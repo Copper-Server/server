@@ -1,0 +1,11 @@
+{
+    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+    "name": "attach-a",
+    "version": "0.1.0",
+    "dependencies": [
+        "boost-asio",
+        "boost-thread",
+        "utfcpp",
+        "gtest"
+    ]
+}
