@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(CraftedCart CXX)
+add_subdirectory("src/library/fast_task")
 set(CMAKE_CXX_STANDARD 23)
 set(Boost_NO_WARN_NEW_VERSIONS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -25,13 +26,15 @@ endif(MSVC)
 set(ENABLE_BOOST_PREPROCESSOR ON)
 
 FILE(GLOB SRCFILES 
-        src/library/*.cpp
+        src/library/ENBT/enbt.cpp
         src/base_objects/*.cpp 
         src/*.cpp 
 )
 
 find_package(Boost REQUIRED COMPONENTS context)
 find_package(utf8cpp CONFIG REQUIRED)
+
+include_directories(${Boost_INCLUDE_DIRS} ${CC_INCLUDE_DIR})
 
 IF(MSVC)
   SET(CMAKE_CXX_FLAGS "/EHsc")
@@ -44,4 +47,5 @@ ENDIF(MSVC)
     PRIVATE
       ${Boost_LIBRARIES}
       utf8::cpp
+      fast_task
     )

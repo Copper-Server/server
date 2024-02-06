@@ -1,9 +1,9 @@
 #include "ClientHandleHelper.hpp"
-#include "enbt.hpp"
-#include <unordered_set>
-#include "chunk_core.hpp"
-#include "protocolHelperNBT.hpp"
 #include "calculations.hpp"
+#include "chunk_core.hpp"
+#include "library/enbt.hpp"
+#include "protocolHelperNBT.hpp"
+#include <unordered_set>
 struct ArrayStream {
     uint8_t* arrau;
     size_t mi;
@@ -140,6 +140,7 @@ public:
         strikethrough = copy.strikethrough;
         obfuscated = copy.obfuscated;
         text_is_translation = copy.text_is_translation;
+        extra = extra;
     }
     Chat& operator=(Chat&& copy) noexcept {
         text = copy.text;
@@ -163,6 +164,7 @@ public:
         strikethrough = copy.strikethrough;
         obfuscated = copy.obfuscated;
         text_is_translation = copy.text_is_translation;
+        extra = std::move(extra);
         return *this;
     }
     ~Chat() {
@@ -318,7 +320,7 @@ protected:
         uint8_t tmp[sizeof(T)];
         for (size_t i = 0; i < sizeof(T); i++)
             tmp[i] = data.read();
-        return ENBT::ConvertNativeEndian(std::endian::big, *(T*)tmp);
+        return ENBT::ConvertEndian(std::endian::big, *(T*)tmp);
     }
 
     std::string ReadString(ArrayStream& data, int32_t max_string_len) {
@@ -346,27 +348,28 @@ protected:
         size_t len = sizeof(Res);
         Res res = ENBT::fromVar<Res>(data.arrau + data.r, len);
         data.r += len;
-        ENBT::ConvertNativeEndian(std::endian::little, res);
+        ENBT::ConvertEndian(std::endian::little, res);
         return res;
     }
     template<class T>
     static void WriteVar(T val, std::vector<uint8_t>& data) {
-        size_t len = sizeof(T);
-        uint8_t* tmp = ENBT::toVar(ENBT::ConvertExternEndian(std::endian::little, val), len);
+        constexpr size_t buf_len = sizeof(T) + (sizeof(T) / 7) + 1;
+        uint8_t buf[buf_len];
+        size_t len = ENBT::toVar(buf, buf_len, ENBT::ConvertEndian(std::endian::little, val));
         for (size_t i = 0; i < len; i++)
-            data.push_back(tmp[i]);
-        delete[] tmp;
+            data.push_back(buf[i]);
     }
-    template<class T>
+
+    template <class T>
     static void WriteVar(T val, ArrayStream& data) {
-        size_t len;
-        uint8_t* tmp = ENBT::toVar(ENBT::ConvertExternEndian(std::endian::little, val), len);
+        constexpr size_t buf_len = sizeof(T) + (sizeof(T) / 7) + 1;
+        uint8_t buf[buf_len];
+        size_t len = ENBT::toVar(buf, buf_len, ENBT::ConvertEndian(std::endian::little, val));
         for (size_t i = 0; i < len; i++)
-            data.write(tmp[i]);
-        delete[] tmp;
+            data.write(buf[i]);
     }
     static void WriteUUID(const ENBT::UUID& val, std::vector<uint8_t>& data) {
-        ENBT::UUID temp = ENBT::ConvertExternEndian(std::endian::big, val);
+        ENBT::UUID temp = ENBT::ConvertEndian(std::endian::big, val);
         uint8_t* tmp = (uint8_t*)&temp;
         for (size_t i = 0; i < 16; i++)
             data.push_back(tmp[i]);
@@ -376,11 +379,11 @@ protected:
         uint8_t* tmp = (uint8_t*)&temp;
         for (size_t i = 0; i < 16; i++)
             tmp[i] = data.read();
-        return ENBT::ConvertNativeEndian(std::endian::big, temp);
+        return ENBT::ConvertEndian(std::endian::big, temp);
     }
     template<class T>
     static void WriteValue(const T& val, std::vector<uint8_t>& data) {
-        T temp = ENBT::ConvertExternEndian(std::endian::big, val);
+        T temp = ENBT::ConvertEndian(std::endian::big, val);
         uint8_t* tmp = (uint8_t*)&temp;
         for (size_t i = 0; i < sizeof(T); i++)
             data.push_back(tmp[i]);
@@ -391,7 +394,7 @@ protected:
         uint8_t* tmp = (uint8_t*)&temp;
         for (size_t i = 0; i < sizeof(T); i++)
             tmp[i] = data.read();
-        return ENBT::ConvertNativeEndian(std::endian::big, temp);
+        return ENBT::ConvertEndian(std::endian::big, temp);
     }
     virtual std::vector<uint8_t>& PreparePacket(const std::vector<uint8_t>& packet) {
         std::vector<uint8_t> res = packet;
@@ -404,29 +407,25 @@ protected:
         packet.insert(packet.begin(), tmp.begin(), tmp.end());
         return packet;
     }
-    virtual std::vector<uint8_t>&& UnpackPacket(std::vector<uint8_t>&& packet) {
-        return std::move(packet);
-    }
     virtual std::vector<uint8_t>& PackPacket(std::vector<uint8_t>& packet) {
         return packet;
     }
     virtual std::vector<std::vector<uint8_t>> PreparePackets(const std::vector<std::vector<uint8_t>>& packets) {
-        std::vector < std::vector<uint8_t>> actuall_packets;
+        std::vector<std::vector<uint8_t>> actual_packets;
         for (auto& packet : packets) {
             if (!packet.size())
                 continue;
             ArrayStream data(packet.begin()._Ptr, packet.size());
-        unpack_packet:
-            int32_t skip_len = ReadVar<int32_t>(data);
-            if (skip_len + data.r > packet.size())
-                actuall_packets.emplace_back(UnpackPacket(std::vector<uint8_t>(packet.begin() + data.r, packet.end())));
-            else
-                actuall_packets.emplace_back(UnpackPacket(std::vector<uint8_t>(packet.begin() + data.r, packet.begin() + data.r + skip_len)));
-            data.r += skip_len;
-            if (data.mi > data.r)
-                goto unpack_packet;
+            while (data.mi > data.r) {
+                int32_t skip_len = ReadVar<int32_t>(data);
+                if (skip_len + data.r > packet.size())
+                    actual_packets.emplace_back(packet.begin() + data.r, packet.end());
+                else
+                    actual_packets.emplace_back(packet.begin() + data.r, packet.begin() + data.r + skip_len);
+                data.r += skip_len;
+            }
         }
-        return actuall_packets;
+        return actual_packets;
     }
 
     virtual Response WorkPacket(std::vector<uint8_t> packet) = 0;
@@ -453,9 +452,7 @@ protected:
     }
     uint32_t protocol_version = 0;
 public:
-    ~TCPClientHandle() override {
-
-    }
+    ~TCPClientHandle() override {}
     TCPclient* RedefineHandler() override {
          return next_handler;
     }
@@ -793,7 +790,7 @@ namespace mcCore{
             data_structure_tile,
             gateway_destination,
             sign_text,
-            undefined,
+            undefined_,
             decl_bed,
             jigsaw_data,
             campfire_items,
@@ -911,7 +908,7 @@ namespace mcCore{
             packet.push_back(0x0D);
             packet.push_back(2);
             WriteUUID(uuid, packet);
-            health = ENBT::ConvertExternEndian(std::endian::big, health);
+            health = ENBT::ConvertEndian(std::endian::big, health);
             uint8_t* bytes = (uint8_t*)&health;
             for (int8_t i = 0; i < 4; i++)
                 packet.push_back(bytes[i]);
@@ -2004,18 +2001,18 @@ namespace mcCore{
         };
 
         // tpnaeu is team_player_names_and_entity_uuids
-        virtual std::vector<uint8_t> TeamCreate(std::string name, Chat display_name, bool can_friendly_fire, bool can_see_invis_teampate, TeamNameTagVisibility ntv_rule, TeamCollisionRule c_rule, TeamColor color, Chat prefix, Chat sufix, std::vector<std::string> tpnaeu) {
+        virtual std::vector<uint8_t> TeamCreate(std::string name, Chat display_name, bool can_friendly_fire, bool can_see_invis_teammate, TeamNameTagVisibility ntv_rule, TeamCollisionRule c_rule, TeamColor color, Chat prefix, Chat suffix, std::vector<std::string> tpnaeu) {
             std::vector<uint8_t> packet;
             packet.push_back(0x55);
             WriteString(packet, name, 16);
             packet.push_back(0);
             WriteString(packet, display_name.ToStr());
-            packet.push_back(can_friendly_fire & can_see_invis_teampate << 1);
+            packet.push_back(uint8_t(can_friendly_fire) & uint8_t(can_see_invis_teammate << 1));
             WriteString(packet, to_string(ntv_rule));
             WriteString(packet, to_string(c_rule));
             packet.push_back((uint8_t)color);
             WriteString(packet, prefix.ToStr());
-            WriteString(packet, sufix.ToStr());
+            WriteString(packet, suffix.ToStr());
             WriteVar((int32_t)tpnaeu.size(), packet);
             for (auto& it : tpnaeu)
                 WriteString(packet, it, 40);
@@ -2028,18 +2025,19 @@ namespace mcCore{
             packet.push_back(1);
             return packet;
         }
-        virtual std::vector<uint8_t> TeamUpdate(std::string name, Chat display_name, bool can_friendly_fire, bool can_see_invis_teampate, TeamNameTagVisibility ntv_rule, TeamCollisionRule c_rule, TeamColor color, Chat prefix, Chat sufix) {
+
+        virtual std::vector<uint8_t> TeamUpdate(std::string name, Chat display_name, bool can_friendly_fire, bool can_see_invis_teammate, TeamNameTagVisibility ntv_rule, TeamCollisionRule c_rule, TeamColor color, Chat prefix, Chat suffix) {
             std::vector<uint8_t> packet;
             packet.push_back(0x55);
             WriteString(packet, name, 16);
             packet.push_back(2);
             WriteString(packet, display_name.ToStr());
-            packet.push_back(can_friendly_fire & can_see_invis_teampate << 1);
+            packet.push_back(uint8_t(can_friendly_fire) & uint8_t(can_see_invis_teammate << 1));
             WriteString(packet, to_string(ntv_rule));
             WriteString(packet, to_string(c_rule));
             packet.push_back((uint8_t)color);
             WriteString(packet, prefix.ToStr());
-            WriteString(packet, sufix.ToStr());
+            WriteString(packet, suffix.ToStr());
             return packet;
         }
         virtual std::vector<uint8_t> TeamAddEntitys(std::string name, std::vector<std::string> tpnaeu) {
@@ -2309,8 +2307,7 @@ protected:
         if (waitLoginStage != actual_login_stage)
             return Response({}, 1);
         switch (actual_login_stage) {
-        case 0:
-        {
+        case 0: {
             std::string nickname = ReadString(data, 16);
             Chat* kick_reason_chat = AllowPlayersName(nickname);
             if (kick_reason_chat != nullptr) {
@@ -2324,8 +2321,7 @@ protected:
                 return Response({ response }, 0, 1);
             }
             waitLoginStage = 1;
-        }
-        break;
+        } break;
         case 1:
             break;
         }
@@ -2492,7 +2488,7 @@ protected:
         uint8_t tmp[sizeof(T)];
         for (size_t i = 0; i < sizeof(T); i++)
             tmp[i] = data.read();
-        return ENBT::ConvertNativeEndian(std::endian::big, *(T*)tmp);
+        return ENBT::ConvertEndian(std::endian::big, *(T*)tmp);
     }
     Response WorkPacket(std::vector<uint8_t> packet) override {
         ArrayStream data(packet.begin()._Ptr, packet.size());

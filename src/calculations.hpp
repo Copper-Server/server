@@ -42,10 +42,10 @@ namespace calc {
 	ANGLE_DEG convert(VECTOR val);
 	VECTOR dif(VECTOR p0, VECTOR p1);
 	VECTOR normalize(VECTOR val);
-	VECTOR streight(VECTOR val, double mult);
+    VECTOR strength(VECTOR val, double mult);
 
 
-	double rad_to_deg180(double val);
+    double rad_to_deg180(double val);
 	double deg_to_rad180(double val);
 
 	double rad_to_deg360(double val);

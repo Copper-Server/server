@@ -19,16 +19,17 @@ namespace calc {
 	}
 	VECTOR normalize(VECTOR val) {
 		return convert(convert(val));
-	}
-	VECTOR streight(VECTOR val, double mult) {
-		val.x *= mult;
+    }
+
+    VECTOR strength(VECTOR val, double mult) {
+        val.x *= mult;
 		val.y *= mult;
 		val.z *= mult;
 		return val;
-	}
+    }
 
 
-	double rad_to_deg180(double val) {
+    double rad_to_deg180(double val) {
 		return (val * pi) / 180;
 	}
 	double deg_to_rad180(double val) {

@@ -1,43 +1,37 @@
 #include "chunk_core.hpp"
-#include "enbt.hpp"
+#include "library/enbt.hpp"
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
 #include <fstream>
 #include <iostream>
 #include <ranges>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/classification.hpp>
 namespace mcCore {
 	ChunkGenerator* global_generator;
 
 	uint8_t ChunkCore::chunk_y_count = 15;
-	std::atomic_bool ChunkCore::mod_cys_allow = 1;
+    std::atomic_bool ChunkCore::mod_cys_allow = 1;
 
+    inline ENBT prepareBlock(Block& bl) {
+        ENBT block_data{
+            ENBT((uint16_t)bl.id), //block id
+            ENBT(ENBT::Type_ID(ENBT::Type_ID::Type::optional)),
+        };
+        if (bl.has_nbt())
+            block_data[1].setOptional(bl.get_nbt());
+        return block_data;
+    }
 
-
-	inline ENBT&& prepareBlock(Block bl) {
-		ENBT block_data(
-			new ENBT[]{
-				ENBT((uint16_t)bl.id),//block id
-				ENBT(ENBT::Type_ID(ENBT::Type_ID::Type::optional)),
-			},
-			ENBT::Type_ID(ENBT::Type_ID::Type::structure, ENBT::Type_ID::LenType::Tiny),
-			2
-		);
-		if (bl.has_nbt())
-			block_data[1].setOptional(bl.get_nbt());
-		return std::move(block_data);
-	}
-	inline Block prepareBlock(ENBT& bl) {
-		uint16_t id = std::get<uint16_t>(bl[0].content());
+    inline Block prepareBlock(ENBT& bl) {
+        uint16_t id = std::get<uint16_t>(bl[0].content());
 
 		if (bl[1].contains())
 			return Block(id,*bl[1].getOptional());
 		else
 			return id;
-	}
+    }
 
 
-
-	void ChunkCore::Save(std::filesystem::path chunkPath) {
+    void ChunkCore::Save(std::filesystem::path chunkPath) {
 		chunkPath += std::filesystem::path::preferred_separator;
 		chunkPath += std::to_string(pos_x) + "_" + std::to_string(pos_z);
 		ENBT tree_z(ENBT::Type_ID::Type::array, 16);
@@ -65,30 +59,31 @@ namespace mcCore {
 		}
 
 		std::ofstream f(chunkPath.c_str());
-		ENBTHelper::InitalizeVersion(f);
-		ENBTHelper::WriteToken(f, tree);
-		f.close();
-	}
+        ENBTHelper::InitializeVersion(f);
+        ENBTHelper::WriteToken(f, tree);
+        f.close();
+    }
 
-	void ChunkCluster::Save(std::filesystem::path clusterPath) {
+    void ChunkCluster::Save(std::filesystem::path clusterPath) {
 		clusterPath += std::filesystem::path::preferred_separator;
 		clusterPath += std::to_string(pos_x) + "_" + std::to_string(pos_z);
 		if (!std::filesystem::exists(clusterPath)) std::filesystem::create_directory(clusterPath);
 		for (auto& tmp : chunks)
 			for (auto& chunk : tmp)
 				chunk.Save(clusterPath);
-	}
-	void WorldClusters::Save(std::filesystem::path wordlPath) {
-		for (auto& tmp : clusters) 
-			for (auto& cluster : tmp.second) 
-				cluster.second->Save(wordlPath);
-	}
+    }
 
-	void ChunkCore::Load(std::filesystem::path chunkPath) {
-		chunkPath += std::filesystem::path::preferred_separator;
-		chunkPath += std::to_string(pos_x) + "_" + std::to_string(pos_z);
+    void WorldClusters::Save(std::filesystem::path worldPath) {
+        for (auto& tmp : clusters)
+            for (auto& cluster : tmp.second)
+                cluster.second->Save(worldPath);
+    }
 
-		std::ifstream f(chunkPath.c_str());
+    void ChunkCore::Load(std::filesystem::path chunkPath) {
+        chunkPath += std::filesystem::path::preferred_separator;
+        chunkPath += std::to_string(pos_x) + "_" + std::to_string(pos_z);
+
+        std::ifstream f(chunkPath.c_str());
 		ENBTHelper::CheckVersion(f);
 		ENBT tree = ENBTHelper::ReadToken(f);
 		f.close();
@@ -107,73 +102,66 @@ namespace mcCore {
 				}
 			}
 		}
-	}
-	void ChunkCluster::Load(std::filesystem::path clusterPath) {
-		if (!std::filesystem::exists(clusterPath)) std::filesystem::create_directory(clusterPath);
-		for (auto& tmp : chunks)
+    }
+
+    void ChunkCluster::Load(std::filesystem::path clusterPath) {
+        if (!std::filesystem::exists(clusterPath))
+            std::filesystem::create_directory(clusterPath);
+        for (auto& tmp : chunks)
 			for (auto& chunk : tmp)
 				chunk.Load(clusterPath);
-	}
-	
-	 
+    }
 
-	void WorldClusters::Load(std::filesystem::path wordlPath) {
-		for (auto& p : std::filesystem::recursive_directory_iterator(wordlPath))
-			if (p.is_directory()) {
-				try {
-					std::u8string path_string{ p.path().u8string() };
-					std::vector<std::u8string> coords;
-					boost::split(coords, path_string, boost::algorithm::is_any_of(u8"_"), boost::algorithm::token_compress_on);
-					if (coords.size() != 2)
-						throw std::invalid_argument("Cordinates count will be equal 2");
-					int64_t x = std::stoll((const char*)coords[0].c_str());
-					int64_t z = std::stoll((const char*)coords[0].c_str());
-					(clusters[x][z] = new ChunkCluster(x, z))->Load(p.path());
-				}
-				catch (const std::bad_alloc& ex) {
-					std::stringstream ss;
-					ss << "Fail load cluster, " << ex.what() << '\n';
-					std::cout << ss.str();
-					ss.flush();
+    void WorldClusters::Load(std::filesystem::path worldPath) {
+        for (auto& p : std::filesystem::recursive_directory_iterator(worldPath))
+            if (p.is_directory()) {
+                try {
+                    std::u8string path_string{p.path().u8string()};
+                    std::vector<std::u8string> coords;
+                    boost::split(coords, path_string, boost::algorithm::is_any_of(u8"_"), boost::algorithm::token_compress_on);
+                    if (coords.size() != 2)
+                        throw std::invalid_argument("Coordinates count will be equal 2");
+                    int64_t x = std::stoll((const char*)coords[0].c_str());
+                    int64_t z = std::stoll((const char*)coords[0].c_str());
+                    (clusters[x][z] = new ChunkCluster(x, z))->Load(p.path());
+                } catch (const std::bad_alloc& ex) {
+                    std::stringstream ss;
+                    ss << "Fail load cluster, " << ex.what() << '\n';
+                    std::cout << ss.str();
+                    ss.flush();
 					std::exit(EXIT_FAILURE);
-				}
-				catch(const std::invalid_argument& arg){
-					std::stringstream ss;
-					ss << "Cluster folder: `" << p.path() << "` is invalid, cause: " << arg.what() << '\n';
-					std::cout << ss.str();
-					ss.flush();
-				}
-				catch (const std::out_of_range& arg) {
-					std::stringstream ss;
-					ss << "Cluster folder: `" << p.path() << "` is invalid, cause: " << arg.what() << '\n';
-					std::cout << ss.str();
-					ss.flush();
-				}
+                } catch (const std::invalid_argument& arg) {
+                    std::stringstream ss;
+                    ss << "Cluster folder: `" << p.path() << "` is invalid, cause: " << arg.what() << '\n';
+                    std::cout << ss.str();
+                    ss.flush();
+                } catch (const std::out_of_range& arg) {
+                    std::stringstream ss;
+                    ss << "Cluster folder: `" << p.path() << "` is invalid, cause: " << arg.what() << '\n';
+                    std::cout << ss.str();
+                    ss.flush();
+                }
+            }
+    }
 
-			}
-	}
-
-
-
-
-	void WorldClusterTalker::ClusterDeath() {
-		race_lock.lock();
-		world_handle = nullptr;
-		race_lock.unlock();
+    void WorldClusterTalker::ClusterDeath() {
+        race_lock.lock();
+        world_handle = nullptr;
+        race_lock.unlock();
 		ClusterUnloaded(cluster_x, cluster_z);
-	}
+    }
 
-
-	WorldClusterTalker::WorldClusterTalker(class WorldClusters& world, block_pos_t x, block_pos_t z, block_pos_t distance):world_handle(&world) {
-		cluster_x = x;
-		cluster_z = z;
+    WorldClusterTalker::WorldClusterTalker(class WorldClusters& world, block_pos_t x, block_pos_t z, block_pos_t distance)
+        : world_handle(&world) {
+        cluster_x = x;
+        cluster_z = z;
 		cluster_handle_distance = distance;
 		if (world.existsCluster(x, z)) 
 			world.SubEvents(this);
-	}
+    }
 
-	void WorldClusterTalker::NotifyBlockChanged(BlockEventData data) {
-		if (world_handle) {
+    void WorldClusterTalker::NotifyBlockChanged(BlockEventData data) {
+        if (world_handle) {
 			race_lock.lock();
 			world_handle->EventNotify({ this,data.block,data.x, data.y, data.z , BlockEvent::Reason::Changed });
 			race_lock.unlock();
@@ -183,8 +171,8 @@ namespace mcCore {
 			std::cout.flush();
 			std::exit(EXIT_FAILURE);
 		}
-	}
-	void WorldClusterTalker::NotifyBlockSeted(BlockEventData data) {
+    }
+    void WorldClusterTalker::NotifyBlockSeted(BlockEventData data) {
 		if (world_handle) {
 			race_lock.lock();
 			world_handle->EventNotify({ this,data.block,data.x, data.y, data.z , BlockEvent::Reason::Seted });

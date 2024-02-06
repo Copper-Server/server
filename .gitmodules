@@ -1,6 +1,13 @@
+
 [submodule "vcpkg"]
 	path = vcpkg
 	url = https://github.com/microsoft/vcpkg.git
-[submodule "library/list_array"]
+[submodule "src/library/list_array"]
 	path = src/library/list_array
 	url = https://github.com/Melnytskyi/list_array.git
+[submodule "src/library/ENBT"]
+	path = src/library/ENBT
+	url = https://github.com/Melnytskyi/ENBT.git
+[submodule "src/library/fast_task"]
+	path = src/library/fast_task
+	url = https://github.com/Melnytskyi/fast_task.git

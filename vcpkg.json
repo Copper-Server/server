@@ -5,6 +5,9 @@
     "dependencies": [
         "boost-asio",
         "boost-thread",
+        "boost-uuid",
+        "boost-context",
+        "boost-lockfree",
         "utfcpp",
         "gtest"
     ]
