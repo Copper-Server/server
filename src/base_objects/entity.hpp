@@ -3,12 +3,13 @@
 #include "../calculations.hpp"
 #include "../chunk_core.hpp"
 #include "../library/enbt.hpp"
+#include "../registers.hpp"
 #include "float16.hpp"
 #include <filesystem>
 #include <fstream>
 #include <stdint.h>
 
-namespace mcCore {
+namespace crafted_craft {
 
 
     class Entity_data {
@@ -47,7 +48,7 @@ namespace mcCore {
             std::function<void(class Entity& target_entity, class Entity& extern_entity, bool in_view, bool hurted, bool hear)>* custom_call = nullptr;
         };
 
-        std::vector<EntityReaction> entity_reacions;
+        list_array<EntityReaction> entity_reacions;
 
         struct BlockReaction {
             uint64_t can_aborted : 1;
@@ -66,7 +67,7 @@ namespace mcCore {
             std::function<void(class Entity& target_entity, block_pos_t x, uint16_t y, block_pos_t z, const Block& block, bool in_view, bool hurted, bool hear)>* custom_call = nullptr;
         };
 
-        std::vector<BlockReaction> block_reacions;
+        list_array<BlockReaction> block_reacions;
 
         struct EnvironmentReaction {
             uint64_t can_aborted : 1;
@@ -81,7 +82,7 @@ namespace mcCore {
             std::function<bool(class Entity& target_entity, uint8_t data_buffer[40])>* action_func = nullptr;
         };
 
-        std::vector<EnvironmentReaction> enviropement_reactions;
+        list_array<EnvironmentReaction> enviropement_reactions;
 
 
         //entity
@@ -136,7 +137,7 @@ namespace mcCore {
         std::function<void(class Entity& target_entity, float current_hunger)> hunger_action;
     };
 
-    class Entity {
+    struct Entity {
         enum class MoveType {
             walk,
             sprint,
@@ -145,10 +146,12 @@ namespace mcCore {
         ENBT nbt;
         calc::VECTOR position;
         calc::VECTOR rotation;
+        calc::VECTOR head_rotation;
         calc::VECTOR motion;
         ENBT::UUID id;
         uint16_t entity_id;
         uint16_t keep_reaction;
+        int32_t data; // varies
         WorldClusters* world;
         uint8_t keep_reaction_data[20];
         bool Save(std::filesystem::path path);
@@ -160,10 +163,6 @@ namespace mcCore {
             Move(new_pos.x, new_pos.y, new_pos.z, move_type);
         }
 
-        friend class Entity_data;
-
-
-    public:
         Entity() {
             sizeof(Entity);
         }

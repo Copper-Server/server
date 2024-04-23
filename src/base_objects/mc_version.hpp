@@ -1,7 +1,8 @@
 #pragma once
 #include <stdint.h>
-namespace mcCore {
-	struct McVersion {
+
+namespace crafted_craft {
+    struct McVersion {
 		enum class Edition:uint16_t {
 			custom_0,
 			custom_1,

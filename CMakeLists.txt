@@ -2,13 +2,14 @@ cmake_minimum_required(VERSION 3.20)
 project(CraftedCart CXX)
 add_subdirectory("src/library/fast_task")
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(Boost_NO_WARN_NEW_VERSIONS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CC_src_INCLUDE_DIR "src")
-set(CC_INCLUDE_DIR ${art_src_INCLUDE_DIR})
+set(CC_INCLUDE_DIR ${CC_src_INCLUDE_DIR})
 
-if(MSVC)  
+if(MSVC)
   add_definitions(/MP)
   add_definitions(/Zc:preprocessor)
   string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
@@ -26,15 +27,19 @@ endif(MSVC)
 set(ENABLE_BOOST_PREPROCESSOR ON)
 
 FILE(GLOB SRCFILES 
+        src/protocolHelper/packets/*/*.cpp
         src/library/ENBT/enbt.cpp
         src/base_objects/*.cpp 
+        src/plugin/*.cpp 
         src/*.cpp 
 )
 
-find_package(Boost REQUIRED COMPONENTS context)
+find_package(Boost REQUIRED COMPONENTS context json)
+find_package(ZLIB REQUIRED)
+find_package(OpenSSL REQUIRED)
 find_package(utf8cpp CONFIG REQUIRED)
 
-include_directories(${Boost_INCLUDE_DIRS} ${CC_INCLUDE_DIR})
+include_directories(${Boost_INCLUDE_DIRS} ${CC_INCLUDE_DIR}${ZLIB_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${utf8cpp_INCLUDE_DIRS})
 
 IF(MSVC)
   SET(CMAKE_CXX_FLAGS "/EHsc")
@@ -46,6 +51,8 @@ ENDIF(MSVC)
   target_link_libraries(CraftedCart
     PRIVATE
       ${Boost_LIBRARIES}
+      ZLIB::ZLIB
+      OpenSSL::SSL
       utf8::cpp
       fast_task
     )

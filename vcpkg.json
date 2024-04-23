@@ -3,12 +3,20 @@
     "name": "attach-a",
     "version": "0.1.0",
     "dependencies": [
-        "boost-asio",
+        {
+            "name":"boost-asio",
+            "features": [
+                "ssl"
+            ]
+        },
         "boost-thread",
         "boost-uuid",
+        "boost-beast",
+        "boost-json",
         "boost-context",
         "boost-lockfree",
         "utfcpp",
-        "gtest"
+        "gtest",
+        "zlib"
     ]
 }

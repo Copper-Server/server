@@ -2,8 +2,8 @@
 #include <list>
 #include <unordered_map>
 
-namespace mcCore {
-	struct HitBox {
+namespace crafted_craft {
+    struct HitBox {
 		struct Hitbox {
 			struct Position {
 				float x, y, z;

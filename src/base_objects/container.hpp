@@ -2,7 +2,7 @@
 #include "item.hpp"
 #include <unordered_map>
 
-namespace mcCore {
+namespace crafted_craft {
     class Container {
         std::pair<uint8_t, item>* slot;
         uint64_t used_slots : 8;

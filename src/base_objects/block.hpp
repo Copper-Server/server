@@ -1,5 +1,6 @@
 #pragma once
 #include "../library/enbt.hpp"
+#include "../library/list_array.hpp"
 #include "adaptived_id.hpp"
 #include "hitbox.hpp"
 #include <map>
@@ -9,7 +10,7 @@
 #pragma pack(push)
 #pragma pack(1)
 
-namespace mcCore {
+namespace crafted_craft {
     struct FullBlockData {
         static constexpr uint64_t break_resistance_max = []() {
             struct {
@@ -96,7 +97,7 @@ namespace mcCore {
     typedef uint16_t block_id_t;
 
     class Block {
-        static std::unordered_map<std::string, std::vector<Block>> tags;
+        static std::unordered_map<std::string, list_array<Block>> tags;
         static std::unordered_map<block_id_t, FullBlockData> full_block_data;
         static block_id_t block_adder;
         ENBT nbt;
@@ -124,8 +125,7 @@ namespace mcCore {
 
         void outTagFamily(std::string tag) {
             auto& it = tags[tag];
-            if (auto found = std::find(it.begin(), it.end(), *this); found == it.end())
-                it.erase(found);
+            it.remove_one([this](auto& it) { return it == *this; });
         }
 
         block_id_t id;
@@ -300,6 +300,17 @@ namespace mcCore {
             } else
                 return TickAnswer(TickAnswer::Behavior::done);
         }
+    };
+
+    union CompressedBlockState {
+        struct {
+            uint64_t blockStateId : 52;
+            uint64_t blockLocalX : 4;
+            uint64_t blockLocalZ : 4;
+            uint64_t blockLocalY : 4;
+        };
+
+        uint64_t value;
     };
 
     struct BlockHash {

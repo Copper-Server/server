@@ -2,7 +2,7 @@
 #include "../calculations.hpp"
 #include <Windows.h>
 
-namespace mcCore {
+namespace crafted_craft {
 
     ENBT* readENBT(std::ifstream& rf) {
         return new ENBT(ENBTHelper::ReadToken(rf));
@@ -24,7 +24,7 @@ namespace mcCore {
         save_nbt[2] = position.x;
         save_nbt[3] = position.y;
         save_nbt[4] = position.z;
-        calc::ANGLE rot = convert(rotation);
+        calc::ANGLE_DEG rot = convert(rotation);
         save_nbt[5] = rot.x;
         save_nbt[6] = rot.y;
         save_nbt[7] = motion.x;
@@ -77,7 +77,7 @@ namespace mcCore {
         position.x = temp[2];
         position.y = temp[3];
         position.z = temp[4];
-        rotation = convert(calc::ANGLE{(double)temp[5], (double)temp[6]});
+        rotation = convert(calc::ANGLE_DEG{(double)temp[5], (double)temp[6]});
         motion.x = temp[7];
         motion.y = temp[8];
         motion.z = temp[9];

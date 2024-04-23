@@ -4,8 +4,9 @@
 #include "util/task_management.hpp"
 #include <filesystem>
 #include <list>
-namespace mcCore {
-	typedef Block ChunkFragment[16][16][16];
+
+namespace crafted_craft {
+    typedef Block ChunkFragment[16][16][16];
 	typedef int32_t block_pos_t;
 	typedef uint32_t ublock_pos_t;
 

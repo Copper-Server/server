@@ -4,7 +4,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace mcCore {
+namespace crafted_craft {
 
 
     union item_use_data {

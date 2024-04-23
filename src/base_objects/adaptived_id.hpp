@@ -1,8 +1,9 @@
 #pragma once
 #include <unordered_map>
 #include "mc_version.hpp"
-namespace mcCore {
-	namespace data {
+
+namespace crafted_craft {
+    namespace data {
 		struct ClientAdaptived {
 			char* struct_data;
 			short struct_len;

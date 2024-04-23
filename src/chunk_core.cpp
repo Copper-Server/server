@@ -5,10 +5,11 @@
 #include <fstream>
 #include <iostream>
 #include <ranges>
-namespace mcCore {
-	ChunkGenerator* global_generator;
 
-	uint8_t ChunkCore::chunk_y_count = 15;
+namespace crafted_craft {
+    ChunkGenerator* global_generator;
+
+    uint8_t ChunkCore::chunk_y_count = 15;
     std::atomic_bool ChunkCore::mod_cys_allow = 1;
 
     inline ENBT prepareBlock(Block& bl) {
@@ -117,7 +118,7 @@ namespace mcCore {
             if (p.is_directory()) {
                 try {
                     std::u8string path_string{p.path().u8string()};
-                    std::vector<std::u8string> coords;
+                    list_array<std::u8string> coords;
                     boost::split(coords, path_string, boost::algorithm::is_any_of(u8"_"), boost::algorithm::token_compress_on);
                     if (coords.size() != 2)
                         throw std::invalid_argument("Coordinates count will be equal 2");
