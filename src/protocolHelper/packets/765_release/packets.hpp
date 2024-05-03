@@ -67,11 +67,11 @@ namespace crafted_craft {
                 TCPclient::Response commandSuggestionsResponse(int32_t transaction_id, int32_t start_pos, int32_t length, const list_array<base_objects::packets::command_suggestion>& suggestions);
                 TCPclient::Response commands(int32_t root_id, const list_array<base_objects::packets::command_node>& nodes);
                 TCPclient::Response closeContainer(uint8_t container_id);
-                TCPclient::Response setContainerContent(uint8_t windows_id, int32_t state_id, const list_array<base_objects::packets::slot>& slots, base_objects::packets::slot carried_item);
+                TCPclient::Response setContainerContent(uint8_t windows_id, int32_t state_id, const list_array<base_objects::slot>& slots, const base_objects::slot& carried_item);
 
                 TCPclient::Response setContainerProperty(uint8_t windows_id, uint16_t property, uint16_t value);
 
-                TCPclient::Response setContainerSlot(uint8_t windows_id, int32_t state_id, int16_t slot, base_objects::packets::slot item);
+                TCPclient::Response setContainerSlot(uint8_t windows_id, int32_t state_id, int16_t slot, const base_objects::slot& item);
 
                 TCPclient::Response setCooldown(int32_t item_id, int32_t cooldown);
 
@@ -157,7 +157,7 @@ namespace crafted_craft {
                 TCPclient::Response pingResponse(int32_t id);
                 TCPclient::Response placeGhostRecipe(int32_t windows_id, const std::string& recipe_id);
                 TCPclient::Response playerAbilities(uint8_t flags, float flying_speed, float field_of_view);
-                TCPclient::Response playerChatMessage(ENBT::UUID sender, int32_t index, std::optional<std::array<uint8_t, 256>> signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::pair<int32_t, ENBT::UUID>>& prev_messages, std::optional<ENBT> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name);
+                TCPclient::Response playerChatMessage(ENBT::UUID sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<ENBT> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name);
                 //UNUSED by Notchian client
                 TCPclient::Response endCombat(int32_t duration);
                 //UNUSED by Notchian client
@@ -203,7 +203,7 @@ namespace crafted_craft {
                 TCPclient::Response linkEntities(int32_t attached_entity_id, int32_t holder_entity_id);
                 TCPclient::Response setEntityVelocity(int32_t entity_id, calc::VECTOR velocity);
 
-                TCPclient::Response setEquipment(int32_t entity_id, uint8_t slot, const base_objects::packets::slot& item);
+                TCPclient::Response setEquipment(int32_t entity_id, uint8_t slot, const base_objects::slot& item);
 
                 TCPclient::Response setExperience(float experience_bar, int32_t level, int32_t total_experience);
 

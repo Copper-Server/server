@@ -1,25 +1,32 @@
+#include "log.hpp"
+
 #include "ClientHandleHelper.hpp"
 #include "library/fast_task.hpp"
 #include "protocolHelper.hpp"
 
+#include "build_in_plugins/ban.hpp"
 #include "build_in_plugins/minecraft.hpp"
+#include "build_in_plugins/server.hpp"
 #include "plugin/main.hpp"
 #include "registers.hpp"
+using namespace crafted_craft;
 
 int main() {
-
-    TCPclient::logConsole(crafted_craft::registers::registryDataPacket());
-
-    crafted_craft::pluginManagement.registerPlugin("minecraft", std::make_shared<crafted_craft::build_in_plugins::Minecraft>());
+    log::commands::init();
+    std::string current_path = std::filesystem::current_path().string();
+    std::string storage_path = current_path + "/storage";
+    pluginManagement.registerPlugin("ban", std::make_shared<build_in_plugins::BanPlugin>(storage_path));
+    pluginManagement.registerPlugin("server", std::make_shared<build_in_plugins::ServerPlugin>(storage_path));
+    pluginManagement.registerPlugin("minecraft", std::make_shared<build_in_plugins::MinecraftPlugin>());
 
     fast_task::task::create_executor();
     fast_task::task::task::enable_task_naming = true;
     boost::asio::io_service service;
 
-    crafted_craft::special_handshake = new crafted_craft::SpecialPluginHandshake();
-    crafted_craft::special_status = new crafted_craft::SpecialPluginStatus();
+    special_handshake = new SpecialPluginHandshake();
+    special_status = new SpecialPluginStatus();
 
-    first_client_holder = new crafted_craft::TCPClientHandleHandshaking();
+    first_client_holder = new TCPClientHandleHandshaking();
     TCPserver server(&service, "localhost", 1234);
 
     server.start();

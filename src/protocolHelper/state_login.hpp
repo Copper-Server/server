@@ -42,6 +42,7 @@ namespace crafted_craft {
             response.push_back(verify_token[1] = generate_ui8());
             response.push_back(verify_token[2] = generate_ui8());
             response.push_back(verify_token[3] = generate_ui8());
+            log::debug("login", "encryption request");
             return Response::Answer({std::move(response)});
         }
 
@@ -66,6 +67,7 @@ namespace crafted_craft {
                     WriteString(response, *it.signature, 32767);
             }
             response.commit();
+            log::debug("login", "request login completion");
             return Response::Answer({std::move(response)});
         }
 
@@ -79,10 +81,12 @@ namespace crafted_craft {
             }
             if (!plugins_query.empty())
                 response += loginSuccess();
+            log::debug("login", "set compression");
             return response;
         }
 
         Response proceedPlugin(ArrayStream& data, bool successful = true) {
+            log::debug("login", "handle plugin request");
             excepted_packet = -1;
             while (plugins_query.size()) {
                 auto&& it = plugins_query.front();
@@ -112,52 +116,57 @@ namespace crafted_craft {
                 return Response::Disconnect();
             switch (packet_id) {
             case 0: { //login start
-                std::cout << session->id << "[login] login start" << std::endl;
+
+                log::debug("login", "login start");
                 std::string nickname = ReadString(data, 16);
                 session->sharedData().name = nickname;
                 Chat* kick_reason_chat = AllowPlayersName(nickname);
                 if (kick_reason_chat) {
                     Chat str = *kick_reason_chat;
                     delete kick_reason_chat;
-                    std::cout << session->id << "[login] kick..." << std::endl;
+                    log::debug("login", "kick...");
                     return packets::login::kick(str);
                 }
                 if (!session->serverData().server_config.offline_mode) {
-                    std::cout << session->id << "[login] encryption request..." << std::endl;
                     return encryptionRequest(); //still not encrypted
                 } else if (session->serverData().server_config.protocol.compression_threshold != -1) {
-                    std::cout << session->id << "[login] enabling compression..." << std::endl;
                     return setCompression(session->serverData().server_config.protocol.compression_threshold);
                 } else if (!plugins_query.empty()) {
-                    std::cout << session->id << "[login] plugin handle..." << std::endl;
                     ArrayStream empty((const uint8_t*)nullptr, 0);
                     return proceedPlugin(empty);
                 } else {
-                    std::cout << session->id << "[login] login complete..." << std::endl;
                     return loginSuccess();
                 }
                 break;
             }
             case 1: { //encryption response
-                std::cout << session->id << "[login] encryption response" << std::endl;
+                log::debug("login", "encryption response");
                 int32_t shared_secret_size = ReadVar<int32_t>(data);
                 list_array<uint8_t> shared_secret = data.range_read(shared_secret_size).to_vector();
                 int32_t verify_token_size = ReadVar<int32_t>(data);
                 list_array<uint8_t> verify_token = data.range_read(verify_token_size).to_vector();
 
-                if (!session->serverData().decrypt_data(verify_token))
+                if (!session->serverData().decrypt_data(verify_token)) {
+                    log::error("login", "invalid verify token");
                     return packets::login::kick("Invalid verify token");
+                }
 
-                if (memcmp(verify_token.data(), this->verify_token, 4))
+                if (memcmp(verify_token.data(), this->verify_token, 4)) {
+                    log::error("login", "invalid verify token");
                     return packets::login::kick("Invalid verify token");
+                }
 
-                if (!session->serverData().decrypt_data(shared_secret))
+
+                if (!session->serverData().decrypt_data(shared_secret)) {
+                    log::error("login", "encryption error");
                     return packets::login::kick("Encryption error");
+                }
 
                 mojang::api::hash serverId;
                 serverId.update(shared_secret);
                 serverId.update(session->public_key().data(), session->public_key().size());
-                std::cout << session->id << "[login] mojang request" << std::endl;
+
+                log::debug("login", "mojang request");
                 session->sharedData().data = session->serverData().getSessionServer().hasJoined(
                     session->sharedData().name,
                     serverId.hexdigest(),
@@ -167,22 +176,24 @@ namespace crafted_craft {
                 return loginSuccess();
             }
             case 2: { //login plugin response
-                std::cout << session->id << "[login] login plugin response" << std::endl;
+                log::debug("login", "login plugin response");
                 int32_t message_id = ReadVar<int32_t>(data);
                 bool successful = data.read();
                 if (message_id != plugin_message_id)
-                    return packets::login::kick("Invalid plugin message id");
+                    log::debug("login", "invalid plugin message id");
                 return proceedPlugin(data, successful);
             }
             case 3: //Login Acknowledged
-                if (excepted_packet == -1)
-                    return packets::login::kick("Protocol error: unexpected packet while plugin handle");
+                if (excepted_packet == -1) {
+                    log::debug("login", "[protocol error] unexpected packet while plugin handle");
+                    return Response::Disconnect();
+                }
 
-                std::cout << session->id << "[login] login ack" << std::endl;
+                log::debug("login", "login ack");
                 next_handler = new TCPClientHandleConfiguration(session);
                 return Response::Empty();
             default:
-                std::cout << session->id << "[login] invalid packet" << std::endl;
+                log::debug("login", "invalid packet");
             }
             return Response::Disconnect();
         }

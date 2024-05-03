@@ -6,6 +6,7 @@
 namespace crafted_craft {
     class TCPClientHandlePlay : public TCPClientHandle {
         Response SendKeepAlive() {
+            log::debug("play", "Send keep alive");
             keep_alive_packet = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
             list_array<uint8_t> response;
             response.push_back(0x24);
@@ -52,6 +53,7 @@ namespace crafted_craft {
             uint8_t packet_id = packet.read();
             switch (packet_id) {
             case 0x00: {
+                log::debug("play", "Teleport confirm");
                 int32_t teleport_id = ReadVar<int32_t>(packet);
                 if (session->sharedData().packets_state.pending_teleport_ids.front() != teleport_id) {
                     return packets::play::kick({"Invalid teleport id"});
@@ -122,6 +124,7 @@ namespace crafted_craft {
                 break;
             }
             case 0x15: { //keep alive
+                log::debug("play", "Keep alive");
                 int64_t keep_alive_packet_response = ReadValue<int64_t>(packet);
                 if (keep_alive_packet == keep_alive_packet_response) {
                     timer.cancel();
@@ -154,21 +157,25 @@ namespace crafted_craft {
                 break;
             }
             case 0x1E: { //ping request
+                log::debug("play", "Ping request");
                 int64_t ping = ReadValue<int64_t>(packet);
                 break;
             }
             case 0x1F: { // place recipe
+                log::debug("play", "Place recipe");
                 int32_t window_id = ReadVar<int32_t>(packet);
                 std::string recipe_id = ReadString(packet, 32767);
                 bool make_all = ReadValue<bool>(packet);
                 break;
             }
             case 0x20: { //player abilities
+                log::debug("play", "Player abilities");
                 int8_t flags = ReadValue<int8_t>(packet);
                 bool flying = flags & 0x02;
                 break;
             }
             case 0x21: { //player action
+                log::debug("play", "Player action");
                 int32_t status = ReadVar<int32_t>(packet);
                 Position pos;
                 pos.raw = ReadValue<int64_t>(packet);
@@ -177,41 +184,49 @@ namespace crafted_craft {
                 break;
             }
             case 0x22: { //player command
+                log::debug("play", "Player command");
                 int32_t entity_id = ReadVar<int32_t>(packet);
                 int32_t action_id = ReadVar<int32_t>(packet);
                 int32_t jump_boost = ReadVar<int32_t>(packet);
                 break;
             }
             case 0x23: { //player input
+                log::debug("play", "Player input");
                 float sideways = ReadValue<float>(packet);
                 float forward = ReadValue<float>(packet);
                 int8_t flags = ReadValue<int8_t>(packet);
                 break;
             }
             case 0x24: { //pong
+                log::debug("play", "Pong");
                 int32_t pong = ReadValue<int32_t>(packet);
                 break;
             }
             case 0x25: { //change recipe book settings
+                log::debug("play", "Change recipe book settings");
                 int32_t book_id = ReadVar<int32_t>(packet);
                 bool book_open = ReadValue<bool>(packet);
                 bool filter_active = ReadValue<bool>(packet);
                 break;
             }
             case 0x26: { //set seen recipe
+                log::debug("play", "Set seen recipe");
                 std::string recipe_id = ReadString(packet, 32767);
                 break;
             }
             case 0x27: { //rename item
+                log::debug("play", "Rename item");
                 std::string name = ReadString(packet, 32767);
                 break;
             }
             case 0x28: { //resource pack response
+                log::debug("play", "Resource pack response");
                 ENBT::UUID uuid = ReadUUID(packet);
                 int32_t result = ReadVar<int32_t>(packet);
                 break;
             }
             case 0x29: { //seen advancments
+                log::debug("play", "Seen advancements");
                 int32_t action = ReadVar<int32_t>(packet);
                 if (action == 1) {
                     std::string tab_id = ReadString(packet, 32767);
@@ -219,10 +234,12 @@ namespace crafted_craft {
                 break;
             }
             case 0x2A: { //select trade
+                log::debug("play", "Select trade");
                 int32_t selected_slot = ReadVar<int32_t>(packet);
                 break;
             }
             case 0x2B: { //set beacon effect
+                log::debug("play", "Set beacon effect");
                 std::optional<int32_t> primary_effect;
                 std::optional<int32_t> secondary_effect;
                 if (ReadValue<bool>(packet))
@@ -232,10 +249,12 @@ namespace crafted_craft {
                 break;
             }
             case 0x2C: { //set held item
+                log::debug("play", "Set held item");
                 int16_t slot = ReadVar<int16_t>(packet);
                 break;
             }
             case 0x2D: { //program command block
+                log::debug("play", "Program command block");
                 Position pos;
                 pos.raw = ReadValue<int64_t>(packet);
                 std::string command = ReadString(packet, 32767);
@@ -245,17 +264,20 @@ namespace crafted_craft {
                 break;
             }
             case 0x2E: { //program command block mineCart
+                log::debug("play", "Program command block mineCart");
                 int32_t entity_id = ReadVar<int32_t>(packet);
                 std::string command = ReadString(packet, 32767);
                 bool track_output = ReadValue<bool>(packet);
                 break;
             }
             case 0x2F: { //set creative slot
+                log::debug("play", "Set creative slot");
                 int16_t slot = ReadVar<int16_t>(packet);
-                base_objects::packets::slot item = ReadSlot(packet);
+                base_objects::slot item = ReadSlot(packet);
                 break;
             }
             case 0x30: { //program jigsaw block
+                log::debug("play", "Program jigsaw block");
                 Position pos;
                 pos.raw = ReadValue<int64_t>(packet);
                 std::string name = ReadString(packet, 32767);
@@ -269,6 +291,7 @@ namespace crafted_craft {
                 break;
             }
             case 0x31: { //program structure block
+                log::debug("play", "Program structure block");
                 Position pos;
                 pos.raw = ReadValue<int64_t>(packet);
                 int32_t action = ReadVar<int32_t>(packet);
@@ -289,6 +312,7 @@ namespace crafted_craft {
                 break;
             }
             case 0x32: { //update sign
+                log::debug("play", "Update sign");
                 Position pos;
                 pos.raw = ReadValue<int64_t>(packet);
                 bool is_front_text = ReadValue<bool>(packet);
@@ -299,15 +323,18 @@ namespace crafted_craft {
                 break;
             }
             case 0x33: { //swing arm
+                log::debug("play", "Swing arm");
                 int32_t hand = ReadVar<int32_t>(packet);
 
                 break;
             }
             case 0x34: { //spectator request to teleport
+                log::debug("play", "Spectator request to teleport");
                 ENBT::UUID target_entity = ReadUUID(packet);
                 break;
             }
             case 0x35: { //Use item On
+                log::debug("play", "Use item on");
                 int32_t hand = ReadVar<int32_t>(packet);
                 Position pos;
                 pos.raw = ReadValue<int64_t>(packet);
@@ -321,6 +348,7 @@ namespace crafted_craft {
                 break;
             }
             case 0x36: { //Use item
+                log::debug("play", "Use item");
                 int32_t hand = ReadVar<int32_t>(packet);
                 int32_t sequence = ReadVar<int32_t>(packet);
 
@@ -346,12 +374,17 @@ namespace crafted_craft {
         }
 
         Response OnSwitch() override {
+            for (auto& plugin : session->sharedData().compatible_plugins)
+                queriedPackets.push_back(pluginManagement.getPlugin(plugin)->OnPlay_initialize(session->sharedData()));
             return IdleActions();
         }
 
     public:
+        static std::unordered_map<std::string, PluginRegistrationPtr> plugins_play;
+
         TCPClientHandlePlay(TCPsession* session)
-            : TCPClientHandle(session), timer(session->sock.get_executor()) {}
+            : TCPClientHandle(session), timer(session->sock.get_executor()) {
+        }
 
         ~TCPClientHandlePlay() override {
         }

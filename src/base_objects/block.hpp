@@ -1,7 +1,6 @@
 #pragma once
 #include "../library/enbt.hpp"
 #include "../library/list_array.hpp"
-#include "adaptived_id.hpp"
 #include "hitbox.hpp"
 #include <map>
 #include <mutex>
@@ -30,68 +29,50 @@ namespace crafted_craft {
         }();
 
 
-        uint64_t break_resistance : 25;   //-1 => unbreacable
-        uint64_t explode_resistance : 22; //-1 => unexplobable
+        uint64_t break_resistance : 25;   //-1 => unbreakable
+        uint64_t explode_resistance : 22; //-1 => un-explodable
 
         uint64_t light_distance : 5;
-        uint64_t flamenable : 1;
+        uint64_t flammable : 1;
         uint64_t light_pass : 1;
         uint64_t can_have_nbt : 1;
         uint64_t can_ticked : 1;
         uint64_t can_transmit_redstone : 1;
-        uint64_t redstone_streight : 4;
+        uint64_t redstone_strength : 4;
         uint64_t movable : 1;
 
-        const HitBox* hitbox; //if nullptr => non full block
+        const HitBox* hitbox; //if nullptr => non full block, if -1 => full block, other => custom hitbox
 
         bool in_block(float x, float y, float z) const {
             return hitbox->in(x, y, z);
         }
 
-        const data::ClientAdaptived client_adaptived(McVersion user_version) const {
-            for (uint16_t i = 0; i < variants_count; i++) {
-                auto& vari = variants[i];
-                if (vari.support_mc_from.Variant == user_version.Variant)
-                    if (vari.support_mc_from <= user_version)
-                        return vari;
-            }
-            return {nullptr, 0};
-        }
-
-        bool can_explode(uint32_t explode_streight) const {
+        bool can_explode(uint32_t explode_strength) const {
             if (explode_resistance == explode_resistance_max)
                 return false;
-            return explode_resistance < explode_streight;
+            return explode_resistance < explode_strength;
         }
 
-        bool can_break(uint32_t break_streight) const { //use when in client side player break, server need calculate break tick long
+        bool can_break(uint32_t break_strength) const { //use when in client side player break, server need calculate break tick long
             if (break_resistance == break_resistance_max)
                 return false;
-            return break_resistance < break_streight;
+            return break_resistance < break_strength;
         }
 
         FullBlockData() {
-            break_resistance = explode_resistance = light_distance = flamenable = light_pass = can_have_nbt = 0;
+            break_resistance = explode_resistance = light_distance = flammable = light_pass = can_have_nbt = 0;
             hitbox = nullptr;
-            variants = nullptr;
-            variants_count = 0;
         }
 
-        FullBlockData(const data::ClientAdaptivedContainer& ClientAdaptivedContainer, short hitboxID, uint32_t breakResist, uint32_t explodeResist, bool canHaveNbt, bool lightPass, bool Flamenable, uint8_t lightDistance) {
+        FullBlockData(short hitboxID, uint32_t breakResist, uint32_t explodeResist, bool canHaveNbt, bool lightPass, bool Flammable, uint8_t lightDistance) {
             break_resistance = break_resistance_max < breakResist ? break_resistance_max : breakResist;
             explode_resistance = explode_resistance_max < explodeResist ? explode_resistance_max : explodeResist;
-            variants = ClientAdaptivedContainer.begin();
-            variants_count = ClientAdaptivedContainer.size();
             hitbox = &HitBox::getHitBox(hitboxID);
             can_have_nbt = canHaveNbt;
             light_pass = lightPass;
-            flamenable = Flamenable;
+            flammable = Flammable;
             light_distance = lightDistance;
         }
-
-    private:
-        const data::ClientAdaptived* variants;
-        uint64_t variants_count : 16;
     };
 
     typedef uint16_t block_id_t;
@@ -100,19 +81,23 @@ namespace crafted_craft {
         static std::unordered_map<std::string, list_array<Block>> tags;
         static std::unordered_map<block_id_t, FullBlockData> full_block_data;
         static block_id_t block_adder;
-        ENBT nbt;
 
     public:
         block_id_t static addNewBlock(const FullBlockData& new_block) {
-            if (block_adder > block_adder + 1)
-                throw std::out_of_range("Blocks count out of short range, block cannont added");
+            struct {
+                block_id_t id : 15;
+            } bound_check;
+
+            bound_check.id = block_adder + 1;
+            if (bound_check.id == 0)
+                throw std::out_of_range("Blocks count out of short range, block can't added");
             full_block_data[block_adder++] = new_block;
         }
 
         bool inTagFamily(std::string tag) const {
             if (tags.contains(tag))
                 for (auto& it : tags[tag])
-                    if (id_and_state_eq(it))
+                    if (it == *this)
                         return true;
             return false;
         }
@@ -128,25 +113,10 @@ namespace crafted_craft {
             it.remove_one([this](auto& it) { return it == *this; });
         }
 
-        block_id_t id;
-
-        Block(block_id_t block_id, const ENBT& enbt)
-            : id(block_id) {
-            if (!can_has_nbt())
-                throw std::invalid_argument("this block not hold nbt");
-            nbt["nbt"] = enbt;
-        }
-
-        Block(block_id_t block_id, ENBT&& enbt)
-            : id(block_id) {
-            if (!can_has_nbt())
-                throw std::invalid_argument("this block not hold nbt");
-            nbt["nbt"] = std::move(enbt);
-        }
+        block_id_t id : 15;
 
         Block(block_id_t block_id = 0)
             : id(block_id) {
-            nbt = nullptr;
         }
 
         Block(const Block& copy) {
@@ -158,13 +128,11 @@ namespace crafted_craft {
         }
 
         Block& operator=(const Block& block) {
-            nbt = nbt;
             id = block.id;
             return *this;
         }
 
         Block& operator=(Block&& block) noexcept {
-            nbt = std::move(block.nbt);
             id = block.id;
             return *this;
         }
@@ -175,28 +143,6 @@ namespace crafted_craft {
 
         bool can_has_nbt() const {
             return full_block_data[id].can_have_nbt;
-        }
-
-        bool has_nbt() const {
-            return nbt.contains("nbt");
-        }
-
-        const ENBT& get_nbt() const {
-            return nbt["nbt"];
-        }
-
-        bool has_state() const {
-            return nbt.contains("state");
-        }
-
-        bool has_state(const char* state_name) const {
-            if (nbt.contains("state"))
-                return nbt["state"].contains(state_name);
-            return false;
-        }
-
-        const ENBT& get_state() const {
-            return nbt["state"];
         }
 
         bool canMove() {
@@ -274,24 +220,20 @@ namespace crafted_craft {
             }
         };
         enum class TickReason : uint8_t {
-            prezent,
+            present,
             next_tick,
             moved,
             near_changed,
             removed,
-            eated
+            eaten
         };
 
-        bool id_and_state_eq(Block& b) const {
-            return id == b.id && nbt["state"] == b.nbt["state"];
-        }
-
         bool operator==(const Block& b) const {
-            return id == b.id && nbt == b.nbt;
+            return id == b.id;
         }
 
         bool operator!=(const Block& b) const {
-            return !operator==(b);
+            return id != b.id;
         }
 
         TickAnswer Tick(TickReason reason) {
@@ -316,9 +258,7 @@ namespace crafted_craft {
     struct BlockHash {
         std::size_t operator()(const Block& k) const {
             using std::hash;
-            using std::size_t;
-
-            return ((hash<block_id_t>()(k.id) ^ (hash<const void*>()(&k.getStaticData()) << 2)) >> 2) ^ ((hash<const void*>()(&k.get_nbt()) << 1) >> 1) ^ (hash<const void*>()(&k.get_state()) << 1);
+            return hash<block_id_t>()(k.id);
         }
     };
 }

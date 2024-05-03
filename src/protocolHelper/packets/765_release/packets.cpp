@@ -406,7 +406,7 @@ namespace crafted_craft {
                     return TCPclient::Response::Answer({{0x12, container_id}});
                 }
 
-                TCPclient::Response setContainerContent(uint8_t windows_id, int32_t state_id, const list_array<base_objects::packets::slot>& slots, base_objects::packets::slot carried_item) {
+                TCPclient::Response setContainerContent(uint8_t windows_id, int32_t state_id, const list_array<base_objects::slot>& slots, const base_objects::slot& carried_item) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + 4 + 2 * slots.size());
                     packet.push_back(0x13);
@@ -430,7 +430,7 @@ namespace crafted_craft {
                     return TCPclient::Response::Answer({packet});
                 }
 
-                TCPclient::Response setContainerSlot(uint8_t windows_id, int32_t state_id, int16_t slot, base_objects::packets::slot item) {
+                TCPclient::Response setContainerSlot(uint8_t windows_id, int32_t state_id, int16_t slot, const base_objects::slot& item) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + 4 + 2 + (bool)item);
                     packet.push_back(0x15);
@@ -869,7 +869,9 @@ namespace crafted_craft {
                     return TCPclient::Response::Answer({packet});
                 }
 
-                TCPclient::Response playerChatMessage(ENBT::UUID sender, int32_t index, std::optional<std::array<uint8_t, 256>> signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::pair<int32_t, ENBT::UUID>>& prev_messages, std::optional<ENBT> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
+                TCPclient::Response playerChatMessage(ENBT::UUID sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<ENBT> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
+                    if (prev_messages.size() > 20)
+                        throw std::runtime_error("too many prev messages");
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 16 + 4 + 1 + message.size() + 8 + 8 + 4 * prev_messages.size() + 1 + 1 + 1 + 2 * 4 + 1 + (bool)target_name * 2);
                     packet.push_back(0x37);
@@ -883,9 +885,9 @@ namespace crafted_craft {
                     WriteValue<int64_t>(timestamp, packet);
                     WriteValue<int64_t>(salt, packet);
                     WriteVar<int32_t>(prev_messages.size(), packet);
-                    for (auto& [message_id, uuid] : prev_messages) {
-                        WriteVar<int32_t>(message_id, packet);
-                        WriteUUID(uuid, packet);
+                    for (auto& msg_signature : prev_messages) {
+                        WriteVar<int32_t>(0, packet);
+                        packet.push_back(msg_signature.data(), msg_signature.size());
                     }
                     packet.push_back((bool)__UNDEFINED__FIELD__);
                     if (__UNDEFINED__FIELD__)
@@ -1361,7 +1363,7 @@ namespace crafted_craft {
                     return TCPclient::Response::Answer({packet});
                 }
 
-                TCPclient::Response setEquipment(int32_t entity_id, uint8_t slot, const base_objects::packets::slot& item) {
+                TCPclient::Response setEquipment(int32_t entity_id, uint8_t slot, const base_objects::slot& item) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 1);
                     packet.push_back(0x59);

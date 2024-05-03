@@ -35,10 +35,12 @@ namespace crafted_craft {
         }
 
         Response FinishConfiguration() {
+            log::debug("configuration", "Finish configuration");
             return Response::Answer({{2}});
         }
 
         Response Ping() {
+            log::debug("configuration", "Ping");
             pong_timer = std::chrono::system_clock::now();
             excepted_pong = std::chrono::duration_cast<std::chrono::milliseconds>(pong_timer.time_since_epoch()).count();
             list_array<uint8_t> response;
@@ -60,10 +62,12 @@ namespace crafted_craft {
                 session->disconnect();
             });
             keep_alive_wait = true;
+            log::debug("configuration", "Send keep alive");
             return Response::Answer({std::move(response)});
         }
 
         Response RegistryData() {
+            log::debug("configuration", "Registry data");
             return Response::Answer({registers::registryDataPacket()});
         }
 
@@ -71,6 +75,7 @@ namespace crafted_craft {
             uint8_t packet_id = packet.read();
             switch (packet_id) {
             case 0x00: { //client settings
+                log::debug("configuration", "Client settings");
                 auto& shared_data = session->sharedData();
                 shared_data.locale = ReadString(packet, 16);
                 shared_data.view_distance = packet.read();
@@ -83,22 +88,28 @@ namespace crafted_craft {
                 break;
             }
             case 0x01: { //plugin message
+                log::debug("configuration", "Plugin message");
                 std::string channel = ReadString(packet, 32767);
                 auto it = plugins_configuration.find(channel);
                 if (it != plugins_configuration.end()) {
                     auto result = it->second->OnConfigurationHandle(channel, packet.read_left().to_vector(), session->sharedData());
                     if (std::holds_alternative<PluginRegistration::PluginResponse>(result)) {
                         auto& plugin = std::get<PluginRegistration::PluginResponse>(result);
+                        log::debug("configuration", "Plugin message");
                         return packets::configuration::configuration(plugin.plugin_chanel, plugin.data);
-                    } else if (std::holds_alternative<Response>(result))
+                    } else if (std::holds_alternative<Response>(result)) {
+                        log::debug("configuration", "Plugin native packet");
                         return std::get<Response>(result);
+                    }
                 }
                 break;
             }
             case 0x02:
+                log::debug("configuration", "Start game");
                 next_handler = new TCPClientHandlePlay(session);
                 return Response::Empty();
             case 0x03: { //keep alive
+                log::debug("configuration", "Keep alive");
                 int64_t keep_alive_packet_response = ReadValue<int64_t>(packet);
                 if (keep_alive_packet == keep_alive_packet_response) {
                     timer.cancel();
@@ -107,6 +118,7 @@ namespace crafted_craft {
                 break;
             }
             case 0x04: { //pong
+                log::debug("configuration", "Pong");
                 int32_t pong = ReadValue<int32_t>(packet);
                 if (pong == excepted_pong)
                     excepted_pong = 0;
@@ -116,6 +128,7 @@ namespace crafted_craft {
                 break;
             }
             case 0x05: { //registry resource pack
+                log::debug("configuration", "Registry resource pack");
                 ENBT::UUID id = ReadUUID(packet);
                 int32_t result = ReadVar<int32_t>(packet);
                 auto res = session->sharedData().packets_state.pending_resource_packs.find(id);

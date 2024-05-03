@@ -22,7 +22,11 @@
 #include "library/enbt.hpp"
 #include "library/list_array.hpp"
 
+#include "base_objects/player.hpp"
 #include "mojang_api/session_server.hpp"
+
+
+#include "log.hpp"
 using namespace boost::placeholders;
 #define OPENSSL_CHECK(OPERATION, console_output)  \
     if ((OPERATION) <= 0) {                       \
@@ -35,91 +39,6 @@ using namespace boost::placeholders;
         std::terminate();                         \
     }
 
-struct SharedClientData {
-    std::string name;
-    std::shared_ptr<mojang::api::session_server::player_data> data;
-    std::string client_brand;
-
-
-    std::string locale; //max 16 chars
-    std::unordered_set<std::string> compatible_plugins;
-    uint8_t view_distance = 0;
-    enum class ChatMode : uint8_t {
-        ENABLED = 0,
-        COMMANDS_ONLY = 1,
-        HIDDEN = 2
-    } chat_mode = ChatMode::ENABLED;
-
-    union {
-        struct {
-            bool cape_enabled : 1;
-            bool jacket_enabled : 1;
-            bool left_sleeve_enabled : 1;
-            bool right_sleeve_enabled : 1;
-            bool left_pants_leg_enabled : 1;
-            bool right_pants_leg_enabled : 1;
-            bool hat_enabled : 1;
-            bool _unused : 1;
-        };
-
-        uint8_t mask = UINT8_MAX - 1;
-    } skin_parts;
-
-    enum class MainHand : uint8_t {
-        LEFT = 0,
-        RIGHT = 1
-    } main_hand = MainHand::RIGHT;
-
-    bool enable_filtering : 1 = false;
-    bool allow_server_listings : 1 = true;
-    bool enable_chat_colors : 1 = true;
-
-    struct ResourcePackData {
-        bool required : 1 = false;
-    };
-
-    struct packets_state_t {
-        std::unordered_set<ENBT::UUID> active_resource_packs;
-        std::unordered_map<ENBT::UUID, ResourcePackData> pending_resource_packs;
-        std::unordered_map<ENBT::UUID, uint32_t> entity_id_holder;
-        std::list<int32_t> pending_teleport_ids;
-        int32_t entity_id_generator;
-        int32_t current_block_sequence_id = 0;
-        int32_t container_state_id = 0;
-
-
-        int32_t protocol_version = -1;
-    } packets_state;
-
-    std::chrono::milliseconds ping = std::chrono::milliseconds(0);
-
-    void registerPlugin(std::string& plugin) {
-        compatible_plugins.insert(plugin);
-    }
-
-    void unregisterPlugin(std::string& plugin) {
-        compatible_plugins.erase(plugin);
-    }
-
-    bool isCompatiblePlugin(std::string& plugin) {
-        return compatible_plugins.contains(plugin);
-    }
-
-    std::mutex safety_lock;
-
-    uint32_t registerEntityId(const ENBT::UUID& id) {
-        std::lock_guard<std::mutex> lock(safety_lock);
-        if (auto it = packets_state.entity_id_holder.find(id); it != packets_state.entity_id_holder.end())
-            return it->second;
-        else
-            return packets_state.entity_id_holder[id] = packets_state.entity_id_generator++;
-    }
-
-    bool unregisterEntityIt(const ENBT::UUID& id) {
-        std::lock_guard<std::mutex> lock(safety_lock);
-        return packets_state.entity_id_holder.erase(id);
-    }
-};
 
 struct ServerConfiguration {
     struct RCON {
@@ -233,8 +152,6 @@ struct ServerConfiguration {
     bool enable_command_block = false;
 
     bool offline_mode = false;
-    bool allowlist_mode = false; //if true, then only players in allowlist can join,  if false, then players in "allowlist" can't join
-    std::unordered_set<std::string> allowlist;
 };
 
 constexpr bool CONSTEXPR_DEBUG_DATA_TRANSPORT = true;
@@ -309,6 +226,9 @@ public:
             Item(list_array<uint8_t>&& data, int32_t compression_threshold = -1, bool apply_compression = false)
                 : data(std::move(data)), compression_threshold(compression_threshold), apply_compression(apply_compression) {}
         };
+
+        Response()
+            : Response({}, 0) {}
 
         ~Response() = default;
 
@@ -392,15 +312,119 @@ public:
 
     virtual ~TCPclient() {}
 
-    static void logConsole(const list_array<uint8_t>& data) {
+    static void logConsole(const std::string& prefix, const list_array<uint8_t>& data) {
+        std::string output = prefix + " ";
+        output.reserve(data.size() * 2);
         static const char hex_chars[] = "0123456789ABCDEF";
-        for (auto& it : data)
-            std::cout << hex_chars[(it & 0xF0) >> 4] << hex_chars[it & 0x0F] << " ";
-        std::cout << std::endl;
+        for (auto& it : data) {
+            output += hex_chars[(it & 0xF0) >> 4];
+            output += hex_chars[it & 0x0F];
+        }
+        crafted_craft::log::debug("Debug tools", output);
     }
 };
 
 extern TCPclient* first_client_holder;
+
+struct SharedClientData {
+    std::string name;
+    std::string ip;
+    std::string str_uuid;
+    ENBT::UUID uuid;
+    std::shared_ptr<mojang::api::session_server::player_data> data;
+    std::string client_brand;
+
+
+    std::string locale; //max 16 chars
+    std::unordered_set<std::string> compatible_plugins;
+    uint8_t view_distance = 0;
+    enum class ChatMode : uint8_t {
+        ENABLED = 0,
+        COMMANDS_ONLY = 1,
+        HIDDEN = 2
+    } chat_mode = ChatMode::ENABLED;
+
+    union {
+        struct {
+            bool cape_enabled : 1;
+            bool jacket_enabled : 1;
+            bool left_sleeve_enabled : 1;
+            bool right_sleeve_enabled : 1;
+            bool left_pants_leg_enabled : 1;
+            bool right_pants_leg_enabled : 1;
+            bool hat_enabled : 1;
+            bool _unused : 1;
+        };
+
+        uint8_t mask = UINT8_MAX - 1;
+    } skin_parts;
+
+    enum class MainHand : uint8_t {
+        LEFT = 0,
+        RIGHT = 1
+    } main_hand = MainHand::RIGHT;
+
+    bool enable_filtering : 1 = false;
+    bool allow_server_listings : 1 = true;
+    bool enable_chat_colors : 1 = true;
+    crafted_craft::base_objects::player player_data;
+
+    struct ResourcePackData {
+        bool required : 1 = false;
+    };
+
+    struct packets_state_t {
+        std::unordered_set<ENBT::UUID> active_resource_packs;
+        std::unordered_map<ENBT::UUID, ResourcePackData> pending_resource_packs;
+        std::unordered_map<ENBT::UUID, uint32_t> entity_id_holder;
+        std::list<int32_t> pending_teleport_ids;
+        int32_t entity_id_generator;
+        int32_t current_block_sequence_id = 0;
+        int32_t container_state_id = 0;
+
+
+        int32_t protocol_version = -1;
+    } packets_state;
+
+    std::chrono::milliseconds ping = std::chrono::milliseconds(0);
+
+    void registerPlugin(std::string& plugin) {
+        compatible_plugins.insert(plugin);
+    }
+
+    void unregisterPlugin(std::string& plugin) {
+        compatible_plugins.erase(plugin);
+    }
+
+    bool isCompatiblePlugin(std::string& plugin) {
+        return compatible_plugins.contains(plugin);
+    }
+
+    std::mutex safety_lock;
+
+    uint32_t registerEntityId(const ENBT::UUID& id) {
+        std::lock_guard<std::mutex> lock(safety_lock);
+        if (auto it = packets_state.entity_id_holder.find(id); it != packets_state.entity_id_holder.end())
+            return it->second;
+        else
+            return packets_state.entity_id_holder[id] = packets_state.entity_id_generator++;
+    }
+
+    bool unregisterEntityIt(const ENBT::UUID& id) {
+        std::lock_guard<std::mutex> lock(safety_lock);
+        return packets_state.entity_id_holder.erase(id);
+    }
+
+    fast_task::task_rw_mutex pending_packets_lock;
+    std::list<TCPclient::Response> pending_packets;
+    std::function<void()> on_disconnect;
+
+    ~SharedClientData() {
+        fast_task::write_lock lock(pending_packets_lock);
+        if (on_disconnect)
+            on_disconnect();
+    }
+};
 
 struct TCPsession {
     static bool do_log_connection_errors;
@@ -481,7 +505,7 @@ struct TCPsession {
 private:
     bool checked(boost::system::error_code ec, std::string const& msg = "error") {
         if (ec && do_log_connection_errors) {
-            std::cout << msg << "(" << id << "): " << ec.message() << std::endl;
+            crafted_craft::log::error("protocol", "[" + msg + "] [" + std::to_string(id) + "]" + ec.message());
             disconnect();
         }
         return !ec.failed();
@@ -518,10 +542,9 @@ private:
             }
 
             //<for debug, set CONSTEXPR_DEBUG_DATA_TRANSPORT to false to disable this block>
-            if constexpr (CONSTEXPR_DEBUG_DATA_TRANSPORT) {
-                std::cout << "P (" << id << ") ";
-                TCPclient::logConsole(combined_packets);
-            }
+            if constexpr (CONSTEXPR_DEBUG_DATA_TRANSPORT)
+                TCPclient::logConsole("P (" + std::to_string(id) + ")", combined_packets);
+
             //</for debug, set CONSTEXPR_DEBUG_DATA_TRANSPORT to false to disable this block>
         repeatDecode:
             if (encryption_enabled)
@@ -561,8 +584,7 @@ private:
             //<for debug, set CONSTEXPR_DEBUG_DATA_TRANSPORT to false to disable this block>
             if constexpr (CONSTEXPR_DEBUG_DATA_TRANSPORT)
                 for (auto& it : tmp.data) {
-                    std::cout << "S (" << id << ") ";
-                    TCPclient::logConsole(it.data);
+                    TCPclient::logConsole("S (" + std::to_string(id) + ")", it.data);
                 }
             //</for debug, set CONSTEXPR_DEBUG_DATA_TRANSPORT to false to disable this block>
         }
@@ -642,14 +664,13 @@ class TCPserver {
         boost::asio::ip::tcp::resolver::query query(ip, std::to_string(port));
         auto list = resolver.resolve(query);
         auto endpoint = list.begin()->endpoint();
-        std::cout << "Server address: " << endpoint.address().to_string() << std::endl;
 
         //iterate all endpoints
         for (auto& endpoints : list) {
             auto address = endpoints.endpoint().address();
             if (address.is_loopback())
                 local_server = true;
-            std::cout << "Server address: " << address.to_string() << std::endl;
+            crafted_craft::log::debug("Server", "Server address: " + address.to_string());
         }
 
 

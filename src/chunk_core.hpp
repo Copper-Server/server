@@ -111,24 +111,25 @@ namespace crafted_craft {
 			Block* block; block_pos_t x, y, z;
 		};
 		void NotifyBlockChanged(BlockEventData);
-		void NotifyBlockSeted(BlockEventData);
-		void NotifyBlockRemoved(BlockEventData);
-		void NotifyBlockBreaked(BlockEventData);
+        void NotifyBlockPlaced(BlockEventData);
+        void NotifyBlockRemoved(BlockEventData);
+        void NotifyBlockBroken(BlockEventData);
 
-		virtual ~WorldClusterTalker();
-	};
-	struct BlockEvent {
-		//source used for prevent send ourself
+        virtual ~WorldClusterTalker();
+    };
+
+    struct BlockEvent {
+        //source used for prevent send ourself
 		class WorldClusterTalker* source;
 		Block* block; block_pos_t x, y, z;
-		enum class Reason {
-			Changed,
-			Seted,
-			Removed,
-			Breaked,
-			nbt_changed
-		};
-		Reason reason;
+        enum class Reason {
+            Changed,
+            Placed,
+            Removed,
+            Broken,
+            nbt_changed
+        };
+        Reason reason;
     };
 
     class WorldClusters {
@@ -156,7 +157,7 @@ namespace crafted_craft {
         }
 
         inline void breakBlock(UPDATE_BLOCK block_pos) {
-            EventNotify({nullptr, nullptr, block_pos.x, block_pos.y, block_pos.z, BlockEvent::Reason::Breaked});
+            EventNotify({nullptr, nullptr, block_pos.x, block_pos.y, block_pos.z, BlockEvent::Reason::Broken});
         }
 
         inline void removeBlock(UPDATE_BLOCK block_pos) {
@@ -164,7 +165,7 @@ namespace crafted_craft {
         }
 
         inline void setBlock(UPDATE_BLOCK block_pos, Block seted_block) {
-            EventNotify({nullptr, new Block(seted_block), block_pos.x, block_pos.y, block_pos.z, BlockEvent::Reason::Seted});
+            EventNotify({nullptr, new Block(seted_block), block_pos.x, block_pos.y, block_pos.z, BlockEvent::Reason::Placed});
         }
 
         void setBlocks(std::list<UPDATE_BLOCK> blocks, Block set_block) {
@@ -417,13 +418,13 @@ namespace crafted_craft {
             case BlockEvent::Reason::Changed:
                 handler->BlockChanged(data.block, data.x, data.y, data.z);
                 break;
-            case BlockEvent::Reason::Seted:
+            case BlockEvent::Reason::Placed:
                 handler->BlockSeted(data.block, data.x, data.y, data.z);
                 break;
             case BlockEvent::Reason::Removed:
                 handler->BlockRemoved(data.x, data.y, data.z);
                 break;
-            case BlockEvent::Reason::Breaked:
+            case BlockEvent::Reason::Broken:
                 handler->BlockBreaked(data.block, data.x, data.y, data.z);
                 break;
             case BlockEvent::Reason::nbt_changed:
@@ -439,11 +440,11 @@ namespace crafted_craft {
             switch (data.reason) {
             case BlockEvent::Reason::Changed:
             case BlockEvent::Reason::nbt_changed:
-            case BlockEvent::Reason::Seted:
+            case BlockEvent::Reason::Placed:
                 LocalBlock(data.x, data.y, data.z) = *data.block;
                 break;
             case BlockEvent::Reason::Removed:
-            case BlockEvent::Reason::Breaked:
+            case BlockEvent::Reason::Broken:
                 LocalBlock(data.x, data.y, data.z) = Block();
                 break;
             }

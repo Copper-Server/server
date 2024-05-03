@@ -128,10 +128,10 @@ namespace crafted_craft {
             float16_t hunger_effect; //per level
             float16_t armor_protect; //used while entity got hit in armor and taken damage
             float16_t sprint_jump;
-            float16_t per_rengen;    //for natural rengen
+            float16_t per_regen;     //for natural regen
             float16_t attack;        //for future
             float16_t teleport;      //
-            float16_t ride_distance; //per block move in rided entity
+            float16_t ride_distance; //per block move in ridded entity
         } hunger_exhaustion;
 
         std::function<void(class Entity& target_entity, float current_hunger)> hunger_action;

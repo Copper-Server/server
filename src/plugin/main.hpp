@@ -15,6 +15,21 @@ namespace crafted_craft {
         PluginRegistrationPtr getPlugin(const std::string& name) {
             return plugins[name];
         }
+
+        void unloadPlugin(const std::string& name) {
+            auto plugin = plugins[name];
+            plugin->OnUnload(plugin);
+            plugins.erase(name);
+        }
+
+        list_array<PluginRegistrationPtr> registeredPlugins() {
+            list_array<PluginRegistrationPtr> result;
+            result.reserve(plugins.size());
+            for (auto& [name, plugin] : plugins)
+                result.push_back(plugin);
+
+            return result;
+        }
     };
 
     extern PluginManagement pluginManagement;

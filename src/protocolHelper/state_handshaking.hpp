@@ -36,7 +36,7 @@ namespace crafted_craft {
         }
 
         Response WorkPacket(ArrayStream& data) override {
-            std::cout << session->id << "[handshaking] Handshaking..." << std::endl;
+            log::debug("Handshaking", "Handshaking...");
             uint8_t tmp = data.peek();
             if (tmp != '\0') {
                 if (special_handshake) {
@@ -64,11 +64,11 @@ namespace crafted_craft {
 
             switch (ReadVar<int32_t>(data)) {
             case 1: //status
-                std::cout << session->id << "[handshaking] Switch to status " << std::endl;
+                log::debug("Handshaking", "Switch to status");
                 next_handler = new TCPClientHandleStatus(session);
                 return Response::Empty();
             case 2: //login
-                std::cout << session->id << "[handshaking] Switch to login " << std::endl;
+                log::debug("Handshaking", "Switch to login");
                 next_handler = new TCPClientHandleLogin(session);
                 return Response::Empty();
             case 3: //transfer

@@ -207,7 +207,7 @@ namespace crafted_craft {
         WriteString(data, str, 262144);
     }
 
-    static void WriteSlot(list_array<uint8_t>& data, const base_objects::packets::slot& slot) {
+    static void WriteSlot(list_array<uint8_t>& data, const base_objects::slot& slot) {
         data.push_back((bool)slot);
         if (slot) {
             WriteVar<int32_t>(slot->id, data);
@@ -219,11 +219,11 @@ namespace crafted_craft {
         }
     }
 
-    static base_objects::packets::slot ReadSlot(ArrayStream& data) {
-        base_objects::packets::slot slot;
+    static base_objects::slot ReadSlot(ArrayStream& data) {
+        base_objects::slot slot;
         if (!data.read())
             return slot;
-        slot = base_objects::packets::slot();
+        slot = base_objects::slot();
         slot->id = ReadVar<int32_t>(data);
         slot->count = data.read();
         if (data.read() == 0) {
@@ -341,7 +341,7 @@ namespace crafted_craft {
                 if (combined.size() < 2)
                     return Response::Empty();
                 if (combined[0] == 0xFE && combined[1] == 0x01) {
-                    std::cout << session->id << "Handle legacy status" << std::endl;
+                    log::debug("protocol", "handle legacy status");
                     auto& server = session->serverData();
                     if (!server.handle_legacy)
                         return Response::Disconnect(list_array<list_array<uint8_t>>());
@@ -392,7 +392,6 @@ namespace crafted_craft {
         }
 
         TCPsession* session;
-        uint32_t protocol_version = 0;
 
     public:
         TCPClientHandle(TCPsession* session)

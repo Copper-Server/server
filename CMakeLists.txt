@@ -30,6 +30,8 @@ FILE(GLOB SRCFILES
         src/protocolHelper/packets/*/*.cpp
         src/library/ENBT/enbt.cpp
         src/base_objects/*.cpp 
+        src/storage/*.cpp 
+        src/api/*.cpp 
         src/plugin/*.cpp 
         src/*.cpp 
 )

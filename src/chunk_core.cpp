@@ -1,5 +1,6 @@
 #include "chunk_core.hpp"
 #include "library/enbt.hpp"
+#include "log.hpp"
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <fstream>
@@ -14,11 +15,8 @@ namespace crafted_craft {
 
     inline ENBT prepareBlock(Block& bl) {
         ENBT block_data{
-            ENBT((uint16_t)bl.id), //block id
-            ENBT(ENBT::Type_ID(ENBT::Type_ID::Type::optional)),
+            ENBT((uint16_t)bl.id) //block id
         };
-        if (bl.has_nbt())
-            block_data[1].setOptional(bl.get_nbt());
         return block_data;
     }
 
@@ -26,9 +24,9 @@ namespace crafted_craft {
         uint16_t id = std::get<uint16_t>(bl[0].content());
 
 		if (bl[1].contains())
-			return Block(id,*bl[1].getOptional());
-		else
-			return id;
+            return Block(id);
+        else
+            return id;
     }
 
 
@@ -126,21 +124,12 @@ namespace crafted_craft {
                     int64_t z = std::stoll((const char*)coords[0].c_str());
                     (clusters[x][z] = new ChunkCluster(x, z))->Load(p.path());
                 } catch (const std::bad_alloc& ex) {
-                    std::stringstream ss;
-                    ss << "Fail load cluster, " << ex.what() << '\n';
-                    std::cout << ss.str();
-                    ss.flush();
-					std::exit(EXIT_FAILURE);
+                    log::error("WorldClusters::Load", "Fail load cluster, " + std::string(ex.what()));
+                    std::exit(EXIT_FAILURE);
                 } catch (const std::invalid_argument& arg) {
-                    std::stringstream ss;
-                    ss << "Cluster folder: `" << p.path() << "` is invalid, cause: " << arg.what() << '\n';
-                    std::cout << ss.str();
-                    ss.flush();
+                    log::error("WorldClusters::Load", "Cluster folder: `" + p.path().string() + "` is invalid, cause: " + arg.what());
                 } catch (const std::out_of_range& arg) {
-                    std::stringstream ss;
-                    ss << "Cluster folder: `" << p.path() << "` is invalid, cause: " << arg.what() << '\n';
-                    std::cout << ss.str();
-                    ss.flush();
+                    log::error("WorldClusters::Load", "Cluster folder: `" + p.path().string() + "` is invalid, cause: " + arg.what());
                 }
             }
     }
@@ -168,82 +157,74 @@ namespace crafted_craft {
 			race_lock.unlock();
 		}
 		else {
-			std::cout << "World death\n";
-			std::cout.flush();
-			std::exit(EXIT_FAILURE);
-		}
+            log::error("WorldClusterTalker::NotifyBlockChanged", "World death");
+            std::exit(EXIT_FAILURE);
+        }
     }
-    void WorldClusterTalker::NotifyBlockSeted(BlockEventData data) {
-		if (world_handle) {
-			race_lock.lock();
-			world_handle->EventNotify({ this,data.block,data.x, data.y, data.z , BlockEvent::Reason::Seted });
-			race_lock.unlock();
-		}
-		else {
-			std::cout << "World death\n";
-			std::cout.flush();
-			std::exit(EXIT_FAILURE);
-		}
-	}
-	void WorldClusterTalker::NotifyBlockRemoved(BlockEventData data) {
-		if (world_handle) {
-			race_lock.lock();
-			world_handle->EventNotify({ this,nullptr,data.x, data.y, data.z , BlockEvent::Reason::Removed });
-			race_lock.unlock();
-		}
-		else {
-			std::cout << "World death\n";
-			std::cout.flush();
-			std::exit(EXIT_FAILURE);
-		}
-	}
-	void WorldClusterTalker::NotifyBlockBreaked(BlockEventData data) {
-		if (world_handle) {
-			race_lock.lock();
-			world_handle->EventNotify({this,nullptr,data.x, data.y, data.z , BlockEvent::Reason::Breaked });
-			race_lock.unlock();
-		}
-		else {
-			std::cout << "World death\n";
-			std::cout.flush();
-			std::exit(EXIT_FAILURE);
-		}
-	}
 
+    void WorldClusterTalker::NotifyBlockPlaced(BlockEventData data) {
+        if (world_handle) {
+            race_lock.lock();
+            world_handle->EventNotify({this, data.block, data.x, data.y, data.z, BlockEvent::Reason::Placed});
+            race_lock.unlock();
+        } else {
+            log::error("WorldClusterTalker::NotifyBlockPlaced", "World death");
+            std::exit(EXIT_FAILURE);
+        }
+    }
 
-	const ChunkCluster& WorldClusterTalker::ClusterRequest(block_pos_t x, block_pos_t z) {
-		if (world_handle) {
-			race_lock.lock();
-			auto& res = world_handle->getCluster(x, z);
-			race_lock.unlock();
-			return res;
-		}
-		else {
-			std::cout << "World death\n";
-			std::cout.flush();
-			std::exit(EXIT_FAILURE);
-			throw std::exception("How you do this");
-		}
-	}
-	const Block& WorldClusterTalker::BlockRequest(block_pos_t x, block_pos_t y, block_pos_t z) {
-		if (world_handle) {
-			race_lock.lock();
-			auto& res = world_handle->LocalBlock(x, y, z);
-			race_lock.unlock();
-			return res;
-		}
-		else {
-			std::cout << "World death\n";
-			std::cout.flush();
-			std::exit(EXIT_FAILURE);
-			throw std::exception("How you do this");
-		}
-	}
+    void WorldClusterTalker::NotifyBlockRemoved(BlockEventData data) {
+        if (world_handle) {
+            race_lock.lock();
+            world_handle->EventNotify({this, nullptr, data.x, data.y, data.z, BlockEvent::Reason::Removed});
+            race_lock.unlock();
+        } else {
+            log::error("WorldClusterTalker::NotifyBlockRemoved", "World death");
+            std::exit(EXIT_FAILURE);
+        }
+    }
 
-	WorldClusterTalker::~WorldClusterTalker() {
-		race_lock.lock();
-		if (world_handle)
-			world_handle->UnsubEvents(this);
-		race_lock.unlock();
-	}
+    void WorldClusterTalker::NotifyBlockBroken(BlockEventData data) {
+        if (world_handle) {
+            race_lock.lock();
+            world_handle->EventNotify({this, nullptr, data.x, data.y, data.z, BlockEvent::Reason::Broken});
+            race_lock.unlock();
+        } else {
+            log::error("WorldClusterTalker::NotifyBlockBroken", "World death");
+            std::exit(EXIT_FAILURE);
+        }
+    }
+
+    const ChunkCluster& WorldClusterTalker::ClusterRequest(block_pos_t x, block_pos_t z) {
+        if (world_handle) {
+            race_lock.lock();
+            auto& res = world_handle->getCluster(x, z);
+            race_lock.unlock();
+            return res;
+        } else {
+            log::error("WorldClusterTalker::ClusterRequest", "World death");
+            std::exit(EXIT_FAILURE);
+            throw std::exception("How you do this");
+        }
+    }
+
+    const Block& WorldClusterTalker::BlockRequest(block_pos_t x, block_pos_t y, block_pos_t z) {
+        if (world_handle) {
+            race_lock.lock();
+            auto& res = world_handle->LocalBlock(x, y, z);
+            race_lock.unlock();
+            return res;
+        } else {
+            log::error("WorldClusterTalker::BlockRequest", "World death");
+            std::exit(EXIT_FAILURE);
+            throw std::exception("How you do this");
+        }
+    }
+
+    WorldClusterTalker::~WorldClusterTalker() {
+        race_lock.lock();
+        if (world_handle)
+            world_handle->UnsubEvents(this);
+        race_lock.unlock();
+    }
 }

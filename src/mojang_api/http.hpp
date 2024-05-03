@@ -34,7 +34,6 @@ namespace mojang {
                 boost::asio::write(socket, request);
                 boost::beast::http::read(socket, buf, res);
 
-                std::cout << res << std::endl;
 
                 switch (res.result()) {
                 case boost::beast::http::status::ok:
