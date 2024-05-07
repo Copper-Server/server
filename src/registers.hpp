@@ -12,6 +12,7 @@
 namespace crafted_craft {
 
     struct registers {
+#pragma region CLIENT/SERVER
         struct IntegerDistribution {
             std::string type;
             ENBT value;
@@ -178,13 +179,8 @@ namespace crafted_craft {
             } element;
         };
 
-        //CLIENT/SERVER
-        static list_array<ArmorTrimMaterial> armorTrimMaterials;
-        static list_array<ArmorTrimPattern> armorTrimPatterns;
-        static list_array<Biome> biomes;
-        static list_array<ChatType> chatTypes;
-        static list_array<DamageType> damageTypes;
-        static list_array<DimensionType> dimensionTypes;
+#pragma endregion
+#pragma region server
 
         struct EntityType {
             std::string id;
@@ -194,9 +190,25 @@ namespace crafted_craft {
             //...
         };
 
+        struct ItemType {
+            std::string id;
+            uint8_t max_count;
+        };
+
+#pragma endregion
+        //CLIENT/SERVER
+        static list_array<ArmorTrimMaterial> armorTrimMaterials;
+        static list_array<ArmorTrimPattern> armorTrimPatterns;
+        static list_array<Biome> biomes;
+        static list_array<ChatType> chatTypes;
+        static list_array<DamageType> damageTypes;
+        static list_array<DimensionType> dimensionTypes;
+
+
         //SERVER
         static std::unordered_map<Block, uint16_t, BlockHash> blockPalette;
         static std::unordered_map<uint16_t, EntityType*> entityList;
+        static std::unordered_map<int32_t, ItemType*> itemList;
 
         //CLIENT
         static list_array<uint8_t>& registryDataPacket() {

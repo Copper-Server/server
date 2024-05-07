@@ -1,15 +1,26 @@
 #include "list_storage.hpp"
+#include <filesystem>
 #include <fstream>
 
 namespace crafted_craft {
     namespace storage {
         list_storage::list_storage(const std::string& path)
             : path(path) {
-            std::fstream file;
+            std::filesystem::path p(path);
+            if (!std::filesystem::exists(p)) {
+                std::filesystem::create_directories(p.parent_path());
+                std::ofstream file;
+                file.open(path, std::ios::out);
+                file.close();
+                _is_loaded = true;
+                return;
+            }
+            std::ifstream file;
             file.open(path, std::ios::in);
+            if (!file.is_open())
+                return;
             for (std::string line; std::getline(file, line);)
                 data.insert(line);
-            file.flush();
             file.close();
             _is_loaded = true;
         }
@@ -18,7 +29,7 @@ namespace crafted_craft {
             if (!data.contains(value)) {
                 data.insert(value);
 
-                std::fstream file;
+                std::ofstream file;
                 file.open(path, std::ios::out | std::ios::app);
                 file << value << std::endl;
                 file.flush();
@@ -33,7 +44,7 @@ namespace crafted_craft {
         void list_storage::remove(const std::string& value) {
             if (this->contains(value)) {
                 this->data.erase(value);
-                std::fstream file;
+                std::ofstream file;
                 file.open(path, std::ios::out | std::ios::trunc);
                 for (const auto& line : this->data)
                     file << line << std::endl;

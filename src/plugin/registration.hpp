@@ -1,11 +1,13 @@
 #ifndef SRC_PLUGIN_REGISTRATION
 #define SRC_PLUGIN_REGISTRATION
-#include "../ClientHandleHelper.hpp"
 #include "../base_objects/commands.hpp"
+#include "../base_objects/response.hpp"
+#include "../base_objects/shared_client_data.hpp"
 #include <memory>
 #include <string>
 #include <variant>
 #include <vector>
+
 
 namespace crafted_craft {
     class PluginRegistration {
@@ -15,7 +17,8 @@ namespace crafted_craft {
             list_array<uint8_t> data;
             std::string plugin_chanel;
         };
-        using plugin_response = std::variant<TCPclient::Response, PluginResponse, bool>;
+
+        using plugin_response = std::variant<Response, PluginResponse, bool>;
 
 #pragma region Server
 
@@ -37,11 +40,11 @@ namespace crafted_craft {
 
 #pragma region OnLogin
 
-        virtual plugin_response OnLoginInit(SharedClientData&) {
+        virtual plugin_response OnLoginInit(base_objects::client_data_holder&) {
             return false;
         }
 
-        virtual plugin_response OnLoginHandle(const std::string& chanel, const list_array<uint8_t>& data, bool successful, SharedClientData&) {
+        virtual plugin_response OnLoginHandle(const std::shared_ptr<PluginRegistration>& self, const std::string& chanel, const list_array<uint8_t>& data, bool successful, base_objects::client_data_holder& client) {
             return false;
         }
 
@@ -49,15 +52,15 @@ namespace crafted_craft {
 
 #pragma region OnConfiguration
 
-        virtual plugin_response OnConfiguration(SharedClientData&) {
+        virtual plugin_response OnConfiguration(base_objects::client_data_holder&) {
             return false;
         }
 
-        virtual plugin_response OnConfigurationHandle(const std::string& chanel, const list_array<uint8_t>& data, SharedClientData&) {
+        virtual plugin_response OnConfigurationHandle(const std::shared_ptr<PluginRegistration>& self, const std::string& chanel, const list_array<uint8_t>& data, base_objects::client_data_holder&) {
             return false;
         }
 
-        virtual plugin_response OnConfiguration_PlayerSettingsChanged(SharedClientData&) {
+        virtual plugin_response OnConfiguration_PlayerSettingsChanged(base_objects::client_data_holder&) {
             return false;
         }
 
@@ -65,11 +68,15 @@ namespace crafted_craft {
 
 #pragma region OnPlay
 
-        virtual plugin_response OnPlay_initialize(SharedClientData& client) {
+        virtual plugin_response OnPlayHandle(const std::shared_ptr<PluginRegistration>& self, const std::string& chanel, const list_array<uint8_t>& data, base_objects::client_data_holder&) {
             return false;
         }
 
-        virtual plugin_response OnPlay_uninitialized(SharedClientData& client) {
+        virtual plugin_response OnPlay_initialize(base_objects::client_data_holder& client) {
+            return false;
+        }
+
+        virtual plugin_response OnPlay_uninitialized(base_objects::client_data_holder& client) {
             return false;
         }
 

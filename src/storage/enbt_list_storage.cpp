@@ -1,16 +1,29 @@
 #include "enbt_list_storage.hpp"
+#include <filesystem>
 #include <fstream>
 
 namespace crafted_craft {
     namespace storage {
         enbt_list_storage::enbt_list_storage(const std::string& path)
             : path(path) {
+            std::filesystem::path p(path);
+            if (!std::filesystem::exists(p)) {
+                std::filesystem::create_directories(p.parent_path());
+                std::ofstream file;
+                file.open(path, std::ios::out);
+                file.close();
+                _is_loaded = true;
+                return;
+            }
             std::ifstream file;
             file.open(path, std::ios::in);
-            while (file.eof()) {
+            if (!file.is_open())
+                return;
+            while (!file.eof()) {
                 std::string key = (std::string)ENBTHelper::ReadString(file);
                 data[key] = ENBTHelper::ReadToken(file);
             }
+            _is_loaded = true;
             file.close();
         }
 

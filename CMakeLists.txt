@@ -36,7 +36,7 @@ FILE(GLOB SRCFILES
         src/*.cpp 
 )
 
-find_package(Boost REQUIRED COMPONENTS context json)
+find_package(Boost REQUIRED COMPONENTS context json bimap)
 find_package(ZLIB REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(utf8cpp CONFIG REQUIRED)

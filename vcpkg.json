@@ -9,6 +9,7 @@
                 "ssl"
             ]
         },
+        "boost-bimap",
         "boost-thread",
         "boost-uuid",
         "boost-beast",

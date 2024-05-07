@@ -35,7 +35,7 @@ namespace crafted_craft {
                 current_line += read_buffer();
                 std::string_view view(current_line);
                 for (auto i = view.find('\n'); i != std::string::npos; i = view.find('\n')) {
-                    commands::on_command((std::string)current_line.substr(0, i));
+                    commands::on_command((std::string)view.substr(0, i));
                     view.remove_prefix(i + 1);
                 }
                 current_line = std::string(view);

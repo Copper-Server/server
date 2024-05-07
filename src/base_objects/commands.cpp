@@ -40,7 +40,7 @@ namespace crafted_craft {
                 throw std::invalid_argument("invalid command id");
             auto real_path =
                 list_array<char>(path.data(), path.size())
-                    .split(' ')
+                    .split_by(' ')
                     .convert<std::string>([](const list_array<char>& a) {
                         return std::string(a.data(), a.size());
                     });
@@ -62,6 +62,73 @@ namespace crafted_craft {
                 return current;
             }
         }
+
+        void apply_options(packets::command_node::parsers parser, packets::command_node::properties_t& parser_data) {
+            switch (parser) {
+            case packets::command_node::parsers::brigadier_float:
+            case packets::command_node::parsers::brigadier_double:
+            case packets::command_node::parsers::brigadier_integer:
+            case packets::command_node::parsers::brigadier_long: {
+                parser_data.flags = 0;
+                if (parser_data.min)
+                    *parser_data.flags |= 1;
+                if (parser_data.max)
+                    *parser_data.flags |= 2;
+                parser_data.registry = std::nullopt;
+                break;
+            }
+            case packets::command_node::parsers::brigadier_string: {
+                if (!parser_data.flags)
+                    parser_data.flags = 0;
+                parser_data.min = std::nullopt;
+                parser_data.max = std::nullopt;
+                parser_data.registry = std::nullopt;
+                break;
+            }
+            case packets::command_node::parsers::minecraft_entity: {
+                if (!parser_data.flags)
+                    parser_data.flags = 0;
+                parser_data.min = std::nullopt;
+                parser_data.max = std::nullopt;
+                parser_data.registry = std::nullopt;
+                break;
+            }
+            case packets::command_node::parsers::minecraft_score_holder: {
+                if (!parser_data.flags)
+                    parser_data.flags = 0;
+                parser_data.min = std::nullopt;
+                parser_data.max = std::nullopt;
+                parser_data.registry = std::nullopt;
+                break;
+            }
+            case packets::command_node::parsers::minecraft_time: {
+                if (!parser_data.min)
+                    parser_data.min = std::numeric_limits<int32_t>::max();
+                parser_data.flags = std::nullopt;
+                parser_data.max = std::nullopt;
+                parser_data.registry = std::nullopt;
+                break;
+            }
+            case packets::command_node::parsers::minecraft_resource_or_tag:
+            case packets::command_node::parsers::minecraft_resource_or_tag_key:
+            case packets::command_node::parsers::minecraft_resource:
+            case packets::command_node::parsers::minecraft_resource_key: {
+                if (!parser_data.registry)
+                    throw std::invalid_argument("this parser should have registry");
+                parser_data.flags = std::nullopt;
+                parser_data.min = std::nullopt;
+                parser_data.max = std::nullopt;
+                break;
+            }
+            default:
+                parser_data.flags = std::nullopt;
+                parser_data.min = std::nullopt;
+                parser_data.max = std::nullopt;
+                parser_data.registry = std::nullopt;
+                break;
+            }
+        }
+
 
         int32_t get_index(const list_array<command>& command_nodes, const std::string& path, int32_t current_ = 0) {
             return get_index(const_cast<list_array<command>&>(command_nodes), path, current_);
@@ -208,7 +275,7 @@ namespace crafted_craft {
             graph_ready = false;
         }
 
-        TCPclient::Response command_manager::execute_command(const std::string& command_string, SharedClientData& data) {
+        void command_manager::execute_command(const std::string& command_string, client_data_holder& data) {
             std::string path = command_string;
             list_array<std::string> args;
             command* current = &command_nodes[0];
@@ -403,6 +470,8 @@ namespace crafted_craft {
 
             for (auto& plugin : pluginManagement.registeredPlugins())
                 plugin->OnCommandsLoadComplete(plugin, browser);
+
+            command_nodes.commit();
         }
 
         command_root_browser::command_root_browser(command_manager& manager)
@@ -416,8 +485,6 @@ namespace crafted_craft {
             root.node.children.push_back(manager.command_nodes.size());
             root.childs_cache[*command.node.name] = manager.command_nodes.size();
             manager.command_nodes.push_back(command);
-            if (manager.command_nodes.blocks_more(2))
-                manager.command_nodes.decommit(1);
             manager.graph_ready = false;
             return command_browser(manager, int32_t(manager.command_nodes.size() - 1));
         }
@@ -505,6 +572,14 @@ namespace crafted_craft {
               current_id(browser.current_id),
               current_command(browser.current_command) {}
 
+        command_browser command_browser::add_child(command&& command, packets::command_node::parsers parser, packets::command_node::properties_t properties) {
+            command_browser browser = add_child(std::move(command));
+            browser.current_command.node.flags.node_type = packets::command_node::node_type::argument;
+            browser.current_command.node.parser_id = parser;
+            apply_options(parser, properties);
+            return browser;
+        }
+
         command_browser command_browser::add_child(command&& command) {
             if (!is_valid())
                 throw std::runtime_error("command has been deleted");
@@ -515,8 +590,6 @@ namespace crafted_craft {
             current_command.node.children.push_back(manager.command_nodes.size());
             current_command.childs_cache[*command.node.name] = manager.command_nodes.size();
             manager.command_nodes.push_back(command);
-            if (manager.command_nodes.blocks_more(2))
-                manager.command_nodes.decommit(1);
             manager.graph_ready = false;
 
 
@@ -587,73 +660,6 @@ namespace crafted_craft {
             manager.graph_ready = false;
             return *this;
         }
-
-        void apply_options(packets::command_node::parsers parser, packets::command_node::properties_t& parser_data) {
-            switch (parser) {
-            case packets::command_node::parsers::brigadier_float:
-            case packets::command_node::parsers::brigadier_double:
-            case packets::command_node::parsers::brigadier_integer:
-            case packets::command_node::parsers::brigadier_long: {
-                parser_data.flags = 0;
-                if (parser_data.min)
-                    *parser_data.flags |= 1;
-                if (parser_data.max)
-                    *parser_data.flags |= 2;
-                parser_data.registry = std::nullopt;
-                break;
-            }
-            case packets::command_node::parsers::brigadier_string: {
-                if (!parser_data.flags)
-                    parser_data.flags = 0;
-                parser_data.min = std::nullopt;
-                parser_data.max = std::nullopt;
-                parser_data.registry = std::nullopt;
-                break;
-            }
-            case packets::command_node::parsers::minecraft_entity: {
-                if (!parser_data.flags)
-                    parser_data.flags = 0;
-                parser_data.min = std::nullopt;
-                parser_data.max = std::nullopt;
-                parser_data.registry = std::nullopt;
-                break;
-            }
-            case packets::command_node::parsers::minecraft_score_holder: {
-                if (!parser_data.flags)
-                    parser_data.flags = 0;
-                parser_data.min = std::nullopt;
-                parser_data.max = std::nullopt;
-                parser_data.registry = std::nullopt;
-                break;
-            }
-            case packets::command_node::parsers::minecraft_time: {
-                if (!parser_data.min)
-                    parser_data.min = std::numeric_limits<int32_t>::max();
-                parser_data.flags = std::nullopt;
-                parser_data.max = std::nullopt;
-                parser_data.registry = std::nullopt;
-                break;
-            }
-            case packets::command_node::parsers::minecraft_resource_or_tag:
-            case packets::command_node::parsers::minecraft_resource_or_tag_key:
-            case packets::command_node::parsers::minecraft_resource:
-            case packets::command_node::parsers::minecraft_resource_key: {
-                if (!parser_data.registry)
-                    throw std::invalid_argument("this parser should have registry");
-                parser_data.flags = std::nullopt;
-                parser_data.min = std::nullopt;
-                parser_data.max = std::nullopt;
-                break;
-            }
-            default:
-                parser_data.flags = std::nullopt;
-                parser_data.min = std::nullopt;
-                parser_data.max = std::nullopt;
-                parser_data.registry = std::nullopt;
-                break;
-            }
-        }
-
         command_browser& command_browser::set_callback(const command_callback& callback, packets::command_node::parsers parser, packets::command_node::properties_t properties) {
             if (!is_valid())
                 throw std::runtime_error("command has been deleted");
@@ -698,7 +704,7 @@ namespace crafted_craft {
         bool command_browser::is_valid() const {
             if (current_id == -1)
                 return false;
-            if (manager.command_nodes.size() > current_id)
+            if (manager.command_nodes.size() < current_id)
                 return false;
             return manager.belongs(&current_command);
         }

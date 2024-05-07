@@ -92,7 +92,7 @@ namespace crafted_craft {
                 std::string channel = ReadString(packet, 32767);
                 auto it = plugins_configuration.find(channel);
                 if (it != plugins_configuration.end()) {
-                    auto result = it->second->OnConfigurationHandle(channel, packet.read_left().to_vector(), session->sharedData());
+                    auto result = it->second->OnConfigurationHandle(it->second, channel, packet.read_left().to_vector(), session->sharedDataRef());
                     if (std::holds_alternative<PluginRegistration::PluginResponse>(result)) {
                         auto& plugin = std::get<PluginRegistration::PluginResponse>(result);
                         log::debug("configuration", "Plugin message");
@@ -105,6 +105,7 @@ namespace crafted_craft {
                 break;
             }
             case 0x02:
+                session->sharedData().packets_state.state = SharedClientData::packets_state_t::protocol_state::play;
                 log::debug("configuration", "Start game");
                 next_handler = new TCPClientHandlePlay(session);
                 return Response::Empty();
@@ -180,11 +181,14 @@ namespace crafted_craft {
 
     public:
         static std::unordered_map<std::string, PluginRegistrationPtr> plugins_configuration;
+        static list_array<PluginRegistrationPtr> base_plugins;
 
         TCPClientHandleConfiguration(TCPsession* sock)
             : TCPClientHandle(sock), timer(sock->sock.get_executor()) {
+            for (auto& plugin : base_plugins)
+                queriedPackets.push_back(plugin->OnConfiguration(session->sharedDataRef()));
             for (auto& plugin : session->sharedData().compatible_plugins)
-                queriedPackets.push_back(pluginManagement.getPlugin(plugin)->OnConfiguration(session->sharedData()));
+                queriedPackets.push_back(pluginManagement.getPlugin(plugin)->OnConfiguration(session->sharedDataRef()));
         }
 
         TCPclient* DefineOurself(TCPsession* sock) override {

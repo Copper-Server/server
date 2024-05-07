@@ -20,8 +20,8 @@ namespace crafted_craft {
 
         namespace players {
             namespace handlers {
-                base_objects::event<std::string> on_player_join;
-                base_objects::event<std::string> on_player_leave;
+                base_objects::event<base_objects::client_data_holder> on_player_join;
+                base_objects::event<base_objects::client_data_holder> on_player_leave;
             }
 
             namespace calls {

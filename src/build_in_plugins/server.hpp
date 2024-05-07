@@ -8,12 +8,13 @@
 namespace crafted_craft {
     namespace build_in_plugins {
         class ServerPlugin : public PluginRegistration {
+            storage::memory::online_player_storage& player_storage;
             storage::players_data players_data;
             base_objects::command_manager manager;
 
         public:
-            ServerPlugin(const std::string& path)
-                : players_data(path + "/players") {
+            ServerPlugin(const std::string& path, storage::memory::online_player_storage& player_storage)
+                : players_data(path + "/players"), player_storage(player_storage) {
             }
 
             void OnLoad(const PluginRegistrationPtr& self) override {
@@ -34,126 +35,122 @@ namespace crafted_craft {
             void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override {
                 {
                     browser.add_child({"reload", "signal to reload server", "/reload"})
-                        .set_callback([](const list_array<std::string>&, SharedClientData& client) -> TCPclient::Response {
-                            if (client.player_data.op_level < 4)
-                                return {};
+                        .set_callback([](const list_array<std::string>&, base_objects::client_data_holder& client) {
+                            if (client->player_data.op_level < 4)
+                                return;
                             //kick all players
                             //unload all plugins
                             //load all plugins
 
                             //open back
-                            return {};
+                            return;
                         });
                 }
                 {
                     browser.add_child({"help", "returns list of commands", ""})
-                        .set_callback(
-                            [browser](const list_array<std::string>& args, SharedClientData& client) -> TCPclient::Response {
-                                return packets::play::systemChatMessage({"help for all commands:" + browser.get_documentation()});
-                            }
-                        )
-                        .add_child({"<command>", "returns help for command", "/help <command>"})
-                        .set_callback(
-                            [browser](const list_array<std::string>& args, SharedClientData& client) -> TCPclient::Response {
-                                auto command = browser.open(args[0]);
-                                if (!command.is_valid())
-                                    return packets::play::systemChatMessage({"Command not found"});
-                                return packets::play::systemChatMessage({command.get_documentation()});
-                            },
-                            base_objects::packets::command_node::parsers::brigadier_string,
-                            {.flags = 3}
-                        );
+                        .set_callback([browser](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                            return packets::play::systemChatMessage({"help for all commands:" + browser.get_documentation()});
+                        })
+                        .add_child({"<command>", "returns help for command", "/help <command>"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
+                        .set_callback([browser](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                            auto command = browser.open(args[0]);
+                            if (!command.is_valid())
+                                api::players::calls::on_system_message({client, {"Command not found"}});
+                            else
+                                api::players::calls::on_system_message({client, {command.get_documentation()}});
+                        });
 
-                    browser.add_child({"?", "help alias"}).set_redirect("help", [browser](const list_array<std::string>& args, const std::string& left, SharedClientData& client) -> TCPclient::Response {
-                        return browser.get_manager().execute_command("help" + left.size() ? " " + left : "", client);
+                    browser.add_child({"?", "help alias"}).set_redirect("help", [browser](const list_array<std::string>& args, const std::string& left, base_objects::client_data_holder& client) {
+                        browser.get_manager().execute_command("help" + left.size() ? " " + left : "", client);
                     });
                 }
                 {
                     browser.add_child({"version", "returns server version", "/version"})
-                        .set_callback([](const list_array<std::string>&, SharedClientData& client) -> TCPclient::Response {
-                            if (client.player_data.op_level < 4)
-                                return {};
-                            return packets::play::systemChatMessage({"Server version: 1.0.0"});
+                        .set_callback([](const list_array<std::string>&, base_objects::client_data_holder& client) {
+                            if (client->player_data.op_level < 4)
+                                return;
+                            api::players::calls::on_system_message({client, {"Server version: 1.0.0"}});
                         });
                 }
                 {
                     browser.add_child({"op"})
-                        .add_child({"<player>", "op player", "/op <player>"})
-                        .set_callback(
-                            [](const list_array<std::string>& args, SharedClientData& client) -> TCPclient::Response {
-                                if (client.player_data.op_level < 4)
-                                    return {};
-                                if (args.size() == 0)
-                                    return packets::play::systemChatMessage({"Usage: /op <player>"});
-                                //op player
-                                return {};
-                            },
-                            base_objects::packets::command_node::parsers::brigadier_string,
-                            {.flags = 2}
-                        );
+                        .add_child({"<player>", "op player", "/op <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                        .set_callback([](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                            if (client->player_data.op_level < 4)
+                                return;
+                            if (args.size() == 0) {
+                                api::players::calls::on_system_message({client, {"Usage: /op <player>"}});
+                                return;
+                            }
+                            //op player
+                        });
                 }
                 {
                     browser.add_child({"deop"})
-                        .add_child({"<player>", "deop player", "/deop <player>"})
-                        .set_callback([](const list_array<std::string>& args, SharedClientData& client) -> TCPclient::Response {
-                            if (client.player_data.op_level < 4)
-                                return {};
-                            if (args.size() == 0)
-                                return packets::play::systemChatMessage({"Usage: /deop <player>"});
-                            return {};
+                        .add_child({"<player>", "deop player", "/deop <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                        .set_callback([](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                            if (client->player_data.op_level < 4)
+                                return;
+                            if (args.size() == 0) {
+                                api::players::calls::on_system_message({client, {"Usage: /deop <player>"}});
+                                return;
+                            }
                             //deop player
-                        },
-                                      base_objects::packets::command_node::parsers::brigadier_string,
-                                      {.flags = 2});
+                        });
                 }
                 {
 
                     browser.add_child({"kick"})
-                        .add_child({"<player>"})
-                        .set_callback(
-                            [](const list_array<std::string>& args, SharedClientData& client) -> TCPclient::Response {
-                                if (client.player_data.op_level < 4)
-                                    return {};
-                                if (args.size() == 0)
-                                    return packets::play::systemChatMessage({"Usage: /kick <player>"});
-                                //kick player
-                                return {};
-                            },
-                            base_objects::packets::command_node::parsers::brigadier_string,
-                            {.flags = 2}
-                        )
-                        .add_child({"<reason>", "kick player with reason", "/kick <player> [reason]"})
-                        .set_callback(
-                            [](const list_array<std::string>& args, SharedClientData& client) -> TCPclient::Response {
-                                if (client.player_data.op_level < 4)
-                                    return {};
-                                if (args.size() == 0)
-                                    return packets::play::systemChatMessage({"Usage: /kick <player> [reason]"});
-                                //kick player
-                                return {};
-                            },
-                            base_objects::packets::command_node::parsers::brigadier_string,
-                            {.flags = 3}
-                        );
+                        .add_child({"<player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                        .set_callback([this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                            if (client->player_data.op_level < 4)
+                                return;
+                            if (args.size() == 0) {
+                                api::players::calls::on_system_message({client, {"Usage: /kick <player>"}});
+                                return;
+                            }
+                            auto target = player_storage.get_player(
+                                SharedClientData::packets_state_t::protocol_state::play,
+                                args[0]
+                            );
+                            api::players::calls::on_player_kick({target, "kicked by admin"});
+                        })
+                        .add_child({"<reason>", "kick player with reason", "/kick <player> [reason]"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
+                        .set_callback([this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                            if (client->player_data.op_level < 4)
+                                return;
+                            if (args.size() == 0) {
+                                api::players::calls::on_system_message({client, {"Usage: /kick <player>"}});
+                                return;
+                            }
+                            auto target = player_storage.get_player(
+                                SharedClientData::packets_state_t::protocol_state::play,
+                                args[0]
+                            );
+                            if (target)
+                                api::players::calls::on_player_kick({target, Chat::parseToChat(args[1])});
+                            else
+                                api::players::calls::on_system_message({client, "Player not found"});
+                        });
                 }
                 {
                     browser.add_child({"stop", "stop server", "/stop"})
-                        .set_callback([](const list_array<std::string>&, SharedClientData& client) -> TCPclient::Response {
-                            if (client.player_data.op_level < 4)
-                                return {};
+                        .set_callback([](const list_array<std::string>&, base_objects::client_data_holder& client) {
+                            if (client->player_data.op_level < 4)
+                                return;
                             //stop server
-                            return {};
                         });
                 }
             }
 
-            plugin_response OnPlay_initialize(SharedClientData& client) override {
+            plugin_response OnPlay_initialize(base_objects::client_data_holder& client_ref) override {
+                auto& client = *client_ref;
                 {
                     auto data = players_data.get_player_data(client.str_uuid);
                     data.load();
                     client.player_data = data.player;
                 }
-                TCPclient::Response response;
+                Response response;
                 auto last_death_location =
                     client.player_data.last_death_location ? std::optional(base_objects::packets::death_location_data(
                                                                  client.player_data.last_death_location->world_id,
@@ -198,10 +195,10 @@ namespace crafted_craft {
                 return response;
             }
 
-            plugin_response OnPlay_uninitialized(SharedClientData& client) override {
+            plugin_response OnPlay_uninitialized(base_objects::client_data_holder& client) override {
                 {
-                    auto data = players_data.get_player_data(client.str_uuid);
-                    data.player = client.player_data;
+                    auto data = players_data.get_player_data(client->str_uuid);
+                    data.player = client->player_data;
                     data.save();
                 }
                 return false;

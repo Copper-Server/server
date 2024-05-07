@@ -1,4 +1,5 @@
 #include "players_data.hpp"
+#include <filesystem>
 
 namespace crafted_craft {
     namespace storage {
@@ -270,11 +271,14 @@ namespace crafted_craft {
                 throw std::runtime_error("Failed to open file: " + path);
             }
             ENBTHelper::WriteToken(file, as_file_data);
+            file.flush();
             file.close();
         }
 
         players_data::players_data(const std::string& base_path)
-            : base_path(base_path) {}
+            : base_path(base_path) {
+            std::filesystem::create_directories(base_path);
+        }
 
         player_data players_data::get_player_data(const std::string& player_uuid) {
             return player_data(base_path + "/" + player_uuid + ".e_dat");

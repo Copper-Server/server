@@ -5,54 +5,54 @@ namespace crafted_craft {
     namespace packets {
         namespace release_765 {
             namespace login {
-                TCPclient::Response kick(const Chat& reason) {
+                Response kick(const Chat& reason) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x00);
                     WriteIdentifier(packet, reason.ToStr());
-                    return TCPclient::Response::Disconnect({packet});
+                    return Response::Disconnect({packet});
                 }
 
-                TCPclient::Response disableCompression() {
-                    return TCPclient::Response::Answer({{0x03, 0}});
+                Response disableCompression() {
+                    return Response::Answer({{0x03, 0}});
                 }
 
-                TCPclient::Response setCompression(int32_t threshold) {
+                Response setCompression(int32_t threshold) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x00);
                     WriteVar<int32_t>(threshold, packet);
-                    return TCPclient::Response::EnableCompressAnswer(packet, threshold);
+                    return Response::EnableCompressAnswer(packet, threshold);
                 }
             }
 
             namespace configuration {
-                TCPclient::Response configuration(const std::string& chanel, const list_array<uint8_t>& data) {
+                Response configuration(const std::string& chanel, const list_array<uint8_t>& data) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x00);
                     WriteIdentifier(packet, chanel);
                     packet.push_back(data);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response kick(const Chat& reason) {
+                Response kick(const Chat& reason) {
                     list_array<uint8_t> packet = reason.ToTextComponent();
                     packet.push_front(0x01); //disconnect
-                    return TCPclient::Response::Disconnect({packet});
+                    return Response::Disconnect({packet});
                 }
 
-                TCPclient::Response removeResourcePacks() {
-                    return TCPclient::Response::Answer({{0x06, false}});
+                Response removeResourcePacks() {
+                    return Response::Answer({{0x06, false}});
                 }
 
-                TCPclient::Response removeResourcePack(const ENBT::UUID& pack_id) {
+                Response removeResourcePack(const ENBT::UUID& pack_id) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(2 + 16);
                     packet.push_back(0x06);
                     packet.push_back(true);
                     WriteUUID(pack_id, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response addResourcePack(const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced) {
+                Response addResourcePack(const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(2 + 16 + 2 + url.size() + 2 + hash.size());
                     packet.push_back(0x07);
@@ -61,10 +61,10 @@ namespace crafted_craft {
                     WriteString(packet, hash, 40);
                     packet.push_back(forced);
                     packet.push_back(false);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response addResourcePack(const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced, Chat prompt) {
+                Response addResourcePack(const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced, Chat prompt) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(2 + 16 + 2 + url.size() + 2 + hash.size());
                     packet.push_back(0x07);
@@ -74,19 +74,19 @@ namespace crafted_craft {
                     packet.push_back(forced);
                     packet.push_back(true);
                     packet.push_back(prompt.ToTextComponent());
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setFeatureFlags(const list_array<std::string>& features) {
+                Response setFeatureFlags(const list_array<std::string>& features) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x08);
                     WriteVar<int16_t>(features.size(), packet);
                     for (auto& it : features)
                         WriteIdentifier(packet, it);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateTags(const list_array<base_objects::packets::tag_mapping>& tags_entries) {
+                Response updateTags(const list_array<base_objects::packets::tag_mapping>& tags_entries) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x09);
                     WriteVar<int32_t>(tags_entries.size(), packet);
@@ -100,12 +100,12 @@ namespace crafted_craft {
                                 WriteVar<int32_t>(entry, packet);
                         }
                     }
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
             }
 
             namespace play {
-                TCPclient::Response bundleResponse(TCPclient::Response&& response) {
+                Response bundleResponse(Response&& response) {
                     if (response.do_disconnect)
                         return std::move(response);
                     else {
@@ -116,22 +116,22 @@ namespace crafted_craft {
                                 return false;
                         });
                         if (response.data.empty())
-                            return TCPclient::Response::Empty();
+                            return Response::Empty();
                         else if (response.data.size() == 1)
                             return std::move(response);
 
-                        TCPclient::Response answer(TCPclient::Response::Answer({{0x00}}));
+                        Response answer(Response::Answer({{0x00}}));
                         answer.data.push_back(response.data);
                         answer.data.push_back({0x00});
                         return answer;
                     }
                 }
 
-                TCPclient::Response spawnEntity(SharedClientData& client, const Entity& entity) {
+                Response spawnEntity(TCPsession& client, const Entity& entity) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 8 * 3 + 3 * 2 + 1 + 16 + 4 + 3 * 2);
                     packet.push_back(0x01);
-                    WriteVar<int32_t>(client.registerEntityId(entity.id), packet);
+                    WriteVar<int32_t>(client.serverData().entity_ids_map.get_id(entity.id), packet);
                     WriteUUID(entity.id, packet);
                     WriteVar<int32_t>(entity.entity_id, packet);
                     WriteValue<double>(entity.position.x, packet);
@@ -147,31 +147,31 @@ namespace crafted_craft {
                     WriteValue<int16_t>(velocity.x, packet);
                     WriteValue<int16_t>(velocity.y, packet);
                     WriteValue<int16_t>(velocity.z, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response spawnExperienceOrb(SharedClientData& client, const Entity& entity, int16_t count) {
+                Response spawnExperienceOrb(TCPsession& client, const Entity& entity, int16_t count) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 8 * 3 + 2);
                     packet.push_back(0x02);
-                    WriteVar<int32_t>(client.registerEntityId(entity.id), packet);
+                    WriteVar<int32_t>(client.serverData().entity_ids_map.get_id(entity.id), packet);
                     WriteValue<double>(entity.position.x, packet);
                     WriteValue<double>(entity.position.y, packet);
                     WriteValue<double>(entity.position.z, packet);
                     WriteValue<int16_t>(count, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response entityAnimation(SharedClientData& client, const Entity& entity, uint8_t animation) {
+                Response entityAnimation(TCPsession& client, const Entity& entity, uint8_t animation) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 1);
                     packet.push_back(0x03);
-                    WriteVar<int32_t>(client.registerEntityId(entity.id), packet);
+                    WriteVar<int32_t>(client.serverData().entity_ids_map.get_id(entity.id), packet);
                     packet.push_back(animation);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response awardStatistics(const list_array<base_objects::packets::statistics>& statistics) {
+                Response awardStatistics(const list_array<base_objects::packets::statistics>& statistics) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 3 * statistics.size());
                     packet.push_back(0x04);
@@ -181,28 +181,28 @@ namespace crafted_craft {
                         WriteVar<int32_t>(statistic_id, packet);
                         WriteVar<int32_t>(value, packet);
                     }
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response acknowledgeBlockChange(SharedClientData& client) {
+                Response acknowledgeBlockChange(SharedClientData& client) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(5);
                     packet.push_back(0x05);
                     WriteVar<int32_t>(client.packets_state.current_block_sequence_id, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setBlockDestroyStage(SharedClientData& client, const Entity& entity, Position block, uint8_t stage) {
+                Response setBlockDestroyStage(TCPsession& client, const Entity& entity, Position block, uint8_t stage) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 8 + 1);
                     packet.push_back(0x06);
-                    WriteVar<int32_t>(client.registerEntityId(entity.id), packet);
+                    WriteVar<int32_t>(client.serverData().entity_ids_map.get_id(entity.id), packet);
                     WriteValue<uint64_t>(block.raw, packet);
                     packet.push_back(stage);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response blockEntityData(Position block, int32_t type, const ENBT& data) {
+                Response blockEntityData(Position block, int32_t type, const ENBT& data) {
 
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 8 + 4);
@@ -210,11 +210,11 @@ namespace crafted_craft {
                     WriteValue<uint64_t>(block.raw, packet);
                     WriteVar<int32_t>(type, packet);
                     packet.push_back(NBT(data).get_as_normal());
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
                 //block_type is from "minecraft:block" registry, not a block state.
-                TCPclient::Response blockAction(Position block, int32_t action_id, int32_t param, int32_t block_type) {
+                Response blockAction(Position block, int32_t action_id, int32_t param, int32_t block_type) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 8 + 4 * 3);
                     packet.push_back(0x08);
@@ -222,20 +222,20 @@ namespace crafted_craft {
                     WriteVar<int32_t>(action_id, packet);
                     WriteVar<int32_t>(param, packet);
                     WriteVar<int32_t>(block_type, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
                 //block_type is from "minecraft:block" registry, not a block state.
-                TCPclient::Response blockUpdate(Position block, int32_t block_type) {
+                Response blockUpdate(Position block, int32_t block_type) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 8 + 4);
                     packet.push_back(0x09);
                     WriteValue<uint64_t>(block.raw, packet);
                     WriteVar<int32_t>(block_type, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response bossBarAdd(const ENBT::UUID& id, const Chat& title, float health, int32_t color, int32_t division, uint8_t flags) {
+                Response bossBarAdd(const ENBT::UUID& id, const Chat& title, float health, int32_t color, int32_t division, uint8_t flags) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 16 + 2 + title.ToStr().size() + 4 * 4);
                     packet.push_back(0x0A);
@@ -246,39 +246,39 @@ namespace crafted_craft {
                     WriteVar<int32_t>(color, packet);
                     WriteVar<int32_t>(division, packet);
                     WriteValue<uint8_t>(flags, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response bossBarRemove(const ENBT::UUID& id) {
+                Response bossBarRemove(const ENBT::UUID& id) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 16 + 1);
                     packet.push_back(0x0A);
                     WriteUUID(id, packet);
                     packet.push_back(0);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response bossBarUpdateHealth(const ENBT::UUID& id, float health) {
+                Response bossBarUpdateHealth(const ENBT::UUID& id, float health) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 16 + 4);
                     packet.push_back(0x0A);
                     WriteUUID(id, packet);
                     packet.push_back(2);
                     WriteValue<float>(health, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response bossBarUpdateTitle(const ENBT::UUID& id, const Chat& title) {
+                Response bossBarUpdateTitle(const ENBT::UUID& id, const Chat& title) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 16 + 2 + title.ToStr().size());
                     packet.push_back(0x0A);
                     WriteUUID(id, packet);
                     packet.push_back(3);
                     WriteString(packet, title.ToStr(), 32767);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response bossBarUpdateStyle(const ENBT::UUID& id, int32_t color, int32_t division) {
+                Response bossBarUpdateStyle(const ENBT::UUID& id, int32_t color, int32_t division) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 16 + 4 * 2);
                     packet.push_back(0x0A);
@@ -286,44 +286,44 @@ namespace crafted_craft {
                     packet.push_back(4);
                     WriteVar<int32_t>(color, packet);
                     WriteVar<int32_t>(division, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response bossBarUpdateFlags(const ENBT::UUID& id, uint8_t flags) {
+                Response bossBarUpdateFlags(const ENBT::UUID& id, uint8_t flags) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 16 + 4);
                     packet.push_back(0x0A);
                     WriteUUID(id, packet);
                     packet.push_back(5);
                     WriteValue<uint8_t>(flags, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response changeDifficulty(uint8_t difficulty, bool locked) {
+                Response changeDifficulty(uint8_t difficulty, bool locked) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + 1);
                     packet.push_back(0x0B);
                     packet.push_back(difficulty);
                     packet.push_back(locked);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response chunkBatchFinished(int32_t count) {
+                Response chunkBatchFinished(int32_t count) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x0C);
                     WriteVar<int32_t>(count, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response chunkBatchStart() {
+                Response chunkBatchStart() {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1);
                     packet.push_back(0x0D);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response chunkBiomes(list_array<base_objects::chunk::chunk_biomes>& chunk) {
+                Response chunkBiomes(list_array<base_objects::chunk::chunk_biomes>& chunk) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x0E);
                     WriteVar<int32_t>(chunk.size(), packet);
@@ -337,18 +337,18 @@ namespace crafted_craft {
 
                         packet.push_back(biomes);
                     }
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response clearTitles(bool reset) {
+                Response clearTitles(bool reset) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1);
                     packet.push_back(0x0F);
                     packet.push_back(reset);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response commandSuggestionsResponse(int32_t transaction_id, int32_t start_pos, int32_t length, const list_array<base_objects::packets::command_suggestion>& suggestions) {
+                Response commandSuggestionsResponse(int32_t transaction_id, int32_t start_pos, int32_t length, const list_array<base_objects::packets::command_suggestion>& suggestions) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 * 4);
                     packet.push_back(0x10);
@@ -362,10 +362,10 @@ namespace crafted_craft {
                         if (tooltip)
                             packet.push_back(tooltip->ToTextComponent());
                     }
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response commands(int32_t root_id, const list_array<base_objects::packets::command_node>& nodes) {
+                Response commands(int32_t root_id, const list_array<base_objects::packets::command_node>& nodes) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x11);
@@ -399,14 +399,14 @@ namespace crafted_craft {
                             WriteIdentifier(packet, node.suggestion_type.value());
                     }
                     WriteVar<int32_t>(root_id, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response closeContainer(uint8_t container_id) {
-                    return TCPclient::Response::Answer({{0x12, container_id}});
+                Response closeContainer(uint8_t container_id) {
+                    return Response::Answer({{0x12, container_id}});
                 }
 
-                TCPclient::Response setContainerContent(uint8_t windows_id, int32_t state_id, const list_array<base_objects::slot>& slots, const base_objects::slot& carried_item) {
+                Response setContainerContent(uint8_t windows_id, int32_t state_id, const list_array<base_objects::slot>& slots, const base_objects::slot& carried_item) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + 4 + 2 * slots.size());
                     packet.push_back(0x13);
@@ -417,20 +417,20 @@ namespace crafted_craft {
                         WriteSlot(packet, it);
 
                     WriteSlot(packet, carried_item);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setContainerProperty(uint8_t windows_id, uint16_t property, uint16_t value) {
+                Response setContainerProperty(uint8_t windows_id, uint16_t property, uint16_t value) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + 2 * 2);
                     packet.push_back(0x14);
                     packet.push_back(windows_id);
                     WriteValue<uint16_t>(property, packet);
                     WriteValue<uint16_t>(value, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setContainerSlot(uint8_t windows_id, int32_t state_id, int16_t slot, const base_objects::slot& item) {
+                Response setContainerSlot(uint8_t windows_id, int32_t state_id, int16_t slot, const base_objects::slot& item) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + 4 + 2 + (bool)item);
                     packet.push_back(0x15);
@@ -439,20 +439,20 @@ namespace crafted_craft {
                     WriteValue<int16_t>(slot, packet);
 
                     WriteSlot(packet, item);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setCooldown(int32_t item_id, int32_t cooldown) {
+                Response setCooldown(int32_t item_id, int32_t cooldown) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 * 2);
                     packet.push_back(0x16);
                     WriteVar<int32_t>(item_id, packet);
                     WriteVar<int32_t>(cooldown, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
                 //UNUSED by Notchian client
-                TCPclient::Response chatSuggestionsResponse(int32_t action, int32_t count, const list_array<std::string>& suggestions) {
+                Response chatSuggestionsResponse(int32_t action, int32_t count, const list_array<std::string>& suggestions) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 * 2);
                     packet.push_back(0x17);
@@ -460,19 +460,19 @@ namespace crafted_craft {
                     WriteVar<int32_t>(count, packet);
                     for (auto& it : suggestions)
                         WriteString(packet, it, 32767);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response customPayload(const std::string& channel, const list_array<uint8_t>& data) {
+                Response customPayload(const std::string& channel, const list_array<uint8_t>& data) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + channel.size() + 2);
                     packet.push_back(0x18);
                     WriteString(packet, channel, 32767);
                     packet.push_back(data);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response damageEvent(int32_t entity_id, int32_t source_type_id, int32_t source_cause_id, int32_t source_direct_id, std::optional<calc::VECTOR> xyz) {
+                Response damageEvent(int32_t entity_id, int32_t source_type_id, int32_t source_cause_id, int32_t source_direct_id, std::optional<calc::VECTOR> xyz) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 * 4 + 1 + (3 * 4) * (bool)xyz);
                     packet.push_back(0x19);
@@ -486,33 +486,33 @@ namespace crafted_craft {
                         WriteValue<float>(xyz->y, packet);
                         WriteValue<float>(xyz->z, packet);
                     }
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response deleteMessage(uint8_t signature[256]) {
+                Response deleteMessage(uint8_t signature[256]) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(12 + 256);
                     packet.push_back(0x1A);
                     packet.push_back(0);
                     packet.push_back(signature, 256);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response deleteMessage(int32_t message_id) {
+                Response deleteMessage(int32_t message_id) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(12 + 4);
                     packet.push_back(0x1A);
                     if (message_id == -1)
                         throw std::runtime_error("message id can't be -1");
                     WriteVar<int32_t>(message_id + 1, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response kick(const Chat& reason) {
-                    return TCPclient::Response::Disconnect({{0x1B, reason.ToTextComponent()}});
+                Response kick(const Chat& reason) {
+                    return Response::Disconnect({{0x1B, reason.ToTextComponent()}});
                 }
 
-                TCPclient::Response disguisedChatMessage(const Chat& message, int32_t chat_type, const Chat& sender, std::optional<Chat> target_name) {
+                Response disguisedChatMessage(const Chat& message, int32_t chat_type, const Chat& sender, std::optional<Chat> target_name) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 2 + 2 + 1 + (bool)target_name * 2 + (bool)target_name * target_name->ToStr().size());
                     packet.push_back(0x1C);
@@ -523,20 +523,20 @@ namespace crafted_craft {
                     if (target_name)
                         packet.push_back(target_name->ToTextComponent());
 
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response entityEvent(int32_t entity_id, uint8_t entity_status) {
+                Response entityEvent(int32_t entity_id, uint8_t entity_status) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 1);
                     packet.push_back(0x1D);
                     WriteValue<int32_t>(entity_id, packet);
                     packet.push_back(entity_status);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
                 //TODO: particles
-                //TCPclient::Response explosion(calc::VECTOR pos, float strength, list_array<calc::XYZ<int8_t>> affected_blocks, calc::VECTOR player_motion, int32_t block_interaction, int32_t small_explosion_particle_id, ) {
+                //Response explosion(calc::VECTOR pos, float strength, list_array<calc::XYZ<int8_t>> affected_blocks, calc::VECTOR player_motion, int32_t block_interaction, int32_t small_explosion_particle_id, ) {
                 //    list_array<uint8_t> packet;
                 //    packet.reserve_push_back(1 + 4 * 4 + 4 + 4 * 3 * affected_blocks.size() + 4 * 3);
                 //    packet.push_back(0x1E);
@@ -553,47 +553,47 @@ namespace crafted_craft {
                 //    WriteValue<float>(player_motion.x, packet);
                 //    WriteValue<float>(player_motion.y, packet);
                 //    WriteValue<float>(player_motion.z, packet);
-                //    return TCPclient::Response::Answer({packet});
+                //    return Response::Answer({packet});
                 //}
 
-                TCPclient::Response unloadChunk(int32_t x, int32_t z) {
+                Response unloadChunk(int32_t x, int32_t z) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 * 2);
                     packet.push_back(0x1F);
                     WriteValue<int32_t>(z, packet);
                     WriteValue<int32_t>(x, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response gameEvent(uint8_t event_id, float value) {
+                Response gameEvent(uint8_t event_id, float value) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + 4);
                     packet.push_back(0x20);
                     packet.push_back(event_id);
                     WriteValue<float>(value, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response openHorseWindow(uint8_t window_id, int32_t slots, int32_t entity_id) {
+                Response openHorseWindow(uint8_t window_id, int32_t slots, int32_t entity_id) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 * 2 + 16);
                     packet.push_back(0x21);
                     packet.push_back(window_id);
                     WriteVar<int32_t>(slots, packet);
                     WriteValue<int32_t>(entity_id, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response hurtAnimation(int32_t entity_id, float yaw) {
+                Response hurtAnimation(int32_t entity_id, float yaw) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 4);
                     packet.push_back(0x22);
                     WriteVar<int32_t>(entity_id, packet);
                     WriteValue<float>(yaw, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response initializeWorldBorder(double x, double z, double old_diameter, double new_diameter, int64_t speed_ms, int32_t portal_teleport_boundary, int32_t warning_blocks, int32_t warning_time) {
+                Response initializeWorldBorder(double x, double z, double old_diameter, double new_diameter, int64_t speed_ms, int32_t portal_teleport_boundary, int32_t warning_blocks, int32_t warning_time) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 8 * 2 + 8 * 2 + 8 + 8 + 8 + 4 * 3);
                     packet.push_back(0x23);
@@ -605,22 +605,22 @@ namespace crafted_craft {
                     WriteVar<int32_t>(portal_teleport_boundary, packet);
                     WriteVar<int32_t>(warning_blocks, packet);
                     WriteVar<int32_t>(warning_time, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
                 //internal use
-                TCPclient::Response keepAlive(int64_t id) {
+                Response keepAlive(int64_t id) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 8);
                     packet.push_back(0x24);
                     WriteValue<int64_t>(id, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
                 //TODO
-                //TCPclient::Response updateChunkDataWLights(...){}
+                //Response updateChunkDataWLights(...){}
 
-                TCPclient::Response worldEvent(int32_t event, Position pos, int32_t data, bool global) {
+                Response worldEvent(int32_t event, Position pos, int32_t data, bool global) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 8 + 4 + 1);
                     packet.push_back(0x26);
@@ -628,10 +628,10 @@ namespace crafted_craft {
                     WriteValue<uint64_t>(pos.raw, packet);
                     WriteVar<int32_t>(data, packet);
                     packet.push_back(global);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response particle(int32_t particle_id, bool long_distance, calc::VECTOR pos, calc::XYZ<float> offset, float max_speed, int32_t count, list_array<uint8_t> data) {
+                Response particle(int32_t particle_id, bool long_distance, calc::VECTOR pos, calc::XYZ<float> offset, float max_speed, int32_t count, list_array<uint8_t> data) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 1 + 4 * 3 + 4 * 3 + 4 + 4 + 4 * data.size());
                     packet.push_back(0x27);
@@ -646,11 +646,11 @@ namespace crafted_craft {
                     WriteValue<float>(max_speed, packet);
                     WriteVar<int32_t>(count, packet);
                     packet.push_back(data);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
                 //TODO
-                //TCPclient::Response updateLight(int32_t chunk_x, int32_t chunk_z, list_array<base_objects::chunk::chunk_light> light) {
+                //Response updateLight(int32_t chunk_x, int32_t chunk_z, list_array<base_objects::chunk::chunk_light> light) {
                 //    list_array<uint8_t> packet;
                 //    packet.reserve_push_back(1 + 4 * 2 + 4 * light.size());
                 //    packet.push_back(0x28);
@@ -662,10 +662,10 @@ namespace crafted_craft {
                 //        WriteVar<int32_t>(it.sky_light, packet);
                 //        WriteVar<int32_t>(it.block_light, packet);
                 //    }
-                //    return TCPclient::Response::Answer({packet});
+                //    return Response::Answer({packet});
                 //}
 
-                TCPclient::Response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, const std::string& current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, std::optional<base_objects::packets::death_location_data> death_location, int32_t portal_cooldown) {
+                Response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, const std::string& current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, std::optional<base_objects::packets::death_location_data> death_location, int32_t portal_cooldown) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 1 + 4 + 1 + 4 + 1 + 4);
                     packet.push_back(0x29);
@@ -694,10 +694,10 @@ namespace crafted_craft {
                         WriteIdentifier(packet, death_location->dimension);
                     }
                     WriteVar<int32_t>(portal_cooldown, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response mapData(int32_t map_id, uint8_t scale, bool locked, const list_array<base_objects::packets::map_icon>& icons, uint8_t columns, uint8_t rows, uint8_t x, uint8_t z, const list_array<uint8_t>& data) {
+                Response mapData(int32_t map_id, uint8_t scale, bool locked, const list_array<base_objects::packets::map_icon>& icons, uint8_t columns, uint8_t rows, uint8_t x, uint8_t z, const list_array<uint8_t>& data) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 1 + 1 + 4 * 2 + 1 + 1 + 1 + 1 + 2 * icons.size() + 4 * 4 + data.size());
                     packet.push_back(0x2A);
@@ -725,10 +725,10 @@ namespace crafted_craft {
                         WriteVar<int32_t>(data.size(), packet);
                         packet.push_back(data);
                     }
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response merchantOffers(int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade> trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock) {
+                Response merchantOffers(int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade> trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 4 + 4 * 2 + 1 + 1 + 1 + 1 + 1 + 2 * trades.size());
                     packet.push_back(0x2B);
@@ -750,10 +750,10 @@ namespace crafted_craft {
                     WriteVar<int32_t>(experience, packet);
                     packet.push_back(regular_villager);
                     packet.push_back(can_restock);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateEntityPosition(int32_t entity_id, calc::XYZ<float> pos, bool on_ground) {
+                Response updateEntityPosition(int32_t entity_id, calc::XYZ<float> pos, bool on_ground) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 4 * 3 + 1);
                     packet.push_back(0x2C);
@@ -763,10 +763,10 @@ namespace crafted_craft {
                     WriteValue<int16_t>(res.y, packet);
                     WriteValue<int16_t>(res.z, packet);
                     packet.push_back(on_ground);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateEntityPositionAndRotation(int32_t entity_id, calc::XYZ<float> pos, calc::VECTOR rot, bool on_ground) {
+                Response updateEntityPositionAndRotation(int32_t entity_id, calc::XYZ<float> pos, calc::VECTOR rot, bool on_ground) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 4 * 3 + 4 * 3 + 1);
                     packet.push_back(0x2D);
@@ -779,10 +779,10 @@ namespace crafted_craft {
                     WriteValue<uint8_t>(res2.x, packet);
                     WriteValue<uint8_t>(res2.y, packet);
                     packet.push_back(on_ground);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateEntityRotation(int32_t entity_id, calc::VECTOR rot, bool on_ground) {
+                Response updateEntityRotation(int32_t entity_id, calc::VECTOR rot, bool on_ground) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 4 * 2 + 1);
                     packet.push_back(0x2E);
@@ -791,10 +791,10 @@ namespace crafted_craft {
                     WriteValue<uint8_t>(res.x, packet);
                     WriteValue<uint8_t>(res.y, packet);
                     packet.push_back(on_ground);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response moveVehicle(calc::VECTOR pos, calc::VECTOR rot) {
+                Response moveVehicle(calc::VECTOR pos, calc::VECTOR rot) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 * 3 + 4 * 3);
                     packet.push_back(0x2F);
@@ -804,72 +804,72 @@ namespace crafted_craft {
                     auto res = calc::to_yaw_pitch(rot);
                     WriteValue<float>(res.x, packet);
                     WriteValue<float>(res.y, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response openBook(int32_t hand) {
+                Response openBook(int32_t hand) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x30);
                     WriteVar<int32_t>(hand, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response openScreen(int32_t window_id, int32_t type, const Chat& title) {
+                Response openScreen(int32_t window_id, int32_t type, const Chat& title) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 * 2 + title.ToStr().size());
                     packet.push_back(0x31);
                     packet.push_back(window_id);
                     WriteVar<int32_t>(type, packet);
                     packet.push_back(title.ToTextComponent());
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response openSignEditor(Position pos, bool is_front_text) {
+                Response openSignEditor(Position pos, bool is_front_text) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 8 + 1);
                     packet.push_back(0x32);
                     WriteValue<uint64_t>(pos.raw, packet);
                     packet.push_back(is_front_text);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response ping(int32_t id) {
+                Response ping(int32_t id) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x33);
                     WriteVar<int32_t>(id, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response pingResponse(int32_t id) {
+                Response pingResponse(int32_t id) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x34);
                     WriteVar<int32_t>(id, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response placeGhostRecipe(int32_t windows_id, const std::string& recipe_id) {
+                Response placeGhostRecipe(int32_t windows_id, const std::string& recipe_id) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + recipe_id.size());
                     packet.push_back(0x35);
                     packet.push_back(windows_id);
                     WriteIdentifier(packet, recipe_id);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response playerAbilities(uint8_t flags, float flying_speed, float field_of_view) {
+                Response playerAbilities(uint8_t flags, float flying_speed, float field_of_view) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + 4 * 2);
                     packet.push_back(0x36);
                     packet.push_back(flags);
                     WriteValue<float>(flying_speed, packet);
                     WriteValue<float>(field_of_view, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response playerChatMessage(ENBT::UUID sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<ENBT> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
+                Response playerChatMessage(ENBT::UUID sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<ENBT> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
                     if (prev_messages.size() > 20)
                         throw std::runtime_error("too many prev messages");
                     list_array<uint8_t> packet;
@@ -907,43 +907,43 @@ namespace crafted_craft {
                     if (target_name)
                         packet.push_back(target_name->ToTextComponent());
 
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
                 //UNUSED by Notchian client
-                TCPclient::Response endCombat(int32_t duration) {
+                Response endCombat(int32_t duration) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x38);
                     WriteVar<int32_t>(duration, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
                 //UNUSED by Notchian client
-                TCPclient::Response enterCombat() {
-                    return TCPclient::Response::Answer({{0x39}});
+                Response enterCombat() {
+                    return Response::Answer({{0x39}});
                 }
 
-                TCPclient::Response combatDeath(int32_t player_id, const Chat& message) {
+                Response combatDeath(int32_t player_id, const Chat& message) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x3A);
                     WriteVar<int32_t>(player_id, packet);
                     packet.push_back(message.ToTextComponent());
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response playerInfoRemove(const list_array<ENBT::UUID>& players) {
+                Response playerInfoRemove(const list_array<ENBT::UUID>& players) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + players.size() * sizeof(ENBT::UUID));
                     packet.push_back(0x3B);
                     WriteVar<int32_t>(players.size(), packet);
                     for (auto& it : players)
                         WriteUUID(it, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_add>& add_players) {
+                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_add>& add_players) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x3C);
                     packet.push_back(0x01);
@@ -960,10 +960,10 @@ namespace crafted_craft {
                                 packet.push_back((uint8_t*)signature->data(), signature->size());
                         }
                     }
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_initialize_chat>& initialize_chat) {
+                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_initialize_chat>& initialize_chat) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x3C);
                     packet.push_back(0x02);
@@ -983,10 +983,10 @@ namespace crafted_craft {
                         WriteVar<int32_t>(public_key_signature.size(), packet);
                         packet.push_back(public_key_signature);
                     }
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_gamemode>& update_game_mode) {
+                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_gamemode>& update_game_mode) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x3C);
                     packet.push_back(0x04);
@@ -995,10 +995,10 @@ namespace crafted_craft {
                         WriteUUID(uuid, packet);
                         packet.push_back(game_mode);
                     }
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_listed>& update_listed) {
+                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_listed>& update_listed) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x3C);
                     packet.push_back(0x08);
@@ -1007,10 +1007,10 @@ namespace crafted_craft {
                         WriteUUID(uuid, packet);
                         packet.push_back(listed);
                     }
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_latency>& update_latency) {
+                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_latency>& update_latency) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x3C);
                     packet.push_back(0x10);
@@ -1019,10 +1019,10 @@ namespace crafted_craft {
                         WriteUUID(uuid, packet);
                         WriteVar<int32_t>(latency, packet);
                     }
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_display_name>& update_display_name) {
+                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_display_name>& update_display_name) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x3C);
@@ -1034,10 +1034,10 @@ namespace crafted_craft {
                         if (display_name)
                             packet.push_back(display_name->ToTextComponent());
                     }
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response lookAt(bool from_feet_or_eyes, calc::VECTOR target, std::optional<std::pair<int32_t, bool>> entity_id) {
+                Response lookAt(bool from_feet_or_eyes, calc::VECTOR target, std::optional<std::pair<int32_t, bool>> entity_id) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + 4 * 3 + (bool)entity_id * 4 * 2);
                     packet.push_back(0x3D);
@@ -1050,10 +1050,10 @@ namespace crafted_craft {
                         WriteVar<int32_t>(entity_id->first, packet); //entity id
                         packet.push_back(entity_id->second);         // to entity foot or eyes
                     }
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response synchronizePlayerPosition(calc::VECTOR pos, float yaw, float pitch, uint8_t flags, int32_t teleport_id) {
+                Response synchronizePlayerPosition(calc::VECTOR pos, float yaw, float pitch, uint8_t flags, int32_t teleport_id) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 * 3 + 4 * 2 + 1);
                     packet.push_back(0x3E);
@@ -1064,10 +1064,10 @@ namespace crafted_craft {
                     WriteValue<float>(pitch, packet);
                     packet.push_back(flags);
                     WriteVar<int32_t>(teleport_id, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response initRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> displayed_recipe_ids, list_array<std::string> had_access_to_recipe_ids) {
+                Response initRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> displayed_recipe_ids, list_array<std::string> had_access_to_recipe_ids) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 2 * displayed_recipe_ids.size() + 2 * had_access_to_recipe_ids.size());
                     packet.push_back(0x3F);
@@ -1086,10 +1086,10 @@ namespace crafted_craft {
                     WriteVar<int32_t>(had_access_to_recipe_ids.size(), packet);
                     for (auto& it : had_access_to_recipe_ids)
                         WriteIdentifier(packet, it);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateRecipeBook(bool add_remove, bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> recipe_ids) {
+                Response updateRecipeBook(bool add_remove, bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> recipe_ids) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 2 * recipe_ids.size());
                     packet.push_back(0x3F);
@@ -1105,29 +1105,29 @@ namespace crafted_craft {
                     WriteVar<int32_t>(recipe_ids.size(), packet);
                     for (auto& it : recipe_ids)
                         WriteIdentifier(packet, it);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response removeEntities(const list_array<int32_t>& entity_ids) {
+                Response removeEntities(const list_array<int32_t>& entity_ids) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 4 * entity_ids.size());
                     packet.push_back(0x40);
                     WriteVar<int32_t>(entity_ids.size(), packet);
                     for (auto& it : entity_ids)
                         WriteVar<int32_t>(it, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response removeEntityEffect(int32_t entity_id, int32_t effect_id) {
+                Response removeEntityEffect(int32_t entity_id, int32_t effect_id) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 * 2);
                     packet.push_back(0x41);
                     WriteVar<int32_t>(entity_id, packet);
                     WriteVar<int32_t>(effect_id, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response resetScore(const std::string& entity_name, const std::optional<std::string>& objective_name) {
+                Response resetScore(const std::string& entity_name, const std::optional<std::string>& objective_name) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + entity_name.size() + (bool)objective_name * objective_name->size());
                     packet.push_back(0x42);
@@ -1135,23 +1135,23 @@ namespace crafted_craft {
                     packet.push_back((bool)objective_name);
                     if (objective_name)
                         WriteString(packet, *objective_name, 32767);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response removeResourcePacks() {
-                    return TCPclient::Response::Answer({{0x43, false}});
+                Response removeResourcePacks() {
+                    return Response::Answer({{0x43, false}});
                 }
 
-                TCPclient::Response removeResourcePack(ENBT::UUID id) {
+                Response removeResourcePack(ENBT::UUID id) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + 16);
                     packet.push_back(0x43);
                     packet.push_back(true);
                     WriteUUID(id, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response addResourcePack(ENBT::UUID id, const std::string& url, const std::string& hash, bool forced, const std::optional<Chat>& prompt) {
+                Response addResourcePack(ENBT::UUID id, const std::string& url, const std::string& hash, bool forced, const std::optional<Chat>& prompt) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + 16 + url.size() + hash.size() + 1);
                     packet.push_back(0x44);
@@ -1162,10 +1162,10 @@ namespace crafted_craft {
                     packet.push_back((bool)prompt);
                     if (prompt)
                         packet.push_back(prompt->ToTextComponent());
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response respawn(const std::string& dimension_type, const std::string& dimension_name, long hashed_seed, uint8_t gamemode, uint8_t previous_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, bool keep_attributes, bool keep_metadata) {
+                Response respawn(const std::string& dimension_type, const std::string& dimension_name, long hashed_seed, uint8_t gamemode, uint8_t previous_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, bool keep_attributes, bool keep_metadata) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + dimension_type.size() + dimension_name.size() + 8 + 1 + 1 + 1 + 1 + 4 + 1 + 1);
                     packet.push_back(0x45);
@@ -1185,10 +1185,10 @@ namespace crafted_craft {
                     uint8_t data_kept = keep_attributes;
                     data_kept |= keep_metadata << 1;
                     packet.push_back(data_kept);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setHeadRotation(int32_t entity_id, calc::VECTOR head_rotation) {
+                Response setHeadRotation(int32_t entity_id, calc::VECTOR head_rotation) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 4 * 2);
                     packet.push_back(0x46);
@@ -1196,10 +1196,10 @@ namespace crafted_craft {
                     auto res = calc::to_yaw_pitch_256(head_rotation);
                     packet.push_back(res.x);
                     packet.push_back(res.y);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateSectionBlocks(int32_t section_x, int32_t section_z, int32_t section_y, const list_array<CompressedBlockState>& blocks) {
+                Response updateSectionBlocks(int32_t section_x, int32_t section_z, int32_t section_y, const list_array<CompressedBlockState>& blocks) {
                     list_array<uint8_t> packet;
                     int64_t section_pos = ((section_x & 0x3FFFFF) << 42) | ((section_z & 0x3FFFFF) << 20) | (section_y & 0xFFFFF);
                     packet.reserve_push_back(1 + 8 + 5 * blocks.size() * 6);
@@ -1208,19 +1208,19 @@ namespace crafted_craft {
                     WriteVar<int32_t>(blocks.size(), packet);
                     for (auto& it : blocks)
                         WriteVar<int64_t>(it.value, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setAdvancementsTab(const std::optional<std::string>& tab_id) {
+                Response setAdvancementsTab(const std::optional<std::string>& tab_id) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x48);
                     packet.push_back((bool)tab_id);
                     if (tab_id)
                         WriteIdentifier(packet, *tab_id);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response serverData(const Chat& motd, const std::optional<list_array<uint8_t>>& icon_png, bool secure_chat) {
+                Response serverData(const Chat& motd, const std::optional<list_array<uint8_t>>& icon_png, bool secure_chat) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x49);
                     packet.push_back(motd.ToTextComponent());
@@ -1230,128 +1230,128 @@ namespace crafted_craft {
                         packet.push_back(*icon_png);
                     }
                     packet.push_back(secure_chat);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setActionBarText(const Chat& text) {
-                    return TCPclient::Response::Answer({{0x4A, text.ToTextComponent()}});
+                Response setActionBarText(const Chat& text) {
+                    return Response::Answer({{0x4A, text.ToTextComponent()}});
                 }
 
-                TCPclient::Response setBorderCenter(double x, double z) {
+                Response setBorderCenter(double x, double z) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 8 * 2);
                     packet.push_back(0x4B);
                     WriteValue<double>(x, packet);
                     WriteValue<double>(z, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setBorderLerp(double old_diameter, double new_diameter, int64_t speed_ms) {
+                Response setBorderLerp(double old_diameter, double new_diameter, int64_t speed_ms) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 8 * 2 + 8);
                     packet.push_back(0x4C);
                     WriteValue<double>(old_diameter, packet);
                     WriteValue<double>(new_diameter, packet);
                     WriteVar<int64_t>(speed_ms, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setBorderSize(double diameter) {
+                Response setBorderSize(double diameter) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 8);
                     packet.push_back(0x4D);
                     WriteValue<double>(diameter, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setBorderWarningDelay(int32_t warning_delay) {
+                Response setBorderWarningDelay(int32_t warning_delay) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x4E);
                     WriteVar<int32_t>(warning_delay, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setBorderWarningDistance(int32_t warning_distance) {
+                Response setBorderWarningDistance(int32_t warning_distance) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x4F);
                     WriteVar<int32_t>(warning_distance, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setCamera(int32_t entity_id) {
+                Response setCamera(int32_t entity_id) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x50);
                     WriteVar<int32_t>(entity_id, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setHeldItem(uint8_t slot) {
+                Response setHeldItem(uint8_t slot) {
                     if (slot > 8)
                         throw std::runtime_error("invalid slot");
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x51);
                     packet.push_back(slot);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setCenterChunk(int32_t x, int32_t z) {
+                Response setCenterChunk(int32_t x, int32_t z) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 * 2);
                     packet.push_back(0x52);
                     WriteVar<int32_t>(x, packet);
                     WriteVar<int32_t>(z, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setRenderDistance(int32_t render_distance) {
+                Response setRenderDistance(int32_t render_distance) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x53);
                     WriteVar<int32_t>(render_distance, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setDefaultSpawnPosition(Position pos, float angle) {
+                Response setDefaultSpawnPosition(Position pos, float angle) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 8 + 1 + 8);
                     packet.push_back(0x54);
                     WriteValue(pos.raw, packet);
                     WriteValue<float>(angle, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response displayObjective(int32_t position, const std::string& objective_name) {
+                Response displayObjective(int32_t position, const std::string& objective_name) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + objective_name.size());
                     packet.push_back(0x55);
                     packet.push_back(position);
                     WriteString(packet, objective_name, 32767);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setEntityMetadata(int32_t entity_id, const list_array<uint8_t>& metadata) {
+                Response setEntityMetadata(int32_t entity_id, const list_array<uint8_t>& metadata) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + metadata.size());
                     packet.push_back(0x56);
                     WriteVar<int32_t>(entity_id, packet);
                     packet.push_back(metadata);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response linkEntities(int32_t attached_entity_id, int32_t holder_entity_id) {
+                Response linkEntities(int32_t attached_entity_id, int32_t holder_entity_id) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 * 2);
                     packet.push_back(0x57);
                     WriteValue<int32_t>(attached_entity_id, packet);
                     WriteValue<int32_t>(holder_entity_id, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setEntityVelocity(int32_t entity_id, calc::VECTOR velocity) {
+                Response setEntityVelocity(int32_t entity_id, calc::VECTOR velocity) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 4 * 3);
                     packet.push_back(0x58);
@@ -1360,40 +1360,40 @@ namespace crafted_craft {
                     WriteValue<int16_t>(res.x, packet);
                     WriteValue<int16_t>(res.y, packet);
                     WriteValue<int16_t>(res.z, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setEquipment(int32_t entity_id, uint8_t slot, const base_objects::slot& item) {
+                Response setEquipment(int32_t entity_id, uint8_t slot, const base_objects::slot& item) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 1);
                     packet.push_back(0x59);
                     WriteVar<int32_t>(entity_id, packet);
                     packet.push_back(slot);
                     WriteSlot(packet, item);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setExperience(float experience_bar, int32_t level, int32_t total_experience) {
+                Response setExperience(float experience_bar, int32_t level, int32_t total_experience) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 4 * 2);
                     packet.push_back(0x5A);
                     WriteValue<float>(experience_bar, packet);
                     WriteVar<int32_t>(level, packet);
                     WriteVar<int32_t>(total_experience, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setHealth(float health, int32_t food, float saturation) {
+                Response setHealth(float health, int32_t food, float saturation) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 4 + 4);
                     packet.push_back(0x5B);
                     WriteValue<float>(health, packet);
                     WriteVar<int32_t>(food, packet);
                     WriteValue<float>(saturation, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateObjectivesCreate(const std::string& objective_name, const Chat& display_name, int32_t render_type) {
+                Response updateObjectivesCreate(const std::string& objective_name, const Chat& display_name, int32_t render_type) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + objective_name.size() + 1 + 1 + 1);
                     packet.push_back(0x5C);
@@ -1402,10 +1402,10 @@ namespace crafted_craft {
                     packet.push_back(display_name.ToTextComponent());
                     packet.push_back(render_type);
                     packet.push_back(0);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateObjectivesCreateStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const ENBT& style) {
+                Response updateObjectivesCreateStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const ENBT& style) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + objective_name.size() + 1 + 1 + 1);
                     packet.push_back(0x5C);
@@ -1416,10 +1416,10 @@ namespace crafted_craft {
                     packet.push_back(true);
                     packet.push_back(1);
                     packet.push_back(NBT(style).get_as_network());
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateObjectivesCreateFixed(const std::string& objective_name, const Chat& display_name, int32_t render_type, const Chat& content) {
+                Response updateObjectivesCreateFixed(const std::string& objective_name, const Chat& display_name, int32_t render_type, const Chat& content) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + objective_name.size() + 1 + 1 + 1);
                     packet.push_back(0x5C);
@@ -1430,19 +1430,19 @@ namespace crafted_craft {
                     packet.push_back(true);
                     packet.push_back(2);
                     packet.push_back(content.ToTextComponent());
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateObjectivesRemove(const std::string& objective_name) {
+                Response updateObjectivesRemove(const std::string& objective_name) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + objective_name.size());
                     packet.push_back(0x5C);
                     WriteString(packet, objective_name, 32767);
                     packet.push_back(1);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateObjectivesInfo(const std::string& objective_name, const Chat& display_name, int32_t render_type) {
+                Response updateObjectivesInfo(const std::string& objective_name, const Chat& display_name, int32_t render_type) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + objective_name.size() + 1 + 1 + 1);
                     packet.push_back(0x5C);
@@ -1451,10 +1451,10 @@ namespace crafted_craft {
                     packet.push_back(display_name.ToTextComponent());
                     packet.push_back(render_type);
                     packet.push_back(false);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateObjectivesInfoStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const ENBT& style) {
+                Response updateObjectivesInfoStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const ENBT& style) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + objective_name.size() + 1 + 1 + 1);
                     packet.push_back(0x5C);
@@ -1465,10 +1465,10 @@ namespace crafted_craft {
                     packet.push_back(true);
                     packet.push_back(1);
                     packet.push_back(NBT(style).get_as_network());
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateObjectivesInfoFixed(const std::string& objective_name, const Chat& display_name, int32_t render_type, const Chat& content) {
+                Response updateObjectivesInfoFixed(const std::string& objective_name, const Chat& display_name, int32_t render_type, const Chat& content) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + objective_name.size() + 1 + 1 + 1);
                     packet.push_back(0x5C);
@@ -1479,10 +1479,10 @@ namespace crafted_craft {
                     packet.push_back(true);
                     packet.push_back(2);
                     packet.push_back(content.ToTextComponent());
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setPassengers(int32_t vehicle_entity_id, const list_array<int32_t>& passengers) {
+                Response setPassengers(int32_t vehicle_entity_id, const list_array<int32_t>& passengers) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 4 * passengers.size());
                     packet.push_back(0x5D);
@@ -1490,10 +1490,10 @@ namespace crafted_craft {
                     WriteVar<int32_t>(passengers.size(), packet);
                     for (auto& it : passengers)
                         WriteVar<int32_t>(it, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateTeamCreate(const std::string& team_name, const Chat& display_name, bool allow_fire_co_teamer, bool see_invisible_co_teamer, const std::string& name_tag_visibility, const std::string& collision_rule, int32_t team_color, const Chat& prefix, const Chat& suffix, const list_array<std::string>& entities) {
+                Response updateTeamCreate(const std::string& team_name, const Chat& display_name, bool allow_fire_co_teamer, bool see_invisible_co_teamer, const std::string& name_tag_visibility, const std::string& collision_rule, int32_t team_color, const Chat& prefix, const Chat& suffix, const list_array<std::string>& entities) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + team_name.size() + name_tag_visibility.size() + collision_rule.size() + 4 * 3 + 1 + 4);
                     packet.push_back(0x5E);
@@ -1509,19 +1509,19 @@ namespace crafted_craft {
                     WriteVar<int32_t>(entities.size(), packet);
                     for (auto& it : entities)
                         WriteString(packet, it, 32767);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateTeamRemove(const std::string& team_name) {
+                Response updateTeamRemove(const std::string& team_name) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + team_name.size());
                     packet.push_back(0x5E);
                     WriteString(packet, team_name, 32767);
                     packet.push_back(1);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateTeamInfo(const std::string& team_name, const Chat& display_name, bool allow_fire_co_teamer, bool see_invisible_co_teamer, const std::string& name_tag_visibility, const std::string& collision_rule, int32_t team_color, const Chat& prefix, const Chat& suffix) {
+                Response updateTeamInfo(const std::string& team_name, const Chat& display_name, bool allow_fire_co_teamer, bool see_invisible_co_teamer, const std::string& name_tag_visibility, const std::string& collision_rule, int32_t team_color, const Chat& prefix, const Chat& suffix) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + team_name.size() + name_tag_visibility.size() + collision_rule.size() + 4 * 3);
                     packet.push_back(0x5E);
@@ -1534,10 +1534,10 @@ namespace crafted_craft {
                     WriteVar<int32_t>(team_color, packet);
                     packet.push_back(prefix.ToTextComponent());
                     packet.push_back(suffix.ToTextComponent());
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateTeamAddEntities(const std::string& team_name, const list_array<std::string>& entities) {
+                Response updateTeamAddEntities(const std::string& team_name, const list_array<std::string>& entities) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + team_name.size() + 4);
                     packet.push_back(0x5E);
@@ -1546,10 +1546,10 @@ namespace crafted_craft {
                     WriteVar<int32_t>(entities.size(), packet);
                     for (auto& it : entities)
                         WriteString(packet, it, 32767);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateTeamRemoveEntities(const std::string& team_name, const list_array<std::string>& entities) {
+                Response updateTeamRemoveEntities(const std::string& team_name, const list_array<std::string>& entities) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + team_name.size() + 4);
                     packet.push_back(0x5E);
@@ -1558,10 +1558,10 @@ namespace crafted_craft {
                     WriteVar<int32_t>(entities.size(), packet);
                     for (auto& it : entities)
                         WriteString(packet, it, 32767);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setScore(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name) {
+                Response setScore(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + entity_name.size() + objective_name.size() + 4 + 1 + 1);
                     packet.push_back(0x5F);
@@ -1572,10 +1572,10 @@ namespace crafted_craft {
                     if (display_name)
                         packet.push_back(display_name->ToTextComponent());
                     packet.push_back(0);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setScoreStyled(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, const ENBT& styled) {
+                Response setScoreStyled(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, const ENBT& styled) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + entity_name.size() + objective_name.size() + 4 + 1 + 1);
                     packet.push_back(0x5F);
@@ -1587,10 +1587,10 @@ namespace crafted_craft {
                         packet.push_back(display_name->ToTextComponent());
                     packet.push_back(1);
                     packet.push_back(NBT(styled).get_as_network());
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setScoreFixed(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, Chat content) {
+                Response setScoreFixed(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, Chat content) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + entity_name.size() + objective_name.size() + 4 + 1 + 1);
                     packet.push_back(0x5F);
@@ -1602,45 +1602,45 @@ namespace crafted_craft {
                         packet.push_back(display_name->ToTextComponent());
                     packet.push_back(2);
                     packet.push_back(content.ToTextComponent());
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setSimulationDistance(float distance) {
+                Response setSimulationDistance(float distance) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x60);
                     WriteValue<float>(distance, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setSubtitleText(const Chat& text) {
-                    return TCPclient::Response::Answer({{0x61, text.ToTextComponent()}});
+                Response setSubtitleText(const Chat& text) {
+                    return Response::Answer({{0x61, text.ToTextComponent()}});
                 }
 
-                TCPclient::Response updateTime(int64_t world_age, int64_t time_of_day) {
+                Response updateTime(int64_t world_age, int64_t time_of_day) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 8 * 2);
                     packet.push_back(0x62);
                     WriteVar<int64_t>(world_age, packet);
                     WriteVar<int64_t>(time_of_day, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setTitleText(const Chat& text) {
-                    return TCPclient::Response::Answer({{0x63, text.ToTextComponent()}});
+                Response setTitleText(const Chat& text) {
+                    return Response::Answer({{0x63, text.ToTextComponent()}});
                 }
 
-                TCPclient::Response setTitleAnimationTimes(int32_t fade_in, int32_t stay, int32_t fade_out) {
+                Response setTitleAnimationTimes(int32_t fade_in, int32_t stay, int32_t fade_out) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 * 3);
                     packet.push_back(0x64);
                     WriteValue<int32_t>(fade_in, packet);
                     WriteValue<int32_t>(stay, packet);
                     WriteValue<int32_t>(fade_out, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response entitySoundEffect(uint32_t sound_id, int32_t category, int32_t entity_id, float volume, float pitch, int64_t seed) {
+                Response entitySoundEffect(uint32_t sound_id, int32_t category, int32_t entity_id, float volume, float pitch, int64_t seed) {
                     if (volume < 0 || volume > 1)
                         throw std::runtime_error("invalid volume value");
                     if (pitch < 0.5 || pitch > 2.0)
@@ -1655,10 +1655,10 @@ namespace crafted_craft {
                     WriteValue<float>(volume, packet);
                     WriteValue<float>(pitch, packet);
                     WriteValue<int64_t>(seed, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response entitySoundEffect(const std::string& sound_id, std::optional<float> range, int32_t category, int32_t entity_id, float volume, float pitch, int64_t seed) {
+                Response entitySoundEffect(const std::string& sound_id, std::optional<float> range, int32_t category, int32_t entity_id, float volume, float pitch, int64_t seed) {
                     if (volume < 0 || volume > 1)
                         throw std::runtime_error("invalid volume value");
                     if (pitch < 0.5 || pitch > 2.0)
@@ -1677,10 +1677,10 @@ namespace crafted_craft {
                     WriteValue<float>(volume, packet);
                     WriteValue<float>(pitch, packet);
                     WriteValue<int64_t>(seed, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response soundEffect(uint32_t sound_id, int32_t category, int32_t x, int32_t y, int32_t z, float volume, float pitch, int64_t seed) {
+                Response soundEffect(uint32_t sound_id, int32_t category, int32_t x, int32_t y, int32_t z, float volume, float pitch, int64_t seed) {
                     if (volume < 0 || volume > 1)
                         throw std::runtime_error("invalid volume value");
                     if (pitch < 0.5 || pitch > 2.0)
@@ -1697,10 +1697,10 @@ namespace crafted_craft {
                     WriteValue<float>(volume, packet);
                     WriteValue<float>(pitch, packet);
                     WriteValue<int64_t>(seed, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response soundEffect(const std::string& sound_id, std::optional<float> range, int32_t category, int32_t x, int32_t y, int32_t z, float volume, float pitch, int64_t seed) {
+                Response soundEffect(const std::string& sound_id, std::optional<float> range, int32_t category, int32_t x, int32_t y, int32_t z, float volume, float pitch, int64_t seed) {
                     if (volume < 0 || volume > 1)
                         throw std::runtime_error("invalid volume value");
                     if (pitch < 0.5 || pitch > 2.0)
@@ -1721,24 +1721,24 @@ namespace crafted_craft {
                     WriteValue<float>(volume, packet);
                     WriteValue<float>(pitch, packet);
                     WriteValue<int64_t>(seed, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
                 //internal
-                TCPclient::Response startConfiguration() {
+                Response startConfiguration() {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1);
                     packet.push_back(0x67);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response stopSound(uint8_t flags) {
+                Response stopSound(uint8_t flags) {
                     if (flags & 0x01 || flags & 0x02)
                         throw std::runtime_error("invalid params for this flag");
-                    return TCPclient::Response::Answer({{0x68, flags}});
+                    return Response::Answer({{0x68, flags}});
                 }
 
-                TCPclient::Response stopSound(uint8_t flags, int32_t source) {
+                Response stopSound(uint8_t flags, int32_t source) {
                     if (flags & 0x02)
                         throw std::runtime_error("invalid params for this flag");
                     list_array<uint8_t> packet;
@@ -1746,10 +1746,10 @@ namespace crafted_craft {
                     packet.push_back(0x68);
                     packet.push_back(flags);
                     WriteVar<int32_t>(source, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response stopSound(uint8_t flags, const std::string& sound) {
+                Response stopSound(uint8_t flags, const std::string& sound) {
                     if (flags & 0x01)
                         throw std::runtime_error("invalid params for this flag");
                     list_array<uint8_t> packet;
@@ -1757,51 +1757,51 @@ namespace crafted_craft {
                     packet.push_back(0x68);
                     packet.push_back(flags);
                     WriteIdentifier(packet, sound);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response stopSound(uint8_t flags, int32_t source, const std::string& sound) {
+                Response stopSound(uint8_t flags, int32_t source, const std::string& sound) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 1 + 4 + sound.size());
                     packet.push_back(0x68);
                     packet.push_back(flags);
                     WriteVar<int32_t>(source, packet);
                     WriteIdentifier(packet, sound);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response systemChatMessage(const Chat& message) {
-                    return TCPclient::Response::Answer({{0x69, message.ToTextComponent(), false}});
+                Response systemChatMessage(const Chat& message) {
+                    return Response::Answer({{0x69, message.ToTextComponent(), false}});
                 }
 
-                TCPclient::Response systemChatMessageOverlay(const Chat& message) {
-                    return TCPclient::Response::Answer({{0x69, message.ToTextComponent(), true}});
+                Response systemChatMessageOverlay(const Chat& message) {
+                    return Response::Answer({{0x69, message.ToTextComponent(), true}});
                 }
 
-                TCPclient::Response setTabListHeaderAndFooter(const Chat& header, const Chat& footer) {
-                    return TCPclient::Response::Answer({{0x6A, header.ToTextComponent(), footer.ToTextComponent()}});
+                Response setTabListHeaderAndFooter(const Chat& header, const Chat& footer) {
+                    return Response::Answer({{0x6A, header.ToTextComponent(), footer.ToTextComponent()}});
                 }
 
-                TCPclient::Response tagQueryResponse(int32_t transaction_id, const ENBT& nbt) {
+                Response tagQueryResponse(int32_t transaction_id, const ENBT& nbt) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x6B);
                     WriteVar<int32_t>(transaction_id, packet);
                     packet.push_back(NBT(nbt).get_as_network());
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response pickupItem(int32_t collected_entity_id, int32_t collector_entity_id, int32_t pickup_item_count) {
+                Response pickupItem(int32_t collected_entity_id, int32_t collector_entity_id, int32_t pickup_item_count) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 * 3);
                     packet.push_back(0x6C);
                     WriteVar<int32_t>(collected_entity_id, packet);
                     WriteVar<int32_t>(collector_entity_id, packet);
                     WriteVar<int32_t>(pickup_item_count, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response teleportEntity(int32_t entity_id, calc::VECTOR pos, float yaw, float pitch, bool on_ground) {
+                Response teleportEntity(int32_t entity_id, calc::VECTOR pos, float yaw, float pitch, bool on_ground) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 4 * 3 + 4 * 2 + 1);
                     packet.push_back(0x6D);
@@ -1812,27 +1812,27 @@ namespace crafted_craft {
                     WriteValue<float>(yaw, packet);
                     WriteValue<float>(pitch, packet);
                     packet.push_back(on_ground);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response setTickingState(float tick_rate, bool is_frozen) {
+                Response setTickingState(float tick_rate, bool is_frozen) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4 + 1);
                     packet.push_back(0x6E);
                     WriteValue<float>(tick_rate, packet);
                     packet.push_back(is_frozen);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response stepTick(int32_t step_count) {
+                Response stepTick(int32_t step_count) {
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x6F);
                     WriteVar<int32_t>(step_count, packet);
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateAdvancements(bool reset, const list_array<base_objects::packets::advancements_maping> advancement_mapping, const list_array<std::string>& remove_advancements, const list_array<base_objects::packets::advancement_progress> progress_advancements) {
+                Response updateAdvancements(bool reset, const list_array<base_objects::packets::advancements_maping> advancement_mapping, const list_array<std::string>& remove_advancements, const list_array<base_objects::packets::advancement_progress> progress_advancements) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x70);
                     packet.push_back(reset);
@@ -1871,10 +1871,10 @@ namespace crafted_craft {
                                 WriteValue<int64_t>(criterion_progress.date, packet);
                         }
                     }
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response updateAttributes(int32_t entity_id, const list_array<base_objects::packets::attributes>& properties) {
+                Response updateAttributes(int32_t entity_id, const list_array<base_objects::packets::attributes>& properties) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x71);
                     WriteVar<int32_t>(entity_id, packet);
@@ -1889,10 +1889,10 @@ namespace crafted_craft {
                             packet.push_back(operation);
                         }
                     }
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
-                TCPclient::Response entityEffect(int32_t entity_id, int32_t effect_id, int8_t amplifier, int32_t duration, int8_t flags, std::optional<ENBT> factor_codec) {
+                Response entityEffect(int32_t entity_id, int32_t effect_id, int8_t amplifier, int32_t duration, int8_t flags, std::optional<ENBT> factor_codec) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x72);
                     WriteVar<int32_t>(entity_id, packet);
@@ -1903,13 +1903,13 @@ namespace crafted_craft {
                     packet.push_back((bool)factor_codec);
                     if (factor_codec)
                         packet.push_back(NBT(*factor_codec).get_as_network());
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
 
                 //TODO:
-                //TCPclient::Response updateRecipes()
+                //Response updateRecipes()
 
-                TCPclient::Response updateTags(const list_array<base_objects::packets::tag_mapping>& tag_mappings) {
+                Response updateTags(const list_array<base_objects::packets::tag_mapping>& tag_mappings) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x74);
                     WriteVar<int32_t>(tag_mappings.size(), packet);
@@ -1923,7 +1923,7 @@ namespace crafted_craft {
                                 WriteVar<int32_t>(entry, packet);
                         }
                     }
-                    return TCPclient::Response::Answer({packet});
+                    return Response::Answer({packet});
                 }
             }
         }

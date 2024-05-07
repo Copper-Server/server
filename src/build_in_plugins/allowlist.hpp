@@ -38,87 +38,81 @@ namespace crafted_craft {
                 {
                     auto allowlist = browser.add_child({"allowlist", "", ""});
                     allowlist.add_child({"add", "", ""})
-                        .add_child({"<player>", "add player to allowlist", "/allowlist add <player>"})
-                        .set_callback(
-                            [this](const list_array<std::string>& args, SharedClientData& client) -> TCPclient::Response {
-                                if (client.player_data.op_level < 4)
-                                    return;
-                                if (args.size() == 0)
-                                    return packets::play::systemChatMessage({"Usage: /allowlist add <player>"});
-                                const std::string& player = args[0];
-                                if (player.contains("\n"))
-                                    throw std::runtime_error("Player name contains newline character");
-                                if (api::allowlist::on_add(player))
-                                    return {};
-
-                                allow_list.add(args[0]);
-                                return packets::play::systemChatMessage({"Player " + args[0] + " added to allowlist"});
-                            },
-                            base_objects::packets::command_node::parsers::brigadier_string,
-                            {.flags = 2}
-                        );
-                    allowlist.add_child({"remove", "", ""})
-                        .add_child({"<player>", "remove player from allowlist", "/allowlist remove <player>"})
-                        .set_callback(
-                            [this](const list_array<std::string>& args, SharedClientData& client) -> TCPclient::Response {
-                                if (client.player_data.op_level < 4)
-                                    return;
-                                if (args.size() == 0)
-                                    return packets::play::systemChatMessage({"Usage: /allowlist remove <player>"});
-                                const std::string& player = args[0];
-                                if (player.contains("\n"))
-                                    throw std::runtime_error("Player name contains newline character");
-                                if (api::allowlist::on_remove(player))
-                                    return {};
-                                allow_list.remove(args[0]);
-                                return packets::play::systemChatMessage({"Player " + args[0] + " removed from allowlist"});
-                            },
-                            base_objects::packets::command_node::parsers::brigadier_string,
-                            {.flags = 2}
-                        );
-                    allowlist.add_child({"list", "list all players in allowlist", "/allowlist list"})
-                        .set_callback(
-                            [this](const list_array<std::string>&, SharedClientData& client) -> TCPclient::Response {
-                                if (client.player_data.op_level < 4)
-                                    return;
-                                //list all players in allowlist
-                                auto entrys = allow_list.entrys();
-                                std::string message = "Players in allowlist: ";
-                                for (const auto& entry : entrys)
-                                    message += entry + ", ";
-                                message.erase(message.size() - 2);
-                                message[message.size() - 1] = '.';
-
-                                return packets::play::systemChatMessage({message});
+                        .add_child({"<player>", "add player to allowlist", "/allowlist add <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                        .set_callback([this](const list_array<std::string>& args, base_objects::client_data_holder& client) -> void {
+                            if (client->player_data.op_level < 4)
+                                return;
+                            if (args.size() == 0) {
+                                client->sendPacket(packets::play::systemChatMessage({"Usage: /allowlist add <player>"}));
+                                return;
                             }
-                        );
+                            const std::string& player = args[0];
+                            if (player.contains("\n"))
+                                throw std::runtime_error("Player name contains newline character");
+                            if (api::allowlist::on_add(player))
+                                return;
+
+                            allow_list.add(args[0]);
+                            client->sendPacket(packets::play::systemChatMessage({"Player " + args[0] + " added to allowlist"}));
+                        });
+                    allowlist.add_child({"remove", "", ""})
+                        .add_child({"<player>", "remove player from allowlist", "/allowlist remove <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                        .set_callback([this](const list_array<std::string>& args, base_objects::client_data_holder& client) -> void {
+                            if (client->player_data.op_level < 4)
+                                return;
+                            if (args.size() == 0) {
+                                client->sendPacket(packets::play::systemChatMessage({"Usage: /allowlist remove <player>"}));
+                                return;
+                            }
+                            const std::string& player = args[0];
+                            if (player.contains("\n"))
+                                throw std::runtime_error("Player name contains newline character");
+                            if (api::allowlist::on_remove(player))
+                                return;
+                            allow_list.remove(args[0]);
+                            client->sendPacket(packets::play::systemChatMessage({"Player " + args[0] + " removed from allowlist"}));
+                        });
+                    allowlist.add_child({"list", "list all players in allowlist", "/allowlist list"})
+                        .set_callback([this](const list_array<std::string>&, base_objects::client_data_holder& client) -> void {
+                            if (client->player_data.op_level < 4)
+                                return;
+                            //list all players in allowlist
+                            auto entrys = allow_list.entrys();
+                            std::string message = "Players in allowlist: ";
+                            for (const auto& entry : entrys)
+                                message += entry + ", ";
+                            message.erase(message.size() - 2);
+                            message[message.size() - 1] = '.';
+
+                            client->sendPacket(packets::play::systemChatMessage({message}));
+                        });
                     allowlist.add_child({"mode"})
-                        .add_child({"<mode>", "set allowlist mode", "/allowlist mode block|allow|off"})
-                        .set_callback(
-                            [](const list_array<std::string>& args, SharedClientData& client) -> TCPclient::Response {
-                                if (client.player_data.op_level < 4)
-                                    return;
-                                if (args.size() == 0)
-                                    return packets::play::systemChatMessage({"Usage: /allowlist mode <mode>"});
-                                if (args[0] == "block")
-                                    api::allowlist::on_mode_change(api::allowlist::allowlist_mode::block);
-                                else if (args[0] == "allow")
-                                    api::allowlist::on_mode_change(api::allowlist::allowlist_mode::allow);
-                                else if (args[0] == "off")
-                                    api::allowlist::on_mode_change(api::allowlist::allowlist_mode::off);
-                                else
-                                    return packets::play::systemChatMessage({"Usage: /allowlist mode block|allow|off"});
-                                return packets::play::systemChatMessage({"Allowlist mode set to " + args[0]});
-                            },
-                            base_objects::packets::command_node::parsers::brigadier_string,
-                            {.flags = 2}
-                        );
+                        .add_child({"<mode>", "set allowlist mode", "/allowlist mode block|allow|off"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                        .set_callback([](const list_array<std::string>& args, base_objects::client_data_holder& client) -> void {
+                            if (client->player_data.op_level < 4)
+                                return;
+                            if (args.size() == 0) {
+                                client->sendPacket(packets::play::systemChatMessage({"Usage: /allowlist mode <mode>"}));
+                                return;
+                            }
+                            if (args[0] == "block")
+                                api::allowlist::on_mode_change(api::allowlist::allowlist_mode::block);
+                            else if (args[0] == "allow")
+                                api::allowlist::on_mode_change(api::allowlist::allowlist_mode::allow);
+                            else if (args[0] == "off")
+                                api::allowlist::on_mode_change(api::allowlist::allowlist_mode::off);
+                            else {
+                                client->sendPacket(packets::play::systemChatMessage({"Usage: /allowlist mode block|allow|off"}));
+                                return;
+                            }
+                            client->sendPacket(packets::play::systemChatMessage({"Allowlist mode set to " + args[0]}));
+                        });
                 }
             }
 
-            plugin_response OnPlay_initialize(SharedClientData& client) override {
-                if (mode == api::allowlist::allowlist_mode::block && !allow_list.contains(client.name))
-                    api::allowlist::on_kick(client.name);
+            plugin_response OnPlay_initialize(base_objects::client_data_holder& client) override {
+                if (mode == api::allowlist::allowlist_mode::block && !allow_list.contains(client->name))
+                    api::allowlist::on_kick(client->name);
                 return false;
             }
         };

@@ -3,6 +3,8 @@
 #include "../base_objects/chat.hpp"
 #include "../base_objects/event.hpp"
 #include "../base_objects/position.hpp"
+#include "../base_objects/shared_client_data.hpp"
+#include "../base_objects/sync_event.hpp"
 #include "../library/list_array.hpp"
 #include <array>
 #include <optional>
@@ -12,13 +14,13 @@ namespace crafted_craft {
     namespace api {
         namespace players {
             namespace handlers {
-                extern base_objects::event<std::string> on_player_join;
-                extern base_objects::event<std::string> on_player_leave;
+                extern base_objects::event<base_objects::client_data_holder> on_player_join;
+                extern base_objects::event<base_objects::client_data_holder> on_player_leave;
             }
 
-            template <typename T>
+            template <class T>
             struct personal {
-                std::string player;
+                base_objects::client_data_holder player;
                 T data;
             };
 
@@ -37,23 +39,27 @@ namespace crafted_craft {
             };
 
             struct player_chat {
-                std::string sender;
+                base_objects::client_data_holder sender;
                 std::string message;
 
                 std::optional<std::array<uint8_t, 256>> signature;
                 uint64_t salt;
                 list_array<std::array<uint8_t, 256>> previous_messages;
                 int32_t chat_type_id; //get id from registry
+
+                Chat sender_decorated_name;
             };
 
             struct player_personal_chat : public player_chat {
-                std::string receiver;
+                base_objects::client_data_holder receiver;
+                int32_t receiver_chat_type_id; //get id from registry
+                Chat receiver_decorated_name;
             };
 
             namespace calls {
 
                 struct teleport_request {
-                    std::string player;
+                    base_objects::client_data_holder player;
                     Position position;
                 };
 

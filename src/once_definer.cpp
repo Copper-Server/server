@@ -16,8 +16,12 @@ namespace crafted_craft {
     size_t TCPClientHandle::max_packet_size = 4096;
     //std::function<std::string(std::string)> crafted_craft::TCPClientHandlePlay::text_filter;
 
+    std::unordered_map<std::string, PluginRegistrationPtr> TCPClientHandlePlay::plugins_play;
     std::unordered_map<std::string, PluginRegistrationPtr> TCPClientHandleLogin::plugins;
     std::unordered_map<std::string, PluginRegistrationPtr> TCPClientHandleConfiguration::plugins_configuration;
+
+    list_array<PluginRegistrationPtr> TCPClientHandlePlay::base_plugins;
+    list_array<PluginRegistrationPtr> TCPClientHandleConfiguration::base_plugins;
 
     //uint8_t crafted_craft::TCPClientHandlePlay::max_chunk_change_count = 48;
 
@@ -31,8 +35,8 @@ namespace crafted_craft {
 
     std::unordered_map<Block, uint16_t, BlockHash> registers::blockPalette;
     std::unordered_map<uint16_t, registers::EntityType*> registers::entityList;
-}
 
-TCPclient* first_client_holder;
-std::atomic_uint64_t TCPsession::id_gen;
-bool TCPsession::do_log_connection_errors = false;
+    TCPclient* first_client_holder;
+    std::atomic_uint64_t TCPsession::id_gen;
+    bool TCPsession::do_log_connection_errors = false;
+}

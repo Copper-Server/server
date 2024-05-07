@@ -90,7 +90,7 @@ namespace crafted_craft {
             excepted_packet = -1;
             while (plugins_query.size()) {
                 auto&& it = plugins_query.front();
-                auto response = it.second->OnLoginHandle(it.first, data.to_vector(), successful, session->sharedData());
+                auto response = it.second->OnLoginHandle(it.second, it.first, data.to_vector(), successful, session->sharedDataRef());
                 if (std::holds_alternative<PluginRegistration::PluginResponse>(response)) {
                     auto& plugin = std::get<PluginRegistration::PluginResponse>(response);
                     plugin_message_id++;
@@ -116,9 +116,14 @@ namespace crafted_craft {
                 return Response::Disconnect();
             switch (packet_id) {
             case 0: { //login start
+                auto& online_players = session->serverData().online_players;
 
                 log::debug("login", "login start");
                 std::string nickname = ReadString(data, 16);
+                if (online_players.has_player(nickname)) {
+                    if (session->serverData().server_config.protocol.connection_conflict == ServerConfiguration::Protocol::connection_conflict_t::prevent_join)
+                        return packets::login::kick("You someone already connected with this nickname");
+                }
                 session->sharedData().name = nickname;
                 Chat* kick_reason_chat = AllowPlayersName(nickname);
                 if (kick_reason_chat) {

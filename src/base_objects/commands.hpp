@@ -1,7 +1,7 @@
 #ifndef SRC_BASE_OBJECTS_COMMANDS
 #define SRC_BASE_OBJECTS_COMMANDS
-#include "../ClientHandleHelper.hpp"
 #include "packets.hpp"
+#include "shared_client_data.hpp"
 #include <functional>
 #include <optional>
 #include <string>
@@ -17,10 +17,12 @@ namespace crafted_craft {
             std::optional<Chat> tooltip;
         };
 
-        using command_callback = std::function<TCPclient::Response(const list_array<std::string>&, SharedClientData&)>;
-        using command_redirect = std::function<TCPclient::Response(const list_array<std::string>&, const std::string&, SharedClientData&)>;
+        using command_callback = std::function<void(const list_array<std::string>&, client_data_holder&)>;
+        using command_redirect = std::function<void(const list_array<std::string>&, const std::string&, client_data_holder&)>;
 
         struct command {
+            using parsers = packets::command_node::parsers;
+            using properties_t = packets::command_node::properties_t;
             packets::command_node node;
             command_callback callback;
             command_redirect redirect_command;
@@ -51,7 +53,7 @@ namespace crafted_craft {
             command_manager(const command_manager&) = delete;
             command_manager(command_manager&&) = delete;
 
-            TCPclient::Response execute_command(const std::string& command, SharedClientData&);
+            void execute_command(const std::string& command, client_data_holder&);
             std::vector<suggestion> request_suggestions(const std::string& command);
 
             const list_array<uint8_t>& compile_to_graph();
@@ -59,6 +61,8 @@ namespace crafted_craft {
 
             bool belongs(command* command);
 
+
+            //every command refrence after this command become invalid, even when created by plugins in OnCommandsLoad, bc. of the commit command for optimization
             void reload_commands();
         };
 
@@ -77,6 +81,7 @@ namespace crafted_craft {
             command_browser(command_browser&& browser) noexcept;
 
             command_browser add_child(command&& command);
+            command_browser add_child(command&& command, packets::command_node::parsers parser, packets::command_node::properties_t properties = {});
             command_browser add_child(command_browser& command);
             std::list<command_browser> get_childs();
 

@@ -226,8 +226,8 @@ namespace crafted_craft {
             std::unordered_map<uint64_t, function> async_lower_avg_priority;
             std::unordered_map<uint64_t, function> async_low_priority;
 
-            static bool removeOne(std::unordered_map<uint64_t, function>& map, uint64_t func) {
-                auto it = map.find(func);
+            static bool removeOne(std::unordered_map<uint64_t, function>& map, event_register_id func) {
+                auto it = map.find(func.id);
                 if (it != map.end()) {
                     map.erase(it);
                     return true;

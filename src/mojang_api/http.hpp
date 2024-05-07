@@ -1,6 +1,9 @@
 #ifndef SRC_MOJANG_API_HTTP
 #define SRC_MOJANG_API_HTTP
-#include <boost/asio/io_context.hpp>
+#if defined(_MSC_VER)
+    #include <SDKDDKVer.h>
+#endif
+#include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <string>

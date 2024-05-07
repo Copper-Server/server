@@ -40,7 +40,7 @@ namespace crafted_craft {
             for (auto& it : load_next_packets) {
                 if (std::holds_alternative<PluginRegistration::PluginResponse>(it)) {
                     auto& plugin = std::get<PluginRegistration::PluginResponse>(it);
-                    response += packets::configuration::configuration(plugin.plugin_chanel, plugin.data);
+                    response += packets::play::customPayload(plugin.plugin_chanel, plugin.data);
                 } else if (std::holds_alternative<Response>(it))
                     response += std::get<Response>(it);
             }
@@ -374,13 +374,17 @@ namespace crafted_craft {
         }
 
         Response OnSwitch() override {
+            for (auto& plugin : base_plugins)
+                queriedPackets.push_back(plugin->OnPlay_initialize(session->sharedDataRef()));
+
             for (auto& plugin : session->sharedData().compatible_plugins)
-                queriedPackets.push_back(pluginManagement.getPlugin(plugin)->OnPlay_initialize(session->sharedData()));
+                queriedPackets.push_back(pluginManagement.getPlugin(plugin)->OnPlay_initialize(session->sharedDataRef()));
             return IdleActions();
         }
 
     public:
         static std::unordered_map<std::string, PluginRegistrationPtr> plugins_play;
+        static list_array<PluginRegistrationPtr> base_plugins;
 
         TCPClientHandlePlay(TCPsession* session)
             : TCPClientHandle(session), timer(session->sock.get_executor()) {

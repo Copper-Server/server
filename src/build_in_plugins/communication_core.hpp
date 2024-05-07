@@ -4,6 +4,7 @@
 #include "../base_objects/event.hpp"
 #include "../plugin/registration.hpp"
 #include "../protocolHelper/packets.hpp"
+#include "../storage/memory/online_player.hpp"
 #include <unordered_map>
 
 namespace crafted_craft {
@@ -28,39 +29,18 @@ namespace crafted_craft {
             base_objects::event_register_id on_unsigned_message_broadcast;
             base_objects::event_register_id on_unsigned_message;
 
+            storage::memory::online_player_storage& player_storage;
+
         public:
-            fast_task::task_rw_mutex mutex;
-            std::unordered_map<std::string, SharedClientData*> clients;
-
-            plugin_response OnPlay_initialize(SharedClientData& client) override {
-                fast_task::write_lock lock(mutex);
-
-                if (auto it = clients.find(client.name); it != clients.end()) {
-                    if (it->second == &client)
-                        return false;
-                    it->second->pending_packets.push_back(packets::play::kick({"Someone joined with your name"}));
-                    it->second->on_disconnect = nullptr;
-                    it->second = &client;
-                } else
-                    clients[client.name] = &client;
-                client.on_disconnect = [this, &client]() {
-                    {
-                        fast_task::write_lock lock(mutex);
-                        clients.erase(client.name);
-                    }
-                    api::players::handlers::on_player_leave.async_notify(client.name);
-                };
-                api::players::handlers::on_player_join.async_notify(client.name);
-                return false;
-            }
+            CommunicationCorePlugin(storage::memory::online_player_storage& player_storage)
+                : player_storage(player_storage) {}
 
             void OnLoad(const PluginRegistrationPtr& self) override {
                 on_player_chat = api::players::calls::on_player_chat += ([this](const api::players::player_chat& chat) {
-                    fast_task::read_lock lock(mutex);
-                    for (auto& [name, client] : clients) {
-                        client->pending_packets.push_back(
+                    player_storage.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&chat](SharedClientData& client) {
+                        client.sendPacket(
                             packets::play::playerChatMessage(
-                                chat.sender,
+                                chat.sender->uuid,
                                 0,
                                 chat.signature,
                                 chat.message,
@@ -71,151 +51,148 @@ namespace crafted_craft {
                                 0,
                                 {},
                                 chat.chat_type_id,
-                                name,
+                                chat.sender_decorated_name.empty() ? chat.sender->name : chat.sender_decorated_name,
                                 std::nullopt
                             )
                         );
-                    }
+                        return false;
+                    });
                     return false;
                 });
 
                 on_player_personal_chat = api::players::calls::on_player_personal_chat += ([this](const api::players::player_personal_chat& chat) {
-                    fast_task::read_lock lock(mutex);
-                    if (auto sender_it = clients.find(chat.sender); sender_it != clients.end())
-                        if (auto receiver_it = clients.find(chat.receiver); receiver_it != clients.end()) {
-                            auto& sender = *sender_it->second;
-                            auto& receiver = *receiver_it->second;
-                            receiver.pending_packets.push_back(
-                                packets::play::playerChatMessage(
-                                    sender.uuid,
-                                    0,
-                                    chat.signature,
-                                    chat.message,
-                                    std::chrono::milliseconds(std::chrono::seconds(std::time(NULL))).count(),
-                                    chat.salt,
-                                    chat.previous_messages,
-                                    std::nullopt,
-                                    0,
-                                    {},
-                                    chat.chat_type_id,
-                                    sender.name,
-                                    receiver.uuid
-                                )
-                            );
-                        }
+                    chat.receiver->sendPacket(
+                        packets::play::playerChatMessage(
+                            chat.sender->uuid,
+                            0,
+                            chat.signature,
+                            chat.message,
+                            std::chrono::milliseconds(std::chrono::seconds(std::time(NULL))).count(),
+                            chat.salt,
+                            chat.previous_messages,
+                            std::nullopt,
+                            0,
+                            {},
+                            chat.receiver_chat_type_id,
+                            chat.sender_decorated_name.empty() ? chat.sender->name : chat.sender_decorated_name,
+                            chat.receiver_decorated_name.empty() ? chat.receiver->name : chat.receiver_decorated_name
+                        )
+                    );
 
+                    chat.sender->sendPacket(
+                        packets::play::playerChatMessage(
+                            chat.sender->uuid,
+                            0,
+                            chat.signature,
+                            chat.message,
+                            std::chrono::milliseconds(std::chrono::seconds(std::time(NULL))).count(),
+                            chat.salt,
+                            chat.previous_messages,
+                            std::nullopt,
+                            0,
+                            {},
+                            chat.chat_type_id,
+                            chat.sender_decorated_name.empty() ? chat.sender->name : chat.sender_decorated_name,
+                            chat.receiver_decorated_name.empty() ? chat.receiver->name : chat.receiver_decorated_name
+                        )
+                    );
                     return false;
                 });
 
 
                 on_system_message_broadcast = api::players::calls::on_system_message_broadcast += ([this](const Chat& message) {
-                    fast_task::read_lock lock(mutex);
-                    for (auto& [name, client] : clients)
-                        client->pending_packets.push_back(packets::play::systemChatMessage(message));
+                    player_storage.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
+                        client.sendPacket(packets::play::systemChatMessage(message));
+                        return false;
+                    });
                     return false;
                 });
                 on_system_message = api::players::calls::on_system_message += ([this](const api::players::personal<Chat>& message) {
-                    fast_task::read_lock lock(mutex);
-                    if (auto it = clients.find(message.player); it != clients.end())
-                        it->second->pending_packets.push_back(packets::play::systemChatMessage(message.data));
+                    message.player->sendPacket(packets::play::systemChatMessage(message.data));
                     return false;
                 });
 
                 on_system_message_overlay_broadcast = api::players::calls::on_system_message_overlay_broadcast += ([this](const Chat& message) {
-                    fast_task::read_lock lock(mutex);
-                    for (auto& [name, client] : clients)
-                        client->pending_packets.push_back(packets::play::systemChatMessageOverlay(message));
+                    player_storage.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
+                        client.sendPacket(packets::play::systemChatMessageOverlay(message));
+                        return false;
+                    });
                     return false;
                 });
                 on_system_message_overlay = api::players::calls::on_system_message_overlay += ([this](const api::players::personal<Chat>& message) {
-                    fast_task::read_lock lock(mutex);
-                    if (auto it = clients.find(message.player); it != clients.end())
-                        it->second->pending_packets.push_back(packets::play::systemChatMessageOverlay(message.data));
+                    message.player->sendPacket(packets::play::systemChatMessageOverlay(message.data));
                     return false;
                 });
 
                 on_player_kick = api::players::calls::on_player_kick += ([this](const api::players::personal<Chat>& message) {
-                    fast_task::read_lock lock(mutex);
-                    if (auto it = clients.find(message.player); it != clients.end()) {
-                        it->second->pending_packets.push_back(packets::play::kick(message.data));
-                        it->second->on_disconnect = nullptr;
-                        clients.erase(it);
-                    }
+                    message.player->sendPacket(packets::play::kick(message.data));
+                    player_storage.remove_player(message.player);
                     return false;
                 });
 
                 on_player_ban = api::players::calls::on_player_ban += ([this](const api::players::personal<Chat>& message) {
-                    fast_task::read_lock lock(mutex);
-                    if (auto it = clients.find(message.player); it != clients.end()) {
-                        it->second->pending_packets.push_back(packets::play::kick(message.data));
-                        it->second->on_disconnect = nullptr;
-                        clients.erase(it);
-                    }
+                    message.player->sendPacket(packets::play::kick(message.data));
+                    player_storage.remove_player(message.player);
                     return false;
                 });
 
                 on_action_bar_message_broadcast = api::players::calls::on_action_bar_message_broadcast += ([this](const Chat& message) {
-                    fast_task::read_lock lock(mutex);
-                    for (auto& [name, client] : clients)
-                        client->pending_packets.push_back(packets::play::setActionBarText(message));
+                    player_storage.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
+                        client.sendPacket(packets::play::setActionBarText(message));
+                        return false;
+                    });
                     return false;
                 });
                 on_action_bar_message = api::players::calls::on_action_bar_message += ([this](const api::players::personal<Chat>& message) {
-                    fast_task::read_lock lock(mutex);
-                    if (auto it = clients.find(message.player); it != clients.end())
-                        it->second->pending_packets.push_back(packets::play::setActionBarText(message.data));
+                    message.player->sendPacket(packets::play::setActionBarText(message.data));
                     return false;
                 });
 
                 on_title_message_broadcast = api::players::calls::on_title_message_broadcast += ([this](const Chat& message) {
-                    fast_task::read_lock lock(mutex);
-                    for (auto& [name, client] : clients)
-                        client->pending_packets.push_back(packets::play::setTitleText(message));
+                    player_storage.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
+                        client.sendPacket(packets::play::setTitleText(message));
+                        return false;
+                    });
                     return false;
                 });
                 on_title_message = api::players::calls::on_title_message += ([this](const api::players::personal<Chat>& message) {
-                    fast_task::read_lock lock(mutex);
-                    if (auto it = clients.find(message.player); it != clients.end())
-                        it->second->pending_packets.push_back(packets::play::setTitleText(message.data));
+                    message.player->sendPacket(packets::play::setTitleText(message.data));
                     return false;
                 });
 
                 on_subtitle_message_broadcast = api::players::calls::on_subtitle_message_broadcast += ([this](const Chat& message) {
-                    fast_task::read_lock lock(mutex);
-                    for (auto& [name, client] : clients)
-                        client->pending_packets.push_back(packets::play::setSubtitleText(message));
+                    player_storage.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
+                        client.sendPacket(packets::play::setSubtitleText(message));
+                        return false;
+                    });
                     return false;
                 });
                 on_subtitle_message = api::players::calls::on_subtitle_message += ([this](const api::players::personal<Chat>& message) {
-                    fast_task::read_lock lock(mutex);
-                    if (auto it = clients.find(message.player); it != clients.end())
-                        it->second->pending_packets.push_back(packets::play::setSubtitleText(message.data));
+                    message.player->sendPacket(packets::play::setSubtitleText(message.data));
                     return false;
                 });
 
                 on_title_times_broadcast = api::players::calls::on_title_times_broadcast += ([this](const api::players::titles_times& times) {
-                    fast_task::read_lock lock(mutex);
-                    for (auto& [name, client] : clients)
-                        client->pending_packets.push_back(packets::play::setTitleAnimationTimes(times.fade_in, times.stay, times.fade_out));
+                    player_storage.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&times](SharedClientData& client) {
+                        client.sendPacket(packets::play::setTitleAnimationTimes(times.fade_in, times.stay, times.fade_out));
+                        return false;
+                    });
                     return false;
                 });
                 on_title_times = api::players::calls::on_title_times += ([this](const api::players::personal<api::players::titles_times>& times) {
-                    fast_task::read_lock lock(mutex);
-                    if (auto it = clients.find(times.player); it != clients.end())
-                        it->second->pending_packets.push_back(packets::play::setTitleAnimationTimes(times.data.fade_in, times.data.stay, times.data.fade_out));
+                    times.player->sendPacket(packets::play::setTitleAnimationTimes(times.data.fade_in, times.data.stay, times.data.fade_out));
                     return false;
                 });
 
                 on_unsigned_message_broadcast = api::players::calls::on_unsigned_message_broadcast += ([this](const api::players::unsigned_chat& message) {
-                    fast_task::read_lock lock(mutex);
-                    for (auto& [name, client] : clients)
-                        client->pending_packets.push_back(packets::play::disguisedChatMessage(message.message, message.chat_type_id, message.sender_name, message.receiver_name));
+                    player_storage.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
+                        client.sendPacket(packets::play::disguisedChatMessage(message.message, message.chat_type_id, message.sender_name, message.receiver_name));
+                        return false;
+                    });
                     return false;
                 });
                 on_unsigned_message = api::players::calls::on_unsigned_message += ([this](const api::players::personal<api::players::unsigned_chat>& message) {
-                    fast_task::read_lock lock(mutex);
-                    if (auto it = clients.find(message.player); it != clients.end())
-                        it->second->pending_packets.push_back(packets::play::disguisedChatMessage(message.data.message, message.data.chat_type_id, message.data.sender_name, message.data.receiver_name));
+                    message.player->sendPacket(packets::play::disguisedChatMessage(message.data.message, message.data.chat_type_id, message.data.sender_name, message.data.receiver_name));
                     return false;
                 });
             }
@@ -239,6 +216,17 @@ namespace crafted_craft {
                 api::players::calls::on_title_times.leave(on_title_times);
                 api::players::calls::on_unsigned_message_broadcast.leave(on_unsigned_message_broadcast);
                 api::players::calls::on_unsigned_message.leave(on_unsigned_message);
+            }
+
+            void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override {
+                browser.add_child({"broadcast"})
+                    .add_child({"<message>", "broadcast <message>", "Broadcast a message to all players"})
+                    .set_callback([this](const list_array<std::string>& args, base_objects::client_data_holder& ignored__) {
+                        player_storage.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [args](SharedClientData& client) {
+                            client.sendPacket(packets::play::systemChatMessage(args[0]));
+                            return false;
+                        });
+                    });
             }
         };
     } // namespace build_in_plugins
