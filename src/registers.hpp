@@ -195,6 +195,14 @@ namespace crafted_craft {
             uint8_t max_count;
         };
 
+        struct BlockPalette {
+            uint16_t id : 15;
+
+
+            std::string full_id;
+        };
+
+
 #pragma endregion
         //CLIENT/SERVER
         static list_array<ArmorTrimMaterial> armorTrimMaterials;
@@ -206,7 +214,7 @@ namespace crafted_craft {
 
 
         //SERVER
-        static std::unordered_map<Block, uint16_t, BlockHash> blockPalette;
+        static std::unordered_map<base_objects::block, uint16_t, base_objects::block_hash> blockPalette;
         static std::unordered_map<uint16_t, EntityType*> entityList;
         static std::unordered_map<int32_t, ItemType*> itemList;
 
@@ -215,15 +223,15 @@ namespace crafted_craft {
             static list_array<uint8_t> data;
             if (data.empty()) {
                 data.push_back(0x05);
-                ENBT nbt(ENBT::Type::compound);
+                ENBT nbt = ENBT::compound();
                 { //minecraft:trim_material
-                    ENBT _armorTrimMaterials(ENBT::Type::array);
+                    ENBT _armorTrimMaterials = ENBT::fixed_array();
                     for (auto& it : armorTrimMaterials) {
-                        ENBT tmp(ENBT::Type::compound);
+                        ENBT tmp = ENBT::compound();
                         tmp["name"] = it.name;
                         tmp["id"] = it.id;
                         { //element
-                            ENBT element;
+                            ENBT element = ENBT::compound();
                             element["asset_name"] = it.element.asset_name;
                             element["ingredient"] = it.element.ingredient;
                             element["item_model_index"] = it.element.item_model_index;
@@ -239,19 +247,19 @@ namespace crafted_craft {
                         }
                         _armorTrimMaterials.push(std::move(tmp));
                     }
-                    ENBT entry(ENBT::Type::compound);
+                    ENBT entry = ENBT::compound();
                     entry["type"] = "minecraft:trim_material";
                     entry["value"] = std::move(_armorTrimMaterials);
                     nbt["minecraft:trim_material"] = std::move(entry);
                 }
                 { //minecraft:trim_pattern
-                    ENBT _armorTrimPatterns(ENBT::Type::array);
+                    ENBT _armorTrimPatterns = ENBT::fixed_array();
                     for (auto& it : armorTrimPatterns) {
-                        ENBT tmp(ENBT::Type::compound);
+                        ENBT tmp = ENBT::compound();
                         tmp["name"] = it.name;
                         tmp["id"] = it.id;
                         { //element
-                            ENBT element;
+                            ENBT element = ENBT::compound();
                             element["assert_id"] = it.element.assert_id;
                             element["template_item"] = it.element.template_item;
                             if (std::holds_alternative<std::string>(it.element.description))
@@ -263,25 +271,25 @@ namespace crafted_craft {
                         }
                         _armorTrimPatterns.push(std::move(tmp));
                     }
-                    ENBT entry(ENBT::Type::compound);
+                    ENBT entry = ENBT::compound();
                     entry["type"] = "minecraft:trim_pattern";
                     entry["value"] = std::move(_armorTrimPatterns);
                     nbt["minecraft:trim_pattern"] = std::move(entry);
                 }
                 { //minecraft:worldgen/biome
-                    ENBT _biomes(ENBT::Type::array);
+                    ENBT _biomes = ENBT::fixed_array();
                     for (auto& it : biomes) {
-                        ENBT tmp(ENBT::Type::compound);
+                        ENBT tmp = ENBT::compound();
                         tmp["name"] = it.name;
                         tmp["id"] = it.id;
                         { //element
-                            ENBT element;
+                            ENBT element = ENBT::compound();
                             element["has_precipitation"] = it.element.has_precipitation;
                             element["temperature"] = it.element.temperature;
                             element["temperature_modifier"] = it.element.temperature_modifier;
                             element["downfall"] = it.element.downfall;
                             { //effects
-                                ENBT effects;
+                                ENBT effects = ENBT::compound();
                                 effects["fog_color"] = it.element.effects.fog_color;
                                 effects["water_color"] = it.element.effects.water_color;
                                 effects["water_fog_color"] = it.element.effects.water_fog_color;
@@ -293,7 +301,7 @@ namespace crafted_craft {
                                 if (it.element.effects.grass_color_modifier)
                                     effects["grass_color_modifier"] = it.element.effects.grass_color_modifier.value();
                                 if (it.element.effects.particle) {
-                                    ENBT particle(ENBT::Type::compound);
+                                    ENBT particle = ENBT::compound();
                                     particle["type"] = it.element.effects.particle->options.type;
                                     particle["options"] = it.element.effects.particle->options.options;
                                     effects["particle"] = std::move(particle);
@@ -302,14 +310,14 @@ namespace crafted_craft {
                                     if (std::holds_alternative<std::string>(*it.element.effects.ambient_sound))
                                         effects["ambient_sound"] = std::get<std::string>(*it.element.effects.ambient_sound);
                                     else if (std::holds_alternative<Biome::AmbientSound>(*it.element.effects.ambient_sound)) {
-                                        ENBT ambient_sound;
+                                        ENBT ambient_sound = ENBT::compound();
                                         ambient_sound["sound"] = std::get<Biome::AmbientSound>(*it.element.effects.ambient_sound).sound;
                                         ambient_sound["range"] = std::get<Biome::AmbientSound>(*it.element.effects.ambient_sound).range;
                                         effects["ambient_sound"] = std::move(ambient_sound);
                                     }
                                 }
                                 if (it.element.effects.mood_sound) {
-                                    ENBT mood_sound;
+                                    ENBT mood_sound = ENBT::compound();
                                     mood_sound["sound"] = it.element.effects.mood_sound->sound;
                                     mood_sound["tick_delay"] = it.element.effects.mood_sound->tick_delay;
                                     mood_sound["block_search_extend"] = it.element.effects.mood_sound->block_search_extend;
@@ -317,13 +325,13 @@ namespace crafted_craft {
                                     effects["mood_sound"] = std::move(mood_sound);
                                 }
                                 if (it.element.effects.additions_sound) {
-                                    ENBT additions_sound;
+                                    ENBT additions_sound = ENBT::compound();
                                     additions_sound["sound"] = it.element.effects.additions_sound->sound;
                                     additions_sound["tick_chance"] = it.element.effects.additions_sound->tick_chance;
                                     effects["additions_sound"] = std::move(additions_sound);
                                 }
                                 if (it.element.effects.music) {
-                                    ENBT music;
+                                    ENBT music = ENBT::compound();
                                     music["sound"] = it.element.effects.music->sound;
                                     music["min_delay"] = it.element.effects.music->min_delay;
                                     music["max_delay"] = it.element.effects.music->max_delay;
@@ -336,21 +344,21 @@ namespace crafted_craft {
                         }
                         _biomes.push(std::move(tmp));
                     }
-                    ENBT entry(ENBT::Type::compound);
+                    ENBT entry = ENBT::compound();
                     entry["type"] = "minecraft:worldgen/biome";
                     entry["value"] = std::move(_biomes);
                     nbt["minecraft:worldgen/biome"] = std::move(entry);
                 }
                 { // minecraft:chat_type
-                    ENBT _chatTypes(ENBT::Type::array);
+                    ENBT _chatTypes = ENBT::fixed_array();
                     for (auto& it : chatTypes) {
-                        ENBT tmp(ENBT::Type::compound);
+                        ENBT tmp = ENBT::compound();
                         tmp["name"] = it.name;
                         tmp["id"] = it.id;
                         { //element
-                            ENBT element;
+                            ENBT element = ENBT::compound();
                             if (it.element.chat) {
-                                ENBT chat(ENBT::Type::compound);
+                                ENBT chat = ENBT::compound();
                                 chat["translation_key"] = it.element.chat->translation_key;
                                 {
                                     it.element.chat->style.GetExtra().clear();
@@ -367,7 +375,7 @@ namespace crafted_craft {
                                 element["chat"] = std::move(chat);
                             }
                             if (it.element.narration) {
-                                ENBT narration(ENBT::Type::compound);
+                                ENBT narration = ENBT::compound();
                                 narration["translation_key"] = it.element.narration->translation_key;
                                 {
                                     it.element.narration->style.GetExtra().clear();
@@ -386,19 +394,19 @@ namespace crafted_craft {
                         }
                         _chatTypes.push(std::move(tmp));
                     }
-                    ENBT entry(ENBT::Type::compound);
+                    ENBT entry = ENBT::compound();
                     entry["type"] = "minecraft:chat_type";
                     entry["value"] = std::move(_chatTypes);
                     nbt["minecraft:chat_type"] = std::move(entry);
                 }
                 { // minecraft:damage_type
-                    ENBT _damageTypes(ENBT::Type::array);
+                    ENBT _damageTypes = ENBT::fixed_array();
                     for (auto& it : damageTypes) {
-                        ENBT tmp(ENBT::Type::compound);
+                        ENBT tmp = ENBT::compound();
                         tmp["name"] = it.name;
                         tmp["id"] = it.id;
                         { //element
-                            ENBT element;
+                            ENBT element = ENBT::compound();
                             element["message_id"] = it.element.message_id;
                             {
                                 const char* scaling = nullptr;
@@ -466,23 +474,23 @@ namespace crafted_craft {
                         }
                         _damageTypes.push(std::move(tmp));
                     }
-                    ENBT entry(ENBT::Type::compound);
+                    ENBT entry = ENBT::compound();
                     entry["type"] = "minecraft:damage_type";
                     entry["value"] = std::move(_damageTypes);
                     nbt["minecraft:damage_type"] = std::move(entry);
                 }
                 { // minecraft:dimension_type
-                    ENBT _dimensionTypes(ENBT::Type::array);
+                    ENBT _dimensionTypes = ENBT::fixed_array();
                     for (auto& it : dimensionTypes) {
-                        ENBT tmp(ENBT::Type::compound);
+                        ENBT tmp = ENBT::compound();
                         tmp["name"] = it.name;
                         tmp["id"] = it.id;
                         { //element
-                            ENBT element;
+                            ENBT element = ENBT::compound();
                             if (std::holds_alternative<int32_t>(it.element.monster_spawn_light_level))
                                 element["monster_spawn_light_level"] = std::get<int32_t>(it.element.monster_spawn_light_level);
                             else {
-                                ENBT distribution(ENBT::Type::compound);
+                                ENBT distribution = ENBT::compound();
                                 auto& ddd = std::get<IntegerDistribution>(it.element.monster_spawn_light_level);
                                 distribution["type"] = ddd.type;
                                 distribution["value"] = ddd.value;
@@ -510,7 +518,7 @@ namespace crafted_craft {
                         }
                         _dimensionTypes.push(std::move(tmp));
                     }
-                    ENBT entry(ENBT::Type::compound);
+                    ENBT entry = ENBT::compound();
                     entry["type"] = "minecraft:dimension_type";
                     entry["value"] = std::move(_dimensionTypes);
                     nbt["minecraft:dimension_type"] = std::move(entry);

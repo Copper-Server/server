@@ -19,12 +19,38 @@ namespace crafted_craft {
                 list_array<base_objects::client_data_holder> players;
                 fast_task::task_mutex mutex;
 
+                std::atomic_size_t online;
 
             public:
+                void login_complete_to_cfg(base_objects::client_data_holder& player) {
+                    if (player->getAssignedData() != this)
+                        throw std::runtime_error("player not assigned to this storage");
+                    player->packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::configuration;
+                    ++online;
+                }
+
+                size_t online_players() {
+                    return online;
+                }
+
+
                 base_objects::client_data_holder allocate_player() {
                     std::unique_lock lock(mutex);
-                    players.push_back(new base_objects::SharedClientData());
+                    players.push_back(new base_objects::SharedClientData(this));
                     return players.back();
+                }
+
+                size_t size() const {
+                    return players.size();
+                }
+
+                size_t size(base_objects::SharedClientData::packets_state_t::protocol_state select_state) {
+                    std::unique_lock lock(mutex);
+                    size_t result = 0;
+                    for (auto& player : players)
+                        if (player->packets_state.state == select_state)
+                            ++result;
+                    return result;
                 }
 
                 bool has_player(const std::string& player) {
@@ -35,11 +61,34 @@ namespace crafted_craft {
                     return false;
                 }
 
+                bool has_player_status(const std::string& player, base_objects::SharedClientData::packets_state_t::protocol_state select_state) {
+                    std::unique_lock lock(mutex);
+                    for (auto& p : players)
+                        if (p->name == player && p->packets_state.state == select_state)
+                            return true;
+                    return false;
+                }
+
+                bool has_player_not_status(const std::string& player, base_objects::SharedClientData::packets_state_t::protocol_state select_state) {
+                    std::unique_lock lock(mutex);
+                    for (auto& p : players)
+                        if (p->name == player && p->packets_state.state != select_state)
+                            return true;
+                    return false;
+                }
+
                 void remove_player(const base_objects::client_data_holder& player) {
+                    if (!player)
+                        return;
+                    if (player->getAssignedData() != this)
+                        return;
+
                     std::unique_lock lock(mutex);
                     size_t i = 0;
                     for (auto& p : players) {
                         if (p == player) {
+                            if (p->packets_state.state != base_objects::SharedClientData::packets_state_t::protocol_state::initialization)
+                                --online;
                             players.remove(i);
                             return;
                         }
@@ -52,6 +101,8 @@ namespace crafted_craft {
                     size_t i = 0;
                     for (auto& p : players) {
                         if (p->name == player) {
+                            if (p->packets_state.state != base_objects::SharedClientData::packets_state_t::protocol_state::initialization)
+                                --online;
                             players.remove(i);
                             return;
                         }
@@ -75,6 +126,14 @@ namespace crafted_craft {
                     return nullptr;
                 }
 
+                base_objects::client_data_holder get_player_not_state(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::string& player) {
+                    std::unique_lock lock(mutex);
+                    for (auto& p : players)
+                        if (p->name == player && p->packets_state.state != select_state)
+                            return p;
+                    return nullptr;
+                }
+
                 list_array<base_objects::client_data_holder> get_players() {
                     std::unique_lock lock(mutex);
                     return players;
@@ -84,6 +143,14 @@ namespace crafted_craft {
                     std::unique_lock lock(mutex);
                     for (auto& player : players)
                         if (player->packets_state.state == select_state)
+                            if (callback(*player))
+                                break;
+                }
+
+                void iterate_players_not_state(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::SharedClientData&)>& callback) {
+                    std::unique_lock lock(mutex);
+                    for (auto& player : players)
+                        if (player->packets_state.state != select_state)
                             if (callback(*player))
                                 break;
                 }

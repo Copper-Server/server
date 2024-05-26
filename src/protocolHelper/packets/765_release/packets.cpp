@@ -835,6 +835,8 @@ namespace crafted_craft {
                 }
 
                 Response ping(int32_t id) {
+                    if (id == -1)
+                        throw std::runtime_error("ping id can't be -1");
                     list_array<uint8_t> packet;
                     packet.reserve_push_back(1 + 4);
                     packet.push_back(0x33);
@@ -1199,7 +1201,7 @@ namespace crafted_craft {
                     return Response::Answer({packet});
                 }
 
-                Response updateSectionBlocks(int32_t section_x, int32_t section_z, int32_t section_y, const list_array<CompressedBlockState>& blocks) {
+                Response updateSectionBlocks(int32_t section_x, int32_t section_z, int32_t section_y, const list_array<base_objects::compressed_block_state>& blocks) {
                     list_array<uint8_t> packet;
                     int64_t section_pos = ((section_x & 0x3FFFFF) << 42) | ((section_z & 0x3FFFFF) << 20) | (section_y & 0xFFFFF);
                     packet.reserve_push_back(1 + 8 + 5 * blocks.size() * 6);

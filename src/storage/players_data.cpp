@@ -18,7 +18,7 @@ namespace crafted_craft {
 
         ENBT compact_slot(base_objects::slot& slot) {
             if (slot) {
-                ENBT compound(ENBT::Type::compound);
+                ENBT compound = ENBT::compound();
 
                 base_objects::slot_data& slot_data = *slot;
                 compound["id"] = slot_data.id;
@@ -163,11 +163,11 @@ namespace crafted_craft {
         }
 
         void player_data::save() {
-            ENBT as_file_data(ENBT::Type::compound);
+            ENBT as_file_data = ENBT::compound();
             {
-                ENBT abilities(ENBT::Type::compound);
+                ENBT abilities = ENBT::compound();
                 {
-                    ENBT flags(ENBT::Type::compound);
+                    ENBT flags = ENBT::compound();
                     flags["invulnerable"] = player.abilities.flags.invulnerable;
                     flags["flying"] = player.abilities.flags.flying;
                     flags["allow_flying"] = player.abilities.flags.allow_flying;
@@ -181,7 +181,7 @@ namespace crafted_craft {
                 as_file_data["abilities"] = abilities;
             }
             {
-                ENBT position(ENBT::Type::compound);
+                ENBT position = ENBT::compound();
                 position["x"] = player.position.x;
                 position["y"] = player.position.y;
                 position["z"] = player.position.z;
@@ -190,9 +190,9 @@ namespace crafted_craft {
                 as_file_data["position"] = position;
             }
             {
-                ENBT inventory(ENBT::Type::compound);
+                ENBT inventory = ENBT::compound();
                 if (player.inventory.crafting_output.has_value() || player.inventory.crafting[0].has_value() || player.inventory.crafting[1].has_value() || player.inventory.crafting[2].has_value() || player.inventory.crafting[3].has_value()) {
-                    ENBT crafting(ENBT::Type::compound);
+                    ENBT crafting = ENBT::compound();
                     crafting["output"] = compact_slot(player.inventory.crafting_output);
                     for (int i = 0; i < 4; i++)
                         crafting["input_" + std::to_string(i)] = compact_slot(player.inventory.crafting[i]);
@@ -200,7 +200,7 @@ namespace crafted_craft {
                     inventory["crafting"] = crafting;
                 }
                 {
-                    ENBT armor(ENBT::Type::compound);
+                    ENBT armor = ENBT::compound();
                     armor["head"] = compact_slot(player.inventory.armor.head);
                     armor["chest"] = compact_slot(player.inventory.armor.chest);
                     armor["legs"] = compact_slot(player.inventory.armor.legs);
@@ -208,13 +208,13 @@ namespace crafted_craft {
                     inventory["armor"] = armor;
                 }
                 {
-                    ENBT main_inventory(ENBT::Type::compound);
+                    ENBT main_inventory = ENBT::compound();
                     for (int i = 0; i < 27; i++)
                         main_inventory[std::to_string(i)] = compact_slot(player.inventory.main_inventory[i]);
                     inventory["main_inventory"] = main_inventory;
                 }
                 {
-                    ENBT hotbar(ENBT::Type::compound);
+                    ENBT hotbar = ENBT::compound();
                     for (int i = 0; i < 9; i++)
                         hotbar[std::to_string(i)] = compact_slot(player.inventory.hotbar[i]);
                     inventory["hotbar"] = hotbar;
@@ -223,7 +223,7 @@ namespace crafted_craft {
                 as_file_data["inventory"] = inventory;
             }
             {
-                ENBT health(ENBT::Type::compound);
+                ENBT health = ENBT::compound();
                 health["health"] = player.health;
                 health["food"] = player.food;
                 health["saturation"] = player.saturation;
@@ -231,7 +231,7 @@ namespace crafted_craft {
                 as_file_data["HUD"] = health;
             }
             {
-                ENBT flags(ENBT::Type::compound);
+                ENBT flags = ENBT::compound();
                 flags["is_died"] = player.is_died;
                 flags["is_sleeping"] = player.is_sleeping;
                 flags["on_ground"] = player.on_ground;
@@ -243,14 +243,14 @@ namespace crafted_craft {
                 as_file_data["flags"] = flags;
             }
             {
-                ENBT gamemode(ENBT::Type::compound);
+                ENBT gamemode = ENBT::compound();
                 gamemode["op_level"] = player.op_level;
                 gamemode["gamemode"] = player.gamemode;
                 gamemode["prev_gamemode"] = player.prev_gamemode;
                 as_file_data["gamemode"] = gamemode;
             }
             if (player.last_death_location.has_value()) {
-                ENBT death_location(ENBT::Type::compound);
+                ENBT death_location = ENBT::compound();
                 death_location["x"] = player.last_death_location->x;
                 death_location["y"] = player.last_death_location->y;
                 death_location["z"] = player.last_death_location->z;

@@ -82,6 +82,15 @@ namespace crafted_craft {
             console::print(console::color(0, 128, 0, "[debug] [" + source + "] " + message));
         }
 
+        void debug_error(const std::string& source, const std::string& message) {
+            console::print(console::color(128, 0, 0, "[debug error] [" + source + "] " + message));
+        }
+
+        void fatal(const std::string& source, const std::string& message) {
+            console::print(console::color(128, 0, 0, "[fatal] [" + source + "] " + message));
+            std::exit(EXIT_FAILURE);
+        }
+
         namespace commands {
             void init() {
                 fast_task::task::start(std::make_shared<fast_task::task>(console::check_console_task));

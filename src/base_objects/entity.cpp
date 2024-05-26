@@ -4,20 +4,8 @@
 
 namespace crafted_craft {
 
-    ENBT* readENBT(std::ifstream& rf) {
-        return new ENBT(ENBTHelper::ReadToken(rf));
-    }
-
-    ENBT* readENBT_safe(std::ifstream& rf) {
-        __try {
-            return readENBT(rf);
-        } __except (GetExceptionCode() == STATUS_STACK_OVERFLOW) {
-            return nullptr;
-        }
-    }
-
     bool Entity::Save(std::filesystem::path path) {
-        ENBT save_nbt(ENBT::Type_ID::Type::darray, 0);
+        ENBT save_nbt = ENBT::dynamic_array();
         save_nbt.resize(5);
         save_nbt[0] = id;
         save_nbt[1] = nbt;
@@ -41,16 +29,23 @@ namespace crafted_craft {
         path += "/" + std::to_string(((uint16_t*)id.data)[4]);
         path += "/" + std::to_string(((uint16_t*)id.data)[5]);
         path += "/" + std::to_string(((uint16_t*)id.data)[6]) + ".enbt";
-        uint16_t eid = ((uint16_t*)id.data)[7];
-        std::ifstream rf(path);
-        ENBT* tmp = readENBT_safe(rf);
-        rf.close();
-        if (!tmp)
+        auto eid = std::to_string(((uint16_t*)id.data)[7]);
+
+        try {
+            std::ifstream rf(path);
+            ENBT tmp = ENBTHelper::ReadToken(rf);
+            rf.close();
+            if (!tmp)
+                return false;
+            if (!tmp.contains(eid))
+                return false;
+            tmp[eid] = save_nbt;
+            std::ofstream wf(path);
+            ENBTHelper::WriteToken(wf, tmp);
+            wf.close();
+        } catch (...) {
             return false;
-        tmp->getByCompoundKey(eid) = save_nbt;
-        std::ofstream wf(path);
-        ENBTHelper::WriteToken(wf, *tmp);
-        wf.close();
+        }
         return true;
     }
 
@@ -63,15 +58,20 @@ namespace crafted_craft {
         path += "/" + std::to_string(((uint16_t*)id.data)[4]);
         path += "/" + std::to_string(((uint16_t*)id.data)[5]);
         path += "/" + std::to_string(((uint16_t*)id.data)[6]) + ".enbt";
-        uint16_t eid = ((uint16_t*)id.data)[7];
-
-        std::ifstream rf(path);
-        ENBT* tmp = readENBT_safe(rf);
-        rf.close();
-        if (!tmp)
+        auto eid = std::to_string(((uint16_t*)id.data)[7]);
+        ENBT temp;
+        try {
+            std::ifstream rf(path);
+            if (!rf.is_open())
+                return false;
+            ENBTHelper::FindValueCompound(rf, ENBTHelper::ReadTypeID(rf), eid.c_str());
+            temp = ENBTHelper::ReadToken(rf);
+            if (!temp)
+                return false;
+            rf.close();
+        } catch (...) {
             return false;
-        ENBT temp = tmp->getByCompoundKey(eid);
-        delete tmp;
+        }
         id = temp[0];
         nbt = temp[1];
         position.x = temp[2];
@@ -90,7 +90,6 @@ namespace crafted_craft {
             keep_reaction_data[i++] = it;
         }
         world = WorldClusters::getWorldByID((uint32_t)temp[13]);
-
         return true;
     }
 
@@ -102,17 +101,22 @@ namespace crafted_craft {
         path += "/" + std::to_string(((uint16_t*)id.data)[4]);
         path += "/" + std::to_string(((uint16_t*)id.data)[5]);
         path += "/" + std::to_string(((uint16_t*)id.data)[6]) + ".enbt";
-        uint16_t eid = ((uint16_t*)id.data)[7];
-        std::ifstream rf(path);
-        ENBT* tmp = readENBT_safe(rf);
-        rf.close();
-        if (!tmp)
+        auto eid = std::to_string(((uint16_t*)id.data)[7]);
+        try {
+            std::ifstream rf(path);
+            ENBT tmp = ENBTHelper::ReadToken(rf);
+            rf.close();
+            if (!tmp)
+                return false;
+            if (!tmp.contains(eid))
+                return false;
+            tmp.remove(eid);
+            std::ofstream wf(path);
+            ENBTHelper::WriteToken(wf, tmp);
+            wf.close();
+        } catch (...) {
             return false;
-        if (!tmp->removeCompoundKey(eid))
-            return false;
-        std::ofstream wf(path);
-        ENBTHelper::WriteToken(wf, *tmp);
-        wf.close();
+        }
         return true;
     }
 
@@ -120,7 +124,7 @@ namespace crafted_craft {
     }
 
     // block
-    void Entity_data::WorkReaction(class Entity& target_entity, block_pos_t x, uint16_t y, block_pos_t z, const Block& block, bool in_view, bool hurted, bool hear) {
+    void Entity_data::WorkReaction(class Entity& target_entity, block_pos_t x, uint16_t y, block_pos_t z, const base_objects::block& block, bool in_view, bool hurted, bool hear) {
     }
 
     void Entity_data::KeepReaction(Entity& entity) {

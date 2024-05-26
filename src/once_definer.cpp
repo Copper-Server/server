@@ -9,10 +9,10 @@ namespace crafted_craft {
     short HitBox::hitboxes_adder = 0;
 
 
-    std::unordered_map<std::string, list_array<Block>> Block::tags;
-    std::unordered_map<uint16_t, FullBlockData> Block::full_block_data;
-    uint16_t Block::block_adder = 0;
-    std::unordered_set<baip::address> TCPClientHandle::banned_players;
+    std::unordered_map<std::string, list_array<base_objects::block>> base_objects::block::tags;
+    std::unordered_map<uint16_t, base_objects::full_block_data> base_objects::block::full_block_data_;
+    uint16_t base_objects::block::block_adder = 0;
+    std::unordered_set<boost::asio::ip::address> TCPClientHandle::banned_players;
     size_t TCPClientHandle::max_packet_size = 4096;
     //std::function<std::string(std::string)> crafted_craft::TCPClientHandlePlay::text_filter;
 
@@ -33,10 +33,10 @@ namespace crafted_craft {
     list_array<registers::DimensionType> registers::dimensionTypes;
 
 
-    std::unordered_map<Block, uint16_t, BlockHash> registers::blockPalette;
+    std::unordered_map<base_objects::block, uint16_t, base_objects::block_hash> registers::blockPalette;
     std::unordered_map<uint16_t, registers::EntityType*> registers::entityList;
 
     TCPclient* first_client_holder;
     std::atomic_uint64_t TCPsession::id_gen;
-    bool TCPsession::do_log_connection_errors = false;
+    bool TCPsession::do_log_connection_errors = true;
 }

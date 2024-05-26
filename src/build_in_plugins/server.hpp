@@ -146,7 +146,7 @@ namespace crafted_craft {
             plugin_response OnPlay_initialize(base_objects::client_data_holder& client_ref) override {
                 auto& client = *client_ref;
                 {
-                    auto data = players_data.get_player_data(client.str_uuid);
+                    auto data = players_data.get_player_data(client.data->uuid_str);
                     data.load();
                     client.player_data = data.player;
                 }
@@ -197,7 +197,7 @@ namespace crafted_craft {
 
             plugin_response OnPlay_uninitialized(base_objects::client_data_holder& client) override {
                 {
-                    auto data = players_data.get_player_data(client->str_uuid);
+                    auto data = players_data.get_player_data(client->data->uuid_str);
                     data.player = client->player_data;
                     data.save();
                 }

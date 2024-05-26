@@ -89,10 +89,10 @@ namespace crafted_craft {
             std::optional<ENBT::UUID> ride_entity_id;
 
             //sent to client
-            ENBT additional_data;
+            ENBT additional_data = ENBT::compound();
 
             //for server plugins
-            ENBT local_data;
+            ENBT local_data = ENBT::compound();
 
 
             player() = default;

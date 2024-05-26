@@ -20,18 +20,21 @@ namespace crafted_craft {
                 : allow_list(storage_path + "/allow_list.txt") {}
 
             void OnLoad(const PluginRegistrationPtr& self) override {
-                mode_change_id = api::allowlist::on_mode_change += [this](api::allowlist::allowlist_mode mode) {
-                    if (mode == api::allowlist::allowlist_mode::block)
-                        for (const auto& entry : allow_list.entrys())
-                            api::allowlist::on_kick(entry);
+                mode_change_id = api::allowlist::on_mode_change.join(
+                    base_objects::event_priority::heigh,
+                    [this](api::allowlist::allowlist_mode mode) {
+                        if (mode == api::allowlist::allowlist_mode::block)
+                            for (const auto& entry : allow_list.entrys())
+                                api::allowlist::on_kick(entry);
 
-                    this->mode = mode;
-                    return false;
-                };
+                        this->mode = mode;
+                        return false;
+                    }
+                );
             }
 
             void OnUnload(const PluginRegistrationPtr& self) override {
-                api::allowlist::on_mode_change.leave(mode_change_id);
+                api::allowlist::on_mode_change.leave(mode_change_id, base_objects::event_priority::heigh, false);
             }
 
             void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override {

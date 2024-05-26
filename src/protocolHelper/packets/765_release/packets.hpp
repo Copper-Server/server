@@ -183,7 +183,7 @@ namespace crafted_craft {
                 Response respawn(const std::string& dimension_type, const std::string& dimension_name, long hashed_seed, uint8_t gamemode, uint8_t previous_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, bool keep_attributes, bool keep_metadata);
                 Response setHeadRotation(int32_t entity_id, calc::VECTOR head_rotation);
 
-                Response updateSectionBlocks(int32_t section_x, int32_t section_z, int32_t section_y, const list_array<CompressedBlockState>& blocks);
+                Response updateSectionBlocks(int32_t section_x, int32_t section_z, int32_t section_y, const list_array<base_objects::compressed_block_state>& blocks);
 
                 Response setAdvancementsTab(const std::optional<std::string>& tab_id);
                 Response serverData(const Chat& motd, const std::optional<list_array<uint8_t>>& icon_png, bool secure_chat);

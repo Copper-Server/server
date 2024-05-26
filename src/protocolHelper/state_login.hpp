@@ -52,6 +52,7 @@ namespace crafted_craft {
             if (!session->sharedData().data)
                 return packets::login::kick("Internal error");
 
+
             excepted_packet = 3; //Login Acknowledged
             list_array<uint8_t> response;
             response.push_back(2);
@@ -109,21 +110,54 @@ namespace crafted_craft {
             return loginSuccess();
         }
 
+        void resolve_join_conflict() {
+            if (
+                has_conflict && session->serverData()
+                                        .server_config
+                                        .protocol
+                                        .connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::kick_connected
+            ) {
+                session->serverData().online_players.iterate_players_not_state(base_objects::SharedClientData::packets_state_t::protocol_state::initialization, [&](base_objects::SharedClientData& player) {
+                    if (player.name == session->sharedData().name) {
+                        constexpr const char reason[] = "Some player with same nickname joined to this server";
+                        switch (player.packets_state.state) {
+                            using ps = base_objects::SharedClientData::packets_state_t::protocol_state;
+                        case ps::play:
+                            player.sendPacket(packets::play::kick(reason));
+                            break;
+                        case ps::configuration:
+                            player.sendPacket(packets::configuration::kick(reason));
+                        default:
+                            break;
+                        }
+                    }
+                    return true;
+                });
+            }
+        }
+
         Response WorkPacket(ArrayStream& data) override {
             uint8_t packet_id = data.read();
 
-            if (packet_id != excepted_packet && excepted_packet != -1)
+            if (packet_id != excepted_packet && excepted_packet != -1) {
+                session->serverData().online_players.remove_player(session->sharedDataRef());
                 return Response::Disconnect();
+            }
+
             switch (packet_id) {
             case 0: { //login start
                 auto& online_players = session->serverData().online_players;
 
                 log::debug("login", "login start");
                 std::string nickname = ReadString(data, 16);
+                auto player = online_players.get_player(nickname);
                 if (online_players.has_player(nickname)) {
-                    if (session->serverData().server_config.protocol.connection_conflict == ServerConfiguration::Protocol::connection_conflict_t::prevent_join)
+                    if (session->serverData().server_config.protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::prevent_join)
                         return packets::login::kick("You someone already connected with this nickname");
+                    else
+                        has_conflict = true;
                 }
+
                 session->sharedData().name = nickname;
                 Chat* kick_reason_chat = AllowPlayersName(nickname);
                 if (kick_reason_chat) {
@@ -193,9 +227,11 @@ namespace crafted_craft {
                     log::debug("login", "[protocol error] unexpected packet while plugin handle");
                     return Response::Disconnect();
                 }
-
-                log::debug("login", "login ack");
+                resolve_join_conflict();
+                session->serverData().online_players.login_complete_to_cfg(session->sharedDataRef());
+                api::players::handlers::on_player_join(session->sharedDataRef());
                 next_handler = new TCPClientHandleConfiguration(session);
+                log::debug("login", "login ack");
                 return Response::Empty();
             default:
                 log::debug("login", "invalid packet");
@@ -220,6 +256,7 @@ namespace crafted_craft {
         int plugin_message_id = 0;
         bool is_authed = false;
         uint8_t excepted_packet = 0;
+        bool has_conflict = false;
 
     public:
         static std::unordered_map<std::string, PluginRegistrationPtr> plugins;

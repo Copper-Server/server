@@ -81,3 +81,33 @@ namespace calc {
         }
     }
 }
+
+namespace std {
+    template <class T>
+    struct hash<calc::XYZ<T>> {
+        size_t operator()(const calc::XYZ<T>& val) const {
+            return hash<T>()(val.x) ^ hash<T>()(val.y) ^ hash<T>()(val.z);
+        }
+    };
+
+    template <class T>
+    struct hash<calc::XY<T>> {
+        size_t operator()(const calc::XY<T>& val) const {
+            return hash<T>()(val.x) ^ hash<T>()(val.y);
+        }
+    };
+
+    template <>
+    struct hash<calc::ANGLE_DEG> {
+        size_t operator()(const calc::ANGLE_DEG& val) const {
+            return hash<double>()(val.x) ^ hash<double>()(val.y);
+        }
+    };
+
+    template <>
+    struct hash<calc::ANGLE_RAD> {
+        size_t operator()(const calc::ANGLE_RAD& val) const {
+            return hash<double>()(val.x) ^ hash<double>()(val.y);
+        }
+    };
+}

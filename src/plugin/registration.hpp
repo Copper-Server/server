@@ -3,6 +3,7 @@
 #include "../base_objects/commands.hpp"
 #include "../base_objects/response.hpp"
 #include "../base_objects/shared_client_data.hpp"
+#include "../base_objects/server_configuaration.hpp"
 #include <memory>
 #include <string>
 #include <variant>
@@ -35,6 +36,8 @@ namespace crafted_craft {
         virtual void OnCommandsLoad(const std::shared_ptr<PluginRegistration>&, base_objects::command_root_browser&) {}
 
         virtual void OnCommandsLoadComplete(const std::shared_ptr<PluginRegistration>&, base_objects::command_root_browser&) {}
+
+        virtual void OnSettingsUpdate(const std::shared_ptr<PluginRegistration>&, const base_objects::ServerConfiguration&){}
 
 #pragma endregion
 

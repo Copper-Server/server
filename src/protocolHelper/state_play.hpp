@@ -1,362 +1,259 @@
 #ifndef SRC_PROTOCOLHELPER_STATE_PLAY
 #define SRC_PROTOCOLHELPER_STATE_PLAY
+#include "../api/protocol.hpp"
+#include "client_play_handler/765_release.hpp"
 #include "packets.hpp"
 #include "util.hpp"
+#include <random>
 
 namespace crafted_craft {
     class TCPClientHandlePlay : public TCPClientHandle {
-        Response SendKeepAlive() {
-            log::debug("play", "Send keep alive");
-            keep_alive_packet = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-            list_array<uint8_t> response;
-            response.push_back(0x24);
-            WriteValue<int64_t>(keep_alive_packet, response);
-            timer.expires_from_now(boost::posix_time::seconds(session->serverData().timeout_seconds));
-            timer.async_wait([this](const boost::system::error_code& ec) {
-                if (ec == boost::asio::error::operation_aborted)
-                    return;
-                session->disconnect();
-            });
-            keep_alive_wait = true;
-            return Response::Answer({std::move(response)});
-        }
-
-        bool inited = false;
-        bool keep_alive_wait = false;
-        boost::asio::deadline_timer timer;
         std::list<PluginRegistration::plugin_response> queriedPackets;
         int64_t keep_alive_packet = 0;
         int32_t excepted_pong = 0;
         std::chrono::time_point<std::chrono::system_clock> pong_timer;
 
+        void check_response(Response& resp) {
+            if (resp.data.empty())
+                return;
+            size_t index;
+        re_check:
+            index = 0;
+            for (auto& entrys : resp.data) {
+                auto& data = entrys.data;
+                switch (data[0]) {
+                case 0x33: { //client bound ping
+                    ArrayStream packet(data.data(), data.size());
+                    int32_t id = ReadVar<int32_t>(packet);
+                    if (id == -1 && excepted_pong != -1) {
+                        resp.data.remove(index);
+                        goto re_check;
+                    }
+                    excepted_pong = id;
+                    pong_timer = std::chrono::system_clock::now();
+                    break;
+                }
+                default:
+                    break;
+                }
+                index++;
+            }
+        }
+
         Response IdleActions() {
             std::list<PluginRegistration::plugin_response> load_next_packets;
-            for (size_t i = 0; i < 20 && !queriedPackets.empty(); i++) {
+            for (size_t i = 0; !queriedPackets.empty(); i++) {
                 load_next_packets.push_back(std::move(queriedPackets.front()));
                 queriedPackets.pop_front();
             }
             Response response(Response::Empty());
+            for (auto& packet : session->sharedData().getPendingPackets())
+                response += std::move(packet);
             response.reserve(load_next_packets.size());
             for (auto& it : load_next_packets) {
                 if (std::holds_alternative<PluginRegistration::PluginResponse>(it)) {
                     auto& plugin = std::get<PluginRegistration::PluginResponse>(it);
                     response += packets::play::customPayload(plugin.plugin_chanel, plugin.data);
-                } else if (std::holds_alternative<Response>(it))
-                    response += std::get<Response>(it);
+                } else if (std::holds_alternative<Response>(it)) {
+                    Response& resp = std::get<Response>(it);
+                    check_response(resp);
+                    response += resp;
+                }
             }
-            if (!keep_alive_wait)
-                response += SendKeepAlive();
+            response += keep_alive_solution->send_keep_alive();
             return response;
         }
 
         Response WorkPacket(ArrayStream& packet) override {
             uint8_t packet_id = packet.read();
             switch (packet_id) {
-            case 0x00: {
-                log::debug("play", "Teleport confirm");
-                int32_t teleport_id = ReadVar<int32_t>(packet);
-                if (session->sharedData().packets_state.pending_teleport_ids.front() != teleport_id) {
-                    return packets::play::kick({"Invalid teleport id"});
-                } else
-                    session->sharedData().packets_state.pending_teleport_ids.pop_front();
+            case 0x00:
+                client_play_handler::proto_765_release::teleport_confirm(session, packet);
                 break;
-            }
-            case 0x01: {
+            case 0x01:
+                client_play_handler::proto_765_release::query_block_nbt(session, packet);
                 break;
-            }
-            case 0x02: {
-
+            case 0x02:
+                client_play_handler::proto_765_release::change_difficulty(session, packet);
                 break;
-            }
-
-            case 0x03: {
+            case 0x03:
+                client_play_handler::proto_765_release::acknowledge_message(session, packet);
                 break;
-            }
-            case 0x04: {
+            case 0x04:
+                client_play_handler::proto_765_release::chat_command(session, packet);
                 break;
-            }
-            case 0x05: {
+            case 0x05:
+                client_play_handler::proto_765_release::chat_message(session, packet);
                 break;
-            }
-            case 0x06: {
+            case 0x06:
+                client_play_handler::proto_765_release::player_session(session, packet);
                 break;
-            }
-            case 0x07: {
+            case 0x07:
+                client_play_handler::proto_765_release::chunk_batch_received(session, packet);
                 break;
-            }
-            case 0x08: {
+            case 0x08:
+                client_play_handler::proto_765_release::client_status(session, packet);
                 break;
-            }
-            case 0x09: {
+            case 0x09:
+                client_play_handler::proto_765_release::client_information(session, packet);
                 break;
-            }
-            case 0x0A: {
+            case 0x0A:
+                client_play_handler::proto_765_release::command_suggestion(session, packet);
                 break;
-            }
-            case 0x0B: {
+            case 0x0B:
+                client_play_handler::proto_765_release::switch_to_configuration(session, packet, next_handler);
                 break;
-            }
-            case 0x0C: {
+            case 0x0C:
+                client_play_handler::proto_765_release::click_container_button(session, packet);
                 break;
-            }
-            case 0x0D: {
+            case 0x0D:
+                client_play_handler::proto_765_release::click_container(session, packet);
                 break;
-            }
-            case 0x0E: {
+            case 0x0E:
+                client_play_handler::proto_765_release::close_container(session, packet);
                 break;
-            }
-            case 0x0F: {
+            case 0x0F:
+                client_play_handler::proto_765_release::change_container_slot_state(session, packet);
                 break;
-            }
             case 0x10: {
-                break;
+                auto tmp = client_play_handler::proto_765_release::plugin_message(session, packet, TCPClientHandlePlay::plugins_play, queriedPackets);
+                if (tmp.data.empty())
+                    break;
+                else
+                    return tmp;
             }
-            case 0x11: {
+            case 0x11:
+                client_play_handler::proto_765_release::edit_book(session, packet);
                 break;
-            }
-            case 0x12: {
+            case 0x12:
+                client_play_handler::proto_765_release::query_entity_tag(session, packet);
                 break;
-            }
-            case 0x13: {
+            case 0x13:
+                client_play_handler::proto_765_release::interact(session, packet);
                 break;
-            }
-            case 0x14: {
+            case 0x14:
+                client_play_handler::proto_765_release::jigsaw_generate(session, packet);
                 break;
-            }
             case 0x15: { //keep alive
                 log::debug("play", "Keep alive");
                 int64_t keep_alive_packet_response = ReadValue<int64_t>(packet);
-                if (keep_alive_packet == keep_alive_packet_response) {
-                    timer.cancel();
-                    keep_alive_wait = false;
-                }
+                if (keep_alive_packet == keep_alive_packet_response)
+                    session->sharedData().packets_state.keep_alive_ping_ms = std::min<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(keep_alive_solution->got_valid_keep_alive()).count(), INT32_MAX);
+                api::protocol::on_keep_alive.async_notify({keep_alive_packet_response, *session, session->sharedDataRef()});
                 break;
             }
-            case 0x16: {
+            case 0x16:
+                client_play_handler::proto_765_release::lock_difficulty(session, packet);
                 break;
-            }
-            case 0x17: {
+            case 0x17:
+                client_play_handler::proto_765_release::set_player_position(session, packet);
                 break;
-            }
-            case 0x18: {
+            case 0x18:
+                client_play_handler::proto_765_release::set_player_position_and_rotation(session, packet);
                 break;
-            }
-            case 0x19: {
+            case 0x19:
+                client_play_handler::proto_765_release::set_player_rotation(session, packet);
                 break;
-            }
-            case 0x1A: {
+            case 0x1A:
+                client_play_handler::proto_765_release::set_player_on_ground(session, packet);
                 break;
-            }
-            case 0x1B: {
+            case 0x1B:
+                client_play_handler::proto_765_release::move_vehicle(session, packet);
                 break;
-            }
-            case 0x1C: {
+            case 0x1C:
+                client_play_handler::proto_765_release::paddle_boat(session, packet);
                 break;
-            }
-            case 0x1D: {
+            case 0x1D:
+                client_play_handler::proto_765_release::pick_item(session, packet);
                 break;
-            }
-            case 0x1E: { //ping request
-                log::debug("play", "Ping request");
-                int64_t ping = ReadValue<int64_t>(packet);
+            case 0x1E:
+                client_play_handler::proto_765_release::ping_request(session, packet);
                 break;
-            }
-            case 0x1F: { // place recipe
-                log::debug("play", "Place recipe");
-                int32_t window_id = ReadVar<int32_t>(packet);
-                std::string recipe_id = ReadString(packet, 32767);
-                bool make_all = ReadValue<bool>(packet);
+            case 0x1F:
+                client_play_handler::proto_765_release::place_recipe(session, packet);
                 break;
-            }
-            case 0x20: { //player abilities
-                log::debug("play", "Player abilities");
-                int8_t flags = ReadValue<int8_t>(packet);
-                bool flying = flags & 0x02;
+            case 0x20:
+                client_play_handler::proto_765_release::player_abilities(session, packet);
                 break;
-            }
-            case 0x21: { //player action
-                log::debug("play", "Player action");
-                int32_t status = ReadVar<int32_t>(packet);
-                Position pos;
-                pos.raw = ReadValue<int64_t>(packet);
-                int8_t face = ReadValue<int8_t>(packet);
-                int32_t sequence = ReadVar<int32_t>(packet);
+            case 0x21:
+                client_play_handler::proto_765_release::player_action(session, packet);
                 break;
-            }
-            case 0x22: { //player command
-                log::debug("play", "Player command");
-                int32_t entity_id = ReadVar<int32_t>(packet);
-                int32_t action_id = ReadVar<int32_t>(packet);
-                int32_t jump_boost = ReadVar<int32_t>(packet);
+            case 0x22:
+                client_play_handler::proto_765_release::player_command(session, packet);
                 break;
-            }
-            case 0x23: { //player input
-                log::debug("play", "Player input");
-                float sideways = ReadValue<float>(packet);
-                float forward = ReadValue<float>(packet);
-                int8_t flags = ReadValue<int8_t>(packet);
+            case 0x23:
+                client_play_handler::proto_765_release::player_input(session, packet);
                 break;
-            }
             case 0x24: { //pong
                 log::debug("play", "Pong");
-                int32_t pong = ReadValue<int32_t>(packet);
-                break;
-            }
-            case 0x25: { //change recipe book settings
-                log::debug("play", "Change recipe book settings");
-                int32_t book_id = ReadVar<int32_t>(packet);
-                bool book_open = ReadValue<bool>(packet);
-                bool filter_active = ReadValue<bool>(packet);
-                break;
-            }
-            case 0x26: { //set seen recipe
-                log::debug("play", "Set seen recipe");
-                std::string recipe_id = ReadString(packet, 32767);
-                break;
-            }
-            case 0x27: { //rename item
-                log::debug("play", "Rename item");
-                std::string name = ReadString(packet, 32767);
-                break;
-            }
-            case 0x28: { //resource pack response
-                log::debug("play", "Resource pack response");
-                ENBT::UUID uuid = ReadUUID(packet);
-                int32_t result = ReadVar<int32_t>(packet);
-                break;
-            }
-            case 0x29: { //seen advancments
-                log::debug("play", "Seen advancements");
-                int32_t action = ReadVar<int32_t>(packet);
-                if (action == 1) {
-                    std::string tab_id = ReadString(packet, 32767);
+                api::protocol::data::pong data;
+                data.id = ReadValue<int32_t>(packet);
+                data.elapsed = std::chrono::system_clock::now() - pong_timer;
+                if (data.id == excepted_pong) {
+                    api::protocol::on_pong.async_notify({data, *session, session->sharedDataRef()});
+                    excepted_pong = -1;
                 }
                 break;
             }
-            case 0x2A: { //select trade
-                log::debug("play", "Select trade");
-                int32_t selected_slot = ReadVar<int32_t>(packet);
+            case 0x25:
+                client_play_handler::proto_765_release::change_recipe_book_settings(session, packet);
                 break;
+            case 0x26:
+                client_play_handler::proto_765_release::set_seen_recipe(session, packet);
+                break;
+            case 0x27:
+                client_play_handler::proto_765_release::rename_item(session, packet);
+                break;
+            case 0x28:
+                client_play_handler::proto_765_release::resource_pack_response(session, packet);
+                break;
+            case 0x29:
+                client_play_handler::proto_765_release::seen_advancements(session, packet);
+                break;
+            case 0x2A:
+                client_play_handler::proto_765_release::select_trade(session, packet);
+                break;
+            case 0x2B:
+                client_play_handler::proto_765_release::set_beacon_effect(session, packet);
+                break;
+            case 0x2C:
+                client_play_handler::proto_765_release::set_held_item(session, packet);
+                break;
+            case 0x2D:
+                client_play_handler::proto_765_release::program_command_block(session, packet);
+                break;
+            case 0x2E:
+                client_play_handler::proto_765_release::program_command_cart(session, packet);
+                break;
+            case 0x2F:
+                client_play_handler::proto_765_release::set_creative_slot(session, packet);
+                break;
+            case 0x30:
+                client_play_handler::proto_765_release::program_jigsaw_block(session, packet);
+                break;
+            case 0x31:
+                client_play_handler::proto_765_release::program_structure_block(session, packet);
+                break;
+            case 0x32:
+                client_play_handler::proto_765_release::update_sign(session, packet);
+                break;
+            case 0x33:
+                client_play_handler::proto_765_release::swing_arm(session, packet);
+                break;
+            case 0x34:
+                client_play_handler::proto_765_release::spectator_teleport(session, packet);
+                break;
+            case 0x35:
+                client_play_handler::proto_765_release::use_item_on(session, packet);
+                break;
+            case 0x36:
+                client_play_handler::proto_765_release::use_item(session, packet);
+                break;
+            default: {
+                auto error = "Unknown packet id: " + std::to_string(packet_id);
+                log::debug_error("play", error);
+                return packets::play::kick(error);
             }
-            case 0x2B: { //set beacon effect
-                log::debug("play", "Set beacon effect");
-                std::optional<int32_t> primary_effect;
-                std::optional<int32_t> secondary_effect;
-                if (ReadValue<bool>(packet))
-                    primary_effect = ReadVar<int32_t>(packet);
-                if (ReadValue<bool>(packet))
-                    secondary_effect = ReadVar<int32_t>(packet);
-                break;
-            }
-            case 0x2C: { //set held item
-                log::debug("play", "Set held item");
-                int16_t slot = ReadVar<int16_t>(packet);
-                break;
-            }
-            case 0x2D: { //program command block
-                log::debug("play", "Program command block");
-                Position pos;
-                pos.raw = ReadValue<int64_t>(packet);
-                std::string command = ReadString(packet, 32767);
-                int32_t mode = ReadVar<int32_t>(packet);
-                int8_t flags = ReadValue<int8_t>(packet);
-
-                break;
-            }
-            case 0x2E: { //program command block mineCart
-                log::debug("play", "Program command block mineCart");
-                int32_t entity_id = ReadVar<int32_t>(packet);
-                std::string command = ReadString(packet, 32767);
-                bool track_output = ReadValue<bool>(packet);
-                break;
-            }
-            case 0x2F: { //set creative slot
-                log::debug("play", "Set creative slot");
-                int16_t slot = ReadVar<int16_t>(packet);
-                base_objects::slot item = ReadSlot(packet);
-                break;
-            }
-            case 0x30: { //program jigsaw block
-                log::debug("play", "Program jigsaw block");
-                Position pos;
-                pos.raw = ReadValue<int64_t>(packet);
-                std::string name = ReadString(packet, 32767);
-                std::string target = ReadString(packet, 32767);
-                std::string pool = ReadString(packet, 32767);
-                std::string final_state = ReadString(packet, 32767);
-                std::string joint_type = ReadString(packet, 32767);
-                int32_t selection_priority = ReadVar<int32_t>(packet);
-                int32_t placement_priority = ReadVar<int32_t>(packet);
-
-                break;
-            }
-            case 0x31: { //program structure block
-                log::debug("play", "Program structure block");
-                Position pos;
-                pos.raw = ReadValue<int64_t>(packet);
-                int32_t action = ReadVar<int32_t>(packet);
-                int32_t mode = ReadVar<int32_t>(packet);
-                std::string name = ReadString(packet, 32767);
-                int8_t offset_x = ReadValue<int8_t>(packet);
-                int8_t offset_y = ReadValue<int8_t>(packet);
-                int8_t offset_z = ReadValue<int8_t>(packet);
-                int8_t size_x = ReadVar<int8_t>(packet);
-                int8_t size_y = ReadVar<int8_t>(packet);
-                int8_t size_z = ReadVar<int8_t>(packet);
-                int32_t mirror = ReadVar<int32_t>(packet);
-                int32_t rotation = ReadVar<int32_t>(packet);
-                std::string metadata = ReadString(packet, 128);
-                float integrity = ReadValue<float>(packet);
-                int64_t seed = ReadValue<int64_t>(packet);
-                int8_t flags = ReadValue<int8_t>(packet);
-                break;
-            }
-            case 0x32: { //update sign
-                log::debug("play", "Update sign");
-                Position pos;
-                pos.raw = ReadValue<int64_t>(packet);
-                bool is_front_text = ReadValue<bool>(packet);
-                std::string line1 = ReadString(packet, 384);
-                std::string line2 = ReadString(packet, 384);
-                std::string line3 = ReadString(packet, 384);
-                std::string line4 = ReadString(packet, 384);
-                break;
-            }
-            case 0x33: { //swing arm
-                log::debug("play", "Swing arm");
-                int32_t hand = ReadVar<int32_t>(packet);
-
-                break;
-            }
-            case 0x34: { //spectator request to teleport
-                log::debug("play", "Spectator request to teleport");
-                ENBT::UUID target_entity = ReadUUID(packet);
-                break;
-            }
-            case 0x35: { //Use item On
-                log::debug("play", "Use item on");
-                int32_t hand = ReadVar<int32_t>(packet);
-                Position pos;
-                pos.raw = ReadValue<int64_t>(packet);
-                int32_t face = ReadVar<int32_t>(packet);
-                float cursor_x = ReadValue<float>(packet);
-                float cursor_y = ReadValue<float>(packet);
-                float cursor_z = ReadValue<float>(packet);
-                bool inside_block = ReadValue<bool>(packet);
-                int32_t sequence = ReadVar<int32_t>(packet);
-
-                break;
-            }
-            case 0x36: { //Use item
-                log::debug("play", "Use item");
-                int32_t hand = ReadVar<int32_t>(packet);
-                int32_t sequence = ReadVar<int32_t>(packet);
-
-
-                break;
-            }
-            default:
-                break;
             }
             return IdleActions();
         }
@@ -373,7 +270,7 @@ namespace crafted_craft {
             return packets::play::kick("Internal server error\nPlease report this to the server owner!");
         }
 
-        Response OnSwitch() override {
+        Response OnSwitching() override {
             for (auto& plugin : base_plugins)
                 queriedPackets.push_back(plugin->OnPlay_initialize(session->sharedDataRef()));
 
@@ -387,10 +284,25 @@ namespace crafted_craft {
         static list_array<PluginRegistrationPtr> base_plugins;
 
         TCPClientHandlePlay(TCPsession* session)
-            : TCPClientHandle(session), timer(session->sock.get_executor()) {
+            : TCPClientHandle(session) {
+            keep_alive_solution->set_callback(
+                [this]() {
+                    log::debug("play", "Send keep alive");
+                    keep_alive_packet = generate_random_int();
+                    list_array<uint8_t> response;
+                    response.push_back(0x24);
+                    WriteValue<int64_t>(keep_alive_packet, response);
+                    return Response::Answer({std::move(response)});
+                }
+            );
         }
 
         ~TCPClientHandlePlay() override {
+            for (auto& plugin : base_plugins)
+                queriedPackets.push_back(plugin->OnPlay_uninitialized(session->sharedDataRef()));
+
+            for (auto& plugin : session->sharedData().compatible_plugins)
+                queriedPackets.push_back(pluginManagement.getPlugin(plugin)->OnPlay_uninitialized(session->sharedDataRef()));
         }
 
         TCPclient* DefineOurself(TCPsession* sock) override {

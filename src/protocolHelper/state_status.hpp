@@ -68,6 +68,7 @@ namespace crafted_craft {
                         res += "{\"name\":\"" + it.first + "\",\"id\":\"" + UUID2String(it.second) + "\"},";
                     }
                     res.pop_back();
+                    res += "]";
                 }
 
                 res += "},";
@@ -93,6 +94,8 @@ namespace crafted_craft {
         }
 
         Response WorkPacket(ArrayStream& packet) override {
+            if (!special_status->enable_status)
+                return Response::Disconnect();
             if (packet.size_read() == 1) {
                 list_array<uint8_t> response;
                 response.push_back('\0');

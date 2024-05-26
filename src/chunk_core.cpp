@@ -13,18 +13,18 @@ namespace crafted_craft {
     uint8_t ChunkCore::chunk_y_count = 15;
     std::atomic_bool ChunkCore::mod_cys_allow = 1;
 
-    inline ENBT prepareBlock(Block& bl) {
+    inline ENBT prepareBlock(base_objects::block& bl) {
         ENBT block_data{
             ENBT((uint16_t)bl.id) //block id
         };
         return block_data;
     }
 
-    inline Block prepareBlock(ENBT& bl) {
+    inline base_objects::block prepareBlock(ENBT& bl) {
         uint16_t id = std::get<uint16_t>(bl[0].content());
 
 		if (bl[1].contains())
-            return Block(id);
+            return base_objects::block(id);
         else
             return id;
     }
@@ -208,7 +208,7 @@ namespace crafted_craft {
         }
     }
 
-    const Block& WorldClusterTalker::BlockRequest(block_pos_t x, block_pos_t y, block_pos_t z) {
+    const base_objects::block& WorldClusterTalker::BlockRequest(block_pos_t x, block_pos_t y, block_pos_t z) {
         if (world_handle) {
             race_lock.lock();
             auto& res = world_handle->LocalBlock(x, y, z);

@@ -2,6 +2,8 @@
 #define SRC_PROTOCOLHELPER_UTIL
 #include "../ClientHandleHelper.hpp"
 #include "../base_objects/packets.hpp"
+#include "../base_objects/ptr_optional.hpp"
+#include "../base_objects/response.hpp"
 #include "../library/enbt.hpp"
 #include "../plugin/main.hpp"
 #include "../registers.hpp"
@@ -189,6 +191,10 @@ namespace crafted_craft {
         return res;
     }
 
+    static std::string ReadIdentifier(ArrayStream& data) {
+        return ReadString(data, 32767);
+    }
+
     static void WriteString(list_array<uint8_t>& data, const std::string& str, int32_t max_string_len = INT32_MAX) {
         int32_t actual_len = str.size();
         if (actual_len != str.size())
@@ -244,14 +250,118 @@ namespace crafted_craft {
             buf[index++] = "0123456789abcdef"[tmp >> 4];
             buf[index++] = "0123456789abcdef"[tmp & 0x0F];
         }
-        return buf;
+        return std::string(buf, 36);
     }
+
+    static list_array<uint8_t> ReadListArray(ArrayStream& data) {
+        int32_t len = ReadVar<int32_t>(data);
+        if (len < 0)
+            throw std::out_of_range("list array len out of range");
+        list_array<uint8_t> res;
+        res.reserve_push_back(len);
+        for (int32_t i = 0; i < len; i++)
+            res.push_back(data.read());
+        return res;
+    }
+
+    class KeepAliveSolution {
+        std::function<Response()> callback;
+        boost::asio::deadline_timer timeout_timer;
+        boost::asio::deadline_timer send_keep_alive_timer;
+        bool send_keep_alive_requested = false;
+        bool need_to_send = false;
+        bool got_keep_alive = true;
+        TCPsession* session;
+
+        void _keep_alive_sended() {
+            need_to_send = false;
+            got_keep_alive = false;
+            timeout_timer.expires_from_now(boost::posix_time::seconds(session->serverData().timeout_seconds));
+            last_keep_alive = std::chrono::system_clock::now();
+            timeout_timer.async_wait([this](const boost::system::error_code& ec) {
+                if (ec == boost::asio::error::operation_aborted)
+                    return;
+                session->disconnect();
+            });
+        }
+
+        void _keep_alive_request() {
+            if (!callback) {
+                send_keep_alive_requested = false;
+                return;
+            }
+            auto seconds = std::min<uint16_t>(session->serverData().timeout_seconds, 2);
+            send_keep_alive_requested = true;
+            send_keep_alive_timer.cancel();
+            send_keep_alive_timer.expires_from_now(boost::posix_time::seconds(seconds));
+            send_keep_alive_timer.async_wait([this](const boost::system::error_code& ec) {
+                if (ec == boost::asio::error::operation_aborted)
+                    return;
+                need_to_send = true;
+                _keep_alive_request();
+            });
+        }
+
+        std::chrono::time_point<std::chrono::system_clock> last_keep_alive;
+
+    public:
+        KeepAliveSolution(TCPsession* session)
+            : timeout_timer(session->sock.get_executor()), send_keep_alive_timer(session->sock.get_executor()), session(session) {
+        }
+
+        ~KeepAliveSolution() {
+            timeout_timer.cancel();
+            send_keep_alive_timer.cancel();
+        }
+
+        void set_callback(const std::function<Response()>& fun) {
+            callback = fun;
+            _keep_alive_request();
+            need_to_send = true;
+        }
+
+        void keep_alive_sended() {
+            if (!callback)
+                return;
+            _keep_alive_sended();
+            send_keep_alive_timer.cancel();
+        }
+
+        Response send_keep_alive() {
+            if (!callback || !need_to_send)
+                return {};
+            _keep_alive_sended();
+            return callback();
+        }
+
+        //returns elapsed time from last keep_alive
+        std::chrono::system_clock::duration got_valid_keep_alive() {
+            got_keep_alive = true;
+            timeout_timer.cancel();
+            return last_keep_alive - std::chrono::system_clock::now();
+        }
+
+        Response no_response() {
+            if (got_keep_alive && callback) {
+                _keep_alive_sended();
+                return callback();
+            } else
+                return {};
+        }
+    };
 
     class TCPClientHandle : public TCPclient {
     protected:
-        static std::unordered_set<baip::address> banned_players;
+        static uint64_t generate_random_int() {
+            static std::random_device rd;
+            static std::mt19937_64 gen;
+            return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() ^ gen();
+        }
+        static std::unordered_set<boost::asio::ip::address> banned_players;
         static size_t max_packet_size;
         TCPclient* next_handler = nullptr;
+        TCPsession* session;
+        base_objects::ptr_optional<KeepAliveSolution> keep_alive_solution;
 
         list_array<uint8_t> PrepareIncoming(ArrayStream& packet) {
             if (session->compression_threshold == -1) {
@@ -330,10 +440,23 @@ namespace crafted_craft {
             return build_packet;
         }
 
+        list_array<list_array<uint8_t>> PrepareSend(auto&& packet) {
+            list_array<list_array<uint8_t>> answer;
+            if (packet.data.size()) {
+                for (auto& resp : packet.data)
+                    answer.push_back(PrepareSend(std::move(resp)));
+            }
+            return answer;
+        }
+
         virtual Response WorkPacket(ArrayStream& packet) = 0;
         virtual Response TooLargePacket() = 0;
         virtual Response Exception(const std::exception& ex) = 0;
         virtual Response UnexpectedException() = 0;
+
+        virtual Response OnSwitching() {
+            return Response::Empty();
+        }
 
         Response WorkPackets(list_array<uint8_t>& combined) {
             assert(session);
@@ -371,12 +494,11 @@ namespace crafted_craft {
                         answer_it = WorkPacket(compressed_data);
                     } else
                         answer_it = WorkPacket(packet);
+
+                    answer.push_back(PrepareSend(answer_it));
                     if (answer_it.do_disconnect)
                         return Response::Disconnect(std::move(answer));
-                    if (answer_it.data.size()) {
-                        for (auto& resp : answer_it.data)
-                            answer.push_back(PrepareSend(std::move(resp)));
-                    }
+
                     if (answer_it.do_disconnect_after_send)
                         return Response::Disconnect(std::move(answer));
                     valid_till = data.r;
@@ -388,14 +510,16 @@ namespace crafted_craft {
                     return UnexpectedException();
                 }
             }
+            if (answer.empty() && next_handler == nullptr)
+                if (keep_alive_solution)
+                    answer.push_back(PrepareSend(keep_alive_solution->no_response()));
             return Response::Answer(std::move(answer), valid_till);
         }
 
-        TCPsession* session;
 
     public:
         TCPClientHandle(TCPsession* session)
-            : session(session) {
+            : session(session), keep_alive_solution(session ? new KeepAliveSolution(session) : nullptr) {
         }
 
         ~TCPClientHandle() override {}
@@ -404,11 +528,25 @@ namespace crafted_craft {
             return next_handler;
         }
 
-        Response WorkClient(list_array<uint8_t>& clientData, uint64_t timeout_ms) override {
+        Response WorkClient(list_array<uint8_t>& clientData) final {
             return WorkPackets(clientData);
         }
 
-        bool DoDisconnect(baip::address ip) override {
+        Response OnSwitch() final {
+            auto res = OnSwitching();
+            if (!res.data.empty()) {
+                list_array<list_array<uint8_t>> answer;
+                for (auto& resp : res.data)
+                    answer.push_back(PrepareSend(std::move(resp)));
+                res.data = std::move(answer);
+                return res;
+            } else if (res.do_disconnect || res.do_disconnect_after_send)
+                return res;
+            else
+                return {};
+        }
+
+        bool DoDisconnect(boost::asio::ip::address ip) override {
             return false;
         }
     };

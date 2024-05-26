@@ -105,13 +105,7 @@ namespace crafted_craft {
             return next_handler;
         }
 
-        Response WorkClient(list_array<uint8_t>& clientData, uint64_t timeout_ms) override {
-            if (!session)
-                return Response::Disconnect();
-            return WorkPackets(clientData);
-        }
-
-        bool DoDisconnect(baip::address ip) override {
+        bool DoDisconnect(boost::asio::ip::address ip) override {
             return banned_players.contains(ip);
         }
     };

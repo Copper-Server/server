@@ -6,9 +6,9 @@
 #include <list>
 
 namespace crafted_craft {
-    typedef Block ChunkFragment[16][16][16];
-	typedef int32_t block_pos_t;
-	typedef uint32_t ublock_pos_t;
+    typedef base_objects::block ChunkFragment[16][16][16];
+    typedef int32_t block_pos_t;
+    typedef uint32_t ublock_pos_t;
 
 	class ChunkGenerator {
 	public:
@@ -35,17 +35,19 @@ namespace crafted_craft {
 		~ChunkCore() {
 			if(chunk_fragments)
 				delete[] chunk_fragments;
-		}
-		Block& operator()(block_pos_t x, block_pos_t y, block_pos_t z) {
-			x += 8;
-			y += 8;
+        }
+
+        base_objects::block& operator()(block_pos_t x, block_pos_t y, block_pos_t z) {
+            x += 8;
+            y += 8;
 			z += 8;
 			if ((block_pos_t)chunk_y_count * 8  <= y)
 				throw std::out_of_range("y block pos out of max size range");
 			return chunk_fragments[y/8][x][y%8][z];
-		}
-		void Save(std::filesystem::path corePath);
-		void Load(std::filesystem::path corePath);
+        }
+
+        void Save(std::filesystem::path corePath);
+        void Load(std::filesystem::path corePath);
 	private:
 		block_pos_t pos_x : (sizeof(block_pos_t)*8-3) = 0;
 		block_pos_t pos_z : (sizeof(block_pos_t)*8-3) = 0;
@@ -70,15 +72,16 @@ namespace crafted_craft {
 		}
 
 		void Save(std::filesystem::path clusterPath);
-		void Load(std::filesystem::path clusterPath);
+        void Load(std::filesystem::path clusterPath);
 
-		Block& operator()(block_pos_t x, block_pos_t y, block_pos_t z) {
-			return (chunks[x / 24][z / 24])(x % 24, y, z % 24);
-		}
-		ChunkCore& getChunk(block_pos_t x, block_pos_t z) {
-			return chunks[x / 24][z / 24];
-		}
-	};
+        base_objects::block& operator()(block_pos_t x, block_pos_t y, block_pos_t z) {
+            return (chunks[x / 24][z / 24])(x % 24, y, z % 24);
+        }
+
+        ChunkCore& getChunk(block_pos_t x, block_pos_t z) {
+            return chunks[x / 24][z / 24];
+        }
+    };
 
 	class WorldClusterTalker {
 	protected:
@@ -93,24 +96,26 @@ namespace crafted_craft {
 		WorldClusterTalker(class WorldClusters& world, block_pos_t cluster_x, block_pos_t cluster_z, block_pos_t cluster_handle_distance);
 
 		virtual void ClusterUnloaded(block_pos_t cluster_x, block_pos_t cluster_z) = 0;
-		virtual void BlockChanged(Block* block, block_pos_t x, block_pos_t y, block_pos_t z) = 0;
-		virtual void BlockSeted(Block* block, block_pos_t x, block_pos_t y, block_pos_t z) = 0;
-		virtual void BlockRemoved(block_pos_t x, block_pos_t y, block_pos_t z) = 0;
-		virtual void BlockBreaked(Block* block, block_pos_t x, block_pos_t y, block_pos_t z) = 0;
-		virtual void BlocksChanged(Block* block, block_pos_t x, block_pos_t y, block_pos_t z) = 0;
+        virtual void BlockChanged(base_objects::block* block, block_pos_t x, block_pos_t y, block_pos_t z) = 0;
+        virtual void BlockSeted(base_objects::block* block, block_pos_t x, block_pos_t y, block_pos_t z) = 0;
+        virtual void BlockRemoved(block_pos_t x, block_pos_t y, block_pos_t z) = 0;
+        virtual void BlockBreaked(base_objects::block* block, block_pos_t x, block_pos_t y, block_pos_t z) = 0;
+        virtual void BlocksChanged(base_objects::block* block, block_pos_t x, block_pos_t y, block_pos_t z) = 0;
 
-		const ChunkCluster& ClusterRequest(block_pos_t x, block_pos_t z);
+        const ChunkCluster& ClusterRequest(block_pos_t x, block_pos_t z);
 
-		bool do_handele_nbt = false;
+        bool do_handele_nbt = false;
 		block_pos_t nbt_handle_x = 0, nbt_handle_y = 0, nbt_handle_z = 0;
-		virtual void BlockHandleNbtChanged(Block* block, block_pos_t x, block_pos_t y, block_pos_t z) = 0;
+        virtual void BlockHandleNbtChanged(base_objects::block* block, block_pos_t x, block_pos_t y, block_pos_t z) = 0;
 
-		const Block& BlockRequest(block_pos_t x, block_pos_t y, block_pos_t z);
+        const base_objects::block& BlockRequest(block_pos_t x, block_pos_t y, block_pos_t z);
 
-		struct BlockEventData {
-			Block* block; block_pos_t x, y, z;
-		};
-		void NotifyBlockChanged(BlockEventData);
+        struct BlockEventData {
+            base_objects::block* block;
+            block_pos_t x, y, z;
+        };
+
+        void NotifyBlockChanged(BlockEventData);
         void NotifyBlockPlaced(BlockEventData);
         void NotifyBlockRemoved(BlockEventData);
         void NotifyBlockBroken(BlockEventData);
@@ -120,8 +125,9 @@ namespace crafted_craft {
 
     struct BlockEvent {
         //source used for prevent send ourself
-		class WorldClusterTalker* source;
-		Block* block; block_pos_t x, y, z;
+        class WorldClusterTalker* source;
+        base_objects::block* block;
+        block_pos_t x, y, z;
         enum class Reason {
             Changed,
             Placed,
@@ -138,7 +144,7 @@ namespace crafted_craft {
 
         struct UPDATE_BLOCK {
             block_pos_t x, y, z;
-            Block::TickReason reason;
+            base_objects::block::TickReason reason;
 
             bool operator==(const UPDATE_BLOCK& bl) const {
                 return bl.x == x && bl.y == y && bl.z == z && bl.reason == reason;
@@ -152,7 +158,7 @@ namespace crafted_craft {
         std::list<UPDATE_BLOCK> to_be_updated;
         std::mutex to_be_updated_mut;
 
-        Block& LocalBlock(block_pos_t x, block_pos_t y, block_pos_t z) {
+        base_objects::block& LocalBlock(block_pos_t x, block_pos_t y, block_pos_t z) {
             return getCluster(x / 128, z / 128)(x % 128, y, z % 128);
         }
 
@@ -164,15 +170,15 @@ namespace crafted_craft {
             EventNotify({nullptr, nullptr, block_pos.x, block_pos.y, block_pos.z, BlockEvent::Reason::Removed});
         }
 
-        inline void setBlock(UPDATE_BLOCK block_pos, Block seted_block) {
-            EventNotify({nullptr, new Block(seted_block), block_pos.x, block_pos.y, block_pos.z, BlockEvent::Reason::Placed});
+        inline void setBlock(UPDATE_BLOCK block_pos, base_objects::block seted_block) {
+            EventNotify({nullptr, new base_objects::block(seted_block), block_pos.x, block_pos.y, block_pos.z, BlockEvent::Reason::Placed});
         }
 
-        void setBlocks(std::list<UPDATE_BLOCK> blocks, Block set_block) {
+        void setBlocks(std::list<UPDATE_BLOCK> blocks, base_objects::block set_block) {
         }
 
-        inline void stateChanged(UPDATE_BLOCK block_pos, Block bock_state) {
-            EventNotify({nullptr, new Block(bock_state), block_pos.x, block_pos.y, block_pos.z, BlockEvent::Reason::Changed});
+        inline void stateChanged(UPDATE_BLOCK block_pos, base_objects::block bock_state) {
+            EventNotify({nullptr, new base_objects::block(bock_state), block_pos.x, block_pos.y, block_pos.z, BlockEvent::Reason::Changed});
         }
 
         bool CalculateCanMoveBlocks(std::list<UPDATE_BLOCK> blocks, uint8_t mx, uint8_t my, uint8_t mz) {
@@ -185,7 +191,7 @@ namespace crafted_craft {
                     return false;
                 auto&& tmp = getCluster(it.x + mx, it.z + mz);
                 tmp.thread_guard.lock();
-                if (!tmp(it.x + mx, it.y + my, it.z + mz).canMove()) {
+                if (!tmp(it.x + mx, it.y + my, it.z + mz).getMoveWeight()) {
                     tmp.thread_guard.unlock();
                     return false;
                 }
@@ -222,9 +228,9 @@ namespace crafted_craft {
             }
         }
 
-        static std::list<UPDATE_BLOCK> _UpdateBlockSelect(Block::TickAnswer to_be_calc, UPDATE_BLOCK tick_pos) {
+        static std::list<UPDATE_BLOCK> _UpdateBlockSelect(base_objects::block::TickAnswer to_be_calc, UPDATE_BLOCK tick_pos) {
             switch (to_be_calc.mode) {
-            case Block::TickAnswer::PosMode::as_pos:
+            case base_objects::block::TickAnswer::PosMode::as_pos:
                 return {
                     UPDATE_BLOCK(
                         to_be_calc.X + tick_pos.x,
@@ -237,7 +243,7 @@ namespace crafted_craft {
                         to_be_calc.z + tick_pos.z
                     ),
                 };
-            case Block::TickAnswer::PosMode::as_box: {
+            case base_objects::block::TickAnswer::PosMode::as_box: {
                 std::list<UPDATE_BLOCK> res;
                 for (auto x : RangeInt(tick_pos.x + to_be_calc.X, tick_pos.x + to_be_calc.x))
                     for (auto y : RangeInt(tick_pos.y + to_be_calc.Y, tick_pos.y + to_be_calc.y))
@@ -245,7 +251,7 @@ namespace crafted_craft {
                             res.push_back({x, y, z});
                 return res;
             }
-            case Block::TickAnswer::PosMode::as_tunnels: {
+            case base_objects::block::TickAnswer::PosMode::as_tunnels: {
                 std::list<UPDATE_BLOCK> res;
                 for (auto x : RangeInt(tick_pos.x + to_be_calc.X, tick_pos.x + to_be_calc.x))
                     res.push_back({x, tick_pos.y, tick_pos.z});
@@ -261,7 +267,7 @@ namespace crafted_craft {
             }
         }
 
-        static std::list<UPDATE_BLOCK> _UpdateBlockSelectMoveFreed(Block::TickAnswer to_be_calc, UPDATE_BLOCK tick_pos) {
+        static std::list<UPDATE_BLOCK> _UpdateBlockSelectMoveFreed(base_objects::block::TickAnswer to_be_calc, UPDATE_BLOCK tick_pos) {
             if (!(to_be_calc.move_x | to_be_calc.move_y | to_be_calc.move_z))
                 return {};
             std::list<UPDATE_BLOCK> res;
@@ -313,17 +319,18 @@ namespace crafted_craft {
                 auto& it = tmp.front();
                 auto tanswer = LocalBlock(it.x, it.y, it.z).Tick(it.reason);
                 switch (tanswer.behavior) {
-                case Block::TickAnswer::Behavior::add_to_be_ticked_next:
+                    using Behavior = base_objects::block::TickAnswer::Behavior;
+                case Behavior::add_to_be_ticked_next:
                     addToBeUpdated(it.x, it.y, it.z);
                     break;
-                case Block::TickAnswer::Behavior::check_can_move_and_move_blocks:
+                case Behavior::check_can_move_and_move_blocks:
                     Task::start([this, tanswer, it]() {
                         auto&& temp = _UpdateBlockSelect(tanswer, it);
                         if (CalculateCanMoveBlocks(temp, tanswer.move_x, tanswer.move_y, tanswer.move_z))
                             MoveBlocks(temp, tanswer.move_x, tanswer.move_y, tanswer.move_z);
                     });
                     break;
-                case Block::TickAnswer::Behavior::check_can_move_and_move_blocks_then_add_new_blocks:
+                case Behavior::check_can_move_and_move_blocks_then_add_new_blocks:
                     Task::start([this, tanswer, it]() {
                         if (!tanswer.block)
                             return;
@@ -335,7 +342,7 @@ namespace crafted_craft {
                         delete tanswer.block;
                     });
                     break;
-                case Block::TickAnswer::Behavior::move_blocks:
+                case Behavior::move_blocks:
                     Task::start([this, tanswer, it]() {
                         MoveBlocks(
                             _UpdateBlockSelect(tanswer, it),
@@ -345,7 +352,7 @@ namespace crafted_craft {
                         );
                     });
                     break;
-                case Block::TickAnswer::Behavior::move_blocks_then_add_new_blocks:
+                case Behavior::move_blocks_then_add_new_blocks:
                     Task::start([this, tanswer, it]() {
                         if (!tanswer.block)
                             return;
@@ -354,38 +361,38 @@ namespace crafted_craft {
                         delete tanswer.block;
                     });
                     break;
-                case Block::TickAnswer::Behavior::update_now: {
+                case Behavior::update_now: {
                     auto&& insert_value = _UpdateBlockSelect(tanswer, it);
                     _UpdateBlockUpdateNow(updated_now, tmp, insert_value);
                     break;
                 }
-                case Block::TickAnswer::Behavior::update_now_except_ourself: {
+                case Behavior::update_now_except_ourself: {
                     auto&& insert_value = _UpdateBlockSelect(tanswer, it);
                     insert_value.remove(it);
                     _UpdateBlockUpdateNow(updated_now, tmp, insert_value);
                     break;
                 }
-                case Block::TickAnswer::Behavior::update_now_except_ticked: {
+                case Behavior::update_now_except_ticked: {
                     ticked.push_back(it);
                     auto&& insert_value = _UpdateBlockSelect(tanswer, it);
                     insert_value.remove_if([&ticked](auto& x) { return std::find(ticked.begin(), ticked.end(), x) != ticked.end(); });
                     _UpdateBlockUpdateNow(updated_now, tmp, insert_value);
                     break;
                 }
-                case Block::TickAnswer::Behavior::clone:
-                case Block::TickAnswer::Behavior::break_box:
+                case Behavior::clone:
+                case Behavior::break_box:
                     breakBlock(it);
                     break;
-                case Block::TickAnswer::Behavior::remove_box:
+                case Behavior::remove_box:
                     removeBlock(it);
                     break;
-                case Block::TickAnswer::Behavior::_break:
+                case Behavior::_break:
                     breakBlock(it);
                     break;
-                case Block::TickAnswer::Behavior::_remove:
+                case Behavior::_remove:
                     removeBlock(it);
                     break;
-                case Block::TickAnswer::Behavior::done:
+                case Behavior::done:
                 default:
                     break;
                 }
@@ -445,7 +452,7 @@ namespace crafted_craft {
                 break;
             case BlockEvent::Reason::Removed:
             case BlockEvent::Reason::Broken:
-                LocalBlock(data.x, data.y, data.z) = Block();
+                LocalBlock(data.x, data.y, data.z) = base_objects::block();
                 break;
             }
             Task::start([this, data]() {
@@ -465,11 +472,11 @@ namespace crafted_craft {
             to_be_updated_mut.unlock();
         }
 
-        inline void UpdateBlock(block_pos_t x, block_pos_t y, block_pos_t z, Block::TickReason reason) {
+        inline void UpdateBlock(block_pos_t x, block_pos_t y, block_pos_t z, base_objects::block::TickReason reason) {
             UpdateBlock({x, y, z, reason});
         }
 
-        inline Block operator()(block_pos_t x, block_pos_t y, block_pos_t z) {
+        inline base_objects::block operator()(block_pos_t x, block_pos_t y, block_pos_t z) {
             return LocalBlock(x, y, z);
         }
 

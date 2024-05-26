@@ -40,7 +40,7 @@ namespace crafted_craft {
                     player_storage.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&chat](SharedClientData& client) {
                         client.sendPacket(
                             packets::play::playerChatMessage(
-                                chat.sender->uuid,
+                                chat.sender->data->uuid,
                                 0,
                                 chat.signature,
                                 chat.message,
@@ -63,7 +63,7 @@ namespace crafted_craft {
                 on_player_personal_chat = api::players::calls::on_player_personal_chat += ([this](const api::players::player_personal_chat& chat) {
                     chat.receiver->sendPacket(
                         packets::play::playerChatMessage(
-                            chat.sender->uuid,
+                            chat.sender->data->uuid,
                             0,
                             chat.signature,
                             chat.message,
@@ -81,7 +81,7 @@ namespace crafted_craft {
 
                     chat.sender->sendPacket(
                         packets::play::playerChatMessage(
-                            chat.sender->uuid,
+                            chat.sender->data->uuid,
                             0,
                             chat.signature,
                             chat.message,

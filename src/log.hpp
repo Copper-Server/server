@@ -15,6 +15,10 @@ namespace crafted_craft {
 
         void debug(const std::string& source, const std::string& message);
 
+        void debug_error(const std::string& source, const std::string& message);
+
+        void fatal(const std::string& source, const std::string& message);
+
         namespace commands {
             extern base_objects::event<std::string> on_command;
             void init();

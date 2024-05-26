@@ -57,7 +57,6 @@ namespace crafted_craft {
             };
 
             namespace calls {
-
                 struct teleport_request {
                     base_objects::client_data_holder player;
                     Position position;

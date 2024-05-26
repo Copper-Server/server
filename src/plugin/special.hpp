@@ -1,5 +1,6 @@
 #ifndef SRC_PLUGIN_SPECIAL
 #define SRC_PLUGIN_SPECIAL
+#include "../base_objects/server_configuaration.hpp"
 #include "../protocolHelper/util.hpp"
 
 namespace crafted_craft {
@@ -22,6 +23,11 @@ namespace crafted_craft {
 
     class SpecialPluginStatus {
     public:
+        bool enable_status = true;
+
+        virtual void OnSettingsUpdate(const base_objects::ServerConfiguration& config) {
+            enable_status = config.status.enable;
+        }
         virtual std::string StatusResponseVersionName() {
             return "CraftedCraft";
         }

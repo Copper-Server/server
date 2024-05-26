@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 project(CraftedCart CXX)
-add_subdirectory("src/library/fast_task")
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(Boost_NO_WARN_NEW_VERSIONS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+add_subdirectory("src/library/fast_task")
 
 set(CC_src_INCLUDE_DIR "src")
 set(CC_INCLUDE_DIR ${CC_src_INCLUDE_DIR})
@@ -27,7 +27,8 @@ endif(MSVC)
 set(ENABLE_BOOST_PREPROCESSOR ON)
 
 FILE(GLOB SRCFILES 
-        src/protocolHelper/packets/*/*.cpp
+        src/protocolHelper/*/*.cpp
+        src/protocolHelper/*/*/*.cpp
         src/library/ENBT/enbt.cpp
         src/base_objects/*.cpp 
         src/storage/*.cpp 

@@ -12,17 +12,18 @@ namespace crafted_craft {
             uint64_t id;
         };
 
+        enum class event_priority {
+            heigh,
+            upper_avg,
+            avg,
+            lower_avg,
+            low
+        };
+
         template <typename T>
         struct event {
 
             using function = std::function<bool(const T&)>;
-            enum class Priority {
-                heigh,
-                upper_avg,
-                avg,
-                lower_avg,
-                low
-            };
 
             event_register_id operator+=(function func) {
                 return join(func);
@@ -32,64 +33,72 @@ namespace crafted_craft {
                 return notify(args);
             }
 
-            event_register_id join(function func, bool async_mode = false, Priority priority = Priority::avg) {
+            event_register_id join(function func) {
+                return join(event_priority::avg, false, func);
+            }
+
+            event_register_id join(event_priority priority, function func) {
+                return join(priority, false, func);
+            }
+
+            event_register_id join(event_priority priority, bool async_mode, function func) {
                 std::lock_guard<fast_task::task_mutex> lock(mutex);
                 if (async_mode) {
                     switch (priority) {
-                    case Priority::heigh:
+                    case event_priority::heigh:
                         return addOne(async_heigh_priority, func);
-                    case Priority::upper_avg:
+                    case event_priority::upper_avg:
                         return addOne(async_upper_avg_priority, func);
-                    case Priority::avg:
+                    case event_priority::avg:
                         return addOne(async_avg_priority, func);
-                    case Priority::lower_avg:
+                    case event_priority::lower_avg:
                         return addOne(async_lower_avg_priority, func);
-                    case Priority::low:
+                    case event_priority::low:
                         return addOne(async_low_priority, func);
                     }
                 } else {
                     switch (priority) {
-                    case Priority::heigh:
+                    case event_priority::heigh:
                         return addOne(heigh_priority, func);
-                    case Priority::upper_avg:
+                    case event_priority::upper_avg:
                         return addOne(upper_avg_priority, func);
-                    case Priority::avg:
+                    case event_priority::avg:
                         return addOne(avg_priority, func);
-                    case Priority::lower_avg:
+                    case event_priority::lower_avg:
                         return addOne(lower_avg_priority, func);
-                    case Priority::low:
+                    case event_priority::low:
                         return addOne(low_priority, func);
                     }
                 }
                 throw std::runtime_error("Invalid priority");
             }
 
-            bool leave(event_register_id func, bool async_mode = false, Priority priority = Priority::avg) {
+            bool leave(event_register_id func, event_priority priority = event_priority::avg, bool async_mode = false) {
                 std::lock_guard<fast_task::task_mutex> lock(mutex);
                 if (async_mode) {
                     switch (priority) {
-                    case Priority::heigh:
+                    case event_priority::heigh:
                         return removeOne(async_heigh_priority, func);
-                    case Priority::upper_avg:
+                    case event_priority::upper_avg:
                         return removeOne(async_upper_avg_priority, func);
-                    case Priority::avg:
+                    case event_priority::avg:
                         return removeOne(async_avg_priority, func);
-                    case Priority::lower_avg:
+                    case event_priority::lower_avg:
                         return removeOne(async_lower_avg_priority, func);
-                    case Priority::low:
+                    case event_priority::low:
                         return removeOne(async_low_priority, func);
                     }
                 } else {
                     switch (priority) {
-                    case Priority::heigh:
+                    case event_priority::heigh:
                         return removeOne(heigh_priority, func);
-                    case Priority::upper_avg:
+                    case event_priority::upper_avg:
                         return removeOne(upper_avg_priority, func);
-                    case Priority::avg:
+                    case event_priority::avg:
                         return removeOne(avg_priority, func);
-                    case Priority::lower_avg:
+                    case event_priority::lower_avg:
                         return removeOne(lower_avg_priority, func);
-                    case Priority::low:
+                    case event_priority::low:
                         return removeOne(low_priority, func);
                     }
                 }
@@ -98,6 +107,8 @@ namespace crafted_craft {
 
             bool await_notify(const T& args) {
                 std::lock_guard<fast_task::task_mutex> lock(mutex);
+                if (can_skip())
+                    return false;
                 if (await_call(async_heigh_priority, args))
                     return true;
                 if (await_call(async_upper_avg_priority, args))
@@ -123,12 +134,18 @@ namespace crafted_craft {
 
             bool notify(const T& args) {
                 std::lock_guard<fast_task::task_mutex> lock(mutex);
-                async_call(async_heigh_priority, args);
-                async_call(async_upper_avg_priority, args);
-                async_call(async_avg_priority, args);
-                async_call(async_lower_avg_priority, args);
-                async_call(async_low_priority, args);
-
+                if (can_skip())
+                    return false;
+                if (await_call(async_heigh_priority, args))
+                    return true;
+                if (await_call(async_upper_avg_priority, args))
+                    return true;
+                if (await_call(async_avg_priority, args))
+                    return true;
+                if (await_call(async_lower_avg_priority, args))
+                    return true;
+                if (await_call(async_low_priority, args))
+                    return true;
                 if (sync_call(heigh_priority, args))
                     return true;
                 if (sync_call(upper_avg_priority, args))
@@ -144,6 +161,8 @@ namespace crafted_craft {
 
             bool sync_notify(const T& args) {
                 std::lock_guard<fast_task::task_mutex> lock(mutex);
+                if (can_skip())
+                    return false;
                 if (sync_call(async_heigh_priority, args))
                     return true;
                 if (sync_call(async_upper_avg_priority, args))
@@ -169,24 +188,12 @@ namespace crafted_craft {
             }
 
             std::shared_ptr<fast_task::task> async_notify(const T& args) {
-                async_call(async_heigh_priority, args);
-                async_call(async_upper_avg_priority, args);
-                async_call(async_avg_priority, args);
-                async_call(async_lower_avg_priority, args);
-                async_call(async_low_priority, args);
+                std::lock_guard<fast_task::task_mutex> lock(mutex);
+                if (can_skip())
+                    return nullptr;
+
                 auto task = std::make_shared<fast_task::task>(
-                    [this]() {
-                        if (sync_call(heigh_priority, args))
-                            return;
-                        if (sync_call(upper_avg_priority, args))
-                            return;
-                        if (sync_call(avg_priority, args))
-                            return;
-                        if (sync_call(lower_avg_priority, args))
-                            return;
-                        if (sync_call(low_priority, args))
-                            return;
-                    }
+                    [this, args]() { notify(args); }
                 );
                 fast_task::task::start(task);
                 return task;
@@ -211,6 +218,18 @@ namespace crafted_craft {
                 : gen(rd()) {}
 
         private:
+            bool can_skip() {
+                return heigh_priority.empty() &&
+                       upper_avg_priority.empty() &&
+                       avg_priority.empty() &&
+                       lower_avg_priority.empty() &&
+                       low_priority.empty() &&
+                       async_heigh_priority.empty() &&
+                       async_upper_avg_priority.empty() &&
+                       async_avg_priority.empty() &&
+                       async_lower_avg_priority.empty() &&
+                       async_low_priority.empty();
+            }
             fast_task::task_mutex mutex;
             std::random_device rd;
             std::mt19937 gen;
@@ -245,20 +264,12 @@ namespace crafted_craft {
                 return id;
             }
 
-            void async_call(std::unordered_map<uint64_t, function>& map, const T& args) const {
-                for (auto& [id, func] : map) {
-                    fast_task::task::start(std::make_shared<fast_task::task>([func, args]() {
-                        func(args);
-                    }));
-                }
-            }
-
             bool await_call(std::unordered_map<uint64_t, function>& map, const T& args) const {
                 std::list<std::shared_ptr<fast_task::task>> tasks;
                 bool result = false;
                 for (auto& [id, func] : map) {
                     auto task = std::make_shared<fast_task::task>(
-                        [func, args, &result]() {
+                        [func, &args, &result]() {
                             if (func(args))
                                 result = true;
                         }

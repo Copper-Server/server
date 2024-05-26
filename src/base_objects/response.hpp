@@ -64,12 +64,28 @@ namespace crafted_craft {
             }
 
             Response& operator+=(const Response& other) {
-                data.push_back(other.data);
+                if (do_disconnect_after_send || do_disconnect)
+                    return *this;
+                else if (other.do_disconnect) {
+                    data.clear();
+                    do_disconnect = true;
+                } else {
+                    data.push_back(other.data);
+                    do_disconnect_after_send |= other.do_disconnect_after_send;
+                }
                 return *this;
             }
 
             Response& operator+=(Response&& other) {
-                data.push_back(std::move(other.data));
+                if (do_disconnect_after_send || do_disconnect)
+                    return *this;
+                else if (other.do_disconnect) {
+                    data.clear();
+                    do_disconnect = true;
+                } else {
+                    data.push_back(std::move(other.data));
+                    do_disconnect_after_send |= other.do_disconnect_after_send;
+                }
                 return *this;
             }
 

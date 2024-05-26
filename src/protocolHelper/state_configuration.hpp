@@ -8,19 +8,24 @@ namespace crafted_craft {
     protected:
         Response IdleActions() {
             std::list<PluginRegistration::plugin_response> load_next_packets;
-            for (size_t i = 0; i < 20 && !queriedPackets.empty(); i++) {
-                load_next_packets.push_back(std::move(queriedPackets.front()));
-                queriedPackets.pop_front();
-            }
             Response response(Response::Empty());
-            response.reserve(load_next_packets.size() + 1);
             if (!inited) {
                 response += RegistryData();
                 inited = true;
-            } else if (load_next_packets.empty()) {
-                response += FinishConfiguration();
-                timer.cancel();
                 return response;
+            } else if (queriedPackets.empty()) {
+                response += FinishConfiguration();
+                keep_alive_solution->got_valid_keep_alive();
+                return response;
+            }
+
+            for (auto& packet : session->sharedData().getPendingPackets())
+                response += std::move(packet);
+
+            response.reserve(load_next_packets.size());
+            for (size_t i = 0; !queriedPackets.empty(); i++) {
+                load_next_packets.push_back(std::move(queriedPackets.front()));
+                queriedPackets.pop_front();
             }
             for (auto& it : load_next_packets) {
                 if (std::holds_alternative<PluginRegistration::PluginResponse>(it)) {
@@ -29,8 +34,7 @@ namespace crafted_craft {
                 } else if (std::holds_alternative<Response>(it))
                     response += std::get<Response>(it);
             }
-            if (!keep_alive_wait)
-                response += SendKeepAlive();
+            response += keep_alive_solution->send_keep_alive();
             return response;
         }
 
@@ -42,27 +46,11 @@ namespace crafted_craft {
         Response Ping() {
             log::debug("configuration", "Ping");
             pong_timer = std::chrono::system_clock::now();
-            excepted_pong = std::chrono::duration_cast<std::chrono::milliseconds>(pong_timer.time_since_epoch()).count();
+            excepted_pong = generate_random_int();
             list_array<uint8_t> response;
             response.push_back(0x04);
             WriteVar<int32_t>(excepted_pong, response);
 
-            return Response::Answer({std::move(response)});
-        }
-
-        Response SendKeepAlive() {
-            keep_alive_packet = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-            list_array<uint8_t> response;
-            response.push_back(0x03);
-            WriteValue<int64_t>(keep_alive_packet, response);
-            timer.expires_from_now(boost::posix_time::seconds(session->serverData().timeout_seconds));
-            timer.async_wait([this](const boost::system::error_code& ec) {
-                if (ec == boost::asio::error::operation_aborted)
-                    return;
-                session->disconnect();
-            });
-            keep_alive_wait = true;
-            log::debug("configuration", "Send keep alive");
             return Response::Answer({std::move(response)});
         }
 
@@ -112,10 +100,8 @@ namespace crafted_craft {
             case 0x03: { //keep alive
                 log::debug("configuration", "Keep alive");
                 int64_t keep_alive_packet_response = ReadValue<int64_t>(packet);
-                if (keep_alive_packet == keep_alive_packet_response) {
-                    timer.cancel();
-                    keep_alive_wait = false;
-                }
+                if (keep_alive_packet == keep_alive_packet_response)
+                    session->sharedData().packets_state.keep_alive_ping_ms = std::min<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(keep_alive_solution->got_valid_keep_alive()).count(), INT32_MAX);
                 break;
             }
             case 0x04: { //pong
@@ -167,24 +153,30 @@ namespace crafted_craft {
             return packets::configuration::kick("Unexpected exception");
         }
 
-        //Response OnSwitch() override {
+        //Response OnSwitching() override {
         //    return IdleActions();
         //}
 
-        bool inited = false;
-        bool keep_alive_wait = false;
-        boost::asio::deadline_timer timer;
         std::list<PluginRegistration::plugin_response> queriedPackets;
+        std::chrono::time_point<std::chrono::system_clock> pong_timer;
         int64_t keep_alive_packet = 0;
         int32_t excepted_pong = 0;
-        std::chrono::time_point<std::chrono::system_clock> pong_timer;
+        bool inited = false;
 
     public:
         static std::unordered_map<std::string, PluginRegistrationPtr> plugins_configuration;
         static list_array<PluginRegistrationPtr> base_plugins;
 
         TCPClientHandleConfiguration(TCPsession* sock)
-            : TCPClientHandle(sock), timer(sock->sock.get_executor()) {
+            : TCPClientHandle(sock) {
+            keep_alive_solution->set_callback([this]() {
+                list_array<uint8_t> response;
+                response.push_back(0x03);
+                WriteValue<int64_t>(keep_alive_packet, response);
+                log::debug("configuration", "Send keep alive");
+                return Response::Answer({std::move(response)});
+            });
+
             for (auto& plugin : base_plugins)
                 queriedPackets.push_back(plugin->OnConfiguration(session->sharedDataRef()));
             for (auto& plugin : session->sharedData().compatible_plugins)
