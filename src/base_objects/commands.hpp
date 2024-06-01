@@ -1,5 +1,6 @@
 #ifndef SRC_BASE_OBJECTS_COMMANDS
 #define SRC_BASE_OBJECTS_COMMANDS
+#include "chat.hpp"
 #include "packets.hpp"
 #include "shared_client_data.hpp"
 #include <functional>

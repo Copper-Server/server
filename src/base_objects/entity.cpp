@@ -3,130 +3,79 @@
 #include <Windows.h>
 
 namespace crafted_craft {
-
-    bool Entity::Save(std::filesystem::path path) {
-        ENBT save_nbt = ENBT::dynamic_array();
-        save_nbt.resize(5);
-        save_nbt[0] = id;
-        save_nbt[1] = nbt;
-        save_nbt[2] = position.x;
-        save_nbt[3] = position.y;
-        save_nbt[4] = position.z;
-        calc::ANGLE_DEG rot = convert(rotation);
-        save_nbt[5] = rot.x;
-        save_nbt[6] = rot.y;
-        save_nbt[7] = motion.x;
-        save_nbt[8] = motion.y;
-        save_nbt[9] = motion.z;
-        save_nbt[10] = entity_id;
-        save_nbt[11] = keep_reaction;
-        save_nbt[12] = ENBT(std::vector<uint8_t>(std::begin(keep_reaction_data), std::end(keep_reaction_data)));
-        save_nbt[13] = world->world_id;
-        path += "/" + std::to_string(((uint16_t*)id.data)[0]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[1]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[2]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[3]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[4]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[5]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[6]) + ".enbt";
-        auto eid = std::to_string(((uint16_t*)id.data)[7]);
-
-        try {
-            std::ifstream rf(path);
-            ENBT tmp = ENBTHelper::ReadToken(rf);
-            rf.close();
-            if (!tmp)
-                return false;
-            if (!tmp.contains(eid))
-                return false;
-            tmp[eid] = save_nbt;
-            std::ofstream wf(path);
-            ENBTHelper::WriteToken(wf, tmp);
-            wf.close();
-        } catch (...) {
-            return false;
+    namespace base_objects {
+        void entity_data::work_reaction(class entity& target_entity, class entity& extern_entity, bool in_view, bool hurted, bool hear) {
         }
-        return true;
-    }
 
-    bool Entity::Load(std::filesystem::path path) {
-
-        path += "/" + std::to_string(((uint16_t*)id.data)[0]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[1]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[2]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[3]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[4]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[5]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[6]) + ".enbt";
-        auto eid = std::to_string(((uint16_t*)id.data)[7]);
-        ENBT temp;
-        try {
-            std::ifstream rf(path);
-            if (!rf.is_open())
-                return false;
-            ENBTHelper::FindValueCompound(rf, ENBTHelper::ReadTypeID(rf), eid.c_str());
-            temp = ENBTHelper::ReadToken(rf);
-            if (!temp)
-                return false;
-            rf.close();
-        } catch (...) {
-            return false;
+        // block
+        void entity_data::work_reaction(class entity& target_entity, int64_t x, uint64_t y, int64_t z, const base_objects::block& block, bool in_view, bool hurted, bool hear) {
         }
-        id = temp[0];
-        nbt = temp[1];
-        position.x = temp[2];
-        position.y = temp[3];
-        position.z = temp[4];
-        rotation = convert(calc::ANGLE_DEG{(double)temp[5], (double)temp[6]});
-        motion.x = temp[7];
-        motion.y = temp[8];
-        motion.z = temp[9];
-        entity_id = temp[10];
-        keep_reaction = temp[11];
-        int8_t i = 0;
-        for (auto& it : temp[12].operator std::vector<uint8_t>()) {
-            if (i >= 40)
-                break;
-            keep_reaction_data[i++] = it;
+
+        void entity_data::work_reaction(entity& target_entity) {
         }
-        world = WorldClusters::getWorldByID((uint32_t)temp[13]);
-        return true;
-    }
 
-    bool Entity::Remove(WorldClusters& world, std::filesystem::path path) {
-        path += "/" + std::to_string(((uint16_t*)id.data)[0]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[1]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[2]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[3]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[4]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[5]);
-        path += "/" + std::to_string(((uint16_t*)id.data)[6]) + ".enbt";
-        auto eid = std::to_string(((uint16_t*)id.data)[7]);
-        try {
-            std::ifstream rf(path);
-            ENBT tmp = ENBTHelper::ReadToken(rf);
-            rf.close();
-            if (!tmp)
-                return false;
-            if (!tmp.contains(eid))
-                return false;
-            tmp.remove(eid);
-            std::ofstream wf(path);
-            ENBTHelper::WriteToken(wf, tmp);
-            wf.close();
-        } catch (...) {
-            return false;
+        void entity_data::keep_reaction(entity& entity) {
         }
-        return true;
-    }
 
-    void Entity_data::WorkReaction(class Entity& target_entity, class Entity& extern_entity, bool in_view, bool hurted, bool hear) {
-    }
+        entity_ref entity::copy() const {
+            entity_ref res = new entity();
+            res->data = data;
+            res->died = died;
+            res->entity_id = entity_id;
+            res->head_rotation = head_rotation;
+            res->id = id;
+            res->keep_reaction = keep_reaction;
+            std::copy(keep_reaction_data, keep_reaction_data + 16, res->keep_reaction_data);
+            res->motion = motion;
+            res->nbt = nbt;
+            res->position = position;
+            res->rotation = rotation;
+            return res;
+        }
 
-    // block
-    void Entity_data::WorkReaction(class Entity& target_entity, block_pos_t x, uint16_t y, block_pos_t z, const base_objects::block& block, bool in_view, bool hurted, bool hear) {
-    }
+        ENBT entity::copy_to_enbt() const {
+            enbt::compound res;
+            res["data"] = data;
+            res["died"] = died;
+            res["entity_id"] = entity_id;
+            res["head_rotation"] = enbt::fixed_array({head_rotation.x, head_rotation.y, head_rotation.z});
+            res["id"] = id;
+            res["keep_reaction"] = keep_reaction;
+            res["keep_reaction_data"] = enbt::simple_array_ui8(keep_reaction_data);
+            res["motion"] = enbt::fixed_array({motion.x, motion.y, motion.z});
+            res["nbt"] = nbt;
+            res["position"] = enbt::fixed_array({position.x, position.y, position.z});
+            res["rotation"] = enbt::fixed_array({rotation.x, rotation.y, rotation.z});
+            return res;
+        }
 
-    void Entity_data::KeepReaction(Entity& entity) {
+        void entity::tick() {
+        }
+
+        void entity::kill() {
+            died = true;
+        }
+
+        entity_ref entity::load_from_enbt(const ENBT& nbt) {
+            const auto compound = enbt::compound::make_ref(nbt);
+            entity_ref res = new entity();
+            res->data = compound["data"];
+            res->died = compound["died"];
+            res->entity_id = compound["entity_id"];
+            auto head_rotation = enbt::fixed_array::make_ref(compound["head_rotation"]);
+            res->head_rotation = {head_rotation[0], head_rotation[1], head_rotation[2]};
+            res->id = compound["id"];
+            res->keep_reaction = compound["keep_reaction"];
+            auto keep_reaction_data = enbt::simple_array_ui8::make_ref(compound["keep_reaction_data"]);
+            std::copy(keep_reaction_data.begin(), keep_reaction_data.end(), res->keep_reaction_data);
+            auto motion = enbt::fixed_array::make_ref(compound["motion"]);
+            res->motion = {motion[0], motion[1], motion[2]};
+            res->nbt = compound["nbt"];
+            auto position = enbt::fixed_array::make_ref(compound["position"]);
+            res->position = {position[0], position[1], position[2]};
+            auto rotation = enbt::fixed_array::make_ref(compound["rotation"]);
+            res->rotation = {rotation[0], rotation[1], rotation[2]};
+            return res;
+        }
     }
 }

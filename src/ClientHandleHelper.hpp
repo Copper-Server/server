@@ -29,7 +29,8 @@
 
 namespace crafted_craft {
     constexpr bool CONSTEXPR_DEBUG_DATA_TRANSPORT = true;
-
+    struct TCPsession;
+    class TCPserver;
 
     class AESencryption {
         AESencryption(const AESencryption&) = delete;

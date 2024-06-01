@@ -13,7 +13,10 @@
 #include "plugin/main.hpp"
 #include "registers.hpp"
 #include <boost/bimap.hpp>
+#include <memory>
 using namespace crafted_craft;
+
+#include "base_objects/bounds.hpp"
 
 int main() {
     fast_task::task::create_executor();

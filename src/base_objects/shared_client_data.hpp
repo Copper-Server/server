@@ -29,6 +29,7 @@ namespace crafted_craft {
             std::string locale; //max 16 chars
             std::unordered_set<std::string> compatible_plugins;
             uint8_t view_distance = 0;
+            uint8_t simulation_distance = 0;
             enum class ChatMode : uint8_t {
                 ENABLED = 0,
                 COMMANDS_ONLY = 1,

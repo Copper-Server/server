@@ -13,17 +13,19 @@
 namespace crafted_craft {
     namespace storage {
         class world_data;
+        struct sub_chunk_data;
+        union block_data;
     }
 
     namespace base_objects {
+        struct block_entity;
+
         struct full_block_data {
             template <size_t size>
             static consteval uint64_t get_max_uint64_t_value() {
                 struct {
-                    uint64_t val : size;
+                    uint64_t val : size = -1;
                 } tmp;
-
-                tmp.val = -1;
                 return tmp.val;
             }
 
@@ -55,7 +57,8 @@ namespace crafted_craft {
                 return break_resistance < break_strength;
             }
 
-            std::function<void(storage::world_data&, int64_t x, uint64_t y, int64_t z)> on_tick;
+            std::function<void(storage::world_data&, storage::sub_chunk_data&, storage::block_data& data, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z)> on_tick;
+            std::function<void(storage::world_data&, storage::sub_chunk_data&, block_entity& data, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z)> as_entity_on_tick;
 
             full_block_data()
                 : hitbox(nullptr),
@@ -94,14 +97,17 @@ namespace crafted_craft {
             static block_id_t block_adder;
 
         public:
-            block_id_t static addNewBlock(const full_block_data& new_block) {
+            static void initialize();
+
+            static block_id_t addNewBlock(const full_block_data& new_block) {
                 struct {
                     block_id_t id : 15;
+                    block_id_t max_id : 15 = 0x7FFF;
                 } bound_check;
 
                 bound_check.id = block_adder + 1;
-                if (bound_check.id == 0)
-                    throw std::out_of_range("Blocks count out of short range, block can't added");
+                if (bound_check.id == bound_check.max_id)
+                    throw std::out_of_range("Blocks count out of range, block can't added");
                 full_block_data_[block_adder++] = new_block;
             }
 
@@ -152,7 +158,7 @@ namespace crafted_craft {
                 return full_block_data_[id];
             }
 
-            int16_t getMoveWeight() {
+            int16_t getMoveWeight() const {
                 return full_block_data_[id].move_weight;
             }
 
@@ -249,9 +255,9 @@ namespace crafted_craft {
         };
 
         struct local_block_pos {
-            int8_t x : 4;
-            int8_t y : 4;
-            int8_t z : 4;
+            uint8_t x : 4;
+            uint8_t y : 4;
+            uint8_t z : 4;
         };
 
         struct block_entity {

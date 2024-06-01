@@ -10,7 +10,7 @@ namespace crafted_craft {
     namespace base_objects {
         namespace chunk {
             struct pallete_data {
-                bit_list_array data;
+                bit_list_array<> data;
                 uint64_t bits_per_entry : 8;
 
                 pallete_data(uint8_t bits_per_entry)

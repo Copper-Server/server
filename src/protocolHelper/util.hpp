@@ -7,6 +7,7 @@
 #include "../library/enbt.hpp"
 #include "../plugin/main.hpp"
 #include "../registers.hpp"
+#include "../log.hpp"
 #include <array>
 #include <exception>
 #include <string>
@@ -219,7 +220,7 @@ namespace crafted_craft {
             WriteVar<int32_t>(slot->id, data);
             data.push_back(slot->count);
             if (slot->nbt)
-                data.push_back(NBT(slot->nbt.value()).get_as_network());
+                data.push_back(NBT::build(slot->nbt.value()).get_as_network());
             else
                 data.push_back(0); //TAG_End
         }
@@ -357,7 +358,7 @@ namespace crafted_craft {
             static std::mt19937_64 gen;
             return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() ^ gen();
         }
-        static std::unordered_set<boost::asio::ip::address> banned_players;
+        static std::unordered_set<boost::asio::ip::address> banned_clients;
         static size_t max_packet_size;
         TCPclient* next_handler = nullptr;
         TCPsession* session;
@@ -547,7 +548,7 @@ namespace crafted_craft {
         }
 
         bool DoDisconnect(boost::asio::ip::address ip) override {
-            return false;
+            return banned_clients.contains(ip);
         }
     };
 }

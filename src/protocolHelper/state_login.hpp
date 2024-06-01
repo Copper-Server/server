@@ -1,5 +1,6 @@
 #ifndef SRC_PROTOCOLHELPER_STATE_LOGIN
 #define SRC_PROTOCOLHELPER_STATE_LOGIN
+#include "../api/players.hpp"
 #include "../mojang_api/hash.hpp"
 #include "../mojang_api/session_server.hpp"
 #include "packets.hpp"

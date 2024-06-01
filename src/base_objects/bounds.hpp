@@ -9,6 +9,91 @@ namespace crafted_craft {
             int64_t z1;
             int64_t x2;
             int64_t z2;
+
+            template <class _FN>
+            void enum_points(_FN fn) {
+                for (int64_t i = x1; i <= x2; i++)
+                    for (int64_t j = z1; j <= z2; j++)
+                        fn(i, j);
+            }
+
+            template <class _FN>
+            void enum_points_from_center(_FN fn) {
+                int64_t centerX = (x1 + x2) / 2;
+                int64_t centerZ = (z1 + z2) / 2;
+
+                int64_t maxLayerX = std::max(x2 - centerX, centerX - x1);
+                int64_t maxLayerZ = std::max(z2 - centerZ, centerZ - z1);
+                int64_t maxLayer = std::max(maxLayerX, maxLayerZ);
+                fn(centerX, centerZ);
+
+                for (int64_t layer = 1; layer <= maxLayer; ++layer) {
+                    if (layer <= maxLayerZ) {
+                        int64_t minX = std::max(-layer, -maxLayerX);
+                        int64_t maxX = std::min(layer, maxLayerX);
+                        for (int64_t i = minX; i <= maxX; ++i) {
+                            fn(centerX + i, centerZ - layer);
+                            fn(centerX + i, centerZ + layer);
+                        }
+                    }
+                    if (layer <= maxLayerX) {
+                        int64_t minZ = std::max(-layer, -maxLayerZ);
+                        int64_t maxZ = std::min(layer, maxLayerZ);
+                        for (int64_t i = minZ + 1; i < maxZ; ++i) {
+                            fn(centerX - layer, centerZ + i);
+                            fn(centerX + layer, centerZ + i);
+                        }
+                    }
+                }
+            }
+
+            bool in_bounds(int64_t x, int64_t z) {
+                return x >= x1 && x <= x2 && z >= z1 && z <= z2;
+            }
+
+            bool out_of_bounds(int64_t x, int64_t z) {
+                return !in_bounds(x, z);
+            }
+        };
+
+        struct cubic_bounds_chunk_radius {
+            int64_t center_x;
+            int64_t center_z;
+            int64_t radius;
+
+            template <class _FN>
+            void enum_points(_FN fn) {
+                int64_t max_x = center_x + radius;
+                int64_t max_z = center_z + radius;
+                for (int64_t i = center_x - radius; i <= max_x; i++)
+                    for (int64_t j = center_z - radius; j <= max_z; j++)
+                        fn(i, j);
+            }
+
+            template <class _FN>
+            void enum_points_from_center(_FN fn) {
+                fn(center_x, center_z);
+                for (int64_t layer = 1; layer <= radius; ++layer) {
+                    for (int64_t i = -layer + 1; i < layer; ++i) {
+                        fn(center_x + i, center_z - layer);
+                        fn(center_x - layer, center_z + i);
+                        fn(center_x + i, center_z + layer);
+                        fn(center_x + layer, center_z + i);
+                    }
+                    fn(center_x - layer, center_z - layer);
+                    fn(center_x + layer, center_z - layer);
+                    fn(center_x - layer, center_z + layer);
+                    fn(center_x + layer, center_z + layer);
+                }
+            }
+
+            bool in_bounds(int64_t x, int64_t z) {
+                return x >= (center_x - radius) && x <= (center_x + radius) && z >= (center_z - radius) && z <= (center_z + radius);
+            }
+
+            bool out_of_bounds(int64_t x, int64_t z) {
+                return !in_bounds(x, z);
+            }
         };
 
         struct cubic_bounds_block {
@@ -18,6 +103,22 @@ namespace crafted_craft {
             int64_t x2;
             int64_t y2;
             int64_t z2;
+
+            template <class _FN>
+            void enum_points(_FN fn) {
+                for (int64_t i = x1; i <= x2; i++)
+                    for (int64_t j = y1; j <= y2; j++)
+                        for (int64_t k = z1; k <= z2; k++)
+                            fn(i, j, k);
+            }
+
+            bool in_bounds(int64_t x, int64_t y, int64_t z) {
+                return x >= x1 && x <= x2 && y >= y1 && y <= y2 && z >= z1 && z <= z2;
+            }
+
+            bool out_of_bounds(int64_t x, int64_t y, int64_t z) {
+                return !in_bounds(x, y, z);
+            }
         };
 
         struct spherical_bounds_chunk {

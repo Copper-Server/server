@@ -14,6 +14,9 @@ namespace crafted_craft {
         class entity_data;
         struct entity;
         using entity_ref = atomic_holder<entity>;
+
+
+        class block;
     }
 
     namespace storage {
@@ -76,7 +79,7 @@ namespace crafted_craft {
                 uint64_t next_action : 15; //start from 1, 0 used for undefined
                 base_objects::block block;
                 //call this function if {action} equal {action::custom_call}, if nullptr, behavior will be equal {action::stay}
-                std::function<void(entity& target_entity, block_pos_t x, uint16_t y, block_pos_t z, const base_objects::block& block, bool in_view, bool hurted, bool hear)> custom_call = nullptr;
+                std::function<void(entity& target_entity, int64_t x, uint64_t y, int64_t z, const base_objects::block& block, bool in_view, bool hurted, bool hear)> custom_call = nullptr;
             };
 
             list_array<block_reaction> block_reactions;
@@ -101,7 +104,7 @@ namespace crafted_craft {
             void work_reaction(entity& target_entity, entity& extern_entity, bool in_view, bool hurted, bool hear);
 
             // block
-            void work_reaction(entity& target_entity, int64_t x, int64_t y, int64_t z, const base_objects::block& block, bool in_view, bool hurted, bool hear);
+            void work_reaction(entity& target_entity, int64_t x, uint64_t y, int64_t z, const base_objects::block& block, bool in_view, bool hurted, bool hear);
 
             // environment
             void work_reaction(entity& target_entity);

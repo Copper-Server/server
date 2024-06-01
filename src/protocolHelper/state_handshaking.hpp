@@ -106,7 +106,7 @@ namespace crafted_craft {
         }
 
         bool DoDisconnect(boost::asio::ip::address ip) override {
-            return banned_players.contains(ip);
+            return false;
         }
     };
 }

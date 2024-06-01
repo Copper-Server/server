@@ -75,7 +75,7 @@ class NBT {
         }
     }
 
-    void BuildCompound(const std::string& c_name, ENBT& comp) {
+    void BuildCompound(const std::string& c_name, ENBT& comp, bool compress) {
         insertValue((uint16_t)c_name.size());
         insertString(c_name.data(), c_name.size());
         for (const auto& [name, tmp] : comp) {
@@ -83,11 +83,11 @@ class NBT {
                 throw std::out_of_range("ENBT string too big to fit in NBT");
             InsertType(tmp.type_id());
             if (tmp.getType() == ENBT::Type::compound) {
-                RecursiveBuilder(tmp, false, name);
+                RecursiveBuilder(tmp, false, name, compress);
             } else {
                 insertValue((uint16_t)name.size());
                 insertString(name.data(), name.size());
-                RecursiveBuilder(tmp, false, "");
+                RecursiveBuilder(tmp, false, "", compress);
             }
         }
         InsertType(ENBT::Type::none);
@@ -140,10 +140,51 @@ class NBT {
         }
     }
 
-    void BuildArray(int32_t len, ENBT& arr) {
+    void BuildBaseIntArray(int32_t len, ENBT& arr, ENBT::Type_ID base_id) {
         insertValue(len);
-        for (int32_t i = 0; i < len; i++)
-            RecursiveBuilder(arr[i], false, "");
+        for (int32_t i = 0; i < len; i++) {
+            if (arr[i].type_id() != base_id)
+                throw std::exception("Array type mismatch");
+            IntegerInsert(arr[i], false);
+        }
+    }
+
+    void BuildSimpleIntArray(int32_t len, ENBT& arr, ENBT::Type_ID base_id) {
+        insertValue(len);
+        for (int32_t i = 0; i < len; i++) {
+            auto val = arr.getIndex(i);
+            if (val.type_id() != base_id)
+                throw std::exception("Array type mismatch");
+            IntegerInsert(val, false);
+        }
+    }
+
+    void BuildArray(int32_t len, ENBT& arr, ENBT::Type_ID base_id, bool compress) {
+        insertValue(len);
+        if (arr.is_sarray()) {
+            for (int32_t i = 0; i < len; i++) {
+                auto val = arr.getIndex(i);
+                auto type = val.type_id();
+                if (type.type != base_id.type || type.length != base_id.length || type.is_signed != base_id.is_signed)
+                    throw std::exception("Array type mismatch");
+                RecursiveBuilder(val, false, "", compress);
+            }
+        } else {
+            if (arr[0].is_numeric()) {
+                for (int32_t i = 0; i < len; i++) {
+                    auto type = arr[i].type_id();
+                    if (type.type != base_id.type || type.length != base_id.length || type.is_signed != base_id.is_signed)
+                        throw std::exception("Array type mismatch");
+                    RecursiveBuilder(arr[i], false, "", compress);
+                }
+            } else {
+                for (int32_t i = 0; i < len; i++) {
+                    if (arr[i].type_id() != base_id)
+                        throw std::exception("Array type mismatch");
+                    RecursiveBuilder(arr[i], false, "", compress);
+                }
+            }
+        }
     }
 
     void BuildArray(int32_t len, ENBT& enbt, bool insert_type, bool compress) {
@@ -154,57 +195,59 @@ class NBT {
             insertValue(0);
             return;
         }
-        if (enbt[0].getType() == ENBT::Type::integer && compress) {
-            if (enbt[0].getTypeLen() != ENBT::TypeLen::Short) {
-                if (enbt[0].getTypeLen() == ENBT::TypeLen::Tiny) {
-                    if (enbt[0].getTypeSign()) {
-                        if (insert_type)
-                            nbt_data.push_back(7);
-                        if (((int32_t)enbt.size()) != enbt.size())
-                            throw std::exception("Unsupported array len");
-                        BuildArray(enbt.size(), enbt);
-                        return;
-                    }
+        auto base_type = enbt.is_sarray() ? enbt.getIndex(0).type_id() : enbt[0].type_id();
+        if ((base_type.type == ENBT::Type::integer || base_type.type == ENBT::Type::var_integer) && compress) {
+            switch (base_type.length) {
+            case ENBT::TypeLen::Tiny:
+                if (base_type.is_signed) {
+                    if (insert_type)
+                        nbt_data.push_back(7);
+                    if (((int32_t)enbt.size()) != enbt.size())
+                        throw std::exception("Unsupported array len");
+                    BuildBaseIntArray(enbt.size(), enbt, base_type);
+                    return;
                 }
-            }
-            if (enbt[0].getTypeLen() != ENBT::TypeLen::Default) {
-                if (enbt[0].getTypeLen() == ENBT::TypeLen::Tiny) {
-                    if (enbt[0].getTypeSign()) {
-                        if (insert_type)
-                            nbt_data.push_back(11);
-                        if (((int32_t)enbt.size()) != enbt.size())
-                            throw std::exception("Unsupported array len");
-                        BuildArray(enbt.size(), enbt);
-                        return;
-                    }
+                break;
+            case ENBT::TypeLen::Short:
+                break;
+            case ENBT::TypeLen::Default:
+                if (enbt[0].getTypeSign()) {
+                    if (insert_type)
+                        nbt_data.push_back(11);
+                    if (((int32_t)enbt.size()) != enbt.size())
+                        throw std::exception("Unsupported array len");
+                    BuildBaseIntArray(enbt.size(), enbt, base_type);
+                    return;
                 }
-            }
-            if (enbt[0].getTypeLen() != ENBT::TypeLen::Long) {
-                if (enbt[0].getTypeLen() == ENBT::TypeLen::Tiny) {
-                    if (enbt[0].getTypeSign()) {
-                        if (insert_type)
-                            nbt_data.push_back(12);
-                        if (((int32_t)enbt.size()) != enbt.size())
-                            throw std::exception("Unsupported array len");
-                        BuildArray(enbt.size(), enbt);
-                        return;
-                    }
+                break;
+            case ENBT::TypeLen::Long:
+                if (enbt[0].getTypeSign()) {
+                    if (insert_type)
+                        nbt_data.push_back(12);
+                    if (((int32_t)enbt.size()) != enbt.size())
+                        throw std::exception("Unsupported array len");
+                    BuildBaseIntArray(enbt.size(), enbt, base_type);
+                    return;
                 }
+                break;
+                default:
+                    break;
             }
         }
         if (insert_type)
             nbt_data.push_back(9);
-        InsertType(enbt[0].type_id());
-        BuildArray(enbt.size(), enbt);
+        InsertType(base_type);
+        BuildArray(enbt.size(), enbt, base_type, compress);
     }
 
-    void RecursiveBuilder(ENBT& enbt, bool insert_type, const std::string& name) {
+    void RecursiveBuilder(ENBT& enbt, bool insert_type, const std::string& name, bool compress) {
         switch (enbt.getType()) {
         case ENBT::Type::none:
             if (insert_type)
                 nbt_data.push_back(0);
             break;
         case ENBT::Type::integer:
+        case ENBT::Type::var_integer:
             IntegerInsert(enbt, insert_type);
             break;
         case ENBT::Type::floating:
@@ -220,13 +263,15 @@ class NBT {
             insertString(str.data(), str.size());
             break;
         }
+        case ENBT::Type::sarray:
         case ENBT::Type::array:
-            BuildArray((int32_t)enbt.size(), enbt, insert_type, true);
+        case ENBT::Type::darray:
+            BuildArray((int32_t)enbt.size(), enbt, insert_type, compress);
             break;
         case ENBT::Type::compound:
             if (insert_type)
                 nbt_data.push_back(10);
-            BuildCompound(name, enbt);
+            BuildCompound(name, enbt, compress);
             break;
         default:
             throw std::exception("Unsupported tag");
@@ -343,15 +388,25 @@ class NBT {
         return RecursiveExtractor_1(data[i++], data, i, max_size);
     }
 
+#pragma endregion
+
+    NBT() {}
 
 public:
-    NBT(const ENBT& enbt, const std::string& entry_name = "", bool align_entry = false) {
-        RecursiveBuilder(const_cast<ENBT&>(enbt), true, entry_name);
+    ~NBT() = default;
+
+    static NBT build(const ENBT& enbt, bool compress = true, const std::string& entry_name = "") {
+        NBT ret;
+        ret.RecursiveBuilder(const_cast<ENBT&>(enbt), true, entry_name, compress);
+        return ret;
     }
 
-    NBT(const list_array<uint8_t>& nbt) {
-        nbt_data = nbt;
+    static NBT build(const list_array<uint8_t>& data) {
+        NBT ret;
+        ret.nbt_data = data;
+        return ret;
     }
+
 
     operator list_array<uint8_t>() {
         return nbt_data;

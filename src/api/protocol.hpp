@@ -33,7 +33,7 @@ namespace crafted_craft {
 
                     list_array<argument_signature> arguments_signature;
                     int32_t message_count;
-                    bit_list_array acknowledged;
+                    bit_list_array<> acknowledged;
                 };
 
                 struct chat_message_unsigned {
@@ -41,7 +41,7 @@ namespace crafted_craft {
                     int64_t timestamp;
                     int64_t salt;
                     int32_t message_count;
-                    bit_list_array acknowledged;
+                    bit_list_array<> acknowledged;
                 };
 
                 struct chat_message_signed : public chat_message_unsigned {

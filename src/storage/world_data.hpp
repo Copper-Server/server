@@ -7,6 +7,7 @@
 #include "../base_objects/event.hpp"
 #include "../base_objects/ptr_optional.hpp"
 #include "../base_objects/server_configuaration.hpp"
+#include "../base_objects/shared_client_data.hpp"
 #include "../calculations.hpp"
 #include "../library/enbt.hpp"
 #include "../library/list_array.hpp"
@@ -48,6 +49,7 @@ namespace crafted_craft {
 
         class world_data;
         class worlds_data;
+        struct sub_chunk_data;
 
         struct light_data {
             union light_item {
@@ -67,11 +69,12 @@ namespace crafted_craft {
             struct {
                 base_objects::block_id_t block_id : 15;
                 bool is_tickable : 1;
+                uint16_t block_state_data : 15;
             };
 
-            uint16_t raw;
+            uint32_t raw;
 
-            void tick(world_data&, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z);
+            void tick(world_data&, sub_chunk_data& sub_chunk, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z);
         };
 
         struct sub_chunk_data {
@@ -90,7 +93,7 @@ namespace crafted_craft {
                 for (int i = 0; i < 16; i++) {
                     for (int j = 0; j < 16; j++) {
                         for (int k = 0; k < 16; k++) {
-                            blocks[i][j][k] = {0, false};
+                            blocks[i][j][k] = {0, false, 0};
                             sky_light.light_map[i][j][k].light_point = 0;
                             sky_light.light_map[i][j][k].lighted = false;
                             block_light.light_map[i][j][k].light_point = 0;
@@ -103,8 +106,6 @@ namespace crafted_craft {
 
         class chunk_data {
             friend world_data;
-            fast_task::task_mutex mutex;
-            world_data& world;
             int64_t chunk_x, chunk_z;
             bool load(const std::filesystem::path& chunk_z);
             bool load(const ENBT& chunk_data);
@@ -115,7 +116,7 @@ namespace crafted_craft {
             std::vector<sub_chunk_data> sub_chunks;
             bool marked_for_tick = false;
 
-            chunk_data(world_data& world, int64_t chunk_x, int64_t chunk_z);
+            chunk_data(int64_t chunk_x, int64_t chunk_z);
 
             void for_each_entity(std::function<void(base_objects::entity_ref& entity)> func);
             void for_each_entity(std::function<void(base_objects::entity_ref& entity)> func, uint64_t sub_chunk_y);
@@ -125,7 +126,7 @@ namespace crafted_craft {
 
             void query_for_tick(uint8_t local_x, uint64_t global_y, uint8_t local_z);
 
-            void tick(size_t max_random_tick_for_chunk, std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time);
+            void tick(world_data& world, size_t max_random_tick_for_chunk, std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time);
         };
 
         class chunk_generator {
@@ -176,6 +177,8 @@ namespace crafted_craft {
 
             std::unordered_map<calc::XY<int64_t>, FuturePtr<base_objects::atomic_holder<chunk_data>>> on_load_process;
             std::unordered_map<calc::XY<int64_t>, FuturePtr<bool>> on_save_process;
+            std::unordered_map<uint64_t, base_objects::client_data_holder> clients;
+            uint64_t local_client_id_generator = 0;
 
 
             std::chrono::high_resolution_clock::time_point last_usage;
@@ -184,10 +187,10 @@ namespace crafted_craft {
             base_objects::atomic_holder<chunk_data> load_chunk_sync(int64_t chunk_x, int64_t chunk_z);
 
         public:
-            ENBT general_world_data = ENBT::compound();
-            ENBT world_game_rules = ENBT::compound();
-            ENBT world_generator_data = ENBT::compound();
-            ENBT world_records = ENBT::compound();
+            enbt::compound general_world_data;
+            enbt::compound world_game_rules;
+            enbt::compound world_generator_data;
+            enbt::compound world_records;
 
             ENBT::UUID world_seed;
             ENBT::UUID wandering_trader_id;
@@ -199,6 +202,8 @@ namespace crafted_craft {
             std::vector<std::string> enabled_datapacks;
             std::vector<std::string> enabled_plugins;
             std::vector<std::string> enabled_features;
+            std::vector<base_objects::cubic_bounds_chunk> load_points;
+            std::vector<base_objects::spherical_bounds_chunk> load_points_sphere;
 
             double border_center_x = 0;
             double border_center_z = 0;
@@ -211,6 +216,7 @@ namespace crafted_craft {
             double border_warning_time = 15;
             int64_t day_time = 0;
             int64_t time = 0;
+            size_t max_random_tick_for_chunk = 100;
             std::chrono::milliseconds tick_speed = std::chrono::milliseconds(1000) / 20;
             std::chrono::milliseconds chunk_lifetime = std::chrono::seconds(1);
             std::chrono::milliseconds world_lifetime = std::chrono::seconds(50);
@@ -220,7 +226,7 @@ namespace crafted_craft {
 
 
             int32_t internal_version = 0;
-            uint16_t chunk_y_count = 20; // == (320 / 16)
+            uint16_t chunk_y_count = 20; // == (320 / 16), do not change this config
             int8_t difficulty = 0;
             uint8_t default_gamemode = 0;
             bool difficulty_locked : 1 = false;
@@ -235,7 +241,12 @@ namespace crafted_craft {
             world_data(const std::filesystem::path& path);
 
             bool exists(int64_t chunk_x, int64_t chunk_z);
+            //returns std::nullopt if chunk already queried for async load
+            std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z);
             FuturePtr<base_objects::atomic_holder<chunk_data>> request_chunk_data(int64_t chunk_x, int64_t chunk_z);
+            void save_chunks();
+            void await_save_chunks();
+            void save_and_unload_chunks();
             void save_and_unload_chunk(int64_t chunk_x, int64_t chunk_z);
             void unload_chunk(int64_t chunk_x, int64_t chunk_z);
             void save_chunk(int64_t chunk_x, int64_t chunk_z);
@@ -257,17 +268,20 @@ namespace crafted_craft {
 
 
             void query_for_tick(int64_t global_x, uint64_t global_y, int64_t global_z);
-            void set_block(base_objects::block block, int64_t global_x, uint64_t global_y, int64_t global_z);
-            void place_block(base_objects::block block, int64_t global_x, uint64_t global_y, int64_t global_z);
-            void remove_block(int64_t global_x, uint64_t global_y, int64_t global_z);
-            void break_block(int64_t global_x, uint64_t global_y, int64_t global_z);
+            bool set_block(base_objects::block block, int64_t global_x, uint64_t global_y, int64_t global_z);
+            bool place_block(base_objects::block block, int64_t global_x, uint64_t global_y, int64_t global_z);
+            bool remove_block(int64_t global_x, uint64_t global_y, int64_t global_z);
+            bool break_block(int64_t global_x, uint64_t global_y, int64_t global_z);
             void query_block(int64_t global_x, uint64_t global_y, int64_t global_z, std::function<void(base_objects::block block)> func);
             void query_block_entity(int64_t global_x, uint64_t global_y, int64_t global_z, std::function<void(base_objects::block_entity& block)> func);
+            uint64_t register_client(const base_objects::client_data_holder& client);
+            void unregister_client(uint64_t);
 
 
-            std::shared_ptr<Future<void>> tick(size_t max_random_tick_for_chunk, std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time, bool update_tps);
+            void tick(std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time, bool update_tps);
             //unloads unused chunks and check themselves lifetime and active operations, if expired and there no active operations, then function will return true
             bool collect_unused_data(std::chrono::high_resolution_clock::time_point current_time, size_t& unload_limit);
+
 
             struct profiling_data {
                 std::chrono::milliseconds tick_time = std::chrono::milliseconds(0);
@@ -313,9 +327,11 @@ namespace crafted_craft {
             base_objects::event<uint64_t> on_world_loaded;
             base_objects::event<uint64_t> on_world_unloaded;
             base_objects::event<double> on_tps_changed;
+            uint64_t ticks_per_second = 20;
 
             //calculated
             double tps = 0;
+
 
             worlds_data(base_objects::ServerConfiguration& configuration, const std::filesystem::path& base_path);
 
@@ -341,7 +357,7 @@ namespace crafted_craft {
             void for_each_entity(uint64_t world_id, int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
             void for_each_entity(uint64_t world_id, int64_t chunk_x, int64_t chunk_z, uint64_t sub_chunk_y, std::function<void(const base_objects::entity_ref& entity)> func);
 
-            //use only on tick task, returns ms to sleep
+            //use only on tick task, returns nanoseconds to sleep
             std::chrono::nanoseconds apply_tick(std::mt19937& random_engine);
         };
     } // namespace storage

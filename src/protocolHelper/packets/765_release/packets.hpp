@@ -38,13 +38,13 @@ namespace crafted_craft {
             namespace play {
                 Response bundleResponse(Response&& response);
 
-                Response spawnEntity(TCPsession& client, const Entity& entity);
-                Response spawnExperienceOrb(TCPsession& client, const Entity& entity, int16_t count);
-                Response entityAnimation(TCPsession& client, const Entity& entity, uint8_t animation);
+                Response spawnEntity(TCPsession& client, const base_objects::entity& entity);
+                Response spawnExperienceOrb(TCPsession& client, const base_objects::entity& entity, int16_t count);
+                Response entityAnimation(TCPsession& client, const base_objects::entity& entity, uint8_t animation);
                 Response awardStatistics(const list_array<base_objects::packets::statistics>& statistics);
                 Response acknowledgeBlockChange(SharedClientData& client);
 
-                Response setBlockDestroyStage(TCPsession& client, const Entity& entity, Position block, uint8_t stage);
+                Response setBlockDestroyStage(TCPsession& client, const base_objects::entity& entity, Position block, uint8_t stage);
 
                 Response blockEntityData(Position block, int32_t type, const ENBT& data);
                 //block_type is from "minecraft:block" registry, not a block state.

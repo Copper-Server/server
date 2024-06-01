@@ -7,23 +7,57 @@ namespace calc {
 		T x;
 		T y;
 		T z;
-	};
-	typedef XYZ<double> VECTOR;
-	template<class T>
-	struct XY {
-		T x;
-		T y;
-	};
+
+        bool operator==(const XYZ& comp) {
+            return x == comp.x && y == comp.y && z == comp.z;
+        }
+
+        bool operator!=(const XYZ& comp) {
+            return x != comp.x || y != comp.y || z != comp.z;
+        }
+    };
+
+    typedef XYZ<double> VECTOR;
+
+    template <class T>
+    struct XY {
+        T x;
+        T y;
+
+        bool operator==(const XY& comp) const {
+            return x == comp.x && y == comp.y;
+        }
+
+        bool operator!=(const XY& comp) const {
+            return x != comp.x || y != comp.y;
+        }
+    };
     typedef XY<double> ANGLE;
 
     struct ANGLE_DEG {
         double x;
         double y;
+
+        bool operator==(const ANGLE_DEG& comp) {
+            return x == comp.x && y == comp.y;
+        }
+
+        bool operator!=(const ANGLE_DEG& comp) {
+            return x != comp.x || y != comp.y;
+        }
     };
 
     struct ANGLE_RAD {
         double x;
         double y;
+
+        bool operator==(const ANGLE_RAD& comp) {
+            return x == comp.x && y == comp.y;
+        }
+
+        bool operator!=(const ANGLE_RAD& comp) {
+            return x != comp.x || y != comp.y;
+        }
     };
 
     typedef XY<double> YAW_PITCH;
@@ -48,7 +82,7 @@ namespace calc {
     }
 
     VECTOR convert(ANGLE_DEG rot);
-    //convert to ANGLE as degres 180*
+    //convert to ANGLE as degrees 180*
     ANGLE_DEG convert(VECTOR val);
     VECTOR dif(VECTOR p0, VECTOR p1);
     VECTOR normalize(VECTOR val);

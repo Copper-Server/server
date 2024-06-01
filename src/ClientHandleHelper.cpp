@@ -203,6 +203,11 @@ namespace crafted_craft {
             delete it;
     }
 
+    void TCPserver::close_session(TCPsession* session) {
+        std::unique_lock<std::mutex> lock(close_mutex);
+        queried_close.push_back(session);
+    }
+
     void TCPserver::AsyncWork(TCPsession* session) {
         boost::system::error_code err;
         if (first_client_holder->DoDisconnect(session->sock.remote_endpoint().address()))
@@ -341,7 +346,7 @@ namespace crafted_craft {
         this->legacy_motd = std::move(response);
     }
 
-    TCPserver::TCPserver(boost::asio::io_service* io_service, const std::string& ip, uint16_t port, size_t threads = 0, size_t ssl_key_length = 1024)
+    TCPserver::TCPserver(boost::asio::io_service* io_service, const std::string& ip, uint16_t port, size_t threads, size_t ssl_key_length)
         : TCPacceptor(*io_service, resolveEndpoint(ip, port)),
           threads(threads ? threads : std::thread::hardware_concurrency()),
           ssl_key_length(ssl_key_length),

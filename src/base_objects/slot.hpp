@@ -8,8 +8,8 @@ namespace crafted_craft {
     namespace base_objects {
         struct slot_data {
             std::optional<ENBT> nbt;
-            int32_t id;
-            uint8_t count;
+            int32_t id = 0;
+            uint8_t count = 0;
         };
 
         using slot = std::optional<slot_data>;

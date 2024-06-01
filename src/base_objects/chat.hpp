@@ -61,7 +61,7 @@ namespace crafted_craft {
             }
         };
 
-        Chat() {}
+        Chat() = default;
 
         Chat(const char* set_text, bool is_translation = false) {
             setString(text, set_text);
@@ -539,7 +539,7 @@ namespace crafted_craft {
         }
 
         ENBT ToENBT() const {
-            ENBT enbt = ENBT::compound();
+            enbt::compound enbt;
             if (text) {
                 if (text_is_translation)
                     enbt["translate"] = text;
@@ -563,7 +563,7 @@ namespace crafted_craft {
             if (defined_obfuscated)
                 enbt["obfuscated"] = obfuscated;
             if (clickEvent) {
-                ENBT clickEvent_enbt = ENBT::compound();
+                enbt::compound clickEvent_enbt;
                 if (clickEvent->open_url) {
                     clickEvent_enbt["action"] = "open_url";
                     clickEvent_enbt["value"] = clickEvent->open_url;
@@ -587,9 +587,9 @@ namespace crafted_craft {
                 enbt["clickEvent"] = std::move(clickEvent_enbt);
             }
             if (hoverEvent) {
-                ENBT hoverEvent_enbt = ENBT::compound();
+                enbt::compound hoverEvent_enbt;
                 if (hoverEvent->show_item) {
-                    ENBT show_item_enbt = ENBT::compound();
+                    enbt::compound show_item_enbt;
                     show_item_enbt["id"] = hoverEvent->show_item->id;
                     show_item_enbt["count"] = hoverEvent->show_item->count;
                     if (hoverEvent->show_item->tag) {
@@ -599,7 +599,7 @@ namespace crafted_craft {
                     hoverEvent_enbt["contents"] = std::move(show_item_enbt);
                 }
                 if (hoverEvent->show_entity) {
-                    ENBT show_entity_enbt = ENBT::compound();
+                    enbt::compound show_entity_enbt;
                     show_entity_enbt["type"] = hoverEvent->show_entity->type;
                     show_entity_enbt["id"] = hoverEvent->show_entity->id;
                     if (hoverEvent->show_entity->name) {
@@ -616,17 +616,17 @@ namespace crafted_craft {
             }
 
             if (extra.size()) {
-                ENBT extra_enbt = ENBT::fixed_array();
-                for (auto& it : extra) {
-                    extra_enbt.push(it.ToENBT());
-                }
+                enbt::fixed_array extra_enbt(extra.size());
+                size_t i = 0;
+                for (auto& it : extra)
+                    extra_enbt.set(i++, it.ToENBT());
                 enbt["extra"] = std::move(extra_enbt);
             }
             return enbt;
         }
 
         list_array<uint8_t> ToTextComponent() const {
-            return NBT(ToENBT()).get_as_normal();
+            return NBT::build(ToENBT()).get_as_normal();
         }
 
         void removeColor() {
