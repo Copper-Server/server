@@ -23,11 +23,12 @@ namespace crafted_craft {
 
     class SpecialPluginStatus {
     public:
-        bool enable_status = true;
+        const base_objects::ServerConfiguration& config;
 
-        virtual void OnSettingsUpdate(const base_objects::ServerConfiguration& config) {
-            enable_status = config.status.enable;
-        }
+        SpecialPluginStatus(const base_objects::ServerConfiguration& config)
+            : config(config) {}
+
+
         virtual std::string StatusResponseVersionName() {
             return "CraftedCraft";
         }

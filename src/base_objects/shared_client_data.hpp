@@ -98,8 +98,12 @@ namespace crafted_craft {
             }
 
             void sendPacket(const Response& packet) {
-                fast_task::write_lock lock(pending_packets_lock);
-                pending_packets.push_back(packet);
+                {
+                    fast_task::write_lock lock(pending_packets_lock);
+                    pending_packets.push_back(packet);
+                }
+                if (special_callback)
+                    special_callback(*this);
             }
 
             std::list<Response> getPendingPackets() {
@@ -107,15 +111,25 @@ namespace crafted_craft {
                 return std::move(pending_packets);
             }
 
-            SharedClientData(void* assigned_data = nullptr)
-                : assigned_data(assigned_data) {}
+            SharedClientData(void* assigned_data = nullptr, std::function<void(SharedClientData& self)> special_callback = nullptr)
+                : assigned_data(assigned_data), special_callback(special_callback) {}
 
             void* getAssignedData() {
                 return assigned_data;
             }
 
+            bool canBeRemoved() {
+                return !special_callback;
+            }
+
+            bool isSpecial() {
+                return (bool)special_callback;
+            }
+
         private:
+            friend class virtual_client;
             void* assigned_data;
+            std::function<void(SharedClientData& self)> special_callback;
             fast_task::task_rw_mutex pending_packets_lock;
             std::list<Response> pending_packets;
         };

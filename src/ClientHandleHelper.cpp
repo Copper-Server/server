@@ -189,6 +189,18 @@ namespace crafted_craft {
         }
     }
 
+    TCPserver* TCPserver::global_instance = nullptr;
+
+    TCPserver& TCPserver::get_global_instance() {
+        return global_instance ? *global_instance : throw std::runtime_error("Server not initialized");
+    }
+
+    void TCPserver::register_global_instance(TCPserver& instance) {
+        if (global_instance)
+            throw std::runtime_error("Server already initialized");
+        global_instance = &instance;
+    }
+
     void TCPserver::make_clean_up() {
         std::unique_lock<std::mutex> lock(close_mutex);
         std::list<TCPsession*> to_clean;
@@ -301,51 +313,6 @@ namespace crafted_craft {
         return ssl_key_length;
     }
 
-    const list_array<uint8_t>& TCPserver::legacyMotdResponse() {
-        boost::shared_lock_guard lock(data_lock);
-        return legacy_motd;
-    }
-
-    void TCPserver::setLegacyMotd(const std::u8string& motd) {
-        if (motd.size() + 20 > 0xFFFF)
-            throw std::invalid_argument("motd too long");
-        list_array<char16_t> legacy_motd;
-        legacy_motd.reserve_push_back(motd.size() + 20);
-        legacy_motd.push_back(u'\u00A7');
-        legacy_motd.push_back(u'1');
-        legacy_motd.push_back(u'\0'); //default color
-        legacy_motd.push_back(u'1');
-        legacy_motd.push_back(u'2');
-        legacy_motd.push_back(u'7');
-        legacy_motd.push_back(u'\0'); //protocol version(always incompatible)
-        legacy_motd.push_back(u'0');
-        legacy_motd.push_back(u'.');
-        legacy_motd.push_back(u'0');
-        legacy_motd.push_back(u'.');
-        legacy_motd.push_back(u'0');
-        legacy_motd.push_back(u'\0'); //server version
-        utf8::utf8to16(motd.begin(), motd.end(), std::back_inserter(legacy_motd));
-        legacy_motd.push_back(u'\0');
-        legacy_motd.push_back(u'0');
-        legacy_motd.push_back(u'\0');
-        legacy_motd.push_back(u'0');
-        legacy_motd.push_back(u'\0'); //why legacy need to know about online players?
-        if constexpr (std::endian::native != std::endian::big)
-            for (char16_t& it : legacy_motd)
-                it = ENBT::ConvertEndian(std::endian::big, it);
-        list_array<uint8_t> response;
-        response.push_back(0xFF); //KICK packet
-        uint16_t len = legacy_motd.size();
-        if constexpr (std::endian::native != std::endian::big)
-            len = ENBT::ConvertEndian(std::endian::big, len);
-        response.push_back(uint8_t(len >> 8));
-        response.push_back(uint8_t(len & 0xFF));
-        response.push_back(reinterpret_cast<uint8_t*>(legacy_motd.data()), legacy_motd.size() * 2);
-
-        std::lock_guard<std::shared_mutex> lock(data_lock);
-        this->legacy_motd = std::move(response);
-    }
-
     TCPserver::TCPserver(boost::asio::io_service* io_service, const std::string& ip, uint16_t port, size_t threads, size_t ssl_key_length)
         : TCPacceptor(*io_service, resolveEndpoint(ip, port)),
           threads(threads ? threads : std::thread::hardware_concurrency()),
@@ -372,7 +339,7 @@ namespace crafted_craft {
             }
         }
         if (local_server)
-            server_config.offline_mode = true;
+            server_config.protocol.offline_mode = true;
     }
 
     TCPserver::~TCPserver() {

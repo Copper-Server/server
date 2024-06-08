@@ -1,8 +1,11 @@
+#include "log.hpp"
 #include "base_objects/event.hpp"
+#include "library/fast_task.hpp"
 #include "library/list_array.hpp"
+#include "util/task_management.hpp"
+#include <commandline.h>
 #include <iostream>
 #include <mutex>
-#include <string>
 
 namespace crafted_craft {
     namespace log {
@@ -11,89 +14,114 @@ namespace crafted_craft {
         }
 
         namespace console {
-            std::string current_line;
-            fast_task::task_mutex console_mutex;
+            Commandline cmd;
+            std::atomic_bool log_levels_switch[(int)level::__max]{
+                true, //info
+                true, //warn
+                true, //error
+                true, //fatal
+                true, //debug_error
+                true, //debug
+            };
+            std::tuple<uint8_t, uint8_t, uint8_t> log_levels_colors[(int)level::__max] = {
+                {128, 128, 128}, //info
+                {128, 0, 0},     //warn
+                {128, 128, 0},   //error
+                {128, 0, 0},     //fatal
+                {170, 128, 0},   //debug_error
+                {0, 128, 0},     //debug
+            };
+            std::string log_levels_names[(int)level::__max] = {
+                "info",
+                "warn",
+                "error",
+                "fatal",
+                "debug_error",
+                "debug",
+            };
 
-            //use ascii escape codes to clear the line
-            void clean_line() {
-                std::cout << "\033[2K\r" << std::flush;
-            }
+            std::string current_line;
+            list_array<std::tuple<log::level, std::string, std::string>> ouput_queue;
+            fast_task::task_mutex console_mutex;
+            fast_task::task_condition_variable output_mutex;
 
             std::string color(uint8_t r, uint8_t g, uint8_t b, const std::string& message) {
                 return "\033[38;2;" + std::to_string(r) + ";" + std::to_string(g) + ";" + std::to_string(b) + "m" + message + "\033[0m";
             }
 
-            std::string read_buffer() {
-                size_t to_read = std::cin.rdbuf()->in_avail();
-                std::string buffer;
-                buffer.resize(to_read);
-                std::cin.readsome(buffer.data(), to_read);
-                return buffer;
-            }
-
-            void check_console() {
-                current_line += read_buffer();
-                std::string_view view(current_line);
-                for (auto i = view.find('\n'); i != std::string::npos; i = view.find('\n')) {
-                    commands::on_command((std::string)view.substr(0, i));
-                    view.remove_prefix(i + 1);
+            void print(log::level level, const std::string& source, const std::string& message) {
+                if (!log_levels_switch[(int)level])
+                    return;
+                auto [r, g, b] = log_levels_colors[(int)level];
+                auto line = "[" + log_levels_names[(int)level] + "] [" + source + "] ";
+                std::string aligned_message;
+                std::string alignment(line.size(), ' ');
+                aligned_message.reserve(message.size() + alignment.size() + 1);
+                for (char c : message) {
+                    if (c == '\n')
+                        aligned_message += "\n" + alignment;
+                    else
+                        aligned_message += c;
                 }
-                current_line = std::string(view);
-            }
-
-            void print(const std::string& message) {
-                std::lock_guard<fast_task::task_mutex> lock(console_mutex);
-                check_console();
-                clean_line();
-
-                std::cout << message << std::endl
-                          << current_line << std::flush;
-            }
-
-            void check_console_task() {
-                while (true) {
-                    {
-                        std::lock_guard<fast_task::task_mutex> lock(console_mutex);
-                        check_console();
-                    }
-                    fast_task::task::sleep(100);
-                }
+                cmd.write(color(r, g, b, line + aligned_message));
             }
         } // namespace console
 
         void info(const std::string& source, const std::string& message) {
-            console::print(console::color(128, 128, 128, "[info] [" + source + "] " + message));
+            console::print(level::info, source, message);
         }
 
         void error(const std::string& source, const std::string& message) {
-            console::print(console::color(128, 0, 0, "[error] [" + source + "] " + message));
+            console::print(level::error, source, message);
         }
 
         void warn(const std::string& source, const std::string& message) {
-            console::print(console::color(128, 128, 0, "[warn] [" + source + "] " + message));
-        }
-
-        void critical(const std::string& source, const std::string& message) {
-            console::print(console::color(128, 0, 128, "[critical] [" + source + "] " + message));
-            std::exit(EXIT_FAILURE);
+            console::print(level::warn, source, message);
         }
 
         void debug(const std::string& source, const std::string& message) {
-            console::print(console::color(0, 128, 0, "[debug] [" + source + "] " + message));
+            console::print(level::debug, source, message);
         }
 
         void debug_error(const std::string& source, const std::string& message) {
-            console::print(console::color(128, 0, 0, "[debug error] [" + source + "] " + message));
+            console::print(level::debug_error, source, message);
         }
 
         void fatal(const std::string& source, const std::string& message) {
-            console::print(console::color(128, 0, 0, "[fatal] [" + source + "] " + message));
+            console::print(level::fatal, source, message);
             std::exit(EXIT_FAILURE);
         }
 
+        void disable_log_level(level level) {
+            console::log_levels_switch[(int)level] = false;
+        }
+
+        void enable_log_level(level level) {
+            console::log_levels_switch[(int)level] = true;
+        }
+
+        bool is_enabled(level level) {
+            return console::log_levels_switch[(int)level];
+        }
         namespace commands {
             void init() {
-                fast_task::task::start(std::make_shared<fast_task::task>(console::check_console_task));
+                console::cmd.enable_history();
+                console::cmd.on_command = [](Commandline& cmd) {
+                    Task::start([command = cmd.get_command()]() {
+                        if (!on_command.await_notify(command))
+                            error("Server", "Undefined command: " + command);
+                    });
+                };
+            }
+
+            void registerCommandSuggestion(const std::function<std::vector<std::string>(const std::string&, int)>& callback) {
+                console::cmd.on_autocomplete = [callback](Commandline&, const std::string& line, int position) {
+                    return callback(line, position);
+                };
+            }
+
+            void unloadCommandSuggestion() {
+                console::cmd.on_autocomplete = nullptr;
             }
         }
     }

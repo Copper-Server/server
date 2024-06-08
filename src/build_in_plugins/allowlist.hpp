@@ -11,8 +11,6 @@ namespace crafted_craft {
     namespace build_in_plugins {
         class AllowListPlugin : public PluginRegistration {
             storage::list_storage allow_list;
-            base_objects::event_register_id mode_change_id;
-
             api::allowlist::allowlist_mode mode = api::allowlist::allowlist_mode::off;
 
         public:
@@ -20,21 +18,14 @@ namespace crafted_craft {
                 : allow_list(storage_path + "/allow_list.txt") {}
 
             void OnLoad(const PluginRegistrationPtr& self) override {
-                mode_change_id = api::allowlist::on_mode_change.join(
-                    base_objects::event_priority::heigh,
-                    [this](api::allowlist::allowlist_mode mode) {
-                        if (mode == api::allowlist::allowlist_mode::block)
-                            for (const auto& entry : allow_list.entrys())
-                                api::allowlist::on_kick(entry);
+                register_event(api::allowlist::on_mode_change, base_objects::event_priority::heigh, [this](api::allowlist::allowlist_mode mode) {
+                    if (mode == api::allowlist::allowlist_mode::block)
+                        for (const auto& entry : allow_list.entrys())
+                            api::allowlist::on_kick(entry);
 
-                        this->mode = mode;
-                        return false;
-                    }
-                );
-            }
-
-            void OnUnload(const PluginRegistrationPtr& self) override {
-                api::allowlist::on_mode_change.leave(mode_change_id, base_objects::event_priority::heigh, false);
+                    this->mode = mode;
+                    return false;
+                });
             }
 
             void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override {

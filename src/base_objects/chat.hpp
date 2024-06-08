@@ -567,20 +567,16 @@ namespace crafted_craft {
                 if (clickEvent->open_url) {
                     clickEvent_enbt["action"] = "open_url";
                     clickEvent_enbt["value"] = clickEvent->open_url;
-                }
-                if (clickEvent->run_command) {
+                } else if (clickEvent->run_command) {
                     clickEvent_enbt["action"] = "run_command";
                     clickEvent_enbt["value"] = clickEvent->run_command;
-                }
-                if (clickEvent->suggest_command) {
+                } else if (clickEvent->suggest_command) {
                     clickEvent_enbt["action"] = "suggest_command";
                     clickEvent_enbt["value"] = clickEvent->suggest_command;
-                }
-                if (clickEvent->change_page) {
+                } else if (clickEvent->change_page) {
                     clickEvent_enbt["action"] = "change_page";
                     clickEvent_enbt["value"] = *clickEvent->change_page;
-                }
-                if (clickEvent->copy_to_clipboard) {
+                } else if (clickEvent->copy_to_clipboard) {
                     clickEvent_enbt["action"] = "copy_to_clipboard";
                     clickEvent_enbt["value"] = clickEvent->copy_to_clipboard;
                 }
@@ -597,8 +593,7 @@ namespace crafted_craft {
                     }
                     hoverEvent_enbt["action"] = "show_item";
                     hoverEvent_enbt["contents"] = std::move(show_item_enbt);
-                }
-                if (hoverEvent->show_entity) {
+                } else if (hoverEvent->show_entity) {
                     enbt::compound show_entity_enbt;
                     show_entity_enbt["type"] = hoverEvent->show_entity->type;
                     show_entity_enbt["id"] = hoverEvent->show_entity->id;
@@ -607,8 +602,7 @@ namespace crafted_craft {
                     }
                     hoverEvent_enbt["action"] = "show_entity";
                     hoverEvent_enbt["contents"] = std::move(show_entity_enbt);
-                }
-                if (hoverEvent->show_text) {
+                } else if (hoverEvent->show_text) {
                     hoverEvent_enbt["action"] = "show_text";
                     hoverEvent_enbt["contents"] = hoverEvent->show_text;
                 }
@@ -750,6 +744,146 @@ namespace crafted_craft {
             return final_chat;
         }
 
+        static Chat fromTextComponent(const list_array<uint8_t>& enbt) {
+            return fromEnbt(NBT::build(enbt).get_as_enbt());
+        }
+
+        static Chat fromEnbt(const ENBT& enbt) {
+            Chat result;
+            auto entry = enbt::compound::make_ref(enbt);
+
+            if (entry.contains("text"))
+                result.SetText(entry["text"]);
+            else if (entry.contains("translate"))
+                result.SetTranslation(entry["translate"]);
+
+            if (entry.contains("color"))
+                result.SetColor(entry["color"]);
+
+            if (entry.contains("insertion"))
+                result.SetInsertion(entry["insertion"]);
+
+            if (entry.contains("bold"))
+                result.SetBold(entry["bold"]);
+
+            if (entry.contains("italic"))
+                result.SetItalic(entry["italic"]);
+
+            if (entry.contains("underlined"))
+                result.SetUnderlined(entry["underlined"]);
+
+            if (entry.contains("strikethrough"))
+                result.SetStrikethrough(entry["strikethrough"]);
+
+            if (entry.contains("obfuscated"))
+                result.SetObfuscated(entry["obfuscated"]);
+
+            if (entry.contains("insertion"))
+                result.SetInsertion(entry["insertion"]);
+
+            if (entry.contains("insertion"))
+                result.SetInsertion(entry["insertion"]);
+
+            if (entry.contains("clickEvent")) {
+                auto click_event = enbt::compound::make_ref(entry["clickEvent"]);
+                std::string& action = click_event["action"];
+                auto& value = click_event["value"];
+                if (action == "open_url")
+                    result.SetClickEventOpenUrl(value);
+                else if (action == "run_command")
+
+                    result.SetClickEventRunCommand(value);
+
+                else if (action == "suggest_command")
+                    result.SetClickEventSuggestCommand(value);
+
+                else if (action == "change_page")
+                    result.SetClickEventChangePage(value);
+                else if (action == "copy_to_clipboard")
+                    result.SetClickEventCopyToClipboard(value);
+            }
+            if (entry.contains("hoverEvent")) {
+                auto hover_event = enbt::compound::make_ref(entry["hoverEvent"]);
+                std::string& action = hover_event["action"];
+                auto& content = hover_event["content"];
+                if (action == "show_item") {
+                    if (content.contains("tag"))
+                        result.SetHoverEventShowItem(content["id"], content["count"], (std::string)content["tag"]);
+                    else
+                        result.SetHoverEventShowItem(content["id"], content["count"], std::nullopt);
+                } else if (action == "show_entity") {
+                    if (content.contains("name"))
+                        result.SetHoverEventShowEntity(content["id"], content["type"], (std::string)content["name"]);
+                    else
+                        result.SetHoverEventShowItem(content["id"], content["type"], std::nullopt);
+                } else if (action == "show_text")
+                    result.SetHoverEventShowText(content);
+            }
+
+            if (entry.contains("extra")) {
+                auto extra_arr = result.GetExtra();
+                auto extra = enbt::fixed_array::make_ref(entry["extra"]);
+                extra_arr.reserve(extra.size());
+                for (auto& it : extra)
+                    extra_arr.push_back(Chat::fromEnbt(it));
+            }
+            return result;
+        }
+
+        std::string to_ansi_console() const {
+            std::string result;
+            if (color) {
+                if (strcmp(color, "black") == 0)
+                    result += "\033[30m";
+                else if (strcmp(color, "dark_blue") == 0)
+                    result += "\033[34m";
+                else if (strcmp(color, "dark_green") == 0)
+                    result += "\033[32m";
+                else if (strcmp(color, "dark_aqua") == 0)
+                    result += "\033[36m";
+                else if (strcmp(color, "dark_red") == 0)
+                    result += "\033[31m";
+                else if (strcmp(color, "dark_purple") == 0)
+                    result += "\033[35m";
+                else if (strcmp(color, "gold") == 0)
+                    result += "\033[33m";
+                else if (strcmp(color, "gray") == 0)
+                    result += "\033[37m";
+                else if (strcmp(color, "dark_gray") == 0)
+                    result += "\033[90m";
+                else if (strcmp(color, "blue") == 0)
+                    result += "\033[94m";
+                else if (strcmp(color, "green") == 0)
+                    result += "\033[92m";
+                else if (strcmp(color, "aqua") == 0)
+                    result += "\033[96m";
+                else if (strcmp(color, "red") == 0)
+                    result += "\033[91m";
+                else if (strcmp(color, "light_purple") == 0)
+                    result += "\033[95m";
+                else if (strcmp(color, "yellow") == 0)
+                    result += "\033[93m";
+                else if (strcmp(color, "white") == 0)
+                    result += "\033[97m";
+            }
+            if (bold)
+                result += "\033[1m";
+            if (italic)
+                result += "\033[3m";
+            if (underlined)
+                result += "\033[4m";
+            if (strikethrough)
+                result += "\033[9m";
+            if (obfuscated)
+                result += "\033[6m";
+            if (text)
+                result += text;
+            for (auto& it : extra)
+                result += it.to_ansi_console();
+            if (bold || italic || underlined || strikethrough || obfuscated)
+                result += "\033[0m";
+            return result;
+        }
 
     private:
         list_array<Chat> extra;
@@ -850,7 +984,7 @@ namespace crafted_craft {
                 delete hoverEvent->show_entity;
             hoverEvent->show_entity = nullptr;
         }
-};
+    };
 }
 
 #endif /* SRC_BASE_OBJECTS_CHAT */

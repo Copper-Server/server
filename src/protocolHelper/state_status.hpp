@@ -94,7 +94,7 @@ namespace crafted_craft {
         }
 
         Response WorkPacket(ArrayStream& packet) override {
-            if (!special_status->enable_status)
+            if (!special_status->config.status.enable)
                 return Response::Disconnect();
             if (packet.size_read() == 1) {
                 list_array<uint8_t> response;

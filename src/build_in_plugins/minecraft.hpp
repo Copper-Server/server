@@ -14,10 +14,6 @@ namespace crafted_craft {
                 log::info("Minecraft", "Minecraft plugin loaded!");
             }
 
-            void OnReload(const PluginRegistrationPtr& self) override {
-                log::info("Minecraft", "Minecraft plugin reloaded!");
-            }
-
             void OnUnload(const PluginRegistrationPtr& self) override {
                 TCPClientHandleConfiguration::base_plugins.erase(self);
                 TCPClientHandleConfiguration::plugins_configuration.erase("minecraft:brand");

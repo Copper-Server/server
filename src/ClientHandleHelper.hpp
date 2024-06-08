@@ -149,10 +149,7 @@ namespace crafted_craft {
 
         void Worker();
 
-        std::shared_mutex data_lock;
         std::atomic_bool disabled = true;
-
-        list_array<uint8_t> legacy_motd;
         std::string ip;
         bool local_server;
 
@@ -163,7 +160,12 @@ namespace crafted_craft {
 
         friend class TCPsession;
         void close_session(TCPsession* session);
+        static TCPserver* global_instance;
+
     public:
+        static TCPserver& get_global_instance();
+        static void register_global_instance(TCPserver& instance);
+
         storage::memory::online_player_storage online_players;
         storage::memory::entity_ids_map_storage entity_ids_map;
 
@@ -191,10 +193,6 @@ namespace crafted_craft {
         uint16_t max_accept_buffer = 100;
         //30 sec
         uint64_t all_connections_timeout = 30000;
-
-        const list_array<uint8_t>& legacyMotdResponse();
-
-        void setLegacyMotd(const std::u8string& motd);
 
         TCPserver(boost::asio::io_service* io_service, const std::string& ip, uint16_t port, size_t threads = 0, size_t ssl_key_length = 1024);
 

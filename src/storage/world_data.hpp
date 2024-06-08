@@ -173,6 +173,7 @@ namespace crafted_craft {
             friend class worlds_data;
             void load();
             void save();
+            std::string preview_world_name();
             std::filesystem::path path;
 
             std::unordered_map<calc::XY<int64_t>, FuturePtr<base_objects::atomic_holder<chunk_data>>> on_load_process;
@@ -323,11 +324,15 @@ namespace crafted_craft {
 
             base_objects::atomic_holder<world_data> load(uint64_t world_id);
 
+            list_array<uint64_t> cached_ids;
+            const list_array<uint64_t>& get_ids();
+
         public:
             base_objects::event<uint64_t> on_world_loaded;
             base_objects::event<uint64_t> on_world_unloaded;
             base_objects::event<double> on_tps_changed;
             uint64_t ticks_per_second = 20;
+            uint64_t base_world_id = -1;
 
             //calculated
             double tps = 0;
@@ -336,6 +341,12 @@ namespace crafted_craft {
             worlds_data(base_objects::ServerConfiguration& configuration, const std::filesystem::path& base_path);
 
             bool exists(uint64_t world_id);
+            bool exists(const std::string& name);
+            const list_array<uint64_t>& get_list();
+            std::string get_name(uint64_t world_id);
+            uint64_t get_id(const std::string& name);
+
+
             base_objects::atomic_holder<world_data> get(uint64_t world_id);
             void save(uint64_t world_id);
             void save_all();

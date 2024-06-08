@@ -5,13 +5,21 @@
 
 namespace crafted_craft {
     namespace log {
+        enum class level {
+            info,
+            warn,
+            error,
+            fatal,
+            debug_error,
+            debug,
+
+            __max
+        };
         void info(const std::string& source, const std::string& message);
 
         void error(const std::string& source, const std::string& message);
 
         void warn(const std::string& source, const std::string& message);
-
-        void critical(const std::string& source, const std::string& message);
 
         void debug(const std::string& source, const std::string& message);
 
@@ -19,9 +27,15 @@ namespace crafted_craft {
 
         void fatal(const std::string& source, const std::string& message);
 
+        void disable_log_level(level);
+        void enable_log_level(level);
+        bool is_enabled(level);
+
         namespace commands {
             extern base_objects::event<std::string> on_command;
             void init();
+            void registerCommandSuggestion(const std::function<std::vector<std::string>(const std::string&, int)>& callback);
+            void unloadCommandSuggestion();
         }
     }
 }

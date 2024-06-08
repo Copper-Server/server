@@ -29,14 +29,14 @@ namespace crafted_craft {
             return ENBT::optional();
         }
 
-        player_data::player_data(const std::string& path)
+        player_data::player_data(const std::filesystem::path& path)
             : path(path) {}
 
         void player_data::load() {
             std::ifstream file(path, std::ios::binary);
             if (!file.is_open()) {
                 file.close();
-                throw std::runtime_error("Failed to open file: " + path);
+                throw std::runtime_error("Failed to open file: " + path.string());
             }
             ENBT file_data = ENBTHelper::ReadToken(file);
             file.close();
@@ -266,20 +266,20 @@ namespace crafted_craft {
             std::ofstream file(path, std::ios::binary);
             if (!file.is_open()) {
                 file.close();
-                throw std::runtime_error("Failed to open file: " + path);
+                throw std::runtime_error("Failed to open file: " + path.string());
             }
             ENBTHelper::WriteToken(file, as_file_data);
             file.flush();
             file.close();
         }
 
-        players_data::players_data(const std::string& base_path)
+        players_data::players_data(const std::filesystem::path& base_path)
             : base_path(base_path) {
             std::filesystem::create_directories(base_path);
         }
 
         player_data players_data::get_player_data(const std::string& player_uuid) {
-            return player_data(base_path + "/" + player_uuid + ".e_dat");
+            return player_data(base_path / (player_uuid + ".e_dat"));
         }
 
     } // namespace storage

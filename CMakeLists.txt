@@ -37,6 +37,8 @@ FILE(GLOB SRCFILES
         src/*.cpp 
 )
 
+find_library(commandline_LIB commandline)
+
 find_package(Boost REQUIRED COMPONENTS context json bimap)
 find_package(ZLIB REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -57,5 +59,6 @@ ENDIF(MSVC)
       ZLIB::ZLIB
       OpenSSL::SSL
       utf8::cpp
+      ${commandline_LIB}
       fast_task
     )

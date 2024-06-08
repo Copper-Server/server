@@ -18,6 +18,7 @@
         "boost-lockfree",
         "utfcpp",
         "gtest",
-        "zlib"
+        "zlib",
+        "lionkor-commandline"
     ]
 }

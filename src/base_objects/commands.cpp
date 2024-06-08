@@ -290,6 +290,8 @@ namespace crafted_craft {
                     path = path.substr(split + 1);
                 }
 
+                if (part.empty())
+                    break;
 
                 int32_t child = current->get_child(command_nodes, part);
                 if (child == -1)
@@ -311,18 +313,70 @@ namespace crafted_craft {
                     return current->redirect_command(args, path, data);
                 else
                     throw std::invalid_argument("internal server error, invalid command structure, report to admin, NO_REDIRECT");
+            } else {
+                if (current->node.flags.is_executable) {
+                    if (callback)
+                        return callback(args, data);
+                    else
+                        throw std::invalid_argument("internal server error, invalid command structure, report to admin, NO_CALLBACK");
+                } else
+                    throw std::invalid_argument("command is not executable");
             }
-            if (current->node.flags.is_executable) {
-                if (callback)
-                    return callback(args, data);
-                else
-                    throw std::invalid_argument("internal server error, invalid command structure, report to admin, NO_CALLBACK");
-            } else
-                throw std::invalid_argument("command is not executable");
         }
 
-        std::vector<suggestion> command_manager::request_suggestions(const std::string& command) {
-            //TODO: implement
+        list_array<suggestion> command_manager::request_suggestions(const std::string& command_string, client_data_holder& data) {
+            list_array<suggestion> suggestions;
+
+            std::string path = command_string;
+            list_array<std::string> args;
+            command* current = &command_nodes[0];
+
+            while (path.size() > 0 || !current->node.flags.has_redirect) {
+                auto split = path.find(' ');
+                std::string part;
+                if (split == std::string::npos) {
+                    std::swap(part, path);
+                } else {
+                    part = path.substr(0, split);
+                    path = path.substr(split + 1);
+                }
+
+                if (part.empty()) {
+                    if (current->node.flags.node_type == packets::command_node::node_type::argument)
+                        return {};
+                    current->node.children.forEach([&](int32_t id) {
+                        suggestions.push_back({command_nodes[id].node.name.value_or("")});
+                    });
+                    return suggestions;
+                }
+
+                try {
+                    int32_t child = current->get_child(command_nodes, part);
+                    if (child == -1) {
+                        try {
+                            args.push_back(find_argument(command_nodes, current, part, path));
+                        } catch (...) {
+                            current->node.children.forEach([&](int32_t id) {
+                                auto res = command_nodes[id].node.name.value_or("");
+                                if (res.starts_with(part))
+                                    suggestions.push_back({res});
+                            });
+                            return suggestions;
+                        }
+                    } else {
+                        auto& command = command_nodes[child];
+                        if (command.node.flags.node_type == packets::command_node::node_type::argument)
+                            args.push_back(find_argument(command_nodes, current, part, path));
+                        else
+                            current = &command_nodes[child];
+
+                        if (!current->node.flags.has_redirect)
+                            continue;
+                    }
+                } catch (...) {
+                    return {};
+                }
+            }
             return {};
         }
 
@@ -522,16 +576,15 @@ namespace crafted_craft {
             if (!is_valid())
                 throw std::runtime_error("command has been deleted");
             std::string res = *current_command.node.name;
+            if (current_command.description.size() > 0)
+                res += " - " + current_command.description;
+
             for (auto& child : current_command.node.children) {
                 command_browser browser(manager, child);
                 std::string child_modify = browser.get_documentation();
                 if (child_modify.size() > 0) {
                     auto cmd = browser.look_up();
                     res.reserve(child_modify.size() + 4 + cmd.node.name->size());
-
-                    res.push_back('\n');
-                    res.push_back('\t');
-                    res.insert(res.end(), cmd.node.name->begin(), cmd.node.name->end());
                     res.push_back('\n');
                     res.push_back('\t');
                     for (auto& ch : child_modify) {
@@ -680,6 +733,37 @@ namespace crafted_craft {
             manager.graph_ready = false;
             return *this;
         }
+
+        command_browser& command_browser::set_suggestion(const std::string& suggestion_type) {
+            if (!is_valid())
+                throw std::runtime_error("command has been deleted");
+            current_command.node.flags.has_suggestion = true;
+            current_command.node.suggestion_type = suggestion_type;
+            current_command.suggestions = {};
+            manager.graph_ready = false;
+            return *this;
+        }
+
+        command_browser& command_browser::set_suggestion_callback(const command_suggestion& suggestions) {
+            if (!is_valid())
+                throw std::runtime_error("command has been deleted");
+            current_command.node.flags.has_suggestion = true;
+            current_command.node.suggestion_type = "minecraft:ask_server";
+            current_command.suggestions = suggestions;
+            manager.graph_ready = false;
+            return *this;
+        }
+
+        command_browser& command_browser::remove_suggestion() {
+            if (!is_valid())
+                throw std::runtime_error("command has been deleted");
+            current_command.node.flags.has_suggestion = false;
+            current_command.node.suggestion_type = std::nullopt;
+            current_command.suggestions = {};
+            manager.graph_ready = false;
+            return *this;
+        }
+
 
         command_browser& command_browser::modify_command(const command& _command) {
             return modify_command(command(_command));

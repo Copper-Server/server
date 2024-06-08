@@ -1,34 +1,89 @@
 #ifndef SRC_BUILD_IN_PLUGINS_SERVER
 #define SRC_BUILD_IN_PLUGINS_SERVER
 #include "../base_objects/commands.hpp"
+#include "../base_objects/server_configuaration.hpp"
+#include "../base_objects/virtual_client.hpp"
 #include "../log.hpp"
 #include "../plugin/registration.hpp"
 #include "../protocolHelper/state_play.hpp"
 #include "../storage/players_data.hpp"
+
+
 namespace crafted_craft {
+    class TCPserver;
     namespace build_in_plugins {
         class ServerPlugin : public PluginRegistration {
             storage::memory::online_player_storage& player_storage;
             storage::players_data players_data;
-            base_objects::command_manager manager;
+            base_objects::ServerConfiguration& config;
+            base_objects::virtual_client console_data;
+            std::filesystem::path base_path;
+
 
         public:
-            ServerPlugin(const std::string& path, storage::memory::online_player_storage& player_storage)
-                : players_data(path + "/players"), player_storage(player_storage) {
+            base_objects::command_manager manager;
+
+            ServerPlugin(const std::filesystem::path& base_path, const std::filesystem::path& storage_path, storage::memory::online_player_storage& player_storage, base_objects::ServerConfiguration& config, TCPserver& server)
+                : players_data(storage_path / "players"),
+                  player_storage(player_storage),
+                  base_path(base_path),
+                  config(config),
+                  console_data(player_storage.allocate_player(), "Console", "Console", server) {
             }
 
             void OnLoad(const PluginRegistrationPtr& self) override {
                 log::info("Server", "starting server...");
                 manager.reload_commands();
+                register_event(log::commands::on_command, base_objects::event_priority::heigh, [&](const std::string& command) {
+                    try {
+                        manager.execute_command(command, console_data.client);
+                    } catch (const std::exception& ex) {
+                        log::error("Server", "[command] " + command + "\n Failed to execute command, reason:\n\t" + ex.what());
+                        return false;
+                    }
+                    log::info("Server", "[command] " + command);
+                    return true;
+                });
+                log::commands::registerCommandSuggestion([this](const std::string& line, int position) {
+                    auto tmp = line;
+                    if (uint32_t(position) <= line.size())
+                        tmp.resize(position);
+                    else
+                        tmp += ' ';
+                    auto insertion_ = tmp;
+
+                    if (!insertion_.starts_with(' ')) {
+                        auto it = insertion_.find_last_of(' ');
+                        if (insertion_.npos == it)
+                            insertion_.clear();
+                        else
+                            insertion_ = insertion_.substr(0, it) + ' ';
+                    }
+                    return manager
+                        .request_suggestions(tmp, console_data.client)
+                        .convert<std::string>([&insertion_](auto&& suggestion) { return insertion_ + suggestion.insertion; })
+                        .to_container<std::vector<std::string>>();
+                });
+                console_data.systemChatMessage = [this](const Chat& message) {
+                    log::info("Server", message.to_ansi_console());
+                };
+                console_data.systemChatMessageOverlay = [this](const Chat& message) {
+                    log::info("Server", message.to_ansi_console());
+                };
+                console_data.disguisedChatMessage = [this](const Chat& message, int32_t chat_type, const Chat& sender, std::optional<Chat> target_name) {
+                    if (!target_name)
+                        log::info("Server", "[" + sender.to_ansi_console() + "] " + message.to_ansi_console());
+                    else
+                        log::info("Server", "[" + sender.to_ansi_console() + " -> " + target_name->to_ansi_console() + "] " + message.to_ansi_console());
+                };
+
+
                 log::info("Server", "server handler loaded.");
             }
 
-            void OnReload(const std::shared_ptr<PluginRegistration>&) override {
-                manager.reload_commands();
-                log::info("Server", "server handler reloaded.");
-            }
-
             void OnUnload(const PluginRegistrationPtr& self) override {
+                log::commands::unloadCommandSuggestion();
+                PluginRegistration::OnUnload(self);
                 log::info("Server", "server handler unloaded.");
             }
 
@@ -37,7 +92,7 @@ namespace crafted_craft {
                     browser.add_child({"reload", "signal to reload server", "/reload"})
                         .set_callback([](const list_array<std::string>&, base_objects::client_data_holder& client) {
                             if (client->player_data.op_level < 4)
-                                return;
+                                throw std::exception("Not enough permissions for this.");
                             //kick all players
                             //unload all plugins
                             //load all plugins
@@ -49,7 +104,7 @@ namespace crafted_craft {
                 {
                     browser.add_child({"help", "returns list of commands", ""})
                         .set_callback([browser](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                            return packets::play::systemChatMessage({"help for all commands:" + browser.get_documentation()});
+                            api::players::calls::on_system_message({client, {"help for all commands:\n" + browser.get_documentation()}});
                         })
                         .add_child({"<command>", "returns help for command", "/help <command>"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
                         .set_callback([browser](const list_array<std::string>& args, base_objects::client_data_holder& client) {
@@ -61,14 +116,14 @@ namespace crafted_craft {
                         });
 
                     browser.add_child({"?", "help alias"}).set_redirect("help", [browser](const list_array<std::string>& args, const std::string& left, base_objects::client_data_holder& client) {
-                        browser.get_manager().execute_command("help" + left.size() ? " " + left : "", client);
+                        browser.get_manager().execute_command("help" + (left.size() ? " " + left : ""), client);
                     });
                 }
                 {
                     browser.add_child({"version", "returns server version", "/version"})
                         .set_callback([](const list_array<std::string>&, base_objects::client_data_holder& client) {
                             if (client->player_data.op_level < 4)
-                                return;
+                                throw std::exception("Not enough permissions for this.");
                             api::players::calls::on_system_message({client, {"Server version: 1.0.0"}});
                         });
                 }
@@ -77,7 +132,7 @@ namespace crafted_craft {
                         .add_child({"<player>", "op player", "/op <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
                         .set_callback([](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                             if (client->player_data.op_level < 4)
-                                return;
+                                throw std::exception("Not enough permissions for this.");
                             if (args.size() == 0) {
                                 api::players::calls::on_system_message({client, {"Usage: /op <player>"}});
                                 return;
@@ -90,7 +145,7 @@ namespace crafted_craft {
                         .add_child({"<player>", "deop player", "/deop <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
                         .set_callback([](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                             if (client->player_data.op_level < 4)
-                                return;
+                                throw std::exception("Not enough permissions for this.");
                             if (args.size() == 0) {
                                 api::players::calls::on_system_message({client, {"Usage: /deop <player>"}});
                                 return;
@@ -104,7 +159,7 @@ namespace crafted_craft {
                         .add_child({"<player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
                         .set_callback([this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                             if (client->player_data.op_level < 4)
-                                return;
+                                throw std::exception("Not enough permissions for this.");
                             if (args.size() == 0) {
                                 api::players::calls::on_system_message({client, {"Usage: /kick <player>"}});
                                 return;
@@ -118,10 +173,10 @@ namespace crafted_craft {
                         .add_child({"<reason>", "kick player with reason", "/kick <player> [reason]"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
                         .set_callback([this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                             if (client->player_data.op_level < 4)
-                                return;
+                                throw std::exception("Not enough permissions for this.");
                             if (args.size() == 0) {
                                 api::players::calls::on_system_message({client, {"Usage: /kick <player>"}});
-                                return;
+                                throw std::exception("Not enough permissions for this.");
                             }
                             auto target = player_storage.get_player(
                                 SharedClientData::packets_state_t::protocol_state::play,
@@ -137,9 +192,20 @@ namespace crafted_craft {
                     browser.add_child({"stop", "stop server", "/stop"})
                         .set_callback([](const list_array<std::string>&, base_objects::client_data_holder& client) {
                             if (client->player_data.op_level < 4)
-                                return;
+                                throw std::exception("Not enough permissions for this.");
                             //stop server
                         });
+                }
+                {
+                    auto _config = browser.add_child({"config"});
+                    _config.add_child({"reload"}).set_callback([&](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                        if (client->player_data.op_level < 4)
+                            throw std::exception("Not enough permissions for this.");
+                        config.load(base_path);
+                        pluginManagement.registeredPlugins().forEach([&](const PluginRegistrationPtr& plugin) {
+                            plugin->OnConfigReload(plugin, config);
+                        });
+                    });
                 }
             }
 

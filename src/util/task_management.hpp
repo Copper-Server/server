@@ -4,7 +4,7 @@
 #include "../library/list_array.hpp"
 
 struct Task {
-    static Task start(const std::function<void()>& fn) {
+    static void start(const std::function<void()>& fn) {
         fast_task::task::start(std::make_shared<fast_task::task>(fn));
     }
 };

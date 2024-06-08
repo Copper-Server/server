@@ -212,7 +212,7 @@ namespace crafted_craft {
                         bool has_suggestion : 1;
                     };
 
-                    uint8_t raw;
+                    uint8_t raw = 0;
                 } flags;
 
                 list_array<int32_t> children;

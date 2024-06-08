@@ -10,6 +10,7 @@
 #include "build_in_plugins/minecraft.hpp"
 #include "build_in_plugins/server.hpp"
 #include "build_in_plugins/special/status.hpp"
+#include "build_in_plugins/world.hpp"
 #include "plugin/main.hpp"
 #include "registers.hpp"
 #include <boost/bimap.hpp>
@@ -22,21 +23,30 @@ int main() {
     fast_task::task::create_executor();
     fast_task::task::task::enable_task_naming = true;
     boost::asio::io_service service;
+
     TCPserver server(&service, "localhost", 1234);
-
-
+    TCPserver::register_global_instance(server);
     log::commands::init();
-    std::string current_path = std::filesystem::current_path().string();
-    std::string storage_path = current_path + "/storage";
+
+
+    auto current_path = std::filesystem::current_path();
+    server.server_config.load(current_path);
+    std::string storage_path = (current_path / "storage").string();
     std::filesystem::create_directories(storage_path);
 
+
+    log::disable_log_level(log::level::debug);
+
+    auto server_plugin = std::make_shared<build_in_plugins::ServerPlugin>(current_path, storage_path, server.online_players, server.server_config, server);
+    pluginManagement.registerPlugin("server", server_plugin);
+
+    pluginManagement.registerPlugin("world", std::make_shared<build_in_plugins::WorldManagementPlugin>(storage_path, server.server_config));
     pluginManagement.registerPlugin("allowlist", std::make_shared<build_in_plugins::AllowListPlugin>(storage_path));
     pluginManagement.registerPlugin("ban", std::make_shared<build_in_plugins::BanPlugin>(storage_path));
     pluginManagement.registerPlugin("communication_core", std::make_shared<build_in_plugins::CommunicationCorePlugin>(server.online_players));
     pluginManagement.registerPlugin("minecraft", std::make_shared<build_in_plugins::MinecraftPlugin>());
 
-    //must be last, initializes commands
-    pluginManagement.registerPlugin("server", std::make_shared<build_in_plugins::ServerPlugin>(storage_path, server.online_players));
+    pluginManagement.callLoad();
 
 
     special_handshake = new SpecialPluginHandshake();

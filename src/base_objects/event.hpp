@@ -20,9 +20,14 @@ namespace crafted_craft {
             low
         };
 
-        template <typename T>
-        struct event {
+        class base_event {
+        public:
+            virtual bool leave(event_register_id func, event_priority priority = event_priority::avg, bool async_mode = false) = 0;
+        };
 
+        template <typename T>
+        class event : public base_event {
+        public:
             using function = std::function<bool(const T&)>;
 
             event_register_id operator+=(function func) {
@@ -73,7 +78,7 @@ namespace crafted_craft {
                 throw std::runtime_error("Invalid priority");
             }
 
-            bool leave(event_register_id func, event_priority priority = event_priority::avg, bool async_mode = false) {
+            bool leave(event_register_id func, event_priority priority = event_priority::avg, bool async_mode = false) override {
                 std::lock_guard<fast_task::task_mutex> lock(mutex);
                 if (async_mode) {
                     switch (priority) {
@@ -119,15 +124,15 @@ namespace crafted_craft {
                     return true;
                 if (await_call(async_low_priority, args))
                     return true;
-                if (syncCall(heigh_priority, args))
+                if (sync_call(heigh_priority, args))
                     return true;
-                if (syncCall(upper_avg_priority, args))
+                if (sync_call(upper_avg_priority, args))
                     return true;
-                if (syncCall(avg_priority, args))
+                if (sync_call(avg_priority, args))
                     return true;
-                if (syncCall(lower_avg_priority, args))
+                if (sync_call(lower_avg_priority, args))
                     return true;
-                if (syncCall(low_priority, args))
+                if (sync_call(low_priority, args))
                     return true;
                 return false;
             }

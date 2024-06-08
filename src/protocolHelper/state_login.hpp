@@ -48,7 +48,7 @@ namespace crafted_craft {
         }
 
         Response loginSuccess() {
-            if (session->serverData().server_config.offline_mode)
+            if (session->serverData().server_config.protocol.offline_mode)
                 session->sharedData().data = session->serverData().getSessionServer().hasJoined(session->sharedData().name, "", false);
             if (!session->sharedData().data)
                 return packets::login::kick("Internal error");
@@ -167,7 +167,7 @@ namespace crafted_craft {
                     log::debug("login", "kick...");
                     return packets::login::kick(str);
                 }
-                if (!session->serverData().server_config.offline_mode) {
+                if (!session->serverData().server_config.protocol.offline_mode) {
                     return encryptionRequest(); //still not encrypted
                 } else if (session->serverData().server_config.protocol.compression_threshold != -1) {
                     return setCompression(session->serverData().server_config.protocol.compression_threshold);

@@ -8,7 +8,7 @@
 namespace crafted_craft {
     namespace api {
         struct world {
-            world();
+            world(TCPserver* server_ref);
 
             void load_world(uint64_t world_id, std::function<void()> callback = nullptr);
             void unload_world(uint64_t world_id, std::function<void()> callback = nullptr);

@@ -11,7 +11,6 @@ namespace crafted_craft {
     namespace build_in_plugins {
         namespace special {
             class Status : public SpecialPluginStatus {
-                const base_objects::ServerConfiguration& config;
                 storage::memory::online_player_storage& online_players;
 
                 fast_task::task_mutex cached_icon_mutex;
@@ -20,9 +19,7 @@ namespace crafted_craft {
 
             public:
                 Status(const base_objects::ServerConfiguration& config, storage::memory::online_player_storage& online_players)
-                    : config(config), online_players(online_players) {
-                    enable_status = config.status.enable;
-                }
+                    : online_players(online_players), SpecialPluginStatus(config) {}
 
                 std::string StatusResponseVersionName() override {
                     return config.status.server_name;
@@ -33,7 +30,7 @@ namespace crafted_craft {
                 }
 
                 size_t MaxPlayers() override {
-                    return config.max_players;
+                    return config.protocol.max_players;
                 }
 
                 size_t OnlinePlayers() override {

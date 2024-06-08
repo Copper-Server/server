@@ -5,9 +5,9 @@
 #include "../base_objects/ptr_optional.hpp"
 #include "../base_objects/response.hpp"
 #include "../library/enbt.hpp"
+#include "../log.hpp"
 #include "../plugin/main.hpp"
 #include "../registers.hpp"
-#include "../log.hpp"
 #include <array>
 #include <exception>
 #include <string>
@@ -352,6 +352,45 @@ namespace crafted_craft {
     };
 
     class TCPClientHandle : public TCPclient {
+
+        list_array<uint8_t> LegacyMotdHelper(const std::u8string& motd) {
+            if (motd.size() + 20 > 0xFFFF)
+                throw std::invalid_argument("motd too long");
+            list_array<char16_t> legacy_motd;
+            legacy_motd.reserve_push_back(motd.size() + 20);
+            legacy_motd.push_back(u'\u00A7');
+            legacy_motd.push_back(u'1');
+            legacy_motd.push_back(u'\0'); //default color
+            legacy_motd.push_back(u'1');
+            legacy_motd.push_back(u'2');
+            legacy_motd.push_back(u'7');
+            legacy_motd.push_back(u'\0'); //protocol version(always incompatible)
+            legacy_motd.push_back(u'0');
+            legacy_motd.push_back(u'.');
+            legacy_motd.push_back(u'0');
+            legacy_motd.push_back(u'.');
+            legacy_motd.push_back(u'0');
+            legacy_motd.push_back(u'\0'); //server version
+            utf8::utf8to16(motd.begin(), motd.end(), std::back_inserter(legacy_motd));
+            legacy_motd.push_back(u'\0');
+            legacy_motd.push_back(u'0');
+            legacy_motd.push_back(u'\0');
+            legacy_motd.push_back(u'0');
+            legacy_motd.push_back(u'\0'); //why legacy need to know about online players?
+            if constexpr (std::endian::native != std::endian::big)
+                for (char16_t& it : legacy_motd)
+                    it = ENBT::ConvertEndian(std::endian::big, it);
+            list_array<uint8_t> response;
+            response.push_back(0xFF); //KICK packet
+            uint16_t len = legacy_motd.size();
+            if constexpr (std::endian::native != std::endian::big)
+                len = ENBT::ConvertEndian(std::endian::big, len);
+            response.push_back(uint8_t(len >> 8));
+            response.push_back(uint8_t(len & 0xFF));
+            response.push_back(reinterpret_cast<uint8_t*>(legacy_motd.data()), legacy_motd.size() * 2);
+            return response;
+        }
+
     protected:
         static uint64_t generate_random_int() {
             static std::random_device rd;
@@ -466,11 +505,11 @@ namespace crafted_craft {
                     return Response::Empty();
                 if (combined[0] == 0xFE && combined[1] == 0x01) {
                     log::debug("protocol", "handle legacy status");
-                    auto& server = session->serverData();
-                    if (!server.handle_legacy)
+                    auto& config = session->serverData().server_config;
+                    if (!config.status.enable)
                         return Response::Disconnect(list_array<list_array<uint8_t>>());
                     else
-                        return Response::Disconnect({server.legacyMotdResponse()});
+                        return Response::Disconnect({LegacyMotdHelper(std::u8string((char8_t*)config.status.description.data(), config.status.description.size()))});
                 }
             }
             list_array<list_array<uint8_t>> answer;

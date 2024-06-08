@@ -477,6 +477,15 @@ namespace crafted_craft {
             ENBTHelper::WriteToken(file, world_data_file);
         }
 
+        std::string world_data::preview_world_name() {
+            std::unique_lock lock(mutex);
+            std::ifstream file(path / "world.dat", std::ios::binary);
+            if (!file.is_open())
+                throw std::runtime_error("Can't open world file");
+            ENBTHelper::MoveToValuePath(file, "world_name");
+            return (std::string)ENBTHelper::ReadToken(file);
+        }
+
         world_data::world_data(const std::filesystem::path& path)
             : path(path) {
             if (!std::filesystem::exists(path))
@@ -788,6 +797,7 @@ namespace crafted_craft {
 
 #pragma region worlds_data
 
+
         base_objects::atomic_holder<world_data> worlds_data::load(uint64_t world_id) {
             if (cached_worlds.find(world_id) == cached_worlds.end()) {
                 auto path = base_path / std::to_string(world_id);
@@ -807,12 +817,67 @@ namespace crafted_craft {
                 std::filesystem::create_directories(base_path);
         }
 
+        const list_array<uint64_t>& worlds_data::get_ids() {
+            if (!cached_ids.empty())
+                return cached_ids;
+            list_array<uint64_t> result;
+            for (auto& entry : std::filesystem::directory_iterator{base_path}) {
+                if (entry.is_directory()) {
+                    auto& path = entry.path();
+                    try {
+                        result.push_back(std::stoi(path.filename().string()));
+                    } catch (const std::exception&) {
+                        log::warn("storage:worlds_data", "Got corrupted file path: " + path.string());
+                    }
+                }
+            }
+            result.commit();
+            return cached_ids = result;
+        }
+
         bool worlds_data::exists(uint64_t world_id) {
             std::unique_lock lock(mutex);
-            if (cached_worlds.find(world_id) == cached_worlds.end())
-                return std::filesystem::exists(base_path / std::to_string(world_id));
+            if (cached_ids.empty()) {
+                lock.unlock();
+                get_list();
+                lock.lock();
+            }
+            return cached_ids.contains(world_id);
+        }
+
+        bool worlds_data::exists(const std::string& name) {
+            return get_id(name) != -1;
+        }
+
+        const list_array<uint64_t>& worlds_data::get_list() {
+            std::unique_lock lock(mutex);
+            return get_ids();
+        }
+
+        std::string worlds_data::get_name(uint64_t world_id) {
+            std::unique_lock lock(mutex);
+            if (auto on_load = cached_worlds.find(world_id); on_load != cached_worlds.end())
+                return on_load->second->world_name;
+
+            auto world_path = base_path / std::to_string(world_id);
+            if (std::filesystem::exists(world_path))
+                return world_data(world_path).preview_world_name();
             else
-                return true;
+                throw std::runtime_error("World with id " + std::to_string(world_id) + " not found.");
+        }
+
+        uint64_t worlds_data::get_id(const std::string& name) {
+            std::unique_lock lock(mutex);
+            for (auto& world : cached_worlds)
+                if (world.second->world_name == name)
+                    return world.first;
+
+            if (cached_ids.empty())
+                get_ids();
+            size_t found = cached_ids.find_it([this, &name](uint64_t id) {
+                return world_data(base_path / std::to_string(id)).preview_world_name() == name;
+            });
+            return found == list_array<uint64_t>::npos ? -1 : cached_ids[found];
         }
 
         base_objects::atomic_holder<world_data> worlds_data::get(uint64_t world_id) {

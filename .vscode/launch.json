@@ -21,6 +21,7 @@
             "logging": {
                 "moduleLoad": false
             },
+            "console":"externalTerminal",
             "visualizerFile": "${workspaceFolder}/src/run_time/link_garbage_remover.natvis"
         },
         {

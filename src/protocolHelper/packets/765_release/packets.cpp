@@ -13,7 +13,7 @@ namespace crafted_craft {
                 }
 
                 Response disableCompression() {
-                    return Response::Answer({{0x03, 0}});
+                    return Response::Answer({list_array<uint8_t>::concat(0x03, 0)});
                 }
 
                 Response setCompression(int32_t threshold) {
@@ -40,7 +40,7 @@ namespace crafted_craft {
                 }
 
                 Response removeResourcePacks() {
-                    return Response::Answer({{0x06, false}});
+                    return Response::Answer({list_array<uint8_t>::concat(0x06, false)});
                 }
 
                 Response removeResourcePack(const ENBT::UUID& pack_id) {
@@ -120,7 +120,7 @@ namespace crafted_craft {
                         else if (response.data.size() == 1)
                             return std::move(response);
 
-                        Response answer(Response::Answer({{0x00}}));
+                        Response answer(Response::Answer({list_array<uint8_t>::concat(0x00)}));
                         answer.data.push_back(response.data);
                         answer.data.push_back({0x00});
                         return answer;
@@ -300,7 +300,7 @@ namespace crafted_craft {
                 }
 
                 Response changeDifficulty(uint8_t difficulty, bool locked) {
-                    return Response::Answer({{0x0B, difficulty, locked}});
+                    return Response::Answer({list_array<uint8_t>::concat(0x0B, difficulty, locked)});
                 }
 
                 Response chunkBatchFinished(int32_t count) {
@@ -312,7 +312,7 @@ namespace crafted_craft {
                 }
 
                 Response chunkBatchStart() {
-                    return Response::Answer({{0x0D}});
+                    return Response::Answer({list_array<uint8_t>::concat(0x0D)});
                 }
 
                 Response chunkBiomes(list_array<base_objects::chunk::chunk_biomes>& chunk) {
@@ -333,7 +333,7 @@ namespace crafted_craft {
                 }
 
                 Response clearTitles(bool reset) {
-                    return Response::Answer({{0x0F, reset}});
+                    return Response::Answer({list_array<uint8_t>::concat(0x0F, reset)});
                 }
 
                 Response commandSuggestionsResponse(int32_t transaction_id, int32_t start_pos, int32_t length, const list_array<base_objects::packets::command_suggestion>& suggestions) {
@@ -391,7 +391,7 @@ namespace crafted_craft {
                 }
 
                 Response closeContainer(uint8_t container_id) {
-                    return Response::Answer({{0x12, container_id}});
+                    return Response::Answer({list_array<uint8_t>::concat(0x12, container_id)});
                 }
 
                 Response setContainerContent(uint8_t windows_id, int32_t state_id, const list_array<base_objects::slot>& slots, const base_objects::slot& carried_item) {
@@ -497,7 +497,7 @@ namespace crafted_craft {
                 }
 
                 Response kick(const Chat& reason) {
-                    return Response::Disconnect({{0x1B, reason.ToTextComponent()}});
+                    return Response::Disconnect({list_array<uint8_t>::concat(0x1B, reason.ToTextComponent())});
                 }
 
                 Response disguisedChatMessage(const Chat& message, int32_t chat_type, const Chat& sender, std::optional<Chat> target_name) {
@@ -911,7 +911,7 @@ namespace crafted_craft {
 
                 //UNUSED by Notchian client
                 Response enterCombat() {
-                    return Response::Answer({{0x39}});
+                    return Response::Answer({list_array<uint8_t>::concat(0x39)});
                 }
 
                 Response combatDeath(int32_t player_id, const Chat& message) {
@@ -1129,7 +1129,7 @@ namespace crafted_craft {
                 }
 
                 Response removeResourcePacks() {
-                    return Response::Answer({{0x43, false}});
+                    return Response::Answer({list_array<uint8_t>::concat(0x43, false)});
                 }
 
                 Response removeResourcePack(ENBT::UUID id) {
@@ -1224,7 +1224,7 @@ namespace crafted_craft {
                 }
 
                 Response setActionBarText(const Chat& text) {
-                    return Response::Answer({{0x4A, text.ToTextComponent()}});
+                    return Response::Answer({list_array<uint8_t>::concat(0x4A, text.ToTextComponent())});
                 }
 
                 Response setBorderCenter(double x, double z) {
@@ -1604,7 +1604,7 @@ namespace crafted_craft {
                 }
 
                 Response setSubtitleText(const Chat& text) {
-                    return Response::Answer({{0x61, text.ToTextComponent()}});
+                    return Response::Answer({list_array<uint8_t>::concat(0x61, text.ToTextComponent())});
                 }
 
                 Response updateTime(int64_t world_age, int64_t time_of_day) {
@@ -1617,7 +1617,7 @@ namespace crafted_craft {
                 }
 
                 Response setTitleText(const Chat& text) {
-                    return Response::Answer({{0x63, text.ToTextComponent()}});
+                    return Response::Answer({list_array<uint8_t>::concat(0x63, text.ToTextComponent())});
                 }
 
                 Response setTitleAnimationTimes(int32_t fade_in, int32_t stay, int32_t fade_out) {
@@ -1725,7 +1725,7 @@ namespace crafted_craft {
                 Response stopSound(uint8_t flags) {
                     if (flags & 0x01 || flags & 0x02)
                         throw std::runtime_error("invalid params for this flag");
-                    return Response::Answer({{0x68, flags}});
+                    return Response::Answer({list_array<uint8_t>::concat(0x68, flags)});
                 }
 
                 Response stopSound(uint8_t flags, int32_t source) {
@@ -1761,15 +1761,15 @@ namespace crafted_craft {
                 }
 
                 Response systemChatMessage(const Chat& message) {
-                    return Response::Answer({{0x69, message.ToTextComponent(), false}});
+                    return Response::Answer({list_array<uint8_t>::concat(0x69, message.ToTextComponent(), false)});
                 }
 
                 Response systemChatMessageOverlay(const Chat& message) {
-                    return Response::Answer({{0x69, message.ToTextComponent(), true}});
+                    return Response::Answer({list_array<uint8_t>::concat(0x69, message.ToTextComponent(), true)});
                 }
 
                 Response setTabListHeaderAndFooter(const Chat& header, const Chat& footer) {
-                    return Response::Answer({{0x6A, header.ToTextComponent(), footer.ToTextComponent()}});
+                    return Response::Answer({list_array<uint8_t>::concat(0x6A, header.ToTextComponent(), footer.ToTextComponent())});
                 }
 
                 Response tagQueryResponse(int32_t transaction_id, const ENBT& nbt) {

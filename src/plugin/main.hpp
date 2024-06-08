@@ -9,7 +9,7 @@ namespace crafted_craft {
     public:
         void registerPlugin(const std::string& name, PluginRegistrationPtr plugin) {
             plugins[name] = plugin;
-            plugin->OnLoad(plugin);
+            plugin->OnRegister(plugin);
         }
 
         PluginRegistrationPtr getPlugin(const std::string& name) {
@@ -29,6 +29,11 @@ namespace crafted_craft {
                 result.push_back(plugin);
 
             return result;
+        }
+
+        void callLoad() {
+            for (auto& [name, plugin] : plugins)
+                plugin->OnLoad(plugin);
         }
     };
 

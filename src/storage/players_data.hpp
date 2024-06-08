@@ -3,16 +3,17 @@
 #include "../base_objects/player.hpp"
 #include "../base_objects/slot.hpp"
 #include "../library/enbt.hpp"
+#include <filesystem>
 #include <fstream>
 #include <string>
 
 namespace crafted_craft {
     namespace storage {
         class player_data {
-            std::string path;
+            std::filesystem::path path;
 
         public:
-            player_data(const std::string& path);
+            player_data(const std::filesystem::path& path);
             base_objects::player player;
 
             void load();
@@ -20,10 +21,10 @@ namespace crafted_craft {
         };
 
         class players_data {
-            std::string base_path;
+            std::filesystem::path base_path;
 
         public:
-            players_data(const std::string& base_path);
+            players_data(const std::filesystem::path& base_path);
 
             player_data get_player_data(const std::string& player_uuid);
         };

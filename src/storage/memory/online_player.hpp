@@ -33,6 +33,11 @@ namespace crafted_craft {
                     return online;
                 }
 
+                base_objects::client_data_holder allocate_special_player(const std::function<void(SharedClientData&)>& callback) {
+                    std::unique_lock lock(mutex);
+                    players.push_back(new base_objects::SharedClientData(this, callback));
+                    return players.back();
+                }
 
                 base_objects::client_data_holder allocate_player() {
                     std::unique_lock lock(mutex);
@@ -81,6 +86,8 @@ namespace crafted_craft {
                     if (!player)
                         return;
                     if (player->getAssignedData() != this)
+                        return;
+                    if (!player->canBeRemoved())
                         return;
 
                     std::unique_lock lock(mutex);

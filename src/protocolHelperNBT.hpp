@@ -331,7 +331,7 @@ class NBT {
             if (i + length >= max_size)
                 throw std::out_of_range("Out of bounds");
             i += length;
-            return ENBT((const char*)data, length);
+            return ENBT((const char*)data + i - length, length);
         }
         case 9: { //list
             uint8_t type = data[i++];
@@ -348,10 +348,12 @@ class NBT {
             std::unordered_map<std::string, ENBT> compound;
             while (*data) {
                 uint8_t type = data[i++];
+                if (!type)
+                    break;
                 uint16_t length = extractValue<uint16_t>(data, i, max_size);
                 if (i + length >= max_size)
                     throw std::out_of_range("Out of bounds");
-                std::string res(data, data + length);
+                std::string res(data + i, data + i + length);
                 i += length;
                 compound[res] = RecursiveExtractor_1(type, data, i, max_size);
             }
@@ -393,6 +395,15 @@ class NBT {
     NBT() {}
 
 public:
+    static ENBT readNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size) {
+        nbt_size = 0;
+        return RecursiveExtractor(data, nbt_size, max_size);
+    }
+
+    static NBT readNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress = true, const std::string& entry_name = "") {
+        return build(readNBT_asENBT(data, max_size, nbt_size), compress, entry_name);
+    }
+
     ~NBT() = default;
 
     static NBT build(const ENBT& enbt, bool compress = true, const std::string& entry_name = "") {
