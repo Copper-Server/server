@@ -34,6 +34,7 @@ FILE(GLOB SRCFILES
         src/storage/*.cpp 
         src/api/*.cpp 
         src/plugin/*.cpp 
+        src/build_in_plugins/*.cpp 
         src/*.cpp 
 )
 

@@ -34,6 +34,7 @@ namespace crafted_craft {
         namespace commands {
             extern base_objects::event<std::string> on_command;
             void init();
+            void deinit();
             void registerCommandSuggestion(const std::function<std::vector<std::string>(const std::string&, int)>& callback);
             void unloadCommandSuggestion();
         }

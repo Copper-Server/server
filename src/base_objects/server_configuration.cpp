@@ -1,3 +1,4 @@
+#include "../library/list_array.hpp"
 #include "../log.hpp"
 #include "../util/json_helpers.hpp"
 #include "server_configuaration.hpp"
@@ -28,7 +29,7 @@ namespace crafted_craft {
                 conflict_type = t::prevent_join;
         }
 
-        void load_fill(ServerConfiguration& cfg, js_object& data) {
+        void merge_configs(ServerConfiguration& cfg, js_object& data) {
             {
                 auto rcon = js_object::get_object(data["rcon"]);
                 cfg.rcon.password = rcon["password"].or_apply(cfg.rcon.password);
@@ -168,7 +169,7 @@ namespace crafted_craft {
             }
         }
 
-        void ServerConfiguration::load(const std::filesystem::path& config_file_path, bool fill_default_values) {
+        boost::json::object try_read_file(const std::filesystem::path& config_file_path) {
             boost::json::object config_data;
             {
                 std::ifstream file(config_file_path / "config.json");
@@ -182,37 +183,104 @@ namespace crafted_craft {
                                 ? std::format("Failed to read config file because:\n{}\n On:\n{}", ec.message(), ec.location().to_string())
                                 : std::format("Failed to read config file because:\n{}", ec.message());
                         log::warn("server", err_string);
-
-                        if (fill_default_values)
-                            config_data = boost::json::object();
-                        else
-                            return;
+                        return {};
                     }
-                } else if (fill_default_values)
-                    config_data = boost::json::object();
-                else {
-                    log::warn("server", "Failed to open config file. Using default values.");
-                    return;
                 }
+            }
+            return config_data;
+        }
+
+        void save_config(const std::filesystem::path& config_file_path, boost::json::object& config_data) {
+            std::ofstream file(config_file_path / "config.json", std::ofstream::trunc);
+            if (!file.is_open()) {
+                log::warn("server", "Failed to save config file. Can not open file.");
+                return;
+            }
+            util::pretty_print(file, config_data);
+        }
+
+        void ServerConfiguration::load(const std::filesystem::path& config_file_path, bool fill_default_values) {
+            boost::json::object config_data = try_read_file(config_file_path);
+            if (config_data.empty() && !fill_default_values) {
+                log::warn("server", "Failed to read config file. Using default values.");
+                return;
             }
             auto config = js_object::get_object(config_data);
             //if (fill_default_values) {
 
             try {
-                load_fill(*this, config);
+                merge_configs(*this, config);
             } catch (const std::exception& ex) {
                 log::error("server", ex.what());
                 throw;
             }
-            {
-                std::ofstream file(config_file_path / "config.json", std::ofstream::trunc);
-                if (!file.is_open()) {
-                    log::warn("server", "Failed to save config file. Can not open file.");
-                    return;
-                }
-                util::pretty_print(file, config);
-            }
+            save_config(config_file_path, config_data);
             //}
+        }
+
+        boost::json::value& get_value_by_path(boost::json::value& value, std::string& path) {
+            auto pos = path.find_first_of(".[");
+            if (pos == std::string::npos) {
+                if (value.is_object())
+                    return value.get_object()[path];
+                if (value.is_array())
+                    return value.get_array()[std::stoi(path)];
+                throw std::runtime_error("Invalid path");
+            }
+            if (path[pos] == '[') {
+                auto next = path.find_first_of("].", pos);
+                if (next == std::string::npos)
+                    throw std::runtime_error("Invalid path");
+                auto index = std::stoi(path.substr(pos + 1, next - pos - 1));
+                path = path.substr(next + 1);
+                if (value.is_array()) {
+                    auto& val = value.get_array()[index];
+                    if (path.empty())
+                        return val;
+                    else
+                        return get_value_by_path(val, path);
+                } else
+                    throw std::runtime_error("Invalid path");
+            } else {
+                auto next = path.find_first_of(".[", pos);
+                if (next == std::string::npos)
+                    throw std::runtime_error("Invalid path");
+                auto key = path.substr(0, pos);
+                path = path.substr(next + 1);
+                if (key.empty())
+                    return value;
+                else {
+                    if (value.is_object()) {
+                        auto& val = value.get_object()[key];
+                        if (path.empty())
+                            return val;
+                        else
+                            return get_value_by_path(val, path);
+                    } else
+                        throw std::runtime_error("Invalid path");
+                }
+            }
+        }
+
+        boost::json::value& get_value_by_path_(boost::json::value& entry, std::string path) {
+            return get_value_by_path(entry, path);
+        }
+
+        void ServerConfiguration::set(const std::filesystem::path& config_file_path, const std::string& config_item_path, const std::string& value) {
+            boost::json::value config_data = boost::json::object();
+            auto config = js_object::get_object(config_data.get_object());
+            merge_configs(*this, config);
+            auto& val = get_value_by_path_(config_data, config_item_path);
+            val = boost::json::parse(value);
+            save_config(config_file_path, config_data.get_object());
+            merge_configs(*this, config);
+        }
+
+        std::string ServerConfiguration::get(const std::string& config_item_path) {
+            boost::json::value config_data = boost::json::object();
+            auto config = js_object::get_object(config_data.get_object());
+            merge_configs(*this, config);
+            return util::pretty_print(get_value_by_path_(config_data, config_item_path));
         }
     }
 }

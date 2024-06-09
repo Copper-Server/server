@@ -138,6 +138,8 @@ namespace crafted_craft {
 
     bool TCPsession::checked(boost::system::error_code ec, std::string const& msg) {
         if (ec || sock.is_open() == false) {
+            if (ec != boost::asio::error::operation_aborted)
+                return false;
             if (do_log_connection_errors)
                 log::error("protocol", "[" + msg + "] [" + std::to_string(id) + "]" + ec.message());
             disconnect();
@@ -237,6 +239,8 @@ namespace crafted_craft {
         make_clean_up();
         TCPsession* session = new TCPsession(boost::asio::ip::tcp::socket(make_strand(threads)), first_client_holder, all_connections_timeout, this);
         TCPacceptor.async_accept(session->sock, [this, session](const boost::system::error_code& error) {
+            if (error == boost::asio::error::operation_aborted || disabled)
+                return;
             Worker();
             AsyncWork(session);
         });
@@ -366,10 +370,10 @@ namespace crafted_craft {
                 std::lock_guard<std::mutex> lock(close_mutex);
                 for (auto it : sessions)
                     it->disconnect();
+                disabled = true;
             }
 
             service->stop();
-            disabled = true;
         } else
             throw std::exception("tcp server already stoped");
     }

@@ -386,7 +386,7 @@ namespace crafted_craft {
         };
 
         class js_object {
-            friend void pretty_print(std::ostream& os, js_object const& jv);
+            friend void pretty_print(std::ostream& os, const js_object& jv);
             boost::json::object& obj;
             std::string path;
 
@@ -436,7 +436,7 @@ namespace crafted_craft {
         };
 
         class js_array {
-            friend void pretty_print(std::ostream& os, js_array const& jv);
+            friend void pretty_print(std::ostream& os, const js_array& jv);
             boost::json::array& obj;
             std::string path;
 
@@ -495,7 +495,7 @@ namespace crafted_craft {
             }
         };
 
-        void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* indent = nullptr) {
+        void pretty_print(std::ostream& os, const boost::json::value& jv, std::string* indent = nullptr) {
             std::string indent_;
             if (!indent)
                 indent = &indent_;
@@ -554,16 +554,40 @@ namespace crafted_craft {
                 os << "\n";
         }
 
-        void pretty_print(std::ostream& os, js_value const& jv) {
+        void pretty_print(std::ostream& os, const js_value& jv) {
             pretty_print(os, jv.obj);
         }
 
-        void pretty_print(std::ostream& os, js_object const& jv) {
+        void pretty_print(std::ostream& os, const js_object& jv) {
             pretty_print(os, jv.obj);
         }
 
-        void pretty_print(std::ostream& os, js_array const& jv) {
+        void pretty_print(std::ostream& os, const js_array& jv) {
             pretty_print(os, jv.obj);
+        }
+
+        std::string pretty_print(const boost::json::value& jv) {
+            std::ostringstream os;
+            pretty_print(os, jv);
+            return os.str();
+        }
+
+        std::string pretty_print(const js_value& jv) {
+            std::ostringstream os;
+            pretty_print(os, jv);
+            return os.str();
+        }
+
+        std::string pretty_print(const js_object& jv) {
+            std::ostringstream os;
+            pretty_print(os, jv);
+            return os.str();
+        }
+
+        std::string pretty_print(const js_array& jv) {
+            std::ostringstream os;
+            pretty_print(os, jv);
+            return os.str();
         }
     }
 }

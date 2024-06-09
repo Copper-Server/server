@@ -132,6 +132,8 @@ namespace crafted_craft {
 
 
             void load(const std::filesystem::path& config_file_path, bool fill_default_values = true);
+            void set(const std::filesystem::path& config_file_path, const std::string& config_item_path, const std::string& value);
+            std::string get(const std::string& config_item_path);
         };
     }
 }

@@ -134,47 +134,30 @@ namespace crafted_craft {
             return get_index(const_cast<list_array<command>&>(command_nodes), path, current_);
         }
 
-        bool is_complete_quoted_string(const std::string& part) {
-            return part[0] == '"' && part[part.size() - 1] == '"';
-        }
-
         std::string parse_quoted_string(std::string& part, std::string& path) {
             if (part[0] == '"') {
                 //allow \" in string
-                std::string phrase = part;
-                if (is_complete_quoted_string(phrase))
-                    return phrase.substr(1, phrase.size() - 2);
-                else {
-                    while (path.size() > 0) {
-                        auto split = path.find('"');
-                        if (split == std::string::npos) {
-                            throw std::invalid_argument("quoted string not closed");
-                        } else {
-                            if (path[split - 1] == '\\') {
-                                phrase += path.substr(0, split + 1);
-                                path = path.substr(split + 1);
-                            } else {
-                                phrase += path.substr(0, split);
-                                path = path.substr(split + 1);
-                                if (path[0] == ' ') {
-                                    path = path.substr(1);
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    return phrase;
-                }
-            } else {
+                std::string phrase = part + ' ' + path;
+                auto pos = phrase.find('"', 1);
+                while (pos != std::string::npos && phrase[pos - 1] == '\\')
+                    pos = phrase.find('"', pos + 1);
+
+                if (pos == std::string::npos)
+                    throw std::invalid_argument("invalid quoted string");
+                part = phrase.substr(1, pos - 1);
+                bool has_space = phrase.find(' ', pos + 1) != std::string::npos;
+                path = phrase.substr(pos + 1 + has_space);
                 return part;
-            }
+            } else
+                return part;
         }
 
         std::string parse_argument(command& current, std::string& part, std::string& path) {
             auto node = current.node;
 
             auto parser = *node.parser_id;
-            auto& parser_data = *node.properties;
+            base_objects::packets::command_node::properties_t default_prop;
+            auto& parser_data = node.properties ? *node.properties : default_prop;
             switch (parser) {
             case packets::command_node::parsers::brigadier_bool: {
                 if (part == "true" || part == "false")
@@ -239,7 +222,6 @@ namespace crafted_craft {
                         return part;
                     break;
                 case 2: { //GREEDY_PHRASE
-
                     auto phrase = part + ' ' + path;
                     path.clear();
                     return phrase;
@@ -630,6 +612,7 @@ namespace crafted_craft {
             browser.current_command.node.flags.node_type = packets::command_node::node_type::argument;
             browser.current_command.node.parser_id = parser;
             apply_options(parser, properties);
+            browser.current_command.node.properties = properties;
             return browser;
         }
 

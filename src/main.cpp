@@ -37,7 +37,7 @@ int main() {
 
     log::disable_log_level(log::level::debug);
 
-    auto server_plugin = std::make_shared<build_in_plugins::ServerPlugin>(current_path, storage_path, server.online_players, server.server_config, server);
+    auto server_plugin = std::make_shared<build_in_plugins::ServerPlugin>(current_path, storage_path, server);
     pluginManagement.registerPlugin("server", server_plugin);
 
     pluginManagement.registerPlugin("world", std::make_shared<build_in_plugins::WorldManagementPlugin>(storage_path, server.server_config));
@@ -55,5 +55,7 @@ int main() {
     first_client_holder = new TCPClientHandleHandshaking();
 
     server.start();
+    fast_task::task::shutDown();
+    log::commands::deinit();
     return 0;
 }

@@ -14,7 +14,7 @@ namespace crafted_craft {
         }
 
         namespace console {
-            Commandline cmd;
+            std::shared_ptr<Commandline> cmd = std::make_shared<Commandline>();
             std::atomic_bool log_levels_switch[(int)level::__max]{
                 true, //info
                 true, //warn
@@ -63,7 +63,8 @@ namespace crafted_craft {
                     else
                         aligned_message += c;
                 }
-                cmd.write(color(r, g, b, line + aligned_message));
+                if (cmd)
+                    cmd->write(color(r, g, b, line + aligned_message));
             }
         } // namespace console
 
@@ -105,8 +106,8 @@ namespace crafted_craft {
         }
         namespace commands {
             void init() {
-                console::cmd.enable_history();
-                console::cmd.on_command = [](Commandline& cmd) {
+                console::cmd->enable_history();
+                console::cmd->on_command = [](Commandline& cmd) {
                     Task::start([command = cmd.get_command()]() {
                         if (!on_command.await_notify(command))
                             error("Server", "Undefined command: " + command);
@@ -114,14 +115,18 @@ namespace crafted_craft {
                 };
             }
 
+            void deinit() {
+                console::cmd = nullptr;
+            }
+
             void registerCommandSuggestion(const std::function<std::vector<std::string>(const std::string&, int)>& callback) {
-                console::cmd.on_autocomplete = [callback](Commandline&, const std::string& line, int position) {
+                console::cmd->on_autocomplete = [callback](Commandline&, const std::string& line, int position) {
                     return callback(line, position);
                 };
             }
 
             void unloadCommandSuggestion() {
-                console::cmd.on_autocomplete = nullptr;
+                console::cmd->on_autocomplete = nullptr;
             }
         }
     }
