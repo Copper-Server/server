@@ -34,6 +34,8 @@ namespace crafted_craft {
         void callLoad() {
             for (auto& [name, plugin] : plugins)
                 plugin->OnLoad(plugin);
+            for (auto& [name, plugin] : plugins)
+                plugin->OnPostLoad(plugin);
         }
     };
 

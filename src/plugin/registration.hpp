@@ -65,6 +65,9 @@ namespace crafted_craft {
         //called after initialization
         virtual void OnLoad(const std::shared_ptr<PluginRegistration>&) {}
 
+        //called after OnLoad, api is ready
+        virtual void OnPostLoad(const std::shared_ptr<PluginRegistration>&) {}
+
         virtual void OnLoadComplete(const std::shared_ptr<PluginRegistration>&) {}
 
         virtual void OnUnload(const std::shared_ptr<PluginRegistration>&) {

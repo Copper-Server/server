@@ -61,9 +61,11 @@ namespace crafted_craft {
                 else
                     log::info("Server", "[" + sender.to_ansi_console() + " -> " + target_name->to_ansi_console() + "] " + message.to_ansi_console());
             };
-
-
             log::info("Server", "server handler loaded.");
+        }
+
+        void ServerPlugin::OnPostLoad(const std::shared_ptr<PluginRegistration>&) {
+            manager.execute_command("version", console_data.client);
         }
 
         void ServerPlugin::OnUnload(const PluginRegistrationPtr& self) {
@@ -152,7 +154,6 @@ namespace crafted_craft {
                     });
             }
             {
-
                 browser.add_child({"kick"})
                     .add_child({"<player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
                     .set_callback([this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
@@ -241,6 +242,8 @@ namespace crafted_craft {
                         return;
                     }
                     auto value = server.server_config.get(args[0]);
+                    if (value.ends_with('\n'))
+                        value.pop_back();
                     if (value.contains("\n"))
                         api::players::calls::on_system_message({client, {"Config value: \n" + value}});
                     else

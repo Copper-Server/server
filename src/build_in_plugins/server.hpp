@@ -19,6 +19,7 @@ namespace crafted_craft {
             ServerPlugin(const std::filesystem::path& base_path, const std::filesystem::path& storage_path, TCPserver& server);
 
             void OnLoad(const PluginRegistrationPtr& self) override;
+            void OnPostLoad(const std::shared_ptr<PluginRegistration>&) override;
             void OnUnload(const PluginRegistrationPtr& self) override;
 
             void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override;
