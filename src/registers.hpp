@@ -245,7 +245,7 @@ namespace crafted_craft {
                                 element["description"] = std::get<Chat>(it.element.description).ToENBT();
                             tmp["element"] = std::move(element);
                         }
-                        _armorTrimMaterials.push_back(std::move(tmp));
+                        _armorTrimMaterials.push_back((ENBT&&)std::move(tmp));
                     }
                     enbt::compound entry;
                     entry["type"] = "minecraft:trim_material";
@@ -269,7 +269,7 @@ namespace crafted_craft {
                             element["decal"] = it.element.decal;
                             tmp["element"] = std::move(element);
                         }
-                        _armorTrimPatterns.push_back(std::move(tmp));
+                        _armorTrimPatterns.push_back((ENBT&&)std::move(tmp));
                     }
                     enbt::compound entry;
                     entry["type"] = "minecraft:trim_pattern";
@@ -342,7 +342,7 @@ namespace crafted_craft {
                             }
                             tmp["element"] = std::move(element);
                         }
-                        _biomes.push_back(std::move(tmp));
+                        _biomes.push_back((ENBT&&)std::move(tmp));
                     }
                     enbt::compound entry;
                     entry["type"] = "minecraft:worldgen/biome";
@@ -392,7 +392,7 @@ namespace crafted_craft {
                             }
                             tmp["element"] = std::move(element);
                         }
-                        _chatTypes.push_back(std::move(tmp));
+                        _chatTypes.push_back((ENBT&&)std::move(tmp));
                     }
                     enbt::compound entry;
                     entry["type"] = "minecraft:chat_type";
@@ -472,7 +472,7 @@ namespace crafted_craft {
                             }
                             tmp["element"] = std::move(element);
                         }
-                        _damageTypes.push_back(std::move(tmp));
+                        _damageTypes.push_back((ENBT&&)std::move(tmp));
                     }
                     enbt::compound entry;
                     entry["type"] = "minecraft:damage_type";
@@ -516,7 +516,7 @@ namespace crafted_craft {
                             element["bed_works"] = it.element.bed_works;
                             tmp["element"] = std::move(element);
                         }
-                        _dimensionTypes.push_back(std::move(tmp));
+                        _dimensionTypes.push_back((ENBT&&)std::move(tmp));
                     }
                     enbt::compound entry;
                     entry["type"] = "minecraft:dimension_type";

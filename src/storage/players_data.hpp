@@ -30,8 +30,6 @@ namespace crafted_craft {
         };
 
     } // namespace storage
-
-
 } // namespace crafted_craft
 
 

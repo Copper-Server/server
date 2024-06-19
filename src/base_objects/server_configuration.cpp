@@ -57,7 +57,7 @@ namespace crafted_craft {
                     else {
                         cfg.world.generator_settings.clear();
                         for (auto&& [key, value] : generator_settings)
-                            cfg.world.generator_settings[key] = generator_settings[key];
+                            cfg.world.generator_settings[(std::string)key] = generator_settings[(std::string)key];
                     }
                 }
             }
@@ -169,27 +169,6 @@ namespace crafted_craft {
             }
         }
 
-        boost::json::object try_read_file(const std::filesystem::path& config_file_path) {
-            boost::json::object config_data;
-            {
-                std::ifstream file(config_file_path / "config.json");
-                if (file.is_open()) {
-                    boost::system::error_code ec;
-                    config_data = boost::json::parse(file, ec).as_object();
-                    file.close();
-                    if (ec) {
-                        std::string err_string =
-                            ec.has_location()
-                                ? std::format("Failed to read config file because:\n{}\n On:\n{}", ec.message(), ec.location().to_string())
-                                : std::format("Failed to read config file because:\n{}", ec.message());
-                        log::warn("server", err_string);
-                        return {};
-                    }
-                }
-            }
-            return config_data;
-        }
-
         void save_config(const std::filesystem::path& config_file_path, boost::json::object& config_data) {
             std::ofstream file(config_file_path / "config.json", std::ofstream::trunc);
             if (!file.is_open()) {
@@ -200,7 +179,7 @@ namespace crafted_craft {
         }
 
         void ServerConfiguration::load(const std::filesystem::path& config_file_path, bool fill_default_values) {
-            boost::json::object config_data = try_read_file(config_file_path);
+            boost::json::object config_data = try_read_json_file(config_file_path / "config.json");
             if (config_data.empty() && !fill_default_values) {
                 log::warn("server", "Failed to read config file. Using default values.");
                 return;

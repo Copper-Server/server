@@ -96,7 +96,7 @@ namespace crafted_craft {
                         if (p == player) {
                             if (p->packets_state.state != base_objects::SharedClientData::packets_state_t::protocol_state::initialization)
                                 --online;
-                            players.remove(i);
+                            players.erase(i);
                             return;
                         }
                         i++;
@@ -110,7 +110,7 @@ namespace crafted_craft {
                         if (p->name == player) {
                             if (p->packets_state.state != base_objects::SharedClientData::packets_state_t::protocol_state::initialization)
                                 --online;
-                            players.remove(i);
+                            players.erase(i);
                             return;
                         }
                         i++;

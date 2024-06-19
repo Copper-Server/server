@@ -429,7 +429,7 @@ public:
 
     list_array<uint8_t> get_as_network() {
         list_array<uint8_t> ret = nbt_data;
-        ret.remove(1, 3);
+        ret.erase(1, 3);
         return ret;
     }
 

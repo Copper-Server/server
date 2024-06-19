@@ -29,8 +29,8 @@ namespace crafted_craft {
             }
         }
 
-        command::command(const std::string& name, const std::string& description, const std::string& usage)
-            : description(description), usage(usage) {
+        command::command(const std::string& name, const std::string& description, const std::string& usage, const std::string& action_name)
+            : description(description), usage(usage), action_name(action_name) {
             node.name = name;
             node.flags.node_type = packets::command_node::node_type::literal;
         }
@@ -49,12 +49,7 @@ namespace crafted_craft {
                 return current_;
             } else {
                 int32_t current = current_;
-                bool first = true;
                 for (auto& part : real_path) {
-                    if (first) {
-                        first = false;
-                        continue;
-                    }
                     current = command_nodes[current].get_child(command_nodes, part);
                     if (current == -1)
                         throw std::invalid_argument("invalid command path");
@@ -152,7 +147,7 @@ namespace crafted_craft {
                 return part;
         }
 
-        std::string parse_argument(command& current, std::string& part, std::string& path) {
+        std::optional<std::string> parse_argument(command& current, std::string& part, std::string& path) {
             auto node = current.node;
 
             auto parser = *node.parser_id;
@@ -163,17 +158,17 @@ namespace crafted_craft {
                 if (part == "true" || part == "false")
                     return part;
                 else
-                    throw std::invalid_argument("invalid boolean value");
+                    return std::nullopt;
             }
             case packets::command_node::parsers::brigadier_float: {
                 float value = std::stof(part);
                 uint8_t flags = parser_data.flags.value_or(0);
                 if (flags & 1)
                     if (value < std::get<float>(parser_data.min.value_or(std::numeric_limits<float>::min())))
-                        throw std::invalid_argument("value is too small");
+                        return std::nullopt;
                 if (flags & 2)
                     if (value > std::get<float>(parser_data.max.value_or(std::numeric_limits<float>::max())))
-                        throw std::invalid_argument("value is too big");
+                        return std::nullopt;
                 return std::to_string(value);
             }
             case packets::command_node::parsers::brigadier_double: {
@@ -181,10 +176,10 @@ namespace crafted_craft {
                 uint8_t flags = parser_data.flags.value_or(0);
                 if (flags & 1)
                     if (value < std::get<double>(parser_data.min.value_or(std::numeric_limits<double>::min())))
-                        throw std::invalid_argument("value is too small");
+                        return std::nullopt;
                 if (flags & 2)
                     if (value > std::get<double>(parser_data.max.value_or(std::numeric_limits<double>::max())))
-                        throw std::invalid_argument("value is too big");
+                        return std::nullopt;
                 return std::to_string(value);
             }
             case packets::command_node::parsers::brigadier_integer: {
@@ -192,10 +187,10 @@ namespace crafted_craft {
                 uint8_t flags = parser_data.flags.value_or(0);
                 if (flags & 1)
                     if (value < std::get<int32_t>(parser_data.min.value_or(std::numeric_limits<int32_t>::min())))
-                        throw std::invalid_argument("value is too small");
+                        return std::nullopt;
                 if (flags & 2)
                     if (value > std::get<int32_t>(parser_data.max.value_or(std::numeric_limits<int32_t>::max())))
-                        throw std::invalid_argument("value is too big");
+                        return std::nullopt;
                 return std::to_string(value);
             }
             case packets::command_node::parsers::brigadier_long: {
@@ -203,10 +198,10 @@ namespace crafted_craft {
                 uint8_t flags = parser_data.flags.value_or(0);
                 if (flags & 1)
                     if (value < std::get<int64_t>(parser_data.min.value_or(std::numeric_limits<int64_t>::min())))
-                        throw std::invalid_argument("value is too small");
+                        return std::nullopt;
                 if (flags & 2)
                     if (value > std::get<int64_t>(parser_data.max.value_or(std::numeric_limits<int64_t>::max())))
-                        throw std::invalid_argument("value is too big");
+                        return std::nullopt;
                 return std::to_string(value);
             }
             case packets::command_node::parsers::brigadier_string: {
@@ -229,27 +224,30 @@ namespace crafted_craft {
                 }
             }
             default:
-                throw std::invalid_argument("parser not implemented");
+                return std::nullopt;
             }
         }
 
-        std::string find_argument(list_array<command>& command_nodes, command*& command, std::string& string, std::string& rest) {
+        std::optional<std::string> find_argument_no_except(list_array<command>& command_nodes, command*& command, std::string& string, std::string& rest) {
             for (auto child_id : command->node.children) {
                 auto& child = command_nodes[child_id];
                 if (child.node.flags.node_type == packets::command_node::node_type::argument) {
-                    try {
-                        auto res = parse_argument(child, string, rest);
+                    auto res = parse_argument(child, string, rest);
+                    if (res) {
                         command = &child;
                         return res;
-
-                    } catch (std::invalid_argument& e) {
-                        continue;
-                    } catch (...) {
-                        throw;
                     }
                 }
             }
-            throw std::invalid_argument("invalid argument");
+            return std::nullopt;
+        }
+
+        std::string find_argument(list_array<command>& command_nodes, command*& command, std::string& string, std::string& rest) {
+            auto res = find_argument_no_except(command_nodes, command, string, rest);
+            if (res)
+                return *res;
+            else
+                throw std::invalid_argument("invalid argument");
         }
 
         command_manager::command_manager() {
@@ -297,18 +295,30 @@ namespace crafted_craft {
                     throw std::invalid_argument("internal server error, invalid command structure, report to admin, NO_REDIRECT");
             } else {
                 if (current->node.flags.is_executable) {
-                    if (callback)
-                        return callback(args, data);
-                    else
+                    if (callback) {
+                        if (TCPserver::get_global_instance().permissions_manager.has_rights(current->action_name, data))
+                            return callback(args, data);
+                        else
+                            throw std::exception("Not enough permissions for this.");
+                    } else
                         throw std::invalid_argument("internal server error, invalid command structure, report to admin, NO_CALLBACK");
                 } else
                     throw std::invalid_argument("command is not executable");
             }
         }
 
-        list_array<suggestion> command_manager::request_suggestions(const std::string& command_string, client_data_holder& data) {
+        list_array<suggestion> extract_suggestions(command* current, list_array<command>& command_nodes, const std::string& part) {
             list_array<suggestion> suggestions;
+            current->node.children.forEach([&](int32_t id) {
+                auto res = command_nodes[id].node.name.value_or("");
+                if (res.starts_with(part))
+                    suggestions.push_back({res});
+            });
+            return suggestions;
+        }
 
+        list_array<suggestion> command_manager::request_suggestions(const std::string& command_string, client_data_holder& data) {
+            bool ends_with_space = command_string.ends_with(' ');
             std::string path = command_string;
             list_array<std::string> args;
             command* current = &command_nodes[0];
@@ -326,32 +336,35 @@ namespace crafted_craft {
                 if (part.empty()) {
                     if (current->node.flags.node_type == packets::command_node::node_type::argument)
                         return {};
-                    current->node.children.forEach([&](int32_t id) {
-                        suggestions.push_back({command_nodes[id].node.name.value_or("")});
+                    return current->node.children.convert<suggestion>([&](int32_t id) -> suggestion {
+                        return {command_nodes[id].node.name.value_or("")};
                     });
-                    return suggestions;
                 }
 
                 try {
                     int32_t child = current->get_child(command_nodes, part);
                     if (child == -1) {
-                        try {
-                            args.push_back(find_argument(command_nodes, current, part, path));
-                        } catch (...) {
-                            current->node.children.forEach([&](int32_t id) {
-                                auto res = command_nodes[id].node.name.value_or("");
-                                if (res.starts_with(part))
-                                    suggestions.push_back({res});
-                            });
-                            return suggestions;
-                        }
+                        auto res = find_argument_no_except(command_nodes, current, part, path);
+                        if (res)
+                            args.push_back(std::move(*res));
+                        else
+                            return extract_suggestions(current, command_nodes, part);
                     } else {
                         auto& command = command_nodes[child];
-                        if (command.node.flags.node_type == packets::command_node::node_type::argument)
-                            args.push_back(find_argument(command_nodes, current, part, path));
-                        else
+                        if (command.node.flags.node_type == packets::command_node::node_type::argument) {
+                            auto res = find_argument_no_except(command_nodes, current, part, path);
+                            if (res)
+                                args.push_back(std::move(*res));
+                            else
+                                return extract_suggestions(current, command_nodes, part);
+                        } else {
                             current = &command_nodes[child];
-
+                            if (path.empty() && !ends_with_space)
+                                return extract_suggestions(current, command_nodes, path).transform([&](suggestion& s) {
+                                    s.insertion = part + ' ' + s.insertion;
+                                    return s;
+                                });
+                        }
                         if (!current->node.flags.has_redirect)
                             continue;
                     }
@@ -594,13 +607,11 @@ namespace crafted_craft {
 
         command_browser::command_browser(command_manager& manager, const std::string& path)
             : manager(manager),
-              current_id(get_index(manager.command_nodes, path)),
-              current_command(manager.command_nodes[current_id]) {}
+              current_command(manager.command_nodes[current_id = get_index(manager.command_nodes, path)]) {}
 
         command_browser::command_browser(command_browser& browser, const std::string& path)
             : manager(manager),
-              current_id(get_index(manager.command_nodes, path, browser.current_id)),
-              current_command(manager.command_nodes[current_id]) {}
+              current_command(manager.command_nodes[current_id = get_index(manager.command_nodes, path, browser.current_id)]) {}
 
         command_browser::command_browser(command_browser&& browser) noexcept
             : manager(browser.manager),
@@ -688,17 +699,22 @@ namespace crafted_craft {
             return *this;
         }
 
-        command_browser& command_browser::set_callback(const command_callback& callback) {
+        command_browser& command_browser::set_callback(const std::string& action, const command_callback& callback) {
             if (!is_valid())
                 throw std::runtime_error("command has been deleted");
+            if (!action.empty())
+                current_command.action_name = action;
             current_command.node.flags.is_executable = true;
             current_command.callback = callback;
             manager.graph_ready = false;
             return *this;
         }
-        command_browser& command_browser::set_callback(const command_callback& callback, packets::command_node::parsers parser, packets::command_node::properties_t properties) {
+
+        command_browser& command_browser::set_callback(const std::string& action, const command_callback& callback, packets::command_node::parsers parser, packets::command_node::properties_t properties) {
             if (!is_valid())
                 throw std::runtime_error("command has been deleted");
+            if (!action.empty())
+                current_command.action_name = action;
             current_command.node.flags.is_executable = true;
             current_command.callback = callback;
             current_command.node.parser_id = parser;

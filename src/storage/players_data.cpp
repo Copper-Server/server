@@ -24,7 +24,7 @@ namespace crafted_craft {
                 compound["id"] = slot_data.id;
                 compound["count"] = slot_data.count;
                 compound["nbt"] = slot_data.nbt;
-                return ENBT::optional(std::move(compound));
+                return ENBT::optional((ENBT&&)std::move(compound));
             }
             return ENBT::optional();
         }
@@ -133,6 +133,12 @@ namespace crafted_craft {
                 player.op_level = gamemode["op_level"];
                 player.gamemode = gamemode["gamemode"];
                 player.prev_gamemode = gamemode["prev_gamemode"];
+            }
+            {
+                auto permissions = enbt::fixed_array::make_ref(file_data["permissions"]);
+                player.permissions.reserve(permissions.size());
+                for (size_t i = 0; i < permissions.size(); i++)
+                    player.permissions.push_back((std::string)permissions[i]);
             }
             if (file_data.contains("death_location")) {
                 auto death_location = enbt::compound::make_ref(file_data["death_location"]);
@@ -246,6 +252,12 @@ namespace crafted_craft {
                 gamemode["gamemode"] = player.gamemode;
                 gamemode["prev_gamemode"] = player.prev_gamemode;
                 as_file_data["gamemode"] = gamemode;
+            }
+            {
+                enbt::fixed_array permissions(player.permissions.size());
+                for (size_t i = 0; i < player.permissions.size(); i++)
+                    permissions.set(i, player.permissions[i]);
+                as_file_data["permissions"] = permissions;
             }
             if (player.last_death_location.has_value()) {
                 enbt::compound death_location;

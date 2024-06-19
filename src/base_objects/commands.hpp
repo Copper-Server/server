@@ -3,6 +3,7 @@
 #include "../library/list_array.hpp"
 #include "chat.hpp"
 #include "packets.hpp"
+#include "permissions.hpp"
 #include "shared_client_data.hpp"
 #include <functional>
 #include <optional>
@@ -30,13 +31,16 @@ namespace crafted_craft {
             command_suggestion suggestions;
             std::string description;
             std::string usage;
-
+            //permission
+            std::string action_name;
+            //mapped permission for native clients
+            int8_t permission_level = 0;
 
             std::unordered_map<std::string, int32_t> childs_cache;
             uint32_t links = 0;
 
             command() = default;
-            command(const std::string& name, const std::string& description = "", const std::string& usage = "");
+            command(const std::string& name, const std::string& description = "", const std::string& usage = "", const std::string& action_name = "");
 
 
             int32_t get_child(list_array<command>& commands_nodes, const std::string& name);
@@ -89,8 +93,8 @@ namespace crafted_craft {
             command_browser& set_redirect(const std::string& path, const command_redirect& redirect);
             command_browser& remove_redirect();
 
-            command_browser& set_callback(const command_callback& callback);
-            command_browser& set_callback(const command_callback& callback, packets::command_node::parsers parser, packets::command_node::properties_t properties = {});
+            command_browser& set_callback(const std::string& action_name, const command_callback& callback);
+            command_browser& set_callback(const std::string& action_name, const command_callback& callback, packets::command_node::parsers parser, packets::command_node::properties_t properties = {});
             command_browser& remove_callback();
 
             command_browser& set_suggestion(const std::string& suggestion_type);

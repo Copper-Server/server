@@ -15,7 +15,7 @@ namespace crafted_craft {
             }
 
             void OnUnload(const PluginRegistrationPtr& self) override {
-                TCPClientHandleConfiguration::base_plugins.erase(self);
+                TCPClientHandleConfiguration::base_plugins.remove(self);
                 TCPClientHandleConfiguration::plugins_configuration.erase("minecraft:brand");
                 log::info("Minecraft", "Minecraft plugin unloaded!");
             }

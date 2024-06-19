@@ -9,24 +9,27 @@ namespace crafted_craft {
 
     namespace build_in_plugins {
 
-        ServerPlugin::ServerPlugin(const std::filesystem::path& base_path, const std::filesystem::path& storage_path, TCPserver& server)
+        ServerPlugin::ServerPlugin(const std::filesystem::path& base_path, const std::filesystem::path& storage_path)
             : players_data(storage_path / "players"),
               base_path(base_path),
               console_data(server.online_players.allocate_player(), "Console", "Console", server),
-              server(server) {
+              server(TCPserver::get_global_instance()) {
+        }
+
+        void ServerPlugin::OnRegister(const PluginRegistrationPtr& self) {
+            log::info("Server", "starting server...");
         }
 
         void ServerPlugin::OnLoad(const PluginRegistrationPtr& self) {
-            log::info("Server", "starting server...");
             manager.reload_commands();
             register_event(log::commands::on_command, base_objects::event_priority::heigh, [&](const std::string& command) {
+                log::info("Server", "[command] " + command);
                 try {
                     manager.execute_command(command, console_data.client);
                 } catch (const std::exception& ex) {
                     log::error("Server", "[command] " + command + "\n Failed to execute command, reason:\n\t" + ex.what());
                     return false;
                 }
-                log::info("Server", "[command] " + command);
                 return true;
             });
             log::commands::registerCommandSuggestion([this](const std::string& line, int position) {
@@ -77,11 +80,15 @@ namespace crafted_craft {
         void ServerPlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
             {
                 browser.add_child({"help", "returns list of commands", ""})
-                    .set_callback([browser](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                    .set_callback("command.help", [browser, this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                        if (!server.permissions_manager.has_rights("command.help", client))
+                            throw std::exception("Not enough permissions for this.");
                         api::players::calls::on_system_message({client, {"help for all commands:\n" + browser.get_documentation()}});
                     })
                     .add_child({"<command>", "returns help for command", "/help <command>"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
-                    .set_callback([browser](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                    .set_callback("command.help.command", [browser, this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                        if (!server.permissions_manager.has_rights("command.help.command", client))
+                            throw std::exception("Not enough permissions for this.");
                         auto command = browser.open(args[0]);
                         if (!command.is_valid())
                             api::players::calls::on_system_message({client, {"Command not found"}});
@@ -95,18 +102,14 @@ namespace crafted_craft {
             }
             {
                 browser.add_child({"version", "returns server version", "/version"})
-                    .set_callback([](const list_array<std::string>&, base_objects::client_data_holder& client) {
-                        if (client->player_data.op_level < 4)
-                            throw std::exception("Not enough permissions for this.");
+                    .set_callback("command.version", [this](const list_array<std::string>&, base_objects::client_data_holder& client) {
                         api::players::calls::on_system_message({client, {"Server version: 1.0.0. Build: " __DATE__ " " __TIME__}});
                     });
             }
             {
                 browser.add_child({"op"})
                     .add_child({"<player>", "op player", "/op <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                    .set_callback([this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                        if (client->player_data.op_level < 5)
-                            throw std::exception("Not enough permissions for this.");
+                    .set_callback("command.op", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         if (args.size() == 0) {
                             api::players::calls::on_system_message({client, {"Usage: /op <player>"}});
                             return;
@@ -130,9 +133,7 @@ namespace crafted_craft {
             {
                 browser.add_child({"deop"})
                     .add_child({"<player>", "deop player", "/deop <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                    .set_callback([this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                        if (client->player_data.op_level < 5)
-                            throw std::exception("Not enough permissions for this.");
+                    .set_callback("command.deop", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         if (args.size() == 0) {
                             api::players::calls::on_system_message({client, {"Usage: /deop <player>"}});
                             return;
@@ -156,9 +157,7 @@ namespace crafted_craft {
             {
                 browser.add_child({"kick"})
                     .add_child({"<player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                    .set_callback([this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                        if (client->player_data.op_level < 4)
-                            throw std::exception("Not enough permissions for this.");
+                    .set_callback("command.kick", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         if (args.size() == 0) {
                             api::players::calls::on_system_message({client, {"Usage: /kick <player>"}});
                             return;
@@ -178,9 +177,7 @@ namespace crafted_craft {
                         api::players::calls::on_player_kick({target, "kicked by admin"});
                     })
                     .add_child({"<reason>", "kick player with reason", "/kick <player> [reason]"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
-                    .set_callback([this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                        if (client->player_data.op_level < 4)
-                            throw std::exception("Not enough permissions for this.");
+                    .set_callback("command.kick.reason", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         if (args.size() == 0) {
                             api::players::calls::on_system_message({client, {"Usage: /kick <player>"}});
                             throw std::exception("Not enough permissions for this.");
@@ -205,50 +202,48 @@ namespace crafted_craft {
             }
             {
                 browser.add_child({"stop", "stop server", "/stop"})
-                    .set_callback([this](const list_array<std::string>&, base_objects::client_data_holder& client) {
-                        if (client->player_data.op_level < 4)
-                            throw std::exception("Not enough permissions for this.");
+                    .set_callback("command.stop", [this](const list_array<std::string>&, base_objects::client_data_holder& client) {
                         server.stop();
                     });
             }
             {
                 auto _config = browser.add_child({"config"});
-                _config.add_child({"reload", "reloads config from file", "/config reload"}).set_callback([&](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                    if (client->player_data.op_level < 4)
-                        throw std::exception("Not enough permissions for this.");
+                _config.add_child({"reload", "reloads config from file", "/config reload"}).set_callback("command.config.reload", [&](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                     server.server_config.load(base_path);
                     pluginManagement.registeredPlugins().forEach([&](const PluginRegistrationPtr& plugin) {
                         plugin->OnConfigReload(plugin, server.server_config);
                     });
                 });
-                _config.add_child({"set"}).add_child({"[config item]"}, base_objects::command::parsers::brigadier_string, {.flags = 1}).add_child({"[value]", "updates config in file and applies for program", "/config set [config item] [value]"}, base_objects::command::parsers::brigadier_string, {.flags = 2}).set_callback([&](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                    if (client->player_data.op_level < 4)
-                        throw std::exception("Not enough permissions for this.");
-                    if (args.size() < 2) {
-                        api::players::calls::on_system_message({client, {"Usage: /config set <config item> <value>"}});
-                        return;
-                    }
-                    server.server_config.set(base_path, args[0], args[1]);
-                    api::players::calls::on_system_message({client, {"Config updated"}});
-                    pluginManagement.registeredPlugins().forEach([&](const PluginRegistrationPtr& plugin) {
-                        plugin->OnConfigReload(plugin, server.server_config);
+                _config.add_child({"set"})
+                    .add_child({"[config item]"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                    .add_child({"[value]", "updates config in file and applies for program", "/config set [config item] [value]"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
+                    .set_callback("command.config.set", [&](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                        if (args.size() < 2) {
+                            api::players::calls::on_system_message({client, {"Usage: /config set <config item> <value>"}});
+                            return;
+                        }
+                        server.server_config.set(base_path, args[0], args[1]);
+                        api::players::calls::on_system_message({client, {"Config updated"}});
+                        pluginManagement.registeredPlugins().forEach([&](const PluginRegistrationPtr& plugin) {
+                            plugin->OnConfigReload(plugin, server.server_config);
+                        });
                     });
-                });
-                _config.add_child({"get"}).add_child({"[config item]", "returns config value", "/config get [config item]"}, base_objects::command::parsers::brigadier_string, {.flags = 1}).set_callback([&](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                    if (client->player_data.op_level < 4)
-                        throw std::exception("Not enough permissions for this.");
-                    if (args.size() == 0) {
-                        api::players::calls::on_system_message({client, {"Usage: /config get <config item>"}});
-                        return;
-                    }
-                    auto value = server.server_config.get(args[0]);
-                    if (value.ends_with('\n'))
-                        value.pop_back();
-                    if (value.contains("\n"))
-                        api::players::calls::on_system_message({client, {"Config value: \n" + value}});
-                    else
-                        api::players::calls::on_system_message({client, {"Config value: " + value}});
-                });
+                _config
+                    .add_child({"get"})
+                    .add_child({"[config item]", "command.config.get", "returns config value", "/config get [config item]"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                    .set_callback("command.config.get", [&](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                        if (args.size() == 0) {
+                            api::players::calls::on_system_message({client, {"Usage: /config get <config item>"}});
+                            return;
+                        }
+                        auto value = server.server_config.get(args[0]);
+                        if (value.ends_with('\n'))
+                            value.pop_back();
+                        if (value.contains("\n"))
+                            api::players::calls::on_system_message({client, {"Config value: \n" + value}});
+                        else
+                            api::players::calls::on_system_message({client, {"Config value: " + value}});
+                    });
             }
         }
 

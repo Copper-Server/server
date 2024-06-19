@@ -108,10 +108,7 @@ namespace crafted_craft {
             void init() {
                 console::cmd->enable_history();
                 console::cmd->on_command = [](Commandline& cmd) {
-                    Task::start([command = cmd.get_command()]() {
-                        if (!on_command.await_notify(command))
-                            error("Server", "Undefined command: " + command);
-                    });
+                    on_command.async_notify(cmd.get_command());
                 };
             }
 

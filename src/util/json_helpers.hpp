@@ -1,12 +1,14 @@
 #ifndef SRC_UTIL_JSON_HELPERS
 #define SRC_UTIL_JSON_HELPERS
 #include <boost/json.hpp>
-#include <format>
+#include <filesystem>
 #include <fstream>
 
 namespace crafted_craft {
     namespace util {
-        std::string to_string(boost::json::kind type_kind) {
+
+
+        inline std::string to_string(boost::json::kind type_kind) {
             return boost::json::to_string(type_kind);
         }
         class js_object;
@@ -394,11 +396,56 @@ namespace crafted_craft {
                 : obj(obj), path(path) {}
 
         public:
+            class js_iterator {
+                std::string& inner_path;
+                boost::json::object::iterator iterator;
+
+            public:
+                js_iterator(boost::json::object::iterator iterator, std::string& inner_path)
+                    : iterator(iterator), inner_path(inner_path) {}
+
+                js_iterator(const js_iterator& iterator)
+                    : iterator(iterator.iterator), inner_path(iterator.inner_path) {}
+
+                js_iterator(js_iterator&& iterator)
+                    : iterator(std::move(iterator.iterator)), inner_path(iterator.inner_path) {}
+
+                std::pair<boost::json::string, js_value> operator*() {
+                    return {iterator->key(), js_value(inner_path + ":" + iterator->key_c_str(), iterator->value())};
+                }
+
+                js_iterator& operator++() {
+                    ++iterator;
+                    return *this;
+                }
+
+                js_iterator& operator--() {
+                    --iterator;
+                    return *this;
+                }
+
+                js_iterator operator++(int) {
+                    return js_iterator(iterator++, inner_path);
+                }
+
+                js_iterator operator--(int) {
+                    return js_iterator(iterator--, inner_path);
+                }
+
+                auto operator!=(const js_iterator& other) {
+                    return iterator != other.iterator;
+                }
+
+                auto operator==(const js_iterator& other) {
+                    return iterator != other.iterator;
+                }
+            };
+
             static js_object get_object(js_value& obj) {
                 return js_object(obj.path, obj.or_apply(boost::json::object()));
             }
 
-            static js_object get_object(js_value obj) {
+            static js_object get_object(js_value&& obj) {
                 return js_object(obj.path, obj.or_apply(boost::json::object()));
             }
 
@@ -422,12 +469,12 @@ namespace crafted_craft {
                 return obj.contains(name);
             }
 
-            boost::json::object::iterator begin() {
-                return obj.begin();
+            js_iterator begin() {
+                return {obj.begin(), path};
             }
 
-            boost::json::object::iterator end() {
-                return obj.end();
+            js_iterator end() {
+                return {obj.end(), path};
             }
 
             bool empty() const {
@@ -444,11 +491,56 @@ namespace crafted_craft {
                 : obj(obj), path(path) {}
 
         public:
+            class js_iterator {
+                std::string& inner_path;
+                boost::json::array::iterator beginning;
+                boost::json::array::iterator iterator;
+
+            public:
+                js_iterator(boost::json::array::iterator iterator, boost::json::array::iterator beginning, std::string& inner_path)
+                    : iterator(iterator), beginning(beginning), inner_path(inner_path) {}
+
+                js_iterator(const js_iterator& iterator)
+                    : iterator(iterator.iterator), beginning(iterator.beginning), inner_path(iterator.inner_path) {}
+
+                js_iterator(js_iterator&& iterator)
+                    : iterator(std::move(iterator.iterator)), beginning(iterator.beginning), inner_path(iterator.inner_path) {}
+
+                js_value operator*() {
+                    return js_value(inner_path + "[" + std::to_string(iterator - beginning) + "]", *iterator);
+                }
+
+                js_iterator& operator++() {
+                    ++iterator;
+                    return *this;
+                }
+
+                js_iterator& operator--() {
+                    --iterator;
+                    return *this;
+                }
+
+                js_iterator operator++(int) {
+                    return js_iterator(iterator++, beginning, inner_path);
+                }
+
+                js_iterator operator--(int) {
+                    return js_iterator(iterator--, beginning, inner_path);
+                }
+
+                auto operator!=(const js_iterator& other) {
+                    return iterator != other.iterator;
+                }
+
+                auto operator==(const js_iterator& other) {
+                    return iterator != other.iterator;
+                }
+            };
             static js_array get_array(js_value& obj) {
                 return js_array(obj.path, obj.or_apply(boost::json::array()));
             }
 
-            static js_array get_array(js_value obj) {
+            static js_array get_array(js_value&& obj) {
                 return js_array(obj.path, obj.or_apply(boost::json::array()));
             }
 
@@ -486,105 +578,49 @@ namespace crafted_craft {
                 obj.push_back(value);
             }
 
-            boost::json::array::iterator begin() {
-                return obj.begin();
+            js_iterator begin() {
+                return {obj.begin(), obj.begin(), path};
             }
 
-            boost::json::array::iterator end() {
-                return obj.end();
+            js_iterator end() {
+                return {obj.end(), obj.begin(), path};
             }
         };
 
-        void pretty_print(std::ostream& os, const boost::json::value& jv, std::string* indent = nullptr) {
-            std::string indent_;
-            if (!indent)
-                indent = &indent_;
+        boost::json::object try_read_json_file(const std::filesystem::path& file_path);
+        void pretty_print(std::ostream& os, const boost::json::value& jv, std::string* indent = nullptr);
 
-            switch (jv.kind()) {
-            case boost::json::kind::object: {
-                os << "{\n";
-                indent->append(4, ' ');
-
-                std::vector<boost::json::string> keys;
-
-                for (auto const& v : jv.get_object()) {
-                    keys.push_back(v.key());
-                }
-
-                std::sort(keys.begin(), keys.end());
-
-                std::size_t i = 0, n = keys.size();
-
-                for (auto const& k : keys) {
-                    os << *indent << boost::json::serialize(k) << ": ";
-                    pretty_print(os, jv.at(k), indent);
-                    os << (++i == n ? "\n" : ",\n");
-                }
-
-                indent->resize(indent->size() - 4);
-                os << *indent << "}";
-                break;
-            }
-            case boost::json::kind::array: {
-                os << "[\n";
-                indent->append(4, ' ');
-
-                auto const& a = jv.get_array();
-
-                std::size_t i = 0, n = a.size();
-
-                for (auto const& v : a) {
-                    os << *indent;
-                    pretty_print(os, v, indent);
-                    os << (++i == n ? "\n" : ",\n");
-                }
-
-                indent->resize(indent->size() - 4);
-                os << *indent << "]";
-                break;
-            }
-
-            default: {
-                os << boost::json::serialize(jv);
-                break;
-            }
-            }
-
-            if (indent->empty())
-                os << "\n";
-        }
-
-        void pretty_print(std::ostream& os, const js_value& jv) {
+        inline void pretty_print(std::ostream& os, const js_value& jv) {
             pretty_print(os, jv.obj);
         }
 
-        void pretty_print(std::ostream& os, const js_object& jv) {
+        inline void pretty_print(std::ostream& os, const js_object& jv) {
             pretty_print(os, jv.obj);
         }
 
-        void pretty_print(std::ostream& os, const js_array& jv) {
+        inline void pretty_print(std::ostream& os, const js_array& jv) {
             pretty_print(os, jv.obj);
         }
 
-        std::string pretty_print(const boost::json::value& jv) {
+        inline std::string pretty_print(const boost::json::value& jv) {
             std::ostringstream os;
             pretty_print(os, jv);
             return os.str();
         }
 
-        std::string pretty_print(const js_value& jv) {
+        inline std::string pretty_print(const js_value& jv) {
             std::ostringstream os;
             pretty_print(os, jv);
             return os.str();
         }
 
-        std::string pretty_print(const js_object& jv) {
+        inline std::string pretty_print(const js_object& jv) {
             std::ostringstream os;
             pretty_print(os, jv);
             return os.str();
         }
 
-        std::string pretty_print(const js_array& jv) {
+        inline std::string pretty_print(const js_array& jv) {
             std::ostringstream os;
             pretty_print(os, jv);
             return os.str();

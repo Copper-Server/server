@@ -117,6 +117,7 @@ namespace crafted_craft {
             if (!file.is_open())
                 return false;
             enbt::compound chunk_data_file;
+            enbt::dynamic_array enbt_sub_chunks;
             for (auto& sub_chunk : sub_chunks) {
                 enbt::compound sub_chunk_data;
                 {
@@ -195,8 +196,9 @@ namespace crafted_craft {
                     }
                     sub_chunk_data["queried_for_tick"] = std::move(queried_for_tick);
                 }
-                chunk_data_file["sub_chunks"].push(std::move(sub_chunk_data));
+                enbt_sub_chunks.push_back(std::move(sub_chunk_data));
             }
+            chunk_data_file["sub_chunks"] = std::move(enbt_sub_chunks);
             ENBTHelper::WriteToken(file, chunk_data_file);
             file.close();
             return true;
@@ -325,7 +327,7 @@ namespace crafted_craft {
             std::vector<T> res;
             res.reserve(arr.size());
             for (auto& item : arr)
-                res.push_back(item);
+                res.push_back((T)item);
             return res;
         }
 
@@ -433,7 +435,7 @@ namespace crafted_craft {
                 res["z1"] = chunk.z1;
                 res["x2"] = chunk.x2;
                 res["z2"] = chunk.z2;
-                return res;
+                return std::move(res);
             });
             world_data_file["load_points_sphere"] = to_fixed_array(load_points_sphere, [](const base_objects::spherical_bounds_chunk& chunk) {
                 enbt::compound res;
@@ -874,7 +876,7 @@ namespace crafted_craft {
 
             if (cached_ids.empty())
                 get_ids();
-            size_t found = cached_ids.find_it([this, &name](uint64_t id) {
+            size_t found = cached_ids.find_if([this, &name](uint64_t id) {
                 return world_data(base_path / std::to_string(id)).preview_world_name() == name;
             });
             return found == list_array<uint64_t>::npos ? -1 : cached_ids[found];

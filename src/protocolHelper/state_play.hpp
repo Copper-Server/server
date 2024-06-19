@@ -26,7 +26,7 @@ namespace crafted_craft {
                     ArrayStream packet(data.data(), data.size());
                     int32_t id = ReadVar<int32_t>(packet);
                     if (id == -1 && excepted_pong != -1) {
-                        resp.data.remove(index);
+                        resp.data.erase(index);
                         goto re_check;
                     }
                     excepted_pong = id;

@@ -90,7 +90,7 @@ namespace crafted_craft {
             }
 
             void reserve(size_t size) {
-                data.reserve_push_back(size);
+                data.reserve(size);
             }
 
         private:

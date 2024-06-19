@@ -171,7 +171,7 @@ namespace crafted_craft {
     Response TCPsession::proceed_data() {
         while (true) {
             Response tmp(chandler->WorkClient(read_data_cached));
-            read_data_cached.remove(0, tmp.valid_till);
+            read_data_cached.erase(0, tmp.valid_till);
             if (auto redefHandler = chandler->RedefineHandler(); redefHandler && !tmp.isDisconnect()) {
                 tmp.valid_till = 0;
                 delete chandler;
@@ -317,11 +317,12 @@ namespace crafted_craft {
         return ssl_key_length;
     }
 
-    TCPserver::TCPserver(boost::asio::io_service* io_service, const std::string& ip, uint16_t port, size_t threads, size_t ssl_key_length)
+    TCPserver::TCPserver(const std::filesystem::path& base_path, boost::asio::io_service* io_service, const std::string& ip, uint16_t port, size_t threads, size_t ssl_key_length)
         : TCPacceptor(*io_service, resolveEndpoint(ip, port)),
           threads(threads ? threads : std::thread::hardware_concurrency()),
           ssl_key_length(ssl_key_length),
-          ip(ip) {
+          ip(ip),
+          permissions_manager(base_path) {
         service = io_service;
         if (ssl_key_length) {
             server_rsa_key = RSA_generate_key(ssl_key_length, RSA_F4, nullptr, nullptr);

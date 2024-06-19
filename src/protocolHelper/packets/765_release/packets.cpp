@@ -45,7 +45,7 @@ namespace crafted_craft {
 
                 Response removeResourcePack(const ENBT::UUID& pack_id) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(18);
+                    packet.reserve(18);
                     packet.push_back(0x06);
                     packet.push_back(true);
                     WriteUUID(pack_id, packet);
@@ -54,7 +54,7 @@ namespace crafted_craft {
 
                 Response addResourcePack(const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(20 + url.size() + 2 + hash.size());
+                    packet.reserve(20 + url.size() + 2 + hash.size());
                     packet.push_back(0x07);
                     WriteUUID(pack_id, packet);
                     WriteString(packet, url, 32767);
@@ -66,7 +66,7 @@ namespace crafted_craft {
 
                 Response addResourcePack(const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced, Chat prompt) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(20 + url.size() + 2 + hash.size());
+                    packet.reserve(20 + url.size() + 2 + hash.size());
                     packet.push_back(0x07);
                     WriteUUID(pack_id, packet);
                     WriteString(packet, url, 32767);
@@ -129,7 +129,7 @@ namespace crafted_craft {
 
                 Response spawnEntity(TCPsession& client, const base_objects::entity& entity) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(58);
+                    packet.reserve(58);
                     packet.push_back(0x01);
                     WriteVar<int32_t>(client.serverData().entity_ids_map.get_id(entity.id), packet);
                     WriteUUID(entity.id, packet);
@@ -152,7 +152,7 @@ namespace crafted_craft {
 
                 Response spawnExperienceOrb(TCPsession& client, const base_objects::entity& entity, int16_t count) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(27);
+                    packet.reserve(27);
                     packet.push_back(0x02);
                     WriteVar<int32_t>(client.serverData().entity_ids_map.get_id(entity.id), packet);
                     WriteValue<double>(entity.position.x, packet);
@@ -164,7 +164,7 @@ namespace crafted_craft {
 
                 Response entityAnimation(TCPsession& client, const base_objects::entity& entity, uint8_t animation) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(6);
+                    packet.reserve(6);
                     packet.push_back(0x03);
                     WriteVar<int32_t>(client.serverData().entity_ids_map.get_id(entity.id), packet);
                     packet.push_back(animation);
@@ -173,7 +173,7 @@ namespace crafted_craft {
 
                 Response awardStatistics(const list_array<base_objects::packets::statistics>& statistics) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(3 * statistics.size() + 1 + 4);
+                    packet.reserve(3 * statistics.size() + 1 + 4);
                     packet.push_back(0x04);
                     WriteVar<int32_t>(statistics.size(), packet);
                     for (auto& [category_id, statistic_id, value] : statistics) {
@@ -186,7 +186,7 @@ namespace crafted_craft {
 
                 Response acknowledgeBlockChange(SharedClientData& client) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(5);
+                    packet.reserve(5);
                     packet.push_back(0x05);
                     WriteVar<int32_t>(client.packets_state.current_block_sequence_id, packet);
                     return Response::Answer({packet});
@@ -194,7 +194,7 @@ namespace crafted_craft {
 
                 Response setBlockDestroyStage(TCPsession& client, const base_objects::entity& entity, Position block, uint8_t stage) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(14);
+                    packet.reserve(14);
                     packet.push_back(0x06);
                     WriteVar<int32_t>(client.serverData().entity_ids_map.get_id(entity.id), packet);
                     WriteValue<uint64_t>(block.raw, packet);
@@ -205,7 +205,7 @@ namespace crafted_craft {
                 Response blockEntityData(Position block, int32_t type, const ENBT& data) {
 
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(13);
+                    packet.reserve(13);
                     packet.push_back(0x07);
                     WriteValue<uint64_t>(block.raw, packet);
                     WriteVar<int32_t>(type, packet);
@@ -216,7 +216,7 @@ namespace crafted_craft {
                 //block_type is from "minecraft:block" registry, not a block state.
                 Response blockAction(Position block, int32_t action_id, int32_t param, int32_t block_type) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(21);
+                    packet.reserve(21);
                     packet.push_back(0x08);
                     WriteValue<uint64_t>(block.raw, packet);
                     WriteVar<int32_t>(action_id, packet);
@@ -228,7 +228,7 @@ namespace crafted_craft {
                 //block_type is from "minecraft:block" registry, not a block state.
                 Response blockUpdate(Position block, int32_t block_type) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(13);
+                    packet.reserve(13);
                     packet.push_back(0x09);
                     WriteValue<uint64_t>(block.raw, packet);
                     WriteVar<int32_t>(block_type, packet);
@@ -237,7 +237,7 @@ namespace crafted_craft {
 
                 Response bossBarAdd(const ENBT::UUID& id, const Chat& title, float health, int32_t color, int32_t division, uint8_t flags) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(title.ToStr().size() + 4 * 4 + 1 + 16 + 2);
+                    packet.reserve(title.ToStr().size() + 4 * 4 + 1 + 16 + 2);
                     packet.push_back(0x0A);
                     WriteUUID(id, packet);
                     packet.push_back(0);
@@ -251,7 +251,7 @@ namespace crafted_craft {
 
                 Response bossBarRemove(const ENBT::UUID& id) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(18);
+                    packet.reserve(18);
                     packet.push_back(0x0A);
                     WriteUUID(id, packet);
                     packet.push_back(0);
@@ -260,7 +260,7 @@ namespace crafted_craft {
 
                 Response bossBarUpdateHealth(const ENBT::UUID& id, float health) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(21);
+                    packet.reserve(21);
                     packet.push_back(0x0A);
                     WriteUUID(id, packet);
                     packet.push_back(2);
@@ -270,7 +270,7 @@ namespace crafted_craft {
 
                 Response bossBarUpdateTitle(const ENBT::UUID& id, const Chat& title) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(title.ToStr().size() + 1 + 16 + 2);
+                    packet.reserve(title.ToStr().size() + 1 + 16 + 2);
                     packet.push_back(0x0A);
                     WriteUUID(id, packet);
                     packet.push_back(3);
@@ -280,7 +280,7 @@ namespace crafted_craft {
 
                 Response bossBarUpdateStyle(const ENBT::UUID& id, int32_t color, int32_t division) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(25);
+                    packet.reserve(25);
                     packet.push_back(0x0A);
                     WriteUUID(id, packet);
                     packet.push_back(4);
@@ -291,7 +291,7 @@ namespace crafted_craft {
 
                 Response bossBarUpdateFlags(const ENBT::UUID& id, uint8_t flags) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(21);
+                    packet.reserve(21);
                     packet.push_back(0x0A);
                     WriteUUID(id, packet);
                     packet.push_back(5);
@@ -305,7 +305,7 @@ namespace crafted_craft {
 
                 Response chunkBatchFinished(int32_t count) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(5);
+                    packet.reserve(5);
                     packet.push_back(0x0C);
                     WriteVar<int32_t>(count, packet);
                     return Response::Answer({packet});
@@ -338,7 +338,7 @@ namespace crafted_craft {
 
                 Response commandSuggestionsResponse(int32_t transaction_id, int32_t start_pos, int32_t length, const list_array<base_objects::packets::command_suggestion>& suggestions) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(17);
+                    packet.reserve(17);
                     packet.push_back(0x10);
                     WriteVar<int32_t>(transaction_id, packet);
                     WriteVar<int32_t>(start_pos, packet);
@@ -355,7 +355,7 @@ namespace crafted_craft {
 
                 Response commands(int32_t root_id, const list_array<base_objects::packets::command_node>& nodes) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(5);
+                    packet.reserve(5);
                     packet.push_back(0x11);
                     WriteVar<int32_t>(nodes.size(), packet);
                     for (auto& node : nodes) {
@@ -396,7 +396,7 @@ namespace crafted_craft {
 
                 Response setContainerContent(uint8_t windows_id, int32_t state_id, const list_array<base_objects::slot>& slots, const base_objects::slot& carried_item) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(2 * slots.size() + 1 + 1 + 4);
+                    packet.reserve(2 * slots.size() + 1 + 1 + 4);
                     packet.push_back(0x13);
                     packet.push_back(windows_id);
                     WriteVar<int32_t>(state_id, packet);
@@ -410,7 +410,7 @@ namespace crafted_craft {
 
                 Response setContainerProperty(uint8_t windows_id, uint16_t property, uint16_t value) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(6);
+                    packet.reserve(6);
                     packet.push_back(0x14);
                     packet.push_back(windows_id);
                     WriteValue<uint16_t>(property, packet);
@@ -420,7 +420,7 @@ namespace crafted_craft {
 
                 Response setContainerSlot(uint8_t windows_id, int32_t state_id, int16_t slot, const base_objects::slot& item) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + 4 + 2 + (bool)item);
+                    packet.reserve(1 + 1 + 4 + 2 + (bool)item);
                     packet.push_back(0x15);
                     packet.push_back(windows_id);
                     WriteVar<int32_t>(state_id, packet);
@@ -432,7 +432,7 @@ namespace crafted_craft {
 
                 Response setCooldown(int32_t item_id, int32_t cooldown) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(9);
+                    packet.reserve(9);
                     packet.push_back(0x16);
                     WriteVar<int32_t>(item_id, packet);
                     WriteVar<int32_t>(cooldown, packet);
@@ -442,7 +442,7 @@ namespace crafted_craft {
                 //UNUSED by Notchian client
                 Response chatSuggestionsResponse(int32_t action, int32_t count, const list_array<std::string>& suggestions) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(9);
+                    packet.reserve(9);
                     packet.push_back(0x17);
                     WriteVar<int32_t>(action, packet);
                     WriteVar<int32_t>(count, packet);
@@ -453,7 +453,7 @@ namespace crafted_craft {
 
                 Response customPayload(const std::string& channel, const list_array<uint8_t>& data) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + channel.size() + 2);
+                    packet.reserve(1 + channel.size() + 2);
                     packet.push_back(0x18);
                     WriteString(packet, channel, 32767);
                     packet.push_back(data);
@@ -462,7 +462,7 @@ namespace crafted_craft {
 
                 Response damageEvent(int32_t entity_id, int32_t source_type_id, int32_t source_cause_id, int32_t source_direct_id, std::optional<calc::VECTOR> xyz) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 * 4 + 1 + (3 * 4) * (bool)xyz);
+                    packet.reserve(1 + 4 * 4 + 1 + (3 * 4) * (bool)xyz);
                     packet.push_back(0x19);
                     WriteVar<int32_t>(entity_id, packet);
                     WriteVar<int32_t>(source_type_id, packet);
@@ -479,7 +479,7 @@ namespace crafted_craft {
 
                 Response deleteMessage(uint8_t signature[256]) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(12 + 256);
+                    packet.reserve(12 + 256);
                     packet.push_back(0x1A);
                     packet.push_back(0);
                     packet.push_back(signature, 256);
@@ -488,7 +488,7 @@ namespace crafted_craft {
 
                 Response deleteMessage(int32_t message_id) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(12 + 4);
+                    packet.reserve(12 + 4);
                     packet.push_back(0x1A);
                     if (message_id == -1)
                         throw std::runtime_error("message id can't be -1");
@@ -502,7 +502,7 @@ namespace crafted_craft {
 
                 Response disguisedChatMessage(const Chat& message, int32_t chat_type, const Chat& sender, std::optional<Chat> target_name) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 2 + 2 + 1 + (bool)target_name * 2 + (bool)target_name * target_name->ToStr().size());
+                    packet.reserve(1 + 2 + 2 + 1 + (bool)target_name * 2 + (bool)target_name * target_name->ToStr().size());
                     packet.push_back(0x1C);
                     packet.push_back(message.ToTextComponent());
                     WriteVar<int32_t>(chat_type, packet);
@@ -516,7 +516,7 @@ namespace crafted_craft {
 
                 Response entityEvent(int32_t entity_id, uint8_t entity_status) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 1);
+                    packet.reserve(1 + 4 + 1);
                     packet.push_back(0x1D);
                     WriteValue<int32_t>(entity_id, packet);
                     packet.push_back(entity_status);
@@ -526,7 +526,7 @@ namespace crafted_craft {
                 //TODO: particles
                 //Response explosion(calc::VECTOR pos, float strength, list_array<calc::XYZ<int8_t>> affected_blocks, calc::VECTOR player_motion, int32_t block_interaction, int32_t small_explosion_particle_id, ) {
                 //    list_array<uint8_t> packet;
-                //    packet.reserve_push_back(1 + 4 * 4 + 4 + 4 * 3 * affected_blocks.size() + 4 * 3);
+                //    packet.reserve(1 + 4 * 4 + 4 + 4 * 3 * affected_blocks.size() + 4 * 3);
                 //    packet.push_back(0x1E);
                 //    WriteValue<float>(pos.x, packet);
                 //    WriteValue<float>(pos.y, packet);
@@ -546,7 +546,7 @@ namespace crafted_craft {
 
                 Response unloadChunk(int32_t x, int32_t z) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 * 2);
+                    packet.reserve(1 + 4 * 2);
                     packet.push_back(0x1F);
                     WriteValue<int32_t>(z, packet);
                     WriteValue<int32_t>(x, packet);
@@ -555,7 +555,7 @@ namespace crafted_craft {
 
                 Response gameEvent(uint8_t event_id, float value) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + 4);
+                    packet.reserve(1 + 1 + 4);
                     packet.push_back(0x20);
                     packet.push_back(event_id);
                     WriteValue<float>(value, packet);
@@ -564,7 +564,7 @@ namespace crafted_craft {
 
                 Response openHorseWindow(uint8_t window_id, int32_t slots, int32_t entity_id) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 * 2 + 16);
+                    packet.reserve(1 + 4 * 2 + 16);
                     packet.push_back(0x21);
                     packet.push_back(window_id);
                     WriteVar<int32_t>(slots, packet);
@@ -574,7 +574,7 @@ namespace crafted_craft {
 
                 Response hurtAnimation(int32_t entity_id, float yaw) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 4);
+                    packet.reserve(1 + 4 + 4);
                     packet.push_back(0x22);
                     WriteVar<int32_t>(entity_id, packet);
                     WriteValue<float>(yaw, packet);
@@ -583,7 +583,7 @@ namespace crafted_craft {
 
                 Response initializeWorldBorder(double x, double z, double old_diameter, double new_diameter, int64_t speed_ms, int32_t portal_teleport_boundary, int32_t warning_blocks, int32_t warning_time) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 8 * 2 + 8 * 2 + 8 + 8 + 8 + 4 * 3);
+                    packet.reserve(1 + 8 * 2 + 8 * 2 + 8 + 8 + 8 + 4 * 3);
                     packet.push_back(0x23);
                     WriteValue<double>(x, packet);
                     WriteValue<double>(z, packet);
@@ -599,7 +599,7 @@ namespace crafted_craft {
                 //internal use
                 Response keepAlive(int64_t id) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 8);
+                    packet.reserve(1 + 8);
                     packet.push_back(0x24);
                     WriteValue<int64_t>(id, packet);
                     return Response::Answer({packet});
@@ -610,7 +610,7 @@ namespace crafted_craft {
 
                 Response worldEvent(int32_t event, Position pos, int32_t data, bool global) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 8 + 4 + 1);
+                    packet.reserve(1 + 4 + 8 + 4 + 1);
                     packet.push_back(0x26);
                     WriteVar<int32_t>(event, packet);
                     WriteValue<uint64_t>(pos.raw, packet);
@@ -621,7 +621,7 @@ namespace crafted_craft {
 
                 Response particle(int32_t particle_id, bool long_distance, calc::VECTOR pos, calc::XYZ<float> offset, float max_speed, int32_t count, list_array<uint8_t> data) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 1 + 4 * 3 + 4 * 3 + 4 + 4 + 4 * data.size());
+                    packet.reserve(1 + 4 + 1 + 4 * 3 + 4 * 3 + 4 + 4 + 4 * data.size());
                     packet.push_back(0x27);
                     WriteVar<int32_t>(particle_id, packet);
                     packet.push_back(long_distance);
@@ -640,7 +640,7 @@ namespace crafted_craft {
                 //TODO
                 //Response updateLight(int32_t chunk_x, int32_t chunk_z, list_array<base_objects::chunk::chunk_light> light) {
                 //    list_array<uint8_t> packet;
-                //    packet.reserve_push_back(1 + 4 * 2 + 4 * light.size());
+                //    packet.reserve(1 + 4 * 2 + 4 * light.size());
                 //    packet.push_back(0x28);
                 //    WriteVar<int32_t>(chunk_x, packet);
                 //    WriteVar<int32_t>(chunk_z, packet);
@@ -655,7 +655,7 @@ namespace crafted_craft {
 
                 Response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, const std::string& current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, std::optional<base_objects::packets::death_location_data> death_location, int32_t portal_cooldown) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 1 + 4 + 1 + 4 + 1 + 4);
+                    packet.reserve(1 + 4 + 1 + 4 + 1 + 4 + 1 + 4);
                     packet.push_back(0x29);
                     WriteVar<int32_t>(entity_id, packet);
                     packet.push_back(is_hardcore);
@@ -687,7 +687,7 @@ namespace crafted_craft {
 
                 Response mapData(int32_t map_id, uint8_t scale, bool locked, const list_array<base_objects::packets::map_icon>& icons, uint8_t columns, uint8_t rows, uint8_t x, uint8_t z, const list_array<uint8_t>& data) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 1 + 1 + 4 * 2 + 1 + 1 + 1 + 1 + 2 * icons.size() + 4 * 4 + data.size());
+                    packet.reserve(1 + 4 + 1 + 1 + 4 * 2 + 1 + 1 + 1 + 1 + 2 * icons.size() + 4 * 4 + data.size());
                     packet.push_back(0x2A);
                     WriteVar<int32_t>(map_id, packet);
                     packet.push_back(scale);
@@ -718,7 +718,7 @@ namespace crafted_craft {
 
                 Response merchantOffers(int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade> trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 4 + 4 * 2 + 1 + 1 + 1 + 1 + 1 + 2 * trades.size());
+                    packet.reserve(1 + 4 + 4 + 4 * 2 + 1 + 1 + 1 + 1 + 1 + 2 * trades.size());
                     packet.push_back(0x2B);
                     packet.push_back(window_id);
                     packet.push_back(trade_id);
@@ -743,7 +743,7 @@ namespace crafted_craft {
 
                 Response updateEntityPosition(int32_t entity_id, calc::XYZ<float> pos, bool on_ground) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 4 * 3 + 1);
+                    packet.reserve(1 + 4 + 4 * 3 + 1);
                     packet.push_back(0x2C);
                     WriteVar<int32_t>(entity_id, packet);
                     auto res = calc::minecraft::packets::delta_move(pos);
@@ -756,7 +756,7 @@ namespace crafted_craft {
 
                 Response updateEntityPositionAndRotation(int32_t entity_id, calc::XYZ<float> pos, calc::VECTOR rot, bool on_ground) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 4 * 3 + 4 * 3 + 1);
+                    packet.reserve(1 + 4 + 4 * 3 + 4 * 3 + 1);
                     packet.push_back(0x2D);
                     WriteVar<int32_t>(entity_id, packet);
                     auto res = calc::minecraft::packets::delta_move(pos);
@@ -772,7 +772,7 @@ namespace crafted_craft {
 
                 Response updateEntityRotation(int32_t entity_id, calc::VECTOR rot, bool on_ground) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 4 * 2 + 1);
+                    packet.reserve(1 + 4 + 4 * 2 + 1);
                     packet.push_back(0x2E);
                     WriteVar<int32_t>(entity_id, packet);
                     auto res = calc::to_yaw_pitch_256(rot);
@@ -784,7 +784,7 @@ namespace crafted_craft {
 
                 Response moveVehicle(calc::VECTOR pos, calc::VECTOR rot) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 * 3 + 4 * 3);
+                    packet.reserve(1 + 4 * 3 + 4 * 3);
                     packet.push_back(0x2F);
                     WriteValue<double>(pos.x, packet);
                     WriteValue<double>(pos.y, packet);
@@ -797,7 +797,7 @@ namespace crafted_craft {
 
                 Response openBook(int32_t hand) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4);
+                    packet.reserve(1 + 4);
                     packet.push_back(0x30);
                     WriteVar<int32_t>(hand, packet);
                     return Response::Answer({packet});
@@ -805,7 +805,7 @@ namespace crafted_craft {
 
                 Response openScreen(int32_t window_id, int32_t type, const Chat& title) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 * 2 + title.ToStr().size());
+                    packet.reserve(1 + 4 * 2 + title.ToStr().size());
                     packet.push_back(0x31);
                     packet.push_back(window_id);
                     WriteVar<int32_t>(type, packet);
@@ -815,7 +815,7 @@ namespace crafted_craft {
 
                 Response openSignEditor(Position pos, bool is_front_text) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 8 + 1);
+                    packet.reserve(1 + 8 + 1);
                     packet.push_back(0x32);
                     WriteValue<uint64_t>(pos.raw, packet);
                     packet.push_back(is_front_text);
@@ -826,7 +826,7 @@ namespace crafted_craft {
                     if (id == -1)
                         throw std::runtime_error("ping id can't be -1");
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4);
+                    packet.reserve(1 + 4);
                     packet.push_back(0x33);
                     WriteVar<int32_t>(id, packet);
                     return Response::Answer({packet});
@@ -834,7 +834,7 @@ namespace crafted_craft {
 
                 Response pingResponse(int32_t id) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4);
+                    packet.reserve(1 + 4);
                     packet.push_back(0x34);
                     WriteVar<int32_t>(id, packet);
                     return Response::Answer({packet});
@@ -842,7 +842,7 @@ namespace crafted_craft {
 
                 Response placeGhostRecipe(int32_t windows_id, const std::string& recipe_id) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + recipe_id.size());
+                    packet.reserve(1 + 4 + recipe_id.size());
                     packet.push_back(0x35);
                     packet.push_back(windows_id);
                     WriteIdentifier(packet, recipe_id);
@@ -851,7 +851,7 @@ namespace crafted_craft {
 
                 Response playerAbilities(uint8_t flags, float flying_speed, float field_of_view) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + 4 * 2);
+                    packet.reserve(1 + 1 + 4 * 2);
                     packet.push_back(0x36);
                     packet.push_back(flags);
                     WriteValue<float>(flying_speed, packet);
@@ -863,7 +863,7 @@ namespace crafted_craft {
                     if (prev_messages.size() > 20)
                         throw std::runtime_error("too many prev messages");
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 16 + 4 + 1 + message.size() + 8 + 8 + 4 * prev_messages.size() + 1 + 1 + 1 + 2 * 4 + 1 + (bool)target_name * 2);
+                    packet.reserve(1 + 16 + 4 + 1 + message.size() + 8 + 8 + 4 * prev_messages.size() + 1 + 1 + 1 + 2 * 4 + 1 + (bool)target_name * 2);
                     packet.push_back(0x37);
                     WriteUUID(sender, packet);
                     WriteVar<int32_t>(index, packet);
@@ -903,7 +903,7 @@ namespace crafted_craft {
                 //UNUSED by Notchian client
                 Response endCombat(int32_t duration) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4);
+                    packet.reserve(1 + 4);
                     packet.push_back(0x38);
                     WriteVar<int32_t>(duration, packet);
                     return Response::Answer({packet});
@@ -916,7 +916,7 @@ namespace crafted_craft {
 
                 Response combatDeath(int32_t player_id, const Chat& message) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4);
+                    packet.reserve(1 + 4);
                     packet.push_back(0x3A);
                     WriteVar<int32_t>(player_id, packet);
                     packet.push_back(message.ToTextComponent());
@@ -925,7 +925,7 @@ namespace crafted_craft {
 
                 Response playerInfoRemove(const list_array<ENBT::UUID>& players) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + players.size() * sizeof(ENBT::UUID));
+                    packet.reserve(1 + 4 + players.size() * sizeof(ENBT::UUID));
                     packet.push_back(0x3B);
                     WriteVar<int32_t>(players.size(), packet);
                     for (auto& it : players)
@@ -1014,7 +1014,7 @@ namespace crafted_craft {
 
                 Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_display_name>& update_display_name) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4);
+                    packet.reserve(1 + 4);
                     packet.push_back(0x3C);
                     packet.push_back(0x20);
                     WriteVar<int32_t>(update_display_name.size(), packet);
@@ -1029,7 +1029,7 @@ namespace crafted_craft {
 
                 Response lookAt(bool from_feet_or_eyes, calc::VECTOR target, std::optional<std::pair<int32_t, bool>> entity_id) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + 4 * 3 + (bool)entity_id * 4 * 2);
+                    packet.reserve(1 + 1 + 4 * 3 + (bool)entity_id * 4 * 2);
                     packet.push_back(0x3D);
                     packet.push_back(from_feet_or_eyes);
                     WriteValue<float>(target.x, packet);
@@ -1045,7 +1045,7 @@ namespace crafted_craft {
 
                 Response synchronizePlayerPosition(calc::VECTOR pos, float yaw, float pitch, uint8_t flags, int32_t teleport_id) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 * 3 + 4 * 2 + 1);
+                    packet.reserve(1 + 4 * 3 + 4 * 2 + 1);
                     packet.push_back(0x3E);
                     WriteValue<double>(pos.x, packet);
                     WriteValue<double>(pos.y, packet);
@@ -1059,7 +1059,7 @@ namespace crafted_craft {
 
                 Response initRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> displayed_recipe_ids, list_array<std::string> had_access_to_recipe_ids) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 2 * displayed_recipe_ids.size() + 2 * had_access_to_recipe_ids.size());
+                    packet.reserve(1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 2 * displayed_recipe_ids.size() + 2 * had_access_to_recipe_ids.size());
                     packet.push_back(0x3F);
                     packet.push_back(0);
                     packet.push_back(crafting_recipe_book_open);
@@ -1081,7 +1081,7 @@ namespace crafted_craft {
 
                 Response updateRecipeBook(bool add_remove, bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> recipe_ids) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 2 * recipe_ids.size());
+                    packet.reserve(1 + 4 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 2 * recipe_ids.size());
                     packet.push_back(0x3F);
                     WriteVar<int32_t>(1 + add_remove, packet);
                     packet.push_back(crafting_recipe_book_open);
@@ -1100,7 +1100,7 @@ namespace crafted_craft {
 
                 Response removeEntities(const list_array<int32_t>& entity_ids) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 4 * entity_ids.size());
+                    packet.reserve(1 + 4 + 4 * entity_ids.size());
                     packet.push_back(0x40);
                     WriteVar<int32_t>(entity_ids.size(), packet);
                     for (auto& it : entity_ids)
@@ -1110,7 +1110,7 @@ namespace crafted_craft {
 
                 Response removeEntityEffect(int32_t entity_id, int32_t effect_id) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 * 2);
+                    packet.reserve(1 + 4 * 2);
                     packet.push_back(0x41);
                     WriteVar<int32_t>(entity_id, packet);
                     WriteVar<int32_t>(effect_id, packet);
@@ -1119,7 +1119,7 @@ namespace crafted_craft {
 
                 Response resetScore(const std::string& entity_name, const std::optional<std::string>& objective_name) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + entity_name.size() + (bool)objective_name * objective_name->size());
+                    packet.reserve(1 + entity_name.size() + (bool)objective_name * objective_name->size());
                     packet.push_back(0x42);
                     WriteString(packet, entity_name, 32767);
                     packet.push_back((bool)objective_name);
@@ -1134,7 +1134,7 @@ namespace crafted_craft {
 
                 Response removeResourcePack(ENBT::UUID id) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + 16);
+                    packet.reserve(1 + 1 + 16);
                     packet.push_back(0x43);
                     packet.push_back(true);
                     WriteUUID(id, packet);
@@ -1143,7 +1143,7 @@ namespace crafted_craft {
 
                 Response addResourcePack(ENBT::UUID id, const std::string& url, const std::string& hash, bool forced, const std::optional<Chat>& prompt) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + 16 + url.size() + hash.size() + 1);
+                    packet.reserve(1 + 1 + 16 + url.size() + hash.size() + 1);
                     packet.push_back(0x44);
                     WriteUUID(id, packet);
                     WriteString(packet, url, 32767);
@@ -1157,7 +1157,7 @@ namespace crafted_craft {
 
                 Response respawn(const std::string& dimension_type, const std::string& dimension_name, long hashed_seed, uint8_t gamemode, uint8_t previous_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, bool keep_attributes, bool keep_metadata) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + dimension_type.size() + dimension_name.size() + 8 + 1 + 1 + 1 + 1 + 4 + 1 + 1);
+                    packet.reserve(1 + dimension_type.size() + dimension_name.size() + 8 + 1 + 1 + 1 + 1 + 4 + 1 + 1);
                     packet.push_back(0x45);
                     WriteIdentifier(packet, dimension_type);
                     WriteIdentifier(packet, dimension_name);
@@ -1180,7 +1180,7 @@ namespace crafted_craft {
 
                 Response setHeadRotation(int32_t entity_id, calc::VECTOR head_rotation) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 4 * 2);
+                    packet.reserve(1 + 4 + 4 * 2);
                     packet.push_back(0x46);
                     WriteVar<int32_t>(entity_id, packet);
                     auto res = calc::to_yaw_pitch_256(head_rotation);
@@ -1192,7 +1192,7 @@ namespace crafted_craft {
                 Response updateSectionBlocks(int32_t section_x, int32_t section_z, int32_t section_y, const list_array<base_objects::compressed_block_state>& blocks) {
                     list_array<uint8_t> packet;
                     int64_t section_pos = ((section_x & 0x3FFFFF) << 42) | ((section_z & 0x3FFFFF) << 20) | (section_y & 0xFFFFF);
-                    packet.reserve_push_back(1 + 8 + 5 * blocks.size() * 6);
+                    packet.reserve(1 + 8 + 5 * blocks.size() * 6);
                     packet.push_back(0x47);
                     WriteValue<int64_t>(section_pos, packet);
                     WriteVar<int32_t>(blocks.size(), packet);
@@ -1229,7 +1229,7 @@ namespace crafted_craft {
 
                 Response setBorderCenter(double x, double z) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 8 * 2);
+                    packet.reserve(1 + 8 * 2);
                     packet.push_back(0x4B);
                     WriteValue<double>(x, packet);
                     WriteValue<double>(z, packet);
@@ -1238,7 +1238,7 @@ namespace crafted_craft {
 
                 Response setBorderLerp(double old_diameter, double new_diameter, int64_t speed_ms) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 8 * 2 + 8);
+                    packet.reserve(1 + 8 * 2 + 8);
                     packet.push_back(0x4C);
                     WriteValue<double>(old_diameter, packet);
                     WriteValue<double>(new_diameter, packet);
@@ -1248,7 +1248,7 @@ namespace crafted_craft {
 
                 Response setBorderSize(double diameter) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 8);
+                    packet.reserve(1 + 8);
                     packet.push_back(0x4D);
                     WriteValue<double>(diameter, packet);
                     return Response::Answer({packet});
@@ -1256,7 +1256,7 @@ namespace crafted_craft {
 
                 Response setBorderWarningDelay(int32_t warning_delay) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4);
+                    packet.reserve(1 + 4);
                     packet.push_back(0x4E);
                     WriteVar<int32_t>(warning_delay, packet);
                     return Response::Answer({packet});
@@ -1264,7 +1264,7 @@ namespace crafted_craft {
 
                 Response setBorderWarningDistance(int32_t warning_distance) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4);
+                    packet.reserve(1 + 4);
                     packet.push_back(0x4F);
                     WriteVar<int32_t>(warning_distance, packet);
                     return Response::Answer({packet});
@@ -1272,7 +1272,7 @@ namespace crafted_craft {
 
                 Response setCamera(int32_t entity_id) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4);
+                    packet.reserve(1 + 4);
                     packet.push_back(0x50);
                     WriteVar<int32_t>(entity_id, packet);
                     return Response::Answer({packet});
@@ -1282,7 +1282,7 @@ namespace crafted_craft {
                     if (slot > 8)
                         throw std::runtime_error("invalid slot");
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4);
+                    packet.reserve(1 + 4);
                     packet.push_back(0x51);
                     packet.push_back(slot);
                     return Response::Answer({packet});
@@ -1290,7 +1290,7 @@ namespace crafted_craft {
 
                 Response setCenterChunk(int32_t x, int32_t z) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 * 2);
+                    packet.reserve(1 + 4 * 2);
                     packet.push_back(0x52);
                     WriteVar<int32_t>(x, packet);
                     WriteVar<int32_t>(z, packet);
@@ -1299,7 +1299,7 @@ namespace crafted_craft {
 
                 Response setRenderDistance(int32_t render_distance) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4);
+                    packet.reserve(1 + 4);
                     packet.push_back(0x53);
                     WriteVar<int32_t>(render_distance, packet);
                     return Response::Answer({packet});
@@ -1307,7 +1307,7 @@ namespace crafted_craft {
 
                 Response setDefaultSpawnPosition(Position pos, float angle) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 8 + 1 + 8);
+                    packet.reserve(1 + 8 + 1 + 8);
                     packet.push_back(0x54);
                     WriteValue(pos.raw, packet);
                     WriteValue<float>(angle, packet);
@@ -1316,7 +1316,7 @@ namespace crafted_craft {
 
                 Response displayObjective(int32_t position, const std::string& objective_name) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + objective_name.size());
+                    packet.reserve(1 + 4 + objective_name.size());
                     packet.push_back(0x55);
                     packet.push_back(position);
                     WriteString(packet, objective_name, 32767);
@@ -1325,7 +1325,7 @@ namespace crafted_craft {
 
                 Response setEntityMetadata(int32_t entity_id, const list_array<uint8_t>& metadata) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + metadata.size());
+                    packet.reserve(1 + 4 + metadata.size());
                     packet.push_back(0x56);
                     WriteVar<int32_t>(entity_id, packet);
                     packet.push_back(metadata);
@@ -1334,7 +1334,7 @@ namespace crafted_craft {
 
                 Response linkEntities(int32_t attached_entity_id, int32_t holder_entity_id) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 * 2);
+                    packet.reserve(1 + 4 * 2);
                     packet.push_back(0x57);
                     WriteValue<int32_t>(attached_entity_id, packet);
                     WriteValue<int32_t>(holder_entity_id, packet);
@@ -1343,7 +1343,7 @@ namespace crafted_craft {
 
                 Response setEntityVelocity(int32_t entity_id, calc::VECTOR velocity) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 4 * 3);
+                    packet.reserve(1 + 4 + 4 * 3);
                     packet.push_back(0x58);
                     WriteVar<int32_t>(entity_id, packet);
                     auto res = calc::minecraft::packets::velocity(velocity);
@@ -1355,7 +1355,7 @@ namespace crafted_craft {
 
                 Response setEquipment(int32_t entity_id, uint8_t slot, const base_objects::slot& item) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 1);
+                    packet.reserve(1 + 4 + 1);
                     packet.push_back(0x59);
                     WriteVar<int32_t>(entity_id, packet);
                     packet.push_back(slot);
@@ -1365,7 +1365,7 @@ namespace crafted_craft {
 
                 Response setExperience(float experience_bar, int32_t level, int32_t total_experience) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 4 * 2);
+                    packet.reserve(1 + 4 + 4 * 2);
                     packet.push_back(0x5A);
                     WriteValue<float>(experience_bar, packet);
                     WriteVar<int32_t>(level, packet);
@@ -1375,7 +1375,7 @@ namespace crafted_craft {
 
                 Response setHealth(float health, int32_t food, float saturation) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 4 + 4);
+                    packet.reserve(1 + 4 + 4 + 4);
                     packet.push_back(0x5B);
                     WriteValue<float>(health, packet);
                     WriteVar<int32_t>(food, packet);
@@ -1385,7 +1385,7 @@ namespace crafted_craft {
 
                 Response updateObjectivesCreate(const std::string& objective_name, const Chat& display_name, int32_t render_type) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + objective_name.size() + 1 + 1 + 1);
+                    packet.reserve(1 + 1 + objective_name.size() + 1 + 1 + 1);
                     packet.push_back(0x5C);
                     WriteString(packet, objective_name, 32767);
                     packet.push_back(0);
@@ -1397,7 +1397,7 @@ namespace crafted_craft {
 
                 Response updateObjectivesCreateStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const ENBT& style) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + objective_name.size() + 1 + 1 + 1);
+                    packet.reserve(1 + 1 + objective_name.size() + 1 + 1 + 1);
                     packet.push_back(0x5C);
                     WriteString(packet, objective_name, 32767);
                     packet.push_back(0);
@@ -1411,7 +1411,7 @@ namespace crafted_craft {
 
                 Response updateObjectivesCreateFixed(const std::string& objective_name, const Chat& display_name, int32_t render_type, const Chat& content) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + objective_name.size() + 1 + 1 + 1);
+                    packet.reserve(1 + 1 + objective_name.size() + 1 + 1 + 1);
                     packet.push_back(0x5C);
                     WriteString(packet, objective_name, 32767);
                     packet.push_back(0);
@@ -1425,7 +1425,7 @@ namespace crafted_craft {
 
                 Response updateObjectivesRemove(const std::string& objective_name) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + objective_name.size());
+                    packet.reserve(1 + objective_name.size());
                     packet.push_back(0x5C);
                     WriteString(packet, objective_name, 32767);
                     packet.push_back(1);
@@ -1434,7 +1434,7 @@ namespace crafted_craft {
 
                 Response updateObjectivesInfo(const std::string& objective_name, const Chat& display_name, int32_t render_type) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + objective_name.size() + 1 + 1 + 1);
+                    packet.reserve(1 + 1 + objective_name.size() + 1 + 1 + 1);
                     packet.push_back(0x5C);
                     WriteString(packet, objective_name, 32767);
                     packet.push_back(2);
@@ -1446,7 +1446,7 @@ namespace crafted_craft {
 
                 Response updateObjectivesInfoStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const ENBT& style) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + objective_name.size() + 1 + 1 + 1);
+                    packet.reserve(1 + 1 + objective_name.size() + 1 + 1 + 1);
                     packet.push_back(0x5C);
                     WriteString(packet, objective_name, 32767);
                     packet.push_back(2);
@@ -1460,7 +1460,7 @@ namespace crafted_craft {
 
                 Response updateObjectivesInfoFixed(const std::string& objective_name, const Chat& display_name, int32_t render_type, const Chat& content) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + objective_name.size() + 1 + 1 + 1);
+                    packet.reserve(1 + 1 + objective_name.size() + 1 + 1 + 1);
                     packet.push_back(0x5C);
                     WriteString(packet, objective_name, 32767);
                     packet.push_back(2);
@@ -1474,7 +1474,7 @@ namespace crafted_craft {
 
                 Response setPassengers(int32_t vehicle_entity_id, const list_array<int32_t>& passengers) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 4 * passengers.size());
+                    packet.reserve(1 + 4 + 4 * passengers.size());
                     packet.push_back(0x5D);
                     WriteVar<int32_t>(vehicle_entity_id, packet);
                     WriteVar<int32_t>(passengers.size(), packet);
@@ -1485,7 +1485,7 @@ namespace crafted_craft {
 
                 Response updateTeamCreate(const std::string& team_name, const Chat& display_name, bool allow_fire_co_teamer, bool see_invisible_co_teamer, const std::string& name_tag_visibility, const std::string& collision_rule, int32_t team_color, const Chat& prefix, const Chat& suffix, const list_array<std::string>& entities) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + team_name.size() + name_tag_visibility.size() + collision_rule.size() + 4 * 3 + 1 + 4);
+                    packet.reserve(1 + 1 + team_name.size() + name_tag_visibility.size() + collision_rule.size() + 4 * 3 + 1 + 4);
                     packet.push_back(0x5E);
                     WriteString(packet, team_name, 32767);
                     packet.push_back(0);
@@ -1504,7 +1504,7 @@ namespace crafted_craft {
 
                 Response updateTeamRemove(const std::string& team_name) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + team_name.size());
+                    packet.reserve(1 + team_name.size());
                     packet.push_back(0x5E);
                     WriteString(packet, team_name, 32767);
                     packet.push_back(1);
@@ -1513,7 +1513,7 @@ namespace crafted_craft {
 
                 Response updateTeamInfo(const std::string& team_name, const Chat& display_name, bool allow_fire_co_teamer, bool see_invisible_co_teamer, const std::string& name_tag_visibility, const std::string& collision_rule, int32_t team_color, const Chat& prefix, const Chat& suffix) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + team_name.size() + name_tag_visibility.size() + collision_rule.size() + 4 * 3);
+                    packet.reserve(1 + 1 + team_name.size() + name_tag_visibility.size() + collision_rule.size() + 4 * 3);
                     packet.push_back(0x5E);
                     WriteString(packet, team_name, 32767);
                     packet.push_back(2);
@@ -1529,7 +1529,7 @@ namespace crafted_craft {
 
                 Response updateTeamAddEntities(const std::string& team_name, const list_array<std::string>& entities) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + team_name.size() + 4);
+                    packet.reserve(1 + 1 + team_name.size() + 4);
                     packet.push_back(0x5E);
                     WriteString(packet, team_name, 32767);
                     packet.push_back(3);
@@ -1541,7 +1541,7 @@ namespace crafted_craft {
 
                 Response updateTeamRemoveEntities(const std::string& team_name, const list_array<std::string>& entities) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + team_name.size() + 4);
+                    packet.reserve(1 + 1 + team_name.size() + 4);
                     packet.push_back(0x5E);
                     WriteString(packet, team_name, 32767);
                     packet.push_back(4);
@@ -1553,7 +1553,7 @@ namespace crafted_craft {
 
                 Response setScore(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + entity_name.size() + objective_name.size() + 4 + 1 + 1);
+                    packet.reserve(1 + entity_name.size() + objective_name.size() + 4 + 1 + 1);
                     packet.push_back(0x5F);
                     WriteString(packet, entity_name, 32767);
                     WriteString(packet, objective_name, 32767);
@@ -1567,7 +1567,7 @@ namespace crafted_craft {
 
                 Response setScoreStyled(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, const ENBT& styled) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + entity_name.size() + objective_name.size() + 4 + 1 + 1);
+                    packet.reserve(1 + entity_name.size() + objective_name.size() + 4 + 1 + 1);
                     packet.push_back(0x5F);
                     WriteString(packet, entity_name, 32767);
                     WriteString(packet, objective_name, 32767);
@@ -1582,7 +1582,7 @@ namespace crafted_craft {
 
                 Response setScoreFixed(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, Chat content) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + entity_name.size() + objective_name.size() + 4 + 1 + 1);
+                    packet.reserve(1 + entity_name.size() + objective_name.size() + 4 + 1 + 1);
                     packet.push_back(0x5F);
                     WriteString(packet, entity_name, 32767);
                     WriteString(packet, objective_name, 32767);
@@ -1597,7 +1597,7 @@ namespace crafted_craft {
 
                 Response setSimulationDistance(float distance) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4);
+                    packet.reserve(1 + 4);
                     packet.push_back(0x60);
                     WriteValue<float>(distance, packet);
                     return Response::Answer({packet});
@@ -1609,7 +1609,7 @@ namespace crafted_craft {
 
                 Response updateTime(int64_t world_age, int64_t time_of_day) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 8 * 2);
+                    packet.reserve(1 + 8 * 2);
                     packet.push_back(0x62);
                     WriteVar<int64_t>(world_age, packet);
                     WriteVar<int64_t>(time_of_day, packet);
@@ -1622,7 +1622,7 @@ namespace crafted_craft {
 
                 Response setTitleAnimationTimes(int32_t fade_in, int32_t stay, int32_t fade_out) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 * 3);
+                    packet.reserve(1 + 4 * 3);
                     packet.push_back(0x64);
                     WriteValue<int32_t>(fade_in, packet);
                     WriteValue<int32_t>(stay, packet);
@@ -1637,7 +1637,7 @@ namespace crafted_craft {
                         throw std::runtime_error("invalid pitch value");
 
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 * 3 + 4 * 2 + 8);
+                    packet.reserve(1 + 4 * 3 + 4 * 2 + 8);
                     packet.push_back(0x65);
                     WriteVar<int32_t>(sound_id + 1, packet);
                     WriteVar<int32_t>(category, packet);
@@ -1655,7 +1655,7 @@ namespace crafted_craft {
                         throw std::runtime_error("invalid pitch value");
 
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 * 3 + 4 * 2 + 8);
+                    packet.reserve(1 + 4 * 3 + 4 * 2 + 8);
                     packet.push_back(0x65);
                     packet.push_back(0);
                     WriteIdentifier(packet, sound_id);
@@ -1677,7 +1677,7 @@ namespace crafted_craft {
                         throw std::runtime_error("invalid pitch value");
 
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 * 3 + 4 * 3 + 4 * 2 + 8);
+                    packet.reserve(1 + 4 * 3 + 4 * 3 + 4 * 2 + 8);
                     packet.push_back(0x66);
                     WriteVar<int32_t>(sound_id + 1, packet);
                     WriteVar<int32_t>(category, packet);
@@ -1697,7 +1697,7 @@ namespace crafted_craft {
                         throw std::runtime_error("invalid pitch value");
 
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 * 3 + 4 * 3 + 4 * 2 + 8);
+                    packet.reserve(1 + 4 * 3 + 4 * 3 + 4 * 2 + 8);
                     packet.push_back(0x66);
                     packet.push_back(0);
                     WriteIdentifier(packet, sound_id);
@@ -1717,7 +1717,7 @@ namespace crafted_craft {
                 //internal
                 Response startConfiguration() {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1);
+                    packet.reserve(1);
                     packet.push_back(0x67);
                     return Response::Answer({packet});
                 }
@@ -1732,7 +1732,7 @@ namespace crafted_craft {
                     if (flags & 0x02)
                         throw std::runtime_error("invalid params for this flag");
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + 4);
+                    packet.reserve(1 + 1 + 4);
                     packet.push_back(0x68);
                     packet.push_back(flags);
                     WriteVar<int32_t>(source, packet);
@@ -1743,7 +1743,7 @@ namespace crafted_craft {
                     if (flags & 0x01)
                         throw std::runtime_error("invalid params for this flag");
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + sound.size());
+                    packet.reserve(1 + 1 + sound.size());
                     packet.push_back(0x68);
                     packet.push_back(flags);
                     WriteIdentifier(packet, sound);
@@ -1752,7 +1752,7 @@ namespace crafted_craft {
 
                 Response stopSound(uint8_t flags, int32_t source, const std::string& sound) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 1 + 4 + sound.size());
+                    packet.reserve(1 + 1 + 4 + sound.size());
                     packet.push_back(0x68);
                     packet.push_back(flags);
                     WriteVar<int32_t>(source, packet);
@@ -1774,7 +1774,7 @@ namespace crafted_craft {
 
                 Response tagQueryResponse(int32_t transaction_id, const ENBT& nbt) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4);
+                    packet.reserve(1 + 4);
                     packet.push_back(0x6B);
                     WriteVar<int32_t>(transaction_id, packet);
                     packet.push_back(NBT::build(nbt).get_as_network());
@@ -1783,7 +1783,7 @@ namespace crafted_craft {
 
                 Response pickupItem(int32_t collected_entity_id, int32_t collector_entity_id, int32_t pickup_item_count) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 * 3);
+                    packet.reserve(1 + 4 * 3);
                     packet.push_back(0x6C);
                     WriteVar<int32_t>(collected_entity_id, packet);
                     WriteVar<int32_t>(collector_entity_id, packet);
@@ -1793,7 +1793,7 @@ namespace crafted_craft {
 
                 Response teleportEntity(int32_t entity_id, calc::VECTOR pos, float yaw, float pitch, bool on_ground) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 4 * 3 + 4 * 2 + 1);
+                    packet.reserve(1 + 4 + 4 * 3 + 4 * 2 + 1);
                     packet.push_back(0x6D);
                     WriteVar<int32_t>(entity_id, packet);
                     WriteValue<double>(pos.x, packet);
@@ -1807,7 +1807,7 @@ namespace crafted_craft {
 
                 Response setTickingState(float tick_rate, bool is_frozen) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(6);
+                    packet.reserve(6);
                     packet.push_back(0x6E);
                     WriteValue<float>(tick_rate, packet);
                     packet.push_back(is_frozen);
@@ -1816,7 +1816,7 @@ namespace crafted_craft {
 
                 Response stepTick(int32_t step_count) {
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(5);
+                    packet.reserve(5);
                     packet.push_back(0x6F);
                     WriteVar<int32_t>(step_count, packet);
                     return Response::Answer({packet});

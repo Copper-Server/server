@@ -3,6 +3,7 @@
 #include "../base_objects/commands.hpp"
 #include "../base_objects/virtual_client.hpp"
 #include "../plugin/registration.hpp"
+#include "../storage/permissions_manager.hpp"
 #include "../storage/players_data.hpp"
 
 namespace crafted_craft {
@@ -16,8 +17,9 @@ namespace crafted_craft {
         public:
             base_objects::command_manager manager;
 
-            ServerPlugin(const std::filesystem::path& base_path, const std::filesystem::path& storage_path, TCPserver& server);
+            ServerPlugin(const std::filesystem::path& base_path, const std::filesystem::path& storage_path);
 
+            void OnRegister(const PluginRegistrationPtr& self) override;
             void OnLoad(const PluginRegistrationPtr& self) override;
             void OnPostLoad(const std::shared_ptr<PluginRegistration>&) override;
             void OnUnload(const PluginRegistrationPtr& self) override;

@@ -97,7 +97,7 @@ namespace crafted_craft {
                     auto& plugin = std::get<PluginRegistration::PluginResponse>(response);
                     plugin_message_id++;
                     list_array<uint8_t> packet;
-                    packet.reserve_push_back(1 + 4 + 1 + plugin.data.size());
+                    packet.reserve(1 + 4 + 1 + plugin.data.size());
                     packet.push_back(0x04);
                     WriteVar<int32_t>(plugin_message_id, packet);
                     WriteIdentifier(packet, plugin.plugin_chanel);

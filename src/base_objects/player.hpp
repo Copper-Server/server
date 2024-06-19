@@ -1,6 +1,7 @@
 #ifndef SRC_BASE_OBJECTS_PLAYER
 #define SRC_BASE_OBJECTS_PLAYER
 #include "../library/enbt.hpp"
+#include "permissions.hpp"
 #include "slot.hpp"
 #include <cstdint>
 #include <string>
@@ -87,6 +88,8 @@ namespace crafted_craft {
             std::optional<DeathLocation> last_death_location;
 
             std::optional<ENBT::UUID> ride_entity_id;
+
+            list_array<std::string> permissions;
 
             //sent to client
             ENBT additional_data = ENBT::compound();

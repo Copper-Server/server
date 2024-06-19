@@ -11,39 +11,35 @@
 #include "build_in_plugins/server.hpp"
 #include "build_in_plugins/special/status.hpp"
 #include "build_in_plugins/world.hpp"
+#include "library/list_array.hpp"
 #include "plugin/main.hpp"
 #include "registers.hpp"
 #include <boost/bimap.hpp>
 #include <memory>
 using namespace crafted_craft;
 
-#include "base_objects/bounds.hpp"
-
 int main() {
+    list_array<uint16_t> test;
+    auto current_path = std::filesystem::current_path();
+    std::string storage_path = (current_path / "storage").string();
+    std::filesystem::create_directories(storage_path);
+
     fast_task::task::create_executor();
     fast_task::task::task::enable_task_naming = true;
     boost::asio::io_service service;
 
-    TCPserver server(&service, "localhost", 1234);
+    TCPserver server(current_path, &service, "localhost", 1234);
+    server.server_config.load(current_path);
     TCPserver::register_global_instance(server);
     log::commands::init();
 
-
-    auto current_path = std::filesystem::current_path();
-    server.server_config.load(current_path);
-    std::string storage_path = (current_path / "storage").string();
-    std::filesystem::create_directories(storage_path);
-
-
     log::disable_log_level(log::level::debug);
 
-    auto server_plugin = std::make_shared<build_in_plugins::ServerPlugin>(current_path, storage_path, server);
-    pluginManagement.registerPlugin("server", server_plugin);
-
-    pluginManagement.registerPlugin("world", std::make_shared<build_in_plugins::WorldManagementPlugin>(storage_path, server.server_config));
+    pluginManagement.registerPlugin("server", std::make_shared<build_in_plugins::ServerPlugin>(current_path, storage_path));
+    pluginManagement.registerPlugin("world", std::make_shared<build_in_plugins::WorldManagementPlugin>(storage_path));
     pluginManagement.registerPlugin("allowlist", std::make_shared<build_in_plugins::AllowListPlugin>(storage_path));
     pluginManagement.registerPlugin("ban", std::make_shared<build_in_plugins::BanPlugin>(storage_path));
-    pluginManagement.registerPlugin("communication_core", std::make_shared<build_in_plugins::CommunicationCorePlugin>(server.online_players));
+    pluginManagement.registerPlugin("communication_core", std::make_shared<build_in_plugins::CommunicationCorePlugin>());
     pluginManagement.registerPlugin("minecraft", std::make_shared<build_in_plugins::MinecraftPlugin>());
 
     pluginManagement.callLoad();
@@ -55,7 +51,7 @@ int main() {
     first_client_holder = new TCPClientHandleHandshaking();
 
     server.start();
-    fast_task::task::shutDown();
     log::commands::deinit();
+    fast_task::task::shutDown();
     return 0;
 }

@@ -25,7 +25,7 @@
 
 #include "storage/memory/entity_ids_map.hpp"
 #include "storage/memory/online_player.hpp"
-
+#include "storage/permissions_manager.hpp"
 
 namespace crafted_craft {
     constexpr bool CONSTEXPR_DEBUG_DATA_TRANSPORT = true;
@@ -168,6 +168,7 @@ namespace crafted_craft {
 
         storage::memory::online_player_storage online_players;
         storage::memory::entity_ids_map_storage entity_ids_map;
+        storage::permissions_manager permissions_manager;
 
         base_objects::ServerConfiguration server_config;
 
@@ -194,7 +195,7 @@ namespace crafted_craft {
         //30 sec
         uint64_t all_connections_timeout = 30000;
 
-        TCPserver(boost::asio::io_service* io_service, const std::string& ip, uint16_t port, size_t threads = 0, size_t ssl_key_length = 1024);
+        TCPserver(const std::filesystem::path& base_path, boost::asio::io_service* io_service, const std::string& ip, uint16_t port, size_t threads = 0, size_t ssl_key_length = 1024);
 
         ~TCPserver();
 

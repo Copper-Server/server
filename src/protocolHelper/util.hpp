@@ -259,7 +259,7 @@ namespace crafted_craft {
         if (len < 0)
             throw std::out_of_range("list array len out of range");
         list_array<uint8_t> res;
-        res.reserve_push_back(len);
+        res.reserve(len);
         for (int32_t i = 0; i < len; i++)
             res.push_back(data.read());
         return res;
@@ -357,7 +357,7 @@ namespace crafted_craft {
             if (motd.size() + 20 > 0xFFFF)
                 throw std::invalid_argument("motd too long");
             list_array<char16_t> legacy_motd;
-            legacy_motd.reserve_push_back(motd.size() + 20);
+            legacy_motd.reserve(motd.size() + 20);
             legacy_motd.push_back(u'\u00A7');
             legacy_motd.push_back(u'1');
             legacy_motd.push_back(u'\0'); //default color
@@ -470,7 +470,7 @@ namespace crafted_craft {
                         throw std::exception("deflateEnd failed");
                 }
                 list_array<uint8_t> compressed_size;
-                compressed_size.reserve_push_back(5);
+                compressed_size.reserve(5);
                 WriteVar<int32_t>(build_packet.size(), compressed_size);
                 build_packet.push_front(compressed_size);
             }

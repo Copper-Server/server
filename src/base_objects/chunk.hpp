@@ -15,7 +15,7 @@ namespace crafted_craft {
 
                 pallete_data(uint8_t bits_per_entry)
                     : bits_per_entry(bits_per_entry) {
-                    data.reserve_push_back((16 * 16 * 16) * bits_per_entry / 64);
+                    data.reserve_back((16 * 16 * 16) * bits_per_entry / 64);
                 }
 
                 constexpr void add(size_t value) {

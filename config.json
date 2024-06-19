@@ -1,0 +1,94 @@
+{
+    "allowed_dimensions": [
+        "overworld"
+    ],
+    "anti_cheat": {
+        "block_ids": [
+        ],
+        "check_block_breaking_time": true,
+        "fastplace": {
+            "max_clicks": 4
+        },
+        "fly": {
+            "allow_flying_time": 200,
+            "prevent_illegal_flying": true
+        },
+        "killaura": {
+            "angle_threshold": 5E0,
+            "enable": true
+        },
+        "movement": {
+            "detect_baritone": true,
+            "no_slow_down": true
+        },
+        "nofall": true,
+        "reach_threshold": 2.0000000298023224E-1,
+        "scaffold": {
+            "enable_all": true
+        },
+        "speed": {
+            "max_speed": 3.0000001192092896E-1,
+            "prevent_illegal_speed": true
+        },
+        "xray": {
+            "hide_surrounded_blocks": false,
+            "send_fake_blocks": false,
+            "visibility_distance": 0
+        }
+    },
+    "game_play": {
+        "allow_flight": true,
+        "difficulty": "normal",
+        "enable_command_block": false,
+        "gamemode": "survival",
+        "hardcore": false,
+        "max_chained_neighbor_updates": 4000,
+        "max_tick_time": 70,
+        "max_word_size": 4294967295,
+        "player_idle_timeout": 2000,
+        "pvp": true,
+        "simulation_distance": 5,
+        "spawn_animals": true,
+        "spawn_monsters": true,
+        "spawn_protection": 1,
+        "sync_chunk_writes": false,
+        "view_distance": 10
+    },
+    "mojang": {
+        "enforce_secure_profile": true
+    },
+    "protocol": {
+        "compression_threshold": 4294967295,
+        "connection_conflict": "kick_connected",
+        "max_players": 0,
+        "offline_mode": true,
+        "prevent_proxy_connections": false,
+        "rate_limit": 0
+    },
+    "query": {
+        "enabled": false,
+        "port": 17543
+    },
+    "rcon": {
+        "broadcast_to_ops": true,
+        "enabled": false,
+        "password": "",
+        "port": 64326
+    },
+    "status": {
+        "description": "",
+        "enable": true,
+        "sample_players_count": 20,
+        "server_name": "CraftedCraft",
+        "show_players": true
+    },
+    "world": {
+        "generate_structures": true,
+        "generator_settings": {
+        },
+        "name": "overworld",
+        "seed": "0",
+        "type": "default",
+        "unload_speed": 10
+    }
+}

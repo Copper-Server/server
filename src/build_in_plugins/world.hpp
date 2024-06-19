@@ -26,8 +26,8 @@ namespace crafted_craft {
 
 
         public:
-            WorldManagementPlugin(const std::string& storage_path, base_objects::ServerConfiguration& config)
-                : worlds_storage(config, storage_path) {
+            WorldManagementPlugin(const std::string& storage_path)
+                : worlds_storage(TCPserver::get_global_instance().server_config, storage_path) {
             }
 
             void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override {
@@ -37,7 +37,7 @@ namespace crafted_craft {
                 }
                 {
                     auto world_id = worlds.add_child({"remove"}).add_child({"[world_id]"});
-                    world_id.set_callback([this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                    world_id.set_callback("command.world.remove", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         uint64_t id;
                         try {
                             id = std::stoull(args[0]);
@@ -59,7 +59,7 @@ namespace crafted_craft {
                     auto base = worlds.add_child({"base"});
                     {
                         auto set = base.add_child({"set"}).add_child({"[world_id]"});
-                        set.set_callback([this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                        set.set_callback("command.world.base.set", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                             uint64_t id;
                             try {
                                 id = std::stoull(args[0]);
@@ -77,7 +77,7 @@ namespace crafted_craft {
                         });
                         add_world_id_suggestion(set);
                     }
-                    base.set_callback([this](const list_array<std::string>&, base_objects::client_data_holder& client) {
+                    base.set_callback("command.world.base", [this](const list_array<std::string>&, base_objects::client_data_holder& client) {
                         if (worlds_storage.base_world_id == -1)
                             api::players::calls::on_system_message({client, {"Base world not set."}});
                         else

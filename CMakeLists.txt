@@ -33,6 +33,7 @@ FILE(GLOB SRCFILES
         src/base_objects/*.cpp 
         src/storage/*.cpp 
         src/api/*.cpp 
+        src/util/*.cpp 
         src/plugin/*.cpp 
         src/build_in_plugins/*.cpp 
         src/*.cpp 
