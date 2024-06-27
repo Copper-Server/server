@@ -36,7 +36,11 @@ namespace crafted_craft {
             std::ifstream file(path, std::ios::binary);
             if (!file.is_open()) {
                 file.close();
-                throw std::runtime_error("Failed to open file: " + path.string());
+                if (std::filesystem::exists(path))
+                    throw std::runtime_error("Failed to open file: " + path.string());
+                else
+                    save();
+                return;
             }
             ENBT file_data = ENBTHelper::ReadToken(file);
             file.close();

@@ -111,13 +111,7 @@ namespace crafted_craft {
 
             void keep_reaction(entity& target_entity);
 
-            entity_data() {
-                sizeof(entity_reaction);
-                sizeof(block_reaction);
-                sizeof(environment_reaction);
-                sizeof(hunger_exhaustion);
-                sizeof(entity_data);
-            }
+            entity_data() {}
 
             uint64_t can_despawn : 1;
             uint64_t idle_tick_to_despawn : 39;

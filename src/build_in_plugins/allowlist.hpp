@@ -5,17 +5,21 @@
 #include "../storage/list_storage.hpp"
 
 namespace crafted_craft {
-    class TCPserver;
+    class Server;
     namespace build_in_plugins {
         class AllowListPlugin : public PluginRegistration {
             storage::list_storage allow_list;
-            TCPserver& server;
+            Server& server;
             api::allowlist::allowlist_mode mode = api::allowlist::allowlist_mode::off;
 
         public:
-            AllowListPlugin(const std::string& storage_path);
+            AllowListPlugin();
 
             void OnLoad(const PluginRegistrationPtr& self) override;
+
+            void OnUnload(const PluginRegistrationPtr& self) override;
+
+            void OnPostLoad(const PluginRegistrationPtr& self) override;
 
             void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override;
             plugin_response OnPlay_initialize(base_objects::client_data_holder& client) override;

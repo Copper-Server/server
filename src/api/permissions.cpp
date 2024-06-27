@@ -17,6 +17,18 @@ namespace crafted_craft {
                 return perm->has_rights(action_name, client);
             }
 
+            bool has_action(const std::string& action_name) {
+                if (perm == nullptr)
+                    return false;
+                return perm->has_action(action_name);
+            }
+
+            bool has_permissions(const std::string& action_name) {
+                if (perm == nullptr)
+                    return false;
+                return perm->has_permissions(action_name);
+            }
+
             void add_requirement(const std::string& action_name, const std::string& permission_tag) {
                 if (perm == nullptr)
                     return;
@@ -41,6 +53,23 @@ namespace crafted_craft {
                 perm->remove_permission(permission_tag);
             }
 
+            void enum_actions(const std::function<void(const std::string&)>& callback) {
+                if (perm == nullptr)
+                    return;
+                perm->enum_actions(callback);
+            }
+
+            void enum_action_requirements(const std::string& action_name, const std::function<void(const std::string&)>& callback) {
+                if (perm == nullptr)
+                    return;
+                perm->enum_action_requirements(action_name, callback);
+            }
+
+            void enum_permissions(const std::function<void(const std::string&)>& callback) {
+                if (perm == nullptr)
+                    return;
+                perm->enum_permissions(callback);
+            }
         };
     }
 }

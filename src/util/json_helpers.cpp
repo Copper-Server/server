@@ -7,21 +7,25 @@
 
 namespace crafted_craft {
     namespace util {
-        boost::json::object try_read_json_file(const std::filesystem::path& file_path) {
+        std::optional<boost::json::object> try_read_json_file(const std::filesystem::path& file_path) {
             boost::json::object data;
             {
                 std::ifstream file(file_path);
                 if (file.is_open()) {
                     boost::system::error_code ec;
-                    data = boost::json::parse(file, ec).as_object();
+                    auto result = boost::json::parse(file, ec);
+                    data = result.is_object() ? std::move(result).as_object() : boost::json::object();
                     file.close();
                     if (ec) {
+                        if (ec.message() == "incomplete JSON")
+                            if (std::filesystem::is_empty(file_path))
+                                return data;
                         std::string err_string =
                             ec.has_location()
                                 ? std::format("Failed to read {} file because:\n{}\n On:\n{}", file_path.string(), ec.message(), ec.location().to_string())
                                 : std::format("Failed to read {} file because:\n{}", file_path.string(), ec.message());
                         log::warn("server", err_string);
-                        return {};
+                        return std::nullopt;
                     }
                 }
             }

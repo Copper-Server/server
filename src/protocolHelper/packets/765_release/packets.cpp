@@ -237,7 +237,7 @@ namespace crafted_craft {
 
                 Response bossBarAdd(const ENBT::UUID& id, const Chat& title, float health, int32_t color, int32_t division, uint8_t flags) {
                     list_array<uint8_t> packet;
-                    packet.reserve(title.ToStr().size() + 4 * 4 + 1 + 16 + 2);
+                    packet.reserve(4 * 4 + 1 + 16 + 2);
                     packet.push_back(0x0A);
                     WriteUUID(id, packet);
                     packet.push_back(0);
@@ -270,7 +270,7 @@ namespace crafted_craft {
 
                 Response bossBarUpdateTitle(const ENBT::UUID& id, const Chat& title) {
                     list_array<uint8_t> packet;
-                    packet.reserve(title.ToStr().size() + 1 + 16 + 2);
+                    packet.reserve(1 + 16 + 2);
                     packet.push_back(0x0A);
                     WriteUUID(id, packet);
                     packet.push_back(3);
@@ -500,9 +500,9 @@ namespace crafted_craft {
                     return Response::Disconnect({list_array<uint8_t>::concat(0x1B, reason.ToTextComponent())});
                 }
 
-                Response disguisedChatMessage(const Chat& message, int32_t chat_type, const Chat& sender, std::optional<Chat> target_name) {
+                Response disguisedChatMessage(const Chat& message, int32_t chat_type, const Chat& sender, const std::optional<Chat>& target_name) {
                     list_array<uint8_t> packet;
-                    packet.reserve(1 + 2 + 2 + 1 + (bool)target_name * 2 + (bool)target_name * target_name->ToStr().size());
+                    packet.reserve(1 + 2 + 2 + 1);
                     packet.push_back(0x1C);
                     packet.push_back(message.ToTextComponent());
                     WriteVar<int32_t>(chat_type, packet);
@@ -805,7 +805,7 @@ namespace crafted_craft {
 
                 Response openScreen(int32_t window_id, int32_t type, const Chat& title) {
                     list_array<uint8_t> packet;
-                    packet.reserve(1 + 4 * 2 + title.ToStr().size());
+                    packet.reserve(1 + 4 * 2);
                     packet.push_back(0x31);
                     packet.push_back(window_id);
                     WriteVar<int32_t>(type, packet);
@@ -1191,7 +1191,7 @@ namespace crafted_craft {
 
                 Response updateSectionBlocks(int32_t section_x, int32_t section_z, int32_t section_y, const list_array<base_objects::compressed_block_state>& blocks) {
                     list_array<uint8_t> packet;
-                    int64_t section_pos = ((section_x & 0x3FFFFF) << 42) | ((section_z & 0x3FFFFF) << 20) | (section_y & 0xFFFFF);
+                    int64_t section_pos = (int64_t(section_x & 0x3FFFFF) << 42) | (int64_t(section_z & 0x3FFFFF) << 20) | int64_t(section_y & 0xFFFFF);
                     packet.reserve(1 + 8 + 5 * blocks.size() * 6);
                     packet.push_back(0x47);
                     WriteValue<int64_t>(section_pos, packet);

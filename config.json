@@ -69,15 +69,13 @@
         "enabled": false,
         "port": 17543
     },
-    "rcon": {
-        "broadcast_to_ops": true,
-        "enabled": false,
-        "password": "",
-        "port": 64326
+    "server": {
+        "storage_folder": "storage"
     },
     "status": {
         "description": "",
         "enable": true,
+        "favicon": "",
         "sample_players_count": 20,
         "server_name": "CraftedCraft",
         "show_players": true

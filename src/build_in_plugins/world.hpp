@@ -26,8 +26,8 @@ namespace crafted_craft {
 
 
         public:
-            WorldManagementPlugin(const std::string& storage_path)
-                : worlds_storage(TCPserver::get_global_instance().server_config, storage_path) {
+            WorldManagementPlugin()
+                : worlds_storage(Server::instance().config, Server::instance().config.server.base_path / Server::instance().config.server.storage_folder) {
             }
 
             void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override {

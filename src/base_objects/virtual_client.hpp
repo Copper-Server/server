@@ -4,14 +4,14 @@
 #include "shared_client_data.hpp"
 
 namespace crafted_craft {
-    class TCPserver;
+    class Server;
 
     namespace base_objects {
         struct virtual_client {
             client_data_holder client;
-            TCPserver& assigned_server;
+            Server& assigned_server;
 
-            virtual_client(client_data_holder allocated, const std::string& name, const std::string& brand, TCPserver& assigned_server)
+            virtual_client(client_data_holder allocated, const std::string& name, const std::string& brand, Server& assigned_server)
                 : client(allocated), assigned_server(assigned_server) {
 
                 client->name = name;
@@ -30,11 +30,11 @@ namespace crafted_craft {
                 client->packets_state.protocol_version = -1;
                 client->packets_state.state = SharedClientData::packets_state_t::protocol_state::play;
                 client->special_callback = [this](SharedClientData& self) {
-                    for (auto& packets : self.getPendingPackets()) {
-                        packets.data.forEach([&](auto& it) {
+                    self.getPendingPackets().for_each([&](auto packet) {
+                        packet.data.for_each([&](Response::Item& it) {
                             parse_packet(it.data);
                         });
-                    }
+                    });
                 };
             }
 

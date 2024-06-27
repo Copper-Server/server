@@ -7,17 +7,17 @@
 #include "../storage/players_data.hpp"
 
 namespace crafted_craft {
-    class TCPserver;
+    class Server;
     namespace build_in_plugins {
         class ServerPlugin : public PluginRegistration {
             storage::players_data players_data;
-            TCPserver& server;
+            Server& server;
             base_objects::virtual_client console_data;
-            std::filesystem::path base_path;
+
         public:
             base_objects::command_manager manager;
 
-            ServerPlugin(const std::filesystem::path& base_path, const std::filesystem::path& storage_path);
+            ServerPlugin();
 
             void OnRegister(const PluginRegistrationPtr& self) override;
             void OnLoad(const PluginRegistrationPtr& self) override;

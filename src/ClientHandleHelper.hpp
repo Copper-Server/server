@@ -30,7 +30,7 @@
 namespace crafted_craft {
     constexpr bool CONSTEXPR_DEBUG_DATA_TRANSPORT = true;
     struct TCPsession;
-    class TCPserver;
+    class Server;
 
     class AESencryption {
         AESencryption(const AESencryption&) = delete;
@@ -94,11 +94,11 @@ namespace crafted_craft {
         boost::asio::ip::tcp::socket sock;
         int32_t protocol_version = -1;
 
-        TCPsession(boost::asio::ip::tcp::socket&& s, TCPclient* client_handler, uint64_t& set_timeout, TCPserver* server = nullptr);
+        TCPsession(boost::asio::ip::tcp::socket&& s, TCPclient* client_handler, uint64_t& set_timeout, Server* server);
         ~TCPsession();
         base_objects::client_data_holder& sharedDataRef();
         SharedClientData& sharedData();
-        TCPserver& serverData();
+        Server& serverData();
         void connect();
         void connect(std::vector<uint8_t>& connection_data, boost::system::error_code ec);
         void disconnect();
@@ -122,7 +122,7 @@ namespace crafted_craft {
         base_objects::client_data_holder _sharedData;
         TCPclient* chandler = nullptr;
         std::atomic_bool active{false};
-        TCPserver* server;
+        Server* server;
         bool encryption_enabled : 1 = false;
 
     public:
@@ -130,7 +130,7 @@ namespace crafted_craft {
         int32_t compression_threshold = -1;
     };
 
-    class TCPserver {
+    class Server {
         boost::asio::io_service* service;
         boost::asio::ip::tcp::acceptor TCPacceptor;
         boost::asio::thread_pool threads;
@@ -160,17 +160,16 @@ namespace crafted_craft {
 
         friend class TCPsession;
         void close_session(TCPsession* session);
-        static TCPserver* global_instance;
+        static Server* global_instance;
 
     public:
-        static TCPserver& get_global_instance();
-        static void register_global_instance(TCPserver& instance);
+        static Server& instance();
 
         storage::memory::online_player_storage online_players;
         storage::memory::entity_ids_map_storage entity_ids_map;
         storage::permissions_manager permissions_manager;
 
-        base_objects::ServerConfiguration server_config;
+        base_objects::ServerConfiguration config;
 
         boost::asio::io_service& getService();
         bool is_local_server();
@@ -195,9 +194,9 @@ namespace crafted_craft {
         //30 sec
         uint64_t all_connections_timeout = 30000;
 
-        TCPserver(const std::filesystem::path& base_path, boost::asio::io_service* io_service, const std::string& ip, uint16_t port, size_t threads = 0, size_t ssl_key_length = 1024);
+        Server(boost::asio::io_service* io_service, const std::string& ip, uint16_t port, size_t threads = 0, size_t ssl_key_length = 1024);
 
-        ~TCPserver();
+        ~Server();
 
         void start();
 

@@ -10,16 +10,24 @@
 
 namespace crafted_craft {
     namespace build_in_plugins {
-        BanPlugin::BanPlugin(const std::string& storage_path)
-            : banned_players(storage_path + "/banned_players.c_enbt"),
-              banned_ips(storage_path + "/banned_ips.c_enbt"),
-              server(TCPserver::get_global_instance()) {
+        BanPlugin::BanPlugin()
+            : banned_players(Server::instance().config.server.get_storage_path() / +"banned_players.c_enbt"),
+              banned_ips(Server::instance().config.server.get_storage_path() / +"banned_ips.c_enbt"),
+              server(Server::instance()) {
             if (!banned_players.is_loaded()) {
                 log::error("BanPlugin", "Failed to load banned players list");
             }
             if (!banned_ips.is_loaded()) {
                 log::error("BanPlugin", "Failed to load banned ips list");
             }
+        }
+
+        void BanPlugin::OnLoad(const PluginRegistrationPtr& self) {
+            TCPClientHandlePlay::base_plugins.push_back(self);
+        }
+
+        void BanPlugin::OnUnload(const PluginRegistrationPtr& self) {
+            TCPClientHandlePlay::base_plugins.remove(self);
         }
 
         void BanPlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
@@ -34,6 +42,10 @@ namespace crafted_craft {
                         if (api::ban::on_ban({args[0], client->name, ""}))
                             return;
 
+                        if (banned_players.contains(args[0])) {
+                            api::players::calls::on_system_message({client, {"Player " + args[0] + " has been already banned."}});
+                            return;
+                        }
                         banned_players.add(args[0], {});
                         api::players::calls::on_system_message({client, {"Player " + args[0] + " has been banned."}});
                     })
@@ -45,6 +57,10 @@ namespace crafted_craft {
                         }
                         if (api::ban::on_ban({args[0], client->name, args[1]}))
                             return;
+                        if (banned_players.contains(args[0])) {
+                            api::players::calls::on_system_message({client, {"Player " + args[0] + " has been already banned."}});
+                            return;
+                        }
                         banned_players.add(args[0], args[1]);
                         api::players::calls::on_system_message({client, {"Player " + args[0] + " has been banned"}});
                     });
@@ -62,6 +78,10 @@ namespace crafted_craft {
                         }
                         if (!api::ban::on_pardon({args[0], client->name, args[1]}))
                             return;
+                        if (!banned_players.contains(args[0])) {
+                            api::players::calls::on_system_message({client, {"Player " + args[0] + " has not been banned."}});
+                            return;
+                        }
                         banned_players.remove(args[0]);
                         api::players::calls::on_system_message({client, {"Player " + args[0] + " has been pardoned."}});
                     });
@@ -71,9 +91,14 @@ namespace crafted_craft {
             }
             {
                 auto ban_list = browser.add_child({"banlist", "list all banned players or ips", "/banlist ips|players"});
-                ban_list.add_child({"players", "list all banned players", "/banlist players"})
-                    .set_callback("command.banlist.players", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                        auto banned = banned_players.keys();
+                {
+                    auto players =
+                        ban_list.add_child({"players", "list all banned players", "/banlist players"});
+
+
+                    players.set_callback("command.banlist.players", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                        bool max_reached = false;
+                        auto banned = banned_players.keys(100, max_reached);
                         if (banned.size() == 0) {
                             api::players::calls::on_system_message({client, {"There are no banned players."}});
                         } else if (banned.size() == 1) {
@@ -81,18 +106,50 @@ namespace crafted_craft {
                         } else {
                             std::string last_item = banned.back();
                             banned.pop_back();
-                            std::string message = "There are " + std::to_string(banned.size()) + " total banned players:\n";
+                            std::string message = "There a total of " + std::to_string(banned.size() + 1) + " banned players:\n";
                             for (auto& player : banned)
                                 message += player + ", ";
 
-                            message.erase(message.size() - 2, 2);
-                            message += "and " + last_item + '.';
+                            if (!max_reached) {
+                                message.erase(message.size() - 2, 2);
+                                message += "and " + last_item + '.';
+                            } else
+                                message += last_item + ", ...";
                             api::players::calls::on_system_message({client, {message}});
                         }
                     });
-                ban_list.add_child({"ips", "list all banned ips", "/banlist ips"})
-                    .set_callback("command.banlist.ips", [this](const list_array<std::string>&, base_objects::client_data_holder& client) {
-                        auto banned = banned_ips.keys();
+
+                    players
+                        .add_child({"detailed", "list all banned players with reasons", "/banlist players detailed"})
+                        .set_callback("command.banlist.players.detailed", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                            std::string message = "List of banned players:\n";
+                            banned_players.for_each(
+                                100,
+                                [&message](auto& it) {
+                                    message += ("\t" + it.first + (it.second.is_none() ? "\n" : ("\n\t\tReason: " + (std::string)it.second + "\n")));
+                                },
+                                [&message]() {
+                                    message += "...\n";
+                                }
+                            );
+                            message.erase(message.size() - 1, 1);
+                            api::players::calls::on_system_message({client, {message}});
+                        });
+
+                    players
+                        .add_child({"contains", "", ""})
+                        .add_child({"<player>", "returns if the player in list", "/banlist players contains <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                        .set_callback("command.banlist.players.contains", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                            api::players::calls::on_system_message({client, {"Player " + args[0] + (banned_players.contains(args[0]) ? " is in the list." : " is not in the list.")}});
+                        });
+                }
+                {
+                    auto ips =
+                        ban_list.add_child({"ips", "list all banned ips", "/banlist ips"});
+
+                    ips.set_callback("command.banlist.ips", [this](const list_array<std::string>&, base_objects::client_data_holder& client) {
+                        bool max_reached = false;
+                        auto banned = banned_ips.keys(100, max_reached);
                         if (banned.size() == 0) {
                             api::players::calls::on_system_message({client, {"There are no banned ips."}});
                         } else if (banned.size() == 1) {
@@ -100,15 +157,41 @@ namespace crafted_craft {
                         } else {
                             std::string last_item = banned.back();
                             banned.pop_back();
-                            std::string message = "There are " + std::to_string(banned.size()) + " total banned ips:\n";
+                            std::string message = "There a total of " + std::to_string(banned.size() + 1) + " banned IPs:\n";
                             for (auto& player : banned)
                                 message += player + ", ";
 
-                            message.erase(message.size() - 2, 2);
-                            message += "and " + last_item + '.';
+                            if (!max_reached) {
+                                message.erase(message.size() - 2, 2);
+                                message += "and " + last_item + '.';
+                            } else
+                                message += last_item + ", ...";
                             api::players::calls::on_system_message({client, {message}});
                         }
                     });
+                    ips
+                        .add_child({"detailed", "list all banned ips with reasons", "/banlist ips detailed"})
+                        .set_callback("command.banlist.ips.detailed", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                            std::string message = "List of banned ips:\n";
+                            banned_ips.for_each(
+                                100,
+                                [&message](auto& it) {
+                                    message += "\t" + it.first + (it.second.is_none() ? "\n" : ("\n\t\tReason: " + (std::string)it.second + "\n"));
+                                },
+                                [&message]() {
+                                    message += "...\n";
+                                }
+                            );
+                            api::players::calls::on_system_message({client, {message}});
+                        });
+
+                    ips
+                        .add_child({"contains", "", ""})
+                        .add_child({"<player>", "returns if IP in list", "/banlist ips contains <ip>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                        .set_callback("command.banlist.ips.contains", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                            api::players::calls::on_system_message({client, {"IP " + args[0] + (banned_players.contains(args[0]) ? " is in the list." : " is not in the list.")}});
+                        });
+                }
             }
             {
                 browser.add_child({"ban-ip"})
@@ -121,9 +204,12 @@ namespace crafted_craft {
                             }
                             return;
                         }
-                        //ban ip
-                        if (api::ban::on_ban_ip({args[0], client->name, ""}))
+                        api::ban::on_ban_ip({args[0], client->name, ""});
+
+                        if (banned_ips.contains(args[0])) {
+                            api::players::calls::on_system_message({client, {"IP " + args[0] + " has been already banned."}});
                             return;
+                        }
                         banned_ips.add(args[0], {});
                         api::players::calls::on_system_message({client, {"IP " + args[0] + " has been banned."}});
                     })
@@ -136,9 +222,11 @@ namespace crafted_craft {
                             }
                             return;
                         }
-                        //ban ip
-                        if (api::ban::on_ban_ip({args[0], client->name, args[1]}))
+                        api::ban::on_ban_ip({args[0], client->name, args[1]});
+                        if (banned_ips.contains(args[0])) {
+                            api::players::calls::on_system_message({client, {"IP " + args[0] + " has been already banned."}});
                             return;
+                        }
                         banned_ips.add(args[0], args[1]);
                         api::players::calls::on_system_message({client, {"IP " + args[0] + " has been banned."}});
                     });
@@ -151,9 +239,13 @@ namespace crafted_craft {
                             api::players::calls::on_system_message({client, {"Usage: /pardon-ip <ip>"}});
                             return;
                         }
-                        //pardon ip
-                        if (!api::ban::on_pardon_ip({args[0], client->name, args[1]}))
+                        api::ban::on_pardon_ip({args[0], client->name, args[1]});
+
+                        if (!banned_ips.contains(args[0])) {
+                            api::players::calls::on_system_message({client, {"IP " + args[0] + " has not been banned."}});
                             return;
+                        }
+
                         banned_ips.remove(args[0]);
                         api::players::calls::on_system_message({client, {"IP " + args[0] + " has been pardoned."}});
                     });
@@ -164,9 +256,9 @@ namespace crafted_craft {
         }
 
         BanPlugin::plugin_response BanPlugin::OnPlay_initialize(base_objects::client_data_holder& client) {
-            if (auto banned = banned_players.get(client->name))
+            if (auto banned = banned_players.get(client->name); banned)
                 return packets::play::kick({"You are banned from this server\nReason: " + (std::string)*banned});
-            if (auto banned = banned_ips.get(client->ip))
+            if (auto banned = banned_ips.get(client->ip); banned)
                 return packets::play::kick({"You are banned from this server\nReason: " + (std::string)*banned});
             return false;
         }

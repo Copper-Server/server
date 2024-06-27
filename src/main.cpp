@@ -19,37 +19,29 @@
 using namespace crafted_craft;
 
 int main() {
-    list_array<uint16_t> test;
-    auto current_path = std::filesystem::current_path();
-    std::string storage_path = (current_path / "storage").string();
-    std::filesystem::create_directories(storage_path);
+    log::commands::init();
 
     fast_task::task::create_executor();
     fast_task::task::task::enable_task_naming = true;
-    boost::asio::io_service service;
 
-    TCPserver server(current_path, &service, "localhost", 1234);
-    server.server_config.load(current_path);
-    TCPserver::register_global_instance(server);
-    log::commands::init();
+    boost::asio::io_service service;
+    Server server(&service, "localhost", 1234);
 
     log::disable_log_level(log::level::debug);
 
-    pluginManagement.registerPlugin("server", std::make_shared<build_in_plugins::ServerPlugin>(current_path, storage_path));
-    pluginManagement.registerPlugin("world", std::make_shared<build_in_plugins::WorldManagementPlugin>(storage_path));
-    pluginManagement.registerPlugin("allowlist", std::make_shared<build_in_plugins::AllowListPlugin>(storage_path));
-    pluginManagement.registerPlugin("ban", std::make_shared<build_in_plugins::BanPlugin>(storage_path));
+    pluginManagement.registerPlugin("server", std::make_shared<build_in_plugins::ServerPlugin>());
+    pluginManagement.registerPlugin("world", std::make_shared<build_in_plugins::WorldManagementPlugin>());
+    pluginManagement.registerPlugin("allowlist", std::make_shared<build_in_plugins::AllowListPlugin>());
+    pluginManagement.registerPlugin("ban", std::make_shared<build_in_plugins::BanPlugin>());
     pluginManagement.registerPlugin("communication_core", std::make_shared<build_in_plugins::CommunicationCorePlugin>());
     pluginManagement.registerPlugin("minecraft", std::make_shared<build_in_plugins::MinecraftPlugin>());
 
-    pluginManagement.callLoad();
-
-
     special_handshake = new SpecialPluginHandshake();
-    special_status = new build_in_plugins::special::Status(server.server_config, server.online_players);
+    special_status = new build_in_plugins::special::Status(server.config, server.online_players);
 
     first_client_holder = new TCPClientHandleHandshaking();
 
+    pluginManagement.callLoad();
     server.start();
     log::commands::deinit();
     fast_task::task::shutDown();

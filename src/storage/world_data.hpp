@@ -142,6 +142,8 @@ namespace crafted_craft {
 
             chunk_light_processor() {}
 
+            virtual ~chunk_light_processor() {}
+
             //updates every time when entity moved
             virtual void process_entity_light_source(world_data& world, const base_objects::entity_ref& entity) {}
 

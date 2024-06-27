@@ -41,7 +41,7 @@ namespace crafted_craft {
         log::debug("Debug tools", output);
     }
 
-    TCPsession::TCPsession(boost::asio::ip::tcp::socket&& s, TCPclient* client_handler, uint64_t& set_timeout, TCPserver* server)
+    TCPsession::TCPsession(boost::asio::ip::tcp::socket&& s, TCPclient* client_handler, uint64_t& set_timeout, Server* server)
         : sock(std::move(s)), timeout(set_timeout), server(server) {
         chandler = client_handler->DefineOurself(this);
         read_data.resize(1024);
@@ -65,7 +65,7 @@ namespace crafted_craft {
         return *sharedDataRef();
     }
 
-    TCPserver& TCPsession::serverData() {
+    Server& TCPsession::serverData() {
         return *server;
     }
 
@@ -191,19 +191,13 @@ namespace crafted_craft {
         }
     }
 
-    TCPserver* TCPserver::global_instance = nullptr;
+    Server* Server::global_instance = nullptr;
 
-    TCPserver& TCPserver::get_global_instance() {
+    Server& Server::instance() {
         return global_instance ? *global_instance : throw std::runtime_error("Server not initialized");
     }
 
-    void TCPserver::register_global_instance(TCPserver& instance) {
-        if (global_instance)
-            throw std::runtime_error("Server already initialized");
-        global_instance = &instance;
-    }
-
-    void TCPserver::make_clean_up() {
+    void Server::make_clean_up() {
         std::unique_lock<std::mutex> lock(close_mutex);
         std::list<TCPsession*> to_clean;
         to_clean.swap(queried_close);
@@ -217,12 +211,12 @@ namespace crafted_craft {
             delete it;
     }
 
-    void TCPserver::close_session(TCPsession* session) {
+    void Server::close_session(TCPsession* session) {
         std::unique_lock<std::mutex> lock(close_mutex);
         queried_close.push_back(session);
     }
 
-    void TCPserver::AsyncWork(TCPsession* session) {
+    void Server::AsyncWork(TCPsession* session) {
         boost::system::error_code err;
         if (first_client_holder->DoDisconnect(session->sock.remote_endpoint().address()))
             session->sock.close();
@@ -235,7 +229,7 @@ namespace crafted_craft {
         }
     }
 
-    void TCPserver::Worker() {
+    void Server::Worker() {
         make_clean_up();
         TCPsession* session = new TCPsession(boost::asio::ip::tcp::socket(make_strand(threads)), first_client_holder, all_connections_timeout, this);
         TCPacceptor.async_accept(session->sock, [this, session](const boost::system::error_code& error) {
@@ -246,13 +240,14 @@ namespace crafted_craft {
         });
     }
 
-    auto TCPserver::resolveEndpoint(const std::string& ip, uint16_t port) {
+    auto Server::resolveEndpoint(const std::string& ip, uint16_t port) {
         boost::asio::io_service io_service;
         boost::asio::ip::tcp::resolver resolver(io_service);
         boost::asio::ip::tcp::resolver::query query(ip, std::to_string(port));
         auto list = resolver.resolve(query);
         auto endpoint = list.begin()->endpoint();
 
+        local_server = false;
         //iterate all endpoints
         for (auto& endpoints : list) {
             auto address = endpoints.endpoint().address();
@@ -265,23 +260,23 @@ namespace crafted_craft {
         return endpoint;
     }
 
-    boost::asio::io_service& TCPserver::getService() {
+    boost::asio::io_service& Server::getService() {
         return *service;
     }
 
-    bool TCPserver::is_local_server() {
+    bool Server::is_local_server() {
         return local_server;
     }
 
-    mojang::api::session_server& TCPserver::getSessionServer() {
+    mojang::api::session_server& Server::getSessionServer() {
         return session_server;
     }
 
-    std::string TCPserver::get_ip() const {
+    std::string Server::get_ip() const {
         return ip;
     }
 
-    bool TCPserver::decrypt_data(list_array<uint8_t>& data) const {
+    bool Server::decrypt_data(list_array<uint8_t>& data) const {
         if (data.size() > INT32_MAX)
             return false;
         if (!server_rsa_key)
@@ -293,7 +288,7 @@ namespace crafted_craft {
         return true;
     }
 
-    bool TCPserver::encrypt_data(list_array<uint8_t>& data) const {
+    bool Server::encrypt_data(list_array<uint8_t>& data) const {
         if (data.size() > INT32_MAX)
             return false;
         if (!server_rsa_key)
@@ -305,24 +300,28 @@ namespace crafted_craft {
         return true;
     }
 
-    boost::asio::const_buffer TCPserver::private_key_buffer() {
+    boost::asio::const_buffer Server::private_key_buffer() {
         return boost::asio::const_buffer(server_private_key.data(), server_private_key.size());
     }
 
-    boost::asio::const_buffer TCPserver::public_key_buffer() {
+    boost::asio::const_buffer Server::public_key_buffer() {
         return boost::asio::const_buffer(server_public_key.data(), server_public_key.size());
     }
 
-    size_t TCPserver::key_length() {
+    size_t Server::key_length() {
         return ssl_key_length;
     }
 
-    TCPserver::TCPserver(const std::filesystem::path& base_path, boost::asio::io_service* io_service, const std::string& ip, uint16_t port, size_t threads, size_t ssl_key_length)
+    Server::Server(boost::asio::io_service* io_service, const std::string& ip, uint16_t port, size_t threads, size_t ssl_key_length)
         : TCPacceptor(*io_service, resolveEndpoint(ip, port)),
           threads(threads ? threads : std::thread::hardware_concurrency()),
           ssl_key_length(ssl_key_length),
           ip(ip),
-          permissions_manager(base_path) {
+          permissions_manager(std::filesystem::current_path()) {
+        if (global_instance)
+            throw std::runtime_error("Server already initialized");
+        global_instance = this;
+        config.load(std::filesystem::current_path());
         service = io_service;
         if (ssl_key_length) {
             server_rsa_key = RSA_generate_key(ssl_key_length, RSA_F4, nullptr, nullptr);
@@ -344,17 +343,17 @@ namespace crafted_craft {
             }
         }
         if (local_server)
-            server_config.protocol.offline_mode = true;
+            config.protocol.offline_mode = true;
     }
 
-    TCPserver::~TCPserver() {
+    Server::~Server() {
         if (!disabled)
             stop();
         if (server_rsa_key)
             RSA_free(server_rsa_key);
     }
 
-    void TCPserver::start() {
+    void Server::start() {
         if (disabled) {
             Worker();
             disabled = false;
@@ -363,7 +362,7 @@ namespace crafted_craft {
             throw std::exception("tcp server already run");
     }
 
-    void TCPserver::stop() {
+    void Server::stop() {
         if (!disabled) {
             make_clean_up();
             TCPacceptor.close();

@@ -539,7 +539,7 @@ namespace crafted_craft {
             for (auto& [location, future] : on_save_process)
                 to_await.push_back(future);
             lock.unlock();
-            to_await.forEach([](FuturePtr<bool>& i) { i->wait(); });
+            to_await.for_each([](FuturePtr<bool>& i) { i->wait(); });
         }
 
         void world_data::save_chunks() {
@@ -741,13 +741,13 @@ namespace crafted_craft {
                     }
             lock.unlock();
             if (!profiling.enable_world_profiling) {
-                to_tick_chunks.take().forEach([&](auto&& chunk) {
+                to_tick_chunks.take().for_each([&](auto&& chunk) {
                     auto local_ticks = max_random_tick_for_chunk;
                     chunk->tick(*this, local_ticks, random_engine, current_time);
                 });
             } else {
                 auto tick_local_time = current_time;
-                to_tick_chunks.take().forEach([&](auto&& chunk) {
+                to_tick_chunks.take().for_each([&](auto&& chunk) {
                     auto local_ticks = max_random_tick_for_chunk;
                     chunk->tick(*this, local_ticks, random_engine, current_time);
 
@@ -1018,7 +1018,7 @@ namespace crafted_craft {
                 if (world->collect_unused_data(current_time, unload_speed))
                     to_unload_worlds.push_back(id);
             }
-            to_unload_worlds.forEach([this](uint64_t id) { save_and_unload(id); });
+            to_unload_worlds.for_each([this](uint64_t id) { save_and_unload(id); });
             lock.lock();
             got_ticks++;
             auto new_current_time = std::chrono::high_resolution_clock::now();

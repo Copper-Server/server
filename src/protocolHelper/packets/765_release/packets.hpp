@@ -88,7 +88,7 @@ namespace crafted_craft {
 
                 Response kick(const Chat& reason);
 
-                Response disguisedChatMessage(const Chat& message, int32_t chat_type, const Chat& sender, std::optional<Chat> target_name);
+                Response disguisedChatMessage(const Chat& message, int32_t chat_type, const Chat& sender, const std::optional<Chat>& target_name);
 
                 Response entityEvent(int32_t entity_id, uint8_t entity_status);
 

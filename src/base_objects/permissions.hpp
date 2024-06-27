@@ -8,36 +8,8 @@ namespace crafted_craft {
         struct permissions_object {
             std::string permission_tag;
             std::string description;
-            int8_t permission_level; //if -1 then this permission just a tag
-            bool instant_grant;      //if true then this permission will be granted without checking others
-
-            permissions_object()
-                : permission_level(-1), instant_grant(false) {}
-
-            permissions_object(const std::string& permission_tag, const std::string& description, bool instant_grant = false, int8_t permission_level = -1)
-                : permission_tag(permission_tag), description(description), instant_grant(instant_grant), permission_level(permission_level) {}
-
-            permissions_object(const permissions_object& other)
-                : permission_tag(other.permission_tag), description(other.description), instant_grant(other.instant_grant), permission_level(other.permission_level) {}
-
-            permissions_object(permissions_object&& other)
-                : permission_tag(std::move(other.permission_tag)), description(std::move(other.description)), instant_grant(other.instant_grant), permission_level(other.permission_level) {}
-
-            permissions_object& operator=(const permissions_object& other) {
-                permission_tag = other.permission_tag;
-                description = other.description;
-                instant_grant = other.instant_grant;
-                permission_level = other.permission_level;
-                return *this;
-            }
-
-            permissions_object& operator=(permissions_object&& other) {
-                permission_tag = std::move(other.permission_tag);
-                description = std::move(other.description);
-                instant_grant = other.instant_grant;
-                permission_level = other.permission_level;
-                return *this;
-            }
+            int8_t permission_level = -1; //if -1 then this permission just a tag
+            bool instant_grant = false;   //if true then this permission will be granted without checking others
 
             bool operator==(const permissions_object& other) const {
                 return permission_tag == other.permission_tag;

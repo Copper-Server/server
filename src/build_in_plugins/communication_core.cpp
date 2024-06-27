@@ -8,7 +8,7 @@
 namespace crafted_craft {
     namespace build_in_plugins {
         CommunicationCorePlugin::CommunicationCorePlugin()
-            : server(TCPserver::get_global_instance()) {}
+            : server(Server::instance()) {}
 
         void CommunicationCorePlugin::OnLoad(const PluginRegistrationPtr& self) {
             register_event(api::players::calls::on_player_chat, [this](const api::players::player_chat& chat) {

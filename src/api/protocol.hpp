@@ -326,7 +326,7 @@ namespace crafted_craft {
 
             template <class T>
             struct event_data {
-                const T& data;
+                T data;
                 TCPsession& client;
                 base_objects::client_data_holder client_data;
             };

@@ -18,24 +18,75 @@ namespace crafted_craft {
                     return true;
 
                 auto& client_data = client->player_data;
-                bool instant_granted = true;
-                bool has_incompatible = item->second.find_if([&client_data, &instant_granted, &values](const std::string& tag) {
+                bool instant_granted = false;
+                bool has_incompatible = false;
+
+                item->second.for_each([&](const std::string& tag) {
                     auto permission = values.permissions.find(tag);
                     if (permission == values.permissions.end())
-                        return false;
+                        return;
                     auto& perm = permission->second;
-                    return client_data
-                               .permissions
-                               .find_if([perm, client_data, &instant_granted](const std::string& client_perm) {
-                                   bool compatible = perm.permission_tag == client_perm && perm.permission_level != -1 ? perm.permission_level <= client_data.op_level : true;
-                                   if (compatible && perm.instant_grant) {
-                                       instant_granted = true;
-                                       return true;
-                                   }
-                                   return !compatible;
-                               }) != client_data.permissions.npos;
-                }) != item->second.npos;
+                    auto client_perm = client_data.permissions.find(perm.permission_tag);
+                    if (client_data.permissions.npos == client_perm && perm.permission_level == -1) {
+                        has_incompatible = true;
+                        return;
+                    }
+                    instant_granted |= perm.instant_grant;
+
+                    if (perm.permission_level != -1) {
+                        has_incompatible |= perm.permission_level > client_data.op_level;
+                    }
+                });
+
                 return !has_incompatible || instant_granted;
+            });
+        }
+
+        bool permissions_manager::has_action(const std::string& action_name) {
+            return protected_values.get([&](const protected_values_t& values) {
+                return values.actions.contains(action_name);
+            });
+        }
+
+        bool permissions_manager::has_permissions(const std::string& action_name) {
+            return protected_values.get([&](const protected_values_t& values) {
+                return values.permissions.contains(action_name);
+            });
+        }
+
+        void permissions_manager::register_action(const std::string& action_name) {
+            protected_values.set([&](protected_values_t& values) {
+                auto it = values.actions.find(action_name);
+                if (it != values.actions.end())
+                    throw std::runtime_error("This action already registered.");
+                values.actions[action_name].clear();
+            });
+        }
+
+        void permissions_manager::register_action(const std::string& action_name, const list_array<std::string>& required_perm) {
+            protected_values.set([&](protected_values_t& values) {
+                auto it = values.actions.find(action_name);
+                if (it != values.actions.end())
+                    throw std::runtime_error("This action already registered.");
+                values.actions[action_name] = required_perm;
+            });
+        }
+
+        void permissions_manager::register_action(const std::string& action_name, list_array<std::string>&& required_perm) {
+            protected_values.set([&](protected_values_t& values) {
+                auto it = values.actions.find(action_name);
+                if (it != values.actions.end())
+                    throw std::runtime_error("This action already registered.");
+                values.actions[action_name] = std::move(required_perm);
+            });
+        }
+
+        void permissions_manager::unregister_action(const std::string& action_name) {
+            protected_values.set([&](protected_values_t& values) {
+                auto it = values.actions.find(action_name);
+                if (it == values.actions.end())
+                    throw std::runtime_error("This action already unregistered.");
+                values.actions.erase(it);
             });
         }
 
@@ -72,37 +123,145 @@ namespace crafted_craft {
             });
         }
 
+        void permissions_manager::enum_actions(const std::function<void(const std::string&)>& callback) {
+            return protected_values.get([&](const protected_values_t& values) {
+                for (auto&& [action, data] : values.actions)
+                    callback(action);
+            });
+        }
+
+        void permissions_manager::enum_action_requirements(const std::string& action_name, const std::function<void(const std::string&)>& callback) {
+            return protected_values.get([&](const protected_values_t& values) {
+                auto item = values.actions.find(action_name);
+                if (item == values.actions.end())
+                    throw std::runtime_error("This action not registered.");
+                item->second.for_each(callback);
+            });
+        }
+
+        void permissions_manager::enum_permissions(const std::function<void(const std::string&)>& callback) {
+            return protected_values.get([&](const protected_values_t& values) {
+                for (auto&& [perm, data] : values.permissions)
+                    callback(perm);
+            });
+        }
+
+
         void permissions_manager::sync() {
             using namespace util;
 
             auto config_holder = try_read_json_file(base_path);
-            if (!config_holder.empty()) {
+            if (!config_holder.has_value()) {
                 log::error("server", "Failed to load permissions file");
                 return;
             }
-            auto root = js_object::get_object(config_holder);
+            auto root = js_object::get_object(*config_holder);
 
             list_array<base_objects::permissions_object> readden_permissions_tag;
-            for (auto value : js_array::get_array(root["actions"])) {
+            auto permissions_obj = js_object::get_object(root["permissions"]);
+            for (auto&& [permission_tag, value] : permissions_obj) {
                 auto perm = js_object::get_object(value);
+                std::string description = perm["description"].or_apply("");
+                bool instant_grant = perm["instant_grant"].or_apply(false);
+                int8_t permission_level = perm["permission_level"].or_apply(0);
 
-                auto permission = base_objects::permissions_object(
-                    perm["permission_tag"],
-                    perm["description"].or_apply(""),
-                    perm["instant_grant"].or_apply(false),
-                    perm["permission_level"].or_apply(0)
-                );
-                readden_permissions_tag.push_back(permission);
+                readden_permissions_tag.push_back(base_objects::permissions_object(
+                    std::string(permission_tag.data(), permission_tag.size()),
+                    std::move(description),
+                    instant_grant,
+                    permission_level
+                ));
             }
             protected_values.set([&](protected_values_t& values) {
-                for (auto&& [key, value] : js_object::get_object(root["permissions"])) {
-                    auto& read = values.actions[std::string(key.c_str(), key.size())];
+                list_array<std::string> declared_actions;
+                list_array<std::string> declared_permissions;
+
+                auto actions_obj = js_object::get_object(root["actions"]);
+                declared_actions.reserve(actions_obj.size());
+
+                //updating actions from json
+                for (auto&& [key, value] : actions_obj) {
+                    std::string cast_key = std::string(key.c_str(), key.size());
+                    auto& read = values.actions[cast_key];
                     for (auto item : js_array::get_array(value))
                         read.push_back((std::string)item);
                     read.commit();
+                    declared_actions.push_back(std::move(cast_key));
                 }
-                for (auto& perm : readden_permissions_tag)
+
+                //adding new actions to json
+                for (auto&& [key, value] : values.actions) {
+                    if (!declared_actions.contains(key)) {
+                        boost::json::array arr;
+                        arr.reserve(value.size());
+                        for (auto& item : value)
+                            arr.push_back(boost::json::string(item));
+                        actions_obj[key] = std::move(arr);
+                    }
+                }
+
+                if (readden_permissions_tag.empty() && values.permissions.empty()) {
+                    values.permissions["operator_1"] = base_objects::permissions_object{
+                        .permission_tag = "operator_1",
+                        .description = "The default permission tag for operator level 1.",
+                        .permission_level = 1,
+                        .instant_grant = false
+                    };
+                    values.permissions["operator_2"] = base_objects::permissions_object{
+                        .permission_tag = "operator_2",
+                        .description = "The default permission tag for operator level 2.",
+                        .permission_level = 1,
+                        .instant_grant = false
+                    };
+                    values.permissions["operator_3"] = base_objects::permissions_object{
+                        .permission_tag = "operator_3",
+                        .description = "The default permission tag for operator level 3.",
+                        .permission_level = 1,
+                        .instant_grant = false
+                    };
+                    values.permissions["permission_op_4"] = base_objects::permissions_object{
+                        .permission_tag = "permission_op_4",
+                        .description = "The default permission tag for operator level 4.",
+                        .permission_level = 1,
+                        .instant_grant = false
+                    };
+                    values.permissions["operator_4"] = base_objects::permissions_object{
+                        .permission_tag = "operator_4",
+                        .description = "The default permission tag for operator level 4.",
+                        .permission_level = 1,
+                        .instant_grant = false
+                    };
+                    values.permissions["console"] = base_objects::permissions_object{
+                        .permission_tag = "console",
+                        .description = "The default permission tag for console commands.",
+                        .permission_level = 1,
+                        .instant_grant = false
+                    };
+                }
+
+                //updating permissions from json
+                for (auto& perm : readden_permissions_tag) {
                     values.permissions[perm.permission_tag] = std::move(perm);
+                    declared_permissions.push_back(perm.permission_tag);
+                }
+
+                //adding new permissions to json
+                for (auto&& [permission_tag, value] : values.permissions) {
+                    if (!declared_permissions.contains(permission_tag)) {
+                        permissions_obj[permission_tag] =
+                            value.description.empty()
+                                ? boost::json::object{
+                                      {"instant_grant", value.instant_grant},
+                                      {"permission_level", value.permission_level},
+                                  }
+                                : boost::json::object{
+                                      {"description", value.description},
+                                      {"instant_grant", value.instant_grant},
+                                      {"permission_level", value.permission_level},
+                                  };
+                    }
+                }
+
                 return values;
             });
             {
@@ -111,7 +270,7 @@ namespace crafted_craft {
                     log::warn("server", "Failed to save permissions file. Can not open file.");
                     return;
                 }
-                util::pretty_print(file, config_holder);
+                util::pretty_print(file, *config_holder);
             }
         }
     }

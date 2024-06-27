@@ -99,7 +99,7 @@ namespace crafted_craft {
             strikethrough = copy.strikethrough;
             obfuscated = copy.obfuscated;
             text_is_translation = copy.text_is_translation;
-            extra = extra;
+            extra = copy.extra;
             return *this;
         }
 
@@ -125,7 +125,7 @@ namespace crafted_craft {
             strikethrough = copy.strikethrough;
             obfuscated = copy.obfuscated;
             text_is_translation = copy.text_is_translation;
-            extra = std::move(extra);
+            extra = std::move(copy.extra);
             return *this;
         }
 
@@ -359,7 +359,6 @@ namespace crafted_craft {
         }
 
         std::optional<bool> GetBold() {
-            std::optional<bool> result;
             if (defined_bold)
                 return std::make_optional<bool>(bold);
             else

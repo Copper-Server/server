@@ -277,7 +277,8 @@ namespace crafted_craft {
         void _keep_alive_sended() {
             need_to_send = false;
             got_keep_alive = false;
-            timeout_timer.expires_from_now(boost::posix_time::seconds(session->serverData().timeout_seconds));
+
+            timeout_timer.expires_from_now(boost::posix_time::seconds(Server::instance().timeout_seconds));
             last_keep_alive = std::chrono::system_clock::now();
             timeout_timer.async_wait([this](const boost::system::error_code& ec) {
                 if (ec == boost::asio::error::operation_aborted)
@@ -291,7 +292,7 @@ namespace crafted_craft {
                 send_keep_alive_requested = false;
                 return;
             }
-            auto seconds = std::min<uint16_t>(session->serverData().timeout_seconds, 2);
+            auto seconds = std::min<uint16_t>(Server::instance().timeout_seconds, 2);
             send_keep_alive_requested = true;
             send_keep_alive_timer.cancel();
             send_keep_alive_timer.expires_from_now(boost::posix_time::seconds(seconds));
@@ -394,7 +395,7 @@ namespace crafted_craft {
     protected:
         static uint64_t generate_random_int() {
             static std::random_device rd;
-            static std::mt19937_64 gen;
+            static std::mt19937_64 gen(rd());
             return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() ^ gen();
         }
         static std::unordered_set<boost::asio::ip::address> banned_clients;
@@ -505,7 +506,7 @@ namespace crafted_craft {
                     return Response::Empty();
                 if (combined[0] == 0xFE && combined[1] == 0x01) {
                     log::debug("protocol", "handle legacy status");
-                    auto& config = session->serverData().server_config;
+                    auto& config = session->serverData().config;
                     if (!config.status.enable)
                         return Response::Disconnect(list_array<list_array<uint8_t>>());
                     else
@@ -578,7 +579,7 @@ namespace crafted_craft {
                 list_array<list_array<uint8_t>> answer;
                 for (auto& resp : res.data)
                     answer.push_back(PrepareSend(std::move(resp)));
-                res.data = std::move(answer);
+                res.data = answer.take().convert<Response::Item>([](list_array<uint8_t>&& item) { return Response::Item(std::move(item)); });
                 return res;
             } else if (res.do_disconnect || res.do_disconnect_after_send)
                 return res;

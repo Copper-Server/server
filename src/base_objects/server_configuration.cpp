@@ -30,13 +30,7 @@ namespace crafted_craft {
         }
 
         void merge_configs(ServerConfiguration& cfg, js_object& data) {
-            {
-                auto rcon = js_object::get_object(data["rcon"]);
-                cfg.rcon.password = rcon["password"].or_apply(cfg.rcon.password);
-                cfg.rcon.port = rcon["port"].or_apply(cfg.rcon.port);
-                cfg.rcon.enabled = rcon["enabled"].or_apply(cfg.rcon.enabled);
-                cfg.rcon.broadcast_to_ops = rcon["broadcast_to_ops"].or_apply(cfg.rcon.broadcast_to_ops);
-            }
+            std::string status_favicon_path;
             {
                 auto query = js_object::get_object(data["query"]);
                 cfg.query.enabled = query["enabled"].or_apply(cfg.query.enabled);
@@ -149,12 +143,21 @@ namespace crafted_craft {
                 auto status = js_object::get_object(data["status"]);
                 cfg.status.server_name = status["server_name"].or_apply(cfg.status.server_name);
                 cfg.status.description = status["description"].or_apply(cfg.status.description);
-                if (status.contains("favicon")) {
-                    //TODO
-                }
+                status_favicon_path = (std::string)status["favicon"].or_apply(std::string());
                 cfg.status.sample_players_count = status["sample_players_count"].or_apply(cfg.status.sample_players_count);
                 cfg.status.enable = status["enable"].or_apply(cfg.status.enable);
                 cfg.status.show_players = status["show_players"].or_apply(cfg.status.show_players);
+            }
+            {
+                auto server = js_object::get_object(data["server"]);
+                auto& folder = (boost::json::string&)server["storage_folder"].or_apply(cfg.server.storage_folder);
+
+                if (folder.find_first_of(".,/\\#$%^&*()`~'\":;|?!<>") != folder.npos)
+                    log::warn("server", "server config: root.server.storage_folder contains special symbol .,/\\#$%^&*()`~'\":;|?!<>, item has been ignored");
+                else {
+                    cfg.server.storage_folder = (std::string)folder;
+                    std::filesystem::create_directories(cfg.server.get_storage_path());
+                }
             }
             {
                 auto allowed_dimensions = js_array::get_array(data["allowed_dimensions"]);
@@ -167,6 +170,20 @@ namespace crafted_craft {
                         cfg.allowed_dimensions.emplace((std::string)allowed_dimensions[i]);
                 }
             }
+
+            if (status_favicon_path != "") {
+                std::ifstream file(status_favicon_path, std::ifstream::in | std::ifstream::binary);
+                if (file.is_open()) {
+                    file.seekg(0, std::ifstream::end);
+                    size_t file_size = file.tellg();
+                    file.seekg(0, std::ifstream::beg);
+                    std::vector<uint8_t> res;
+                    res.resize(file_size);
+                    file.read((char*)res.data(), res.size());
+                    cfg.status.favicon = std::move(res);
+                }
+            } else
+                cfg.status.favicon.clear();
         }
 
         void save_config(const std::filesystem::path& config_file_path, boost::json::object& config_data) {
@@ -179,12 +196,12 @@ namespace crafted_craft {
         }
 
         void ServerConfiguration::load(const std::filesystem::path& config_file_path, bool fill_default_values) {
-            boost::json::object config_data = try_read_json_file(config_file_path / "config.json");
-            if (config_data.empty() && !fill_default_values) {
+            auto config_data = try_read_json_file(config_file_path / "config.json");
+            if (!config_data.has_value() && !fill_default_values) {
                 log::warn("server", "Failed to read config file. Using default values.");
                 return;
             }
-            auto config = js_object::get_object(config_data);
+            auto config = js_object::get_object(*config_data);
             //if (fill_default_values) {
 
             try {
@@ -193,56 +210,85 @@ namespace crafted_craft {
                 log::error("server", ex.what());
                 throw;
             }
-            save_config(config_file_path, config_data);
+            save_config(config_file_path, *config_data);
             //}
         }
 
-        boost::json::value& get_value_by_path(boost::json::value& value, std::string& path) {
+        [[noreturn]] void decorated_exception(const std::string& desc, const std::string& part_path, const std::string& full_path) {
+            assert(full_path.ends_with(part_path) && "The part path must belong to full path");
+
+            std::string msq = desc + ", in path: " + full_path + "\n";
+            size_t where_point = msq.size() - part_path.size();
+            std::string point(where_point + 3, ' ');
+            point[where_point + 2] = '^';
+            throw std::runtime_error(msq + point);
+        }
+
+        boost::json::value& get_value_by_path(boost::json::value& value, std::string& path, const std::string& full_path) {
+            if (path.empty())
+                return value;
             auto pos = path.find_first_of(".[");
             if (pos == std::string::npos) {
-                if (value.is_object())
-                    return value.get_object()[path];
-                if (value.is_array())
-                    return value.get_array()[std::stoi(path)];
-                throw std::runtime_error("Invalid path");
+                if (value.is_object()) {
+                    auto& obj = value.get_object();
+                    auto it = obj.find(path);
+                    path.clear();
+                    if (it != obj.end())
+                        return it->value();
+                    else
+                        decorated_exception("The element not found", path, full_path);
+                } else {
+                    path.clear();
+                    decorated_exception("Type miss match, excepted object but received: " + util::to_string(value.kind()), path, full_path);
+                }
             }
             if (path[pos] == '[') {
-                auto next = path.find_first_of("].", pos);
+                auto next = path.find_first_of(']', pos);
                 if (next == std::string::npos)
-                    throw std::runtime_error("Invalid path");
-                auto index = std::stoi(path.substr(pos + 1, next - pos - 1));
+                    decorated_exception("Incomplete expression. not found ] in after [", path, full_path);
+
+                auto index_str = path.substr(pos + 1, next - pos - 1);
                 path = path.substr(next + 1);
+
                 if (value.is_array()) {
-                    auto& val = value.get_array()[index];
-                    if (path.empty())
-                        return val;
-                    else
-                        return get_value_by_path(val, path);
+                    unsigned long pos = 0;
+                    try {
+                        pos = std::stoul(index_str);
+                    } catch (const std::invalid_argument&) {
+                        decorated_exception("The index is not integer", path, full_path);
+                    } catch (const std::out_of_range&) {
+                        decorated_exception("Index is too big", path, full_path);
+                    }
+                    if (value.get_array().size() <= pos)
+                        decorated_exception("Index out of range", path, full_path);
+                    return value.get_array()[pos];
                 } else
-                    throw std::runtime_error("Invalid path");
+                    decorated_exception("Type miss match, excepted array but received: " + util::to_string(value.kind()), path, full_path);
             } else {
-                auto next = path.find_first_of(".[", pos);
-                if (next == std::string::npos)
-                    throw std::runtime_error("Invalid path");
                 auto key = path.substr(0, pos);
-                path = path.substr(next + 1);
+                path = path.substr(pos + 1);
                 if (key.empty())
-                    return value;
+                    return get_value_by_path(value, path, full_path);
                 else {
                     if (value.is_object()) {
-                        auto& val = value.get_object()[key];
-                        if (path.empty())
-                            return val;
-                        else
-                            return get_value_by_path(val, path);
+                        auto& obj = value.get_object();
+                        auto it = obj.find(key);
+                        if (it != obj.end()) {
+                            if (path.empty())
+                                return it->value();
+                            else
+                                return get_value_by_path(it->value(), path, full_path);
+                        } else
+                            decorated_exception("The element not found", path, full_path);
                     } else
-                        throw std::runtime_error("Invalid path");
+                        decorated_exception("Type miss match, excepted object but received: " + util::to_string(value.kind()), path, full_path);
                 }
             }
         }
 
-        boost::json::value& get_value_by_path_(boost::json::value& entry, std::string path) {
-            return get_value_by_path(entry, path);
+        boost::json::value& get_value_by_path_(boost::json::value& entry, const std::string& path) {
+            std::string tmp = path;
+            return get_value_by_path(entry, tmp, path);
         }
 
         void ServerConfiguration::set(const std::filesystem::path& config_file_path, const std::string& config_item_path, const std::string& value) {
@@ -250,9 +296,12 @@ namespace crafted_craft {
             auto config = js_object::get_object(config_data.get_object());
             merge_configs(*this, config);
             auto& val = get_value_by_path_(config_data, config_item_path);
-            val = boost::json::parse(value);
-            save_config(config_file_path, config_data.get_object());
+            boost::system::error_code ec;
+            val = boost::json::parse(value, ec);
+            if (ec)
+                throw std::runtime_error("Failed to parse value, strings must be in \" scope and constants must be in lowercase");
             merge_configs(*this, config);
+            save_config(config_file_path, config_data.get_object());
         }
 
         std::string ServerConfiguration::get(const std::string& config_item_path) {

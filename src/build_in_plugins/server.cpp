@@ -5,15 +5,14 @@
 #include "../protocolHelper/state_play.hpp"
 
 namespace crafted_craft {
-    class TCPserver;
+    class Server;
 
     namespace build_in_plugins {
 
-        ServerPlugin::ServerPlugin(const std::filesystem::path& base_path, const std::filesystem::path& storage_path)
-            : players_data(storage_path / "players"),
-              base_path(base_path),
+        ServerPlugin::ServerPlugin()
+            : players_data(Server::instance().config.server.get_storage_path() / "players"),
               console_data(server.online_players.allocate_player(), "Console", "Console", server),
-              server(TCPserver::get_global_instance()) {
+              server(Server::instance()) {
         }
 
         void ServerPlugin::OnRegister(const PluginRegistrationPtr& self) {
@@ -22,7 +21,14 @@ namespace crafted_craft {
 
         void ServerPlugin::OnLoad(const PluginRegistrationPtr& self) {
             manager.reload_commands();
+            try {
+                server.permissions_manager.sync();
+            } catch (const std::exception& ex) {
+                log::error("Server", std::string("[permissions] Failed to load permission file because: ") + ex.what());
+            }
             register_event(log::commands::on_command, base_objects::event_priority::heigh, [&](const std::string& command) {
+                if (command.empty())
+                    return false;
                 log::info("Server", "[command] " + command);
                 try {
                     manager.execute_command(command, console_data.client);
@@ -64,7 +70,16 @@ namespace crafted_craft {
                 else
                     log::info("Server", "[" + sender.to_ansi_console() + " -> " + target_name->to_ansi_console() + "] " + message.to_ansi_console());
             };
+
+            console_data.client->player_data.permissions = {
+                "operator_1",
+                "operator_2",
+                "operator_3",
+                "operator_4",
+                "console"
+            };
             log::info("Server", "server handler loaded.");
+            TCPClientHandlePlay::base_plugins.push_back(self);
         }
 
         void ServerPlugin::OnPostLoad(const std::shared_ptr<PluginRegistration>&) {
@@ -73,6 +88,7 @@ namespace crafted_craft {
 
         void ServerPlugin::OnUnload(const PluginRegistrationPtr& self) {
             log::commands::unloadCommandSuggestion();
+            TCPClientHandlePlay::base_plugins.remove(self);
             PluginRegistration::OnUnload(self);
             log::info("Server", "server handler unloaded.");
         }
@@ -208,35 +224,35 @@ namespace crafted_craft {
             }
             {
                 auto _config = browser.add_child({"config"});
-                _config.add_child({"reload", "reloads config from file", "/config reload"}).set_callback("command.config.reload", [&](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                    server.server_config.load(base_path);
-                    pluginManagement.registeredPlugins().forEach([&](const PluginRegistrationPtr& plugin) {
-                        plugin->OnConfigReload(plugin, server.server_config);
+                _config.add_child({"reload", "reloads config from file", "/config reload"}).set_callback({"command.config.reload", {"console"}}, [&](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                    server.config.load(server.config.server.base_path);
+                    pluginManagement.registeredPlugins().for_each([&](const PluginRegistrationPtr& plugin) {
+                        plugin->OnConfigReload(plugin, server.config);
                     });
                 });
                 _config.add_child({"set"})
                     .add_child({"[config item]"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
                     .add_child({"[value]", "updates config in file and applies for program", "/config set [config item] [value]"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
-                    .set_callback("command.config.set", [&](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                    .set_callback({"command.config.set", {"console"}}, [&](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         if (args.size() < 2) {
                             api::players::calls::on_system_message({client, {"Usage: /config set <config item> <value>"}});
                             return;
                         }
-                        server.server_config.set(base_path, args[0], args[1]);
+                        server.config.set(server.config.server.base_path, args[0], args[1]);
                         api::players::calls::on_system_message({client, {"Config updated"}});
-                        pluginManagement.registeredPlugins().forEach([&](const PluginRegistrationPtr& plugin) {
-                            plugin->OnConfigReload(plugin, server.server_config);
+                        pluginManagement.registeredPlugins().for_each([&](const PluginRegistrationPtr& plugin) {
+                            plugin->OnConfigReload(plugin, server.config);
                         });
                     });
                 _config
                     .add_child({"get"})
                     .add_child({"[config item]", "command.config.get", "returns config value", "/config get [config item]"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                    .set_callback("command.config.get", [&](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                    .set_callback({"command.config.get", {"console"}}, [&](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         if (args.size() == 0) {
                             api::players::calls::on_system_message({client, {"Usage: /config get <config item>"}});
                             return;
                         }
-                        auto value = server.server_config.get(args[0]);
+                        auto value = server.config.get(args[0]);
                         if (value.ends_with('\n'))
                             value.pop_back();
                         if (value.contains("\n"))
@@ -244,6 +260,52 @@ namespace crafted_craft {
                         else
                             api::players::calls::on_system_message({client, {"Config value: " + value}});
                     });
+            }
+            {
+                auto _console = browser.add_child({"console"});
+                auto _log = _console.add_child({"log"});
+                {
+                    _log
+                        .add_child({"enable"})
+                        .add_child({"<log level>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                        .set_callback({"command.console.log.enable", {"console"}}, [](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                            auto& level = args[0];
+                            if (level == "info")
+                                log::enable_log_level(log::level::info);
+                            else if (level == "warn")
+                                log::enable_log_level(log::level::warn);
+                            else if (level == "error")
+                                log::enable_log_level(log::level::error);
+                            else if (level == "fatal")
+                                log::enable_log_level(log::level::fatal);
+                            else if (level == "debug_error")
+                                log::enable_log_level(log::level::debug_error);
+                            else if (level == "debug")
+                                log::enable_log_level(log::level::debug);
+                            else
+                                log::error("Server", "log level " + level + " is undefined.");
+                        });
+                    _log
+                        .add_child({"disable"})
+                        .add_child({"<log level>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                        .set_callback({"command.console.log.disable", {"console"}}, [](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                            auto& level = args[0];
+                            if (level == "info")
+                                log::disable_log_level(log::level::info);
+                            else if (level == "warn")
+                                log::disable_log_level(log::level::warn);
+                            else if (level == "error")
+                                log::disable_log_level(log::level::error);
+                            else if (level == "fatal")
+                                log::disable_log_level(log::level::fatal);
+                            else if (level == "debug_error")
+                                log::disable_log_level(log::level::debug_error);
+                            else if (level == "debug")
+                                log::disable_log_level(log::level::debug);
+                            else
+                                log::error("Server", "log level " + level + " is undefined.");
+                        });
+                }
             }
         }
 

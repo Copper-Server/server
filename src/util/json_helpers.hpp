@@ -11,6 +11,7 @@ namespace crafted_craft {
         inline std::string to_string(boost::json::kind type_kind) {
             return boost::json::to_string(type_kind);
         }
+
         class js_object;
         class js_array;
 
@@ -138,6 +139,7 @@ namespace crafted_craft {
             }
 
             operator boost::json::object&() {
+
                 try {
                     return obj.as_object();
                 } catch (const boost::system::system_error& err) {
@@ -147,9 +149,9 @@ namespace crafted_craft {
             }
 
             operator boost::json::array&() {
-                try {
-                    return obj.as_array();
-                } catch (const boost::system::system_error& err) {
+                if (obj.is_array())
+                    return obj.get_array();
+                else {
                     auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::array), path, util::to_string(obj.kind()));
                     throw std::runtime_error(text);
                 }
@@ -442,11 +444,11 @@ namespace crafted_craft {
             };
 
             static js_object get_object(js_value& obj) {
-                return js_object(obj.path, obj.or_apply(boost::json::object()));
+                return js_object(obj.path, (boost::json::object&)obj.or_apply(boost::json::object()));
             }
 
             static js_object get_object(js_value&& obj) {
-                return js_object(obj.path, obj.or_apply(boost::json::object()));
+                return js_object(obj.path, (boost::json::object&)obj.or_apply(boost::json::object()));
             }
 
             static js_object get_object(boost::json::object& obj) {
@@ -479,6 +481,10 @@ namespace crafted_craft {
 
             bool empty() const {
                 return obj.empty();
+            }
+
+            size_t size() const {
+                return obj.size();
             }
         };
 
@@ -537,11 +543,11 @@ namespace crafted_craft {
                 }
             };
             static js_array get_array(js_value& obj) {
-                return js_array(obj.path, obj.or_apply(boost::json::array()));
+                return js_array(obj.path, (boost::json::array&)obj.or_apply(boost::json::array()));
             }
 
             static js_array get_array(js_value&& obj) {
-                return js_array(obj.path, obj.or_apply(boost::json::array()));
+                return js_array(obj.path, (boost::json::array&)obj.or_apply(boost::json::array()));
             }
 
             static js_array get_array(boost::json::array& obj) {
@@ -587,7 +593,7 @@ namespace crafted_craft {
             }
         };
 
-        boost::json::object try_read_json_file(const std::filesystem::path& file_path);
+        std::optional<boost::json::object> try_read_json_file(const std::filesystem::path& file_path);
         void pretty_print(std::ostream& os, const boost::json::value& jv, std::string* indent = nullptr);
 
         inline void pretty_print(std::ostream& os, const js_value& jv) {

@@ -3,8 +3,27 @@
 #include "../protocolHelper/util.hpp"
 #include "packets.hpp"
 
+
 namespace crafted_craft {
     namespace base_objects {
+        action_provider::action_provider(const std::string& tag)
+            : action_tag(tag) {}
+
+        action_provider::action_provider(const std::string&& tag)
+            : action_tag(std::move(tag)) {}
+
+        action_provider::action_provider(const std::string& tag, const list_array<std::string>& requirement)
+            : action_tag(tag), required_permissions_tag(requirement) {}
+
+        action_provider::action_provider(const std::string&& tag, const list_array<std::string>& requirement)
+            : action_tag(std::move(tag)), required_permissions_tag(requirement) {}
+
+        action_provider::action_provider(const std::string& tag, list_array<std::string>&& requirement)
+            : action_tag(tag), required_permissions_tag(std::move(requirement)) {}
+
+        action_provider::action_provider(const std::string&& tag, list_array<std::string>&& requirement)
+            : action_tag(std::move(tag)), required_permissions_tag(std::move(requirement)) {}
+
         int32_t command::get_child(list_array<command>& command_nodes, const std::string& name) {
             if (childs_cache.size() == node.children.size()) {
                 auto it = childs_cache.find(name);
@@ -296,7 +315,7 @@ namespace crafted_craft {
             } else {
                 if (current->node.flags.is_executable) {
                     if (callback) {
-                        if (TCPserver::get_global_instance().permissions_manager.has_rights(current->action_name, data))
+                        if (Server::instance().permissions_manager.has_rights(current->action_name, data))
                             return callback(args, data);
                         else
                             throw std::exception("Not enough permissions for this.");
@@ -309,7 +328,7 @@ namespace crafted_craft {
 
         list_array<suggestion> extract_suggestions(command* current, list_array<command>& command_nodes, const std::string& part) {
             list_array<suggestion> suggestions;
-            current->node.children.forEach([&](int32_t id) {
+            current->node.children.for_each([&](int32_t id) {
                 auto res = command_nodes[id].node.name.value_or("");
                 if (res.starts_with(part))
                     suggestions.push_back({res});
@@ -538,8 +557,8 @@ namespace crafted_craft {
             return command_browser(manager, int32_t(manager.command_nodes.size() - 1));
         }
 
-        std::list<command_browser> command_root_browser::get_childs() {
-            std::list<command_browser> res;
+        list_array<command_browser> command_root_browser::get_childs() {
+            list_array<command_browser> res;
             for (auto& child : manager.command_nodes[0].node.children)
                 res.push_back(command_browser(manager, child));
             return res;
@@ -660,11 +679,11 @@ namespace crafted_craft {
             return command_browser(manager, int32_t(manager.command_nodes.size() - 1));
         }
 
-        std::list<command_browser> command_browser::get_childs() {
+        list_array<command_browser> command_browser::get_childs() {
             if (!is_valid())
                 throw std::runtime_error("command has been deleted");
 
-            std::list<command_browser> res;
+            list_array<command_browser> res;
             for (auto& child : current_command.node.children)
                 res.push_back(command_browser(manager, child));
             return res;
@@ -699,22 +718,85 @@ namespace crafted_craft {
             return *this;
         }
 
+        void apply_action_command(command& current_command, const action_provider& action) {
+            if (!action.action_tag.empty()) {
+                current_command.action_name = action.action_tag;
+                auto& permissions_manager =
+                    Server::instance()
+                        .permissions_manager;
+                permissions_manager.register_action(action.action_tag, action.required_permissions_tag);
+            }
+        }
+
+        void apply_action_command(command& current_command, action_provider&& action) {
+            if (!action.action_tag.empty()) {
+                current_command.action_name = action.action_tag;
+                auto& permissions_manager =
+                    Server::instance()
+                        .permissions_manager;
+                permissions_manager.register_action(action.action_tag, std::move(action.required_permissions_tag));
+            }
+        }
+
         command_browser& command_browser::set_callback(const std::string& action, const command_callback& callback) {
+            return set_callback(action_provider{action}, callback);
+        }
+
+        command_browser& command_browser::set_callback(const std::string& action, const command_callback& callback, packets::command_node::parsers parser, packets::command_node::properties_t properties) {
+            return set_callback(action_provider{action}, callback, parser, properties);
+        }
+
+        command_browser& command_browser::set_callback(const action_provider& action, const command_callback& callback) {
             if (!is_valid())
                 throw std::runtime_error("command has been deleted");
-            if (!action.empty())
-                current_command.action_name = action;
+            if (current_command.callback)
+                throw std::runtime_error("This command already has callback");
+
+
+            apply_action_command(current_command, action);
             current_command.node.flags.is_executable = true;
             current_command.callback = callback;
             manager.graph_ready = false;
             return *this;
         }
 
-        command_browser& command_browser::set_callback(const std::string& action, const command_callback& callback, packets::command_node::parsers parser, packets::command_node::properties_t properties) {
+        command_browser& command_browser::set_callback(const action_provider& action, const command_callback& callback, packets::command_node::parsers parser, packets::command_node::properties_t properties) {
             if (!is_valid())
                 throw std::runtime_error("command has been deleted");
-            if (!action.empty())
-                current_command.action_name = action;
+            if (current_command.callback)
+                throw std::runtime_error("This command already has callback");
+            apply_action_command(current_command, action);
+
+            current_command.node.flags.is_executable = true;
+            current_command.callback = callback;
+            current_command.node.parser_id = parser;
+            apply_options(parser, properties);
+            current_command.node.properties = properties.flags || properties.max || properties.min || properties.registry ? std::optional(properties) : std::nullopt;
+            manager.graph_ready = false;
+            return *this;
+        }
+
+        command_browser& command_browser::set_callback(action_provider&& action, const command_callback& callback) {
+            if (!is_valid())
+                throw std::runtime_error("command has been deleted");
+            if (current_command.callback)
+                throw std::runtime_error("This command already has callback");
+
+
+            apply_action_command(current_command, std::move(action));
+            current_command.node.flags.is_executable = true;
+            current_command.callback = callback;
+            manager.graph_ready = false;
+            return *this;
+        }
+
+        command_browser& command_browser::set_callback(action_provider&& action, const command_callback& callback, packets::command_node::parsers parser, packets::command_node::properties_t properties) {
+            if (!is_valid())
+                throw std::runtime_error("command has been deleted");
+            if (current_command.callback)
+                throw std::runtime_error("This command already has callback");
+            apply_action_command(current_command, std::move(action));
+
             current_command.node.flags.is_executable = true;
             current_command.callback = callback;
             current_command.node.parser_id = parser;

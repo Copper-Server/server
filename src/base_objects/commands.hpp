@@ -22,6 +22,17 @@ namespace crafted_craft {
         using command_redirect = std::function<void(const list_array<std::string>&, const std::string&, client_data_holder&)>;
         using command_suggestion = std::function<list_array<suggestion>(const list_array<std::string>&, client_data_holder&)>;
 
+        struct action_provider {
+            std::string action_tag;
+            list_array<std::string> required_permissions_tag;
+            action_provider(const std::string& tag);
+            action_provider(const std::string&& tag);
+            action_provider(const std::string& tag, const list_array<std::string>& requirement);
+            action_provider(const std::string&& tag, const list_array<std::string>& requirement);
+            action_provider(const std::string& tag, list_array<std::string>&& requirement);
+            action_provider(const std::string&& tag, list_array<std::string>&& requirement);
+        };
+
         struct command {
             using parsers = packets::command_node::parsers;
             using properties_t = packets::command_node::properties_t;
@@ -88,13 +99,17 @@ namespace crafted_craft {
             command_browser add_child(command&& command);
             command_browser add_child(command&& command, packets::command_node::parsers parser, packets::command_node::properties_t properties = {});
             command_browser add_child(command_browser& command);
-            std::list<command_browser> get_childs();
+            list_array<command_browser> get_childs();
 
             command_browser& set_redirect(const std::string& path, const command_redirect& redirect);
             command_browser& remove_redirect();
 
-            command_browser& set_callback(const std::string& action_name, const command_callback& callback);
-            command_browser& set_callback(const std::string& action_name, const command_callback& callback, packets::command_node::parsers parser, packets::command_node::properties_t properties = {});
+            command_browser& set_callback(const std::string& action, const command_callback& callback);
+            command_browser& set_callback(const std::string& action, const command_callback& callback, packets::command_node::parsers parser, packets::command_node::properties_t properties = {});
+            command_browser& set_callback(const action_provider& action, const command_callback& callback);
+            command_browser& set_callback(const action_provider& action, const command_callback& callback, packets::command_node::parsers parser, packets::command_node::properties_t properties = {});
+            command_browser& set_callback(action_provider&& action, const command_callback& callback);
+            command_browser& set_callback(action_provider&& action, const command_callback& callback, packets::command_node::parsers parser, packets::command_node::properties_t properties = {});
             command_browser& remove_callback();
 
             command_browser& set_suggestion(const std::string& suggestion_type);
@@ -124,7 +139,7 @@ namespace crafted_craft {
                 : manager(browser.manager) {}
 
             command_browser add_child(command&& command);
-            std::list<command_browser> get_childs();
+            list_array<command_browser> get_childs();
 
             command_browser open(const std::string& path) const;
             std::string get_documentation() const;

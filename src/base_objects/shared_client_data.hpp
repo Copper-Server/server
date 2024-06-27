@@ -106,9 +106,9 @@ namespace crafted_craft {
                     special_callback(*this);
             }
 
-            std::list<Response> getPendingPackets() {
+            list_array<Response> getPendingPackets() {
                 fast_task::read_lock lock(pending_packets_lock);
-                return std::move(pending_packets);
+                return pending_packets.take();
             }
 
             SharedClientData(void* assigned_data = nullptr, std::function<void(SharedClientData& self)> special_callback = nullptr)
@@ -131,7 +131,7 @@ namespace crafted_craft {
             void* assigned_data;
             std::function<void(SharedClientData& self)> special_callback;
             fast_task::task_rw_mutex pending_packets_lock;
-            std::list<Response> pending_packets;
+            list_array<Response> pending_packets;
         };
 
         using client_data_holder = atomic_holder<SharedClientData>;

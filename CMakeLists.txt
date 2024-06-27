@@ -1,9 +1,10 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.23)
 project(CraftedCart CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(Boost_NO_WARN_NEW_VERSIONS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 add_subdirectory("src/library/fast_task")
 
 set(CC_src_INCLUDE_DIR "src")

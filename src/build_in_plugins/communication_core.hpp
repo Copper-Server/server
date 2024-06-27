@@ -3,10 +3,10 @@
 #include "../plugin/registration.hpp"
 
 namespace crafted_craft {
-    class TCPserver;
+    class Server;
     namespace build_in_plugins {
         class CommunicationCorePlugin : public PluginRegistration {
-            TCPserver& server;
+            Server& server;
 
         public:
             CommunicationCorePlugin();

@@ -40,10 +40,7 @@ namespace crafted_craft {
                 "debug",
             };
 
-            std::string current_line;
-            list_array<std::tuple<log::level, std::string, std::string>> ouput_queue;
-            fast_task::task_mutex console_mutex;
-            fast_task::task_condition_variable output_mutex;
+            fast_task::task_rw_mutex console_mutex;
 
             std::string color(uint8_t r, uint8_t g, uint8_t b, const std::string& message) {
                 return "\033[38;2;" + std::to_string(r) + ";" + std::to_string(g) + ";" + std::to_string(b) + "m" + message + "\033[0m";
@@ -54,15 +51,11 @@ namespace crafted_craft {
                     return;
                 auto [r, g, b] = log_levels_colors[(int)level];
                 auto line = "[" + log_levels_names[(int)level] + "] [" + source + "] ";
-                std::string aligned_message;
-                std::string alignment(line.size(), ' ');
-                aligned_message.reserve(message.size() + alignment.size() + 1);
-                for (char c : message) {
-                    if (c == '\n')
-                        aligned_message += "\n" + alignment;
-                    else
-                        aligned_message += c;
-                }
+                std::string alignment(line.size() + 1, ' ');
+                alignment[0] = '\n';
+
+                auto aligned_message = list_array<char>(message).replace('\t', "    ", 4).replace('\n', alignment.data(), line.size()).to_container<std::string>();
+                fast_task::read_lock lock(console_mutex);
                 if (cmd)
                     cmd->write(color(r, g, b, line + aligned_message));
             }
@@ -106,6 +99,7 @@ namespace crafted_craft {
         }
         namespace commands {
             void init() {
+                fast_task::write_lock lock(console::console_mutex);
                 console::cmd->enable_history();
                 console::cmd->on_command = [](Commandline& cmd) {
                     on_command.async_notify(cmd.get_command());
@@ -113,17 +107,20 @@ namespace crafted_craft {
             }
 
             void deinit() {
-                console::cmd = nullptr;
+                fast_task::write_lock lock(console::console_mutex);
+                console::cmd.reset();
             }
 
             void registerCommandSuggestion(const std::function<std::vector<std::string>(const std::string&, int)>& callback) {
+                fast_task::write_lock lock(console::console_mutex);
                 console::cmd->on_autocomplete = [callback](Commandline&, const std::string& line, int position) {
                     return callback(line, position);
                 };
             }
 
             void unloadCommandSuggestion() {
-                console::cmd->on_autocomplete = nullptr;
+                fast_task::write_lock lock(console::console_mutex);
+                console::cmd.reset();
             }
         }
     }

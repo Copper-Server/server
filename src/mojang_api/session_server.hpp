@@ -113,7 +113,7 @@ namespace mojang {
 
             static ENBT::UUID generateOfflineUUID() {
                 static std::random_device rd;
-                static std::mt19937_64 gen;
+                static std::mt19937_64 gen(rd());
                 static std::uniform_int_distribution<uint64_t> dis;
                 uint64_t data[2]{dis(gen), dis(gen)};
                 uint8_t* ptr = (uint8_t*)data;

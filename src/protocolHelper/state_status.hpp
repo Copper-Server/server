@@ -13,10 +13,12 @@ namespace crafted_craft {
         };
 
         virtual IllegalDataResponse AllowProtocolVersion(int proto_version) {
-            if (765 == proto_version)
-                return IllegalDataResponse::none;
-            else
-                return IllegalDataResponse::none;
+            return IllegalDataResponse::none;
+            //
+            //if (765 == proto_version)
+            //    return IllegalDataResponse::none;
+            //else
+            //    return IllegalDataResponse::none;
         }
 
         virtual IllegalDataResponse AllowServerAddressAndPort(std::string& str, uint16_t port) {
@@ -81,8 +83,9 @@ namespace crafted_craft {
             if (base64_fav == "")
                 res += "\n}";
             else
-                res += ",\"favicon\": \"data:image/png" +
-                       ';' + base64_fav +
+                res += ",\"favicon\": \"data:image/png"
+                       ";" +
+                       base64_fav +
                        ",<data>\"\n}";
             return res;
         }
@@ -96,7 +99,9 @@ namespace crafted_craft {
         Response WorkPacket(ArrayStream& packet) override {
             if (!special_status->config.status.enable)
                 return Response::Disconnect();
-            if (packet.size_read() == 1) {
+            if (packet.size_read() == 0)
+                return Response::Empty();
+            else if (packet.size_read() == 1) {
                 list_array<uint8_t> response;
                 response.push_back('\0');
                 std::string&& tmp = buildResponse();

@@ -4,11 +4,10 @@
 
 namespace crafted_craft {
     namespace storage {
-        enbt_list_storage::enbt_list_storage(const std::string& path)
+        enbt_list_storage::enbt_list_storage(const std::filesystem::path& path)
             : path(path) {
-            std::filesystem::path p(path);
-            if (!std::filesystem::exists(p)) {
-                std::filesystem::create_directories(p.parent_path());
+            if (!std::filesystem::exists(path)) {
+                std::filesystem::create_directories(path.parent_path());
                 std::ofstream file;
                 file.open(path, std::ios::out);
                 file.close();
@@ -19,17 +18,27 @@ namespace crafted_craft {
             file.open(path, std::ios::in);
             if (!file.is_open())
                 return;
-            while (!file.eof()) {
-                std::string key = (std::string)ENBTHelper::ReadString(file);
-                data[key] = ENBTHelper::ReadToken(file);
-            }
+            data.set([&](auto& value) {
+                while (!file.eof()) {
+                    std::string key = (std::string)ENBTHelper::ReadString(file);
+                    if (file.eof())
+                        break;
+                    value[key] = ENBTHelper::ReadToken(file);
+                }
+            });
             _is_loaded = true;
             file.close();
         }
 
         void enbt_list_storage::add(const std::string& key, const ENBT& enbt) {
-            if (data.find(key) == data.end()) {
-                data[key] = enbt;
+            bool save = false;
+            data.set([&](auto& value) {
+                if (value.find(key) == value.end()) {
+                    value[key] = enbt;
+                    save = true;
+                }
+            });
+            if (save) {
                 std::fstream file;
                 file.open(path, std::ios::out | std::ios::app);
                 ENBTHelper::WriteString(file, key);
@@ -39,36 +48,83 @@ namespace crafted_craft {
             }
         }
 
-        std::optional<ENBT> enbt_list_storage::get(const std::string& key) {
-            auto it = data.find(key);
-            if (it != data.end())
-                return std::optional(it->second);
-            return std::nullopt;
-        }
+        void enbt_list_storage::update(const std::string& key, const ENBT& enbt) {
+            bool save = false;
+            data.set([&](auto& value) {
+                auto it = value.find(key);
+                if (it != value.end()) {
+                    it->second = enbt;
+                    save = true;
+                }
+            });
 
-        bool enbt_list_storage::contains(const std::string& value) {
-            return data.contains(value);
-        }
-
-        void enbt_list_storage::remove(const std::string& key) {
-            if (data.find(key) != data.end()) {
-                data.erase(key);
+            if (save) {
                 std::fstream file;
                 file.open(path, std::ios::out | std::ios::trunc);
-                for (const auto& [key, value] : data) {
-                    ENBTHelper::WriteString(file, key);
-                    ENBTHelper::WriteToken(file, value);
-                }
+                data.get([&](auto& value) {
+                    for (const auto& [key, value] : value) {
+                        ENBTHelper::WriteString(file, key);
+                        ENBTHelper::WriteToken(file, value);
+                    }
+                });
                 file.flush();
                 file.close();
             }
         }
 
-        std::list<std::string> enbt_list_storage::keys() {
-            std::list<std::string> keys;
-            for (const auto& [key, value] : data)
-                keys.push_back(key);
-            return keys;
+        std::optional<ENBT> enbt_list_storage::get(const std::string& key) {
+            return data.get([&](auto& value) -> std::optional<ENBT> {
+                auto it = value.find(key);
+                if (it != value.end())
+                    return std::optional(it->second);
+                return std::nullopt;
+            });
+        }
+
+        bool enbt_list_storage::contains(const std::string& find_value) {
+            return data.get([&](auto& value) {
+                return value.contains(find_value);
+            });
+        }
+
+        void enbt_list_storage::remove(const std::string& key) {
+            bool save = false;
+            data.set([&](auto& value) {
+                auto it = value.find(key);
+                if (it != value.end()) {
+                    value.erase(it);
+                    save = true;
+                }
+            });
+
+            if (save) {
+                std::fstream file;
+                file.open(path, std::ios::out | std::ios::trunc);
+                data.get([&](auto& value) {
+                    for (const auto& [key, value] : value) {
+                        ENBTHelper::WriteString(file, key);
+                        ENBTHelper::WriteToken(file, value);
+                    }
+                });
+                file.flush();
+                file.close();
+            }
+        }
+
+        list_array<std::string> enbt_list_storage::keys(size_t max_items, bool& max_reached) {
+            return data.get([&](auto& value) {
+                list_array<std::string> keys;
+                size_t i = 0;
+                keys.reserve(value.size());
+                for (const auto& [key, value_] : value) {
+                    if (i++ == max_items) {
+                        max_reached = 0;
+                        break;
+                    }
+                    keys.push_back(key);
+                }
+                return keys;
+            });
         }
 
     } // namespace storage

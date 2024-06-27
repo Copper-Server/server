@@ -43,6 +43,8 @@ namespace crafted_craft {
                     size_t i = 0;
                     online_players.iterate_players_not_state(crafted_craft::base_objects::SharedClientData::packets_state_t::protocol_state::initialization, [&](const crafted_craft::base_objects::SharedClientData& player) {
                         if (i < config.status.sample_players_count) {
+                            if (!player.data)
+                                return true;
                             result.push_back({player.name, player.data->uuid});
                             return true;
                         } else

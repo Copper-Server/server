@@ -41,7 +41,7 @@ namespace crafted_craft {
         }
 
         Response IdleActions() {
-            std::list<PluginRegistration::plugin_response> load_next_packets;
+            list_array<PluginRegistration::plugin_response> load_next_packets;
             for (size_t i = 0; !queriedPackets.empty(); i++) {
                 load_next_packets.push_back(std::move(queriedPackets.front()));
                 queriedPackets.pop_front();

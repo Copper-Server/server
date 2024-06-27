@@ -12,7 +12,7 @@ namespace crafted_craft {
                 bool apply_compression;
 
                 Item()
-                    : apply_compression(false) {}
+                    : apply_compression(false), compression_threshold(-1) {}
 
                 Item(const list_array<uint8_t>& data, int32_t compression_threshold = -1, bool apply_compression = false)
                     : data(data), compression_threshold(compression_threshold), apply_compression(apply_compression) {}

@@ -7,7 +7,7 @@ namespace crafted_craft {
     class TCPClientHandleConfiguration : public TCPClientHandle {
     protected:
         Response IdleActions() {
-            std::list<PluginRegistration::plugin_response> load_next_packets;
+            list_array<PluginRegistration::plugin_response> load_next_packets;
             Response response(Response::Empty());
             if (!inited) {
                 response += RegistryData();

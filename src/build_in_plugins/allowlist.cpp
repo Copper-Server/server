@@ -1,24 +1,33 @@
 #include "allowlist.hpp"
+#include "../api/players.hpp"
 #include "../base_objects/commands.hpp"
 #include "../log.hpp"
 #include "../protocolHelper/state_play.hpp"
 
 namespace crafted_craft {
-    class TCPserver;
+    class Server;
 
     namespace build_in_plugins {
-        AllowListPlugin::AllowListPlugin(const std::string& storage_path)
-            : allow_list(storage_path + "/allow_list.txt"), server(TCPserver::get_global_instance()) {}
+        AllowListPlugin::AllowListPlugin()
+            : allow_list(Server::instance().config.server.get_storage_path() / "allow_list.txt"), server(Server::instance()) {}
 
-        void AllowListPlugin::OnLoad(const PluginRegistrationPtr& self) {
+        void AllowListPlugin::OnPostLoad(const PluginRegistrationPtr& self) {
             register_event(api::allowlist::on_mode_change, base_objects::event_priority::heigh, [this](api::allowlist::allowlist_mode mode) {
                 if (mode == api::allowlist::allowlist_mode::block)
-                    for (const auto& entry : allow_list.entrys())
+                    allow_list.for_each(-1, [&](const auto& entry) {
                         api::allowlist::on_kick(entry);
-
+                    });
                 this->mode = mode;
                 return false;
             });
+        }
+
+        void AllowListPlugin::OnLoad(const PluginRegistrationPtr& self) {
+            TCPClientHandlePlay::base_plugins.push_back(self);
+        }
+
+        void AllowListPlugin::OnUnload(const PluginRegistrationPtr& self) {
+            TCPClientHandlePlay::base_plugins.remove(self);
         }
 
         void AllowListPlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
@@ -28,7 +37,7 @@ namespace crafted_craft {
                     .add_child({"<player>", "add player to allowlist", "/allowlist add <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
                     .set_callback("command.allowlist.add", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) -> void {
                         if (args.size() == 0) {
-                            client->sendPacket(packets::play::systemChatMessage({"Usage: /allowlist add <player>"}));
+                            api::players::calls::on_system_message({client, {"Usage: /allowlist add <player>"}});
                             return;
                         }
                         const std::string& player = args[0];
@@ -38,13 +47,13 @@ namespace crafted_craft {
                             return;
 
                         allow_list.add(args[0]);
-                        client->sendPacket(packets::play::systemChatMessage({"Player " + args[0] + " added to allowlist"}));
+                        api::players::calls::on_system_message({client, {"Player " + args[0] + " added to allowlist"}});
                     });
                 allowlist.add_child({"remove", "", ""})
                     .add_child({"<player>", "remove player from allowlist", "/allowlist remove <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
                     .set_callback("command.allowlist.remove", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) -> void {
                         if (args.size() == 0) {
-                            client->sendPacket(packets::play::systemChatMessage({"Usage: /allowlist remove <player>"}));
+                            api::players::calls::on_system_message({client, {"Usage: /allowlist remove <player>"}});
                             return;
                         }
                         const std::string& player = args[0];
@@ -53,25 +62,36 @@ namespace crafted_craft {
                         if (api::allowlist::on_remove(player))
                             return;
                         allow_list.remove(args[0]);
-                        client->sendPacket(packets::play::systemChatMessage({"Player " + args[0] + " removed from allowlist"}));
+                        api::players::calls::on_system_message({client, {"Player " + args[0] + " removed from allowlist"}});
                     });
                 allowlist.add_child({"list", "list all players in allowlist", "/allowlist list"})
                     .set_callback("command.allowlist.list", [this](const list_array<std::string>&, base_objects::client_data_holder& client) -> void {
-                        //list all players in allowlist
-                        auto entrys = allow_list.entrys();
-                        std::string message = "Players in allowlist: ";
-                        for (const auto& entry : entrys)
-                            message += entry + ", ";
-                        message.erase(message.size() - 2);
-                        message[message.size() - 1] = '.';
+                        bool max_reached = false;
+                        auto listed = allow_list.entrys(100, max_reached);
+                        if (listed.size() == 0) {
+                            api::players::calls::on_system_message({client, {"There are no listed player."}});
+                        } else if (listed.size() == 1) {
+                            api::players::calls::on_system_message({client, {"There is only one player in the list:" + listed.back()}});
+                        } else {
+                            std::string last_item = listed.back();
+                            listed.pop_back();
+                            std::string message = "There a total of " + std::to_string(listed.size() + 1) + " listed players:\n";
+                            for (auto& player : listed)
+                                message += player + ", ";
 
-                        client->sendPacket(packets::play::systemChatMessage({message}));
+                            if (!max_reached) {
+                                message.erase(message.size() - 2, 2);
+                                message += "and " + last_item + '.';
+                            } else
+                                message += last_item + ", ...";
+                            api::players::calls::on_system_message({client, {message}});
+                        }
                     });
                 allowlist.add_child({"mode"})
                     .add_child({"<mode>", "set allowlist mode", "/allowlist mode block|allow|off"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
                     .set_callback("command.allowlist.mode", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) -> void {
                         if (args.size() == 0) {
-                            client->sendPacket(packets::play::systemChatMessage({"Usage: /allowlist mode <mode>"}));
+                            api::players::calls::on_system_message({client, {"Usage: /allowlist mode <mode>"}});
                             return;
                         }
                         if (args[0] == "block")
@@ -81,10 +101,10 @@ namespace crafted_craft {
                         else if (args[0] == "off")
                             api::allowlist::on_mode_change(api::allowlist::allowlist_mode::off);
                         else {
-                            client->sendPacket(packets::play::systemChatMessage({"Usage: /allowlist mode block|allow|off"}));
+                            api::players::calls::on_system_message({client, {"Usage: /allowlist mode block|allow|off"}});
                             return;
                         }
-                        client->sendPacket(packets::play::systemChatMessage({"Allowlist mode set to " + args[0]}));
+                        api::players::calls::on_system_message({client, {"Allowlist mode set to " + args[0]}});
                     });
             }
         }

@@ -130,6 +130,7 @@ class NBT {
             nbt_data.push_back(8);
             break;
         case ENBT::Type::array:
+        case ENBT::Type::darray:
             nbt_data.push_back(9);
             break;
         case ENBT::Type::compound:

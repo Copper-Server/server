@@ -48,7 +48,7 @@ namespace crafted_craft {
         }
 
         Response loginSuccess() {
-            if (session->serverData().server_config.protocol.offline_mode)
+            if (session->serverData().config.protocol.offline_mode)
                 session->sharedData().data = session->serverData().getSessionServer().hasJoined(session->sharedData().name, "", false);
             if (!session->sharedData().data)
                 return packets::login::kick("Internal error");
@@ -114,7 +114,7 @@ namespace crafted_craft {
         void resolve_join_conflict() {
             if (
                 has_conflict && session->serverData()
-                                        .server_config
+                                        .config
                                         .protocol
                                         .connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::kick_connected
             ) {
@@ -153,7 +153,7 @@ namespace crafted_craft {
                 std::string nickname = ReadString(data, 16);
                 auto player = online_players.get_player(nickname);
                 if (online_players.has_player(nickname)) {
-                    if (session->serverData().server_config.protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::prevent_join)
+                    if (session->serverData().config.protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::prevent_join)
                         return packets::login::kick("You someone already connected with this nickname");
                     else
                         has_conflict = true;
@@ -167,10 +167,10 @@ namespace crafted_craft {
                     log::debug("login", "kick...");
                     return packets::login::kick(str);
                 }
-                if (!session->serverData().server_config.protocol.offline_mode) {
+                if (!session->serverData().config.protocol.offline_mode) {
                     return encryptionRequest(); //still not encrypted
-                } else if (session->serverData().server_config.protocol.compression_threshold != -1) {
-                    return setCompression(session->serverData().server_config.protocol.compression_threshold);
+                } else if (session->serverData().config.protocol.compression_threshold != -1) {
+                    return setCompression(session->serverData().config.protocol.compression_threshold);
                 } else if (!plugins_query.empty()) {
                     ArrayStream empty((const uint8_t*)nullptr, 0);
                     return proceedPlugin(empty);

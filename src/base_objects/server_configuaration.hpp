@@ -10,15 +10,8 @@
 namespace crafted_craft {
     namespace base_objects {
         struct ServerConfiguration {
-            struct RCON {
-                std::string password = "";
-                uint16_t port = 64326;
-                bool enabled = false;
-                bool broadcast_to_ops = true;
-            } rcon;
-
             struct Query {
-                uint16_t port = 17543;
+                uint16_t port = 25545;
                 bool enabled = false;
             } query;
 
@@ -127,7 +120,17 @@ namespace crafted_craft {
                 bool show_players = true;
             } status;
 
-            
+            struct Server {
+                //[runtime]
+                const std::filesystem::path base_path = std::filesystem::current_path();
+
+                std::string storage_folder = "storage";
+
+                std::filesystem::path get_storage_path() const {
+                    return base_path / storage_folder;
+                }
+            } server;
+
             std::unordered_set<std::string> allowed_dimensions = {"overworld"};
 
 

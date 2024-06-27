@@ -24,6 +24,9 @@ namespace crafted_craft {
         list_array<event_auto_cleanup_t> cleanup_list;
 
     public:
+        virtual void initializer(const std::shared_ptr<PluginRegistration>&) {};
+        virtual void deinitializer(const std::shared_ptr<PluginRegistration>&) {};
+
         template <class T>
         void register_event(base_objects::event<T>& event_ref, base_objects::event<T>::function&& fn) {
             cleanup_list.push_back({&event_ref, event_ref.join(base_objects::event_priority::avg, false, fn), base_objects::event_priority::avg, false});
@@ -40,7 +43,7 @@ namespace crafted_craft {
         }
 
         void clean_up_registered_events() {
-            cleanup_list.take().forEach([](event_auto_cleanup_t&& leave_data) {
+            cleanup_list.take().for_each([](event_auto_cleanup_t&& leave_data) {
                 leave_data.event_obj->leave(leave_data.id, leave_data.priority, leave_data.async_mode);
             });
         }

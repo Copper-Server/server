@@ -32,9 +32,12 @@ namespace crafted_craft {
         }
 
         void unloadPlugin(const std::string& name) {
-            auto plugin = plugins[name];
+            auto it = plugins.find(name);
+            if (it == plugins.end())
+                return;
+            auto& plugin = it->second;
             plugin->OnUnload(plugin);
-            plugins.erase(name);
+            plugins.erase(it);
         }
 
         list_array<PluginRegistrationPtr> registeredPlugins() {
@@ -47,8 +50,9 @@ namespace crafted_craft {
         }
 
         void callLoad() {
-            for (auto& [name, plugin] : plugins)
+            for (auto& [name, plugin] : plugins) {
                 plugin->OnLoad(plugin);
+            }
             for (auto& [name, plugin] : plugins)
                 plugin->OnPostLoad(plugin);
         }

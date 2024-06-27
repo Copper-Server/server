@@ -4,15 +4,19 @@
 #include "../storage/enbt_list_storage.hpp"
 
 namespace crafted_craft {
-    class TCPserver;
+    class Server;
     namespace build_in_plugins {
         class BanPlugin : public PluginRegistration {
             storage::enbt_list_storage banned_players;
             storage::enbt_list_storage banned_ips;
-            TCPserver& server;
+            Server& server;
 
         public:
-            BanPlugin(const std::string& storage_path);
+            BanPlugin();
+
+            void OnLoad(const PluginRegistrationPtr& self) override;
+
+            void OnUnload(const PluginRegistrationPtr& self) override;
 
             void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override;
             plugin_response OnPlay_initialize(base_objects::client_data_holder& client) override;
