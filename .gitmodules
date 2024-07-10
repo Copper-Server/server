@@ -11,3 +11,6 @@
 [submodule "src/library/fast_task"]
 	path = src/library/fast_task
 	url = https://github.com/Melnytskyi/fast_task.git
+[submodule "src/library/commandline"]
+	path = src/library/commandline
+	url = https://github.com/Melnytskyi/commandline.git

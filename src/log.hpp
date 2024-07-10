@@ -1,5 +1,5 @@
-#ifndef SRC_CONSOLE
-#define SRC_CONSOLE
+#ifndef SRC_LOG
+#define SRC_LOG
 #include "base_objects/event.hpp"
 #include <string>
 
@@ -33,6 +33,7 @@ namespace crafted_craft {
 
         namespace commands {
             extern base_objects::event<std::string> on_command;
+            bool is_inited();
             void init();
             void deinit();
             void registerCommandSuggestion(const std::function<std::vector<std::string>(const std::string&, int)>& callback);
@@ -42,4 +43,4 @@ namespace crafted_craft {
 }
 
 
-#endif /* SRC_CONSOLE */
+#endif /* SRC_LOG */

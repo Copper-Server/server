@@ -1,4 +1,6 @@
 #include "server.hpp"
+#include "../api/command.hpp"
+#include "../api/console.hpp"
 #include "../api/players.hpp"
 #include "../log.hpp"
 #include "../plugin/registration.hpp"
@@ -11,7 +13,6 @@ namespace crafted_craft {
 
         ServerPlugin::ServerPlugin()
             : players_data(Server::instance().config.server.get_storage_path() / "players"),
-              console_data(server.online_players.allocate_player(), "Console", "Console", server),
               server(Server::instance()) {
         }
 
@@ -20,70 +21,20 @@ namespace crafted_craft {
         }
 
         void ServerPlugin::OnLoad(const PluginRegistrationPtr& self) {
-            manager.reload_commands();
             try {
                 server.permissions_manager.sync();
             } catch (const std::exception& ex) {
                 log::error("Server", std::string("[permissions] Failed to load permission file because: ") + ex.what());
             }
-            register_event(log::commands::on_command, base_objects::event_priority::heigh, [&](const std::string& command) {
-                if (command.empty())
-                    return false;
-                log::info("Server", "[command] " + command);
-                try {
-                    manager.execute_command(command, console_data.client);
-                } catch (const std::exception& ex) {
-                    log::error("Server", "[command] " + command + "\n Failed to execute command, reason:\n\t" + ex.what());
-                    return false;
-                }
-                return true;
-            });
-            log::commands::registerCommandSuggestion([this](const std::string& line, int position) {
-                auto tmp = line;
-                if (uint32_t(position) <= line.size())
-                    tmp.resize(position);
-                else
-                    tmp += ' ';
-                auto insertion_ = tmp;
-
-                if (!insertion_.starts_with(' ')) {
-                    auto it = insertion_.find_last_of(' ');
-                    if (insertion_.npos == it)
-                        insertion_.clear();
-                    else
-                        insertion_ = insertion_.substr(0, it) + ' ';
-                }
-                return manager
-                    .request_suggestions(tmp, console_data.client)
-                    .convert<std::string>([&insertion_](auto&& suggestion) { return insertion_ + suggestion.insertion; })
-                    .to_container<std::vector<std::string>>();
-            });
-            console_data.systemChatMessage = [this](const Chat& message) {
-                log::info("Server", message.to_ansi_console());
-            };
-            console_data.systemChatMessageOverlay = [this](const Chat& message) {
-                log::info("Server", message.to_ansi_console());
-            };
-            console_data.disguisedChatMessage = [this](const Chat& message, int32_t chat_type, const Chat& sender, std::optional<Chat> target_name) {
-                if (!target_name)
-                    log::info("Server", "[" + sender.to_ansi_console() + "] " + message.to_ansi_console());
-                else
-                    log::info("Server", "[" + sender.to_ansi_console() + " -> " + target_name->to_ansi_console() + "] " + message.to_ansi_console());
-            };
-
-            console_data.client->player_data.permissions = {
-                "operator_1",
-                "operator_2",
-                "operator_3",
-                "operator_4",
-                "console"
-            };
+            api::command::register_manager(manager);
+            manager.reload_commands();
             log::info("Server", "server handler loaded.");
             TCPClientHandlePlay::base_plugins.push_back(self);
         }
 
         void ServerPlugin::OnPostLoad(const std::shared_ptr<PluginRegistration>&) {
-            manager.execute_command("version", console_data.client);
+            if (api::console::console_enabled())
+                api::console::execute_as_console("version");
         }
 
         void ServerPlugin::OnUnload(const PluginRegistrationPtr& self) {
@@ -97,14 +48,10 @@ namespace crafted_craft {
             {
                 browser.add_child({"help", "returns list of commands", ""})
                     .set_callback("command.help", [browser, this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                        if (!server.permissions_manager.has_rights("command.help", client))
-                            throw std::exception("Not enough permissions for this.");
                         api::players::calls::on_system_message({client, {"help for all commands:\n" + browser.get_documentation()}});
                     })
                     .add_child({"<command>", "returns help for command", "/help <command>"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
-                    .set_callback("command.help.command", [browser, this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                        if (!server.permissions_manager.has_rights("command.help.command", client))
-                            throw std::exception("Not enough permissions for this.");
+                    .set_callback("command.help", [browser, this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         auto command = browser.open(args[0]);
                         if (!command.is_valid())
                             api::players::calls::on_system_message({client, {"Command not found"}});
@@ -123,54 +70,6 @@ namespace crafted_craft {
                     });
             }
             {
-                browser.add_child({"op"})
-                    .add_child({"<player>", "op player", "/op <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                    .set_callback("command.op", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                        if (args.size() == 0) {
-                            api::players::calls::on_system_message({client, {"Usage: /op <player>"}});
-                            return;
-                        }
-                        auto target = server.online_players.get_player(
-                            SharedClientData::packets_state_t::protocol_state::play,
-                            args[0]
-                        );
-                        if (!target) {
-                            api::players::calls::on_system_message({client, "Player not found"});
-                            return;
-                        }
-                        if (target->player_data.op_level > 4) {
-                            api::players::calls::on_system_message({client, "This player has more permissions than OP"});
-                            return;
-                        }
-                        target->player_data.op_level = 4;
-                        api::players::calls::on_system_message_broadcast({"Player " + target->name + "(" + target->data->uuid_str + ") is now OP"});
-                    });
-            }
-            {
-                browser.add_child({"deop"})
-                    .add_child({"<player>", "deop player", "/deop <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                    .set_callback("command.deop", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                        if (args.size() == 0) {
-                            api::players::calls::on_system_message({client, {"Usage: /deop <player>"}});
-                            return;
-                        }
-                        auto target = server.online_players.get_player(
-                            SharedClientData::packets_state_t::protocol_state::play,
-                            args[0]
-                        );
-                        if (!target) {
-                            api::players::calls::on_system_message({client, "Player not found or offline"});
-                            return;
-                        }
-                        if (target->player_data.op_level > 4) {
-                            api::players::calls::on_system_message({client, "This player has more permissions than OP"});
-                            return;
-                        }
-                        target->player_data.op_level = 4;
-                        api::players::calls::on_system_message_broadcast({"Player " + target->name + "(" + target->data->uuid_str + ") is now OP"});
-                    });
-            }
-            {
                 browser.add_child({"kick"})
                     .add_child({"<player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
                     .set_callback("command.kick", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
@@ -186,14 +85,14 @@ namespace crafted_craft {
                             api::players::calls::on_system_message({client, "Player not found"});
                             return;
                         }
-                        if (target->player_data.op_level > 4) {
+                        if (server.permissions_manager.has_rights("misc.operator_protection.kick", target)) {
                             api::players::calls::on_system_message({client, "You can't kick this player"});
                             return;
                         }
                         api::players::calls::on_player_kick({target, "kicked by admin"});
                     })
                     .add_child({"<reason>", "kick player with reason", "/kick <player> [reason]"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
-                    .set_callback("command.kick.reason", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                    .set_callback("command.kick", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         if (args.size() == 0) {
                             api::players::calls::on_system_message({client, {"Usage: /kick <player>"}});
                             throw std::exception("Not enough permissions for this.");
@@ -206,7 +105,7 @@ namespace crafted_craft {
                             api::players::calls::on_system_message({client, "Player not found"});
                             return;
                         }
-                        if (target->player_data.op_level > 4) {
+                        if (server.permissions_manager.has_rights("misc.operator_protection.kick", target)) {
                             api::players::calls::on_system_message({client, "You can't kick this player"});
                             return;
                         }
@@ -261,52 +160,6 @@ namespace crafted_craft {
                             api::players::calls::on_system_message({client, {"Config value: " + value}});
                     });
             }
-            {
-                auto _console = browser.add_child({"console"});
-                auto _log = _console.add_child({"log"});
-                {
-                    _log
-                        .add_child({"enable"})
-                        .add_child({"<log level>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                        .set_callback({"command.console.log.enable", {"console"}}, [](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                            auto& level = args[0];
-                            if (level == "info")
-                                log::enable_log_level(log::level::info);
-                            else if (level == "warn")
-                                log::enable_log_level(log::level::warn);
-                            else if (level == "error")
-                                log::enable_log_level(log::level::error);
-                            else if (level == "fatal")
-                                log::enable_log_level(log::level::fatal);
-                            else if (level == "debug_error")
-                                log::enable_log_level(log::level::debug_error);
-                            else if (level == "debug")
-                                log::enable_log_level(log::level::debug);
-                            else
-                                log::error("Server", "log level " + level + " is undefined.");
-                        });
-                    _log
-                        .add_child({"disable"})
-                        .add_child({"<log level>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                        .set_callback({"command.console.log.disable", {"console"}}, [](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                            auto& level = args[0];
-                            if (level == "info")
-                                log::disable_log_level(log::level::info);
-                            else if (level == "warn")
-                                log::disable_log_level(log::level::warn);
-                            else if (level == "error")
-                                log::disable_log_level(log::level::error);
-                            else if (level == "fatal")
-                                log::disable_log_level(log::level::fatal);
-                            else if (level == "debug_error")
-                                log::disable_log_level(log::level::debug_error);
-                            else if (level == "debug")
-                                log::disable_log_level(log::level::debug);
-                            else
-                                log::error("Server", "log level " + level + " is undefined.");
-                        });
-                }
-            }
         }
 
         ServerPlugin::plugin_response ServerPlugin::OnPlay_initialize(base_objects::client_data_holder& client_ref) {
@@ -335,8 +188,8 @@ namespace crafted_craft {
                 client.player_data.reduced_debug_info,
                 true,
                 false,
-                client.player_data.world_id,
-                client.player_data.world_id,
+                client.player_data.world_id.get(),
+                client.player_data.world_id.get(),
                 0,
                 client.player_data.gamemode,
                 client.player_data.prev_gamemode,

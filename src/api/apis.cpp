@@ -1,3 +1,4 @@
+#include "../base_objects/virtual_client.hpp"
 #include "allowlist.hpp"
 #include "ban.hpp"
 #include "players.hpp"
@@ -107,5 +108,61 @@ namespace crafted_craft {
             base_objects::event<event_data<data::use_item_on>> on_use_item_on;
             base_objects::event<event_data<data::use_item>> on_use_item;
         } // namespace protocol
+
+        namespace command {
+            base_objects::command_manager* global_manager = nullptr;
+
+            void register_manager(base_objects::command_manager& manager) {
+                if (!global_manager)
+                    global_manager = &manager;
+                else
+                    throw std::runtime_error("Command manager already registered");
+            }
+
+            void unregister_manager() {
+                if (global_manager)
+                    global_manager = nullptr;
+                else
+                    throw std::runtime_error("Command manager not yet registered");
+            }
+
+            base_objects::command_manager& get_manager() {
+                if (global_manager)
+                    return *global_manager;
+                else
+                    throw std::runtime_error("Command manager not yet registered");
+            }
+        }
+
+        namespace console {
+            base_objects::virtual_client* console_data;
+
+            void register_virtual_client(base_objects::virtual_client& client) {
+                if (!console_data)
+                    console_data = &client;
+                else
+                    throw std::runtime_error("Consoles virtual client already registered");
+            }
+
+            void unregister_virtual_client() {
+                if (console_data)
+                    console_data = nullptr;
+                else
+                    throw std::runtime_error("Consoles virtual client not yet registered");
+            }
+
+            void execute_as_console(const std::string& command) {
+                if (!console_data)
+                    throw std::runtime_error("Virtual client for console not yet registered");
+
+                api::command::get_manager().execute_command(command, console_data->client);
+            }
+
+            bool console_enabled() {
+                if (!console_data)
+                    return false;
+                return log::commands::is_inited();
+            }
+        }
     }
 }

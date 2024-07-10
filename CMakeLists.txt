@@ -1,24 +1,15 @@
 cmake_minimum_required(VERSION 3.23)
+set(CMAKE_POLICY_DEFAULT_CMP0091 NEW)
 project(CraftedCart CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(Boost_NO_WARN_NEW_VERSIONS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_subdirectory("src/library/fast_task")
-
-set(CC_src_INCLUDE_DIR "src")
-set(CC_INCLUDE_DIR ${CC_src_INCLUDE_DIR})
-
 if(MSVC)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
   add_definitions(/MP)
   add_definitions(/Zc:preprocessor)
-  string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-  string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
-  string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
-  string(REPLACE "/Gv" "/Gr" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_RELEASE})
-  string(REPLACE "/Gv" "/Gr" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
-  string(REPLACE "/Gv" "/Gr" CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
 else(MSVC)
   add_compile_options(-m64)
   add_compile_options(-g)
@@ -26,6 +17,17 @@ else(MSVC)
   set(Boost_USE_STATIC_RUNTIME ON)
 endif(MSVC)
 set(ENABLE_BOOST_PREPROCESSOR ON)
+
+
+set(COMMANDLINE_LIBTYPE STATIC)
+set(COMMANDLINE_SHARED_LIBS OFF)
+
+add_subdirectory("src/library/fast_task")
+add_subdirectory("src/library/commandline")
+
+set(CC_src_INCLUDE_DIR "src")
+set(CC_INCLUDE_DIR ${CC_src_INCLUDE_DIR})
+
 
 FILE(GLOB SRCFILES 
         src/protocolHelper/*/*.cpp
@@ -40,7 +42,6 @@ FILE(GLOB SRCFILES
         src/*.cpp 
 )
 
-find_library(commandline_LIB commandline)
 
 find_package(Boost REQUIRED COMPONENTS context json bimap)
 find_package(ZLIB REQUIRED)
@@ -62,6 +63,6 @@ ENDIF(MSVC)
       ZLIB::ZLIB
       OpenSSL::SSL
       utf8::cpp
-      ${commandline_LIB}
+      commandline::commandline
       fast_task
     )

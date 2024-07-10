@@ -1,5 +1,6 @@
 #ifndef SRC_BASE_OBJECTS_SERVER_CONFIGUARATION
 #define SRC_BASE_OBJECTS_SERVER_CONFIGUARATION
+#include "shared_string.hpp"
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
@@ -16,19 +17,19 @@ namespace crafted_craft {
             } query;
 
             struct World {
-                std::string name = "overworld";
-                std::string seed = "0";
-                std::string type = "default";
+                shared_string name = "overworld";
+                shared_string seed = "0";
+                shared_string type = "default";
                 size_t unload_speed = 10; //max 1000 chunks per tick
 
                 bool generate_structures = true;
 
-                std::unordered_map<std::string, std::string> generator_settings = {};
+                std::unordered_map<shared_string, std::string> generator_settings = {};
             } world;
 
             struct GamePlay {
-                std::string difficulty = "normal";
-                std::string gamemode = "survival";
+                shared_string difficulty = "normal";
+                shared_string gamemode = "survival";
                 uint64_t max_chained_neighbor_updates = 4000;
                 uint32_t max_tick_time = 70; //tick time
                 uint32_t view_distance = 10;
@@ -131,7 +132,7 @@ namespace crafted_craft {
                 }
             } server;
 
-            std::unordered_set<std::string> allowed_dimensions = {"overworld"};
+            std::unordered_set<shared_string> allowed_dimensions = {"overworld"};
 
 
             void load(const std::filesystem::path& config_file_path, bool fill_default_values = true);

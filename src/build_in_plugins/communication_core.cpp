@@ -174,10 +174,53 @@ namespace crafted_craft {
 
         void CommunicationCorePlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
             browser.add_child({"broadcast"})
-                .add_child({"<message>", "broadcast <message>", "Broadcast a message to all players"})
+                .add_child({"<message>", "broadcast <message>", "Broadcast a message to all players"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
                 .set_callback("command.broadcast", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                     api::players::calls::on_system_message_broadcast(Chat::parseToChat(args[0]));
                 });
+            browser.add_child({"msg"})
+                .add_child({"<target>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                .add_child({"<message>", "msg <target> <message>", "Send private message to specified player"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
+                .set_callback("command.msg", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                    auto target = server.online_players.get_player(args[0]);
+                    if (!target) {
+                        api::players::calls::on_system_message({client, "Player not found"});
+                        return;
+                    }
+                    Chat message = Chat::parseToChat(args[1]);
+                    api::players::calls::on_system_message({client, {"To " + target->name + ": ", message}});
+                    api::players::calls::on_system_message({target, {"From " + client->name + ": ", message}});
+                });
+            browser.add_child({"chat"})
+                .add_child({"<message>", "chat <message>", "Send message to chat"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
+                .set_callback("command.chat", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                    api::players::calls::on_system_message_broadcast({"[" + client->name + "] ", Chat::parseToChat(args[0])});
+                });
+            browser.add_child({"whoami"})
+                .set_callback("command.whoami", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                    api::players::calls::on_system_message({client, "You are " + client->name});
+                });
+            browser.add_child({"tellraw"})
+                .add_child({"<message>", "tellraw <message>", "Broadcast raw message for everyone."}, base_objects::command::parsers::brigadier_string, {.flags = 2})
+                .set_callback("command.tellraw", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                    api::players::calls::on_system_message_broadcast(Chat::fromStr(args[0]));
+                });
+            browser.add_child({"tellraw"})
+                .add_child({"<message>", "tellraw <message>", "Broadcast raw message for everyone."}, base_objects::command::parsers::brigadier_string, {.flags = 2})
+                .set_callback("command.tellraw", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                    api::players::calls::on_system_message_broadcast(Chat::fromStr(args[0]));
+                });
+            {
+                auto title = browser
+                                 .add_child({"title"})
+                                 .add_child({"<target>"}, base_objects::command::parsers::minecraft_entity, {.flags = 2});
+                title.add_child({"clear", "title <target> clear", "Clear title"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                    .set_callback("command.title.clear", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                        server.online_players.iterate_online([&client](SharedClientData& client) {
+                            return false;
+                        });
+                    });
+            }
         }
     } // namespace build_in_plugins
 

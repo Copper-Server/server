@@ -2,6 +2,7 @@
 #define SRC_BASE_OBJECTS_PACKETS
 #include "chat.hpp"
 #include "position.hpp"
+#include "shared_string.hpp"
 #include "slot.hpp"
 #include <vector>
 
@@ -225,7 +226,7 @@ namespace crafted_craft {
 
 
             struct death_location_data {
-                std::string dimension;
+                shared_string dimension;
                 Position position;
             };
 
@@ -305,15 +306,15 @@ namespace crafted_craft {
                         hidden = 0x04,
                     } flags;
 
-                    std::optional<std::string> background_texture;
+                    std::optional<shared_string> background_texture;
                     float x;
                     float y;
                 };
 
-                std::string key;
-                std::optional<std::string> parent;
+                shared_string key;
+                std::optional<shared_string> parent;
                 std::optional<advancement_display> display;
-                list_array<list_array<std::string>> requirements;
+                list_array<list_array<shared_string>> requirements;
                 bool sends_telemetry_data;
             };
 
@@ -323,12 +324,12 @@ namespace crafted_craft {
                     int64_t date;
                 };
 
-                std::string criterion;
+                shared_string criterion;
                 criterion_progress progress;
             };
 
             struct advancement_progress {
-                std::string advancement;
+                shared_string advancement;
                 list_array<advancement_progress_item> criteria;
             };
 
@@ -339,18 +340,18 @@ namespace crafted_craft {
                     int8_t operation; //0:addition/subtraction, 1:addition/subtraction by %, 2:multiplication by %
                 };
 
-                std::string key;
+                shared_string key;
                 double value;
                 list_array<modifier> modifiers;
             };
 
             struct tag_mapping {
                 struct entry {
-                    std::string tag_name;
+                    shared_string tag_name;
                     list_array<int32_t> entires;
                 };
 
-                std::string registry;
+                shared_string registry;
                 list_array<entry> tags;
             };
         }

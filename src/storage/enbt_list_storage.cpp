@@ -14,8 +14,7 @@ namespace crafted_craft {
                 _is_loaded = true;
                 return;
             }
-            std::ifstream file;
-            file.open(path, std::ios::in);
+            std::ifstream file(path, std::ios::binary);
             if (!file.is_open())
                 return;
             data.set([&](auto& value) {
@@ -40,7 +39,7 @@ namespace crafted_craft {
             });
             if (save) {
                 std::fstream file;
-                file.open(path, std::ios::out | std::ios::app);
+                file.open(path, std::ios::out | std::ios::app | std::ios::binary);
                 ENBTHelper::WriteString(file, key);
                 ENBTHelper::WriteToken(file, enbt);
                 file.flush();
@@ -60,7 +59,7 @@ namespace crafted_craft {
 
             if (save) {
                 std::fstream file;
-                file.open(path, std::ios::out | std::ios::trunc);
+                file.open(path, std::ios::out | std::ios::trunc | std::ios::binary);
                 data.get([&](auto& value) {
                     for (const auto& [key, value] : value) {
                         ENBTHelper::WriteString(file, key);

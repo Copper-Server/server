@@ -7,18 +7,25 @@
 #include "build_in_plugins/allowlist.hpp"
 #include "build_in_plugins/ban.hpp"
 #include "build_in_plugins/communication_core.hpp"
+#include "build_in_plugins/console.hpp"
 #include "build_in_plugins/minecraft.hpp"
+#include "build_in_plugins/permissions.hpp"
 #include "build_in_plugins/server.hpp"
 #include "build_in_plugins/special/status.hpp"
 #include "build_in_plugins/world.hpp"
 #include "library/list_array.hpp"
 #include "plugin/main.hpp"
 #include "registers.hpp"
+#include "utf8.h"
 #include <boost/bimap.hpp>
 #include <memory>
+
 using namespace crafted_craft;
 
+#include <conio.h>
+#include <windows.h>
 int main() {
+
     log::commands::init();
 
     fast_task::task::create_executor();
@@ -35,6 +42,8 @@ int main() {
     pluginManagement.registerPlugin("ban", std::make_shared<build_in_plugins::BanPlugin>());
     pluginManagement.registerPlugin("communication_core", std::make_shared<build_in_plugins::CommunicationCorePlugin>());
     pluginManagement.registerPlugin("minecraft", std::make_shared<build_in_plugins::MinecraftPlugin>());
+    pluginManagement.registerPlugin("console", std::make_shared<build_in_plugins::ConsolePlugin>());
+    pluginManagement.registerPlugin("permissions", std::make_shared<build_in_plugins::PermissionsPlugin>());
 
     special_handshake = new SpecialPluginHandshake();
     special_status = new build_in_plugins::special::Status(server.config, server.online_players);

@@ -38,16 +38,16 @@ namespace crafted_craft {
             }
             {
                 auto world = js_object::get_object(data["world"]);
-                cfg.world.name = world["name"].or_apply(cfg.world.name);
-                cfg.world.seed = world["seed"].or_apply(cfg.world.seed);
-                cfg.world.type = world["type"].or_apply(cfg.world.type);
+                cfg.world.name = world["name"].or_apply(cfg.world.name.get());
+                cfg.world.seed = world["seed"].or_apply(cfg.world.seed.get());
+                cfg.world.type = world["type"].or_apply(cfg.world.type.get());
                 cfg.world.unload_speed = world["unload_speed"].or_apply(cfg.world.unload_speed);
                 cfg.world.generate_structures = world["generate_structures"].or_apply(cfg.world.generate_structures);
                 {
                     auto generator_settings = js_object::get_object(world["generator_settings"]);
                     if (generator_settings.empty())
                         for (auto&& [key, value] : cfg.world.generator_settings)
-                            generator_settings[key] = value;
+                            generator_settings[key.get()] = value;
                     else {
                         cfg.world.generator_settings.clear();
                         for (auto&& [key, value] : generator_settings)
@@ -57,8 +57,8 @@ namespace crafted_craft {
             }
             {
                 auto game_play = js_object::get_object(data["game_play"]);
-                cfg.game_play.difficulty = game_play["difficulty"].or_apply(cfg.game_play.difficulty);
-                cfg.game_play.gamemode = game_play["gamemode"].or_apply(cfg.game_play.gamemode);
+                cfg.game_play.difficulty = game_play["difficulty"].or_apply(cfg.game_play.difficulty.get());
+                cfg.game_play.gamemode = game_play["gamemode"].or_apply(cfg.game_play.gamemode.get());
                 cfg.game_play.max_chained_neighbor_updates = game_play["max_chained_neighbor_updates"].or_apply(cfg.game_play.max_chained_neighbor_updates);
                 cfg.game_play.max_tick_time = game_play["max_tick_time"].or_apply(cfg.game_play.max_tick_time);
                 cfg.game_play.view_distance = game_play["view_distance"].or_apply(cfg.game_play.view_distance);
@@ -163,7 +163,7 @@ namespace crafted_craft {
                 auto allowed_dimensions = js_array::get_array(data["allowed_dimensions"]);
                 if (allowed_dimensions.empty()) {
                     for (auto& id : cfg.allowed_dimensions)
-                        allowed_dimensions.push_back(id.c_str());
+                        allowed_dimensions.push_back(id.get().c_str());
                 } else {
                     size_t arr_siz = allowed_dimensions.size();
                     for (size_t i = 0; i < arr_siz; i++)

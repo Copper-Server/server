@@ -12,16 +12,16 @@ namespace crafted_craft {
         action_provider::action_provider(const std::string&& tag)
             : action_tag(std::move(tag)) {}
 
-        action_provider::action_provider(const std::string& tag, const list_array<std::string>& requirement)
+        action_provider::action_provider(const std::string& tag, const list_array<shared_string>& requirement)
             : action_tag(tag), required_permissions_tag(requirement) {}
 
-        action_provider::action_provider(const std::string&& tag, const list_array<std::string>& requirement)
+        action_provider::action_provider(const std::string&& tag, const list_array<shared_string>& requirement)
             : action_tag(std::move(tag)), required_permissions_tag(requirement) {}
 
-        action_provider::action_provider(const std::string& tag, list_array<std::string>&& requirement)
+        action_provider::action_provider(const std::string& tag, list_array<shared_string>&& requirement)
             : action_tag(tag), required_permissions_tag(std::move(requirement)) {}
 
-        action_provider::action_provider(const std::string&& tag, list_array<std::string>&& requirement)
+        action_provider::action_provider(const std::string&& tag, list_array<shared_string>&& requirement)
             : action_tag(std::move(tag)), required_permissions_tag(std::move(requirement)) {}
 
         int32_t command::get_child(list_array<command>& command_nodes, const std::string& name) {
@@ -58,7 +58,7 @@ namespace crafted_craft {
             if (current_ < 0)
                 throw std::invalid_argument("invalid command id");
             auto real_path =
-                list_array<char>(path.data(), path.size())
+                list_array<char>(path)
                     .split_by(' ')
                     .convert<std::string>([](const list_array<char>& a) {
                         return std::string(a.data(), a.size());
@@ -170,7 +170,7 @@ namespace crafted_craft {
             auto node = current.node;
 
             auto parser = *node.parser_id;
-            base_objects::packets::command_node::properties_t default_prop;
+            packets::command_node::properties_t default_prop;
             auto& parser_data = node.properties ? *node.properties : default_prop;
             switch (parser) {
             case packets::command_node::parsers::brigadier_bool: {
@@ -724,7 +724,8 @@ namespace crafted_craft {
                 auto& permissions_manager =
                     Server::instance()
                         .permissions_manager;
-                permissions_manager.register_action(action.action_tag, action.required_permissions_tag);
+                if (!permissions_manager.has_action(action.action_tag))
+                    permissions_manager.register_action(action.action_tag, action.required_permissions_tag);
             }
         }
 
@@ -734,7 +735,8 @@ namespace crafted_craft {
                 auto& permissions_manager =
                     Server::instance()
                         .permissions_manager;
-                permissions_manager.register_action(action.action_tag, std::move(action.required_permissions_tag));
+                if (!permissions_manager.has_action(action.action_tag))
+                    permissions_manager.register_action(action.action_tag, std::move(action.required_permissions_tag));
             }
         }
 

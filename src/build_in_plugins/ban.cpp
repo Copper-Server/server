@@ -35,7 +35,7 @@ namespace crafted_craft {
                 browser.add_child({"ban", "", ""})
                     .add_child({"<player>", "ban player", "/ban <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
                     .set_callback("command.ban", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                                                if (args.size() == 0) {
+                        if (args.size() == 0) {
                             api::players::calls::on_system_message({client, {"Usage: /ban <player>"}});
                             return;
                         }
@@ -50,7 +50,7 @@ namespace crafted_craft {
                         api::players::calls::on_system_message({client, {"Player " + args[0] + " has been banned."}});
                     })
                     .add_child({"<reason>", "ban player with reason", "/ban <player> [reason]"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
-                    .set_callback("command.ban.reason", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                    .set_callback("command.ban:reason", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         if (args.size() == 0) {
                             api::players::calls::on_system_message({client, {"Usage: /ban <player> [reason]"}});
                             return;
@@ -214,7 +214,7 @@ namespace crafted_craft {
                         api::players::calls::on_system_message({client, {"IP " + args[0] + " has been banned."}});
                     })
                     .add_child({"<reason>", "ban ip with reason", "/ban-ip <ip> [reason]"}, base_objects::packets::command_node::parsers::brigadier_string, {.flags = 2})
-                    .set_callback("command.ban-ip.reason", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                    .set_callback("command.ban-ip:reason", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         if (args.size() == 0) {
                             {
                                 api::players::calls::on_system_message({client, {"Usage: /ban-ip <ip> [reason]"}});
@@ -257,9 +257,9 @@ namespace crafted_craft {
 
         BanPlugin::plugin_response BanPlugin::OnPlay_initialize(base_objects::client_data_holder& client) {
             if (auto banned = banned_players.get(client->name); banned)
-                return packets::play::kick({"You are banned from this server\nReason: " + (std::string)*banned});
+                return packets::play::kick({"You are banned from this server\nReason: " + banned->convert_to_str()});
             if (auto banned = banned_ips.get(client->ip); banned)
-                return packets::play::kick({"You are banned from this server\nReason: " + (std::string)*banned});
+                return packets::play::kick({"You are banned from this server\nReason: " + banned->convert_to_str()});
             return false;
         }
     }

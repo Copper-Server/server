@@ -1,0 +1,29 @@
+#ifndef SRC_BUILD_IN_PLUGINS_CONSOLE
+#define SRC_BUILD_IN_PLUGINS_CONSOLE
+
+#include "../base_objects/commands.hpp"
+#include "../base_objects/virtual_client.hpp"
+#include "../plugin/registration.hpp"
+#include "../storage/players_data.hpp"
+
+namespace crafted_craft {
+    class Server;
+
+    namespace build_in_plugins {
+        class ConsolePlugin : public PluginRegistration {
+            Server& server;
+            base_objects::virtual_client console_data;
+
+        public:
+            ConsolePlugin();
+
+            void OnLoad(const PluginRegistrationPtr& self) override;
+            void OnUnload(const PluginRegistrationPtr& self) override;
+
+            void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override;
+        };
+    }
+}
+
+
+#endif /* SRC_BUILD_IN_PLUGINS_CONSOLE */

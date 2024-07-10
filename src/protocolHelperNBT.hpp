@@ -75,19 +75,21 @@ class NBT {
         }
     }
 
-    void BuildCompound(const std::string& c_name, ENBT& comp, bool compress) {
-        insertValue((uint16_t)c_name.size());
-        insertString(c_name.data(), c_name.size());
+    void BuildCompound(const std::string& c_name, ENBT& comp, bool compress, bool in_array) {
+        if (!in_array) {
+            insertValue((uint16_t)c_name.size());
+            insertString(c_name.data(), c_name.size());
+        }
         for (const auto& [name, tmp] : comp) {
             if (name.size() > UINT16_MAX)
                 throw std::out_of_range("ENBT string too big to fit in NBT");
             InsertType(tmp.type_id());
             if (tmp.getType() == ENBT::Type::compound) {
-                RecursiveBuilder(tmp, false, name, compress);
+                RecursiveBuilder(tmp, false, name, compress, false);
             } else {
                 insertValue((uint16_t)name.size());
                 insertString(name.data(), name.size());
-                RecursiveBuilder(tmp, false, "", compress);
+                RecursiveBuilder(tmp, false, "", compress, false);
             }
         }
         InsertType(ENBT::Type::none);
@@ -97,6 +99,9 @@ class NBT {
         switch (t.type) {
         case ENBT::Type::none:
             nbt_data.push_back(0);
+            break;
+        case ENBT::Type::bit:
+            nbt_data.push_back(1);
             break;
         case ENBT::Type::integer:
             switch (t.length) {
@@ -168,7 +173,7 @@ class NBT {
                 auto type = val.type_id();
                 if (type.type != base_id.type || type.length != base_id.length || type.is_signed != base_id.is_signed)
                     throw std::exception("Array type mismatch");
-                RecursiveBuilder(val, false, "", compress);
+                RecursiveBuilder(val, false, "", compress, true);
             }
         } else {
             if (arr[0].is_numeric()) {
@@ -176,13 +181,13 @@ class NBT {
                     auto type = arr[i].type_id();
                     if (type.type != base_id.type || type.length != base_id.length || type.is_signed != base_id.is_signed)
                         throw std::exception("Array type mismatch");
-                    RecursiveBuilder(arr[i], false, "", compress);
+                    RecursiveBuilder(arr[i], false, "", compress, true);
                 }
             } else {
                 for (int32_t i = 0; i < len; i++) {
                     if (arr[i].type_id() != base_id)
                         throw std::exception("Array type mismatch");
-                    RecursiveBuilder(arr[i], false, "", compress);
+                    RecursiveBuilder(arr[i], false, "", compress, true);
                 }
             }
         }
@@ -241,11 +246,16 @@ class NBT {
         BuildArray(enbt.size(), enbt, base_type, compress);
     }
 
-    void RecursiveBuilder(ENBT& enbt, bool insert_type, const std::string& name, bool compress) {
+    void RecursiveBuilder(ENBT& enbt, bool insert_type, const std::string& name, bool compress, bool in_array) {
         switch (enbt.getType()) {
         case ENBT::Type::none:
             if (insert_type)
                 nbt_data.push_back(0);
+            break;
+        case ENBT::Type::bit:
+            if (insert_type)
+                nbt_data.push_back(1);
+            nbt_data.push_back((bool)enbt);
             break;
         case ENBT::Type::integer:
         case ENBT::Type::var_integer:
@@ -272,7 +282,7 @@ class NBT {
         case ENBT::Type::compound:
             if (insert_type)
                 nbt_data.push_back(10);
-            BuildCompound(name, enbt, compress);
+            BuildCompound(name, enbt, compress, in_array);
             break;
         default:
             throw std::exception("Unsupported tag");
@@ -309,7 +319,7 @@ class NBT {
         return ENBT(ret, ENBT::Type_ID(ENBT::Type::array, ENBT::TypeLen::Default));
     }
 
-    static ENBT RecursiveExtractor_1(uint8_t type, const uint8_t* data, size_t& i, size_t max_size) {
+    static ENBT RecursiveExtractor_1(uint8_t type, const uint8_t* data, size_t& i, size_t max_size, bool in_array) {
         switch (type) {
         case 0: //end
             return ENBT();
@@ -342,12 +352,12 @@ class NBT {
             std::vector<ENBT> res;
             res.reserve(length);
             for (int32_t iterate = 0; iterate < length; iterate++)
-                res.push_back(RecursiveExtractor_1(type, data, i, max_size));
+                res.push_back(RecursiveExtractor_1(type, data, i, max_size, true));
             return ENBT(res, ENBT::Type_ID(ENBT::Type::array, ENBT::TypeLen::Default));
         }
         case 10: { //compound
             std::unordered_map<std::string, ENBT> compound;
-            while (*data) {
+            while (true) {
                 uint8_t type = data[i++];
                 if (!type)
                     break;
@@ -356,7 +366,7 @@ class NBT {
                     throw std::out_of_range("Out of bounds");
                 std::string res(data + i, data + i + length);
                 i += length;
-                compound[res] = RecursiveExtractor_1(type, data, i, max_size);
+                compound[res] = RecursiveExtractor_1(type, data, i, max_size, false);
             }
             return compound;
         }
@@ -386,9 +396,9 @@ class NBT {
             //skip first base compound name tag
             i++;
             i += extractValue<uint16_t>(data, i, max_size);
-            return RecursiveExtractor_1(10, data, i, max_size);
+            return RecursiveExtractor_1(10, data, i, max_size, false);
         }
-        return RecursiveExtractor_1(data[i++], data, i, max_size);
+        return RecursiveExtractor_1(data[i++], data, i, max_size, false);
     }
 
 #pragma endregion
@@ -409,7 +419,7 @@ public:
 
     static NBT build(const ENBT& enbt, bool compress = true, const std::string& entry_name = "") {
         NBT ret;
-        ret.RecursiveBuilder(const_cast<ENBT&>(enbt), true, entry_name, compress);
+        ret.RecursiveBuilder(const_cast<ENBT&>(enbt), true, entry_name, compress, false);
         return ret;
     }
 

@@ -139,10 +139,10 @@ namespace crafted_craft {
                 player.prev_gamemode = gamemode["prev_gamemode"];
             }
             {
-                auto permissions = enbt::fixed_array::make_ref(file_data["permissions"]);
-                player.permissions.reserve(permissions.size());
-                for (size_t i = 0; i < permissions.size(); i++)
-                    player.permissions.push_back((std::string)permissions[i]);
+                auto permission_groups = enbt::fixed_array::make_ref(file_data["permission_groups"]);
+                player.permission_groups.reserve(permission_groups.size());
+                for (size_t i = 0; i < permission_groups.size(); i++)
+                    player.permission_groups.push_back((std::string)permission_groups[i]);
             }
             if (file_data.contains("death_location")) {
                 auto death_location = enbt::compound::make_ref(file_data["death_location"]);
@@ -150,7 +150,7 @@ namespace crafted_craft {
                     death_location["x"],
                     death_location["y"],
                     death_location["z"],
-                    death_location["world_id"]
+                    base_objects::shared_string((std::string&)death_location["world_id"])
                 };
             } else
                 player.last_death_location.reset();
@@ -258,17 +258,17 @@ namespace crafted_craft {
                 as_file_data["gamemode"] = gamemode;
             }
             {
-                enbt::fixed_array permissions(player.permissions.size());
-                for (size_t i = 0; i < player.permissions.size(); i++)
-                    permissions.set(i, player.permissions[i]);
-                as_file_data["permissions"] = permissions;
+                enbt::fixed_array permissions(player.permission_groups.size());
+                for (size_t i = 0; i < player.permission_groups.size(); i++)
+                    permissions.set(i, player.permission_groups[i].get());
+                as_file_data["permission_groups"] = permissions;
             }
             if (player.last_death_location.has_value()) {
                 enbt::compound death_location;
                 death_location["x"] = player.last_death_location->x;
                 death_location["y"] = player.last_death_location->y;
                 death_location["z"] = player.last_death_location->z;
-                death_location["world_id"] = player.last_death_location->world_id;
+                death_location["world_id"] = player.last_death_location->world_id.get();
                 as_file_data["death_location"] = death_location;
             }
             if (player.ride_entity_id.has_value())

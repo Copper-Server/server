@@ -304,6 +304,12 @@ namespace crafted_craft {
                 return *this;
             }
 
+            js_value& or_apply(const char* any_val) {
+                if (obj.is_null())
+                    obj = any_val;
+                return *this;
+            }
+
             js_value& or_apply(boost::json::value&& any_val) {
                 if (obj.is_null())
                     obj = std::move(any_val);
@@ -455,16 +461,20 @@ namespace crafted_craft {
                 return js_object("root", obj);
             }
 
+            static js_object get_object(boost::json::value& obj) {
+                if (obj.is_null())
+                    obj = boost::json::object();
+                return js_object("root", obj.as_object());
+            }
+
             js_object(const js_object& copy)
                 : obj(copy.obj), path(copy.path) {}
 
             js_object(js_object&& move)
                 : obj(move.obj), path(move.path) {}
 
-            js_value operator[](const std::string& name) {
-                if (!obj.contains(name))
-                    obj.emplace(name, boost::json::value());
-                return js_value(path + ":" + name, obj.at(name));
+            js_value operator[](const boost::json::string_view& name) {
+                return js_value(path + ":" + (std::string)name, obj[name]);
             }
 
             bool contains(const std::string& name) {
@@ -485,6 +495,13 @@ namespace crafted_craft {
 
             size_t size() const {
                 return obj.size();
+            }
+
+            //required only to not invalidate references when adding values,
+            // can be useful only when need to access multiply fields at once, do not use when not needed
+            template <class... Args>
+            void defile_values(Args... args) {
+                (obj[args], ...);
             }
         };
 

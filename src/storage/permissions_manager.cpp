@@ -11,50 +11,105 @@ namespace crafted_craft {
         permissions_manager::permissions_manager(const std::filesystem::path& base_path)
             : base_path(base_path / "permissions.json") {}
 
-        bool permissions_manager::has_rights(const std::string& action_name, const base_objects::client_data_holder& client) {
+        bool permissions_manager::has_rights(const base_objects::shared_string& action_name, const base_objects::client_data_holder& client) {
             return protected_values.get([&](const protected_values_t& values) {
+                if (client->player_data.instant_granted_actions.find(action_name) != client->player_data.instant_granted_actions.npos)
+                    return true;
+
+                bool pass_if_noting = values.check_mode == permission_check_mode::all_or_noting || values.check_mode == permission_check_mode::any_or_noting;
+
                 auto item = values.actions.find(action_name);
                 if (item == values.actions.end())
-                    return true;
+                    return pass_if_noting;
 
                 auto& client_data = client->player_data;
                 bool instant_granted = false;
-                bool has_incompatible = false;
+                bool has_not_found = false;
+                bool is_incompatible = false;
+                bool is_compatible = false;
 
-                item->second.for_each([&](const std::string& tag) {
+                bool check_all = values.check_mode == permission_check_mode::all || values.check_mode == permission_check_mode::all_or_noting;
+                bool pass_any = values.check_mode == permission_check_mode::any || values.check_mode == permission_check_mode::any_or_noting;
+
+
+                item->second.for_each([&](const base_objects::shared_string& tag) {
+                    if (is_incompatible || is_compatible)
+                        return;
                     auto permission = values.permissions.find(tag);
                     if (permission == values.permissions.end())
                         return;
-                    auto& perm = permission->second;
-                    auto client_perm = client_data.permissions.find(perm.permission_tag);
-                    if (client_data.permissions.npos == client_perm && perm.permission_level == -1) {
-                        has_incompatible = true;
-                        return;
-                    }
-                    instant_granted |= perm.instant_grant;
 
-                    if (perm.permission_level != -1) {
-                        has_incompatible |= perm.permission_level > client_data.op_level;
+                    auto& perm = permission->second;
+                    auto client_perm = client_data.permissions.find(tag);
+                    if (!perm.reverse_mode) {
+                        if (client_data.permissions.npos == client_perm && perm.permission_level == -1) {
+                            if (perm.important || check_all)
+                                is_incompatible = true;
+                            else
+                                has_not_found = true;
+                            return;
+                        } else if (client_data.permissions.npos != client_perm && perm.permission_level != -1) {
+                            if (perm.permission_level > client_data.op_level) {
+                                if (perm.important || check_all)
+                                    is_incompatible = true;
+                                else
+                                    has_not_found = true;
+                                return;
+                            }
+                        }
+                        if (pass_any)
+                            is_compatible = true;
+                        else
+                            instant_granted |= perm.instant_grant;
+                    } else {
+                        if (client_data.permissions.npos != client_perm && perm.permission_level == -1) {
+                            if (perm.important || check_all)
+                                is_incompatible = true;
+                            else
+                                has_not_found = true;
+                            return;
+                        } else if (client_data.permissions.npos != client_perm && perm.permission_level != -1) {
+                            if (perm.permission_level <= client_data.op_level) {
+                                if (perm.important || check_all)
+                                    is_incompatible = true;
+                                else
+                                    has_not_found = true;
+                                return;
+                            }
+                        }
+                        if (pass_any)
+                            is_compatible = true;
+                        else
+                            instant_granted |= perm.instant_grant;
                     }
                 });
 
-                return !has_incompatible || instant_granted;
+                if (item->second.empty() && pass_if_noting)
+                    return true;
+                else
+                    return is_compatible || (!is_incompatible && (!has_not_found || instant_granted));
             });
         }
 
-        bool permissions_manager::has_action(const std::string& action_name) {
+        bool permissions_manager::has_action(const base_objects::shared_string& action_name) const {
             return protected_values.get([&](const protected_values_t& values) {
                 return values.actions.contains(action_name);
             });
         }
 
-        bool permissions_manager::has_permissions(const std::string& action_name) {
+        bool permissions_manager::has_permission(const base_objects::shared_string& permission_name) const {
             return protected_values.get([&](const protected_values_t& values) {
-                return values.permissions.contains(action_name);
+                return values.permissions.contains(permission_name);
             });
         }
 
-        void permissions_manager::register_action(const std::string& action_name) {
+        bool permissions_manager::has_group(const base_objects::shared_string& group_name) const {
+            return protected_values.get([&](const protected_values_t& values) {
+                return values.permissions.contains(group_name);
+            });
+        }
+
+        void permissions_manager::register_action(const base_objects::shared_string& action_name) {
             protected_values.set([&](protected_values_t& values) {
                 auto it = values.actions.find(action_name);
                 if (it != values.actions.end())
@@ -63,7 +118,7 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::register_action(const std::string& action_name, const list_array<std::string>& required_perm) {
+        void permissions_manager::register_action(const base_objects::shared_string& action_name, const list_array<base_objects::shared_string>& required_perm) {
             protected_values.set([&](protected_values_t& values) {
                 auto it = values.actions.find(action_name);
                 if (it != values.actions.end())
@@ -72,7 +127,7 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::register_action(const std::string& action_name, list_array<std::string>&& required_perm) {
+        void permissions_manager::register_action(const base_objects::shared_string& action_name, list_array<base_objects::shared_string>&& required_perm) {
             protected_values.set([&](protected_values_t& values) {
                 auto it = values.actions.find(action_name);
                 if (it != values.actions.end())
@@ -81,7 +136,7 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::unregister_action(const std::string& action_name) {
+        void permissions_manager::unregister_action(const base_objects::shared_string& action_name) {
             protected_values.set([&](protected_values_t& values) {
                 auto it = values.actions.find(action_name);
                 if (it == values.actions.end())
@@ -90,7 +145,7 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::add_requirement(const std::string& action_name, const std::string& permission_tag) {
+        void permissions_manager::add_requirement(const base_objects::shared_string& action_name, const base_objects::shared_string& permission_tag) {
             protected_values.set([&](protected_values_t& values) {
                 auto& action = values.actions[action_name];
                 if (action.find(action_name) == action.npos) {
@@ -100,37 +155,73 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::remove_requirement(const std::string& action_name, const std::string& permission_tag) {
+        void permissions_manager::remove_requirement(const base_objects::shared_string& action_name, const base_objects::shared_string& permission_tag) {
             protected_values.set([&](protected_values_t& values) {
-                values.actions[action_name].remove_if([permission_tag](const std::string& tag) {
+                values.actions[action_name].remove_if([permission_tag](const base_objects::shared_string& tag) {
                     return tag == permission_tag;
                 });
-                return values;
             });
         }
 
         void permissions_manager::add_permission(base_objects::permissions_object permission) {
             protected_values.set([&](protected_values_t& values) {
                 values.permissions[permission.permission_tag] = std::move(permission);
-                return values;
             });
         }
 
-        void permissions_manager::remove_permission(const std::string& permission_tag) {
+        void permissions_manager::remove_permission(const base_objects::shared_string& permission_tag) {
             protected_values.set([&](protected_values_t& values) {
                 values.permissions.erase(permission_tag);
-                return values;
             });
         }
 
-        void permissions_manager::enum_actions(const std::function<void(const std::string&)>& callback) {
+        void permissions_manager::add_group(const base_objects::permission_group& group) {
+            protected_values.set([&](protected_values_t& values) {
+                values.permissions_group[group.group_name] = group;
+            });
+        }
+
+        void permissions_manager::remove_group(const base_objects::shared_string& group_name) {
+            protected_values.set([&](protected_values_t& values) {
+                values.permissions_group.erase(group_name);
+            });
+        }
+
+        void permissions_manager::add_group_value(const base_objects::shared_string& group_name, const base_objects::shared_string& permission_tag) {
+            protected_values.set([&](protected_values_t& values) {
+                auto& ref = values.permissions_group.at(group_name).permissions_tags;
+                ref.push_back(permission_tag);
+                if (ref.need_commit())
+                    ref.commit();
+            });
+        }
+
+        void permissions_manager::remove_group_value(const base_objects::shared_string& group_name, const base_objects::shared_string& permission_tag) {
+            protected_values.set([&](protected_values_t& values) {
+                auto& ref = values.permissions_group.at(group_name).permissions_tags;
+                ref.remove_if([permission_tag](const base_objects::shared_string& tag) {
+                    return tag == permission_tag;
+                });
+                if (ref.need_commit())
+                    ref.commit();
+            });
+        }
+
+        void permissions_manager::enum_actions(const std::function<void(const base_objects::shared_string&)>& callback) const {
             return protected_values.get([&](const protected_values_t& values) {
                 for (auto&& [action, data] : values.actions)
                     callback(action);
             });
         }
 
-        void permissions_manager::enum_action_requirements(const std::string& action_name, const std::function<void(const std::string&)>& callback) {
+        void permissions_manager::enum_actions(const std::function<void(const base_objects::shared_string&, const list_array<base_objects::shared_string>&)>& callback) const {
+            return protected_values.get([&](const protected_values_t& values) {
+                for (auto&& [action, data] : values.actions)
+                    callback(action, data);
+            });
+        }
+
+        void permissions_manager::enum_action_requirements(const base_objects::shared_string& action_name, const std::function<void(const base_objects::shared_string&)>& callback) const {
             return protected_values.get([&](const protected_values_t& values) {
                 auto item = values.actions.find(action_name);
                 if (item == values.actions.end())
@@ -139,11 +230,68 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::enum_permissions(const std::function<void(const std::string&)>& callback) {
+        void permissions_manager::enum_permissions(const std::function<void(const base_objects::permissions_object&)>& callback) const {
             return protected_values.get([&](const protected_values_t& values) {
                 for (auto&& [perm, data] : values.permissions)
-                    callback(perm);
+                    callback(data);
             });
+        }
+
+        void permissions_manager::enum_groups(const std::function<void(const base_objects::permission_group&)>& callback) const {
+            return protected_values.get([&](const protected_values_t& values) {
+                for (auto&& [perm, data] : values.permissions_group)
+                    callback(data);
+            });
+        }
+
+        void permissions_manager::enum_group_values(const base_objects::shared_string& group_name, const std::function<void(const base_objects::shared_string&)>& callback) const {
+            return protected_values.get([&](const protected_values_t& values) {
+                auto item = values.permissions_group.find(group_name);
+                if (item == values.permissions_group.end())
+                    throw std::runtime_error("This group not registered.");
+                item->second.permissions_tags.for_each(callback);
+            });
+        }
+
+        void permissions_manager::set_check_mode(permissions_manager::permission_check_mode mode) {
+            protected_values.set([&](protected_values_t& values) {
+                values.check_mode = mode;
+                values.check_mode_changed = true;
+                return values;
+            });
+        }
+
+        permissions_manager::permission_check_mode permissions_manager::get_check_mode() const {
+            return protected_values.get([&](const protected_values_t& values) {
+                return values.check_mode;
+            });
+        }
+
+        std::string from_check_mode(permissions_manager::permission_check_mode mode) {
+            switch (mode) {
+            case permissions_manager::permission_check_mode::all:
+                return "all";
+            case permissions_manager::permission_check_mode::any:
+                return "any";
+            case permissions_manager::permission_check_mode::all_or_noting:
+                return "all_or_noting";
+            case permissions_manager::permission_check_mode::any_or_noting:
+                return "any_or_noting";
+            default:
+                return "unknown";
+            }
+        }
+
+        permissions_manager::permission_check_mode to_check_mode(std::string_view mode) {
+            if (mode == "all")
+                return permissions_manager::permission_check_mode::all;
+            if (mode == "any")
+                return permissions_manager::permission_check_mode::any;
+            if (mode == "all_or_noting")
+                return permissions_manager::permission_check_mode::all_or_noting;
+            if (mode == "any_or_noting")
+                return permissions_manager::permission_check_mode::any_or_noting;
+            return permissions_manager::permission_check_mode::all_or_noting;
         }
 
 
@@ -156,112 +304,165 @@ namespace crafted_craft {
                 return;
             }
             auto root = js_object::get_object(*config_holder);
-
-            list_array<base_objects::permissions_object> readden_permissions_tag;
-            auto permissions_obj = js_object::get_object(root["permissions"]);
-            for (auto&& [permission_tag, value] : permissions_obj) {
-                auto perm = js_object::get_object(value);
-                std::string description = perm["description"].or_apply("");
-                bool instant_grant = perm["instant_grant"].or_apply(false);
-                int8_t permission_level = perm["permission_level"].or_apply(0);
-
-                readden_permissions_tag.push_back(base_objects::permissions_object(
-                    std::string(permission_tag.data(), permission_tag.size()),
-                    std::move(description),
-                    instant_grant,
-                    permission_level
-                ));
-            }
             protected_values.set([&](protected_values_t& values) {
-                list_array<std::string> declared_actions;
-                list_array<std::string> declared_permissions;
-
-                auto actions_obj = js_object::get_object(root["actions"]);
-                declared_actions.reserve(actions_obj.size());
-
-                //updating actions from json
-                for (auto&& [key, value] : actions_obj) {
-                    std::string cast_key = std::string(key.c_str(), key.size());
-                    auto& read = values.actions[cast_key];
-                    for (auto item : js_array::get_array(value))
-                        read.push_back((std::string)item);
-                    read.commit();
-                    declared_actions.push_back(std::move(cast_key));
+                {
+                    auto check_mode_obj = root["check_mode"];
+                    if (values.check_mode_changed)
+                        check_mode_obj = from_check_mode(values.check_mode);
+                    else
+                        values.check_mode = to_check_mode((boost::json::string)check_mode_obj.or_apply("all_or_noting"));
+                    values.check_mode_changed = false;
                 }
+                {
+                    auto actions_obj = js_object::get_object(root["actions"]);
+                    if (actions_obj.empty() && values.permissions.empty()) {
+                        values.permissions["operator_1"] = base_objects::permissions_object{
+                            .permission_tag = "operator_1",
+                            .description = "The default permission tag for operator level 1.",
+                            .permission_level = 1,
+                            .instant_grant = false
+                        };
+                        values.permissions["operator_2"] = base_objects::permissions_object{
+                            .permission_tag = "operator_2",
+                            .description = "The default permission tag for operator level 2.",
+                            .permission_level = 2,
+                            .instant_grant = false
+                        };
+                        values.permissions["operator_3"] = base_objects::permissions_object{
+                            .permission_tag = "operator_3",
+                            .description = "The default permission tag for operator level 3.",
+                            .permission_level = 3,
+                            .instant_grant = false
+                        };
+                        values.permissions["permission_op_4"] = base_objects::permissions_object{
+                            .permission_tag = "permission_op_4",
+                            .description = "The default permission tag for operator level 4.",
+                            .permission_level = 4,
+                            .instant_grant = false
+                        };
+                        values.permissions["console"] = base_objects::permissions_object{
+                            .permission_tag = "console",
+                            .description = "The default permission tag for console commands.",
+                            .permission_level = 5,
+                            .instant_grant = false
+                        };
+                    }
 
-                //adding new actions to json
-                for (auto&& [key, value] : values.actions) {
-                    if (!declared_actions.contains(key)) {
-                        boost::json::array arr;
-                        arr.reserve(value.size());
-                        for (auto& item : value)
-                            arr.push_back(boost::json::string(item));
-                        actions_obj[key] = std::move(arr);
+                    list_array<base_objects::shared_string> declared_actions;
+                    declared_actions.reserve(actions_obj.size());
+                    for (auto&& [key, value] : actions_obj) {
+                        base_objects::shared_string shared_tag(key.data(), key.size());
+                        auto& read = values.actions[shared_tag];
+                        for (auto item : js_array::get_array(value))
+                            read.push_back((std::string)item);
+                        read.commit();
+                        declared_actions.push_back(std::move(shared_tag));
+                    }
+                    for (auto&& [key, value] : values.actions) {
+                        if (!declared_actions.contains(key)) {
+                            boost::json::array arr;
+                            arr.reserve(value.size());
+                            for (auto& item : value)
+                                arr.push_back(boost::json::string(item.get()));
+                            actions_obj[key.get()] = std::move(arr);
+                        }
                     }
                 }
+                {
+                    list_array<base_objects::shared_string> declared_permissions;
+                    auto permissions_obj = js_object::get_object(root["permissions"]);
+                    for (auto&& [permission_tag, value] : permissions_obj) {
+                        auto perm = js_object::get_object(value);
+                        std::string description = perm["description"].or_apply("");
+                        int8_t permission_level = perm["permission_level"].or_apply(0);
+                        bool instant_grant = perm["instant_grant"].or_apply(false);
+                        bool reverse_mode = perm["reverse_mode"].or_apply(false);
+                        bool important = perm["important"].or_apply(false);
 
-                if (readden_permissions_tag.empty() && values.permissions.empty()) {
-                    values.permissions["operator_1"] = base_objects::permissions_object{
-                        .permission_tag = "operator_1",
-                        .description = "The default permission tag for operator level 1.",
-                        .permission_level = 1,
-                        .instant_grant = false
-                    };
-                    values.permissions["operator_2"] = base_objects::permissions_object{
-                        .permission_tag = "operator_2",
-                        .description = "The default permission tag for operator level 2.",
-                        .permission_level = 1,
-                        .instant_grant = false
-                    };
-                    values.permissions["operator_3"] = base_objects::permissions_object{
-                        .permission_tag = "operator_3",
-                        .description = "The default permission tag for operator level 3.",
-                        .permission_level = 1,
-                        .instant_grant = false
-                    };
-                    values.permissions["permission_op_4"] = base_objects::permissions_object{
-                        .permission_tag = "permission_op_4",
-                        .description = "The default permission tag for operator level 4.",
-                        .permission_level = 1,
-                        .instant_grant = false
-                    };
-                    values.permissions["operator_4"] = base_objects::permissions_object{
-                        .permission_tag = "operator_4",
-                        .description = "The default permission tag for operator level 4.",
-                        .permission_level = 1,
-                        .instant_grant = false
-                    };
-                    values.permissions["console"] = base_objects::permissions_object{
-                        .permission_tag = "console",
-                        .description = "The default permission tag for console commands.",
-                        .permission_level = 1,
-                        .instant_grant = false
-                    };
-                }
-
-                //updating permissions from json
-                for (auto& perm : readden_permissions_tag) {
-                    values.permissions[perm.permission_tag] = std::move(perm);
-                    declared_permissions.push_back(perm.permission_tag);
-                }
-
-                //adding new permissions to json
-                for (auto&& [permission_tag, value] : values.permissions) {
-                    if (!declared_permissions.contains(permission_tag)) {
-                        permissions_obj[permission_tag] =
-                            value.description.empty()
-                                ? boost::json::object{
-                                      {"instant_grant", value.instant_grant},
-                                      {"permission_level", value.permission_level},
-                                  }
-                                : boost::json::object{
-                                      {"description", value.description},
-                                      {"instant_grant", value.instant_grant},
-                                      {"permission_level", value.permission_level},
-                                  };
+                        base_objects::shared_string shared_tag(permission_tag.data(), permission_tag.size());
+                        values.permissions[shared_tag] = base_objects::permissions_object(
+                            {permission_tag.data(), permission_tag.size()},
+                            std::move(description),
+                            permission_level,
+                            instant_grant,
+                            reverse_mode,
+                            important
+                        );
+                        declared_permissions.push_back(shared_tag);
+                    }
+                    for (auto&& [permission_tag, value] : values.permissions) {
+                        if (!declared_permissions.contains(permission_tag)) {
+                            permissions_obj[permission_tag.get()] =
+                                value.description.empty()
+                                    ? boost::json::object{
+                                          {"instant_grant", value.instant_grant},
+                                          {"permission_level", value.permission_level},
+                                          {"instant_grant", value.instant_grant},
+                                          {"reverse_mode", value.reverse_mode},
+                                          {"important", value.important},
+                                      }
+                                    : boost::json::object{
+                                          {"description", value.description},
+                                          {"permission_level", value.permission_level},
+                                          {"instant_grant", value.instant_grant},
+                                          {"reverse_mode", value.reverse_mode},
+                                          {"important", value.important},
+                                      };
+                        }
                     }
                 }
+                {
+                    auto group_obj = js_object::get_object(root["permission_group"]);
+                    if (group_obj.empty() && values.permissions_group.empty()) {
+                        values.permissions_group["operator"] = base_objects::permission_group{
+                            .group_name = "operator",
+                            .permissions_tags = {
+                                "operator_4",
+                                "operator_3",
+                                "operator_2",
+                                "operator_1",
+                            }
+                        };
+                        values.permissions_group["console"] = base_objects::permission_group{
+                            .group_name = "console",
+                            .permissions_tags = {
+                                "console",
+                                "operator_4",
+                                "operator_3",
+                                "operator_2",
+                                "operator_1",
+                            }
+                        };
+                    }
 
+
+                    list_array<base_objects::shared_string> declared_groups;
+                    declared_groups.reserve(group_obj.size());
+                    for (auto&& [group_tag, value] : group_obj) {
+                        auto group_list = js_array::get_array(value);
+                        list_array<base_objects::shared_string> perm_tags;
+                        perm_tags.reserve(group_list.size());
+                        for (auto item : group_list) {
+                            auto& res = (boost::json::string&)item;
+                            perm_tags.push_back({res.data(), res.size()});
+                        }
+                        base_objects::shared_string shared_tag(group_tag.data(), group_tag.size());
+                        values.permissions_group[shared_tag] = base_objects::permission_group(
+                            shared_tag,
+                            std::move(perm_tags)
+                        );
+                        declared_groups.push_back(shared_tag);
+                    }
+                    for (auto&& [group_tag, value] : values.permissions_group) {
+                        if (!declared_groups.contains(group_tag)) {
+                            boost::json::array arr;
+                            arr.reserve(value.permissions_tags.size());
+                            for (auto& it : value.permissions_tags)
+                                arr.push_back(boost::json::string(it.get()));
+                            group_obj[group_tag.get()] = std::move(arr);
+                        }
+                    }
+                }
                 return values;
             });
             {

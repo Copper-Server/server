@@ -12,8 +12,6 @@ namespace crafted_craft {
         class ServerPlugin : public PluginRegistration {
             storage::players_data players_data;
             Server& server;
-            base_objects::virtual_client console_data;
-
         public:
             base_objects::command_manager manager;
 

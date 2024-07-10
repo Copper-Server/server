@@ -59,7 +59,7 @@ namespace crafted_craft {
             float saturation = 5;
             float experience = 0;
 
-            std::string world_id;
+            shared_string world_id;
             std::string player_name;
 
             int32_t fall_distance = 0;
@@ -82,14 +82,19 @@ namespace crafted_craft {
                 double x = 0;
                 double y = 0;
                 double z = 0;
-                std::string world_id;
+                shared_string world_id;
             };
 
             std::optional<DeathLocation> last_death_location;
 
             std::optional<ENBT::UUID> ride_entity_id;
 
-            list_array<std::string> permissions;
+            list_array<shared_string> permission_groups;
+
+            //[runtime] calculated from permission_groups
+            list_array<shared_string> permissions;
+            //[runtime] calculated from permission_groups
+            list_array<shared_string> instant_granted_actions;
 
             //sent to client
             ENBT additional_data = ENBT::compound();

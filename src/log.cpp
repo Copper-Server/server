@@ -14,7 +14,7 @@ namespace crafted_craft {
         }
 
         namespace console {
-            std::shared_ptr<Commandline> cmd = std::make_shared<Commandline>();
+            std::shared_ptr<Commandline> cmd;
             std::atomic_bool log_levels_switch[(int)level::__max]{
                 true, //info
                 true, //warn
@@ -47,7 +47,7 @@ namespace crafted_craft {
             }
 
             void print(log::level level, const std::string& source, const std::string& message) {
-                if (!log_levels_switch[(int)level])
+                if (!log_levels_switch[(int)level] || !cmd)
                     return;
                 auto [r, g, b] = log_levels_colors[(int)level];
                 auto line = "[" + log_levels_names[(int)level] + "] [" + source + "] ";
@@ -97,9 +97,16 @@ namespace crafted_craft {
         bool is_enabled(level level) {
             return console::log_levels_switch[(int)level];
         }
+
         namespace commands {
+            bool is_inited() {
+                fast_task::read_lock lock(console::console_mutex);
+                return (bool)console::cmd;
+            }
             void init() {
                 fast_task::write_lock lock(console::console_mutex);
+                if (!console::cmd)
+                    console::cmd = std::make_shared<Commandline>();
                 console::cmd->enable_history();
                 console::cmd->on_command = [](Commandline& cmd) {
                     on_command.async_notify(cmd.get_command());
@@ -113,14 +120,16 @@ namespace crafted_craft {
 
             void registerCommandSuggestion(const std::function<std::vector<std::string>(const std::string&, int)>& callback) {
                 fast_task::write_lock lock(console::console_mutex);
-                console::cmd->on_autocomplete = [callback](Commandline&, const std::string& line, int position) {
-                    return callback(line, position);
-                };
+                if (console::cmd)
+                    console::cmd->on_autocomplete = [callback](Commandline&, const std::string& line, int position) {
+                        return callback(line, position);
+                    };
             }
 
             void unloadCommandSuggestion() {
                 fast_task::write_lock lock(console::console_mutex);
-                console::cmd.reset();
+                if (console::cmd)
+                    console::cmd->on_autocomplete = nullptr;
             }
         }
     }
