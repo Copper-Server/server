@@ -37,12 +37,12 @@ namespace crafted_craft {
             } else {
                 childs_cache.clear();
                 for (size_t i = 0; i < node.children.size(); i++) {
-                    auto& name = command_nodes[node.children[i]].node.name;
-                    if (!name)
+                    auto& check_name = command_nodes[node.children[i]].node.name;
+                    if (!check_name)
                         throw std::invalid_argument("invalid command children tree, empty name found");
-                    if (childs_cache.find(*name) != childs_cache.end())
+                    if (childs_cache.find(*check_name) != childs_cache.end())
                         throw std::invalid_argument("invalid command children tree, duplicate name found");
-                    childs_cache[*name] = i;
+                    childs_cache[*check_name] = i;
                 }
                 return get_child(command_nodes, name);
             }
@@ -326,17 +326,38 @@ namespace crafted_craft {
             }
         }
 
-        list_array<suggestion> extract_suggestions(command* current, list_array<command>& command_nodes, const std::string& part) {
-            list_array<suggestion> suggestions;
+        bool has_accessible_callbacks_child(command* current, list_array<command>& command_nodes, client_data_holder& data) {
+            return current->node.children.contains_one([&](int32_t id) {
+                auto& command = command_nodes[id];
+                if (command.callback)
+                    return Server::instance().permissions_manager.has_rights(command.action_name, data);
+                else
+                    return has_accessible_callbacks_child(&command, command_nodes, data);
+            });
+        }
+
+        list_array<std::string> extract_suggestions(command* current, list_array<command>& command_nodes, const std::string& part, client_data_holder& data) {
+            list_array<std::string> suggestions;
             current->node.children.for_each([&](int32_t id) {
-                auto res = command_nodes[id].node.name.value_or("");
-                if (res.starts_with(part))
-                    suggestions.push_back({res});
+                auto& command = command_nodes[id];
+                if (!has_accessible_callbacks_child(&command, command_nodes, data))
+                    return;
+                if (command.callback)
+                    if (!Server::instance().permissions_manager.has_rights(command.action_name, data))
+                        return;
+
+                auto res = command.node.name.value_or("");
+                if (res.starts_with(part)) {
+                    if (command.suggestions)
+                        suggestions.push_back(command.suggestions(part, data));
+                    else
+                        suggestions.push_back(res);
+                }
             });
             return suggestions;
         }
 
-        list_array<suggestion> command_manager::request_suggestions(const std::string& command_string, client_data_holder& data) {
+        list_array<std::string> command_manager::request_suggestions(const std::string& command_string, client_data_holder& data) {
             bool ends_with_space = command_string.ends_with(' ');
             std::string path = command_string;
             list_array<std::string> args;
@@ -352,22 +373,17 @@ namespace crafted_craft {
                     path = path.substr(split + 1);
                 }
 
-                if (part.empty()) {
-                    if (current->node.flags.node_type == packets::command_node::node_type::argument)
-                        return {};
-                    return current->node.children.convert<suggestion>([&](int32_t id) -> suggestion {
-                        return {command_nodes[id].node.name.value_or("")};
-                    });
-                }
-
                 try {
+                    if (part.empty())
+                        return extract_suggestions(current, command_nodes, part, data);
+
                     int32_t child = current->get_child(command_nodes, part);
                     if (child == -1) {
                         auto res = find_argument_no_except(command_nodes, current, part, path);
                         if (res)
                             args.push_back(std::move(*res));
                         else
-                            return extract_suggestions(current, command_nodes, part);
+                            return extract_suggestions(current, command_nodes, part, data);
                     } else {
                         auto& command = command_nodes[child];
                         if (command.node.flags.node_type == packets::command_node::node_type::argument) {
@@ -375,12 +391,12 @@ namespace crafted_craft {
                             if (res)
                                 args.push_back(std::move(*res));
                             else
-                                return extract_suggestions(current, command_nodes, part);
+                                return extract_suggestions(current, command_nodes, part, data);
                         } else {
                             current = &command_nodes[child];
                             if (path.empty() && !ends_with_space)
-                                return extract_suggestions(current, command_nodes, path).transform([&](suggestion& s) {
-                                    s.insertion = part + ' ' + s.insertion;
+                                return extract_suggestions(current, command_nodes, path, data).transform([&](std::string&& s) {
+                                    s = part + ' ' + s;
                                     return s;
                                 });
                         }
@@ -549,7 +565,12 @@ namespace crafted_craft {
             if (manager.command_nodes.size() >= INT32_MAX)
                 throw std::runtime_error("command nodes limit reached");
 
+
             auto& root = manager.command_nodes[0];
+
+            if (root.childs_cache.find(*command.node.name) != root.childs_cache.end())
+                throw std::invalid_argument("This command already defined");
+
             root.node.children.push_back(manager.command_nodes.size());
             root.childs_cache[*command.node.name] = manager.command_nodes.size();
             manager.command_nodes.push_back(command);
@@ -653,6 +674,9 @@ namespace crafted_craft {
             if (manager.command_nodes.size() >= INT32_MAX)
                 throw std::runtime_error("command nodes limit reached");
 
+            if (current_command.childs_cache.find(*command.node.name) != current_command.childs_cache.end())
+                throw std::invalid_argument("This command already defined");
+
             current_command.node.children.push_back(manager.command_nodes.size());
             current_command.childs_cache[*command.node.name] = manager.command_nodes.size();
             manager.command_nodes.push_back(command);
@@ -670,6 +694,9 @@ namespace crafted_craft {
 
             if (manager.command_nodes.size() >= INT32_MAX)
                 throw std::runtime_error("command nodes limit reached");
+
+            if (current_command.childs_cache.find(*command.current_command.node.name) != current_command.childs_cache.end())
+                throw std::invalid_argument("This command already defined");
 
             current_command.node.children.push_back(command.current_id);
             current_command.childs_cache[*command.current_command.node.name] = command.current_id;

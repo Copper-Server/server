@@ -111,6 +111,10 @@ namespace crafted_craft {
             return false;
         }
 
+        virtual plugin_response OnConfiguration_gotKnownPacks(base_objects::client_data_holder&, const list_array<base_objects::packets::known_pack>& known_packs) {
+            return false;
+        }
+
 #pragma endregion
 
 #pragma region OnPlay

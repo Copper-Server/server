@@ -24,8 +24,9 @@ using namespace crafted_craft;
 
 #include <conio.h>
 #include <windows.h>
-int main() {
 
+int main() {
+    using type = std::add_lvalue_reference_t<std::add_const_t<void>>;
     log::commands::init();
 
     fast_task::task::create_executor();

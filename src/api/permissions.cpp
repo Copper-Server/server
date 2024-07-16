@@ -145,6 +145,18 @@ namespace crafted_craft {
                 perm->enum_group_values(group_name, callback);
             }
 
+            void view_permission(const base_objects::shared_string& perm_name, const std::function<void(const base_objects::permissions_object&)>& callback) {
+                if (perm == nullptr)
+                    return;
+                perm->view_permission(perm_name, callback);
+            }
+
+            void view_group(const base_objects::shared_string& group_name, const std::function<void(const base_objects::permission_group&)>& callback) {
+                if (perm == nullptr)
+                    return;
+                perm->view_group(group_name, callback);
+            }
+
             void set_check_mode(storage::permissions_manager::permission_check_mode mode) {
                 if (perm == nullptr)
                     return;

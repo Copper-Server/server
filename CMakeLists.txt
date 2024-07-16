@@ -32,6 +32,7 @@ set(CC_INCLUDE_DIR ${CC_src_INCLUDE_DIR})
 FILE(GLOB SRCFILES 
         src/protocolHelper/*/*.cpp
         src/protocolHelper/*/*/*.cpp
+        src/protocolHelper/*/*/*/*.cpp
         src/library/ENBT/enbt.cpp
         src/base_objects/*.cpp 
         src/storage/*.cpp 

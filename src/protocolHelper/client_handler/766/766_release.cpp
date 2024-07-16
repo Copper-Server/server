@@ -1,12 +1,12 @@
 
 
-#include "../../api/protocol.hpp"
-#include "../state_configuration.hpp"
-#include "../util.hpp"
+#include "../../../api/protocol.hpp"
+#include "../../util.hpp"
+#include "../abstract.hpp"
 
 namespace crafted_craft {
-    namespace client_play_handler {
-        namespace proto_765_release {
+    namespace client_handler {
+        namespace play_766_release {
             void teleport_confirm(TCPsession* session, ArrayStream& packet) {
                 log::debug("play", "Teleport confirm");
                 api::protocol::data::teleport_request_completion data;
@@ -37,14 +37,19 @@ namespace crafted_craft {
 
             void chat_command(TCPsession* session, ArrayStream& packet) {
                 log::debug("play", "Chat command");
-                api::protocol::data::chat_command data;
-                data.command = ReadString(packet, 256);
+                api::protocol::on_chat_command.async_notify({ReadString(packet, 32767), *session, session->sharedDataRef()});
+            }
+
+            void signed_chat_command(TCPsession* session, ArrayStream& packet) {
+                log::debug("play", "Chat command");
+                api::protocol::data::signed_chat_command data;
+                data.command = ReadString(packet, 32767);
                 data.timestamp = ReadValue<int64_t>(packet);
                 data.salt = ReadValue<int64_t>(packet);
                 int32_t arguments_count = ReadVar<int32_t>(packet);
                 data.arguments_signature.reserve(arguments_count);
                 for (int32_t i = 0; i < arguments_count; i++) {
-                    api::protocol::data::chat_command::argument_signature arg;
+                    api::protocol::data::signed_chat_command::argument_signature arg;
                     arg.argument_name = ReadString(packet, 16);
                     for (int i = 0; i < 256; i++)
                         arg.signature[i] = packet.read();
@@ -55,7 +60,7 @@ namespace crafted_craft {
                 data.acknowledged.arr.push_back(packet.read());
                 data.acknowledged.arr.push_back(packet.read());
 
-                api::protocol::on_chat_command.async_notify({data, *session, session->sharedDataRef()});
+                api::protocol::on_signed_chat_command.async_notify({data, *session, session->sharedDataRef()});
             }
 
             void chat_message(TCPsession* session, ArrayStream& packet) {
@@ -134,7 +139,7 @@ namespace crafted_craft {
             void switch_to_configuration(TCPsession* session, ArrayStream& packet, TCPclient*& next_handler) {
                 session->sharedData().packets_state.state = SharedClientData::packets_state_t::protocol_state::configuration;
                 log::debug("configuration", "Switch to configuration");
-                next_handler = new TCPClientHandleConfiguration(session);
+                next_handler = abstract::createHandleConfiguration(session);
             }
 
             void click_container_button(TCPsession* session, ArrayStream& packet) {
@@ -179,14 +184,23 @@ namespace crafted_craft {
                 api::protocol::on_change_container_slot_state.async_notify({data, *session, session->sharedDataRef()});
             }
 
-            Response plugin_message(TCPsession* session, ArrayStream& packet, std::unordered_map<std::string, PluginRegistrationPtr>& plugins_play, std::list<PluginRegistration::plugin_response>& queriedPackets) {
+            void cookie_response(TCPsession* session, ArrayStream& packet) {
+                log::debug("play", "Cookie response");
+                api::protocol::data::cookie_response data;
+                data.key = ReadIdentifier(packet);
+                if (packet.read())
+                    data.payload = ReadArray<uint8_t>(packet);
+                api::protocol::on_cookie_response.async_notify({data, *session, session->sharedDataRef()});
+            }
+
+            Response plugin_message(TCPsession* session, ArrayStream& packet, std::list<PluginRegistration::plugin_response>& queriedPackets) {
                 log::debug("play", "Change container slot state");
                 api::protocol::data::plugin_message msg;
                 msg.channel = ReadIdentifier(packet);
                 msg.data = packet.read_left().to_vector();
-                auto plugin = plugins_play.find(msg.channel);
-                if (plugin != plugins_play.end()) {
-                    auto response = plugin->second->OnPlayHandle(plugin->second, msg.channel, msg.data, session->sharedDataRef());
+                auto plugin = pluginManagement.get_bind_plugin(PluginManagement::registration_on::play, msg.channel);
+                if (plugin) {
+                    auto response = plugin->OnPlayHandle(plugin, msg.channel, msg.data, session->sharedDataRef());
                     if (std::holds_alternative<Response>(response))
                         return std::get<Response>(response);
                     else
@@ -194,6 +208,12 @@ namespace crafted_craft {
                 } else
                     log::debug_error("play", "Unknown chanel: " + msg.channel);
                 return Response::Empty();
+            }
+
+            void subscribe_to_debug_sample(TCPsession* session, ArrayStream& packet) {
+                log::debug("play", "Subscribe to debug sample");
+                auto data = (api::protocol::data::debug_sample_subscription)ReadVar<int32_t>(packet);
+                api::protocol::on_debug_sample_subscription.async_notify({data, *session, session->sharedDataRef()});
             }
 
             void edit_book(TCPsession* session, ArrayStream& packet) {

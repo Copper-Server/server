@@ -7,13 +7,11 @@
 
 namespace crafted_craft {
     namespace api {
-        struct world {
-            world(Server* server_ref);
-
-            void load_world(uint64_t world_id, std::function<void()> callback = nullptr);
-            void unload_world(uint64_t world_id, std::function<void()> callback = nullptr);
-            void save_world(uint64_t world_id, std::function<void()> callback = nullptr);
-            void save_all_worlds(std::function<void()> callback = nullptr);
+        namespace world {
+            void load(uint64_t world_id, std::function<void()> callback = nullptr);
+            void unload(uint64_t world_id, std::function<void()> callback = nullptr);
+            void save(uint64_t world_id, std::function<void()> callback = nullptr);
+            void save_all(std::function<void()> callback = nullptr);
 
             void load_chunk(uint64_t world_id, int64_t x, int64_t z, std::function<void(const storage::chunk_data& data)> callback = nullptr);
             void unload_chunk(uint64_t world_id, int64_t x, int64_t z, std::function<void()> callback = nullptr);
@@ -32,12 +30,9 @@ namespace crafted_craft {
             void get_block_entity(uint64_t world_id, int64_t x, int64_t y, int64_t z, std::function<void(base_objects::block_entity entity)> callback);
             void get_block_entities(uint64_t world_id, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, std::function<void(list_array<base_objects::block_entity> entities)> callback);
 
-            void iterate_worlds(std::function<void(uint64_t world, storage::world_data& data)> callback);
-            void get_world(uint64_t world_id, std::function<void(storage::world_data& data)> callback);
-
-        private:
-            Server* server;
-        };
+            void iterate(std::function<void(uint64_t world, storage::world_data& data)> callback);
+            void get(uint64_t world_id, std::function<void(storage::world_data& data)> callback);
+        }
     }
 }
 

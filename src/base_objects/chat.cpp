@@ -104,7 +104,8 @@ namespace crafted_craft {
                 utf_code_point += c;
                 if (utf_code_point.size() == 4) {
                     utf8::utfchar16_t code_point = std::stoi(utf_code_point, nullptr, 16);
-                    current_string = utf8::utf16to8(&code_point, &code_point + 1, current_string);
+                    char utf8_code_point[4];
+                    current_string += std::string(utf8_code_point, utf8::utf16to8(&code_point, &code_point + 1, utf8_code_point));
                     got_utf_code_point = false;
                     utf_code_point.clear();
                 }
@@ -112,7 +113,8 @@ namespace crafted_craft {
                 utf_code_point += c;
                 if (utf_code_point.size() == 8) {
                     utf8::utfchar32_t code_point = std::stoi(utf_code_point, nullptr, 16);
-                    current_string = utf8::utf32to8(&code_point, &code_point + 1, current_string);
+                    char utf8_code_point[4];
+                    current_string += std::string(utf8_code_point, utf8::utf32to8(&code_point, &code_point + 1, utf8_code_point));
                     got_big_utf_code_point = false;
                     utf_code_point.clear();
                 }
@@ -194,9 +196,13 @@ namespace crafted_craft {
                 current_string += c;
                 got_first_part_format_symbol = false;
             } else if (c == '\\') {
-
+                got_slash = true;
             } else
                 current_string += c;
+        }
+        if (got_slash) {
+            current_string += '\\';
+            got_slash = false;
         }
         if (current_string.size()) {
             current_chat.SetText(current_string);
@@ -219,7 +225,8 @@ namespace crafted_craft {
                 utf_code_pint += c;
                 if (utf_code_pint.size() == 4) {
                     utf8::utfchar16_t code_point = std::stoi(utf_code_pint, nullptr, 16);
-                    result = utf8::utf16to8(&code_point, &code_point + 1, result);
+                    char utf8_code_point[4];
+                    result += std::string(utf8_code_point, utf8::utf16to8(&code_point, &code_point + 1, utf8_code_point));
                     got_utf_code_point = false;
                     utf_code_pint.clear();
                 }
@@ -227,7 +234,8 @@ namespace crafted_craft {
                 utf_code_pint += c;
                 if (utf_code_pint.size() == 8) {
                     utf8::utfchar32_t code_point = std::stoi(utf_code_pint, nullptr, 16);
-                    result = utf8::utf32to8(&code_point, &code_point + 1, result);
+                    char utf8_code_point[4];
+                    result += std::string(utf8_code_point, utf8::utf32to8(&code_point, &code_point + 1, utf8_code_point));
                     got_big_utf_code_point = false;
                     utf_code_pint.clear();
                 }

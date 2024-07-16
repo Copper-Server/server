@@ -53,6 +53,7 @@ namespace crafted_craft {
 
                 bool prevent_proxy_connections = false; //	If the ISP/AS sent from the server is different from the one from Mojang Studios' authentication server, the player is kicked.
                 bool offline_mode = false;
+                bool enable_encryption = true;
 
                 enum class connection_conflict_t {
                     kick_connected,

@@ -17,8 +17,6 @@ namespace crafted_craft {
 
             void OnLoad(const PluginRegistrationPtr& self) override;
 
-            void OnUnload(const PluginRegistrationPtr& self) override;
-
             void OnPostLoad(const PluginRegistrationPtr& self) override;
 
             void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override;

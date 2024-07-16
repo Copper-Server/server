@@ -214,6 +214,29 @@ namespace crafted_craft {
         WriteString(data, str, 262144);
     }
 
+    template <class ArrayT>
+    static void WriteArray(list_array<uint8_t>& data, const ArrayT& arr) {
+        WriteVar<int32_t>(arr.size(), data);
+        if constexpr (std::is_same_v<ArrayT, list_array<uint8_t>>)
+            data.push_back(arr);
+        else
+            for (auto& it : arr)
+                WriteValue<ArrayT>(it, data);
+    }
+
+    template <class T>
+    static list_array<T> ReadArray(ArrayStream& data) {
+        int32_t len = ReadVar<int32_t>(data);
+        if (len < 0)
+            throw std::out_of_range("array len out of range");
+        list_array<T> res;
+        res.reserve(len);
+        for (int32_t i = 0; i < len; i++)
+            res.push_back(ReadValue<T>(data));
+        return res;
+    }
+
+
     static void WriteSlot(list_array<uint8_t>& data, const base_objects::slot& slot) {
         data.push_back((bool)slot);
         if (slot) {
@@ -226,14 +249,35 @@ namespace crafted_craft {
         }
     }
 
+    static void WriteSlotItem(list_array<uint8_t>& data, const base_objects::slot& slot) {
+        WriteVar<int32_t>(slot->id, data);
+        data.push_back(slot->count);
+        if (slot->nbt)
+            data.push_back(NBT::build(slot->nbt.value()).get_as_network());
+        else
+            data.push_back(0); //TAG_End
+    }
+
     static base_objects::slot ReadSlot(ArrayStream& data) {
         base_objects::slot slot;
         if (!data.read())
             return slot;
-        slot = base_objects::slot();
+        slot = base_objects::slot_data();
         slot->id = ReadVar<int32_t>(data);
         slot->count = data.read();
-        if (data.read() == 0) {
+        if (data.peek() == 0) {
+            size_t readed = 0;
+            slot->nbt = NBT::extract_from_array(data.data_read(), readed, data.size_read());
+            data.r += readed;
+        }
+        return slot;
+    }
+
+    static base_objects::slot ReadSlotItem(ArrayStream& data) {
+        base_objects::slot slot = base_objects::slot_data();
+        slot->id = ReadVar<int32_t>(data);
+        slot->count = data.read();
+        if (data.peek() == 0) {
             size_t readed = 0;
             slot->nbt = NBT::extract_from_array(data.data_read(), readed, data.size_read());
             data.r += readed;
@@ -506,7 +550,7 @@ namespace crafted_craft {
                     return Response::Empty();
                 if (combined[0] == 0xFE && combined[1] == 0x01) {
                     log::debug("protocol", "handle legacy status");
-                    auto& config = session->serverData().config;
+                    auto& config = Server::instance().config;
                     if (!config.status.enable)
                         return Response::Disconnect(list_array<list_array<uint8_t>>());
                     else
@@ -574,17 +618,23 @@ namespace crafted_craft {
         }
 
         Response OnSwitch() final {
-            auto res = OnSwitching();
-            if (!res.data.empty()) {
-                list_array<list_array<uint8_t>> answer;
-                for (auto& resp : res.data)
-                    answer.push_back(PrepareSend(std::move(resp)));
-                res.data = answer.take().convert<Response::Item>([](list_array<uint8_t>&& item) { return Response::Item(std::move(item)); });
-                return res;
-            } else if (res.do_disconnect || res.do_disconnect_after_send)
-                return res;
-            else
-                return {};
+            try {
+                auto res = OnSwitching();
+                if (!res.data.empty()) {
+                    list_array<list_array<uint8_t>> answer;
+                    for (auto& resp : res.data)
+                        answer.push_back(PrepareSend(std::move(resp)));
+                    res.data = answer.take().convert<Response::Item>([](list_array<uint8_t>&& item) { return Response::Item(std::move(item)); });
+                    return res;
+                } else if (res.do_disconnect || res.do_disconnect_after_send)
+                    return res;
+                else
+                    return {};
+            } catch (const std::exception& ex) {
+                return Exception(ex);
+            } catch (...) {
+                return UnexpectedException();
+            }
         }
 
         bool DoDisconnect(boost::asio::ip::address ip) override {

@@ -4,10 +4,13 @@
 #include "../base_objects/block.hpp"
 #include "../base_objects/bounds.hpp"
 #include "../base_objects/entity.hpp"
+#include "../base_objects/entity_animation.hpp"
 #include "../base_objects/event.hpp"
 #include "../base_objects/ptr_optional.hpp"
 #include "../base_objects/server_configuaration.hpp"
 #include "../base_objects/shared_client_data.hpp"
+#include "../base_objects/slot.hpp"
+#include "../base_objects/weather.hpp"
 #include "../calculations.hpp"
 #include "../library/enbt.hpp"
 #include "../library/list_array.hpp"
@@ -284,6 +287,45 @@ namespace crafted_craft {
             void tick(std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time, bool update_tps);
             //unloads unused chunks and check themselves lifetime and active operations, if expired and there no active operations, then function will return true
             bool collect_unused_data(std::chrono::high_resolution_clock::time_point current_time, size_t& unload_limit);
+
+
+            //interface
+            //virtual void broadcast_attach_entity(const base_objects::entity& target, const base_objects::entity& vehicle);
+            //virtual void broadcast_block_action(calc::VECTOR block_pos, uint8_t byte1, uint8_t byte2, uint8_t block_type, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_block_break_animation(uint32_t entity_id, calc::VECTOR block_pos, int8_t stage, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_block_entity(calc::VECTOR block_pos, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_boss_bar_update_health(const base_objects::entity& entity, uint32_t unique_id, float fraction_filled);
+            //virtual void broadcast_chat(const Chat& message, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_collect_entity(const base_objects::entity& collected, const base_objects::entity& collector, uint32_t count, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_destroy_entity(const base_objects::entity& entity, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_detach_entity(const base_objects::entity& target, const base_objects::entity& vehicle);
+            //virtual void broadcast_entity_effect(const base_objects::entity& entity, int effect_id, int amplifier, int duration, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_entity_equipment(const base_objects::entity& entity, int16_t slot_num, const base_objects::slot& item, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_entity_head_look(const base_objects::entity& entity, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_entity_look(const base_objects::entity& entity, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_entity_metadata(const base_objects::entity& entity, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_entity_position(const base_objects::entity& entity, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_entity_velocity(const base_objects::entity& entity, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_entity_animation(const base_objects::entity& entity, base_objects::entity_animation animation, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_leash_entity(const base_objects::entity& entity, const base_objects::entity& entity_leashed_to);
+            //virtual void broadcast_particle_effect(const std::string& particle_name, calc::VECTOR src, calc::VECTOR offset, float particle_data, int particle_amount, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_particle_effect(const std::string& particle_name, calc::VECTOR src, calc::VECTOR offset, float particle_data, int particle_amount, std::array<int, 2> data, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_player_list_add_player(const base_objects::player& player, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_player_list_header_footer(const Chat& header, const Chat& footer);
+            //virtual void broadcast_player_list_remove_player(const base_objects::player& player, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_player_list_update_display_name(const base_objects::player& player, const std::string& custom_name, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_player_list_update_game_mode(const base_objects::player& player, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_player_list_update_ping();
+            //virtual void broadcast_remove_entity_effect(const base_objects::entity& entity, int effect_id, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_scoreboard_objective(const std::string& name, const std::string& display_name, uint8_t mode);
+            //virtual void broadcast_score_update(const std::string& objective, const std::string& player_name, int64_t score, uint8_t mode);
+            //virtual void broadcast_display_objective(const std::string& objective, base_objects::scoreboard::display_slot display);
+            //virtual void broadcast_sound_effect(const std::string& sound_name, calc::VECTOR position, float volume, float pitch, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_spawn_entity(base_objects::entity& entity, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_thunderbolt(calc::VECTOR block_pos, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_time_update(const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_unleash_entity(const base_objects::entity& entity);
+            //virtual void broadcast_weather(base_objects::weather weather, const base_objects::client_data_holder& exclude = nullptr);
 
 
             struct profiling_data {

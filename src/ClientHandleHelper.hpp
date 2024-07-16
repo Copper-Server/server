@@ -94,17 +94,15 @@ namespace crafted_craft {
         boost::asio::ip::tcp::socket sock;
         int32_t protocol_version = -1;
 
-        TCPsession(boost::asio::ip::tcp::socket&& s, TCPclient* client_handler, uint64_t& set_timeout, Server* server);
+        TCPsession(boost::asio::ip::tcp::socket&& s, TCPclient* client_handler, uint64_t& set_timeout);
         ~TCPsession();
         base_objects::client_data_holder& sharedDataRef();
         SharedClientData& sharedData();
-        Server& serverData();
         void connect();
         void connect(std::vector<uint8_t>& connection_data, boost::system::error_code ec);
         void disconnect();
         bool isActive();
         bool start_symmetric_encryption(const list_array<uint8_t>& encryption_key, const list_array<uint8_t>& encryption_iv);
-        boost::asio::const_buffer public_key();
 
     private:
         void send(Response&& resp);
@@ -122,7 +120,6 @@ namespace crafted_craft {
         base_objects::client_data_holder _sharedData;
         TCPclient* chandler = nullptr;
         std::atomic_bool active{false};
-        Server* server;
         bool encryption_enabled : 1 = false;
 
     public:

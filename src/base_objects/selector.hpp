@@ -131,8 +131,7 @@ namespace crafted_craft {
             bool limit_inverted = false; //if inverted then selects entities more than limit, and retuns noting if got less than limit
 
 
-            //parses and builds selector
-            selector build_selector(const std::string& selector_string);
+            void build_selector(const std::string& selector_string);
 
             //from noting
             bool select(class Entity& entity) const;

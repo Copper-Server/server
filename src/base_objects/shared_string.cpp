@@ -16,6 +16,8 @@ namespace crafted_craft {
             });
         }
 
+        const shared_string empty;
+
         void shared_string::leave() {
             if (count) {
                 if (*count-- == 1) {

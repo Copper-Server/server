@@ -1,8 +1,9 @@
 #include "allowlist.hpp"
+#include "../ClientHandleHelper.hpp"
 #include "../api/players.hpp"
 #include "../base_objects/commands.hpp"
 #include "../log.hpp"
-#include "../protocolHelper/state_play.hpp"
+#include "../plugin/main.hpp"
 
 namespace crafted_craft {
     class Server;
@@ -23,11 +24,7 @@ namespace crafted_craft {
         }
 
         void AllowListPlugin::OnLoad(const PluginRegistrationPtr& self) {
-            TCPClientHandlePlay::base_plugins.push_back(self);
-        }
-
-        void AllowListPlugin::OnUnload(const PluginRegistrationPtr& self) {
-            TCPClientHandlePlay::base_plugins.remove(self);
+            pluginManagement.registerPluginOn(self, PluginManagement::registration_on::play);
         }
 
         void AllowListPlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {

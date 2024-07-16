@@ -1,11 +1,11 @@
 #include "ban.hpp"
-#include "../api/players.hpp"
-
+#include "../ClientHandleHelper.hpp"
 #include "../api/ban.hpp"
+#include "../api/players.hpp"
 #include "../base_objects/commands.hpp"
 #include "../log.hpp"
+#include "../plugin/main.hpp"
 #include "../plugin/registration.hpp"
-#include "../protocolHelper/state_play.hpp"
 #include "../storage/enbt_list_storage.hpp"
 
 namespace crafted_craft {
@@ -23,11 +23,7 @@ namespace crafted_craft {
         }
 
         void BanPlugin::OnLoad(const PluginRegistrationPtr& self) {
-            TCPClientHandlePlay::base_plugins.push_back(self);
-        }
-
-        void BanPlugin::OnUnload(const PluginRegistrationPtr& self) {
-            TCPClientHandlePlay::base_plugins.remove(self);
+            pluginManagement.registerPluginOn(self, PluginManagement::registration_on::play);
         }
 
         void BanPlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
@@ -49,7 +45,7 @@ namespace crafted_craft {
                         banned_players.add(args[0], {});
                         api::players::calls::on_system_message({client, {"Player " + args[0] + " has been banned."}});
                     })
-                    .add_child({"<reason>", "ban player with reason", "/ban <player> [reason]"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
+                    .add_child({"[reason]", "ban player with reason", "/ban <player> [reason]"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
                     .set_callback("command.ban:reason", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         if (args.size() == 0) {
                             api::players::calls::on_system_message({client, {"Usage: /ban <player> [reason]"}});
@@ -66,28 +62,26 @@ namespace crafted_craft {
                     });
             }
             {
-                browser.add_child({"pardon", "", ""})
-                    .add_child({"<player>", "pardon player", "/pardon <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                    .set_callback("command.pardon", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                        if (args.size() == 0) {
-                            {
-                                api::players::calls::on_system_message({client, {"Usage: /pardon <player>"}});
-                                return;
-                            }
-                            return;
-                        }
-                        if (!api::ban::on_pardon({args[0], client->name, args[1]}))
-                            return;
-                        if (!banned_players.contains(args[0])) {
-                            api::players::calls::on_system_message({client, {"Player " + args[0] + " has not been banned."}});
-                            return;
-                        }
-                        banned_players.remove(args[0]);
-                        api::players::calls::on_system_message({client, {"Player " + args[0] + " has been pardoned."}});
-                    });
-                browser.add_child({"unban", "pardon alias"}).set_redirect("pardon", [browser](const list_array<std::string>& args, const std::string& left, base_objects::client_data_holder& client) {
-                    browser.get_manager().execute_command("pardon " + left, client);
-                });
+                auto& pardon = browser.add_child({"pardon", "", ""})
+                                   .add_child({"<player>", "pardon player", "/pardon <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                                   .set_callback("command.pardon", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                                       if (args.size() == 0) {
+                                           {
+                                               api::players::calls::on_system_message({client, {"Usage: /pardon <player>"}});
+                                               return;
+                                           }
+                                           return;
+                                       }
+                                       if (api::ban::on_pardon({args[0], client->name, ""}))
+                                           return;
+                                       if (!banned_players.contains(args[0])) {
+                                           api::players::calls::on_system_message({client, {"Player " + args[0] + " has not been banned."}});
+                                           return;
+                                       }
+                                       banned_players.remove(args[0]);
+                                       api::players::calls::on_system_message({client, {"Player " + args[0] + " has been pardoned."}});
+                                   });
+                browser.add_child({"unban", "pardon alias"}).add_child(pardon);
             }
             {
                 auto ban_list = browser.add_child({"banlist", "list all banned players or ips", "/banlist ips|players"});
@@ -213,7 +207,7 @@ namespace crafted_craft {
                         banned_ips.add(args[0], {});
                         api::players::calls::on_system_message({client, {"IP " + args[0] + " has been banned."}});
                     })
-                    .add_child({"<reason>", "ban ip with reason", "/ban-ip <ip> [reason]"}, base_objects::packets::command_node::parsers::brigadier_string, {.flags = 2})
+                    .add_child({"[reason]", "ban ip with reason", "/ban-ip <ip> [reason]"}, base_objects::packets::command_node::parsers::brigadier_string, {.flags = 2})
                     .set_callback("command.ban-ip:reason", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         if (args.size() == 0) {
                             {
@@ -232,34 +226,32 @@ namespace crafted_craft {
                     });
             }
             {
-                browser.add_child({"pardon-ip"})
-                    .add_child({"<ip>", "pardon ip", "/pardon-ip <ip>"}, base_objects::packets::command_node::parsers::brigadier_string, {.flags = 1})
-                    .set_callback("command.pardon-ip", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                        if (args.size() == 0) {
-                            api::players::calls::on_system_message({client, {"Usage: /pardon-ip <ip>"}});
-                            return;
-                        }
-                        api::ban::on_pardon_ip({args[0], client->name, args[1]});
+                auto& pardon_ip = browser.add_child({"pardon-ip"})
+                                      .add_child({"<ip>", "pardon ip", "/pardon-ip <ip>"}, base_objects::packets::command_node::parsers::brigadier_string, {.flags = 1})
+                                      .set_callback("command.pardon-ip", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                                          if (args.size() == 0) {
+                                              api::players::calls::on_system_message({client, {"Usage: /pardon-ip <ip>"}});
+                                              return;
+                                          }
+                                          api::ban::on_pardon_ip({args[0], client->name, args[1]});
 
-                        if (!banned_ips.contains(args[0])) {
-                            api::players::calls::on_system_message({client, {"IP " + args[0] + " has not been banned."}});
-                            return;
-                        }
+                                          if (!banned_ips.contains(args[0])) {
+                                              api::players::calls::on_system_message({client, {"IP " + args[0] + " has not been banned."}});
+                                              return;
+                                          }
 
-                        banned_ips.remove(args[0]);
-                        api::players::calls::on_system_message({client, {"IP " + args[0] + " has been pardoned."}});
-                    });
-                browser.add_child({"unban-ip", "pardon-ip alias"}).set_redirect("pardon-ip", [browser](const list_array<std::string>& args, const std::string& left, base_objects::client_data_holder& client) {
-                    return browser.get_manager().execute_command("pardon-ip " + left, client);
-                });
+                                          banned_ips.remove(args[0]);
+                                          api::players::calls::on_system_message({client, {"IP " + args[0] + " has been pardoned."}});
+                                      });
+                browser.add_child({"unban-ip", "pardon-ip alias"}).add_child(pardon_ip);
             }
         }
 
         BanPlugin::plugin_response BanPlugin::OnPlay_initialize(base_objects::client_data_holder& client) {
             if (auto banned = banned_players.get(client->name); banned)
-                return packets::play::kick({"You are banned from this server\nReason: " + banned->convert_to_str()});
+                api::players::calls::on_player_kick({client, {"You are banned from this server\nReason: " + banned->convert_to_str()}});
             if (auto banned = banned_ips.get(client->ip); banned)
-                return packets::play::kick({"You are banned from this server\nReason: " + banned->convert_to_str()});
+                api::players::calls::on_player_kick({client, {"You are banned from this server\nReason: " + banned->convert_to_str()}});
             return false;
         }
     }

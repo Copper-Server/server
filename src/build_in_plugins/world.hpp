@@ -1,5 +1,6 @@
 #ifndef SRC_BUILD_IN_PLUGINS_WORLD
 #define SRC_BUILD_IN_PLUGINS_WORLD
+#include "../api/players.hpp"
 #include "../base_objects/commands.hpp"
 #include "../log.hpp"
 #include "../plugin/registration.hpp"
@@ -11,15 +12,14 @@ namespace crafted_craft {
             storage::worlds_data worlds_storage;
 
             void add_world_id_suggestion(base_objects::command_browser& browser) {
-                browser.set_suggestion_callback([this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                    auto suggestions = worlds_storage.get_list().convert<base_objects::suggestion>([](uint64_t id) {
-                        return base_objects::suggestion{std::to_string(id)};
+                browser.set_suggestion_callback([this](const std::string& current, base_objects::client_data_holder& client) {
+                    auto suggestions = worlds_storage.get_list().convert<std::string>([](uint64_t id) {
+                        return std::to_string(id);
                     });
-                    if (args.empty())
+                    if (current.empty())
                         return suggestions;
                     else {
-                        auto& input = args[0];
-                        return suggestions.where([&input](const base_objects::suggestion& suggestion) { return suggestion.insertion.starts_with(input); });
+                        return suggestions.where([&current](const std::string& suggestion) { return suggestion.starts_with(current); });
                     }
                 });
             }
@@ -36,7 +36,7 @@ namespace crafted_craft {
                     auto create = worlds.add_child({"create"});
                 }
                 {
-                    auto world_id = worlds.add_child({"remove"}).add_child({"[world_id]"});
+                    auto world_id = worlds.add_child({"remove"}).add_child({"<world_id>"});
                     world_id.set_callback("command.world.remove", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         uint64_t id;
                         try {
@@ -58,7 +58,7 @@ namespace crafted_craft {
                 {
                     auto base = worlds.add_child({"base"});
                     {
-                        auto set = base.add_child({"set"}).add_child({"[world_id]"});
+                        auto set = base.add_child({"set"}).add_child({"<world_id>"});
                         set.set_callback("command.world.base.set", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                             uint64_t id;
                             try {

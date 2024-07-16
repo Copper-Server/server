@@ -21,10 +21,25 @@ namespace crafted_craft {
                     : data(std::move(data)), compression_threshold(compression_threshold), apply_compression(apply_compression) {}
             };
 
-            Response()
-                : Response({}, 0) {}
+            Response() = default;
 
-            ~Response() = default;
+            Response(Response&& move)
+                : data(std::move(move.data)), do_disconnect(move.do_disconnect), do_disconnect_after_send(move.do_disconnect_after_send), valid_till(move.valid_till) {}
+
+            Response(const Response& copy)
+                : data(copy.data), do_disconnect(copy.do_disconnect), do_disconnect_after_send(copy.do_disconnect_after_send), valid_till(copy.valid_till) {}
+
+            ~Response()
+                = default;
+
+            Response& operator=(Response&& move) {
+                data = std::move(move.data);
+                do_disconnect = move.do_disconnect;
+                do_disconnect_after_send = move.do_disconnect_after_send;
+                valid_till = move.valid_till;
+                return *this;
+            }
+
 
             list_array<Item> data;
             bool do_disconnect = false;

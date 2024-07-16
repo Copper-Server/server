@@ -60,6 +60,7 @@
     "protocol": {
         "compression_threshold": 4294967295,
         "connection_conflict": "kick_connected",
+        "enable_encryption": true,
         "max_players": 0,
         "offline_mode": true,
         "prevent_proxy_connections": false,

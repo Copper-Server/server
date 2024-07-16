@@ -6,44 +6,19 @@
 namespace crafted_craft {
     class TCPClientHandleStatus : public TCPClientHandle {
     protected:
-        enum class IllegalDataResponse {
-            none,
-            disconnect,
-            switch_to_next_handler
-        };
-
-        virtual IllegalDataResponse AllowProtocolVersion(int proto_version) {
-            return IllegalDataResponse::none;
-            //
-            //if (765 == proto_version)
-            //    return IllegalDataResponse::none;
-            //else
-            //    return IllegalDataResponse::none;
-        }
-
-        virtual IllegalDataResponse AllowServerAddressAndPort(std::string& str, uint16_t port) {
-            return IllegalDataResponse::none;
-        }
-
-        //return empty chat string if al normal
-        virtual std::string AllowPlayersName(std::string& nick) {
-            // return "{\"text\":\"Server closed!\"}";
-            return "";
-        }
-
         //response status
         virtual std::string buildResponse() {
             if (!special_status) {
                 return "{"
                        "\"version\": {"
-                       "\"name\": \"Incorrect handler\","
+                       "\"name\": \"Undefined handler\","
                        "\"protocol\": 0"
                        "},"
                        "\"players\": {"
                        "\"max\": 0,"
                        "\"online\": 0"
                        "},"
-                       "\"description\": {\"text\":\"Please set correct status handler!\",\"color\":\"red\"}"
+                       "\"description\": {\"text\":\"Please set status handler!\",\"color\":\"red\"}"
                        "}";
             }
             int32_t protocol_version = special_status->ConnectionAvailable(session->protocol_version)
@@ -90,12 +65,6 @@ namespace crafted_craft {
             return res;
         }
 
-        //if return empty, sample will not be shown
-        virtual list_array<std::string> StatusResponseOnlinePlayers() {
-            //return {"Test World","Hello!:)"};
-            return {};
-        }
-
         Response WorkPacket(ArrayStream& packet) override {
             if (!special_status->config.status.enable)
                 return Response::Disconnect();
@@ -103,8 +72,8 @@ namespace crafted_craft {
                 return Response::Empty();
             else if (packet.size_read() == 1) {
                 list_array<uint8_t> response;
-                response.push_back('\0');
-                std::string&& tmp = buildResponse();
+                response.push_back(0);
+                std::string tmp = buildResponse();
                 WriteVar<int32_t>(tmp.size(), response);
                 response.push_back((uint8_t*)tmp.data(), tmp.size());
                 return Response::Answer({std::move(response)});

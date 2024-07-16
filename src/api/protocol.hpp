@@ -21,7 +21,9 @@ namespace crafted_craft {
                     Position position;
                 };
 
-                struct chat_command {
+                using chat_command = std::string;
+
+                struct signed_chat_command {
                     std::string command;
                     int64_t timestamp;
                     int64_t salt;
@@ -322,6 +324,35 @@ namespace crafted_craft {
                     int32_t hand;
                     int32_t sequence;
                 };
+
+                struct cookie_response {
+                    std::string key;
+                    std::optional<list_array<uint8_t>> payload;
+
+                    cookie_response() = default;
+
+                    cookie_response(const cookie_response& copy)
+                        : key(copy.key), payload(copy.payload) {}
+
+                    cookie_response(cookie_response&& move)
+                        : key(std::move(move.key)), payload(std::move(move.payload)) {}
+
+                    cookie_response& operator=(const cookie_response& copy) {
+                        key = copy.key;
+                        payload = copy.payload;
+                        return *this;
+                    }
+
+                    cookie_response& operator=(cookie_response&& move) {
+                        key = std::move(move.key);
+                        payload = std::move(move.payload);
+                        return *this;
+                    }
+                };
+
+                enum class debug_sample_subscription {
+                    tick_time = 0,
+                };
             }
 
             template <class T>
@@ -336,6 +367,7 @@ namespace crafted_craft {
             extern base_objects::event<event_data<uint8_t>> on_change_difficulty;
             extern base_objects::event<event_data<int32_t>> on_acknowledge_message;
             extern base_objects::event<event_data<data::chat_command>> on_chat_command;
+            extern base_objects::event<event_data<data::signed_chat_command>> on_signed_chat_command;
             extern base_objects::event<event_data<data::chat_message_unsigned>> on_chat_message_unsigned;
             extern base_objects::event<event_data<data::chat_message_signed>> on_chat_message_signed;
             extern base_objects::event<event_data<data::player_session>> on_player_session;
@@ -347,7 +379,9 @@ namespace crafted_craft {
             extern base_objects::event<event_data<data::click_container>> on_click_container;
             extern base_objects::event<event_data<uint8_t>> on_close_container;
             extern base_objects::event<event_data<data::change_container_slot_state>> on_change_container_slot_state;
+            extern base_objects::event<event_data<data::cookie_response>> on_cookie_response;
             extern base_objects::event<event_data<data::plugin_message>> on_plugin_message;
+            extern base_objects::event<event_data<data::debug_sample_subscription>> on_debug_sample_subscription;
             extern base_objects::event<event_data<data::edit_book>> on_edit_book;
             extern base_objects::event<event_data<data::query_entity_tag>> on_query_entity_tag;
             extern base_objects::event<event_data<data::interact_attack>> on_interact_attack;

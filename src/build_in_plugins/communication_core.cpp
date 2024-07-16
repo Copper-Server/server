@@ -205,11 +205,6 @@ namespace crafted_craft {
                 .set_callback("command.tellraw", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                     api::players::calls::on_system_message_broadcast(Chat::fromStr(args[0]));
                 });
-            browser.add_child({"tellraw"})
-                .add_child({"<message>", "tellraw <message>", "Broadcast raw message for everyone."}, base_objects::command::parsers::brigadier_string, {.flags = 2})
-                .set_callback("command.tellraw", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                    api::players::calls::on_system_message_broadcast(Chat::fromStr(args[0]));
-                });
             {
                 auto title = browser
                                  .add_child({"title"})

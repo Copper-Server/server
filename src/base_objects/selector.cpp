@@ -37,11 +37,11 @@ namespace crafted_craft {
             return pos;
         }
 
-        selector selector::build_selector(const std::string& full_string) {
+        void selector::build_selector(const std::string& full_string) {
             this->full_string = full_string;
             std::string_view view(full_string);
             if (view[0] != '@')
-                return;
+                throw std::runtime_error("Expected '@' at the start of selector");
             switch (view[1]) {
             case 'p':
                 flags.only_players = true;
@@ -81,7 +81,7 @@ namespace crafted_craft {
             case '<': {
                 auto close = view.find('>', 2);
                 if (close == view.npos)
-                    return;
+                    throw std::runtime_error("Expected '>' in selector");
                 std::string_view selected = view.substr(2, close - 1);
                 view = view.substr(close + 1);
                 list_array<char>(selected)
@@ -234,25 +234,31 @@ namespace crafted_craft {
         bool selector::select(class Entity& entity) const {
             if (flags.self)
                 return false;
+            return false;
         }
 
         bool selector::select(client_data_holder& player) const {
             if (flags.self)
                 return false;
+            return false;
         }
 
         //entity selects
         bool selector::select(Entity& caller, class Entity& entity) const {
+            return false;
         }
 
         bool selector::select(Entity& caller, client_data_holder& player) const {
+            return false;
         }
 
         //player selects
         bool selector::select(client_data_holder& caller, class Entity& entity) const {
+            return false;
         }
 
         bool selector::select(client_data_holder& caller, client_data_holder& player) const {
+            return false;
         }
 
 

@@ -5,16 +5,23 @@
 #include "../../../base_objects/chunk.hpp"
 #include "../../../base_objects/entity.hpp"
 #include "../../../base_objects/packets.hpp"
+#include "../../../base_objects/particle_data.hpp"
 #include "../../../base_objects/position.hpp"
+#include "../../../base_objects/recipe.hpp"
 
 //packets for 1.20.4, protocol 765
 namespace crafted_craft {
     namespace packets {
         namespace release_765 {
             namespace login {
+                Response login(int32_t plugin_message_id, const std::string& chanel, const list_array<uint8_t>& data);
+
                 Response kick(const Chat& reason);
                 Response disableCompression();
                 Response setCompression(int32_t threshold);
+
+                Response loginSuccess(SharedClientData& client);
+                Response encryptionRequest(const std::string& server_id, uint8_t (&verify_token)[4]);
             }
 
             namespace configuration {
@@ -22,13 +29,21 @@ namespace crafted_craft {
 
                 Response kick(const Chat& reason);
 
+                Response finish();
+
+                Response keep_alive(int64_t keep_alive_packet);
+
+                Response ping(int32_t excepted_pong);
+
+                Response registry_data();
+
                 Response removeResourcePacks();
 
                 Response removeResourcePack(const ENBT::UUID& pack_id);
 
-                Response addResourcePack(const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced);
+                Response addResourcePack(SharedClientData& client, const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced);
 
-                Response addResourcePack(const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced, Chat prompt);
+                Response addResourcePack(SharedClientData& client,const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced, Chat prompt);
 
                 Response setFeatureFlags(const list_array<std::string>& features);
 
@@ -38,13 +53,13 @@ namespace crafted_craft {
             namespace play {
                 Response bundleResponse(Response&& response);
 
-                Response spawnEntity(TCPsession& client, const base_objects::entity& entity);
-                Response spawnExperienceOrb(TCPsession& client, const base_objects::entity& entity, int16_t count);
-                Response entityAnimation(TCPsession& client, const base_objects::entity& entity, uint8_t animation);
+                Response spawnEntity(const base_objects::entity& entity);
+                Response spawnExperienceOrb( const base_objects::entity& entity, int16_t count);
+                Response entityAnimation(const base_objects::entity& entity, uint8_t animation);
                 Response awardStatistics(const list_array<base_objects::packets::statistics>& statistics);
                 Response acknowledgeBlockChange(SharedClientData& client);
 
-                Response setBlockDestroyStage(TCPsession& client, const base_objects::entity& entity, Position block, uint8_t stage);
+                Response setBlockDestroyStage(const base_objects::entity& entity, Position block, uint8_t stage);
 
                 Response blockEntityData(Position block, int32_t type, const ENBT& data);
                 //block_type is from "minecraft:block" registry, not a block state.
@@ -92,26 +107,20 @@ namespace crafted_craft {
 
                 Response entityEvent(int32_t entity_id, uint8_t entity_status);
 
-                //TODO: particles
-                //Response explosion(calc::VECTOR pos, float strength, list_array<calc::XYZ<int8_t>> affected_blocks, calc::VECTOR player_motion, int32_t block_interaction, int32_t small_explosion_particle_id, ) {
-                //    list_array<uint8_t> packet;
-                //    packet.reserve(1 + 4 * 4 + 4 + 4 * 3 * affected_blocks.size() + 4 * 3);
-                //    packet.push_back(0x1E);
-                //    WriteValue<float>(pos.x, packet);
-                //    WriteValue<float>(pos.y, packet);
-                //    WriteValue<float>(pos.z, packet);
-                //    WriteValue<float>(strength, packet);
-                //    WriteVar<int32_t>(affected_blocks.size(), packet);
-                //    for (auto& it : affected_blocks) {
-                //        WriteValue<int8_t>(it.x, packet);
-                //        WriteValue<int8_t>(it.y, packet);
-                //        WriteValue<int8_t>(it.z, packet);
-                //    }
-                //    WriteValue<float>(player_motion.x, packet);
-                //    WriteValue<float>(player_motion.y, packet);
-                //    WriteValue<float>(player_motion.z, packet);
-                //    return Response::Answer({packet});
-                //}
+
+                Response explosion(
+                    calc::VECTOR pos,
+                    float strength,
+                    list_array<calc::XYZ<int8_t>> affected_blocks,
+                    calc::VECTOR player_motion,
+                    int32_t block_interaction,
+                    int32_t small_explosion_particle_id,
+                    const base_objects::particle_data& small_explosion_particle_data,
+                    int32_t large_explosion_particle_id,
+                    const base_objects::particle_data& large_explosion_particle_data,
+                    const std::string& sound_name,
+                    std::optional<float> fixed_range
+                );
 
                 Response unloadChunk(int32_t x, int32_t z);
                 Response gameEvent(uint8_t event_id, float value);
@@ -122,26 +131,34 @@ namespace crafted_craft {
                 Response initializeWorldBorder(double x, double z, double old_diameter, double new_diameter, int64_t speed_ms, int32_t portal_teleport_boundary, int32_t warning_blocks, int32_t warning_time);
                 //internal use
                 Response keepAlive(int64_t id);
-                //TODO:
-                //Response updateChunkDataWLights(...){}
+
+                Response updateChunkDataWLights(
+                    int32_t chunk_x,
+                    int32_t chunk_z,
+                    NBT heightmaps,
+                    const std::vector<uint8_t> data,
+                    //block_entries not implemented, this is legal to send later by blockEntityData,
+                    const bit_list_array<>& sky_light_mask,
+                    const bit_list_array<>& block_light_mask,
+                    const bit_list_array<>& empty_skylight_mask,
+                    const bit_list_array<>& empty_block_light_mask,
+                    const list_array<std::vector<uint8_t>> sky_light_arrays,
+                    const list_array<std::vector<uint8_t>> block_light_arrays
+                );
 
                 Response worldEvent(int32_t event, Position pos, int32_t data, bool global);
-                Response particle(int32_t particle_id, bool long_distance, calc::VECTOR pos, calc::XYZ<float> offset, float max_speed, int32_t count, list_array<uint8_t> data);
-                //TODO:
-                //Response updateLight(int32_t chunk_x, int32_t chunk_z, list_array<base_objects::chunk::chunk_light> light) {
-                //    list_array<uint8_t> packet;
-                //    packet.reserve(1 + 4 * 2 + 4 * light.size());
-                //    packet.push_back(0x28);
-                //    WriteVar<int32_t>(chunk_x, packet);
-                //    WriteVar<int32_t>(chunk_z, packet);
-                //    WriteVar<int32_t>(light.size(), packet);
-                //    for (auto& it : light) {
-                //        WriteVar<int32_t>(it.y, packet);
-                //        WriteVar<int32_t>(it.sky_light, packet);
-                //        WriteVar<int32_t>(it.block_light, packet);
-                //    }
-                //    return Response::Answer({packet});
-                //}
+                Response particle(int32_t particle_id, bool long_distance, calc::VECTOR pos, calc::XYZ<float> offset, float max_speed, int32_t count, const list_array<uint8_t>& data);
+
+                Response updateLight(
+                    int32_t chunk_x,
+                    int32_t chunk_z,
+                    const bit_list_array<>& sky_light_mask,
+                    const bit_list_array<>& block_light_mask,
+                    const bit_list_array<>& empty_skylight_mask,
+                    const bit_list_array<>& empty_block_light_mask,
+                    const list_array<std::vector<uint8_t>> sky_light_arrays,
+                    const list_array<std::vector<uint8_t>> block_light_arrays
+                );
 
                 Response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, const std::string& current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, std::optional<base_objects::packets::death_location_data> death_location, int32_t portal_cooldown);
                 Response mapData(int32_t map_id, uint8_t scale, bool locked, const list_array<base_objects::packets::map_icon>& icons = {}, uint8_t columns = 0, uint8_t rows = 0, uint8_t x = 0, uint8_t z = 0, const list_array<uint8_t>& data = {});
@@ -173,7 +190,8 @@ namespace crafted_craft {
                 Response lookAt(bool from_feet_or_eyes, calc::VECTOR target, std::optional<std::pair<int32_t, bool>> entity_id);
                 Response synchronizePlayerPosition(calc::VECTOR pos, float yaw, float pitch, uint8_t flags, int32_t teleport_id);
                 Response initRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> displayed_recipe_ids, list_array<std::string> had_access_to_recipe_ids);
-                Response updateRecipeBook(bool add_remove, bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> recipe_ids);
+                Response addRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> recipe_ids);
+                Response removeRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> recipe_ids);
                 Response removeEntities(const list_array<int32_t>& entity_ids);
                 Response removeEntityEffect(int32_t entity_id, int32_t effect_id);
                 Response resetScore(const std::string& entity_name, const std::optional<std::string>& objective_name);
@@ -231,7 +249,7 @@ namespace crafted_craft {
                 Response setScoreStyled(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, const ENBT& styled);
                 Response setScoreFixed(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, Chat content);
 
-                Response setSimulationDistance(float distance);
+                Response setSimulationDistance(int32_t distance);
                 Response setSubtitleText(const Chat& text);
                 Response updateTime(int64_t world_age, int64_t time_of_day);
                 Response setTitleText(const Chat& text);
@@ -262,10 +280,10 @@ namespace crafted_craft {
                 Response updateAttributes(int32_t entity_id, const list_array<base_objects::packets::attributes>& properties);
 
                 Response entityEffect(int32_t entity_id, int32_t effect_id, int8_t amplifier, int32_t duration, int8_t flags, std::optional<ENBT> factor_codec);
-                //TODO:
-                //Response updateRecipes()
 
-                Response updateTags(bool reset, const list_array<base_objects::packets::tag_mapping>& tag_mappings, const list_array<std::string>& remove_tags);
+                Response updateRecipes(const std::vector<base_objects::recipe>& recipes);
+
+                Response updateTags(const list_array<base_objects::packets::tag_mapping>& tag_mappings);
             }
         }
     }

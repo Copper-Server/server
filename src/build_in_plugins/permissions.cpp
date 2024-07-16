@@ -2,7 +2,8 @@
 #include "../ClientHandleHelper.hpp"
 #include "../api/permissions.hpp"
 #include "../api/players.hpp"
-#include "../protocolHelper/state_play.hpp"
+#include "../log.hpp"
+#include "../plugin/main.hpp"
 
 namespace crafted_craft {
     namespace build_in_plugins {
@@ -26,10 +27,18 @@ namespace crafted_craft {
 
             for (const auto& group_name : pd.permission_groups)
                 apply_group(group_name, pd);
-            if (op_list.contains(client_ref.name)) {
+            if (op_list.contains(client_ref.name))
                 apply_group("operator", pd);
-                pd.op_level = 4;
+            pd.permissions.unify();
+
+            int8_t op_level = 0;
+            for (const auto& perm_name : pd.permissions) {
+                api::permissions::view_permission(perm_name, [&op_level](const base_objects::permissions_object& perm) {
+                    if (perm.permission_level != (int8_t)-1)
+                        op_level = std::max(op_level, perm.permission_level);
+                });
             }
+            pd.op_level = op_level;
 
 
             pd.permissions.commit();
@@ -38,7 +47,7 @@ namespace crafted_craft {
 
         void PermissionsPlugin::OnLoad(const PluginRegistrationPtr& self) {
             if (op_list.is_loaded())
-                TCPClientHandlePlay::base_plugins.push_back(self);
+                pluginManagement.registerPluginOn(self, PluginManagement::registration_on::play);
             else
                 log::error("permissions", "failed to load permissions");
         }
@@ -49,10 +58,6 @@ namespace crafted_craft {
                 update_perm(client_ref);
                 return false;
             });
-        }
-
-        void PermissionsPlugin::OnUnload(const PluginRegistrationPtr& self) {
-            TCPClientHandlePlay::base_plugins.remove(self);
         }
 
         void PermissionsPlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {

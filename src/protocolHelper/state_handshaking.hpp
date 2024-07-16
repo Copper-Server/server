@@ -1,8 +1,8 @@
-#ifndef SRC_PROTOCOLHELPER_HANDSHAKING
-#define SRC_PROTOCOLHELPER_HANDSHAKING
+#ifndef SRC_PROTOCOLHELPER_STATE_HANDSHAKING
+#define SRC_PROTOCOLHELPER_STATE_HANDSHAKING
 #include "../plugin/special.hpp"
+#include "client_handler/abstract.hpp"
 #include "packets.hpp"
-#include "state_login.hpp"
 #include "state_status.hpp"
 
 namespace crafted_craft {
@@ -69,7 +69,7 @@ namespace crafted_craft {
                 return Response::Empty();
             case 2: //login
                 log::debug("Handshaking", "Switch to login");
-                next_handler = new TCPClientHandleLogin(session);
+                next_handler = client_handler::abstract::createHandleLogin(session);
                 return Response::Empty();
             case 3: //transfer
                 return Response::Disconnect();
@@ -111,4 +111,4 @@ namespace crafted_craft {
     };
 }
 
-#endif /* SRC_PROTOCOLHELPER_HANDSHAKING */
+#endif /* SRC_PROTOCOLHELPER_STATE_HANDSHAKING */

@@ -53,8 +53,10 @@ namespace crafted_craft {
                 auto line = "[" + log_levels_names[(int)level] + "] [" + source + "] ";
                 std::string alignment(line.size() + 1, ' ');
                 alignment[0] = '\n';
-
-                auto aligned_message = list_array<char>(message).replace('\t', "    ", 4).replace('\n', alignment.data(), line.size()).to_container<std::string>();
+                auto aligned_message = list_array<char>(message)
+                                           .replace('\t', "    ", 4)
+                                           .replace('\n', alignment.data(), line.size() + 1)
+                                           .to_container<std::string>();
                 fast_task::read_lock lock(console_mutex);
                 if (cmd)
                     cmd->write(color(r, g, b, line + aligned_message));
@@ -108,6 +110,7 @@ namespace crafted_craft {
                 if (!console::cmd)
                     console::cmd = std::make_shared<Commandline>();
                 console::cmd->enable_history();
+                console::cmd->set_prompt(">");
                 console::cmd->on_command = [](Commandline& cmd) {
                     on_command.async_notify(cmd.get_command());
                 };

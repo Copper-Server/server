@@ -41,8 +41,8 @@ namespace crafted_craft {
         log::debug("Debug tools", output);
     }
 
-    TCPsession::TCPsession(boost::asio::ip::tcp::socket&& s, TCPclient* client_handler, uint64_t& set_timeout, Server* server)
-        : sock(std::move(s)), timeout(set_timeout), server(server) {
+    TCPsession::TCPsession(boost::asio::ip::tcp::socket&& s, TCPclient* client_handler, uint64_t& set_timeout)
+        : sock(std::move(s)), timeout(set_timeout) {
         chandler = client_handler->DefineOurself(this);
         read_data.resize(1024);
     }
@@ -51,23 +51,20 @@ namespace crafted_craft {
         if (_sharedData) {
             if (_sharedData->packets_state.state != SharedClientData::packets_state_t::protocol_state::initialization)
                 api::players::handlers::on_player_leave(sharedDataRef());
-            server->online_players.remove_player(sharedDataRef());
+            Server::instance().online_players.remove_player(sharedDataRef());
         }
         if (chandler)
             delete chandler;
     }
 
     base_objects::client_data_holder& TCPsession::sharedDataRef() {
-        return _sharedData ? _sharedData : _sharedData = server->online_players.allocate_player();
+        return _sharedData ? _sharedData : _sharedData = Server::instance().online_players.allocate_player();
     }
 
     SharedClientData& TCPsession::sharedData() {
         return *sharedDataRef();
     }
 
-    Server& TCPsession::serverData() {
-        return *server;
-    }
 
     void TCPsession::connect() {
         active = true;
@@ -90,7 +87,7 @@ namespace crafted_craft {
                 sock.cancel();
             sock.close();
             active = false;
-            server->close_session(this);
+            Server::instance().close_session(this);
         });
     }
 
@@ -103,10 +100,6 @@ namespace crafted_craft {
             return false;
         encryption_enabled = true;
         return true;
-    }
-
-    boost::asio::const_buffer TCPsession::public_key() {
-        return server->public_key_buffer();
     }
 
     void TCPsession::send(Response&& resp) {
@@ -231,7 +224,7 @@ namespace crafted_craft {
 
     void Server::Worker() {
         make_clean_up();
-        TCPsession* session = new TCPsession(boost::asio::ip::tcp::socket(make_strand(threads)), first_client_holder, all_connections_timeout, this);
+        TCPsession* session = new TCPsession(boost::asio::ip::tcp::socket(make_strand(threads)), first_client_holder, all_connections_timeout);
         TCPacceptor.async_accept(session->sock, [this, session](const boost::system::error_code& error) {
             if (error == boost::asio::error::operation_aborted || disabled)
                 return;

@@ -3,8 +3,8 @@
 #include "../api/console.hpp"
 #include "../api/players.hpp"
 #include "../log.hpp"
+#include "../plugin/main.hpp"
 #include "../plugin/registration.hpp"
-#include "../protocolHelper/state_play.hpp"
 
 namespace crafted_craft {
     class Server;
@@ -29,7 +29,7 @@ namespace crafted_craft {
             api::command::register_manager(manager);
             manager.reload_commands();
             log::info("Server", "server handler loaded.");
-            TCPClientHandlePlay::base_plugins.push_back(self);
+            pluginManagement.registerPluginOn(self, PluginManagement::registration_on::play);
         }
 
         void ServerPlugin::OnPostLoad(const std::shared_ptr<PluginRegistration>&) {
@@ -39,7 +39,6 @@ namespace crafted_craft {
 
         void ServerPlugin::OnUnload(const PluginRegistrationPtr& self) {
             log::commands::unloadCommandSuggestion();
-            TCPClientHandlePlay::base_plugins.remove(self);
             PluginRegistration::OnUnload(self);
             log::info("Server", "server handler unloaded.");
         }
@@ -50,7 +49,7 @@ namespace crafted_craft {
                     .set_callback("command.help", [browser, this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         api::players::calls::on_system_message({client, {"help for all commands:\n" + browser.get_documentation()}});
                     })
-                    .add_child({"<command>", "returns help for command", "/help <command>"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
+                    .add_child({"[command]", "returns help for command", "/help [command]"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
                     .set_callback("command.help", [browser, this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         auto command = browser.open(args[0]);
                         if (!command.is_valid())
@@ -91,7 +90,7 @@ namespace crafted_craft {
                         }
                         api::players::calls::on_player_kick({target, "kicked by admin"});
                     })
-                    .add_child({"<reason>", "kick player with reason", "/kick <player> [reason]"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
+                    .add_child({"[reason]", "kick player with reason", "/kick <player> [reason]"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
                     .set_callback("command.kick", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         if (args.size() == 0) {
                             api::players::calls::on_system_message({client, {"Usage: /kick <player>"}});
@@ -130,8 +129,8 @@ namespace crafted_craft {
                     });
                 });
                 _config.add_child({"set"})
-                    .add_child({"[config item]"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                    .add_child({"[value]", "updates config in file and applies for program", "/config set [config item] [value]"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
+                    .add_child({"<config item>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                    .add_child({"<value>", "updates config in file and applies for program", "/config set <config item> <value>"}, base_objects::command::parsers::brigadier_string, {.flags = 2})
                     .set_callback({"command.config.set", {"console"}}, [&](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         if (args.size() < 2) {
                             api::players::calls::on_system_message({client, {"Usage: /config set <config item> <value>"}});
@@ -145,7 +144,7 @@ namespace crafted_craft {
                     });
                 _config
                     .add_child({"get"})
-                    .add_child({"[config item]", "command.config.get", "returns config value", "/config get [config item]"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                    .add_child({"<config item>", "command.config.get", "returns config value", "/config get <config item>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
                     .set_callback({"command.config.get", {"console"}}, [&](const list_array<std::string>& args, base_objects::client_data_holder& client) {
                         if (args.size() == 0) {
                             api::players::calls::on_system_message({client, {"Usage: /config get <config item>"}});

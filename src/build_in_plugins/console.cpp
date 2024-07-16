@@ -2,14 +2,35 @@
 #include "../api/command.hpp"
 #include "../api/console.hpp"
 #include "../api/players.hpp"
+#include "../base_objects/commands.hpp"
 #include "../log.hpp"
 #include "../plugin/registration.hpp"
-#include "../protocolHelper/state_play.hpp"
 
 namespace crafted_craft {
     class Server;
 
     namespace build_in_plugins {
+
+
+        void add_log_type_suggestion(base_objects::command_browser& browser) {
+            browser.set_suggestion_callback([](const std::string& current, base_objects::client_data_holder& client) {
+                auto suggestions = list_array<std::string>{
+                    "info",
+                    "warn",
+                    "error",
+                    "fatal",
+                    "debug_error",
+                    "debug"
+                };
+
+                if (current.empty())
+                    return suggestions;
+                else {
+                    return suggestions.where([&current](const std::string& suggestion) { return suggestion.starts_with(current); });
+                }
+            });
+        }
+
         ConsolePlugin::ConsolePlugin()
             : server(Server::instance()), console_data(server.online_players.allocate_player(), "Console", "Console", Server::instance()) {
         }
@@ -46,7 +67,7 @@ namespace crafted_craft {
                 }
                 return api::command::get_manager()
                     .request_suggestions(tmp, console_data.client)
-                    .convert<std::string>([&insertion_](auto&& suggestion) { return insertion_ + suggestion.insertion; })
+                    .transform([&insertion_](auto&& suggestion) { return insertion_ + suggestion; })
                     .to_container<std::vector<std::string>>();
             });
             console_data.systemChatMessage = [this](const Chat& message) {
@@ -74,52 +95,84 @@ namespace crafted_craft {
                 auto _console = browser.add_child({"console"});
                 auto _log = _console.add_child({"log"});
                 {
-                    _log
-                        .add_child({"enable"})
-                        .add_child({"<log level>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                        .set_callback({"command.console.log.enable", {"console"}}, [](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                            auto& level = args[0];
-                            if (level == "info")
-                                log::enable_log_level(log::level::info);
-                            else if (level == "warn")
-                                log::enable_log_level(log::level::warn);
-                            else if (level == "error")
-                                log::enable_log_level(log::level::error);
-                            else if (level == "fatal")
-                                log::enable_log_level(log::level::fatal);
-                            else if (level == "debug_error")
-                                log::enable_log_level(log::level::debug_error);
-                            else if (level == "debug")
-                                log::enable_log_level(log::level::debug);
-                            else {
-                                log::error("console", "log level " + level + " is undefined.");
-                                return;
-                            }
-                            log::info("console", "Log level " + level + " is now enabled.");
-                        });
-                    _log
-                        .add_child({"disable"})
-                        .add_child({"<log level>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                        .set_callback({"command.console.log.disable", {"console"}}, [](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                            auto& level = args[0];
-                            if (level == "info")
-                                log::disable_log_level(log::level::info);
-                            else if (level == "warn")
-                                log::disable_log_level(log::level::warn);
-                            else if (level == "error")
-                                log::disable_log_level(log::level::error);
-                            else if (level == "fatal")
-                                log::disable_log_level(log::level::fatal);
-                            else if (level == "debug_error")
-                                log::disable_log_level(log::level::debug_error);
-                            else if (level == "debug")
-                                log::disable_log_level(log::level::debug);
-                            else {
-                                log::error("console", "log level " + level + " is undefined.");
-                                return;
-                            }
-                            log::info("console", "Log level " + level + " is now disabled.");
-                        });
+                    auto& enable
+                        = _log
+                              .add_child({"enable"})
+                              .add_child({"<log level>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                              .set_callback({"command.console.log.enable", {"console"}}, [](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                                  auto& level = args[0];
+                                  if (level == "info")
+                                      log::enable_log_level(log::level::info);
+                                  else if (level == "warn")
+                                      log::enable_log_level(log::level::warn);
+                                  else if (level == "error")
+                                      log::enable_log_level(log::level::error);
+                                  else if (level == "fatal")
+                                      log::enable_log_level(log::level::fatal);
+                                  else if (level == "debug_error")
+                                      log::enable_log_level(log::level::debug_error);
+                                  else if (level == "debug")
+                                      log::enable_log_level(log::level::debug);
+                                  else {
+                                      log::error("console", "log level " + level + " is undefined.");
+                                      return;
+                                  }
+                                  log::info("console", "Log level " + level + " is now enabled.");
+                              });
+
+                    auto& test
+                        = _log
+                              .add_child({"test"})
+                              .add_child({"<log level>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                              .set_callback({"command.console.log.test", {"NOPERM"}}, [](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                                  auto& level = args[0];
+                                  if (level == "info")
+                                      log::enable_log_level(log::level::info);
+                                  else if (level == "warn")
+                                      log::enable_log_level(log::level::warn);
+                                  else if (level == "error")
+                                      log::enable_log_level(log::level::error);
+                                  else if (level == "fatal")
+                                      log::enable_log_level(log::level::fatal);
+                                  else if (level == "debug_error")
+                                      log::enable_log_level(log::level::debug_error);
+                                  else if (level == "debug")
+                                      log::enable_log_level(log::level::debug);
+                                  else {
+                                      log::error("console", "log level " + level + " is undefined.");
+                                      return;
+                                  }
+                                  log::info("console", "Log level " + level + " is now enabled.");
+                              });
+
+                    auto& disable
+                        = _log
+                              .add_child({"disable"})
+                              .add_child({"<log level>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
+                              .set_callback({"command.console.log.disable", {"console"}}, [](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                                  auto& level = args[0];
+                                  if (level == "info")
+                                      log::disable_log_level(log::level::info);
+                                  else if (level == "warn")
+                                      log::disable_log_level(log::level::warn);
+                                  else if (level == "error")
+                                      log::disable_log_level(log::level::error);
+                                  else if (level == "fatal")
+                                      log::disable_log_level(log::level::fatal);
+                                  else if (level == "debug_error")
+                                      log::disable_log_level(log::level::debug_error);
+                                  else if (level == "debug")
+                                      log::disable_log_level(log::level::debug);
+                                  else {
+                                      log::error("console", "log level " + level + " is undefined.");
+                                      return;
+                                  }
+                                  log::info("console", "Log level " + level + " is now disabled.");
+                              });
+
+                    add_log_type_suggestion(enable);
+                    add_log_type_suggestion(test);
+                    add_log_type_suggestion(disable);
                 }
             }
         }

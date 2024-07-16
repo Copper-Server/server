@@ -3,6 +3,7 @@
 #include "ban.hpp"
 #include "players.hpp"
 #include "protocol.hpp"
+#include "statistics.hpp"
 
 namespace crafted_craft {
     namespace api {
@@ -55,6 +56,7 @@ namespace crafted_craft {
             base_objects::event<event_data<uint8_t>> on_change_difficulty;
             base_objects::event<event_data<int32_t>> on_acknowledge_message;
             base_objects::event<event_data<data::chat_command>> on_chat_command;
+            base_objects::event<event_data<data::signed_chat_command>> on_signed_chat_command;
             base_objects::event<event_data<data::chat_message_unsigned>> on_chat_message_unsigned;
             base_objects::event<event_data<data::chat_message_signed>> on_chat_message_signed;
             base_objects::event<event_data<data::player_session>> on_player_session;
@@ -66,7 +68,9 @@ namespace crafted_craft {
             base_objects::event<event_data<data::click_container>> on_click_container;
             base_objects::event<event_data<uint8_t>> on_close_container;
             base_objects::event<event_data<data::change_container_slot_state>> on_change_container_slot_state;
+            base_objects::event<event_data<data::cookie_response>> on_cookie_response;
             base_objects::event<event_data<data::plugin_message>> on_plugin_message;
+            base_objects::event<event_data<data::debug_sample_subscription>> on_debug_sample_subscription;
             base_objects::event<event_data<data::edit_book>> on_edit_book;
             base_objects::event<event_data<data::query_entity_tag>> on_query_entity_tag;
             base_objects::event<event_data<data::interact_attack>> on_interact_attack;
@@ -162,6 +166,20 @@ namespace crafted_craft {
                 if (!console_data)
                     return false;
                 return log::commands::is_inited();
+            }
+        }
+
+        namespace statistics {
+            namespace minecraft {
+                base_objects::event<statistic_event> custom;
+                base_objects::event<statistic_event> mined;
+                base_objects::event<statistic_event> broken;
+                base_objects::event<statistic_event> crafted;
+                base_objects::event<statistic_event> used;
+                base_objects::event<statistic_event> picked_up;
+                base_objects::event<statistic_event> dropped;
+                base_objects::event<statistic_event> killed;
+                base_objects::event<statistic_event> killed_by;
             }
         }
     }

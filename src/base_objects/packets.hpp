@@ -340,9 +340,60 @@ namespace crafted_craft {
                     int8_t operation; //0:addition/subtraction, 1:addition/subtraction by %, 2:multiplication by %
                 };
 
-                shared_string key;
+                int32_t key;
                 double value;
                 list_array<modifier> modifiers;
+
+                constexpr static std::string key_to_string(int32_t key) {
+                    switch (key) {
+                    case 0:
+                        return "generic.armor";
+                    case 1:
+                        return "generic.armor_toughness";
+                    case 2:
+                        return "generic.attack_damage";
+                    case 3:
+                        return "generic.attack_knockback";
+                    case 4:
+                        return "generic.attack_speed";
+                    case 5:
+                        return "generic.block_break_speed";
+                    case 6:
+                        return "generic.block_interaction_range";
+                    case 7:
+                        return "generic.entity_interaction_range";
+                    case 8:
+                        return "generic.fall_damage_multiplier";
+                    case 9:
+                        return "generic.flying_speed";
+                    case 10:
+                        return "generic.follow_range";
+                    case 11:
+                        return "generic.gravity";
+                    case 12:
+                        return "generic.jump_strength";
+                    case 13:
+                        return "generic.knockback_resistance";
+                    case 14:
+                        return "generic.luck";
+                    case 15:
+                        return "generic.max_absorption";
+                    case 16:
+                        return "generic.max_health";
+                    case 17:
+                        return "generic.movement_speed";
+                    case 18:
+                        return "generic.safe_fall_distance";
+                    case 19:
+                        return "generic.scale";
+                    case 20:
+                        return "generic.spawn_reinforcements";
+                    case 21:
+                        return "generic.step_height";
+                    default:
+                        return "UNDEFINED";
+                    }
+                }
             };
 
             struct tag_mapping {
@@ -353,6 +404,12 @@ namespace crafted_craft {
 
                 shared_string registry;
                 list_array<entry> tags;
+            };
+
+            struct known_pack {
+                std::string namespace_;
+                std::string id;
+                std::string version;
             };
         }
     }

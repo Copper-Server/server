@@ -12,15 +12,9 @@
 
 namespace crafted_craft {
     namespace base_objects {
-
-
-        struct suggestion {
-            std::string insertion;
-        };
-
         using command_callback = std::function<void(const list_array<std::string>&, client_data_holder&)>;
         using command_redirect = std::function<void(const list_array<std::string>&, const std::string&, client_data_holder&)>;
-        using command_suggestion = std::function<list_array<suggestion>(const list_array<std::string>&, client_data_holder&)>;
+        using command_suggestion = std::function<list_array<std::string>(const std::string& current, client_data_holder&)>;
 
         struct action_provider {
             std::string action_tag;
@@ -70,7 +64,7 @@ namespace crafted_craft {
             command_manager(command_manager&&) = delete;
 
             void execute_command(const std::string& command, client_data_holder&);
-            list_array<suggestion> request_suggestions(const std::string& command, client_data_holder&);
+            list_array<std::string> request_suggestions(const std::string& command, client_data_holder&);
 
             const list_array<uint8_t>& compile_to_graph();
             bool is_graph_fresh() const;

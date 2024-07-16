@@ -3,8 +3,8 @@
 #include "../util.hpp"
 
 namespace crafted_craft {
-    namespace client_play_handler {
-        namespace proto_765_release {
+    namespace client_handler {
+        namespace play_765_release {
             void teleport_confirm(TCPsession* session, ArrayStream& packet);
 
             void query_block_nbt(TCPsession* session, ArrayStream& packet);
@@ -37,7 +37,7 @@ namespace crafted_craft {
 
             void change_container_slot_state(TCPsession* session, ArrayStream& packet);
 
-            Response plugin_message(TCPsession* session, ArrayStream& packet, std::unordered_map<std::string, PluginRegistrationPtr>& plugins_play, std::list<PluginRegistration::plugin_response>& queriedPackets);
+            Response plugin_message(TCPsession* session, ArrayStream& packet, std::list<PluginRegistration::plugin_response>& queriedPackets);
 
             void edit_book(TCPsession* session, ArrayStream& packet);
 
@@ -111,8 +111,8 @@ namespace crafted_craft {
 
             void use_item(TCPsession* session, ArrayStream& packet);
 
-        };
 
+        }
     }
 } // namespace crafted_craft
 

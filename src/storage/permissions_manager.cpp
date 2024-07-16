@@ -253,6 +253,24 @@ namespace crafted_craft {
             });
         }
 
+        void permissions_manager::view_permission(const base_objects::shared_string& perm_name, const std::function<void(const base_objects::permissions_object&)>& callback) const {
+            return protected_values.get([&](const protected_values_t& values) {
+                auto item = values.permissions.find(perm_name);
+                if (item == values.permissions.end())
+                    throw std::runtime_error("This group not registered.");
+                callback(item->second);
+            });
+        }
+
+        void permissions_manager::view_group(const base_objects::shared_string& group_name, const std::function<void(const base_objects::permission_group&)>& callback) const {
+            return protected_values.get([&](const protected_values_t& values) {
+                auto item = values.permissions_group.find(group_name);
+                if (item == values.permissions_group.end())
+                    throw std::runtime_error("This group not registered.");
+                callback(item->second);
+            });
+        }
+
         void permissions_manager::set_check_mode(permissions_manager::permission_check_mode mode) {
             protected_values.set([&](protected_values_t& values) {
                 values.check_mode = mode;
@@ -334,8 +352,8 @@ namespace crafted_craft {
                             .permission_level = 3,
                             .instant_grant = false
                         };
-                        values.permissions["permission_op_4"] = base_objects::permissions_object{
-                            .permission_tag = "permission_op_4",
+                        values.permissions["operator_4"] = base_objects::permissions_object{
+                            .permission_tag = "operator_4",
                             .description = "The default permission tag for operator level 4.",
                             .permission_level = 4,
                             .instant_grant = false

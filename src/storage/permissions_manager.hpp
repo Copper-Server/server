@@ -66,6 +66,9 @@ namespace crafted_craft {
             void enum_groups(const std::function<void(const base_objects::permission_group&)>& callback) const;
             void enum_group_values(const base_objects::shared_string& group_name, const std::function<void(const base_objects::shared_string&)>& callback) const;
 
+            void view_permission(const base_objects::shared_string& perm_name, const std::function<void(const base_objects::permissions_object&)>& callback) const;
+            void view_group(const base_objects::shared_string& group_name, const std::function<void(const base_objects::permission_group&)>& callback) const;
+
             void set_check_mode(permissions_manager::permission_check_mode mode);
             permission_check_mode get_check_mode() const;
             void sync();
