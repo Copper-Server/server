@@ -58,10 +58,7 @@ namespace crafted_craft {
             if (base64_fav == "")
                 res += "\n}";
             else
-                res += ",\"favicon\": \"data:image/png"
-                       ";" +
-                       base64_fav +
-                       ",<data>\"\n}";
+                res += ",\"favicon\": \"data:image/png;base64," + base64_fav + "\"\n}";
             return res;
         }
 

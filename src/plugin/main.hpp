@@ -4,6 +4,70 @@
 #include "registration.hpp"
 
 namespace crafted_craft {
+
+    namespace __internal__ {
+        template <std::size_t N>
+        struct CTS {
+            char data[N]{};
+
+            consteval CTS(const char (&str)[N]) {
+                std::copy_n(str, N, data);
+            }
+        };
+
+        template <class T, CTS name>
+        struct static_registry {
+            struct proxy {
+                inline proxy();
+            };
+
+            static proxy p;
+        };
+
+        template <class T, CTS name>
+        typename static_registry<T, name>::proxy static_registry<T, name>::p;
+
+        class delayed_construct_base {
+        public:
+            virtual PluginRegistrationPtr construct() = 0;
+        };
+
+        void register_configuration(const PluginRegistrationPtr& self);
+        void register_play(const PluginRegistrationPtr& self);
+
+        template <class T>
+        class delayed_construct : public delayed_construct_base {
+        public:
+            PluginRegistrationPtr construct() override {
+                auto tmp_ = std::make_shared<T>();
+                if (
+                    &T::OnConfiguration != &PluginRegistration::OnConfiguration
+                    || &T::OnConfiguration_PlayerSettingsChanged != &PluginRegistration::OnConfiguration_PlayerSettingsChanged
+                    || &T::OnConfiguration_gotKnownPacks != &PluginRegistration::OnConfiguration_gotKnownPacks
+                )
+                    register_configuration(tmp_);
+                if (
+                    &T::OnPlay_initialize != &PluginRegistration::OnPlay_initialize
+                    || &T::OnPlay_uninitialized != &PluginRegistration::OnPlay_uninitialized
+                )
+                    register_play(tmp_);
+                return tmp_;
+            }
+        };
+
+        std::vector<std::pair<std::string, std::shared_ptr<delayed_construct_base>>>& registration_list();
+
+        template <class T, CTS name>
+        static_registry<T, name>::proxy::proxy() {
+            registration_list().push_back({name.data, std::make_shared<delayed_construct<T>>()});
+        }
+
+        template <class T, CTS name>
+        static void register_value() {
+            static_registry<T, name>::p;
+        }
+    }
+
     class PluginManagement {
         struct protected_values_t {
             std::unordered_map<std::string, PluginRegistrationPtr> plugins;
@@ -48,7 +112,6 @@ namespace crafted_craft {
         };
 
         fast_task::protected_value<protected_values_t> protected_values;
-
 
     public:
         enum class registration_on {
@@ -162,7 +225,6 @@ namespace crafted_craft {
             });
         }
 
-
         void registerPlugin(const std::string& name, PluginRegistrationPtr plugin) {
             protected_values.set(
                 [&](protected_values_t& vals) {
@@ -224,6 +286,13 @@ namespace crafted_craft {
             );
         }
 
+        void autoRegister() {
+            for (auto& [name, plugin] : __internal__::registration_list()) {
+                registerPlugin(name, plugin->construct());
+            }
+            __internal__::registration_list().clear();
+        }
+
         void callLoad() {
             std::unordered_map<std::string, PluginRegistrationPtr> plugins;
             protected_values.get(
@@ -236,7 +305,19 @@ namespace crafted_craft {
             }
             for (auto& [name, plugin] : plugins)
                 plugin->OnPostLoad(plugin);
+
+            for (auto& [name, plugin] : plugins)
+                plugin->OnLoadComplete(plugin);
         }
+    };
+
+    template <__internal__::CTS name, class Self>
+    class PluginAutoRegister : public PluginRegistration {
+    protected:
+        static inline const std::string registered_name = []() {
+            __internal__::register_value<Self, name>();
+            return name.data;
+        }();
     };
 
     extern PluginManagement pluginManagement;

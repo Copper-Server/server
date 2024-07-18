@@ -23,10 +23,6 @@ namespace crafted_craft {
             });
         }
 
-        void AllowListPlugin::OnLoad(const PluginRegistrationPtr& self) {
-            pluginManagement.registerPluginOn(self, PluginManagement::registration_on::play);
-        }
-
         void AllowListPlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
             {
                 auto allowlist = browser.add_child({"allowlist", "", ""});

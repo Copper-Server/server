@@ -1,11 +1,11 @@
 #ifndef SRC_BUILD_IN_PLUGINS_COMMUNICATION_CORE
 #define SRC_BUILD_IN_PLUGINS_COMMUNICATION_CORE
-#include "../plugin/registration.hpp"
+#include "../plugin/main.hpp"
 
 namespace crafted_craft {
     class Server;
     namespace build_in_plugins {
-        class CommunicationCorePlugin : public PluginRegistration {
+        class CommunicationCorePlugin : public PluginAutoRegister<"communication_core", CommunicationCorePlugin> {
             Server& server;
 
         public:

@@ -1,14 +1,14 @@
 #ifndef SRC_BUILD_IN_PLUGINS_PERMISSIONS
 #define SRC_BUILD_IN_PLUGINS_PERMISSIONS
 #include "../base_objects/commands.hpp"
-#include "../plugin/registration.hpp"
+#include "../plugin/main.hpp"
 #include "../storage/list_storage.hpp"
 
 namespace crafted_craft {
     class Server;
 
     namespace build_in_plugins {
-        class PermissionsPlugin : public PluginRegistration {
+        class PermissionsPlugin : public PluginAutoRegister<"permissions", PermissionsPlugin> {
             storage::list_storage op_list;
             Server& server;
             void update_perm(base_objects::SharedClientData& client_ref);

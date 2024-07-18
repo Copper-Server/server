@@ -68,6 +68,7 @@ namespace crafted_craft {
                 return api::command::get_manager()
                     .request_suggestions(tmp, console_data.client)
                     .transform([&insertion_](auto&& suggestion) { return insertion_ + suggestion; })
+                    .sort()
                     .to_container<std::vector<std::string>>();
             });
             console_data.systemChatMessage = [this](const Chat& message) {

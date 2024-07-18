@@ -29,7 +29,6 @@ namespace crafted_craft {
             api::command::register_manager(manager);
             manager.reload_commands();
             log::info("Server", "server handler loaded.");
-            pluginManagement.registerPluginOn(self, PluginManagement::registration_on::play);
         }
 
         void ServerPlugin::OnPostLoad(const std::shared_ptr<PluginRegistration>&) {
@@ -151,7 +150,7 @@ namespace crafted_craft {
                             return;
                         }
                         auto value = server.config.get(args[0]);
-                        if (value.ends_with('\n'))
+                        while (value.ends_with('\n') | value.ends_with('\r'))
                             value.pop_back();
                         if (value.contains("\n"))
                             api::players::calls::on_system_message({client, {"Config value: \n" + value}});

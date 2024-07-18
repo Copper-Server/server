@@ -3,14 +3,14 @@
 
 #include "../base_objects/commands.hpp"
 #include "../base_objects/virtual_client.hpp"
-#include "../plugin/registration.hpp"
+#include "../plugin/main.hpp"
 #include "../storage/players_data.hpp"
 
 namespace crafted_craft {
     class Server;
 
     namespace build_in_plugins {
-        class ConsolePlugin : public PluginRegistration {
+        class ConsolePlugin : public PluginAutoRegister<"console_interface", ConsolePlugin> {
             Server& server;
             base_objects::virtual_client console_data;
 

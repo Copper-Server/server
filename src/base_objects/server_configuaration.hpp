@@ -47,7 +47,7 @@ namespace crafted_craft {
             } game_play;
 
             struct Protocol {
-                uint32_t compression_threshold = -1;
+                int32_t compression_threshold = -1;
                 uint32_t max_players = 0; //0 for unlimited
                 uint32_t rate_limit = 0;
 
@@ -116,15 +116,16 @@ namespace crafted_craft {
                 std::string server_name = "CraftedCraft";
                 std::string description = "The C++ Minecraft server!";
 
-                std::vector<uint8_t> favicon;     //icon must be 64x64 and png format, can be empty
+                //can be empty
+                std::string favicon_path;
+                /*[[computed_from(favicon_path)]] [runtime]*/ std::vector<uint8_t> favicon; //icon must be 64x64 and png format, can be empty
                 size_t sample_players_count = 20; //how many players to show in the list, 0 to disable
                 bool enable = true;
                 bool show_players = true;
             } status;
 
             struct Server {
-                //[runtime]
-                const std::filesystem::path base_path = std::filesystem::current_path();
+                /*[runtime]*/ const std::filesystem::path base_path = std::filesystem::current_path();
 
                 std::string storage_folder = "storage";
 

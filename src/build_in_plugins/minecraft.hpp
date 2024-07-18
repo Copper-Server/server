@@ -1,10 +1,10 @@
 #ifndef SRC_BUILD_IN_PLUGINS_MINECRAFT
 #define SRC_BUILD_IN_PLUGINS_MINECRAFT
-#include "../plugin/registration.hpp"
+#include "../plugin/main.hpp"
 
 namespace crafted_craft {
     namespace build_in_plugins {
-        class MinecraftPlugin : public PluginRegistration {
+        class MinecraftPlugin : public PluginAutoRegister<"minecraft", MinecraftPlugin> {
         public:
             void OnLoad(const PluginRegistrationPtr& self) override;
             void OnUnload(const PluginRegistrationPtr& self) override;

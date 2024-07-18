@@ -8,7 +8,6 @@ namespace crafted_craft {
     namespace build_in_plugins {
 
         void MinecraftPlugin::OnLoad(const PluginRegistrationPtr& self) {
-            pluginManagement.registerPluginOn(self, PluginManagement::registration_on::configuration);
             pluginManagement.bindPluginOn("minecraft:brand", self, PluginManagement::registration_on::configuration);
             log::info("Minecraft", "Minecraft plugin loaded!");
         }

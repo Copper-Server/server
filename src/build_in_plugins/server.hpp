@@ -2,14 +2,14 @@
 #define SRC_BUILD_IN_PLUGINS_SERVER
 #include "../base_objects/commands.hpp"
 #include "../base_objects/virtual_client.hpp"
-#include "../plugin/registration.hpp"
+#include "../plugin/main.hpp"
 #include "../storage/permissions_manager.hpp"
 #include "../storage/players_data.hpp"
 
 namespace crafted_craft {
     class Server;
     namespace build_in_plugins {
-        class ServerPlugin : public PluginRegistration {
+        class ServerPlugin : public PluginAutoRegister<"server_plugin", ServerPlugin> {
             storage::players_data players_data;
             Server& server;
         public:

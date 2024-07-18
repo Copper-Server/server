@@ -87,10 +87,6 @@ namespace crafted_craft {
 
 #pragma region OnLogin
 
-        virtual plugin_response OnLoginInit(base_objects::client_data_holder&) {
-            return false;
-        }
-
         virtual plugin_response OnLoginHandle(const std::shared_ptr<PluginRegistration>& self, const std::string& chanel, const list_array<uint8_t>& data, bool successful, base_objects::client_data_holder& client) {
             return false;
         }

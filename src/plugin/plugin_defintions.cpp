@@ -6,30 +6,18 @@ namespace crafted_craft {
     SpecialPluginHandshake* special_handshake;
     SpecialPluginStatus* special_status;
 
-    namespace ___internal__ {
-        void register_OnLoginInit(const std::shared_ptr<PluginRegistration>& self) {
+    namespace __internal__ {
+        std::vector<std::pair<std::string, std::shared_ptr<delayed_construct_base>>>& registration_list() {
+            static std::vector<std::pair<std::string, std::shared_ptr<delayed_construct_base>>> list;
+            return list;
         }
 
-        void register_OnLoginHandle(const std::shared_ptr<PluginRegistration>& self);
+        void register_configuration(const PluginRegistrationPtr& self) {
+            pluginManagement.registerPluginOn(self, PluginManagement::registration_on::configuration);
+        }
 
-        void register_OnConfiguration(const std::shared_ptr<PluginRegistration>& self);
-        void register_OnConfigurationHandle(const std::shared_ptr<PluginRegistration>& self);
-        void register_OnConfiguration_PlayerSettingsChanged(const std::shared_ptr<PluginRegistration>& self);
-
-        void register_OnPlayHandle(const std::shared_ptr<PluginRegistration>& self);
-        void register_OnPlay_initialize(const std::shared_ptr<PluginRegistration>& self);
-        void register_OnPlay_uninitialized(const std::shared_ptr<PluginRegistration>& self);
-
-
-        void unregister_OnLoginInit(const std::shared_ptr<PluginRegistration>& self);
-        void unregister_OnLoginHandle(const std::shared_ptr<PluginRegistration>& self);
-
-        void unregister_OnConfiguration(const std::shared_ptr<PluginRegistration>& self);
-        void unregister_OnConfigurationHandle(const std::shared_ptr<PluginRegistration>& self);
-        void unregister_OnConfiguration_PlayerSettingsChanged(const std::shared_ptr<PluginRegistration>& self);
-
-        void unregister_OnPlayHandle(const std::shared_ptr<PluginRegistration>& self);
-        void unregister_OnPlay_initialize(const std::shared_ptr<PluginRegistration>& self);
-        void unregister_OnPlay_uninitialized(const std::shared_ptr<PluginRegistration>& self);
+        void register_play(const PluginRegistrationPtr& self) {
+            pluginManagement.registerPluginOn(self, PluginManagement::registration_on::play);
+        }
     }
 }

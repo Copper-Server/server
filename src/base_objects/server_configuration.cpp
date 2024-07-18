@@ -1,9 +1,11 @@
+#include "../library/enbt.hpp"
 #include "../library/list_array.hpp"
 #include "../log.hpp"
 #include "../util/json_helpers.hpp"
 #include "server_configuaration.hpp"
 #include <filesystem>
 #include <fstream>
+
 
 namespace crafted_craft {
     using namespace util;
@@ -30,7 +32,7 @@ namespace crafted_craft {
         }
 
         void merge_configs(ServerConfiguration& cfg, js_object& data) {
-            std::string status_favicon_path;
+            bool calculate_favicon = false;
             {
                 auto query = js_object::get_object(data["query"]);
                 cfg.query.enabled = query["enabled"].or_apply(cfg.query.enabled);
@@ -144,7 +146,8 @@ namespace crafted_craft {
                 auto status = js_object::get_object(data["status"]);
                 cfg.status.server_name = status["server_name"].or_apply(cfg.status.server_name);
                 cfg.status.description = status["description"].or_apply(cfg.status.description);
-                status_favicon_path = (std::string)status["favicon"].or_apply(std::string());
+                calculate_favicon = (boost::json::string)status["favicon_path"].or_apply(std::string()) != cfg.status.favicon_path;
+                cfg.status.favicon_path = (std::string)status["favicon_path"].or_apply(std::string());
                 cfg.status.sample_players_count = status["sample_players_count"].or_apply(cfg.status.sample_players_count);
                 cfg.status.enable = status["enable"].or_apply(cfg.status.enable);
                 cfg.status.show_players = status["show_players"].or_apply(cfg.status.show_players);
@@ -172,18 +175,30 @@ namespace crafted_craft {
                 }
             }
 
-            if (status_favicon_path != "") {
-                std::ifstream file(status_favicon_path, std::ifstream::in | std::ifstream::binary);
+            if (cfg.status.favicon_path != "" && calculate_favicon) {
+                std::ifstream file(cfg.status.favicon_path, std::ifstream::in | std::ifstream::binary);
                 if (file.is_open()) {
                     file.seekg(0, std::ifstream::end);
                     size_t file_size = file.tellg();
+                    if (file_size < 28) {
+                        log::error("server", "Failed to read favicon, icon too small, skipping...");
+                        return;
+                    }
                     file.seekg(0, std::ifstream::beg);
                     std::vector<uint8_t> res;
                     res.resize(file_size);
                     file.read((char*)res.data(), res.size());
+                    uint32_t width = 0, height = 0;
+                    width = ENBT::ConvertEndian(std::endian::big, *(uint32_t*)&res[16]);
+                    height = ENBT::ConvertEndian(std::endian::big, *(uint32_t*)&res[20]);
+
+                    if (width != 64 || height != 64) {
+                        log::error("server", "Failed to read favicon, icon resolution not equal to 64x64, skipping...");
+                        return;
+                    }
                     cfg.status.favicon = std::move(res);
                 }
-            } else
+            } else if (calculate_favicon)
                 cfg.status.favicon.clear();
         }
 

@@ -1,21 +1,19 @@
 #ifndef SRC_BUILD_IN_PLUGINS_ALLOWLIST
 #define SRC_BUILD_IN_PLUGINS_ALLOWLIST
 #include "../api/allowlist.hpp"
-#include "../plugin/registration.hpp"
+#include "../plugin/main.hpp"
 #include "../storage/list_storage.hpp"
 
 namespace crafted_craft {
     class Server;
     namespace build_in_plugins {
-        class AllowListPlugin : public PluginRegistration {
+        class AllowListPlugin : public PluginAutoRegister<"server_plugin", AllowListPlugin> {
             storage::list_storage allow_list;
             Server& server;
             api::allowlist::allowlist_mode mode = api::allowlist::allowlist_mode::off;
 
         public:
             AllowListPlugin();
-
-            void OnLoad(const PluginRegistrationPtr& self) override;
 
             void OnPostLoad(const PluginRegistrationPtr& self) override;
 

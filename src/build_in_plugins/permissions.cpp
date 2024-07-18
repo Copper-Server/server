@@ -46,9 +46,7 @@ namespace crafted_craft {
         }
 
         void PermissionsPlugin::OnLoad(const PluginRegistrationPtr& self) {
-            if (op_list.is_loaded())
-                pluginManagement.registerPluginOn(self, PluginManagement::registration_on::play);
-            else
+            if (!op_list.is_loaded())
                 log::error("permissions", "failed to load permissions");
         }
 

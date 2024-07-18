@@ -22,10 +22,6 @@ namespace crafted_craft {
             }
         }
 
-        void BanPlugin::OnLoad(const PluginRegistrationPtr& self) {
-            pluginManagement.registerPluginOn(self, PluginManagement::registration_on::play);
-        }
-
         void BanPlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
             {
                 browser.add_child({"ban", "", ""})
