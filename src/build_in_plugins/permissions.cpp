@@ -1,6 +1,5 @@
-#include "permissions.hpp"
-#include "../ClientHandleHelper.hpp"
 #include "../api/permissions.hpp"
+#include "../ClientHandleHelper.hpp"
 #include "../api/players.hpp"
 #include "../log.hpp"
 #include "../plugin/main.hpp"
@@ -8,7 +7,7 @@
 namespace crafted_craft {
     namespace build_in_plugins {
         PermissionsPlugin::PermissionsPlugin()
-            : server(Server::instance()), op_list(Server::instance().config.server.base_path / "op_list.txt") {
+            : op_list(Server::instance().config.server.base_path / "op_list.txt") {
         }
 
         void apply_group(const base_objects::shared_string& group_name, base_objects::player& pd) {
@@ -52,26 +51,29 @@ namespace crafted_craft {
 
         void PermissionsPlugin::OnPostLoad(const PluginRegistrationPtr& self) {
             api::permissions::make_sync();
-            server.online_players.iterate_online([&](base_objects::SharedClientData& client_ref) {
+            Server::instance().online_players.iterate_online([&](base_objects::SharedClientData& client_ref) {
                 update_perm(client_ref);
                 return false;
             });
         }
 
         void PermissionsPlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
-            auto permissions = browser.add_child({"permissions"});
-            permissions.add_child({"reload"}).set_callback("command.permissions.reload", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+            using predicate = base_objects::predicate;
+            using pred_string = base_objects::predicates::string;
+            using cmd_pred_string = base_objects::predicates::command::string;
+            auto permissions = browser.add_child("permissions");
+            permissions.add_child("reload").set_callback("command.permissions.reload", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
                 api::players::calls::on_system_message({client, "Reloading permissions..."});
                 api::permissions::make_sync();
-                server.online_players.iterate_online([&](base_objects::SharedClientData& client_ref) {
+                Server::instance().online_players.iterate_online([&](base_objects::SharedClientData& client_ref) {
                     update_perm(client_ref);
                     return false;
                 });
                 api::players::calls::on_system_message({client, "Permissions reload complete."});
             });
             {
-                auto list = permissions.add_child({"list"});
-                list.add_child({"group"}).set_callback("command.permissions.list.group", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                auto list = permissions.add_child("list");
+                list.add_child("group").set_callback("command.permissions.list.group", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
                     list_array<base_objects::shared_string> enumerate;
                     bool overflow = false;
                     api::permissions::enum_groups([&](const base_objects::permission_group& group) {
@@ -98,7 +100,7 @@ namespace crafted_craft {
                         api::players::calls::on_system_message({client, std::move(buf)});
                     }
                 });
-                list.add_child({"permission"}).set_callback("command.permissions.list.permission", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
+                list.add_child("permission").set_callback("command.permissions.list.permission", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
                     list_array<base_objects::shared_string> enumerate;
                     bool overflow = false;
                     api::permissions::enum_permissions([&](const base_objects::permissions_object& group) {
@@ -129,65 +131,65 @@ namespace crafted_craft {
                 });
             }
             {
-                auto group = permissions.add_child({"group"});
+                auto group = permissions.add_child("group");
                 group
-                    .add_child({"list"})
+                    .add_child("list")
                     .set_redirect(
                         "permissions list group",
-                        [browser](const list_array<std::string>& args, const std::string& left, base_objects::client_data_holder& client) {
-                            browser.get_manager().execute_command("permissions list group", client);
+                        [browser](base_objects::command& cmd, const list_array<predicate>& args, const std::string& left, base_objects::client_data_holder& client) {
+                            browser.get_manager().execute_command_from("", cmd, client);
                         }
                     );
                 {
-                    auto add = group
-                                   .add_child({"add"})
-                                   .add_child({"<name>"}, base_objects::packets::command_node::parsers::brigadier_string, {.flags = 1});
-
-                    add.set_callback("command.permissions.group.add", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                        api::permissions::add_group({args[0]});
-                    });
-                    add
-                        .add_child({"<values>"}, base_objects::packets::command_node::parsers::brigadier_string, {.flags = 2})
-                        .set_callback("command.permissions.group.add:with_values", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                            auto permissions = list_array<char>(args[0]).split_by(' ').convert<base_objects::shared_string>([](const list_array<char>& a) {
+                    group
+                        .add_child("add")
+                        .add_child("<name>", cmd_pred_string::quotable_phrase)
+                        .set_callback("command.permissions.group.add", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                            api::permissions::add_group({std::get<pred_string>(args[0]).value});
+                        })
+                        .add_child("<values>", cmd_pred_string::greedy_phrase)
+                        .set_callback("command.permissions.group.add:with_values", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                            auto permissions = list_array<char>(std::get<pred_string>(args[1]).value).split_by(' ').convert<base_objects::shared_string>([](const list_array<char>& a) {
                                 return base_objects::shared_string(a.data(), a.size());
                             });
-                            api::permissions::add_group({args[0]});
+                            api::permissions::add_group({std::get<pred_string>(args[0]).value, permissions});
                         });
                 }
             }
             {
-                browser.add_child({"op"})
-                    .add_child({"<player>", "op player", "/op <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                    .set_callback("command.op", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                        if (op_list.contains(args[0])) {
+                browser.add_child("op")
+                    .add_child({"<player>", "op player", "/op <player>"}, cmd_pred_string::greedy_phrase)
+                    .set_callback("command.op", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                        auto& player_name = std::get<pred_string>(args[0]).value;
+                        if (op_list.contains(player_name)) {
                             api::players::calls::on_system_message({client, "This player already operator."});
                             return;
                         }
-                        op_list.add(args[0]);
-                        api::players::calls::on_system_message_broadcast("Player " + args[0] + " is now operator.");
+                        op_list.add(player_name);
+                        api::players::calls::on_system_message_broadcast("Player " + player_name + " is now operator.");
 
-                        auto target = server.online_players.get_player(
+                        auto target = Server::instance().online_players.get_player(
                             SharedClientData::packets_state_t::protocol_state::play,
-                            args[0]
+                            player_name
                         );
                         if (!target)
                             update_perm(*target);
                     });
             }
             {
-                browser.add_child({"deop"})
-                    .add_child({"<player>", "deop player", "/deop <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                    .set_callback("command.deop", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                        op_list.remove(args[0]);
-                        auto target = server.online_players.get_player(
+                browser.add_child("deop")
+                    .add_child({"<player>", "deop player", "/deop <player>"}, cmd_pred_string::greedy_phrase)
+                    .set_callback("command.deop", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                        auto& player_name = std::get<pred_string>(args[0]).value;
+                        op_list.remove(player_name);
+                        auto target = Server::instance().online_players.get_player(
                             SharedClientData::packets_state_t::protocol_state::play,
-                            args[0]
+                            player_name
                         );
                         if (!target)
                             update_perm(*target);
 
-                        api::players::calls::on_system_message_broadcast({"Player " + args[0] + " is no more operator."});
+                        api::players::calls::on_system_message_broadcast({"Player " + player_name + " is no more operator."});
                     });
             }
         }

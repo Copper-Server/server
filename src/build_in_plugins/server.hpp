@@ -9,9 +9,9 @@
 namespace crafted_craft {
     class Server;
     namespace build_in_plugins {
-        class ServerPlugin : public PluginAutoRegister<"server_plugin", ServerPlugin> {
+        class ServerPlugin : public PluginAutoRegister<"server", ServerPlugin> {
             storage::players_data players_data;
-            Server& server;
+
         public:
             base_objects::command_manager manager;
 

@@ -323,6 +323,8 @@ namespace crafted_craft {
                 struct use_item{
                     int32_t hand;
                     int32_t sequence;
+                    float yaw = 0;
+                    float pitch = 0;
                 };
 
                 struct cookie_response {

@@ -1,7 +1,6 @@
 #pragma once
 #include "../library/enbt.hpp"
 #include "../library/list_array.hpp"
-#include "hitbox.hpp"
 #include <cstdint>
 #include <map>
 #include <mutex>
@@ -29,7 +28,6 @@ namespace crafted_craft {
                 return tmp.val;
             }
 
-            const HitBox* hitbox; //if nullptr => non full block, if -1 => full block, other => custom hitbox
 
             uint64_t break_resistance : 11;      //-1 => unbreakable, to get real value divide by 100
             uint64_t explode_resistance : 11;    //-1 => unexplodable
@@ -42,7 +40,7 @@ namespace crafted_craft {
             uint64_t _unused___ : 6;
 
             bool in_block(float x, float y, float z) const {
-                return hitbox->in(x, y, z);
+                return false; // hitbox->in(x, y, z);
             }
 
             bool can_explode(uint32_t explode_strength) const {
@@ -61,8 +59,7 @@ namespace crafted_craft {
             std::function<void(storage::world_data&, storage::sub_chunk_data&, block_entity& data, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z)> as_entity_on_tick;
 
             full_block_data()
-                : hitbox(nullptr),
-                  break_resistance(get_max_uint64_t_value<11>()),
+                : break_resistance(get_max_uint64_t_value<11>()),
                   explode_resistance(get_max_uint64_t_value<11>()),
                   move_weight(-1),
                   light_pass(-1),
@@ -73,8 +70,7 @@ namespace crafted_craft {
                   _unused___(0) {
             }
 
-            full_block_data(short hitboxID, uint16_t breakResist, uint16_t explodeResist, uint8_t moveWeight, uint8_t lightPass, uint8_t emitLight, uint16_t flameResist, uint8_t canTransmitRedstone, uint8_t emitRedstoneStrength) {
-                hitbox = &HitBox::getHitBox(hitboxID);
+            full_block_data(uint16_t breakResist, uint16_t explodeResist, uint8_t moveWeight, uint8_t lightPass, uint8_t emitLight, uint16_t flameResist, uint8_t canTransmitRedstone, uint8_t emitRedstoneStrength) {
                 break_resistance = get_max_uint64_t_value<11>() < breakResist ? get_max_uint64_t_value<11>() : breakResist;
                 explode_resistance = get_max_uint64_t_value<11>() < explodeResist ? get_max_uint64_t_value<11>() : explodeResist;
                 move_weight = get_max_uint64_t_value<7>() < moveWeight ? get_max_uint64_t_value<7>() : moveWeight;

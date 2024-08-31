@@ -192,6 +192,11 @@ namespace crafted_craft {
             int64_t x2;
             int64_t z2;
         };
+
+        struct bounding {
+            double xz;
+            double y;
+        };
     }
 }
 

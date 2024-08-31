@@ -5,12 +5,9 @@
 #include "../storage/list_storage.hpp"
 
 namespace crafted_craft {
-    class Server;
-
     namespace build_in_plugins {
         class PermissionsPlugin : public PluginAutoRegister<"permissions", PermissionsPlugin> {
             storage::list_storage op_list;
-            Server& server;
             void update_perm(base_objects::SharedClientData& client_ref);
 
         public:

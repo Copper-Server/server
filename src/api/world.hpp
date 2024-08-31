@@ -32,6 +32,8 @@ namespace crafted_craft {
 
             void iterate(std::function<void(uint64_t world, storage::world_data& data)> callback);
             void get(uint64_t world_id, std::function<void(storage::world_data& data)> callback);
+            void get(const std::string& name, std::function<void(storage::world_data& data)> callback);
+            uint64_t resolve_id(const std::string& name);
         }
     }
 }

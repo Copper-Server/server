@@ -9,18 +9,18 @@ namespace crafted_craft {
                 slot.reset();
                 return;
             }
-            base_objects::slot_data slot_data;
+            base_objects::slot_data_storage slot_data;
             slot_data.id = (*res)["id"];
             slot_data.count = (*res)["count"];
             slot_data.nbt = (*res)["nbt"];
-            slot = slot_data;
+            slot = slot_data.unpack();
         }
 
         static ENBT compact_slot(base_objects::slot& slot) {
             if (slot) {
                 enbt::compound compound;
 
-                base_objects::slot_data& slot_data = *slot;
+                base_objects::slot_data_storage slot_data = slot->pack();
                 compound["id"] = slot_data.id;
                 compound["count"] = slot_data.count;
                 compound["nbt"] = slot_data.nbt;

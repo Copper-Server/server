@@ -11,7 +11,6 @@ namespace crafted_craft {
 
     namespace build_in_plugins {
         class ConsolePlugin : public PluginAutoRegister<"console_interface", ConsolePlugin> {
-            Server& server;
             base_objects::virtual_client console_data;
 
         public:

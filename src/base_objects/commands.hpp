@@ -4,16 +4,22 @@
 #include "chat.hpp"
 #include "packets.hpp"
 #include "permissions.hpp"
+#include "predicates.hpp"
 #include "shared_client_data.hpp"
 #include <functional>
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <variant>
 
 namespace crafted_craft {
     namespace base_objects {
-        using command_callback = std::function<void(const list_array<std::string>&, client_data_holder&)>;
-        using command_redirect = std::function<void(const list_array<std::string>&, const std::string&, client_data_holder&)>;
+        struct command;
+        using command_callback = std::function<void(const list_array<predicate>&, client_data_holder&)>;
+
+        using command_redirect = std::function<void(command& target, const list_array<predicate>&, const std::string&, client_data_holder&)>;
+
+
         using command_suggestion = std::function<list_array<std::string>(const std::string& current, client_data_holder&)>;
 
         struct action_provider {
@@ -27,34 +33,106 @@ namespace crafted_craft {
             action_provider(const std::string&& tag, list_array<shared_string>&& requirement);
         };
 
+        struct redirect_command {
+            command_redirect redirect_routine;
+            int32_t target_command;
+        };
+
         struct command {
-            using parsers = packets::command_node::parsers;
-            using properties_t = packets::command_node::properties_t;
-            packets::command_node node;
-            command_callback callback;
-            command_redirect redirect_command;
-            command_suggestion suggestions;
+            std::string name;
             std::string description;
             std::string usage;
-            //permission
-            std::string action_name;
-            //mapped permission for native clients
-            int8_t permission_level = 0;
+            std::optional<command_predicate> argument_predicate;
+            std::optional<command_callback> executable;
+            std::optional<redirect_command> redirect;
+            std::variant<command_suggestion, std::string> suggestions;
 
+            list_array<int32_t> childs;
             std::unordered_map<std::string, int32_t> childs_cache;
+            std::string action_name;
             uint32_t links = 0;
 
-            command() = default;
-            command(const std::string& name, const std::string& description = "", const std::string& usage = "", const std::string& action_name = "");
+            using parsers = packets::command_node::parsers;
 
+            bool is_named_suggestion() const {
+                return std::visit(
+                    [&](auto& it) -> bool {
+                        return std::is_same_v<std::decay_t<decltype(it)>, std::string>;
+                    },
+                    suggestions
+                );
+            }
 
+            bool is_custom_suggestion() const {
+                return std::visit(
+                    [&](auto& it) {
+                        return std::is_same_v<std::decay_t<decltype(it)>, command_suggestion>;
+                    },
+                    suggestions
+                );
+            }
+
+            bool has_suggestion() const {
+                return std::visit(
+                    [&](auto& it) {
+                        if constexpr (std::is_same_v<std::decay_t<decltype(it)>, command_suggestion>)
+                            return (bool)it;
+                        else
+                            return true;
+                    },
+                    suggestions
+                );
+            }
+
+            const std::string& get_named_suggestion() const {
+                return std::visit(
+                    [&](auto& it) -> const std::string& {
+                        if constexpr (std::is_same_v<std::decay_t<decltype(it)>, std::string>)
+                            return it;
+                        else
+                            throw std::runtime_error("Invalid type");
+                    },
+                    suggestions
+                );
+            }
+
+            const command_suggestion& get_custom_suggestion() const {
+                return std::visit(
+                    [&](auto& it) -> const command_suggestion& {
+                        if constexpr (std::is_same_v<std::decay_t<decltype(it)>, command_suggestion>)
+                            return it;
+                        else
+                            throw std::runtime_error("Invalid type");
+                    },
+                    suggestions
+                );
+            }
             int32_t get_child(list_array<command>& commands_nodes, const std::string& name);
         };
 
+        class command_custom_parser {
+        public:
+            std::vector<predicate> native_predicates;
+            command_suggestion suggestions_provider;
+
+            virtual predicates::custom_virtual parse(predicates::command::custom_virtual& cfg, std::string& part, std::string& path) = 0;
+            virtual std::string name() = 0;
+        };
+
+        using named_suggestion_provider = std::function<list_array<std::string>(command& cmd, const std::string& name, const std::string& current, client_data_holder&)>;
+
         class command_manager {
+            std::unordered_map<std::string, std::shared_ptr<command_custom_parser>> custom_parsers;
+            std::unordered_map<std::string, named_suggestion_provider> named_suggestion_providers = {
+                {"minecraft:ask_server",
+                 named_suggestion_provider([](command& cmd, const std::string&, const std::string&, client_data_holder&) -> list_array<std::string> {
+                     return {cmd.name};
+                 })}
+            };
             list_array<command> command_nodes;
             list_array<uint8_t> graph_cache;
             bool graph_ready;
+            void remove(size_t id);
 
         public:
             friend class command_browser;
@@ -63,14 +141,23 @@ namespace crafted_craft {
             command_manager(const command_manager&) = delete;
             command_manager(command_manager&&) = delete;
 
-            void execute_command(const std::string& command, client_data_holder&);
+            //minecraft:ask_server already registered to prevent stack overflow and cannot be redefined
+            void register_named_suggestion_provider(const std::string& name, const named_suggestion_provider& provider);
+            void remove_named_suggestion_provider(const std::string& name);
+
+
+            void register_parser(const std::shared_ptr<command_custom_parser>& parser);
+            command_custom_parser& get_parser(const std::string& name);
+            void unregister_parser(const std::string& name);
+
+            void execute_command(const std::string& command_string, client_data_holder&);
+            void execute_command_from(const std::string& command_string, command& cmd, client_data_holder&);
             list_array<std::string> request_suggestions(const std::string& command, client_data_holder&);
 
             const list_array<uint8_t>& compile_to_graph();
             bool is_graph_fresh() const;
 
             bool belongs(command* command);
-
 
             //every command refrence after this command become invalid, even when created by plugins in OnCommandsLoad, bc. of the commit command for optimization
             void reload_commands();
@@ -90,28 +177,36 @@ namespace crafted_craft {
             command_browser(command_browser& browser, const std::string& path);
             command_browser(command_browser&& browser) noexcept;
 
+            command_browser add_child(const std::string& name);
+            command_browser add_child(const std::string& name, command_predicate pred);
             command_browser add_child(command&& command);
-            command_browser add_child(command&& command, packets::command_node::parsers parser, packets::command_node::properties_t properties = {});
+            command_browser add_child(command&& command, command_predicate pred);
             command_browser add_child(command_browser& command);
+            bool remove_child(const std::string& name);
             list_array<command_browser> get_childs();
 
-            command_browser& set_redirect(const std::string& path, const command_redirect& redirect);
+            command_browser& set_redirect(const std::string& path, command_redirect redirect);
             command_browser& remove_redirect();
 
+            command_browser& set_argument_type(const command_predicate& pred);
+            command_browser& remove_argument();
+
             command_browser& set_callback(const std::string& action, const command_callback& callback);
-            command_browser& set_callback(const std::string& action, const command_callback& callback, packets::command_node::parsers parser, packets::command_node::properties_t properties = {});
             command_browser& set_callback(const action_provider& action, const command_callback& callback);
-            command_browser& set_callback(const action_provider& action, const command_callback& callback, packets::command_node::parsers parser, packets::command_node::properties_t properties = {});
-            command_browser& set_callback(action_provider&& action, const command_callback& callback);
-            command_browser& set_callback(action_provider&& action, const command_callback& callback, packets::command_node::parsers parser, packets::command_node::properties_t properties = {});
+
+            command_browser& set_callback(action_provider&& action, const command_callback& callback) {
+                return set_callback(action, callback);
+            }
+
             command_browser& remove_callback();
+
 
             command_browser& set_suggestion(const std::string& suggestion_type);
             command_browser& set_suggestion_callback(const command_suggestion& suggestion);
             command_browser& remove_suggestion();
 
-            command_browser& modify_command(const command& command);
-            command_browser& modify_command(command&& command);
+            command_browser& modify_command(const command& _command);
+            command_browser& modify_command(command&& _command);
 
             command_browser open(const std::string& path) const;
             std::string get_documentation() const;
@@ -133,12 +228,15 @@ namespace crafted_craft {
                 : manager(browser.manager) {}
 
             command_browser add_child(command&& command);
+            command_browser add_child(const std::string& name);
+            bool remove_child(const std::string& name);
+
             list_array<command_browser> get_childs();
 
             command_browser open(const std::string& path) const;
             std::string get_documentation() const;
 
-            command_manager& get_manager()const;
+            command_manager& get_manager() const;
         };
 
     } // namespace base_objects

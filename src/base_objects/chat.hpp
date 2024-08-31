@@ -158,100 +158,119 @@ namespace crafted_craft {
             hoverEvent = nullptr;
         }
 
-        void SetText(const std::string& set_text = "") {
+        Chat& SetText(const std::string& set_text = "") {
             setString(text, set_text);
             text_is_translation = false;
+            return *this;
         }
 
-        void SetTranslation(const std::string& set_text = "") {
+        Chat& SetTranslation(const std::string& set_text = "") {
             setString(text, set_text);
             text_is_translation = true;
+            return *this;
         }
 
-        void SetColor(const std::string& set_text = "") {
+        Chat& SetColor(const std::string& set_text = "") {
             setString(color, set_text);
+            return *this;
         }
 
-        void SetInsertion(const std::string& set_text = "") {
+        Chat& SetInsertion(const std::string& set_text = "") {
             setString(insertion, set_text);
+            return *this;
         }
 
-        void SetFont(const std::string& set_text = "") {
+        Chat& SetFont(const std::string& set_text = "") {
             setString(font, set_text);
+            return *this;
         }
 
-        void SetBold() {
+        Chat& SetBold() {
             defined_bold = false;
+            return *this;
         }
 
-        void SetItalic() {
+        Chat& SetItalic() {
             defined_italic = false;
+            return *this;
         }
 
-        void SetUnderlined() {
+        Chat& SetUnderlined() {
             defined_underlined = false;
+            return *this;
         }
 
-        void SetStrikethrough() {
+        Chat& SetStrikethrough() {
             defined_strikethrough = false;
+            return *this;
         }
 
-        void SetObfuscated() {
+        Chat& SetObfuscated() {
             defined_obfuscated = false;
+            return *this;
         }
 
-        void SetBold(bool is) {
+        Chat& SetBold(bool is) {
             bold = is;
             defined_bold = true;
+            return *this;
         }
 
-        void SetItalic(bool is) {
+        Chat& SetItalic(bool is) {
             italic = is;
             defined_italic = true;
+            return *this;
         }
 
-        void SetUnderlined(bool is) {
+        Chat& SetUnderlined(bool is) {
             underlined = is;
             defined_underlined = true;
+            return *this;
         }
 
-        void SetStrikethrough(bool is) {
+        Chat& SetStrikethrough(bool is) {
             strikethrough = is;
             defined_strikethrough = true;
+            return *this;
         }
 
-        void SetObfuscated(bool is) {
+        Chat& SetObfuscated(bool is) {
             obfuscated = is;
             defined_obfuscated = true;
+            return *this;
         }
 
-        void SetHoverEventShowText(const std::string& _show_text) {
+        Chat& SetHoverEventShowText(const std::string& _show_text) {
             setHoverEvent(_show_text);
+            return *this;
         }
 
-        void SetHoverEventShowItem(const std::string& _id, int32_t _count, const std::optional<std::string>& _tag = std::nullopt) {
+        Chat& SetHoverEventShowItem(const std::string& _id, int32_t _count, const std::optional<std::string>& _tag = std::nullopt) {
             hoverEventS::show_itemS* show_item = new hoverEventS::show_itemS;
             show_item->id = _id;
             show_item->count = _count;
             show_item->tag = _tag;
             setHoverEvent(show_item);
+            return *this;
         }
 
-        void SetHoverEventShowEntity(const std::string& _id, const std::string& _type, const std::optional<std::string>& _name = std::nullopt) {
+        Chat& SetHoverEventShowEntity(const std::string& _id, const std::string& _type, const std::optional<std::string>& _name = std::nullopt) {
             hoverEventS::show_entityS* show_entity = new hoverEventS::show_entityS;
             show_entity->id = _id;
             show_entity->type = _type;
             show_entity->name = _name;
             setHoverEvent(show_entity);
+            return *this;
         }
 
-        void SetHoverEvent() {
+        Chat& SetHoverEvent() {
             if (hoverEvent)
                 delete hoverEvent;
             hoverEvent = nullptr;
+            return *this;
         }
 
-        void SetClickEventOpenUrl(const std::string& _open_url) {
+        Chat& SetClickEventOpenUrl(const std::string& _open_url) {
             if (!clickEvent)
                 clickEvent = new clickEventS;
 
@@ -264,9 +283,10 @@ namespace crafted_craft {
             if (clickEvent->change_page)
                 delete clickEvent->change_page;
             setString(clickEvent->open_url, _open_url);
+            return *this;
         }
 
-        void SetClickEventRunCommand(const std::string& _run_command) {
+        Chat& SetClickEventRunCommand(const std::string& _run_command) {
             if (!clickEvent)
                 clickEvent = new clickEventS;
 
@@ -280,9 +300,10 @@ namespace crafted_craft {
                 delete clickEvent->change_page;
 
             setString(clickEvent->run_command, _run_command);
+            return *this;
         }
 
-        void SetClickEventSuggestCommand(const std::string& _suggest_command) {
+        Chat& SetClickEventSuggestCommand(const std::string& _suggest_command) {
             if (!clickEvent)
                 clickEvent = new clickEventS;
 
@@ -296,29 +317,33 @@ namespace crafted_craft {
                 delete clickEvent->change_page;
 
             setString(clickEvent->suggest_command, _suggest_command);
+            return *this;
         }
 
-        void SetClickEventChangePage(uint32_t _change_page) {
+        Chat& SetClickEventChangePage(uint32_t _change_page) {
             if (!clickEvent)
                 clickEvent = new clickEventS;
             if (!clickEvent->change_page)
                 clickEvent->change_page = new uint32_t;
             *clickEvent->change_page = _change_page;
+            return *this;
         }
 
-        void SetClickEventCopyToClipboard(const std::string& _copy_to_clipboard) {
+        Chat& SetClickEventCopyToClipboard(const std::string& _copy_to_clipboard) {
             if (!clickEvent)
                 clickEvent = new clickEventS;
             if (clickEvent->copy_to_clipboard)
                 delete clickEvent->copy_to_clipboard;
             clickEvent->copy_to_clipboard = nullptr;
             setString(clickEvent->copy_to_clipboard, _copy_to_clipboard);
+            return *this;
         }
 
-        void SetClickEvent() {
+        Chat& SetClickEvent() {
             if (clickEvent)
                 delete clickEvent;
             clickEvent = nullptr;
+            return *this;
         }
 
         list_array<Chat>& GetExtra() {

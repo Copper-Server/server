@@ -1,6 +1,7 @@
 
 
 #include "../../../api/protocol.hpp"
+#include "../../packets/766/writers_readers.hpp"
 #include "../../util.hpp"
 #include "../abstract.hpp"
 
@@ -163,10 +164,10 @@ namespace crafted_craft {
                 for (int32_t i = 0; i < changed_slots_count; i++) {
                     api::protocol::data::click_container::changed_slot slot;
                     slot.slot = ReadVar<int16_t>(packet);
-                    slot.item = ReadSlot(packet);
+                    slot.item = packets::release_766::reader::ReadSlot(packet);
                     data.changed_slots.push_back(slot);
                 }
-                data.carried_item = ReadSlot(packet);
+                data.carried_item = packets::release_766::reader::ReadSlot(packet);
                 api::protocol::on_click_container.async_notify({data, *session, session->sharedDataRef()});
             }
 
@@ -481,7 +482,7 @@ namespace crafted_craft {
                 log::debug("play", "Set creative slot");
                 api::protocol::data::set_creative_slot data;
                 data.slot = ReadVar<int16_t>(packet);
-                data.item = ReadSlot(packet);
+                data.item = packets::release_766::reader::ReadSlot(packet);
                 api::protocol::on_set_creative_slot.async_notify({data, *session, session->sharedDataRef()});
             }
 

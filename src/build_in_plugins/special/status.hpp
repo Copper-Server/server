@@ -58,7 +58,14 @@ namespace crafted_craft {
                 }
 
                 bool ConnectionAvailable(int32_t protocol_version) override {
-                    return protocol_version == 765;
+                    switch (protocol_version) {
+                    case 765:
+                    case 766:
+                    case 767:
+                        return true;
+                    default:
+                        return false;
+                    }
                 }
 
                 //return empty string if no icon, icon must be 64x64 and png format in base64

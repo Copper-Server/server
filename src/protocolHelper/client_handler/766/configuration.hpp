@@ -1,6 +1,6 @@
 #ifndef SRC_PROTOCOLHELPER_CLIENT_HANDLER_766_CONFIGURATION
 #define SRC_PROTOCOLHELPER_CLIENT_HANDLER_766_CONFIGURATION
-#include "../../packets/766_release/packets.hpp"
+#include "../../packets/766/packets.hpp"
 #include "../abstract.hpp"
 
 namespace crafted_craft {

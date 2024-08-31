@@ -58,9 +58,9 @@
         "enforce_secure_profile": true
     },
     "protocol": {
-        "compression_threshold": 4294967295,
+        "compression_threshold": -1,
         "connection_conflict": "kick_connected",
-        "enable_encryption": true,
+        "enable_encryption": false,
         "max_players": 0,
         "offline_mode": true,
         "prevent_proxy_connections": false,
@@ -76,7 +76,7 @@
     "status": {
         "description": "",
         "enable": true,
-        "favicon": "",
+        "favicon_path": "D:/project/CraftedCart/storage/output-onlinepngtools.png",
         "sample_players_count": 20,
         "server_name": "CraftedCraft",
         "show_players": true

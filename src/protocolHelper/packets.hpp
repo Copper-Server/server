@@ -1,10 +1,10 @@
 #ifndef SRC_PROTOCOLHELPER_PACKETS
 #define SRC_PROTOCOLHELPER_PACKETS
-#include "packets/765_release/packets.hpp"
+#include "packets/767/packets.hpp"
 
 namespace crafted_craft {
     namespace packets {
-        using namespace release_765;
+        using namespace release_767;
     }
 }
 

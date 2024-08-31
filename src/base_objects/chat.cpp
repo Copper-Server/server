@@ -1,8 +1,8 @@
 
 #include "chat.hpp"
+#include "../util/conversions.hpp"
 #include "../util/json_helpers.hpp"
 #include <utf8.h>
-
 namespace crafted_craft {
     Chat Chat::parseToChat(const std::string& string) {
         list_array<Chat> result;
@@ -211,81 +211,6 @@ namespace crafted_craft {
         Chat final_chat;
         final_chat.GetExtra() = result;
         return final_chat;
-    }
-
-    std::string handle_string(const std::string& string) {
-        //handle in string \n \t  and other \* commands
-        std::string result;
-        std::string utf_code_pint;
-        bool got_slash = false;
-        bool got_utf_code_point = false;
-        bool got_big_utf_code_point = false;
-        for (char c : string) {
-            if (got_utf_code_point) {
-                utf_code_pint += c;
-                if (utf_code_pint.size() == 4) {
-                    utf8::utfchar16_t code_point = std::stoi(utf_code_pint, nullptr, 16);
-                    char utf8_code_point[4];
-                    result += std::string(utf8_code_point, utf8::utf16to8(&code_point, &code_point + 1, utf8_code_point));
-                    got_utf_code_point = false;
-                    utf_code_pint.clear();
-                }
-            } else if (got_big_utf_code_point) {
-                utf_code_pint += c;
-                if (utf_code_pint.size() == 8) {
-                    utf8::utfchar32_t code_point = std::stoi(utf_code_pint, nullptr, 16);
-                    char utf8_code_point[4];
-                    result += std::string(utf8_code_point, utf8::utf32to8(&code_point, &code_point + 1, utf8_code_point));
-                    got_big_utf_code_point = false;
-                    utf_code_pint.clear();
-                }
-            } else if (got_slash) {
-                switch (c) {
-                case 'n':
-                    result += '\n';
-                    break;
-                case 't':
-                    result += '\t';
-                    break;
-                case 'r':
-                    result += '\r';
-                    break;
-                case 'f':
-                    result += '\f';
-                    break;
-                case 'b':
-                    result += '\b';
-                    break;
-                case '\\':
-                    result += '\\';
-                    break;
-                case '\'':
-                    result += '\'';
-                    break;
-                case '\"':
-                    result += '\"';
-                    break;
-                case 'v':
-                    result += '\v';
-                    break;
-                case 'u':
-                    got_utf_code_point = true;
-                    break;
-                case 'U':
-                    got_big_utf_code_point = true;
-                    break;
-                default:
-                    result += '\\';
-                    result += c;
-                    break;
-                }
-                got_slash = false;
-            } else if (c == '\\') {
-                got_slash = true;
-            } else
-                result += c;
-        }
-        return result;
     }
 
     std::string Chat::to_ansi_console() const {
@@ -578,7 +503,7 @@ namespace crafted_craft {
         using namespace util;
         Chat result;
         if (json.contains("text"))
-            result.SetText(handle_string(json["text"]));
+            result.SetText(util::conversions::string::to_direct(json["text"]));
         else if (json.contains("translate"))
             result.SetTranslation(json["translate"]);
 
@@ -644,7 +569,7 @@ namespace crafted_craft {
                 else
                     result.SetHoverEventShowItem(content_obj["id"], content_obj["type"], std::nullopt);
             } else if (action == "show_text")
-                result.SetHoverEventShowText(handle_string(content));
+                result.SetHoverEventShowText(util::conversions::string::to_direct(content));
         }
 
         if (json.contains("extra")) {

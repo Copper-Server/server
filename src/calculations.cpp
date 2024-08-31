@@ -90,9 +90,9 @@ namespace calc {
             }
 
             XYZ<int16_t> delta_move(XYZ<float> pos) {
-                int64_t x = (int64_t)pos.x * (128 * 32);
-                int64_t y = (int64_t)pos.y * (128 * 32);
-                int64_t z = (int64_t)pos.z * (128 * 32);
+                int64_t x = (int64_t)pos.x * (4096);
+                int64_t y = (int64_t)pos.y * (4096);
+                int64_t z = (int64_t)pos.z * (4096);
                 return {
                     (int16_t)std::clamp<int64_t>(x, INT16_MIN, INT16_MAX),
                     (int16_t)std::clamp<int64_t>(y, INT16_MIN, INT16_MAX),
@@ -101,8 +101,8 @@ namespace calc {
             }
 
             XY<int16_t> delta_move(XY<float> pos) {
-                int64_t x = (int64_t)pos.x * (128 * 32);
-                int64_t y = (int64_t)pos.y * (128 * 32);
+                int64_t x = (int64_t)pos.x * (4096);
+                int64_t y = (int64_t)pos.y * (4096);
                 return {
                     (int16_t)std::clamp<int64_t>(x, INT16_MIN, INT16_MAX),
                     (int16_t)std::clamp<int64_t>(y, INT16_MIN, INT16_MAX)

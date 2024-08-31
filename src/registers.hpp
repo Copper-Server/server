@@ -18,28 +18,21 @@ namespace crafted_craft {
         };
 
         struct ArmorTrimMaterial {
-            std::string name;
+            std::string asset_name;
+            std::string ingredient;
+            std::unordered_map<std::string, std::string> override_armor_materials; //leather, chainmail, iron, gold, diamond, turtle, netherite
+            std::variant<std::string, Chat> description;
+            float item_model_index;
             int32_t id;
-
-            struct {
-                std::string asset_name;
-                std::string ingredient;
-                float item_model_index;
-                std::variant<std::string, std::vector<std::string>> override_armor_materials; //leather, chainmail, iron, gold, diamond, turtle, netherite
-                std::variant<std::string, Chat> description;
-            } element;
         };
 
         struct ArmorTrimPattern {
-            std::string name;
             uint32_t id;
 
-            struct {
-                std::string assert_id;
-                std::string template_item;
-                std::variant<std::string, Chat> description;
-                bool decal;
-            } element;
+            std::string assert_id;
+            std::string template_item;
+            std::variant<std::string, Chat> description;
+            bool decal;
         };
 
         struct Biome {
@@ -76,14 +69,12 @@ namespace crafted_craft {
                 bool replace_current_music = true;
             };
 
-            std::string name;
             uint32_t id;
 
-            struct {
                 bool has_precipitation;
                 float temperature;
-                float temperature_modifier;
                 float downfall;
+                std::optional<std::string> temperature_modifier;
 
                 struct {
                     int32_t fog_color;
@@ -92,14 +83,13 @@ namespace crafted_craft {
                     int32_t sky_color;
                     std::optional<int32_t> foliage_color;
                     std::optional<int32_t> grass_color;
-                    std::optional<int32_t> grass_color_modifier;
+                    std::optional<std::string> grass_color_modifier;
                     std::optional<Particle> particle;
                     std::optional<std::variant<std::string, AmbientSound>> ambient_sound;
                     std::optional<MoodSound> mood_sound;
                     std::optional<AdditionsSound> additions_sound;
                     std::optional<Music> music;
                 } effects;
-            } element;
         };
 
         struct ChatType {
@@ -109,23 +99,20 @@ namespace crafted_craft {
                 std::variant<std::string, std::vector<std::string>> parameters; // sender, target, content
             };
 
-            std::string name;
             uint32_t id;
 
-            struct {
                 std::optional<Decoration> chat;
                 std::optional<Decoration> narration;
-            } element;
         };
 
         struct DamageType {
-            enum ScalingType {
+            enum class ScalingType {
                 never,
                 when_caused_by_living_non_player,
                 always
             };
 
-            enum EffectsType {
+            enum class EffectsType {
                 hurt,
                 thorns,
                 drowning,
@@ -134,48 +121,42 @@ namespace crafted_craft {
                 freezing
             };
 
-            enum DeathMessageType {
+            enum class DeathMessageType {
                 _default, //"default"
                 fall_variants,
                 intentional_game_design
             };
 
-            std::string name;
-            uint32_t id;
 
-            struct {
-                std::string message_id;
-                ScalingType scaling; //as string
-                float exhaustion;
-                std::optional<EffectsType> effects;
-                std::optional<DeathMessageType> death_message_type;
-            } element;
+            std::string message_id;
+            ScalingType scaling; //as string
+            std::optional<EffectsType> effects;
+            std::optional<DeathMessageType> death_message_type;
+            float exhaustion;
+            uint32_t id;
         };
 
         struct DimensionType {
-            std::string name;
             uint32_t id;
 
-            struct {
-                std::variant<int32_t, IntegerDistribution> monster_spawn_light_level;
-                std::optional<uint64_t> fixed_time;
-                std::string infiniburn;
-                std::string effects;
-                double coordinate_scale;
-                float ambient_light;
-                int32_t min_y;
-                int32_t height;
-                int32_t logical_height;
-                int32_t monster_spawn_block_light_limit;
-                bool has_skylight : 1;
-                bool has_ceiling : 1;
-                bool ultrawarm : 1;
-                bool natural : 1;
-                bool piglin_safe : 1;
-                bool has_raids : 1;
-                bool respawn_anchor_works : 1;
-                bool bed_works : 1;
-            } element;
+            std::variant<int32_t, IntegerDistribution> monster_spawn_light_level;
+            std::optional<uint64_t> fixed_time;
+            std::string infiniburn;
+            std::string effects;
+            double coordinate_scale;
+            float ambient_light;
+            int32_t min_y;
+            int32_t height;
+            int32_t logical_height;
+            int32_t monster_spawn_block_light_limit;
+            bool has_skylight : 1;
+            bool has_ceiling : 1;
+            bool ultrawarm : 1;
+            bool natural : 1;
+            bool piglin_safe : 1;
+            bool has_raids : 1;
+            bool respawn_anchor_works : 1;
+            bool bed_works : 1;
         };
 
         struct WolfVariant {
@@ -184,8 +165,21 @@ namespace crafted_craft {
             std::string angry_texture;
             list_array<std::string> biomes;
 
+            uint32_t id;
+        };
 
-            std::string name;
+        struct BannerPattern {
+            std::string asset_id;
+            std::string translation_key;
+
+            uint32_t id;
+        };
+
+        struct PaintingVariant {
+            std::string asset_id;
+            uint32_t height;
+            uint32_t width;
+
             uint32_t id;
         };
 
@@ -215,19 +209,29 @@ namespace crafted_craft {
 
 #pragma endregion
         //CLIENT/SERVER
-        extern list_array<ArmorTrimMaterial> armorTrimMaterials;
-        extern list_array<ArmorTrimPattern> armorTrimPatterns;
-        extern list_array<Biome> biomes;
-        extern list_array<ChatType> chatTypes;
-        extern list_array<DamageType> damageTypes;
-        extern list_array<DimensionType> dimensionTypes;
-        extern list_array<WolfVariant> wolfVariants;
+        extern std::unordered_map<std::string, ArmorTrimMaterial> armorTrimMaterials;
+        extern std::unordered_map<std::string, ArmorTrimPattern> armorTrimPatterns;
+        extern std::unordered_map<std::string, Biome> biomes;
+        extern std::unordered_map<std::string, ChatType> chatTypes;
+        extern std::unordered_map<std::string, DamageType> damageTypes;
+        extern std::unordered_map<std::string, DimensionType> dimensionTypes;
+        extern std::unordered_map<std::string, WolfVariant> wolfVariants;
+        extern std::unordered_map<std::string, BannerPattern> bannerPatterns;
+        extern std::unordered_map<std::string, PaintingVariant> paintingVariants;
 
 
         //SERVER
+
         extern std::unordered_map<base_objects::block, uint16_t, base_objects::block_hash> blockPalette;
         extern std::unordered_map<uint16_t, EntityType*> entityList;
         extern std::unordered_map<int32_t, ItemType*> itemList;
+        //entity_data
+        extern std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>> tags; //[namespace][tag][values]   values can't contain other tags, parsers must resolve them
+        extern std::string default_tag_namespace;                                                              //minecraft
+
+
+        const list_array<std::string>& unfold_tag(const std::string& namespace_, const std::string& tag);
+        const list_array<std::string>& unfold_tag(const std::string& tag);
 
         //CLIENT
         //till 765

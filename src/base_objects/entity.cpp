@@ -1,81 +1,147 @@
 #include "entity.hpp"
+#include "../api/world.hpp"
 #include "../calculations.hpp"
-#include <Windows.h>
+#include "../library/fast_task.hpp"
+#include "../storage/world_data.hpp"
 
 namespace crafted_craft {
     namespace base_objects {
-        void entity_data::work_reaction(class entity& target_entity, class entity& extern_entity, bool in_view, bool hurted, bool hear) {
+        struct entities_storage {
+            std::unordered_map<uint16_t, entity_data> _registry;
+            uint16_t id_adder = 0;
+        };
+
+        fast_task::protected_value<entities_storage> data_for_entities;
+
+        const entity_data& entity_data::get_entity(uint16_t id) {
+            return data_for_entities.get([&](auto& data) -> const entity_data& {
+                auto it = data._registry.find(id);
+                if (it == data._registry.end())
+                    throw std::runtime_error("Entity not found.");
+                else
+                    return it->second;
+            });
         }
 
-        // block
-        void entity_data::work_reaction(class entity& target_entity, int64_t x, uint64_t y, int64_t z, const base_objects::block& block, bool in_view, bool hurted, bool hear) {
+        uint16_t entity_data::register_entity(entity_data entity) {
+            return data_for_entities.set([&](auto& data) {
+                uint16_t id = data.id_adder++;
+                if (data.id_adder == 0) {
+                    --data.id_adder;
+                    throw std::runtime_error("Too many entities.");
+                }
+                data._registry[id] = entity;
+                return id;
+            });
         }
 
-        void entity_data::work_reaction(entity& target_entity) {
-        }
-
-        void entity_data::keep_reaction(entity& entity) {
+        void entity_data::reset_entities() {
+            data_for_entities.set([&](auto& data) {
+                data.id_adder = 0;
+                data._registry.clear();
+            });
         }
 
         entity_ref entity::copy() const {
             entity_ref res = new entity();
-            res->data = data;
             res->died = died;
             res->entity_id = entity_id;
-            res->head_rotation = head_rotation;
-            res->id = id;
-            res->keep_reaction = keep_reaction;
-            std::copy(keep_reaction_data, keep_reaction_data + 16, res->keep_reaction_data);
-            res->motion = motion;
             res->nbt = nbt;
             res->position = position;
-            res->rotation = rotation;
             return res;
         }
 
         ENBT entity::copy_to_enbt() const {
             enbt::compound res;
-            res["data"] = data;
-            res["died"] = died;
-            res["entity_id"] = entity_id;
-            res["head_rotation"] = enbt::fixed_array({head_rotation.x, head_rotation.y, head_rotation.z});
-            res["id"] = id;
-            res["keep_reaction"] = keep_reaction;
-            res["keep_reaction_data"] = enbt::simple_array_ui8(keep_reaction_data);
-            res["motion"] = enbt::fixed_array({motion.x, motion.y, motion.z});
             res["nbt"] = nbt;
+            res["server_data"] = server_data;
             res["position"] = enbt::fixed_array({position.x, position.y, position.z});
+            res["motion"] = enbt::fixed_array({motion.x, motion.y, motion.z});
             res["rotation"] = enbt::fixed_array({rotation.x, rotation.y, rotation.z});
+            res["head_rotation"] = enbt::fixed_array({head_rotation.x, head_rotation.y, head_rotation.z});
+            res["entity_id"] = entity_id;
+            res["id"] = id;
+            res["died"] = died;
+            if (world)
+                res["bound_world"] = world->world_name;
             return res;
         }
 
         void entity::tick() {
+            const_data().tick_callback(*this);
         }
 
-        void entity::kill() {
+        bool entity::kill() {
+            if (!const_data().pre_death_callback(*this, false))
+                return false;
+
+            died = true;
+            return true;
+        }
+
+        void entity::force_kill() {
+            const_data().pre_death_callback(*this, true);
             died = true;
         }
 
-        entity_ref entity::load_from_enbt(const ENBT& nbt) {
-            const auto compound = enbt::compound::make_ref(nbt);
+        bool entity::is_died() {
+            return died;
+        }
+
+        const entity_data& entity::const_data() {
+            return entity_data::get_entity(entity_id);
+        }
+
+        entity_ref entity::load_from_enbt(const enbt::compound_ref& nbt) {
             entity_ref res = new entity();
-            res->data = compound["data"];
-            res->died = compound["died"];
-            res->entity_id = compound["entity_id"];
-            auto head_rotation = enbt::fixed_array::make_ref(compound["head_rotation"]);
-            res->head_rotation = {head_rotation[0], head_rotation[1], head_rotation[2]};
-            res->id = compound["id"];
-            res->keep_reaction = compound["keep_reaction"];
-            auto keep_reaction_data = enbt::simple_array_ui8::make_ref(compound["keep_reaction_data"]);
-            std::copy(keep_reaction_data.begin(), keep_reaction_data.end(), res->keep_reaction_data);
-            auto motion = enbt::fixed_array::make_ref(compound["motion"]);
+            res->died = nbt["died"];
+            res->entity_id = nbt["entity_id"];
+
+            res->id = nbt["id"];
+
+            auto motion = enbt::fixed_array::make_ref(nbt["motion"]);
             res->motion = {motion[0], motion[1], motion[2]};
-            res->nbt = compound["nbt"];
-            auto position = enbt::fixed_array::make_ref(compound["position"]);
+
+            auto position = enbt::fixed_array::make_ref(nbt["position"]);
             res->position = {position[0], position[1], position[2]};
-            auto rotation = enbt::fixed_array::make_ref(compound["rotation"]);
+
+            auto rotation = enbt::fixed_array::make_ref(nbt["rotation"]);
             res->rotation = {rotation[0], rotation[1], rotation[2]};
+
+            auto head_rotation = enbt::fixed_array::make_ref(nbt["head_rotation"]);
+            res->head_rotation = {head_rotation[0], head_rotation[1], head_rotation[2]};
+
+            res->nbt = nbt["nbt"];
+            res->server_data = nbt["server_data"];
+
+            if (nbt.contains("bound_world")) {
+                res->world = (storage::world_data*)0XFFFFFFFFFFF;
+                api::world::get((std::string)nbt["bound_world"], [&](storage::world_data& it) {
+                    it.register_entity(res);
+                });
+                if (res->world == (storage::world_data*)0XFFFFFFFFFFF) {
+                    res->world = nullptr;
+                    throw std::runtime_error("World " + (std::string)nbt["bound_world"] + " not found.");
+                }
+            };
+            try {
+                auto creation_callback = entity_data::get_entity(res->entity_id).create_from_enbt_callback;
+                if (creation_callback)
+                    creation_callback(res, nbt);
+            } catch (...) {
+                if (res->world)
+                    res->world->unregister_entity(res);
+                throw;
+            }
             return res;
+        }
+
+        entity_ref entity::create(uint16_t id) {
+            return entity_data::get_entity(id).create_callback();
+        }
+
+        entity_ref entity::create(uint16_t id, const enbt::compound_ref& nbt) {
+            return entity_data::get_entity(id).create_callback_with_nbt(nbt);
         }
     }
 }

@@ -27,6 +27,10 @@ namespace crafted_craft {
             atomic_holder()
                 : data(), ref_count() {}
 
+            atomic_holder(nullptr_t)
+                : data(nullptr), ref_count(nullptr) {}
+
+
             atomic_holder(T* data)
                 : data(data), ref_count(new std::atomic_size_t(1)) {}
 

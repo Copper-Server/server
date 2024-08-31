@@ -2,7 +2,7 @@
 #define SRC_PROTOCOLHELPER_CLIENT_PLAY_HANDLER_765_LOGIN
 #include "../../api/players.hpp"
 #include "../../mojang_api/hash.hpp"
-#include "../../packets/765_release/packets.hpp"
+#include "../../packets/765/packets.hpp"
 #include "../abstract.hpp"
 
 namespace crafted_craft {
@@ -124,9 +124,6 @@ namespace crafted_craft {
                         }
                         if (
                             !Server::instance().config.protocol.offline_mode
-                            || (Server::instance().config.protocol.enable_encryption
-                                && session->protocol_version >= 766
-                            )
                         ) {
                             return encryptionRequest();
                         } else if (Server::instance().config.protocol.compression_threshold != -1) {
@@ -169,7 +166,7 @@ namespace crafted_craft {
                         session->sharedData().data = Server::instance().getSessionServer().hasJoined(
                             session->sharedData().name,
                             serverId.hexdigest(),
-                            Server::instance().config.protocol.offline_mode
+                            !Server::instance().config.protocol.offline_mode
                         );
                         session->start_symmetric_encryption(shared_secret, shared_secret);
                         return loginSuccess();

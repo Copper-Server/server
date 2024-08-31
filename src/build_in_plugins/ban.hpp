@@ -9,7 +9,6 @@ namespace crafted_craft {
         class BanPlugin : public PluginAutoRegister<"ban", BanPlugin> {
             storage::enbt_list_storage banned_players;
             storage::enbt_list_storage banned_ips;
-            Server& server;
 
         public:
             BanPlugin();

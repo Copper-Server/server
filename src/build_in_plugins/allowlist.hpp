@@ -7,9 +7,8 @@
 namespace crafted_craft {
     class Server;
     namespace build_in_plugins {
-        class AllowListPlugin : public PluginAutoRegister<"server_plugin", AllowListPlugin> {
+        class AllowListPlugin : public PluginAutoRegister<"allow_list", AllowListPlugin> {
             storage::list_storage allow_list;
-            Server& server;
             api::allowlist::allowlist_mode mode = api::allowlist::allowlist_mode::off;
 
         public:

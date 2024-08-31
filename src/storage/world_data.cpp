@@ -91,8 +91,9 @@ namespace crafted_craft {
                 if (!valid_sub_chunk_size(blocks))
                     return false;
                 load_block_data(blocks, sub_chunk_data.blocks, sub_chunk_data.has_tickable_blocks);
-                for (auto [empty_, entity] : sub_chunk["entities"])
-                    sub_chunk_data.stored_entities.push_back(base_objects::entity::load_from_enbt(entity));
+                for (auto [empty_, entity] : sub_chunk["entities"]) {
+                    sub_chunk_data.stored_entities.push_back(base_objects::entity::load_from_enbt(enbt::compound::make_ref(entity)));
+                }
                 for (auto [empty_, block_entity] : sub_chunk["block_entities"]) {
                     base_objects::block_entity be;
                     be.block_id = base_objects::block(block_entity["id"]);
@@ -689,12 +690,26 @@ namespace crafted_craft {
             std::unique_lock lock(mutex);
             uint64_t id = local_client_id_generator++;
             clients[id] = client;
+            //TODO NOTIFY CLIENTS AND ENTITIES
             return id;
         }
 
         void world_data::unregister_client(uint64_t id) {
             std::unique_lock lock(mutex);
             clients.erase(id);
+            //TODO NOTIFY CLIENTS AND ENTITIES
+        }
+
+        void world_data::register_entity(base_objects::entity_ref& entity) {
+            std::unique_lock lock(mutex);
+            entity->world = this;
+            //TODO NOTIFY CLIENTS AND ENTITIES
+        }
+
+        void world_data::unregister_entity(base_objects::entity_ref& entity) {
+            std::unique_lock lock(mutex);
+            entity->world = nullptr;
+            //TODO NOTIFY CLIENTS AND ENTITIES
         }
 
         void world_data::tick(std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time, bool update_tps) {

@@ -25,7 +25,6 @@ namespace crafted_craft {
                 client->player_data.world_id = "virtual_client astral space";
                 client->player_data.health = 999999.0f;
                 client->player_data.on_ground = true;
-                client->player_data.on_ground = true;
 
                 client->packets_state.protocol_version = -1;
                 client->packets_state.state = SharedClientData::packets_state_t::protocol_state::play;

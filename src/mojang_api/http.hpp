@@ -18,13 +18,15 @@ namespace mojang {
                 boost::asio::io_context ioc;
                 boost::asio::ip::tcp::resolver resolver(ioc);
                 boost::asio::ip::tcp::resolver::query address_query(address, port_string);
-                auto const results = resolver.resolve(address_query);
+                boost::system::error_code ec;
+                auto const results = resolver.resolve(address_query, ec);
 
-                boost::asio::ip::tcp::socket socket(ioc);
-                if (!results.empty())
-                    boost::asio::connect(socket, results.begin(), results.end());
-                else
+                if (results.empty() || ec)
                     throw std::runtime_error("Failed to resolve " + address);
+                boost::asio::ip::tcp::socket socket(ioc);
+                boost::asio::connect(socket, results.begin(), results.end(), ec);
+                if (ec)
+                    throw std::runtime_error("Failed to connect " + address);
                 boost::beast::flat_buffer buf;
                 boost::beast::http::response<boost::beast::http::string_body> res;
 

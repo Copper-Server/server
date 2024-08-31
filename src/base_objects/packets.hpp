@@ -221,6 +221,11 @@ namespace crafted_craft {
                 std::optional<std::string> name;
                 std::optional<parsers> parser_id;
                 std::optional<properties_t> properties;
+
+                //minecraft:ask_server
+                //minecraft:all_recipes
+                //minecraft:available_sounds
+                //minecraft:summonable_entities
                 std::optional<std::string> suggestion_type;
             };
 
@@ -236,6 +241,12 @@ namespace crafted_craft {
                 int8_t x;
                 int8_t z;
                 int8_t direction;
+            };
+
+            struct trade_item {
+                int32_t id;
+                int32_t count;
+                //TODO
             };
 
             struct trade {
@@ -410,6 +421,24 @@ namespace crafted_craft {
                 std::string namespace_;
                 std::string id;
                 std::string version;
+            };
+
+            struct server_link {
+                enum class label_type {
+                    bug_report,
+                    community_guidelines,
+                    support,
+                    status,
+                    feedback,
+                    community,
+                    website,
+                    forums,
+                    news,
+                    announcements,
+                };
+
+                std::variant<label_type, Chat> label;
+                std::string url;
             };
         }
     }

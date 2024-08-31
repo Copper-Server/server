@@ -27,6 +27,8 @@ namespace crafted_craft {
 
         void fatal(const std::string& source, const std::string& message);
 
+        void clear();
+
         void disable_log_level(level);
         void enable_log_level(level);
         bool is_enabled(level);

@@ -6,8 +6,6 @@ namespace crafted_craft {
     class Server;
     namespace build_in_plugins {
         class CommunicationCorePlugin : public PluginAutoRegister<"communication_core", CommunicationCorePlugin> {
-            Server& server;
-
         public:
             CommunicationCorePlugin();
             void OnLoad(const PluginRegistrationPtr& self) override;

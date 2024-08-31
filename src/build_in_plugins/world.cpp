@@ -21,53 +21,46 @@ namespace crafted_craft {
         }
 
         void WorldManagementPlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
-            auto worlds = browser.add_child({"worlds"});
+            using predicate = base_objects::predicate;
+            using pred_long = base_objects::predicates::_long;
+            using cmd_pred_long = base_objects::predicates::command::_long;
+            auto worlds = browser.add_child("worlds");
             {
-                auto create = worlds.add_child({"create"});
+                auto create = worlds.add_child("create");
             }
             {
-                auto world_id = worlds.add_child({"remove"}).add_child({"<world_id>"});
-                world_id.set_callback("command.world.remove", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                    uint64_t id;
-                    try {
-                        id = std::stoull(args[0]);
-                    } catch (...) {
-                        Chat message("Failed to set world id, invalid argument: " + args[0]);
-                        message.SetColor("red");
-                        api::players::calls::on_system_message({client, message});
-                    }
-                    if (!worlds_storage.exists(id)) {
-                        Chat message("Failed to set world id, world with this id not set: " + args[0]);
-                        message.SetColor("red");
-                        api::players::calls::on_system_message({client, message});
-                    } else
-                        worlds_storage.erase(id);
-                });
-                add_world_id_suggestion(world_id);
-            }
-            {
-                auto base = worlds.add_child({"base"});
-                {
-                    auto set = base.add_child({"set"}).add_child({"<world_id>"});
-                    set.set_callback("command.world.base.set", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                        uint64_t id;
-                        try {
-                            id = std::stoull(args[0]);
-                        } catch (...) {
-                            Chat message("Failed to set world id, invalid argument: " + args[0]);
-                            message.SetColor("red");
-                            api::players::calls::on_system_message({client, message});
-                        }
+                auto world_id = worlds.add_child("remove").add_child({"<world_id>"});
+                world_id
+                    .set_argument_type(cmd_pred_long())
+                    .set_callback("command.world.remove", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                        uint64_t id = std::get<pred_long>(args[0]).value;
                         if (!worlds_storage.exists(id)) {
-                            Chat message("Failed to set world id, world with this id not set: " + args[0]);
+                            Chat message("Failed to set world id, world with this id not set: " + std::to_string(id));
                             message.SetColor("red");
                             api::players::calls::on_system_message({client, message});
                         } else
-                            worlds_storage.base_world_id = id;
+                            worlds_storage.erase(id);
                     });
+                add_world_id_suggestion(world_id);
+            }
+            {
+                auto base = worlds.add_child("base");
+                {
+                    auto set = base.add_child("set").add_child("<world_id>");
+                    set
+                        .set_argument_type(cmd_pred_long())
+                        .set_callback("command.world.base.set", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                            uint64_t id = std::get<pred_long>(args[0]).value;
+                            if (!worlds_storage.exists(id)) {
+                                Chat message("Failed to set world id, world with this id not set: " + std::to_string(id));
+                                message.SetColor("red");
+                                api::players::calls::on_system_message({client, message});
+                            } else
+                                worlds_storage.base_world_id = id;
+                        });
                     add_world_id_suggestion(set);
                 }
-                base.set_callback("command.world.base", [this](const list_array<std::string>&, base_objects::client_data_holder& client) {
+                base.set_callback("command.world.base", [this](const list_array<predicate>&, base_objects::client_data_holder& client) {
                     if (worlds_storage.base_world_id == -1)
                         api::players::calls::on_system_message({client, {"Base world not set."}});
                     else

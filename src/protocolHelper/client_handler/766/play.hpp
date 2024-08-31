@@ -1,7 +1,7 @@
 #ifndef SRC_PROTOCOLHELPER_CLIENT_HANDLER_766_PLAY
 #define SRC_PROTOCOLHELPER_CLIENT_HANDLER_766_PLAY
 #include "../../api/protocol.hpp"
-#include "../../packets/766_release/packets.hpp"
+#include "../../packets/766/packets.hpp"
 #include "../abstract.hpp"
 #include "766_release.hpp"
 

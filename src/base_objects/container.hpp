@@ -108,7 +108,7 @@ namespace crafted_craft {
                     if (to_add <= 0)
                         return true;
                     if (slot_.second.id == item.id) {
-                        if (slot_.second.nbt == item.nbt) {
+                        if (slot_.second == item) {
                             int64_t add_res = int64_t(item_data.max_count) - slot_.second.count;
                             if (add_res > 0) {
                                 add_res = std::min(add_res, to_add);
@@ -139,7 +139,7 @@ namespace crafted_craft {
                         break;
 
                     if (slot_.second.id == item.id) {
-                        if (slot_.second.nbt == item.nbt) {
+                        if (slot_.second == item) {
                             int64_t rem_res = slot_.second.count;
 
                             if (rem_res > 0) {

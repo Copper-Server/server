@@ -106,9 +106,9 @@ namespace crafted_craft {
                 return false;
             }
 
-            event_register_id addOne(std::unordered_map<uint64_t, function>& map, function func) {
+            sync_event_register_id addOne(std::unordered_map<uint64_t, function>& map, function func) {
                 std::uniform_int_distribution<uint64_t> dis;
-                event_register_id id;
+                sync_event_register_id id;
                 do {
                     id.id = dis(gen);
                 } while (map.find(id.id) != map.end());

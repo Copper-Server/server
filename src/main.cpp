@@ -1,15 +1,18 @@
-#include "log.hpp"
-#include "ClientHandleHelper.hpp"
-#include "protocolHelper.hpp"
-#include "library/fast_task.hpp"
 #include "plugin/main.hpp"
+#include "ClientHandleHelper.hpp"
 #include "build_in_plugins/special/status.hpp"
+#include "library/fast_task.hpp"
+#include "log.hpp"
+#include "protocolHelper.hpp"
+#include "resources/registers.hpp"
 
 using namespace crafted_craft;
 
 int main() {
     using type = std::add_lvalue_reference_t<std::add_const_t<void>>;
     log::commands::init();
+    resources::initialize_registers();
+    resources::initialize_entities();
 
     fast_task::task::create_executor();
     fast_task::task::task::enable_task_naming = true;

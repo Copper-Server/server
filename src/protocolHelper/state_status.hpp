@@ -26,14 +26,12 @@ namespace crafted_craft {
                                            : 0;
             std::string version_name = special_status->StatusResponseVersionName();
 
-            std::string res =
-                "{"
-                "\"version\": {"
-                "\"name\": \"" +
-                version_name + "\","
-                               "\"protocol\": " +
-                std::to_string(protocol_version) +
-                "},";
+            std::string res = "{"
+                              "\"version\": {"
+                              "\"name\": \""
+                              + version_name + "\","
+                                               "\"protocol\": "
+                              + std::to_string(protocol_version) + "},";
 
             if (special_status->ShowConnectionStatus()) {
                 res += "\"players\":{\"max\":" + std::to_string(special_status->MaxPlayers()) + ",\"online\":" + std::to_string(special_status->OnlinePlayers());

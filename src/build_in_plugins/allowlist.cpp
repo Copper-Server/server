@@ -10,7 +10,7 @@ namespace crafted_craft {
 
     namespace build_in_plugins {
         AllowListPlugin::AllowListPlugin()
-            : allow_list(Server::instance().config.server.get_storage_path() / "allow_list.txt"), server(Server::instance()) {}
+            : allow_list(Server::instance().config.server.get_storage_path() / "allow_list.txt") {}
 
         void AllowListPlugin::OnPostLoad(const PluginRegistrationPtr& self) {
             register_event(api::allowlist::on_mode_change, base_objects::event_priority::heigh, [this](api::allowlist::allowlist_mode mode) {
@@ -24,41 +24,36 @@ namespace crafted_craft {
         }
 
         void AllowListPlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
+            using predicate = base_objects::predicate;
+            using pred_string = base_objects::predicates::string;
+            using cmd_pred_string = base_objects::predicates::command::string;
             {
                 auto allowlist = browser.add_child({"allowlist", "", ""});
                 allowlist.add_child({"add", "", ""})
-                    .add_child({"<player>", "add player to allowlist", "/allowlist add <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                    .set_callback("command.allowlist.add", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) -> void {
-                        if (args.size() == 0) {
-                            api::players::calls::on_system_message({client, {"Usage: /allowlist add <player>"}});
-                            return;
-                        }
-                        const std::string& player = args[0];
-                        if (player.contains("\n"))
+                    .add_child({"<player>", "add player to allowlist", "/allowlist add <player>"}, cmd_pred_string::quotable_phrase)
+                    .set_callback("command.allowlist.add", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) -> void {
+                        auto& player_name = std::get<pred_string>(args[0]).value;
+                        if (player_name.contains("\n"))
                             throw std::runtime_error("Player name contains newline character");
-                        if (api::allowlist::on_add(player))
+                        if (api::allowlist::on_add(player_name))
                             return;
 
-                        allow_list.add(args[0]);
-                        api::players::calls::on_system_message({client, {"Player " + args[0] + " added to allowlist"}});
+                        allow_list.add(player_name);
+                        api::players::calls::on_system_message({client, {"Player " + player_name + " added to allowlist"}});
                     });
                 allowlist.add_child({"remove", "", ""})
-                    .add_child({"<player>", "remove player from allowlist", "/allowlist remove <player>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                    .set_callback("command.allowlist.remove", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) -> void {
-                        if (args.size() == 0) {
-                            api::players::calls::on_system_message({client, {"Usage: /allowlist remove <player>"}});
-                            return;
-                        }
-                        const std::string& player = args[0];
-                        if (player.contains("\n"))
+                    .add_child({"<player>", "remove player from allowlist", "/allowlist remove <player>"}, cmd_pred_string::quotable_phrase)
+                    .set_callback("command.allowlist.remove", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) -> void {
+                        auto& player_name = std::get<pred_string>(args[0]).value;
+                        if (player_name.contains("\n"))
                             throw std::runtime_error("Player name contains newline character");
-                        if (api::allowlist::on_remove(player))
+                        if (api::allowlist::on_remove(player_name))
                             return;
-                        allow_list.remove(args[0]);
-                        api::players::calls::on_system_message({client, {"Player " + args[0] + " removed from allowlist"}});
+                        allow_list.remove(player_name);
+                        api::players::calls::on_system_message({client, {"Player " + player_name + " removed from allowlist"}});
                     });
                 allowlist.add_child({"list", "list all players in allowlist", "/allowlist list"})
-                    .set_callback("command.allowlist.list", [this](const list_array<std::string>&, base_objects::client_data_holder& client) -> void {
+                    .set_callback("command.allowlist.list", [this](const list_array<predicate>&, base_objects::client_data_holder& client) -> void {
                         bool max_reached = false;
                         auto listed = allow_list.entrys(100, max_reached);
                         if (listed.size() == 0) {
@@ -81,23 +76,20 @@ namespace crafted_craft {
                         }
                     });
                 allowlist.add_child({"mode"})
-                    .add_child({"<mode>", "set allowlist mode", "/allowlist mode block|allow|off"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                    .set_callback("command.allowlist.mode", [this](const list_array<std::string>& args, base_objects::client_data_holder& client) -> void {
-                        if (args.size() == 0) {
-                            api::players::calls::on_system_message({client, {"Usage: /allowlist mode <mode>"}});
-                            return;
-                        }
-                        if (args[0] == "block")
+                    .add_child({"<mode>", "set allowlist mode", "/allowlist mode block|allow|off"}, cmd_pred_string::quotable_phrase)
+                    .set_callback("command.allowlist.mode", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) -> void {
+                        auto& mode = std::get<pred_string>(args[0]).value;
+                        if (mode == "block")
                             api::allowlist::on_mode_change(api::allowlist::allowlist_mode::block);
-                        else if (args[0] == "allow")
+                        else if (mode == "allow")
                             api::allowlist::on_mode_change(api::allowlist::allowlist_mode::allow);
-                        else if (args[0] == "off")
+                        else if (mode == "off")
                             api::allowlist::on_mode_change(api::allowlist::allowlist_mode::off);
                         else {
                             api::players::calls::on_system_message({client, {"Usage: /allowlist mode block|allow|off"}});
                             return;
                         }
-                        api::players::calls::on_system_message({client, {"Allowlist mode set to " + args[0]}});
+                        api::players::calls::on_system_message({client, {"Allowlist mode set to " + mode}});
                     });
             }
         }

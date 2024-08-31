@@ -1,5 +1,6 @@
 #include "packets.hpp"
 #include "../../util.hpp"
+#include "writers_readers.hpp"
 
 namespace crafted_craft {
     namespace packets {
@@ -138,7 +139,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response addResourcePack(SharedClientData& client,const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced, Chat prompt) {
+                Response addResourcePack(SharedClientData& client, const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced, Chat prompt) {
                     list_array<uint8_t> packet;
                     packet.reserve(20 + url.size() + 2 + hash.size());
                     packet.push_back(0x07);
@@ -477,9 +478,9 @@ namespace crafted_craft {
                     WriteVar<int32_t>(state_id, packet);
                     WriteVar<int32_t>(slots.size(), packet);
                     for (auto& it : slots)
-                        WriteSlot(packet, it);
+                        reader::WriteSlot(packet, it);
 
-                    WriteSlot(packet, carried_item);
+                    reader::WriteSlot(packet, carried_item);
                     return Response::Answer({std::move(packet)});
                 }
 
@@ -501,7 +502,7 @@ namespace crafted_craft {
                     WriteVar<int32_t>(state_id, packet);
                     WriteValue<int16_t>(slot, packet);
 
-                    WriteSlot(packet, item);
+                    reader::WriteSlot(packet, item);
                     return Response::Answer({std::move(packet)});
                 }
 
@@ -910,9 +911,9 @@ namespace crafted_craft {
                     packet.push_back(trade_id);
                     WriteVar<int32_t>(trades.size(), packet);
                     for (auto& [input1, output, input2, number_of_trade_uses, max_number_of_trades, xp, spec_price, price_multiplier, demand, trade_disabled] : trades) {
-                        WriteSlot(packet, input1);
-                        WriteSlot(packet, output);
-                        WriteSlot(packet, input2);
+                        reader::WriteSlot(packet, input1);
+                        reader::WriteSlot(packet, output);
+                        reader::WriteSlot(packet, input2);
                         WriteValue<int32_t>(number_of_trade_uses, packet);
                         WriteValue<int32_t>(max_number_of_trades, packet);
                         WriteValue<int32_t>(xp, packet);
@@ -1565,7 +1566,7 @@ namespace crafted_craft {
                     packet.push_back(0x59);
                     WriteVar<int32_t>(entity_id, packet);
                     packet.push_back(slot);
-                    WriteSlot(packet, item);
+                    reader::WriteSlot(packet, item);
                     return Response::Answer({std::move(packet)});
                 }
 
@@ -2043,7 +2044,7 @@ namespace crafted_craft {
                             auto& display = *item.display;
                             packet.push_back(display.title.ToTextComponent());
                             packet.push_back(display.description.ToTextComponent());
-                            WriteSlot(packet, display.icon);
+                            reader::WriteSlot(packet, display.icon);
                             WriteVar<int32_t>(display.frame_type, packet);
                             //automaticaly set background_texture flag(0x01) to true if it has value
                             WriteValue(display.flags & (int32_t)display.background_texture.has_value(), packet);
@@ -2120,9 +2121,9 @@ namespace crafted_craft {
                                     for (auto& items : item.ingredients) {
                                         WriteVar<int32_t>(items.size(), packet);
                                         for (auto& ingredient : items)
-                                            WriteSlotItem(packet, ingredient);
+                                            reader::WriteSlotItem(packet, ingredient);
                                     }
-                                    WriteSlotItem(packet, item.result);
+                                    reader::WriteSlotItem(packet, item.result);
                                     packet.push_back(item.show_notification);
                                 } else if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::crafting_shapeless>) {
                                     WriteString(packet, item.group, 32767);
@@ -2131,9 +2132,9 @@ namespace crafted_craft {
                                     for (auto& items : item.ingredients) {
                                         WriteVar<int32_t>(items.size(), packet);
                                         for (auto& ingredient : items)
-                                            WriteSlotItem(packet, ingredient);
+                                            reader::WriteSlotItem(packet, ingredient);
                                     }
-                                    WriteSlotItem(packet, item.result);
+                                    reader::WriteSlotItem(packet, item.result);
                                 } else if constexpr (
                                     std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_armordye>
                                     | std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_bookcloning>
@@ -2161,37 +2162,37 @@ namespace crafted_craft {
                                     WriteVar<int32_t>((int32_t)item.category, packet);
                                     WriteVar<int32_t>(item.ingredient.size(), packet);
                                     for (auto& slot : item.ingredient)
-                                        WriteSlotItem(packet, slot);
-                                    WriteSlotItem(packet, item.result);
+                                        reader::WriteSlotItem(packet, slot);
+                                    reader::WriteSlotItem(packet, item.result);
                                     WriteValue<float>(item.experience, packet);
                                     WriteVar<int32_t>(item.cooking_time, packet);
                                 } else if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::stonecutting>) {
                                     WriteString(packet, item.group, 32767);
                                     WriteVar<int32_t>(item.ingredient.size(), packet);
                                     for (auto& slot : item.ingredient)
-                                        WriteSlotItem(packet, slot);
-                                    WriteSlotItem(packet, item.result);
+                                        reader::WriteSlotItem(packet, slot);
+                                    reader::WriteSlotItem(packet, item.result);
                                 } else if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::smithing_transform>) {
                                     WriteVar<int32_t>(item._template.size(), packet);
                                     for (auto& slot : item._template)
-                                        WriteSlotItem(packet, slot);
+                                        reader::WriteSlotItem(packet, slot);
                                     WriteVar<int32_t>(item.base.size(), packet);
                                     for (auto& slot : item.base)
-                                        WriteSlotItem(packet, slot);
+                                        reader::WriteSlotItem(packet, slot);
                                     WriteVar<int32_t>(item.addition.size(), packet);
                                     for (auto& slot : item.addition)
-                                        WriteSlotItem(packet, slot);
-                                    WriteSlotItem(packet, item.result);
+                                        reader::WriteSlotItem(packet, slot);
+                                    reader::WriteSlotItem(packet, item.result);
                                 } else if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::smithing_trim>) {
                                     WriteVar<int32_t>(item._template.size(), packet);
                                     for (auto& slot : item._template)
-                                        WriteSlotItem(packet, slot);
+                                        reader::WriteSlotItem(packet, slot);
                                     WriteVar<int32_t>(item.base.size(), packet);
                                     for (auto& slot : item.base)
-                                        WriteSlotItem(packet, slot);
+                                        reader::WriteSlotItem(packet, slot);
                                     WriteVar<int32_t>(item.addition.size(), packet);
                                     for (auto& slot : item.addition)
-                                        WriteSlotItem(packet, slot);
+                                        reader::WriteSlotItem(packet, slot);
                                 } else if constexpr (std::is_same_v<type, base_objects::recipes::custom>) {
                                     packet.push_back(item.data);
                                 } else

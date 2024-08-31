@@ -41,6 +41,9 @@
         "command.config.set": [
             "console"
         ],
+        "command.console.clear": [
+            "console"
+        ],
         "command.console.log.disable": [
             "console"
         ],

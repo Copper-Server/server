@@ -10,15 +10,15 @@ namespace crafted_craft {
             ArrayStream arr(packet.data(), packet.size());
             uint8_t packet_id = arr.read();
             switch (packet_id) {
-            case 0x00: //bundle
+            case 0x00:
                 return;
-            case 0x01: { //spawn entity
-                return;
-            }
-            case 0x02: { //spawn experience orb
+            case 0x01: {
                 return;
             }
-            case 0x03: { //
+            case 0x02: {
+                return;
+            }
+            case 0x03: {
             }
             case 0x04:
             case 0x05:
@@ -43,7 +43,9 @@ namespace crafted_craft {
             case 0x19:
             case 0x1A:
             case 0x1B:
-            case 0x1C: {
+            case 0x1C:
+            case 0x1D:
+            case 0x1E: {
                 if (!disguisedChatMessage)
                     return;
                 list_array<uint8_t> message_text_component;
@@ -72,7 +74,6 @@ namespace crafted_craft {
                 );
                 break;
             }
-            case 0x1D:
             case 0x1F:
             case 0x20:
             case 0x21:
@@ -143,7 +144,10 @@ namespace crafted_craft {
             case 0x66:
             case 0x67:
             case 0x68:
-            case 0x69: { //systemChatMessage
+            case 0x69:
+            case 0x6A:
+            case 0x6B:
+            case 0x6C: { //systemChatMessage
                 if (!systemChatMessage && !systemChatMessageOverlay)
                     return;
                 size_t readen = 0;
@@ -159,9 +163,6 @@ namespace crafted_craft {
                 }
                 break;
             };
-            case 0x6A:
-            case 0x6B:
-            case 0x6C:
             case 0x6D:
             case 0x6F:
             case 0x70:

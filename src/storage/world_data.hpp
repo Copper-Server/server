@@ -283,6 +283,9 @@ namespace crafted_craft {
             uint64_t register_client(const base_objects::client_data_holder& client);
             void unregister_client(uint64_t);
 
+            void register_entity(base_objects::entity_ref& client);
+            void unregister_entity(base_objects::entity_ref& client);
+
 
             void tick(std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time, bool update_tps);
             //unloads unused chunks and check themselves lifetime and active operations, if expired and there no active operations, then function will return true

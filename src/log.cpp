@@ -61,6 +61,12 @@ namespace crafted_craft {
                 if (cmd)
                     cmd->write(color(r, g, b, line + aligned_message));
             }
+
+            void direct_print(const std::string& message) {
+                fast_task::read_lock lock(console_mutex);
+                if (cmd)
+                    cmd->write(message);
+            }
         } // namespace console
 
         void info(const std::string& source, const std::string& message) {
@@ -86,6 +92,10 @@ namespace crafted_craft {
         void fatal(const std::string& source, const std::string& message) {
             console::print(level::fatal, source, message);
             std::exit(EXIT_FAILURE);
+        }
+
+        void clear() {
+            console::direct_print("\033[2J");
         }
 
         void disable_log_level(level level) {

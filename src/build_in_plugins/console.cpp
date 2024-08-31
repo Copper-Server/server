@@ -32,7 +32,7 @@ namespace crafted_craft {
         }
 
         ConsolePlugin::ConsolePlugin()
-            : server(Server::instance()), console_data(server.online_players.allocate_player(), "Console", "Console", Server::instance()) {
+            : console_data(Server::instance().online_players.allocate_player(), "Console", "Console", Server::instance()) {
         }
 
         void ConsolePlugin::OnLoad(const PluginRegistrationPtr& self) {
@@ -92,41 +92,19 @@ namespace crafted_craft {
         }
 
         void ConsolePlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
+            using predicate = base_objects::predicate;
+            using pred_string = base_objects::predicates::string;
+            using cmd_pred_string = base_objects::predicates::command::string;
             {
-                auto _console = browser.add_child({"console"});
-                auto _log = _console.add_child({"log"});
+                auto _console = browser.add_child("console");
+                auto _log = _console.add_child("log");
                 {
                     auto& enable
                         = _log
-                              .add_child({"enable"})
-                              .add_child({"<log level>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                              .set_callback({"command.console.log.enable", {"console"}}, [](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                                  auto& level = args[0];
-                                  if (level == "info")
-                                      log::enable_log_level(log::level::info);
-                                  else if (level == "warn")
-                                      log::enable_log_level(log::level::warn);
-                                  else if (level == "error")
-                                      log::enable_log_level(log::level::error);
-                                  else if (level == "fatal")
-                                      log::enable_log_level(log::level::fatal);
-                                  else if (level == "debug_error")
-                                      log::enable_log_level(log::level::debug_error);
-                                  else if (level == "debug")
-                                      log::enable_log_level(log::level::debug);
-                                  else {
-                                      log::error("console", "log level " + level + " is undefined.");
-                                      return;
-                                  }
-                                  log::info("console", "Log level " + level + " is now enabled.");
-                              });
-
-                    auto& test
-                        = _log
-                              .add_child({"test"})
-                              .add_child({"<log level>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                              .set_callback({"command.console.log.test", {"NOPERM"}}, [](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                                  auto& level = args[0];
+                              .add_child("enable")
+                              .add_child({"<log level>"}, cmd_pred_string::quotable_phrase)
+                              .set_callback({"command.console.log.enable", {"console"}}, [](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                                  auto& level = std::get<pred_string>(args[0]).value;
                                   if (level == "info")
                                       log::enable_log_level(log::level::info);
                                   else if (level == "warn")
@@ -148,10 +126,10 @@ namespace crafted_craft {
 
                     auto& disable
                         = _log
-                              .add_child({"disable"})
-                              .add_child({"<log level>"}, base_objects::command::parsers::brigadier_string, {.flags = 1})
-                              .set_callback({"command.console.log.disable", {"console"}}, [](const list_array<std::string>& args, base_objects::client_data_holder& client) {
-                                  auto& level = args[0];
+                              .add_child("disable")
+                              .add_child({"<log level>"}, cmd_pred_string::quotable_phrase)
+                              .set_callback({"command.console.log.disable", {"console"}}, [](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                                  auto& level = std::get<pred_string>(args[0]).value;
                                   if (level == "info")
                                       log::disable_log_level(log::level::info);
                                   else if (level == "warn")
@@ -172,9 +150,12 @@ namespace crafted_craft {
                               });
 
                     add_log_type_suggestion(enable);
-                    add_log_type_suggestion(test);
                     add_log_type_suggestion(disable);
                 }
+                _console.add_child("clear")
+                    .set_callback({"command.console.clear", {"console"}}, [](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                        log::clear();
+                    });
             }
         }
     }
