@@ -5,3 +5,7 @@ build/*
 .VSCodeCounter
 .PVS-Studio
 out/*
+storage
+op_list.txt
+permissions.json
+config.json
