@@ -163,34 +163,37 @@ namespace crafted_craft {
                                                        : std::nullopt;
 
 
-            //response += packets::play::joinGame(
-            //    0,
-            //    client.player_data.hardcore_hearts,
-            //    registers::dimensionTypes.convert<std::string>([](auto& a) { return a.name; }),
-            //    100,
-            //    2,
-            //    2,
-            //    client.player_data.reduced_debug_info,
-            //    true,
-            //    false,
-            //    0, //client.player_data.world_id.get(),
-            //    client.player_data.world_id.get(),
-            //    0,
-            //    client.player_data.gamemode,
-            //    client.player_data.prev_gamemode,
-            //    false,
-            //    false,
-            //    last_death_location,
-            //    0,
-            //    false
-            //);
+            response += packets::play::joinGame(
+                client,
+                0,
+                client.player_data.hardcore_hearts,
+                registers::dimensionTypes_cache.convert<std::string>([](auto& a) { return a->first; }),
+                100,
+                2,
+                2,
+                client.player_data.reduced_debug_info,
+                true,
+                false,
+                0, //client.player_data.world_id.get(),
+                client.player_data.world_id.get(),
+                0,
+                client.player_data.gamemode,
+                client.player_data.prev_gamemode,
+                false,
+                false,
+                last_death_location,
+                0,
+                false
+            );
             response += packets::play::playerAbilities(
+                client,
                 client.player_data.abilities.flags.mask,
                 client.player_data.abilities.flying_speed,
                 client.player_data.abilities.field_of_view_modifier
             );
             client.packets_state.pending_teleport_ids.push_back(0);
             response += packets::play::synchronizePlayerPosition(
+                client,
                 calc::VECTOR(client.player_data.position.x, client.player_data.position.y, client.player_data.position.z),
                 client.player_data.position.yaw,
                 client.player_data.position.pitch,

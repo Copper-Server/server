@@ -29,6 +29,7 @@ namespace crafted_craft {
 
 
         struct entity_data {
+            list_array<std::string> entity_aliases; //string entity ids(checks from first to last, if none found in `initialize_entities()` throws)
             std::string id;
             std::string name;
             std::string translation_resource_key;
@@ -52,12 +53,21 @@ namespace crafted_craft {
             std::function<void(entity_ref& creating_entity, const enbt::compound_ref&)> create_from_enbt_callback;
             std::function<void(entity_ref& checking_entity, entity_data&, calc::VECTOR pos)> check_bounds; //if nullptr then used base_bounds, return true if entity is in bounds
 
+
+            std::unordered_map<uint32_t, uint32_t> internal_entity_aliases; //protocol id -> entity id
+
+
             //entity can be added without reload, but it can be removed only by `reset_entities`
             //multi threaded
             static const entity_data& get_entity(uint16_t id);
             static uint16_t register_entity(entity_data);
+            static const entity_data& view(const entity& entity);
             //USED ONLY DURING FULL SERVER RELOAD!  DO NOT ALLOW CALL FROM THE USER CODE
-            static void reset_entities(); //INTERNAL
+            static void reset_entities();      //INTERNAL
+            static void initialize_entities(); //INTERNAL, used to assign internal_entity_aliases ids from entity_aliases
+
+
+            static std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> internal_entity_aliases_protocol;
         };
 
         struct entity {
@@ -98,6 +108,7 @@ namespace crafted_craft {
             void tick();
 
         private:
+            friend struct entity_data;
             uint16_t entity_id;
             bool died;
         };

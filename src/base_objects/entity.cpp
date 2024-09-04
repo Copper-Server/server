@@ -12,6 +12,8 @@ namespace crafted_craft {
         };
 
         fast_task::protected_value<entities_storage> data_for_entities;
+        std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> entity_data::internal_entity_aliases_protocol;
+
 
         const entity_data& entity_data::get_entity(uint16_t id) {
             return data_for_entities.get([&](auto& data) -> const entity_data& {
@@ -35,10 +37,34 @@ namespace crafted_craft {
             });
         }
 
+        const entity_data& entity_data::view(const entity& entity) {
+            return get_entity(entity.entity_id);
+        }
+
         void entity_data::reset_entities() {
             data_for_entities.set([&](auto& data) {
                 data.id_adder = 0;
                 data._registry.clear();
+            });
+        }
+
+        void entity_data::initialize_entities() {
+            data_for_entities.set([&](auto& data) {
+                for (auto& [id, entity] : data._registry) {
+                    entity.internal_entity_aliases.clear();
+                    for (auto& [protocol, assignations] : internal_entity_aliases_protocol) {
+                        bool found = false;
+                        for (auto& alias : entity.entity_aliases) {
+                            if (assignations.find(alias) != assignations.end()) {
+                                entity.internal_entity_aliases[protocol] = assignations[alias];
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found)
+                            throw std::runtime_error("Entity alias for " + entity.id + " not found in protocol " + std::to_string(protocol));
+                    }
+                }
             });
         }
 

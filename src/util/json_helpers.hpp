@@ -125,6 +125,10 @@ namespace crafted_craft {
                 return *this;
             }
 
+            bool is_null() const {
+                return obj.is_null();
+            }
+
             operator std::string() {
                 return operator boost::json::string&().c_str();
             }
@@ -393,6 +397,10 @@ namespace crafted_craft {
                     obj = any_val;
                 return *this;
             }
+
+            boost::json::value& get() {
+                return obj;
+            }
         };
 
         class js_object {
@@ -477,7 +485,7 @@ namespace crafted_craft {
                 return js_value(path + ":" + (std::string)name, obj[name]);
             }
 
-            bool contains(const std::string& name) {
+            bool contains(std::string_view name) {
                 return obj.contains(name);
             }
 

@@ -429,29 +429,28 @@ public:
         return ret;
     }
 
-
-    operator list_array<uint8_t>() {
+    operator list_array<uint8_t>() const {
         return nbt_data;
     }
 
-    list_array<uint8_t> get_as_normal() {
+    list_array<uint8_t> get_as_normal() const {
         return nbt_data;
     }
 
-    list_array<uint8_t> get_as_network() {
+    list_array<uint8_t> get_as_network() const {
         list_array<uint8_t> ret = nbt_data;
         ret.erase(1, 3);
         return ret;
     }
 
-    ENBT get_as_enbt() {
+    ENBT get_as_enbt() const {
         size_t i = 0;
         return RecursiveExtractor(nbt_data.data(), i, nbt_data.size());
     }
 
-    std::string get_entry_name() {
+    std::string get_entry_name() const {
         size_t i = 0;
-        uint8_t* data = nbt_data.data();
+        const uint8_t* data = nbt_data.data();
         if (data[0] == 10) {
             //skip first base compound name tag
             i++;

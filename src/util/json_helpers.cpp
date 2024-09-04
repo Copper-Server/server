@@ -14,7 +14,7 @@ namespace crafted_craft {
                 if (file.is_open()) {
                     boost::system::error_code ec;
                     auto result = boost::json::parse(file, ec);
-                    data = result.is_object() ? std::move(result).as_object() : boost::json::object();
+                    data = result.is_object() ? std::move(result).as_object() : boost::json::object{{"root", std::move(result)}};
                     file.close();
                     if (ec) {
                         if (ec.message() == "incomplete JSON")

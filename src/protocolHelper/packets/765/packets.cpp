@@ -110,7 +110,315 @@ namespace crafted_craft {
                 }
 
                 Response registry_data() {
-                    return Response::Answer({registers::registryDataPacket()});
+                    using namespace registers;
+                    static list_array<uint8_t> data;
+                    if (data.empty()) {
+                        data.push_back(0x05);
+                        enbt::compound nbt;
+                        { //minecraft:trim_material
+                            enbt::dynamic_array _armorTrimMaterials;
+                            for (auto& [name, it] : armorTrimMaterials) {
+                                enbt::compound tmp;
+                                tmp["name"] = name;
+                                tmp["id"] = it.id;
+                                { //element
+                                    enbt::compound element;
+                                    element["asset_name"] = it.asset_name;
+                                    element["ingredient"] = it.ingredient;
+                                    element["item_model_index"] = it.item_model_index;
+                                    {
+                                        enbt::compound override_armor_materials;
+                                        for (auto& [key, value] : it.override_armor_materials)
+                                            override_armor_materials[key] = value;
+                                        element["override_armor_materials"] = std::move(override_armor_materials);
+                                    }
+                                    if (std::holds_alternative<std::string>(it.description))
+                                        element["description"] = std::get<std::string>(it.description);
+                                    else
+                                        element["description"] = std::get<Chat>(it.description).ToENBT();
+                                    tmp["element"] = std::move(element);
+                                }
+                                _armorTrimMaterials.push_back((ENBT&&)std::move(tmp));
+                            }
+                            enbt::compound entry;
+                            entry["type"] = "minecraft:trim_material";
+                            entry["value"] = std::move(_armorTrimMaterials);
+                            nbt["minecraft:trim_material"] = std::move(entry);
+                        }
+                        { //minecraft:trim_pattern
+                            enbt::dynamic_array _armorTrimPatterns;
+                            for (auto& [name, it] : armorTrimPatterns) {
+                                enbt::compound tmp;
+                                tmp["name"] = name;
+                                tmp["id"] = it.id;
+                                { //element
+                                    enbt::compound element;
+                                    element["assert_id"] = it.assert_id;
+                                    element["template_item"] = it.template_item;
+                                    if (std::holds_alternative<std::string>(it.description))
+                                        element["description"] = std::get<std::string>(it.description);
+                                    else
+                                        element["description"] = std::get<Chat>(it.description).ToENBT();
+                                    element["decal"] = it.decal;
+                                    tmp["element"] = std::move(element);
+                                }
+                                _armorTrimPatterns.push_back((ENBT&&)std::move(tmp));
+                            }
+                            enbt::compound entry;
+                            entry["type"] = "minecraft:trim_pattern";
+                            entry["value"] = std::move(_armorTrimPatterns);
+                            nbt["minecraft:trim_pattern"] = std::move(entry);
+                        }
+                        { //minecraft:worldgen/biome
+                            enbt::dynamic_array _biomes;
+                            for (auto& [name, it] : biomes) {
+                                enbt::compound tmp;
+                                tmp["name"] = name;
+                                tmp["id"] = it.id;
+                                { //element
+                                    enbt::compound element;
+                                    element["has_precipitation"] = it.has_precipitation;
+                                    element["temperature"] = it.temperature;
+                                    element["temperature_modifier"] = it.temperature_modifier;
+                                    element["downfall"] = it.downfall;
+                                    { //effects
+                                        enbt::compound effects;
+                                        effects["fog_color"] = it.effects.fog_color;
+                                        effects["water_color"] = it.effects.water_color;
+                                        effects["water_fog_color"] = it.effects.water_fog_color;
+                                        effects["sky_color"] = it.effects.sky_color;
+                                        if (it.effects.foliage_color)
+                                            effects["foliage_color"] = it.effects.foliage_color.value();
+                                        if (it.effects.grass_color)
+                                            effects["grass_color"] = it.effects.grass_color.value();
+                                        if (it.effects.grass_color_modifier)
+                                            effects["grass_color_modifier"] = it.effects.grass_color_modifier.value();
+                                        if (it.effects.particle) {
+                                            enbt::compound particle;
+                                            particle["type"] = it.effects.particle->options.type;
+                                            particle["options"] = it.effects.particle->options.options;
+                                            effects["particle"] = std::move(particle);
+                                        }
+                                        if (it.effects.ambient_sound) {
+                                            if (std::holds_alternative<std::string>(*it.effects.ambient_sound))
+                                                effects["ambient_sound"] = std::get<std::string>(*it.effects.ambient_sound);
+                                            else if (std::holds_alternative<Biome::AmbientSound>(*it.effects.ambient_sound)) {
+                                                enbt::compound ambient_sound;
+                                                ambient_sound["sound"] = std::get<Biome::AmbientSound>(*it.effects.ambient_sound).sound;
+                                                ambient_sound["range"] = std::get<Biome::AmbientSound>(*it.effects.ambient_sound).range;
+                                                effects["ambient_sound"] = std::move(ambient_sound);
+                                            }
+                                        }
+                                        if (it.effects.mood_sound) {
+                                            enbt::compound mood_sound;
+                                            mood_sound["sound"] = it.effects.mood_sound->sound;
+                                            mood_sound["tick_delay"] = it.effects.mood_sound->tick_delay;
+                                            mood_sound["block_search_extend"] = it.effects.mood_sound->block_search_extend;
+                                            mood_sound["offset"] = it.effects.mood_sound->offset;
+                                            effects["mood_sound"] = std::move(mood_sound);
+                                        }
+                                        if (it.effects.additions_sound) {
+                                            enbt::compound additions_sound;
+                                            additions_sound["sound"] = it.effects.additions_sound->sound;
+                                            additions_sound["tick_chance"] = it.effects.additions_sound->tick_chance;
+                                            effects["additions_sound"] = std::move(additions_sound);
+                                        }
+                                        if (it.effects.music) {
+                                            enbt::compound music;
+                                            music["sound"] = it.effects.music->sound;
+                                            music["min_delay"] = it.effects.music->min_delay;
+                                            music["max_delay"] = it.effects.music->max_delay;
+                                            music["replace_current_music"] = it.effects.music->replace_current_music;
+                                            effects["music"] = std::move(music);
+                                        }
+                                        element["effects"] = std::move(effects);
+                                    }
+                                    tmp["element"] = std::move(element);
+                                }
+                                _biomes.push_back((ENBT&&)std::move(tmp));
+                            }
+                            enbt::compound entry;
+                            entry["type"] = "minecraft:worldgen/biome";
+                            entry["value"] = std::move(_biomes);
+                            nbt["minecraft:worldgen/biome"] = std::move(entry);
+                        }
+                        { // minecraft:chat_type
+                            enbt::dynamic_array _chatTypes;
+                            for (auto& [name, it] : chatTypes) {
+                                enbt::compound tmp;
+                                tmp["name"] = name;
+                                tmp["id"] = it.id;
+                                { //element
+                                    enbt::compound element;
+                                    if (it.chat) {
+                                        enbt::compound chat;
+                                        chat["translation_key"] = it.chat->translation_key;
+                                        {
+                                            it.chat->style.GetExtra().clear();
+                                            it.chat->style.SetText("");
+                                            ENBT style = it.chat->style.ToENBT();
+                                            style.remove("text");
+                                            chat["style"] = std::move(style);
+                                        }
+                                        if (std::holds_alternative<std::string>(it.chat->parameters))
+                                            chat["parameters"] = std::get<std::string>(it.chat->parameters);
+                                        else
+                                            chat["parameters"] = std::get<std::vector<std::string>>(it.chat->parameters);
+
+                                        element["chat"] = std::move(chat);
+                                    }
+                                    if (it.narration) {
+                                        enbt::compound narration;
+                                        narration["translation_key"] = it.narration->translation_key;
+                                        {
+                                            it.narration->style.GetExtra().clear();
+                                            it.narration->style.SetText("");
+                                            ENBT style = it.chat->style.ToENBT();
+                                            style.remove("text");
+                                            narration["style"] = std::move(style);
+                                        }
+                                        if (std::holds_alternative<std::string>(it.narration->parameters))
+                                            narration["parameters"] = std::get<std::string>(it.narration->parameters);
+                                        else
+                                            narration["parameters"] = std::get<std::vector<std::string>>(it.narration->parameters);
+                                        element["narration"] = std::move(narration);
+                                    }
+                                    tmp["element"] = std::move(element);
+                                }
+                                _chatTypes.push_back((ENBT&&)std::move(tmp));
+                            }
+                            enbt::compound entry;
+                            entry["type"] = "minecraft:chat_type";
+                            entry["value"] = std::move(_chatTypes);
+                            nbt["minecraft:chat_type"] = std::move(entry);
+                        }
+                        { // minecraft:damage_type
+                            enbt::dynamic_array _damageTypes;
+                            for (auto& [name, it] : damageTypes) {
+                                enbt::compound tmp;
+                                tmp["name"] = name;
+                                tmp["id"] = it.id;
+                                { //element
+                                    enbt::compound element;
+                                    element["message_id"] = it.message_id;
+                                    {
+                                        const char* scaling = nullptr;
+                                        switch (it.scaling) {
+                                        case DamageType::ScalingType::never:
+                                            scaling = "never";
+                                            break;
+                                        case DamageType::ScalingType::when_caused_by_living_non_player:
+                                            scaling = "when_caused_by_living_non_player";
+                                            break;
+                                        case DamageType::ScalingType::always:
+                                            scaling = "always";
+                                            break;
+                                        }
+                                        if (scaling)
+                                            element["scaling"] = scaling;
+                                    }
+                                    element["exhaustion"] = it.exhaustion;
+                                    if (it.effects) {
+                                        const char* effect = nullptr;
+                                        switch (*it.effects) {
+                                        case DamageType::EffectsType::hurt:
+                                            effect = "hurt";
+                                            break;
+                                        case DamageType::EffectsType::thorns:
+                                            effect = "thorns";
+                                            break;
+                                        case DamageType::EffectsType::drowning:
+                                            effect = "drowning";
+                                            break;
+                                        case DamageType::EffectsType::burning:
+                                            effect = "burning";
+                                            break;
+                                        case DamageType::EffectsType::poking:
+                                            effect = "poking";
+                                            break;
+                                        case DamageType::EffectsType::freezing:
+                                            effect = "freezing";
+                                            break;
+                                        default:
+                                            break;
+                                        }
+                                        if (effect)
+                                            element["effects"] = effect;
+                                    }
+                                    if (it.death_message_type) {
+                                        const char* death_message_type = nullptr;
+                                        switch (*it.death_message_type) {
+                                        case DamageType::DeathMessageType::_default:
+                                            death_message_type = "default";
+                                            break;
+                                        case DamageType::DeathMessageType::fall_variants:
+                                            death_message_type = "fall_variants";
+                                            break;
+                                        case DamageType::DeathMessageType::intentional_game_design:
+                                            death_message_type = "intentional_game_design";
+                                            break;
+                                        default:
+                                            break;
+                                        }
+                                        if (death_message_type)
+                                            element["death_message_type"] = death_message_type;
+                                    }
+                                    tmp["element"] = std::move(element);
+                                }
+                                _damageTypes.push_back((ENBT&&)std::move(tmp));
+                            }
+                            enbt::compound entry;
+                            entry["type"] = "minecraft:damage_type";
+                            entry["value"] = std::move(_damageTypes);
+                            nbt["minecraft:damage_type"] = std::move(entry);
+                        }
+                        { // minecraft:dimension_type
+                            enbt::dynamic_array _dimensionTypes;
+                            for (auto& [name, it] : dimensionTypes) {
+                                enbt::compound tmp;
+                                tmp["name"] = name;
+                                tmp["id"] = it.id;
+                                { //element
+                                    enbt::compound element;
+                                    if (std::holds_alternative<int32_t>(it.monster_spawn_light_level))
+                                        element["monster_spawn_light_level"] = std::get<int32_t>(it.monster_spawn_light_level);
+                                    else {
+                                        enbt::compound distribution;
+                                        auto& ddd = std::get<IntegerDistribution>(it.monster_spawn_light_level);
+                                        distribution["type"] = ddd.type;
+                                        distribution["value"] = ddd.value;
+                                        element["monster_spawn_light_level"] = std::move(distribution);
+                                    }
+                                    if (it.fixed_time)
+                                        element["fixed_time"] = it.fixed_time.value();
+                                    element["infiniburn"] = it.infiniburn;
+                                    element["effects"] = it.effects;
+                                    element["coordinate_scale"] = it.coordinate_scale;
+                                    element["ambient_light"] = it.ambient_light;
+                                    element["min_y"] = it.min_y;
+                                    element["height"] = it.height;
+                                    element["logical_height"] = it.logical_height;
+                                    element["monster_spawn_block_light_limit"] = it.monster_spawn_block_light_limit;
+                                    element["has_skylight"] = it.has_skylight;
+                                    element["has_ceiling"] = it.has_ceiling;
+                                    element["ultrawarm"] = it.ultrawarm;
+                                    element["natural"] = it.natural;
+                                    element["piglin_safe"] = it.piglin_safe;
+                                    element["has_raids"] = it.has_raids;
+                                    element["respawn_anchor_works"] = it.respawn_anchor_works;
+                                    element["bed_works"] = it.bed_works;
+                                    tmp["element"] = std::move(element);
+                                }
+                                _dimensionTypes.push_back((ENBT&&)std::move(tmp));
+                            }
+                            enbt::compound entry;
+                            entry["type"] = "minecraft:dimension_type";
+                            entry["value"] = std::move(_dimensionTypes);
+                            nbt["minecraft:dimension_type"] = std::move(entry);
+                        }
+                        data.push_back(NBT::build((ENBT&)nbt).get_as_network());
+                    }
+                    return Response::Answer({data});
                 }
 
                 Response removeResourcePacks() {
@@ -139,7 +447,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response addResourcePack(SharedClientData& client, const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced, Chat prompt) {
+                Response addResourcePackPrompted(SharedClientData& client, const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced, const Chat& prompt) {
                     list_array<uint8_t> packet;
                     packet.reserve(20 + url.size() + 2 + hash.size());
                     packet.push_back(0x07);
@@ -203,13 +511,15 @@ namespace crafted_craft {
                     }
                 }
 
-                Response spawnEntity(const base_objects::entity& entity) {
+                Response spawnEntity(const base_objects::entity& entity, uint16_t protocol) {
+                    if (protocol == UINT16_MAX)
+                        protocol = 765;
                     list_array<uint8_t> packet;
                     packet.reserve(58);
                     packet.push_back(0x01);
                     WriteVar<int32_t>(Server::instance().entity_ids_map.get_id(entity.id), packet);
                     WriteUUID(entity.id, packet);
-                    WriteVar<int32_t>(entity.entity_id, packet);
+                    WriteVar<int32_t>(base_objects::entity_data::view(entity).internal_entity_aliases.at(protocol), packet);
                     WriteValue<double>(entity.position.x, packet);
                     WriteValue<double>(entity.position.y, packet);
                     WriteValue<double>(entity.position.z, packet);
@@ -218,7 +528,7 @@ namespace crafted_craft {
                     WriteValue<int8_t>(res.y, packet);
                     res = calc::to_yaw_pitch(entity.head_rotation);
                     WriteValue<int8_t>(res.y, packet);
-                    WriteVar<int32_t>(entity.data, packet);
+                    WriteVar<int32_t>(entity.nbt, packet);
                     auto velocity = calc::minecraft::packets::velocity(entity.motion);
                     WriteValue<int16_t>(velocity.x, packet);
                     WriteValue<int16_t>(velocity.y, packet);
@@ -553,7 +863,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response deleteMessage(uint8_t signature[256]) {
+                Response deleteMessage(uint8_t (&signature)[256]) {
                     list_array<uint8_t> packet;
                     packet.reserve(12 + 256);
                     packet.push_back(0x1A);
@@ -602,7 +912,7 @@ namespace crafted_craft {
                 Response explosion(
                     calc::VECTOR pos,
                     float strength,
-                    list_array<calc::XYZ<int8_t>> affected_blocks,
+                    const list_array<calc::XYZ<int8_t>>& affected_blocks,
                     calc::VECTOR player_motion,
                     int32_t block_interaction,
                     int32_t small_explosion_particle_id,
@@ -725,14 +1035,14 @@ namespace crafted_craft {
                 Response updateChunkDataWLights(
                     int32_t chunk_x,
                     int32_t chunk_z,
-                    NBT heightmaps,
-                    const std::vector<uint8_t> data,
+                    const NBT& heightmaps,
+                    const std::vector<uint8_t>& data,
                     const bit_list_array<>& sky_light_mask,
                     const bit_list_array<>& block_light_mask,
                     const bit_list_array<>& empty_skylight_mask,
                     const bit_list_array<>& empty_block_light_mask,
-                    const list_array<std::vector<uint8_t>> sky_light_arrays,
-                    const list_array<std::vector<uint8_t>> block_light_arrays
+                    const list_array<std::vector<uint8_t>>& sky_light_arrays,
+                    const list_array<std::vector<uint8_t>>& block_light_arrays
                 ) {
                     if (
                         sky_light_mask.need_commit() | block_light_mask.need_commit() | empty_skylight_mask.need_commit() | empty_block_light_mask.need_commit()
@@ -805,8 +1115,8 @@ namespace crafted_craft {
                     const bit_list_array<>& block_light_mask,
                     const bit_list_array<>& empty_skylight_mask,
                     const bit_list_array<>& empty_block_light_mask,
-                    const list_array<std::vector<uint8_t>> sky_light_arrays,
-                    const list_array<std::vector<uint8_t>> block_light_arrays
+                    const list_array<std::vector<uint8_t>>& sky_light_arrays,
+                    const list_array<std::vector<uint8_t>>& block_light_arrays
                 ) {
                     if (
                         sky_light_mask.need_commit() | block_light_mask.need_commit() | empty_skylight_mask.need_commit() | empty_block_light_mask.need_commit()
@@ -840,7 +1150,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, const std::string& current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, std::optional<base_objects::packets::death_location_data> death_location, int32_t portal_cooldown) {
+                Response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown) {
                     list_array<uint8_t> packet;
                     packet.reserve(1 + 4 + 1 + 4 + 1 + 4 + 1 + 4);
                     packet.push_back(0x29);
@@ -856,7 +1166,7 @@ namespace crafted_craft {
                     packet.push_back(reduced_debug_info);
                     packet.push_back(enable_respawn_screen);
                     packet.push_back(do_limited_crafting);
-                    WriteIdentifier(packet, current_dimension_type);
+                    WriteIdentifier(packet, registers::dimensionTypes_cache[current_dimension_type]->first);
                     WriteIdentifier(packet, dimension_name);
                     WriteValue<int64_t>(hashed_seed, packet);
                     packet.push_back(gamemode);
@@ -903,7 +1213,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response merchantOffers(int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade> trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock) {
+                Response merchantOffers(int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade>& trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock) {
                     list_array<uint8_t> packet;
                     packet.reserve(1 + 4 + 4 + 4 * 2 + 1 + 1 + 1 + 1 + 1 + 2 * trades.size());
                     packet.push_back(0x2B);
@@ -1046,7 +1356,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response playerChatMessage(ENBT::UUID sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<ENBT> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
+                Response playerChatMessage(ENBT::UUID sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, const std::optional<ENBT>& __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
                     if (prev_messages.size() > 20)
                         throw std::runtime_error("too many prev messages");
                     list_array<uint8_t> packet;
@@ -1120,7 +1430,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_add>& add_players) {
+                Response playerInfoAdd(const list_array<base_objects::packets::player_actions_add>& add_players) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x3C);
                     packet.push_back(0x01);
@@ -1140,7 +1450,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_initialize_chat>& initialize_chat) {
+                Response playerInfoInitializeChat(const list_array<base_objects::packets::player_actions_initialize_chat>& initialize_chat) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x3C);
                     packet.push_back(0x02);
@@ -1163,7 +1473,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_gamemode>& update_game_mode) {
+                Response playerInfoUpdateGameMode(const list_array<base_objects::packets::player_actions_update_gamemode>& update_game_mode) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x3C);
                     packet.push_back(0x04);
@@ -1175,7 +1485,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_listed>& update_listed) {
+                Response playerInfoUpdateListed(const list_array<base_objects::packets::player_actions_update_listed>& update_listed) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x3C);
                     packet.push_back(0x08);
@@ -1187,7 +1497,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_latency>& update_latency) {
+                Response playerInfoUpdateLatency(const list_array<base_objects::packets::player_actions_update_latency>& update_latency) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x3C);
                     packet.push_back(0x10);
@@ -1199,7 +1509,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_display_name>& update_display_name) {
+                Response playerInfoUpdateDisplayName(const list_array<base_objects::packets::player_actions_update_display_name>& update_display_name) {
                     list_array<uint8_t> packet;
                     packet.reserve(1 + 4);
                     packet.push_back(0x3C);
@@ -1244,7 +1554,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response initRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> displayed_recipe_ids, list_array<std::string> had_access_to_recipe_ids) {
+                Response initRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, const list_array<std::string>& displayed_recipe_ids, const list_array<std::string>& had_access_to_recipe_ids) {
                     list_array<uint8_t> packet;
                     packet.reserve(1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 2 * displayed_recipe_ids.size() + 2 * had_access_to_recipe_ids.size());
                     packet.push_back(0x3F);
@@ -1266,7 +1576,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response addRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> recipe_ids) {
+                Response addRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, const list_array<std::string>& recipe_ids) {
                     list_array<uint8_t> packet;
                     packet.reserve(1 + 4 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 2 * recipe_ids.size());
                     packet.push_back(0x3F);
@@ -1285,7 +1595,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response removeRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> recipe_ids) {
+                Response removeRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, const list_array<std::string>& recipe_ids) {
                     list_array<uint8_t> packet;
                     packet.reserve(1 + 4 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 2 * recipe_ids.size());
                     packet.push_back(0x3F);
@@ -1361,8 +1671,9 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response respawn(const std::string& dimension_type, const std::string& dimension_name, long hashed_seed, uint8_t gamemode, uint8_t previous_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, bool keep_attributes, bool keep_metadata) {
+                Response respawn(int32_t _dimension_type, const std::string& dimension_name, long hashed_seed, uint8_t gamemode, uint8_t previous_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, bool keep_attributes, bool keep_metadata) {
                     list_array<uint8_t> packet;
+                    auto& dimension_type = registers::dimensionTypes_cache.at(_dimension_type)->first;
                     packet.reserve(1 + dimension_type.size() + dimension_name.size() + 8 + 1 + 1 + 1 + 1 + 4 + 1 + 1);
                     packet.push_back(0x45);
                     WriteIdentifier(packet, dimension_type);
@@ -1855,7 +2166,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response entitySoundEffect(const std::string& sound_id, std::optional<float> range, int32_t category, int32_t entity_id, float volume, float pitch, int64_t seed) {
+                Response entitySoundEffectCustom(const std::string& sound_id, std::optional<float> range, int32_t category, int32_t entity_id, float volume, float pitch, int64_t seed) {
                     if (volume < 0 || volume > 1)
                         throw std::runtime_error("invalid volume value");
                     if (pitch < 0.5 || pitch > 2.0)
@@ -1897,7 +2208,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response soundEffect(const std::string& sound_id, std::optional<float> range, int32_t category, int32_t x, int32_t y, int32_t z, float volume, float pitch, int64_t seed) {
+                Response soundEffectCustom(const std::string& sound_id, std::optional<float> range, int32_t category, int32_t x, int32_t y, int32_t z, float volume, float pitch, int64_t seed) {
                     if (volume < 0 || volume > 1)
                         throw std::runtime_error("invalid volume value");
                     if (pitch < 0.5 || pitch > 2.0)
@@ -1935,7 +2246,7 @@ namespace crafted_craft {
                     return Response::Answer({list_array<uint8_t>::concat(0x68, flags)});
                 }
 
-                Response stopSound(uint8_t flags, int32_t source) {
+                Response stopSoundBySource(uint8_t flags, int32_t source) {
                     if (flags & 0x02)
                         throw std::runtime_error("invalid params for this flag");
                     list_array<uint8_t> packet;
@@ -1946,7 +2257,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response stopSound(uint8_t flags, const std::string& sound) {
+                Response stopSoundBySound(uint8_t flags, const std::string& sound) {
                     if (flags & 0x01)
                         throw std::runtime_error("invalid params for this flag");
                     list_array<uint8_t> packet;
@@ -1957,7 +2268,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response stopSound(uint8_t flags, int32_t source, const std::string& sound) {
+                Response stopSoundBySourceAndSound(uint8_t flags, int32_t source, const std::string& sound) {
                     list_array<uint8_t> packet;
                     packet.reserve(1 + 1 + 4 + sound.size());
                     packet.push_back(0x68);
@@ -2029,7 +2340,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response updateAdvancements(bool reset, const list_array<base_objects::packets::advancements_maping> advancement_mapping, const list_array<std::string>& remove_advancements, const list_array<base_objects::packets::advancement_progress> progress_advancements) {
+                Response updateAdvancements(bool reset, const list_array<base_objects::packets::advancements_maping>& advancement_mapping, const list_array<std::string>& remove_advancements, const list_array<base_objects::packets::advancement_progress>& progress_advancements) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x70);
                     packet.push_back(reset);
@@ -2089,7 +2400,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response entityEffect(int32_t entity_id, int32_t effect_id, int8_t amplifier, int32_t duration, int8_t flags, std::optional<ENBT> factor_codec) {
+                Response entityEffect(int32_t entity_id, int32_t effect_id, int8_t amplifier, int32_t duration, int8_t flags, const std::optional<ENBT>& factor_codec) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x72);
                     WriteVar<int32_t>(entity_id, packet);
@@ -2101,6 +2412,10 @@ namespace crafted_craft {
                     if (factor_codec)
                         packet.push_back(NBT::build(*factor_codec).get_as_network());
                     return Response::Answer({std::move(packet)});
+                }
+
+                Response entityEffect(int32_t entity_id, int32_t effect_id, int8_t amplifier, int32_t duration, int8_t flags) {
+                    return entityEffect(entity_id, effect_id, amplifier, duration, flags, std::nullopt);
                 }
 
                 Response updateRecipes(const std::vector<base_objects::recipe>& recipes) {

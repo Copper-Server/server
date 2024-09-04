@@ -486,8 +486,8 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response addResourcePack(SharedClientData& client, const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced, Chat prompt) {
-                    auto res = release_765::configuration::addResourcePack(client, pack_id, url, hash, forced, prompt);
+                Response addResourcePackPrompted(SharedClientData& client, const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced, const Chat& prompt) {
+                    auto res = release_765::configuration::addResourcePackPrompted(client, pack_id, url, hash, forced, prompt);
                     res.data[0].data[0] = 0x09;
                     return res;
                 }
@@ -543,8 +543,10 @@ namespace crafted_craft {
                     return release_765::play::bundleResponse(std::move(response));
                 }
 
-                Response spawnEntity(const base_objects::entity& entity) {
-                    return release_765::play::spawnEntity(entity);
+                Response spawnEntity(const base_objects::entity& entity, uint16_t protocol) {
+                    if (protocol == UINT16_MAX)
+                        protocol = 766;
+                    return release_765::play::spawnEntity(entity, protocol);
                 }
 
                 Response spawnExperienceOrb(const base_objects::entity& entity, int16_t count) {
@@ -687,14 +689,14 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response deleteMessage(uint8_t signature[256]) {
-                    auto res = release_765::play::deleteMessage(signature);
+                Response deleteMessageBySignature(uint8_t (&signature)[256]) {
+                    auto res = release_765::play::deleteMessageBySignature(signature);
                     res.data[0].data[0] = 0x1C;
                     return res;
                 }
 
-                Response deleteMessage(int32_t message_id) {
-                    auto res = release_765::play::deleteMessage(message_id);
+                Response deleteMessageByID(int32_t message_id) {
+                    auto res = release_765::play::deleteMessageByID(message_id);
                     res.data[0].data[0] = 0x1C;
                     return res;
                 }
@@ -720,7 +722,7 @@ namespace crafted_craft {
                 Response explosion(
                     calc::VECTOR pos,
                     float strength,
-                    list_array<calc::XYZ<int8_t>> affected_blocks,
+                    const list_array<calc::XYZ<int8_t>>& affected_blocks,
                     calc::VECTOR player_motion,
                     int32_t block_interaction,
                     int32_t small_explosion_particle_id,
@@ -775,15 +777,15 @@ namespace crafted_craft {
                 Response updateChunkDataWLights(
                     int32_t chunk_x,
                     int32_t chunk_z,
-                    NBT heightmaps,
-                    const std::vector<uint8_t> data,
+                    const NBT& heightmaps,
+                    const std::vector<uint8_t>& data,
                     //block_entries not implemented, this is legal to send later by blockEntityData,
                     const bit_list_array<>& sky_light_mask,
                     const bit_list_array<>& block_light_mask,
                     const bit_list_array<>& empty_skylight_mask,
                     const bit_list_array<>& empty_block_light_mask,
-                    const list_array<std::vector<uint8_t>> sky_light_arrays,
-                    const list_array<std::vector<uint8_t>> block_light_arrays
+                    const list_array<std::vector<uint8_t>>& sky_light_arrays,
+                    const list_array<std::vector<uint8_t>>& block_light_arrays
                 ) {
                     auto res = release_765::play::updateChunkDataWLights(chunk_x, chunk_z, heightmaps, data, sky_light_mask, block_light_mask, empty_skylight_mask, empty_block_light_mask, sky_light_arrays, block_light_arrays);
                     res.data[0].data[0] = 0x27;
@@ -809,15 +811,15 @@ namespace crafted_craft {
                     const bit_list_array<>& block_light_mask,
                     const bit_list_array<>& empty_skylight_mask,
                     const bit_list_array<>& empty_block_light_mask,
-                    const list_array<std::vector<uint8_t>> sky_light_arrays,
-                    const list_array<std::vector<uint8_t>> block_light_arrays
+                    const list_array<std::vector<uint8_t>>& sky_light_arrays,
+                    const list_array<std::vector<uint8_t>>& block_light_arrays
                 ) {
                     auto res = release_765::play::updateLight(chunk_x, chunk_z, sky_light_mask, block_light_mask, empty_skylight_mask, empty_block_light_mask, sky_light_arrays, block_light_arrays);
                     res.data[0].data[0] = 0x2A;
                     return res;
                 }
 
-                Response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, std::optional<base_objects::packets::death_location_data> death_location, int32_t portal_cooldown, bool enforces_secure_chat) {
+                Response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, bool enforces_secure_chat) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x2B);
                     WriteVar<int32_t>(entity_id, packet);
@@ -855,7 +857,7 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response merchantOffers(int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade> trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock) {
+                Response merchantOffers(int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade>& trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock) {
                     auto res = release_765::play::merchantOffers(window_id, trade_id, trades, level, experience, regular_villager, can_restock);
                     res.data[0].data[0] = 0x2D;
                     return res;
@@ -927,7 +929,7 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response playerChatMessage(ENBT::UUID sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<ENBT> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
+                Response playerChatMessage(ENBT::UUID sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, const std::optional<ENBT>& __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
                     auto res = release_765::play::playerChatMessage(sender, index, signature, message, timestamp, salt, prev_messages, __UNDEFINED__FIELD__, filter_type, filtered_symbols_bitfield, chat_type, sender_name, target_name);
                     res.data[0].data[0] = 0x39;
                     return res;
@@ -957,38 +959,38 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_add>& add_players) {
-                    auto res = release_765::play::playerInfoUpdate(add_players);
+                Response playerInfoAdd(const list_array<base_objects::packets::player_actions_add>& add_players) {
+                    auto res = release_765::play::playerInfoAdd(add_players);
                     res.data[0].data[0] = 0x3E;
                     return res;
                 }
 
-                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_initialize_chat>& initialize_chat) {
-                    auto res = release_765::play::playerInfoUpdate(initialize_chat);
+                Response playerInfoInitializeChat(const list_array<base_objects::packets::player_actions_initialize_chat>& initialize_chat) {
+                    auto res = release_765::play::playerInfoInitializeChat(initialize_chat);
                     res.data[0].data[0] = 0x3E;
                     return res;
                 }
 
-                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_gamemode>& update_game_mode) {
-                    auto res = release_765::play::playerInfoUpdate(update_game_mode);
+                Response playerInfoUpdateGameMode(const list_array<base_objects::packets::player_actions_update_gamemode>& update_game_mode) {
+                    auto res = release_765::play::playerInfoUpdateGameMode(update_game_mode);
                     res.data[0].data[0] = 0x3E;
                     return res;
                 }
 
-                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_listed>& update_listed) {
-                    auto res = release_765::play::playerInfoUpdate(update_listed);
+                Response playerInfoUpdateListed(const list_array<base_objects::packets::player_actions_update_listed>& update_listed) {
+                    auto res = release_765::play::playerInfoUpdateListed(update_listed);
                     res.data[0].data[0] = 0x3E;
                     return res;
                 }
 
-                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_latency>& update_latency) {
-                    auto res = release_765::play::playerInfoUpdate(update_latency);
+                Response playerInfoUpdateLatency(const list_array<base_objects::packets::player_actions_update_latency>& update_latency) {
+                    auto res = release_765::play::playerInfoUpdateLatency(update_latency);
                     res.data[0].data[0] = 0x3E;
                     return res;
                 }
 
-                Response playerInfoUpdate(const list_array<base_objects::packets::player_actions_update_display_name>& update_display_name) {
-                    auto res = release_765::play::playerInfoUpdate(update_display_name);
+                Response playerInfoUpdateDisplayName(const list_array<base_objects::packets::player_actions_update_display_name>& update_display_name) {
+                    auto res = release_765::play::playerInfoUpdateDisplayName(update_display_name);
                     res.data[0].data[0] = 0x3E;
                     return res;
                 }
@@ -1005,19 +1007,19 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response initRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> displayed_recipe_ids, list_array<std::string> had_access_to_recipe_ids) {
+                Response initRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, const list_array<std::string>& displayed_recipe_ids, const list_array<std::string>& had_access_to_recipe_ids) {
                     auto res = release_765::play::initRecipeBook(crafting_recipe_book_open, crafting_recipe_book_filter_active, smelting_recipe_book_open, smelting_recipe_book_filter_active, blast_furnace_recipe_book_open, blast_furnace_recipe_book_filter_active, smoker_recipe_book_open, smoker_recipe_book_filter_active, displayed_recipe_ids, had_access_to_recipe_ids);
                     res.data[0].data[0] = 0x41;
                     return res;
                 }
 
-                Response addRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> recipe_ids) {
+                Response addRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, const list_array<std::string>& recipe_ids) {
                     auto res = release_765::play::addRecipeBook(crafting_recipe_book_open, crafting_recipe_book_filter_active, smelting_recipe_book_open, smelting_recipe_book_filter_active, blast_furnace_recipe_book_open, blast_furnace_recipe_book_filter_active, smoker_recipe_book_open, smoker_recipe_book_filter_active, recipe_ids);
                     res.data[0].data[0] = 0x41;
                     return res;
                 }
 
-                Response removeRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> recipe_ids) {
+                Response removeRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, const list_array<std::string>& recipe_ids) {
                     auto res = release_765::play::removeRecipeBook(crafting_recipe_book_open, crafting_recipe_book_filter_active, smelting_recipe_book_open, smelting_recipe_book_filter_active, blast_furnace_recipe_book_open, blast_furnace_recipe_book_filter_active, smoker_recipe_book_open, smoker_recipe_book_filter_active, recipe_ids);
                     res.data[0].data[0] = 0x41;
                     return res;
@@ -1099,7 +1101,7 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response serverData(const Chat& motd, const std::optional<list_array<uint8_t>>& icon_png) {
+                Response serverData(const Chat& motd, const std::optional<list_array<uint8_t>>& icon_png, bool __ignored) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x4B);
                     packet.push_back(motd.ToTextComponent());
@@ -1351,8 +1353,8 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response entitySoundEffect(const std::string& sound_id, std::optional<float> range, int32_t category, int32_t entity_id, float volume, float pitch, int64_t seed) {
-                    auto res = release_765::play::entitySoundEffect(sound_id, range, category, entity_id, volume, pitch, seed);
+                Response entitySoundEffectCustom(const std::string& sound_id, std::optional<float> range, int32_t category, int32_t entity_id, float volume, float pitch, int64_t seed) {
+                    auto res = release_765::play::entitySoundEffectCustom(sound_id, range, category, entity_id, volume, pitch, seed);
                     res.data[0].data[0] = 0x67;
                     return res;
                 }
@@ -1363,8 +1365,8 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response soundEffect(const std::string& sound_id, std::optional<float> range, int32_t category, int32_t x, int32_t y, int32_t z, float volume, float pitch, int64_t seed) {
-                    auto res = release_765::play::soundEffect(sound_id, range, category, x, y, z, volume, pitch, seed);
+                Response soundEffectCustom(const std::string& sound_id, std::optional<float> range, int32_t category, int32_t x, int32_t y, int32_t z, float volume, float pitch, int64_t seed) {
+                    auto res = release_765::play::soundEffectCustom(sound_id, range, category, x, y, z, volume, pitch, seed);
                     res.data[0].data[0] = 0x68;
                     return res;
                 }
@@ -1381,20 +1383,20 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response stopSound(uint8_t flags, int32_t source) {
-                    auto res = release_765::play::stopSound(flags, source);
+                Response stopSoundBySource(uint8_t flags, int32_t source) {
+                    auto res = release_765::play::stopSoundBySource(flags, source);
                     res.data[0].data[0] = 0x6A;
                     return res;
                 }
 
-                Response stopSound(uint8_t flags, const std::string& sound) {
-                    auto res = release_765::play::stopSound(flags, sound);
+                Response stopSoundBySound(uint8_t flags, const std::string& sound) {
+                    auto res = release_765::play::stopSoundBySound(flags, sound);
                     res.data[0].data[0] = 0x6A;
                     return res;
                 }
 
-                Response stopSound(uint8_t flags, int32_t source, const std::string& sound) {
-                    auto res = release_765::play::stopSound(flags, source, sound);
+                Response stopSoundBySourceAndSound(uint8_t flags, int32_t source, const std::string& sound) {
+                    auto res = release_765::play::stopSoundBySourceAndSound(flags, source, sound);
                     res.data[0].data[0] = 0x6A;
                     return res;
                 }
@@ -1468,7 +1470,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response updateAdvancements(bool reset, const list_array<base_objects::packets::advancements_maping> advancement_mapping, const list_array<std::string>& remove_advancements, const list_array<base_objects::packets::advancement_progress> progress_advancements) {
+                Response updateAdvancements(bool reset, const list_array<base_objects::packets::advancements_maping>& advancement_mapping, const list_array<std::string>& remove_advancements, const list_array<base_objects::packets::advancement_progress>& progress_advancements) {
                     auto res = release_765::play::updateAdvancements(reset, advancement_mapping, remove_advancements, progress_advancements);
                     res.data[0].data[0] = 0x74;
                     return res;

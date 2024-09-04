@@ -14,6 +14,7 @@ namespace crafted_craft {
                 Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&chat](SharedClientData& client) {
                     client.sendPacket(
                         packets::play::playerChatMessage(
+                            client,
                             chat.sender->data->uuid,
                             0,
                             chat.signature,
@@ -37,6 +38,7 @@ namespace crafted_craft {
             register_event(api::players::calls::on_player_personal_chat, [this](const api::players::player_personal_chat& chat) {
                 chat.receiver->sendPacket(
                     packets::play::playerChatMessage(
+                        *chat.receiver,
                         chat.sender->data->uuid,
                         0,
                         chat.signature,
@@ -55,6 +57,7 @@ namespace crafted_craft {
 
                 chat.sender->sendPacket(
                     packets::play::playerChatMessage(
+                        *chat.sender,
                         chat.sender->data->uuid,
                         0,
                         chat.signature,
@@ -76,97 +79,97 @@ namespace crafted_craft {
 
             register_event(api::players::calls::on_system_message_broadcast, [this](const Chat& message) {
                 Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
-                    client.sendPacket(packets::play::systemChatMessage(message));
+                    client.sendPacket(packets::play::systemChatMessage(client,message));
                     return false;
                 });
                 return false;
             });
             register_event(api::players::calls::on_system_message, [this](const api::players::personal<Chat>& message) {
-                message.player->sendPacket(packets::play::systemChatMessage(message.data));
+                message.player->sendPacket(packets::play::systemChatMessage(*message.player, message.data));
                 return false;
             });
 
             register_event(api::players::calls::on_system_message_overlay_broadcast, [this](const Chat& message) {
                 Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
-                    client.sendPacket(packets::play::systemChatMessageOverlay(message));
+                    client.sendPacket(packets::play::systemChatMessageOverlay(client, message));
                     return false;
                 });
                 return false;
             });
             register_event(api::players::calls::on_system_message_overlay, [this](const api::players::personal<Chat>& message) {
-                message.player->sendPacket(packets::play::systemChatMessageOverlay(message.data));
+                message.player->sendPacket(packets::play::systemChatMessageOverlay(*message.player, message.data));
                 return false;
             });
 
             register_event(api::players::calls::on_player_kick, [this](const api::players::personal<Chat>& message) {
-                message.player->sendPacket(packets::play::kick(message.data));
+                message.player->sendPacket(packets::play::kick(*message.player,message.data));
                 Server::instance().online_players.remove_player(message.player);
                 return false;
             });
 
             register_event(api::players::calls::on_player_ban, [this](const api::players::personal<Chat>& message) {
-                message.player->sendPacket(packets::play::kick(message.data));
+                message.player->sendPacket(packets::play::kick(*message.player, message.data));
                 Server::instance().online_players.remove_player(message.player);
                 return false;
             });
 
             register_event(api::players::calls::on_action_bar_message_broadcast, [this](const Chat& message) {
                 Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
-                    client.sendPacket(packets::play::setActionBarText(message));
+                    client.sendPacket(packets::play::setActionBarText(client, message));
                     return false;
                 });
                 return false;
             });
             register_event(api::players::calls::on_action_bar_message, [this](const api::players::personal<Chat>& message) {
-                message.player->sendPacket(packets::play::setActionBarText(message.data));
+                message.player->sendPacket(packets::play::setActionBarText(*message.player, message.data));
                 return false;
             });
 
             register_event(api::players::calls::on_title_message_broadcast, [this](const Chat& message) {
                 Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
-                    client.sendPacket(packets::play::setTitleText(message));
+                    client.sendPacket(packets::play::setTitleText(client, message));
                     return false;
                 });
                 return false;
             });
             register_event(api::players::calls::on_title_message, [this](const api::players::personal<Chat>& message) {
-                message.player->sendPacket(packets::play::setTitleText(message.data));
+                message.player->sendPacket(packets::play::setTitleText(*message.player, message.data));
                 return false;
             });
 
             register_event(api::players::calls::on_subtitle_message_broadcast, [this](const Chat& message) {
                 Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
-                    client.sendPacket(packets::play::setSubtitleText(message));
+                    client.sendPacket(packets::play::setSubtitleText(client, message));
                     return false;
                 });
                 return false;
             });
             register_event(api::players::calls::on_subtitle_message, [this](const api::players::personal<Chat>& message) {
-                message.player->sendPacket(packets::play::setSubtitleText(message.data));
+                message.player->sendPacket(packets::play::setSubtitleText(*message.player, message.data));
                 return false;
             });
 
             register_event(api::players::calls::on_title_times_broadcast, [this](const api::players::titles_times& times) {
                 Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&times](SharedClientData& client) {
-                    client.sendPacket(packets::play::setTitleAnimationTimes(times.fade_in, times.stay, times.fade_out));
+                    client.sendPacket(packets::play::setTitleAnimationTimes(client, times.fade_in, times.stay, times.fade_out));
                     return false;
                 });
                 return false;
             });
             register_event(api::players::calls::on_title_times, [this](const api::players::personal<api::players::titles_times>& times) {
-                times.player->sendPacket(packets::play::setTitleAnimationTimes(times.data.fade_in, times.data.stay, times.data.fade_out));
+                times.player->sendPacket(packets::play::setTitleAnimationTimes(*times.player, times.data.fade_in, times.data.stay, times.data.fade_out));
                 return false;
             });
 
             register_event(api::players::calls::on_unsigned_message_broadcast, [this](const api::players::unsigned_chat& message) {
                 Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
-                    client.sendPacket(packets::play::disguisedChatMessage(message.message, message.chat_type_id, message.sender_name, message.receiver_name));
+                    client.sendPacket(packets::play::disguisedChatMessage(client, message.message, message.chat_type_id, message.sender_name, message.receiver_name));
                     return false;
                 });
                 return false;
             });
             register_event(api::players::calls::on_unsigned_message, [this](const api::players::personal<api::players::unsigned_chat>& message) {
-                message.player->sendPacket(packets::play::disguisedChatMessage(message.data.message, message.data.chat_type_id, message.data.sender_name, message.data.receiver_name));
+                message.player->sendPacket(packets::play::disguisedChatMessage(*message.player, message.data.message, message.data.chat_type_id, message.data.sender_name, message.data.receiver_name));
                 return false;
             });
         }

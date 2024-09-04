@@ -1,13 +1,72 @@
 #include "../registers.hpp"
 #include "../base_objects/entity.hpp"
+#include "../util/conversions.hpp"
+#include "../util/json_helpers.hpp"
 
 namespace crafted_craft {
     namespace resources {
-        template <class T>
-        void id_assigner(T& map) {
+        template <class T, class Iterator>
+        void id_assigner(std::unordered_map<std::string, T>& map, std::vector<Iterator>& cache) {
             size_t i = 0;
-            for (auto& [name, it] : map)
-                it.id = i++;
+            auto it = map.begin();
+            auto end = map.end();
+            cache.reserve(map.size());
+            for (; it != end; ++it) {
+                it->second.id = i++;
+                cache.push_back(it);
+            }
+        }
+
+        template <class T, size_t length>
+        void check_override(std::unordered_map<std::string, T>& map, const std::string& id, const char (&type_name)[length]) {
+            auto it = map.find(id);
+            if (it != map.end())
+                if (!it->allow_override)
+                    throw std::runtime_error("This " + std::string(type_name) + " is already defined and does not allow override. [" + id + "]");
+        }
+
+        using namespace util;
+        using namespace registers;
+
+        void registers_reset() {
+            biomes.clear();
+            biomes.clear();
+            chatTypes.clear();
+            armorTrimPatterns.clear();
+            armorTrimMaterials.clear();
+            wolfVariants.clear();
+            dimensionTypes.clear();
+            damageTypes.clear();
+            bannerPatterns.clear();
+            paintingVariants.clear();
+            biomes_cache.clear();
+            biomes_cache.clear();
+            chatTypes_cache.clear();
+            armorTrimPatterns_cache.clear();
+            armorTrimMaterials_cache.clear();
+            wolfVariants_cache.clear();
+            dimensionTypes_cache.clear();
+            damageTypes_cache.clear();
+            bannerPatterns_cache.clear();
+            paintingVariants_cache.clear();
+            tags.clear();
+        }
+
+        void load_registers_complete() {
+            id_assigner(biomes, biomes_cache);
+            id_assigner(chatTypes, chatTypes_cache);
+            id_assigner(armorTrimPatterns, armorTrimPatterns_cache);
+            id_assigner(armorTrimMaterials, armorTrimMaterials_cache);
+            id_assigner(wolfVariants, wolfVariants_cache);
+            id_assigner(dimensionTypes, dimensionTypes_cache);
+            id_assigner(damageTypes, damageTypes_cache);
+            id_assigner(bannerPatterns, bannerPatterns_cache);
+            id_assigner(paintingVariants, paintingVariants_cache);
+
+            for (auto& it : tags)
+                for (auto& it2 : it.second)
+                    for (auto& it3 : it2.second)
+                        it3.second.commit();
         }
 
         void initialize_registers() {
@@ -1825,7 +1884,6 @@ namespace crafted_craft {
                 {
                     "minecraft:arrow",
                     DamageType{
-
                         .message_id = "arrow",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -1833,8 +1891,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:bad_respawn_point",
-                    {
-
+                    DamageType{
                         .message_id = "badRespawnPoint",
                         .scaling = DamageType::ScalingType::always,
                         .death_message_type = DamageType::DeathMessageType::intentional_game_design,
@@ -1843,8 +1900,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:cactus",
-                    {
-
+                    DamageType{
                         .message_id = "cactus",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -1852,8 +1908,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:cramming",
-                    {
-
+                    DamageType{
                         .message_id = "cramming",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.0,
@@ -1861,8 +1916,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:dragon_breath",
-                    {
-
+                    DamageType{
                         .message_id = "dragonBreath",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.0,
@@ -1870,8 +1924,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:drown",
-                    {
-
+                    DamageType{
                         .message_id = "drown",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .effects = DamageType::EffectsType::drowning,
@@ -1880,8 +1933,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:dry_out",
-                    {
-
+                    DamageType{
                         .message_id = "dryout",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -1889,8 +1941,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:explosion",
-                    {
-
+                    DamageType{
                         .message_id = "explosion",
                         .scaling = DamageType::ScalingType::always,
                         .exhaustion = 0.1,
@@ -1898,8 +1949,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:fall",
-                    {
-
+                    DamageType{
                         .message_id = "fall",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .death_message_type = DamageType::DeathMessageType::fall_variants,
@@ -1908,8 +1958,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:fall",
-                    {
-
+                    DamageType{
                         .message_id = "fall",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .death_message_type = DamageType::DeathMessageType::fall_variants,
@@ -1918,8 +1967,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:falling_anvil",
-                    {
-
+                    DamageType{
                         .message_id = "anvil",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -1927,8 +1975,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:falling_block",
-                    {
-
+                    DamageType{
                         .message_id = "fallingBlock",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -1936,8 +1983,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:falling_stalactite",
-                    {
-
+                    DamageType{
                         .message_id = "fallingStalactite",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -1945,8 +1991,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:fireball",
-                    {
-
+                    DamageType{
                         .message_id = "fireball",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .effects = DamageType::EffectsType::burning,
@@ -1955,8 +2000,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:fireworks",
-                    {
-
+                    DamageType{
                         .message_id = "fireworks",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -1964,8 +2008,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:fly_into_wall",
-                    {
-
+                    DamageType{
                         .message_id = "flyIntoWall",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.0,
@@ -1973,8 +2016,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:freeze",
-                    {
-
+                    DamageType{
                         .message_id = "freeze",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .effects = DamageType::EffectsType::freezing,
@@ -1983,8 +2025,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:generic",
-                    {
-
+                    DamageType{
                         .message_id = "generic",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.0,
@@ -1992,8 +2033,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:generic_kill",
-                    {
-
+                    DamageType{
                         .message_id = "genericKill",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.0,
@@ -2001,8 +2041,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:hot_floor",
-                    {
-
+                    DamageType{
                         .message_id = "hotFloor",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -2010,8 +2049,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:in_fire",
-                    {
-
+                    DamageType{
                         .message_id = "inFire",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .effects = DamageType::EffectsType::burning,
@@ -2020,8 +2058,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:in_wall",
-                    {
-
+                    DamageType{
                         .message_id = "inWall",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.0,
@@ -2029,8 +2066,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:indirect_magic",
-                    {
-
+                    DamageType{
                         .message_id = "indirectMagic",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.0,
@@ -2038,8 +2074,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:lava",
-                    {
-
+                    DamageType{
                         .message_id = "lava",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .effects = DamageType::EffectsType::burning,
@@ -2048,8 +2083,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:lightning_bolt",
-                    {
-
+                    DamageType{
                         .message_id = "lightningBolt",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -2057,8 +2091,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:magic",
-                    {
-
+                    DamageType{
                         .message_id = "magic",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.0,
@@ -2066,8 +2099,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:mob_attack",
-                    {
-
+                    DamageType{
                         .message_id = "mob",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -2075,8 +2107,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:mob_attack_no_aggro",
-                    {
-
+                    DamageType{
                         .message_id = "mob",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -2084,8 +2115,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:mob_projectile",
-                    {
-
+                    DamageType{
                         .message_id = "mob",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -2093,8 +2123,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:on_fire",
-                    {
-
+                    DamageType{
                         .message_id = "onFire",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .effects = DamageType::EffectsType::burning,
@@ -2103,8 +2132,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:out_of_world",
-                    {
-
+                    DamageType{
                         .message_id = "outOfWorld",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0,
@@ -2112,8 +2140,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:outside_border",
-                    {
-
+                    DamageType{
                         .message_id = "outsideBorder",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0,
@@ -2121,8 +2148,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:player_attack",
-                    {
-
+                    DamageType{
                         .message_id = "player",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -2130,8 +2156,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:player_explosion",
-                    {
-
+                    DamageType{
                         .message_id = "explosion.player",
                         .scaling = DamageType::ScalingType::always,
                         .exhaustion = 0.1,
@@ -2139,8 +2164,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:sonic_boom",
-                    {
-
+                    DamageType{
                         .message_id = "sonic_boom",
                         .scaling = DamageType::ScalingType::always,
                         .exhaustion = 0,
@@ -2148,8 +2172,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:spit",
-                    {
-
+                    DamageType{
                         .message_id = "mob",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0,
@@ -2157,8 +2180,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:stalagmite",
-                    {
-
+                    DamageType{
                         .message_id = "stalagmite",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0,
@@ -2166,8 +2188,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:starve",
-                    {
-
+                    DamageType{
                         .message_id = "starve",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0,
@@ -2175,8 +2196,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:sting",
-                    {
-
+                    DamageType{
                         .message_id = "sting",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -2184,8 +2204,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:sweet_berry_bush",
-                    {
-
+                    DamageType{
                         .message_id = "sweetBerryBush",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .effects = DamageType::EffectsType::poking,
@@ -2194,8 +2213,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:thorns",
-                    {
-
+                    DamageType{
                         .message_id = "thorns",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .effects = DamageType::EffectsType::thorns,
@@ -2204,8 +2222,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:thrown",
-                    {
-
+                    DamageType{
                         .message_id = "thrown",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -2213,8 +2230,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:trident",
-                    {
-
+                    DamageType{
                         .message_id = "trident",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -2222,8 +2238,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:unattributed_fireball",
-                    {
-
+                    DamageType{
                         .message_id = "onFire",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .effects = DamageType::EffectsType::burning,
@@ -2232,8 +2247,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:wither",
-                    {
-
+                    DamageType{
                         .message_id = "wither",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.0,
@@ -2241,8 +2255,7 @@ namespace crafted_craft {
                 },
                 {
                     "minecraft:wither_skull",
-                    {
-
+                    DamageType{
                         .message_id = "witherSkull",
                         .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
                         .exhaustion = 0.1,
@@ -2884,15 +2897,6 @@ namespace crafted_craft {
                     },
                 },
             };
-            id_assigner(biomes);
-            id_assigner(chatTypes);
-            id_assigner(armorTrimPatterns);
-            id_assigner(armorTrimMaterials);
-            id_assigner(wolfVariants);
-            id_assigner(dimensionTypes);
-            id_assigner(damageTypes);
-            id_assigner(bannerPatterns);
-            id_assigner(paintingVariants);
         }
 
         void initialize_entities() {
@@ -3476,15 +3480,6 @@ namespace crafted_craft {
             );
             entity_data::register_entity(
                 entity_data{
-                    .id = "minecraft:leash_knot",
-                    .name = "Leash Knot",
-                    .translation_resource_key = "entity.minecraft.leash_knot",
-                    .kind_name = "entity",
-                    .base_bounds = {0.375, 0.5},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
                     .id = "minecraft:lightning_bolt",
                     .name = "Lightning Bolt",
                     .translation_resource_key = "entity.minecraft.lightning_bolt",
@@ -3563,6 +3558,15 @@ namespace crafted_craft {
                     .translation_resource_key = "entity.minecraft.ocelot",
                     .kind_name = "entity",
                     .base_bounds = {0.6, 0.7},
+                }
+            );
+            entity_data::register_entity(
+                entity_data{
+                    .id = "minecraft:ominous_item_spawner",
+                    .name = "Ominous Item Spawner",
+                    .translation_resource_key = "entity.minecraft.ominous_item_spawner",
+                    .kind_name = "entity",
+                    .base_bounds = {0.6, 0.7}, //TODO
                 }
             );
             entity_data::register_entity(
@@ -3965,6 +3969,15 @@ namespace crafted_craft {
             );
             entity_data::register_entity(
                 entity_data{
+                    .id = "minecraft:wind_charge",
+                    .name = "Wind Charge",
+                    .translation_resource_key = "entity.minecraft.wind_charge",
+                    .kind_name = "entity",
+                    .base_bounds = {0.9, 2.9}, //TODO
+                }
+            );
+            entity_data::register_entity(
+                entity_data{
                     .id = "minecraft:witch",
                     .name = "Witch",
                     .translation_resource_key = "entity.minecraft.witch",
@@ -4071,6 +4084,784 @@ namespace crafted_craft {
                     .base_bounds = {0.25, 0.25},
                 }
             );
+
+
+            entity_data::internal_entity_aliases_protocol[765] = {
+                {"minecraft:allay", 0},
+                {"minecraft:area_effect_cloud", 1},
+                {"minecraft:armor_stand", 2},
+                {"minecraft:arrow", 3},
+                {"minecraft:axolotl", 4},
+                {"minecraft:bat", 5},
+                {"minecraft:bee", 6},
+                {"minecraft:blaze", 7},
+                {"minecraft:block_display", 8},
+                {"minecraft:boat", 9},
+                {"minecraft:breeze", 10},
+                {"minecraft:camel", 11},
+                {"minecraft:cat", 12},
+                {"minecraft:cave_spider", 13},
+                {"minecraft:chest_boat", 14},
+                {"minecraft:chest_minecart", 15},
+                {"minecraft:chicken", 16},
+                {"minecraft:cod", 17},
+                {"minecraft:command_block_minecart", 18},
+                {"minecraft:cow", 19},
+                {"minecraft:creeper", 20},
+                {"minecraft:dolphin", 21},
+                {"minecraft:donkey", 22},
+                {"minecraft:dragon_fireball", 23},
+                {"minecraft:drowned", 24},
+                {"minecraft:egg", 25},
+                {"minecraft:elder_guardian", 26},
+                {"minecraft:end_crystal", 27},
+                {"minecraft:ender_dragon", 28},
+                {"minecraft:ender_pearl", 29},
+                {"minecraft:enderman", 30},
+                {"minecraft:endermite", 31},
+                {"minecraft:evoker", 32},
+                {"minecraft:evoker_fangs", 33},
+                {"minecraft:experience_bottle", 34},
+                {"minecraft:experience_orb", 35},
+                {"minecraft:eye_of_ender", 36},
+                {"minecraft:falling_block", 37},
+                {"minecraft:fireball", 58},
+                {"minecraft:firework_rocket", 38},
+                {"minecraft:fox", 39},
+                {"minecraft:frog", 40},
+                {"minecraft:furnace_minecart", 41},
+                {"minecraft:ghast", 42},
+                {"minecraft:giant", 43},
+                {"minecraft:glow_item_frame", 44},
+                {"minecraft:glow_squid", 45},
+                {"minecraft:goat", 46},
+                {"minecraft:guardian", 47},
+                {"minecraft:hoglin", 48},
+                {"minecraft:hopper_minecart", 49},
+                {"minecraft:horse", 50},
+                {"minecraft:husk", 51},
+                {"minecraft:illusioner", 52},
+                {"minecraft:interaction", 53},
+                {"minecraft:iron_golem", 54},
+                {"minecraft:item", 55},
+                {"minecraft:item_display", 56},
+                {"minecraft:item_frame", 57},
+                {"minecraft:leash_knot", 59},
+                {"minecraft:lightning_bolt", 60},
+                {"minecraft:llama", 61},
+                {"minecraft:llama_spit", 62},
+                {"minecraft:magma_cube", 63},
+                {"minecraft:marker", 64},
+                {"minecraft:minecart", 65},
+                {"minecraft:mooshroom", 66},
+                {"minecraft:mule", 67},
+                {"minecraft:ocelot", 68},
+                {"minecraft:painting", 69},
+                {"minecraft:panda", 70},
+                {"minecraft:parrot", 71},
+                {"minecraft:phantom", 72},
+                {"minecraft:pig", 73},
+                {"minecraft:piglin", 74},
+                {"minecraft:piglin_brute", 75},
+                {"minecraft:pillager", 76},
+                {"minecraft:polar_bear", 77},
+                {"minecraft:potion", 78},
+                {"minecraft:pufferfish", 79},
+                {"minecraft:rabbit", 80},
+                {"minecraft:ravager", 81},
+                {"minecraft:salmon", 82},
+                {"minecraft:sheep", 83},
+                {"minecraft:shulker", 84},
+                {"minecraft:shulker_bullet", 85},
+                {"minecraft:silverfish", 86},
+                {"minecraft:skeleton", 87},
+                {"minecraft:skeleton_horse", 88},
+                {"minecraft:slime", 89},
+                {"minecraft:small_fireball", 90},
+                {"minecraft:sniffer", 91},
+                {"minecraft:snow_golem", 92},
+                {"minecraft:snowball", 93},
+                {"minecraft:spawner_minecart", 94},
+                {"minecraft:spectral_arrow", 95},
+                {"minecraft:spider", 96},
+                {"minecraft:squid", 97},
+                {"minecraft:stray", 98},
+                {"minecraft:strider", 99},
+                {"minecraft:tadpole", 100},
+                {"minecraft:text_display", 101},
+                {"minecraft:tnt", 102},
+                {"minecraft:tnt_minecart", 103},
+                {"minecraft:trader_llama", 104},
+                {"minecraft:trident", 105},
+                {"minecraft:tropical_fish", 106},
+                {"minecraft:turtle", 107},
+                {"minecraft:vex", 108},
+                {"minecraft:villager", 109},
+                {"minecraft:vindicator", 110},
+                {"minecraft:wandering_trader", 111},
+                {"minecraft:warden", 112},
+                {"minecraft:wind_charge", 113},
+                {"minecraft:witch", 114},
+                {"minecraft:wither", 115},
+                {"minecraft:wither_skeleton", 116},
+                {"minecraft:wither_skull", 117},
+                {"minecraft:wolf", 118},
+                {"minecraft:zoglin", 119},
+                {"minecraft:zombie", 120},
+                {"minecraft:zombie_horse", 121},
+                {"minecraft:zombie_villager", 122},
+                {"minecraft:zombified_piglin", 123},
+                {"minecraft:player", 124},
+                {"minecraft:fishing_bobber", 125},
+                {"minecraft:armadillo", 39},            //ALIAS FOX
+                {"minecraft:bogged", 98},               //ALIAS STRAY
+                {"minecraft:breeze_wind_charge", 113},  //ALIAS wind_charge
+                {"minecraft:ominous_item_spawner", 55}, //ALIAS ITEM
+            };
+            entity_data::internal_entity_aliases_protocol[766] = {
+                {"minecraft:allay", 0},
+                {"minecraft:area_effect_cloud", 1},
+                {"minecraft:armadillo", 2},
+                {"minecraft:armor_stand", 3},
+                {"minecraft:arrow", 4},
+                {"minecraft:axolotl", 5},
+                {"minecraft:bat", 6},
+                {"minecraft:bee", 7},
+                {"minecraft:blaze", 8},
+                {"minecraft:block_display", 9},
+                {"minecraft:boat", 10},
+                {"minecraft:bogged", 11},
+                {"minecraft:breeze", 12},
+                {"minecraft:breeze_wind_charge", 13},
+                {"minecraft:camel", 14},
+                {"minecraft:cat", 15},
+                {"minecraft:cave_spider", 16},
+                {"minecraft:chest_boat", 17},
+                {"minecraft:chest_minecart", 18},
+                {"minecraft:chicken", 19},
+                {"minecraft:cod", 20},
+                {"minecraft:command_block_minecart", 21},
+                {"minecraft:cow", 22},
+                {"minecraft:creeper", 23},
+                {"minecraft:dolphin", 24},
+                {"minecraft:donkey", 25},
+                {"minecraft:dragon_fireball", 26},
+                {"minecraft:drowned", 27},
+                {"minecraft:egg", 28},
+                {"minecraft:elder_guardian", 29},
+                {"minecraft:end_crystal", 30},
+                {"minecraft:ender_dragon", 31},
+                {"minecraft:ender_pearl", 32},
+                {"minecraft:enderman", 33},
+                {"minecraft:endermite", 34},
+                {"minecraft:evoker", 35},
+                {"minecraft:evoker_fangs", 36},
+                {"minecraft:experience_bottle", 37},
+                {"minecraft:experience_orb", 38},
+                {"minecraft:eye_of_ender", 39},
+                {"minecraft:falling_block", 40},
+                {"minecraft:fireball", 62},
+                {"minecraft:firework_rocket", 41},
+                {"minecraft:fishing_bobber", 129},
+                {"minecraft:fox", 42},
+                {"minecraft:frog", 43},
+                {"minecraft:furnace_minecart", 44},
+                {"minecraft:ghast", 45},
+                {"minecraft:giant", 46},
+                {"minecraft:glow_item_frame", 47},
+                {"minecraft:glow_squid", 48},
+                {"minecraft:goat", 49},
+                {"minecraft:guardian", 50},
+                {"minecraft:hoglin", 51},
+                {"minecraft:hopper_minecart", 52},
+                {"minecraft:horse", 53},
+                {"minecraft:husk", 54},
+                {"minecraft:illusioner", 55},
+                {"minecraft:interaction", 56},
+                {"minecraft:iron_golem", 57},
+                {"minecraft:item", 58},
+                {"minecraft:item_display", 59},
+                {"minecraft:item_frame", 60},
+                {"minecraft:leash_knot", 63},
+                {"minecraft:lightning_bolt", 64},
+                {"minecraft:llama", 65},
+                {"minecraft:llama_spit", 66},
+                {"minecraft:magma_cube", 67},
+                {"minecraft:marker", 68},
+                {"minecraft:minecart", 69},
+                {"minecraft:mooshroom", 70},
+                {"minecraft:mule", 71},
+                {"minecraft:ocelot", 72},
+                {"minecraft:ominous_item_spawner", 61},
+                {"minecraft:painting", 73},
+                {"minecraft:panda", 74},
+                {"minecraft:parrot", 75},
+                {"minecraft:phantom", 76},
+                {"minecraft:pig", 77},
+                {"minecraft:piglin", 78},
+                {"minecraft:piglin_brute", 79},
+                {"minecraft:pillager", 80},
+                {"minecraft:player", 128},
+                {"minecraft:polar_bear", 81},
+                {"minecraft:potion", 82},
+                {"minecraft:pufferfish", 83},
+                {"minecraft:rabbit", 84},
+                {"minecraft:ravager", 85},
+                {"minecraft:salmon", 86},
+                {"minecraft:sheep", 87},
+                {"minecraft:shulker", 88},
+                {"minecraft:shulker_bullet", 89},
+                {"minecraft:silverfish", 90},
+                {"minecraft:skeleton", 91},
+                {"minecraft:skeleton_horse", 92},
+                {"minecraft:slime", 93},
+                {"minecraft:small_fireball", 94},
+                {"minecraft:sniffer", 95},
+                {"minecraft:snow_golem", 96},
+                {"minecraft:snowball", 97},
+                {"minecraft:spawner_minecart", 98},
+                {"minecraft:spectral_arrow", 99},
+                {"minecraft:spider", 100},
+                {"minecraft:squid", 101},
+                {"minecraft:stray", 102},
+                {"minecraft:strider", 103},
+                {"minecraft:tadpole", 104},
+                {"minecraft:text_display", 105},
+                {"minecraft:tnt", 106},
+                {"minecraft:tnt_minecart", 107},
+                {"minecraft:trader_llama", 108},
+                {"minecraft:trident", 109},
+                {"minecraft:tropical_fish", 110},
+                {"minecraft:turtle", 111},
+                {"minecraft:vex", 112},
+                {"minecraft:villager", 113},
+                {"minecraft:vindicator", 114},
+                {"minecraft:wandering_trader", 115},
+                {"minecraft:warden", 116},
+                {"minecraft:wind_charge", 117},
+                {"minecraft:witch", 118},
+                {"minecraft:wither", 119},
+                {"minecraft:wither_skeleton", 120},
+                {"minecraft:wither_skull", 121},
+                {"minecraft:wolf", 122},
+                {"minecraft:zoglin", 123},
+                {"minecraft:zombie", 124},
+                {"minecraft:zombie_horse", 125},
+                {"minecraft:zombie_villager", 126},
+                {"minecraft:zombified_piglin", 127},
+            };
+            entity_data::internal_entity_aliases_protocol[767] = {
+                {"minecraft:allay", 0},
+                {"minecraft:area_effect_cloud", 1},
+                {"minecraft:armadillo", 2},
+                {"minecraft:armor_stand", 3},
+                {"minecraft:arrow", 4},
+                {"minecraft:axolotl", 5},
+                {"minecraft:bat", 6},
+                {"minecraft:bee", 7},
+                {"minecraft:blaze", 8},
+                {"minecraft:block_display", 9},
+                {"minecraft:boat", 10},
+                {"minecraft:bogged", 11},
+                {"minecraft:breeze", 12},
+                {"minecraft:breeze_wind_charge", 13},
+                {"minecraft:camel", 14},
+                {"minecraft:cat", 15},
+                {"minecraft:cave_spider", 16},
+                {"minecraft:chest_boat", 17},
+                {"minecraft:chest_minecart", 18},
+                {"minecraft:chicken", 19},
+                {"minecraft:cod", 20},
+                {"minecraft:command_block_minecart", 21},
+                {"minecraft:cow", 22},
+                {"minecraft:creeper", 23},
+                {"minecraft:dolphin", 24},
+                {"minecraft:donkey", 25},
+                {"minecraft:dragon_fireball", 26},
+                {"minecraft:drowned", 27},
+                {"minecraft:egg", 28},
+                {"minecraft:elder_guardian", 29},
+                {"minecraft:end_crystal", 30},
+                {"minecraft:ender_dragon", 31},
+                {"minecraft:ender_pearl", 32},
+                {"minecraft:enderman", 33},
+                {"minecraft:endermite", 34},
+                {"minecraft:evoker", 35},
+                {"minecraft:evoker_fangs", 36},
+                {"minecraft:experience_bottle", 37},
+                {"minecraft:experience_orb", 38},
+                {"minecraft:eye_of_ender", 39},
+                {"minecraft:falling_block", 40},
+                {"minecraft:fireball", 62},
+                {"minecraft:firework_rocket", 41},
+                {"minecraft:fishing_bobber", 129},
+                {"minecraft:fox", 42},
+                {"minecraft:frog", 43},
+                {"minecraft:furnace_minecart", 44},
+                {"minecraft:ghast", 45},
+                {"minecraft:giant", 46},
+                {"minecraft:glow_item_frame", 47},
+                {"minecraft:glow_squid", 48},
+                {"minecraft:goat", 49},
+                {"minecraft:guardian", 50},
+                {"minecraft:hoglin", 51},
+                {"minecraft:hopper_minecart", 52},
+                {"minecraft:horse", 53},
+                {"minecraft:husk", 54},
+                {"minecraft:illusioner", 55},
+                {"minecraft:interaction", 56},
+                {"minecraft:iron_golem", 57},
+                {"minecraft:item", 58},
+                {"minecraft:item_display", 59},
+                {"minecraft:item_frame", 60},
+                {"minecraft:leash_knot", 63},
+                {"minecraft:lightning_bolt", 64},
+                {"minecraft:llama", 65},
+                {"minecraft:llama_spit", 66},
+                {"minecraft:magma_cube", 67},
+                {"minecraft:marker", 68},
+                {"minecraft:minecart", 69},
+                {"minecraft:mooshroom", 70},
+                {"minecraft:mule", 71},
+                {"minecraft:ocelot", 72},
+                {"minecraft:ominous_item_spawner", 61},
+                {"minecraft:painting", 73},
+                {"minecraft:panda", 74},
+                {"minecraft:parrot", 75},
+                {"minecraft:phantom", 76},
+                {"minecraft:pig", 77},
+                {"minecraft:piglin", 78},
+                {"minecraft:piglin_brute", 79},
+                {"minecraft:pillager", 80},
+                {"minecraft:player", 128},
+                {"minecraft:polar_bear", 81},
+                {"minecraft:potion", 82},
+                {"minecraft:pufferfish", 83},
+                {"minecraft:rabbit", 84},
+                {"minecraft:ravager", 85},
+                {"minecraft:salmon", 86},
+                {"minecraft:sheep", 87},
+                {"minecraft:shulker", 88},
+                {"minecraft:shulker_bullet", 89},
+                {"minecraft:silverfish", 90},
+                {"minecraft:skeleton", 91},
+                {"minecraft:skeleton_horse", 92},
+                {"minecraft:slime", 93},
+                {"minecraft:small_fireball", 94},
+                {"minecraft:sniffer", 95},
+                {"minecraft:snow_golem", 96},
+                {"minecraft:snowball", 97},
+                {"minecraft:spawner_minecart", 98},
+                {"minecraft:spectral_arrow", 99},
+                {"minecraft:spider", 100},
+                {"minecraft:squid", 101},
+                {"minecraft:stray", 102},
+                {"minecraft:strider", 103},
+                {"minecraft:tadpole", 104},
+                {"minecraft:text_display", 105},
+                {"minecraft:tnt", 106},
+                {"minecraft:tnt_minecart", 107},
+                {"minecraft:trader_llama", 108},
+                {"minecraft:trident", 109},
+                {"minecraft:tropical_fish", 110},
+                {"minecraft:turtle", 111},
+                {"minecraft:vex", 112},
+                {"minecraft:villager", 113},
+                {"minecraft:vindicator", 114},
+                {"minecraft:wandering_trader", 115},
+                {"minecraft:warden", 116},
+                {"minecraft:wind_charge", 117},
+                {"minecraft:witch", 118},
+                {"minecraft:wither", 119},
+                {"minecraft:wither_skeleton", 120},
+                {"minecraft:wither_skull", 121},
+                {"minecraft:wolf", 122},
+                {"minecraft:zoglin", 123},
+                {"minecraft:zombie", 124},
+                {"minecraft:zombie_horse", 125},
+                {"minecraft:zombie_villager", 126},
+                {"minecraft:zombified_piglin", 127}
+            };
+
+            entity_data::initialize_entities();
+        }
+
+        void load_file_biomes(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(paintingVariants, id, "biome");
+
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            js_object bio_js = js_object::get_object(res.value());
+            Biome bio;
+            bio.downfall = bio_js["downfall"];
+            bio.temperature = bio_js["temperature"];
+            bio.has_precipitation = bio_js["has_precipitation"];
+            if (bio_js.contains("temperature_modifier"))
+                bio.temperature_modifier = (std::string)bio_js["temperature_modifier"];
+            {
+                Biome::Effects effects;
+                js_object effects_js = js_object::get_object(bio_js["effects"]);
+                effects.sky_color = effects_js["sky_color"];
+                effects.water_fog_color = effects_js["water_fog_color"];
+                effects.fog_color = effects_js["fog_color"];
+                effects.water_color = effects_js["water_color"];
+                if (effects_js.contains("foliage_color"))
+                    effects.foliage_color = effects_js["foliage_color"];
+                if (effects_js.contains("grass_color"))
+                    effects.grass_color = effects_js["grass_color"];
+                if (effects_js.contains("grass_color_modifier"))
+                    effects.grass_color_modifier = (std::string)effects_js["grass_color_modifier"];
+                if (effects_js.contains("particle")) {
+                    js_object particle_js = js_object::get_object(effects_js["particle"]);
+                    Biome::Particle particle;
+                    particle.probability = particle_js["probability"];
+                    particle.options.type = (std::string)particle_js["type"];
+                    particle.options.options = conversions::json::from_json(particle_js["options"].get());
+                    effects.particle = std::move(particle);
+                }
+                if (effects_js.contains("ambient_sound")) {
+                    auto eff = effects_js["ambient_sound"];
+                    if (eff.get().is_string())
+                        effects.ambient_sound = (std::string)eff;
+                    else {
+                        js_object ambient_sound_js = js_object::get_object(effects_js["ambient_sound"]);
+                        Biome::AmbientSound ambient_sound;
+                        ambient_sound.sound = (std::string)ambient_sound_js["sound"];
+                        ambient_sound.range = ambient_sound_js["range"];
+                        effects.ambient_sound = std::move(ambient_sound);
+                    }
+                }
+                if (effects_js.contains("mood_sound")) {
+                    js_object mood_sound_js = js_object::get_object(effects_js["mood_sound"]);
+                    Biome::MoodSound mood_sound;
+                    mood_sound.sound = (std::string)mood_sound_js["sound"];
+                    mood_sound.offset = mood_sound_js["offset"].or_apply(2.0);
+                    mood_sound.block_search_extend = mood_sound_js["block_search_extend"].or_apply(8);
+                    mood_sound.tick_delay = mood_sound_js["tick_delay"].or_apply(6000);
+                    effects.mood_sound = std::move(mood_sound);
+                }
+                if (effects_js.contains("additions_sound")) {
+                    js_object additions_sound_js = js_object::get_object(effects_js["additions_sound"]);
+                    Biome::AdditionsSound additions_sound;
+                    additions_sound.sound = (std::string)additions_sound_js["sound"];
+                    additions_sound.tick_chance = additions_sound_js["tick_chance"];
+                    effects.additions_sound = std::move(additions_sound);
+                }
+                if (effects_js.contains("music")) {
+                    js_object music_js = js_object::get_object(effects_js["music"]);
+                    Biome::Music music;
+                    music.sound = (std::string)music_js["sound"];
+                    music.min_delay = music_js["min_delay"].or_apply(12000);
+                    music.max_delay = music_js["max_delay"].or_apply(24000);
+                    music.replace_current_music = music_js["replace_current_music"].or_apply(true);
+                    effects.music = std::move(music);
+                }
+                bio.effects = std::move(effects);
+            }
+            biomes[id] = std::move(bio);
+        }
+
+        ChatType::Decoration to_decoration(js_value&& json) {
+            ChatType::Decoration decoration;
+            js_object chat_js = js_object::get_object(json);
+            decoration.style = Chat::fromEnbt(conversions::json::from_json(chat_js["style"].get()));
+            decoration.translation_key = (std::string)chat_js["translation_key"];
+            {
+                auto params = chat_js["parameters"];
+                if (params.get().is_array()) {
+                    auto params_ = js_array::get_array(params);
+                    std::vector<std::string> parameters;
+                    parameters.reserve(params_.size());
+                    for (auto&& chat_ : params_)
+                        parameters.push_back((std::string)chat_);
+                    decoration.parameters = std::move(parameters);
+                } else
+                    decoration.parameters = (std::string)params;
+            }
+            return decoration;
+        }
+
+        void load_file_chatType(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(paintingVariants, id, "chat type");
+
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            js_object type_js = js_object::get_object(res.value());
+            ChatType type;
+            if (type_js.contains("chat"))
+                type.chat = to_decoration(type_js["chat"]);
+            if (type_js.contains("narration"))
+                type.narration = to_decoration(type_js["narration"]);
+
+            chatTypes[id] = std::move(type);
+        }
+
+        void load_file_armorTrimPattern(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(paintingVariants, id, "armor trim pattern");
+
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            js_object pattern_js = js_object::get_object(res.value());
+            ArmorTrimPattern pattern;
+            pattern.assert_id = pattern_js["assert_id"];
+            pattern.decal = pattern_js["decal"];
+            pattern.template_item = pattern_js["template_item"];
+            {
+                auto desc = pattern_js["description"];
+                if (desc.get().is_string())
+                    pattern.description = (std::string)desc;
+                else
+                    pattern.description = Chat::fromEnbt(conversions::json::from_json(desc.get()));
+            }
+            armorTrimPatterns[id] = std::move(pattern);
+        }
+
+        void load_file_armorTrimMaterial(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(paintingVariants, id, "armor trim material");
+
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            js_object material_js = js_object::get_object(res.value());
+            ArmorTrimMaterial material;
+            material.asset_name = material_js["texture"];
+            material.ingredient = material_js["ingredient"];
+            material.item_model_index = material_js["item_model_index"];
+            {
+                auto desc = material_js["description"];
+                if (desc.get().is_string())
+                    material.description = (std::string)desc;
+                else
+                    material.description = Chat::fromEnbt(conversions::json::from_json(desc.get()));
+            }
+            if (material_js.contains("override_armor_materials")) {
+                auto override_armor_materials = material_js["override_armor_materials"];
+                for (auto&& [name, material_] : js_object::get_object(override_armor_materials))
+                    material.override_armor_materials[(std::string)name] = (std::string)material_;
+            }
+            armorTrimMaterials[id] = std::move(material);
+        }
+
+        void load_file_wolfVariant(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(paintingVariants, id, "wolf variant");
+
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            js_object variant_js = js_object::get_object(res.value());
+            WolfVariant variant;
+            variant.wild_texture = variant_js["wild_texture"];
+            variant.tame_texture = variant_js["tame_texture"];
+            variant.angry_texture = variant_js["angry_texture"];
+            auto biomes = js_array::get_array(variant_js["biomes"]);
+            variant.biomes.reserve(biomes.size());
+            for (auto&& biome : biomes)
+                variant.biomes.push_back(biome);
+            wolfVariants[id] = std::move(variant);
+        }
+
+        void load_file_dimensionType(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(paintingVariants, id, "dimension type");
+
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+
+            js_object type_js = js_object::get_object(res.value());
+            DimensionType type;
+            if (type_js.contains("monster_spawn_light_level")) {
+                auto monster_spawn_light_level = type_js["monster_spawn_light_level"];
+                if (monster_spawn_light_level.get().is_number())
+                    type.monster_spawn_light_level = monster_spawn_light_level;
+                else {
+                    js_object monster_spawn_light_level_js = js_object::get_object(monster_spawn_light_level);
+                    IntegerDistribution monster_spawn_light_level_;
+                    monster_spawn_light_level_.value = conversions::json::from_json(monster_spawn_light_level_js["value"].get());
+                    monster_spawn_light_level_.type = monster_spawn_light_level_js["type"];
+                    type.monster_spawn_light_level = std::move(monster_spawn_light_level_);
+                }
+            }
+            if (type_js.contains("fixed_time"))
+                type.fixed_time = type_js["fixed_time"];
+
+            type.infiniburn = type_js["infiniburn"];
+            type.effects = type_js["effects"];
+            type.coordinate_scale = type_js["coordinate_scale"];
+            type.ambient_light = type_js["ambient_light"];
+            type.min_y = type_js["min_y"];
+            type.height = type_js["height"];
+            type.logical_height = type_js["logical_height"];
+            type.monster_spawn_block_light_limit = type_js["monster_spawn_block_light_limit"];
+            type.has_skylight = type_js["has_skylight"];
+            type.has_ceiling = type_js["has_ceiling"];
+            type.ultrawarm = type_js["ultrawarm"];
+            type.natural = type_js["natural"];
+            type.piglin_safe = type_js["piglin_safe"];
+            type.has_raids = type_js["has_raids"];
+            type.respawn_anchor_works = type_js["respawn_anchor_works"];
+            type.bed_works = type_js["bed_works"];
+            dimensionTypes[id] = std::move(type);
+        }
+
+        void load_file_damageType(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(paintingVariants, id, "damage type");
+
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            js_object type_js = js_object::get_object(res.value());
+            DamageType type;
+            type.message_id = type_js["message_id"];
+            std::string scaling = type_js["scaling"];
+            if (scaling == "never")
+                type.scaling = DamageType::ScalingType::never;
+            else if (scaling == "when_caused_by_living_non_player")
+                type.scaling = DamageType::ScalingType::when_caused_by_living_non_player;
+            else if (scaling == "always")
+                type.scaling = DamageType::ScalingType::always;
+            else
+                throw std::runtime_error("Unknown scaling type: " + scaling);
+
+            if (type_js.contains("effects")) {
+                std::string effects = type_js["effects"];
+                if (effects == "hurt")
+                    type.effects = DamageType::EffectsType::hurt;
+                else if (effects == "thorns")
+                    type.effects = DamageType::EffectsType::thorns;
+                else if (effects == "drowning")
+                    type.effects = DamageType::EffectsType::drowning;
+                else if (effects == "burning")
+                    type.effects = DamageType::EffectsType::burning;
+                else if (effects == "poking")
+                    type.effects = DamageType::EffectsType::poking;
+                else if (effects == "freezing")
+                    type.effects = DamageType::EffectsType::freezing;
+                else
+                    throw std::runtime_error("Unknown effects type: " + effects);
+            }
+
+            if (type_js.contains("death_message_type")) {
+                std::string death_message_type = type_js["death_message_type"];
+                if (death_message_type == "default")
+                    type.death_message_type = DamageType::DeathMessageType::_default;
+                else if (death_message_type == "fall_variants")
+                    type.death_message_type = DamageType::DeathMessageType::fall_variants;
+                else if (death_message_type == "intentional_game_design")
+                    type.death_message_type = DamageType::DeathMessageType::intentional_game_design;
+                else
+                    throw std::runtime_error("Unknown death message type: " + death_message_type);
+            }
+
+            type.exhaustion = type_js["exhaustion"];
+            damageTypes[id] = std::move(type);
+        }
+
+        void load_file_bannerPattern(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(paintingVariants, id, "banner pattern");
+
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            js_object pattern_js = js_object::get_object(res.value());
+            BannerPattern pattern;
+            pattern.asset_id = pattern_js["asset_id"];
+            pattern.translation_key = pattern_js["translation_key"];
+            bannerPatterns[id] = std::move(pattern);
+        }
+
+        void load_file_paintingVariant(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(paintingVariants, id, "painting variant");
+
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            js_object variant_js = js_object::get_object(res.value());
+            PaintingVariant variant;
+            variant.asset_id = variant_js["asset_id"];
+            variant.height = variant_js["height"];
+            variant.width = variant_js["width"];
+            paintingVariants[id] = std::move(variant);
+        }
+
+        void apply_tags(js_value val, const std::string& type, const std::string& namespace_, const std::string& path_) {
+            list_array<std::string> result;
+            for (auto&& tag : js_array::get_array(val)) {
+                std::string the_tag;
+                if (tag.get().is_string())
+                    the_tag = tag;
+                else {
+                    auto tag_ = js_object::get_object(tag);
+                    if (tag_.contains("id")) {
+                        the_tag = tag_["id"];
+                    } else
+                        throw std::runtime_error("Unknown tag type");
+                }
+
+                if (the_tag.starts_with("#")) {
+                    result.push_back(unfold_tag(type, namespace_, the_tag.substr(1)));
+                } else
+                    result.push_back(the_tag);
+            }
+            tags[type][namespace_][path_].push_back(std::move(result));
+        }
+
+        void load_file_tags(const std::filesystem::path& file_path, const std::string& type, const std::string& namespace_, const std::string& path_) {
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            js_object tags_ = js_object::get_object(res.value());
+            if (tags_.contains("replace")) {
+                bool replace = tags_["replace"];
+                if (replace)
+                    tags[type][namespace_][path_].clear();
+                apply_tags(tags_["values"], type, namespace_, path_);
+            } else if (tags_.contains("values"))
+                apply_tags(tags_["values"], type, namespace_, path_);
+            else if (tags_.contains("root"))
+                apply_tags(tags_["root"], type, namespace_, path_);
+            else
+                throw std::runtime_error("Invalid tag file format");
+        }
+
+        void load_register_file(const std::filesystem::path& file_path, std::string namespace_, const std::string& path_, const std::string& type) {
+            if (path_.empty())
+                throw std::runtime_error("Path is empty");
+
+            if (namespace_.empty())
+                namespace_ = default_namespace;
+            std::string id = namespace_ + ":" + path_;
+            if (type == "biomes") {
+                load_file_biomes(file_path, id);
+            } else if (type == "chatType") {
+                load_file_biomes(file_path, id);
+            } else if (type == "armorTrimPattern") {
+                load_file_biomes(file_path, id);
+            } else if (type == "armorTrimMaterial") {
+                load_file_biomes(file_path, id);
+            } else if (type == "wolfVariant") {
+                load_file_biomes(file_path, id);
+            } else if (type == "dimensionType") {
+                load_file_biomes(file_path, id);
+            } else if (type == "damageType") {
+                load_file_biomes(file_path, id);
+            } else if (type == "bannerPattern") {
+                load_file_biomes(file_path, id);
+            } else if (type == "paintingVariant") {
+                load_file_biomes(file_path, id);
+            } else if (type.starts_with("tag")) {
+                std::string tag_type;
+                if (type.starts_with("tags/")) {
+                    tag_type = type.substr(5);
+                } else if (type.starts_with("tag/")) {
+                    tag_type = type.substr(4);
+                } else
+                    throw std::runtime_error("Unknown type: " + type);
+                load_file_tags(file_path, tag_type, namespace_, path_);
+            } else
+                throw std::runtime_error("Unknown type: " + type);
         }
     }
 }

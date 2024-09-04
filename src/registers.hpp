@@ -24,15 +24,16 @@ namespace crafted_craft {
             std::variant<std::string, Chat> description;
             float item_model_index;
             int32_t id;
+            bool allow_override = false;
         };
 
         struct ArmorTrimPattern {
-            uint32_t id;
-
             std::string assert_id;
             std::string template_item;
             std::variant<std::string, Chat> description;
             bool decal;
+            bool allow_override = false;
+            uint32_t id;
         };
 
         struct Biome {
@@ -70,26 +71,27 @@ namespace crafted_craft {
             };
 
             uint32_t id;
+            bool allow_override = false;
 
-                bool has_precipitation;
-                float temperature;
-                float downfall;
-                std::optional<std::string> temperature_modifier;
+            bool has_precipitation;
+            float temperature;
+            float downfall;
+            std::optional<std::string> temperature_modifier;
 
-                struct {
-                    int32_t fog_color;
-                    int32_t water_color;
-                    int32_t water_fog_color;
-                    int32_t sky_color;
-                    std::optional<int32_t> foliage_color;
-                    std::optional<int32_t> grass_color;
-                    std::optional<std::string> grass_color_modifier;
-                    std::optional<Particle> particle;
-                    std::optional<std::variant<std::string, AmbientSound>> ambient_sound;
-                    std::optional<MoodSound> mood_sound;
-                    std::optional<AdditionsSound> additions_sound;
-                    std::optional<Music> music;
-                } effects;
+            struct Effects {
+                int32_t fog_color;
+                int32_t water_color;
+                int32_t water_fog_color;
+                int32_t sky_color;
+                std::optional<int32_t> foliage_color;
+                std::optional<int32_t> grass_color;
+                std::optional<std::string> grass_color_modifier;
+                std::optional<Particle> particle;
+                std::optional<std::variant<std::string, AmbientSound>> ambient_sound;
+                std::optional<MoodSound> mood_sound;
+                std::optional<AdditionsSound> additions_sound;
+                std::optional<Music> music;
+            } effects;
         };
 
         struct ChatType {
@@ -99,10 +101,11 @@ namespace crafted_craft {
                 std::variant<std::string, std::vector<std::string>> parameters; // sender, target, content
             };
 
-            uint32_t id;
+            std::optional<Decoration> chat;
+            std::optional<Decoration> narration;
 
-                std::optional<Decoration> chat;
-                std::optional<Decoration> narration;
+            uint32_t id;
+            bool allow_override = false;
         };
 
         struct DamageType {
@@ -134,10 +137,11 @@ namespace crafted_craft {
             std::optional<DeathMessageType> death_message_type;
             float exhaustion;
             uint32_t id;
+
+            bool allow_override = false;
         };
 
         struct DimensionType {
-            uint32_t id;
 
             std::variant<int32_t, IntegerDistribution> monster_spawn_light_level;
             std::optional<uint64_t> fixed_time;
@@ -157,6 +161,10 @@ namespace crafted_craft {
             bool has_raids : 1;
             bool respawn_anchor_works : 1;
             bool bed_works : 1;
+
+
+            bool allow_override : 1 = false;
+            uint32_t id;
         };
 
         struct WolfVariant {
@@ -166,6 +174,7 @@ namespace crafted_craft {
             list_array<std::string> biomes;
 
             uint32_t id;
+            bool allow_override = false;
         };
 
         struct BannerPattern {
@@ -173,6 +182,7 @@ namespace crafted_craft {
             std::string translation_key;
 
             uint32_t id;
+            bool allow_override = false;
         };
 
         struct PaintingVariant {
@@ -181,6 +191,7 @@ namespace crafted_craft {
             uint32_t width;
 
             uint32_t id;
+            bool allow_override = false;
         };
 
 #pragma endregion
@@ -219,6 +230,16 @@ namespace crafted_craft {
         extern std::unordered_map<std::string, BannerPattern> bannerPatterns;
         extern std::unordered_map<std::string, PaintingVariant> paintingVariants;
 
+        extern list_array<std::unordered_map<std::string, ArmorTrimMaterial>::iterator> armorTrimMaterials_cache;
+        extern list_array<std::unordered_map<std::string, ArmorTrimPattern>::iterator> armorTrimPatterns_cache;
+        extern list_array<std::unordered_map<std::string, Biome>::iterator> biomes_cache;
+        extern list_array<std::unordered_map<std::string, ChatType>::iterator> chatTypes_cache;
+        extern list_array<std::unordered_map<std::string, DamageType>::iterator> damageTypes_cache;
+        extern list_array<std::unordered_map<std::string, DimensionType>::iterator> dimensionTypes_cache;
+        extern list_array<std::unordered_map<std::string, WolfVariant>::iterator> wolfVariants_cache;
+        extern list_array<std::unordered_map<std::string, BannerPattern>::iterator> bannerPatterns_cache;
+        extern list_array<std::unordered_map<std::string, PaintingVariant>::iterator> paintingVariants_cache;
+
 
         //SERVER
 
@@ -226,16 +247,14 @@ namespace crafted_craft {
         extern std::unordered_map<uint16_t, EntityType*> entityList;
         extern std::unordered_map<int32_t, ItemType*> itemList;
         //entity_data
-        extern std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>> tags; //[namespace][tag][values]   values can't contain other tags, parsers must resolve them
-        extern std::string default_tag_namespace;                                                              //minecraft
+        extern std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>>> tags; 
+            //[type][namespace][tag][values]   values can't contain other tags, parsers must resolve them
+        extern std::string default_namespace;                                                                 
+            //minecraft
 
 
-        const list_array<std::string>& unfold_tag(const std::string& namespace_, const std::string& tag);
-        const list_array<std::string>& unfold_tag(const std::string& tag);
-
-        //CLIENT
-        //till 765
-        list_array<uint8_t>& registryDataPacket();
+        const list_array<std::string>& unfold_tag(const std::string& type, const std::string& namespace_, const std::string& tag);
+        const list_array<std::string>& unfold_tag(const std::string& type, const std::string& tag);
     }
 }
 
