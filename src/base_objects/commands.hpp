@@ -14,6 +14,14 @@
 
 namespace crafted_craft {
     namespace base_objects {
+        struct command_exception {
+            std::exception_ptr exception;
+            size_t pos = 0;
+            command_exception(std::exception_ptr exception, size_t pos)
+                : exception(exception), pos(pos) {}
+        };
+
+
         struct command;
         using command_callback = std::function<void(const list_array<predicate>&, client_data_holder&)>;
 

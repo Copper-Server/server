@@ -1,5 +1,7 @@
 #include "world_data.hpp"
 #include "../log.hpp"
+#include <boost/iostreams/filter/zstd.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
 
 namespace crafted_craft {
     namespace storage {
@@ -78,10 +80,18 @@ namespace crafted_craft {
         }
 
         bool chunk_data::load(const std::filesystem::path& chunk_z) {
+            if (!std::filesystem::exists(chunk_z))
+                return false;
+            if (std::filesystem::file_size(chunk_z) == 0)
+                return false;
             std::ifstream file(chunk_z, std::ios::binary);
             if (!file.is_open())
                 return false;
-            enbt::value chunk_data_file = enbt::io_helper::read_token(file);
+            boost::iostreams::filtering_istream filter;
+            filter.push(boost::iostreams::zstd_decompressor());
+            filter.push(file);
+
+            enbt::value chunk_data_file = enbt::io_helper::read_token(filter);
             file.close();
             auto ref = enbt::compound::make_ref(chunk_data_file);
             return load(ref);
@@ -135,7 +145,7 @@ namespace crafted_craft {
                     size_t z_ = 0;
                     for (auto z : enbt::simple_array_ui32::make_ref(y)) {
                         data[x_][y_][z_].raw = z;
-                        has_tickable_blocks |= data[x_][y_][z_].is_tickable();
+                        has_tickable_blocks = data[x_][y_][z_].is_tickable();
                         ++z_;
                     }
                     ++y_;
@@ -282,8 +292,10 @@ namespace crafted_craft {
                 enbt_sub_chunks.push_back(std::move(sub_chunk_data));
             }
             chunk_data_file["sub_chunks"] = std::move(enbt_sub_chunks);
-            enbt::io_helper::write_token(file, (const enbt::value&)chunk_data_file);
-            file.close();
+            boost::iostreams::filtering_ostream filter;
+            filter.push(boost::iostreams::zstd_compressor());
+            filter.push(file);
+            enbt::io_helper::write_token(filter, (const enbt::value&)chunk_data_file);
             return true;
         }
 
@@ -416,10 +428,9 @@ namespace crafted_craft {
                     make_save(chunk_x, chunk_z, y_axis, also_unload);
         }
 
-        void world_data::make_save(int64_t chunk_x, int64_t chunk_z, chunk_row::iterator& item, bool also_unload) {
+        void world_data::make_save(int64_t chunk_x, int64_t chunk_z, chunk_row::iterator item, bool also_unload) {
             if (auto process = on_save_process.find({chunk_x, chunk_z}); process == on_save_process.end()) {
                 auto& chunk = item->second;
-                ++item;
                 on_save_process[{chunk_x, chunk_z}] = Future<bool>::start(
                     [this, chunk, chunk_x, chunk_z] {
                         try {
@@ -433,9 +444,10 @@ namespace crafted_craft {
                     }
                 );
             }
-            if (also_unload)
+            if (also_unload) {
                 if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
-                    x_axis->second.erase(chunk_z);
+                    x_axis->second.erase(item);
+            }
         }
 
         base_objects::atomic_holder<chunk_data> world_data::load_chunk_sync(int64_t chunk_x, int64_t chunk_z) {
@@ -504,64 +516,66 @@ namespace crafted_craft {
             return res;
         }
 
+        void world_data::load(const enbt::compound_ref& load_from_nbt) {
+            general_world_data = load_from_nbt["general_world_data"];
+            world_game_rules = load_from_nbt["world_game_rules"];
+            world_generator_data = load_from_nbt["world_generator_data"];
+            world_records = load_from_nbt["world_records"];
+            world_seed = load_from_nbt["world_seed"];
+            wandering_trader_id = load_from_nbt["wandering_trader_id"];
+            wandering_trader_spawn_chance = load_from_nbt["wandering_trader_spawn_chance"];
+            wandering_trader_spawn_delay = load_from_nbt["wandering_trader_spawn_delay"];
+            world_name = (base_objects::shared_string)(std::string)load_from_nbt["world_name"];
+            light_processor_id = (base_objects::shared_string)(std::string)load_from_nbt["light_processor_id"];
+            world_type = (base_objects::shared_string)(std::string)load_from_nbt["world_type"];
+            generator_id = (base_objects::shared_string)(std::string)load_from_nbt["generator_id"];
+            enabled_datapacks = from_fixed_array<std::string>(load_from_nbt["enabled_datapacks"]);
+            enabled_plugins = from_fixed_array<std::string>(load_from_nbt["enabled_plugins"]);
+            enabled_features = from_fixed_array<std::string>(load_from_nbt["enabled_features"]);
+            load_points = from_fixed_array<base_objects::cubic_bounds_chunk>(load_from_nbt["load_points"], [](const enbt::value& enbt) {
+                return base_objects::cubic_bounds_chunk(enbt["x1"], enbt["z1"], enbt["x2"], enbt["z2"]);
+            });
+            load_points_sphere = from_fixed_array<base_objects::spherical_bounds_chunk>(load_from_nbt["load_points_sphere"], [](const enbt::value& enbt) {
+                return base_objects::spherical_bounds_chunk(enbt["x"], enbt["z"], enbt["radius"]);
+            });
+
+            border_center_x = load_from_nbt["border_center_x"];
+            border_center_z = load_from_nbt["border_center_z"];
+            border_size = load_from_nbt["border_size"];
+            border_safe_zone = load_from_nbt["border_safe_zone"];
+            border_damage_per_block = load_from_nbt["border_damage_per_block"];
+            border_lerp_target = load_from_nbt["border_lerp_target"];
+            border_lerp_time = load_from_nbt["border_lerp_time"];
+            border_warning_blocks = load_from_nbt["border_warning_blocks"];
+            border_warning_time = load_from_nbt["border_warning_time"];
+            day_time = load_from_nbt["day_time"];
+            time = load_from_nbt["time"];
+            max_random_tick_for_chunk = load_from_nbt["max_random_tick_for_chunk"];
+            tick_speed = std::chrono::milliseconds((long long)load_from_nbt["tick_speed"]);
+            chunk_lifetime = std::chrono::milliseconds((long long)load_from_nbt["chunk_lifetime"]);
+            world_lifetime = std::chrono::milliseconds((long long)load_from_nbt["world_lifetime"]);
+            clear_weather_time = load_from_nbt["clear_weather_time"];
+            internal_version = load_from_nbt["internal_version"];
+            chunk_y_count = load_from_nbt["chunk_y_count"];
+            difficulty = load_from_nbt["difficulty"];
+            default_gamemode = load_from_nbt["default_gamemode"];
+            difficulty_locked = load_from_nbt["difficulty_locked"];
+            is_hardcore = load_from_nbt["is_hardcore"];
+            initialized = load_from_nbt["initialized"];
+            raining = load_from_nbt["raining"];
+            thundering = load_from_nbt["thundering"];
+            has_skylight = load_from_nbt["has_skylight"];
+            enable_entity_updates_when_hold_light_source = load_from_nbt["enable_entity_updates_when_hold_light_source"];
+            enable_entity_light_source_updates = load_from_nbt["enable_entity_light_source_updates"];
+        }
+
         void world_data::load() {
             std::unique_lock lock(mutex);
             std::ifstream file(path / "world.dat", std::ios::binary);
             if (!file.is_open())
                 throw std::runtime_error("Can't open world file");
             enbt::value world_data_file_ = enbt::io_helper::read_token(file);
-            auto world_data_file = enbt::compound::make_ref(world_data_file_);
-            file.close();
-            general_world_data = world_data_file["general_world_data"];
-            world_game_rules = world_data_file["world_game_rules"];
-            world_generator_data = world_data_file["world_generator_data"];
-            world_records = world_data_file["world_records"];
-            world_seed = world_data_file["world_seed"];
-            wandering_trader_id = world_data_file["wandering_trader_id"];
-            wandering_trader_spawn_chance = world_data_file["wandering_trader_spawn_chance"];
-            wandering_trader_spawn_delay = world_data_file["wandering_trader_spawn_delay"];
-            world_name = (base_objects::shared_string)(std::string)world_data_file["world_name"];
-            light_processor_id = (base_objects::shared_string)(std::string)world_data_file["light_processor_id"];
-            world_type = (base_objects::shared_string)(std::string)world_data_file["world_type"];
-            generator_id = (base_objects::shared_string)(std::string)world_data_file["generator_id"];
-            enabled_datapacks = from_fixed_array<std::string>(world_data_file["enabled_datapacks"]);
-            enabled_plugins = from_fixed_array<std::string>(world_data_file["enabled_plugins"]);
-            enabled_features = from_fixed_array<std::string>(world_data_file["enabled_features"]);
-            load_points = from_fixed_array<base_objects::cubic_bounds_chunk>(world_data_file["load_points"], [](const enbt::value& enbt) {
-                return base_objects::cubic_bounds_chunk(enbt["x1"], enbt["z1"], enbt["x2"], enbt["z2"]);
-            });
-            load_points_sphere = from_fixed_array<base_objects::spherical_bounds_chunk>(world_data_file["load_points_sphere"], [](const enbt::value& enbt) {
-                return base_objects::spherical_bounds_chunk(enbt["x"], enbt["z"], enbt["radius"]);
-            });
-
-            border_center_x = world_data_file["border_center_x"];
-            border_center_z = world_data_file["border_center_z"];
-            border_size = world_data_file["border_size"];
-            border_safe_zone = world_data_file["border_safe_zone"];
-            border_damage_per_block = world_data_file["border_damage_per_block"];
-            border_lerp_target = world_data_file["border_lerp_target"];
-            border_lerp_time = world_data_file["border_lerp_time"];
-            border_warning_blocks = world_data_file["border_warning_blocks"];
-            border_warning_time = world_data_file["border_warning_time"];
-            day_time = world_data_file["day_time"];
-            time = world_data_file["time"];
-            max_random_tick_for_chunk = world_data_file["max_random_tick_for_chunk"];
-            tick_speed = std::chrono::milliseconds((long long)world_data_file["tick_speed"]);
-            chunk_lifetime = std::chrono::milliseconds((long long)world_data_file["chunk_lifetime"]);
-            world_lifetime = std::chrono::milliseconds((long long)world_data_file["world_lifetime"]);
-            clear_weather_time = world_data_file["clear_weather_time"];
-            internal_version = world_data_file["internal_version"];
-            chunk_y_count = world_data_file["chunk_y_count"];
-            difficulty = world_data_file["difficulty"];
-            default_gamemode = world_data_file["default_gamemode"];
-            difficulty_locked = world_data_file["difficulty_locked"];
-            is_hardcore = world_data_file["is_hardcore"];
-            initialized = world_data_file["initialized"];
-            raining = world_data_file["raining"];
-            thundering = world_data_file["thundering"];
-            has_skylight = world_data_file["has_skylight"];
-            enable_entity_updates_when_hold_light_source = world_data_file["enable_entity_updates_when_hold_light_source"];
-            enable_entity_light_source_updates = world_data_file["enable_entity_light_source_updates"];
+            load(enbt::compound::make_ref(world_data_file_));
         }
 
         void world_data::save() {
@@ -1232,20 +1246,25 @@ namespace crafted_craft {
                     return true;
 
             for (auto& [x, x_axis] : chunks) {
-                auto begin = x_axis.begin();
-                auto end = x_axis.end();
-                while (begin != end && unload_limit) {
-                    if (!begin->second->last_usage.time_since_epoch().count()) {
-                        if (begin->second->last_usage + chunk_lifetime < current_time) {
-                            make_save(x, begin->first, begin, true);
-                            --unload_limit;
-                        } else
-                            ++begin;
-                    } else
+                bool chunk_unloaded = false;
+                do {
+                    chunk_unloaded = false;
+                    auto begin = x_axis.begin();
+                    auto end = x_axis.end();
+                    while (begin != end && unload_limit) {
+                        if (!begin->second->last_usage.time_since_epoch().count()) {
+                            if (begin->second->last_usage + chunk_lifetime < current_time) {
+                                make_save(x, begin->first, begin, true);
+                                --unload_limit;
+                                chunk_unloaded = true;
+                                break;
+                            }
+                        }
                         ++begin;
-                }
-                if (!unload_limit)
-                    break;
+                    }
+                    if (!unload_limit)
+                        break;
+                } while (chunk_unloaded);
             }
             return false;
         }
@@ -1428,6 +1447,11 @@ namespace crafted_craft {
             cached_worlds[id]->world_name = name;
             cached_worlds[id]->save();
             return id;
+        }
+
+        void worlds_data::locked(std::function<void()> func) {
+            std::unique_lock lock(mutex);
+            func();
         }
 
         void worlds_data::locked(std::function<void(worlds_data& self)> func) {

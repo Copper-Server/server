@@ -43,6 +43,20 @@ namespace crafted_craft {
                 log::info("command", command);
                 try {
                     api::console::execute_as_console(command);
+                } catch (const base_objects::command_exception& ex) {
+                    try {
+                        std::rethrow_exception(ex.exception);
+                    } catch (const std::exception& inner_ex) {
+                        std::string error_message = command;
+                        std::string error_place(command.size() + 4, ' ');
+                        error_place[0] = '\n';
+                        error_place[error_place.size() - 2] = '\n';
+                        error_place[error_place.size() - 1] = '\t';
+                        if (ex.pos != -1)
+                            error_place[ex.pos] = '^';
+                        log::error("command", error_message + error_place + inner_ex.what());
+                    }
+                    return false;
                 } catch (const std::exception& ex) {
                     log::error("command", command + "\n Failed to execute command, reason:\n\t" + ex.what());
                     return false;

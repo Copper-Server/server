@@ -16,10 +16,10 @@
         "boost-json",
         "boost-context",
         "boost-lockfree",
+        "boost-iostreams",
         "utfcpp",
         "gtest",
         "zlib",
-        "lionkor-commandline",
-        "cmakerc"
+        "lionkor-commandline"
     ]
 }

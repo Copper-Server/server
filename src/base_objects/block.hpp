@@ -61,9 +61,62 @@ namespace crafted_craft {
 
             std::unordered_map<std::string, std::vector<std::string>> states;
             std::unordered_map<block_id_t, std::unordered_map<std::string, std::string>> assigned_states;
-            block_id_t default_state;
+            block_id_t default_state = 0;
             enbt::compound defintion;
             base_objects::shared_string name;
+
+            enum class tick_opt : uint16_t {
+                undefined,
+                block_tickable,
+                entity_tickable,
+                no_tick
+            } tickable;
+
+            bool is_tickable() const {
+                switch (tickable) {
+                case tick_opt::block_tickable:
+                case tick_opt::entity_tickable:
+                    return true;
+                case tick_opt::undefined:
+                    if (on_tick)
+                        return true;
+                    else if (as_entity_on_tick)
+                        return true;
+                    else
+                        return false;
+                default:
+                case tick_opt::no_tick:
+                    return false;
+                }
+            }
+
+            bool is_tickable() {
+                switch (tickable) {
+                case tick_opt::block_tickable:
+                case tick_opt::entity_tickable:
+                    return true;
+                case tick_opt::undefined:
+                    tickable = resolve_tickable();
+                    return tickable != tick_opt::no_tick;
+                default:
+                case tick_opt::no_tick:
+                    return false;
+                }
+            }
+
+            tick_opt resolve_tickable() const {
+                if (on_tick)
+                    return tick_opt::block_tickable;
+                if (as_entity_on_tick)
+                    return tick_opt::entity_tickable;
+                return tick_opt::no_tick;
+            }
+
+            tick_opt get_tickable() {
+                if (tickable == tick_opt::undefined)
+                    tickable = resolve_tickable();
+                return tickable;
+            }
 
             static_block_data()
                 : break_resistance(get_max_uint64_t_value<11>()),
@@ -97,6 +150,8 @@ namespace crafted_craft {
         };
 
         union block {
+            using tick_opt = static_block_data::tick_opt;
+
             static void initialize();
 
             static block_id_t addNewStatelessBlock(static_block_data&& new_block) {
@@ -124,12 +179,6 @@ namespace crafted_craft {
                 return addNewStatelessBlock(static_block_data(new_block));
             }
 
-            enum class tick_opt : uint16_t {
-                undefined,
-                block_tickable,
-                entity_tickable,
-                no_tick
-            };
 
             struct {
                 base_objects::block_id_t id : 15;

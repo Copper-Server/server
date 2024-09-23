@@ -17,7 +17,7 @@ int main() {
     resources::initialize_registers();
     resources::initialize_entities();
 
-    fast_task::task::create_executor(10);
+    fast_task::task::create_executor(16);
     fast_task::task::task::enable_task_naming = false;
     try {
         boost::asio::io_service service;

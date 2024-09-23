@@ -62,10 +62,13 @@ namespace crafted_craft {
                     uint8_t _unused : 4;
                 };
 
-                uint8_t raw = 0;
+                uint8_t raw;
             };
 
             light_item light_map[16][16][16];
+
+            light_data()
+                : light_map() {}
         };
 
         struct sub_chunk_data {
@@ -229,13 +232,15 @@ namespace crafted_craft {
 
             std::chrono::high_resolution_clock::time_point last_usage;
             void make_save(int64_t chunk_x, int64_t chunk_z, bool also_unload);
-            void make_save(int64_t chunk_x, int64_t chunk_z, chunk_row::iterator&, bool also_unload);
+            void make_save(int64_t chunk_x, int64_t chunk_z, chunk_row::iterator, bool also_unload);
             base_objects::atomic_holder<chunk_data> load_chunk_sync(int64_t chunk_x, int64_t chunk_z);
 
             base_objects::atomic_holder<chunk_generator>& get_generator();
             base_objects::atomic_holder<chunk_light_processor>& get_light_processor();
 
         public:
+            //metadata
+            void load(const enbt::compound_ref& load_from_nbt);
             //metadata
             void load();
             //metadata
@@ -478,6 +483,7 @@ namespace crafted_craft {
             void unload_all();
             void erase(uint64_t world_id);
 
+            void locked(std::function<void()> func);
             void locked(std::function<void(worlds_data& self)> func);
 
             uint64_t create(const base_objects::shared_string& name);

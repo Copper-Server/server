@@ -33,7 +33,7 @@ set(ENABLE_BOOST_PREPROCESSOR ON)
 set(COMMANDLINE_LIBTYPE STATIC)
 set(COMMANDLINE_SHARED_LIBS OFF)
 
-find_package(Boost REQUIRED COMPONENTS context json bimap)
+find_package(Boost REQUIRED COMPONENTS context json bimap iostreams)
 find_package(ZLIB REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(utf8cpp CONFIG REQUIRED)

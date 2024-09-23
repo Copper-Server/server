@@ -12,6 +12,7 @@ namespace crafted_craft {
 
 
             void add_world_id_suggestion(base_objects::command_browser& browser);
+            void add_world_name_suggestion(base_objects::command_browser& browser);
 
         public:
             WorldManagementPlugin();

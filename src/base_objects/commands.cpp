@@ -462,47 +462,65 @@ namespace crafted_craft {
             }
 
             std::optional<predicates::_double> parse(command_manager& manager, predicates::command::_double& cfg, std::string& part, std::string& path) {
-                double value = std::stod(part);
-                if (cfg.min)
-                    if (value < *cfg.min)
-                        return std::nullopt;
-                if (cfg.max)
-                    if (value > *cfg.max)
-                        return std::nullopt;
-                return predicates::_double{value};
+                try {
+                    double value = std::stod(part);
+                    if (cfg.min)
+                        if (value < *cfg.min)
+                            return std::nullopt;
+                    if (cfg.max)
+                        if (value > *cfg.max)
+                            return std::nullopt;
+                    return predicates::_double{value};
+                }
+
+                catch (...) {
+                    return std::nullopt;
+                }
             }
 
             std::optional<predicates::_float> parse(command_manager& manager, predicates::command::_float& cfg, std::string& part, std::string& path) {
-                float value = std::stof(part);
-                if (cfg.min)
-                    if (value < *cfg.min)
-                        return std::nullopt;
-                if (cfg.max)
-                    if (value > *cfg.max)
-                        return std::nullopt;
-                return predicates::_float{value};
+                try {
+                    float value = std::stof(part);
+                    if (cfg.min)
+                        if (value < *cfg.min)
+                            return std::nullopt;
+                    if (cfg.max)
+                        if (value > *cfg.max)
+                            return std::nullopt;
+                    return predicates::_float{value};
+                } catch (...) {
+                    return std::nullopt;
+                }
             }
 
             std::optional<predicates::_integer> parse(command_manager& manager, predicates::command::_integer& cfg, std::string& part, std::string& path) {
-                int32_t value = std::stoi(part);
-                if (cfg.min)
-                    if (value < *cfg.min)
-                        return std::nullopt;
-                if (cfg.max)
-                    if (value > *cfg.max)
-                        return std::nullopt;
-                return predicates::_integer{value};
+                try {
+                    int32_t value = std::stoi(part);
+                    if (cfg.min)
+                        if (value < *cfg.min)
+                            return std::nullopt;
+                    if (cfg.max)
+                        if (value > *cfg.max)
+                            return std::nullopt;
+                    return predicates::_integer{value};
+                } catch (...) {
+                    return std::nullopt;
+                }
             }
 
             std::optional<predicates::_long> parse(command_manager& manager, predicates::command::_long& cfg, std::string& part, std::string& path) {
-                int32_t value = std::stoll(part);
-                if (cfg.min)
-                    if (value < *cfg.min)
-                        return std::nullopt;
-                if (cfg.max)
-                    if (value > *cfg.max)
-                        return std::nullopt;
-                return predicates::_long{value};
+                try {
+                    int32_t value = std::stoll(part);
+                    if (cfg.min)
+                        if (value < *cfg.min)
+                            return std::nullopt;
+                    if (cfg.max)
+                        if (value > *cfg.max)
+                            return std::nullopt;
+                    return predicates::_long{value};
+                } catch (...) {
+                    return std::nullopt;
+                }
             }
 
             std::optional<predicates::custom_virtual> parse(command_manager& manager, predicates::command::custom_virtual& cfg, std::string& part, std::string& path) {
@@ -648,10 +666,8 @@ namespace crafted_craft {
         std::optional<predicate> find_argument_no_except(command_manager& mngr, list_array<command>& command_nodes, command*& command, std::string& string, std::string& rest) {
             for (auto child_id : command->childs) {
                 auto& child = command_nodes[child_id];
-                if (!child.argument_predicate)
-                    continue;
-                if (child.argument_predicate)
-                    return std::visit(
+                if (child.argument_predicate) {
+                    auto res = std::visit(
                         [&](auto& predicate_cfg) -> std::optional<predicate> {
                             auto res = pred::parse(mngr, predicate_cfg, string, rest);
                             if (res) {
@@ -662,6 +678,9 @@ namespace crafted_craft {
                         },
                         *child.argument_predicate
                     );
+                    if (res)
+                        return std::move(*res);
+                }
             }
             return std::nullopt;
         }
@@ -756,27 +775,31 @@ namespace crafted_craft {
 
 
             while (path.size() > 0 && !current->redirect) {
-                auto split = path.find(' ');
-                std::string part;
-                if (split == std::string::npos) {
-                    std::swap(part, path);
-                } else {
-                    part = path.substr(0, split);
-                    path = path.substr(split + 1);
-                }
+                try {
+                    auto split = path.find(' ');
+                    std::string part;
+                    if (split == std::string::npos) {
+                        std::swap(part, path);
+                    } else {
+                        part = path.substr(0, split);
+                        path = path.substr(split + 1);
+                    }
 
-                if (part.empty())
-                    break;
+                    if (part.empty())
+                        break;
 
-                int32_t child = current->get_child(command_nodes, part);
-                if (child == -1)
-                    args.push_back(find_argument(*this, command_nodes, current, part, path));
-                else {
-                    auto& command = command_nodes[child];
-                    if (command.argument_predicate)
+                    int32_t child = current->get_child(command_nodes, part);
+                    if (child == -1)
                         args.push_back(find_argument(*this, command_nodes, current, part, path));
-                    else
-                        current = &command_nodes[child];
+                    else {
+                        auto& command = command_nodes[child];
+                        if (command.argument_predicate)
+                            args.push_back(find_argument(*this, command_nodes, current, part, path));
+                        else
+                            current = &command_nodes[child];
+                    }
+                } catch (...) {
+                    throw command_exception(std::current_exception(), command_string.size() - path.size());
                 }
             }
             if (current->redirect) {

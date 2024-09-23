@@ -17,7 +17,7 @@ namespace crafted_craft {
                 static_data.as_entity_on_tick(world, sub_chunk, *this, sub_chunk.get_block_entity_data(local_x, local_y, local_z), chunk_x, sub_chunk_y, chunk_z, local_x, local_y, local_z, random_ticked);
                 return;
             case tick_opt::undefined:
-                tickable = resolve_tickable(id);
+                tickable = static_data.resolve_tickable();
                 goto retry;
                 break;
             default:
@@ -27,12 +27,7 @@ namespace crafted_craft {
         }
 
         block::tick_opt block::resolve_tickable(base_objects::block_id_t block_id) {
-            auto& staic_data = base_objects::block(block_id).getStaticData();
-            if (staic_data.on_tick)
-                return tick_opt::block_tickable;
-            if (staic_data.as_entity_on_tick)
-                return tick_opt::entity_tickable;
-            return tick_opt::no_tick;
+            return base_objects::block(block_id).getStaticData().resolve_tickable();
         }
 
         bool block::is_tickable() {
@@ -41,7 +36,7 @@ namespace crafted_craft {
             case tick_opt::entity_tickable:
                 return true;
             case tick_opt::undefined:
-                tickable = resolve_tickable(id);
+                tickable = getStaticData().resolve_tickable();
                 return tickable != tick_opt::no_tick;
             default:
             case tick_opt::no_tick:
