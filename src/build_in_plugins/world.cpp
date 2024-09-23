@@ -1,5 +1,9 @@
 #include "world.hpp"
 #include "../ClientHandleHelper.hpp"
+#include "../api/players.hpp"
+#include "../api/world.hpp"
+#include "../log.hpp"
+#include "../util/conversions.hpp"
 
 namespace crafted_craft {
     namespace build_in_plugins {
@@ -17,8 +21,78 @@ namespace crafted_craft {
         }
 
         WorldManagementPlugin::WorldManagementPlugin()
-            : worlds_storage(Server::instance().config, Server::instance().config.server.base_path / Server::instance().config.server.storage_folder) {
+            : worlds_storage(Server::instance().config, Server::instance().config.server.get_worlds_path()) {
         }
+
+        void WorldManagementPlugin::OnLoad(const PluginRegistrationPtr& self) {
+            log::info("World", "loading worlds...");
+            api::world::register_worlds_data(worlds_storage);
+
+            for (auto& it : Server::instance().config.allowed_dimensions) {
+                api::world::pre_load_world(it.get(), [&](storage::world_data& world) {
+                    world.world_type = Server::instance().config.world.type;
+                    world.world_seed = util::conversions::uuid::from(Server::instance().config.world.seed.get());
+                    world.light_processor_id = "default"_ss;
+                    if (world.world_name.get() == "end") {
+                        world.generator_id = "end"_ss;
+                    } else if (world.world_name.get() == "nether") {
+                        world.generator_id = "nether"_ss;
+                    } else {
+                        world.generator_id = Server::instance().config.world.type;
+                        for (auto& [name, value] : Server::instance().config.world.generator_settings)
+                            world.world_generator_data[name.get()] = value;
+                        world.load_points.push_back({10, 10, -10, -10});
+                    }
+                });
+                log::info("World", it.get() + " loaded.");
+            }
+            log::info("World", "installing ticking task...");
+            world_ticking = std::make_shared<fast_task::task>([this]() {
+                log::info("World", "load complete.");
+                std::random_device rd;
+                std::mt19937 gen(rd());
+                while (true) {
+                    std::chrono::nanoseconds time(0);
+                    worlds_storage.locked([&](storage::worlds_data& worlds) {
+                        fast_task::task::check_cancellation();
+                        time = worlds_storage.apply_tick(gen);
+                    });
+                    fast_task::task::sleep_until(std::chrono::high_resolution_clock::now() + time);
+                }
+            });
+            fast_task::task::start(world_ticking);
+        }
+
+        void WorldManagementPlugin::OnUnload(const PluginRegistrationPtr& self) {
+            log::info("World", "saving worlds...");
+            worlds_storage.locked([&](storage::worlds_data& worlds) {
+                fast_task::task::notify_cancel(world_ticking);
+                worlds.for_each_world([&](uint64_t id, storage::world_data& world) {
+                    log::info("World", "saving world " + world.world_name.get() + "...");
+                    world.save();
+                    world.save_and_unload_chunks();
+                    world.await_save_chunks();
+                    log::info("World", "world " + world.world_name.get() + " saved.");
+                });
+                worlds.unload_all();
+            });
+        }
+
+        //do not release memory, just save
+        void WorldManagementPlugin::OnFaultUnload(const PluginRegistrationPtr& self) {
+            log::info("World", "saving worlds...");
+            worlds_storage.locked([&](storage::worlds_data& worlds) {
+                fast_task::task::notify_cancel(world_ticking);
+                worlds.for_each_world([&](uint64_t id, storage::world_data& world) {
+                    log::info("World", "saving world " + world.world_name.get() + "...");
+                    world.save();
+                    world.save_chunks();
+                    world.await_save_chunks();
+                    log::info("World", "world " + world.world_name.get() + " saved.");
+                });
+            });
+        }
+
 
         void WorldManagementPlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
             using predicate = base_objects::predicate;
@@ -64,7 +138,7 @@ namespace crafted_craft {
                     if (worlds_storage.base_world_id == -1)
                         api::players::calls::on_system_message({client, {"Base world not set."}});
                     else
-                        api::players::calls::on_system_message({client, {"Base world is: " + worlds_storage.get(worlds_storage.base_world_id)->world_name}});
+                        api::players::calls::on_system_message({client, {"Base world is: " + worlds_storage.get(worlds_storage.base_world_id)->world_name.get()}});
                 });
             }
         }

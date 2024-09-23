@@ -115,7 +115,7 @@ namespace crafted_craft {
                     }
                     case 0x05: { //registry resource pack
                         log::debug("configuration", "Registry resource pack");
-                        ENBT::UUID id = ReadUUID(packet);
+                        enbt::raw_uuid id = ReadUUID(packet);
                         int32_t result = ReadVar<int32_t>(packet);
                         auto res = session->sharedData().packets_state.pending_resource_packs.find(id);
                         if (res != session->sharedData().packets_state.pending_resource_packs.end()) {

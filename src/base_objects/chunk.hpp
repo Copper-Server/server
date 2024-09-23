@@ -108,7 +108,7 @@ namespace crafted_craft {
             private:
                 static void write_var_int(list_array<uint8_t>& result, int32_t value) {
                     uint8_t buffer[5];
-                    size_t res = ENBT::toVar(buffer, 5, value);
+                    size_t res = enbt::value::toVar(buffer, 5, value);
                     for (size_t i = 0; i < res; i++)
                         result.push_back(buffer[i]);
                 }

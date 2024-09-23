@@ -155,12 +155,11 @@ namespace crafted_craft {
                 client.player_data = data.player;
             }
             Response response;
-            auto last_death_location =
-                client.player_data.last_death_location ? std::optional(base_objects::packets::death_location_data(
-                                                             client.player_data.last_death_location->world_id,
-                                                             {client.player_data.last_death_location->x, client.player_data.last_death_location->y, client.player_data.last_death_location->z}
-                                                         ))
-                                                       : std::nullopt;
+            auto last_death_location = client.player_data.last_death_location ? std::optional(base_objects::packets::death_location_data(
+                                                                                    client.player_data.last_death_location->world_id,
+                                                                                    {(int32_t)client.player_data.last_death_location->x, (int32_t)client.player_data.last_death_location->y, (int32_t)client.player_data.last_death_location->z}
+                                                                                ))
+                                                                              : std::nullopt;
 
 
             response += packets::play::joinGame(

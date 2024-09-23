@@ -53,16 +53,21 @@ namespace crafted_craft {
                 for (auto& [id, entity] : data._registry) {
                     entity.internal_entity_aliases.clear();
                     for (auto& [protocol, assignations] : internal_entity_aliases_protocol) {
-                        bool found = false;
-                        for (auto& alias : entity.entity_aliases) {
-                            if (assignations.find(alias) != assignations.end()) {
-                                entity.internal_entity_aliases[protocol] = assignations[alias];
-                                found = true;
-                                break;
+                        if (assignations.find(entity.id) != assignations.end()) {
+                            entity.internal_entity_aliases[protocol] = assignations[entity.id];
+                            continue;
+                        } else {
+                            bool found = false;
+                            for (auto& alias : entity.entity_aliases) {
+                                if (assignations.find(alias) != assignations.end()) {
+                                    entity.internal_entity_aliases[protocol] = assignations[alias];
+                                    found = true;
+                                    break;
+                                }
                             }
+                            if (!found)
+                                throw std::runtime_error("Entity alias for " + entity.id + " not found in protocol " + std::to_string(protocol));
                         }
-                        if (!found)
-                            throw std::runtime_error("Entity alias for " + entity.id + " not found in protocol " + std::to_string(protocol));
                     }
                 }
             });
@@ -77,7 +82,7 @@ namespace crafted_craft {
             return res;
         }
 
-        ENBT entity::copy_to_enbt() const {
+        enbt::value entity::copy_to_enbt() const {
             enbt::compound res;
             res["nbt"] = nbt;
             res["server_data"] = server_data;
@@ -89,7 +94,7 @@ namespace crafted_craft {
             res["id"] = id;
             res["died"] = died;
             if (world)
-                res["bound_world"] = world->world_name;
+                res["bound_world"] = world->world_name.get();
             return res;
         }
 

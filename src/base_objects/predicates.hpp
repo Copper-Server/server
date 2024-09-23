@@ -11,6 +11,7 @@ namespace crafted_craft {
             namespace command {
                 class custom_virtual_base {
                 public:
+                    virtual ~custom_virtual_base() {}
                     virtual std::string name() = 0;
                     virtual custom_virtual_base* make_copy() const = 0;
                 };
@@ -198,6 +199,7 @@ namespace crafted_craft {
 
             class custom_virtual_base {
             public:
+                virtual ~custom_virtual_base() {}
                 virtual std::string name() = 0;
             };
 
@@ -251,13 +253,13 @@ namespace crafted_craft {
             struct block {
                 std::string block_id;
                 std::unordered_map<std::string, std::string> states;
-                ENBT data_tags;
+                enbt::value data_tags;
             };
 
             struct state {
                 std::string block_id;
                 std::unordered_map<std::string, std::string> states;
-                //ENBT data_tags;still parsed but ignored
+                //enbt::value data_tags;still parsed but ignored
             };
 
             enum class color : uint8_t {
@@ -353,7 +355,7 @@ namespace crafted_craft {
 
             struct item {
                 std::string value;
-                ENBT data_tags;
+                enbt::value data_tags;
             };
 
             struct item_slot {
@@ -363,7 +365,7 @@ namespace crafted_craft {
 
             struct item_stack {
                 std::string value;
-                ENBT data_tags;
+                enbt::value data_tags;
             };
 
             struct message {
@@ -371,7 +373,7 @@ namespace crafted_craft {
             };
 
             struct nbt_compound_tag {
-                ENBT nbt;
+                enbt::value nbt;
             };
 
             struct nbt_path {
@@ -379,7 +381,7 @@ namespace crafted_craft {
             };
 
             struct nbt {
-                ENBT any_nbt;
+                enbt::value any_nbt;
             };
 
             struct objective {
@@ -437,7 +439,7 @@ namespace crafted_craft {
 
                 struct item {
                     std::string item_id;
-                    ENBT nbt;
+                    enbt::value nbt;
                 };
 
                 struct sculk_charge {
@@ -579,7 +581,7 @@ namespace crafted_craft {
             };
 
             struct uuid {
-                ENBT::UUID value;
+                enbt::raw_uuid value;
             };
 
             struct vec2 {

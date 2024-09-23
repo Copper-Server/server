@@ -10,17 +10,17 @@ namespace crafted_craft {
     namespace storage {
         namespace memory {
             class entity_ids_map_storage {
-                boost::bimap<int32_t, ENBT::UUID> ids;
+                boost::bimap<int32_t, enbt::raw_uuid> ids;
                 fast_task::task_mutex mutex;
                 int32_t id_allocator = 0;
 
             public:
                 //generates random UUID allocates, guarantees uniqueness
-                [[nodiscard]] std::pair<int32_t, ENBT::UUID> allocate_id() {
+                [[nodiscard]] std::pair<int32_t, enbt::raw_uuid> allocate_id() {
                     static std::random_device rd;
                     static std::mt19937 gen(rd());
                     static std::uniform_int_distribution<uint16_t> dis;
-                    ENBT::UUID uuid;
+                    enbt::raw_uuid uuid;
                     std::unique_lock lock(mutex);
                     if (ids.size() == INT32_MAX)
                         throw std::runtime_error("Too many registered UUID's, can't allocate more");
@@ -41,9 +41,10 @@ namespace crafted_craft {
                     while (ids.left.find(id_allocator) != ids.left.end())
                         id_allocator++;
                     ids.left.insert({id_allocator, uuid});
+                    return {id_allocator, uuid};
                 }
 
-                [[nodiscard]] int32_t allocate_id(const ENBT::UUID& uuid) {
+                [[nodiscard]] int32_t allocate_id(const enbt::raw_uuid& uuid) {
                     std::unique_lock lock(mutex);
                     if (ids.size() == INT32_MAX)
                         throw std::runtime_error("Too many registered UUID's, can't allocate more");
@@ -60,7 +61,7 @@ namespace crafted_craft {
                     ids.left.erase(id);
                 }
 
-                [[nodiscard]] int32_t remove_id(const ENBT::UUID& uuid) {
+                [[nodiscard]] int32_t remove_id(const enbt::raw_uuid& uuid) {
                     std::unique_lock lock(mutex);
                     auto it = ids.right.find(uuid);
                     if (it == ids.right.end())
@@ -70,7 +71,7 @@ namespace crafted_craft {
                     return id;
                 }
 
-                [[nodiscard]] int32_t get_id(const ENBT::UUID& uuid) {
+                [[nodiscard]] int32_t get_id(const enbt::raw_uuid& uuid) {
                     std::unique_lock lock(mutex);
                     auto it = ids.right.find(uuid);
                     if (it == ids.right.end())
@@ -78,11 +79,11 @@ namespace crafted_craft {
                     return it->second;
                 }
 
-                [[nodiscard]] ENBT::UUID get_uuid(int32_t id) {
+                [[nodiscard]] enbt::raw_uuid get_uuid(int32_t id) {
                     std::unique_lock lock(mutex);
                     auto it = ids.left.find(id);
                     if (it == ids.left.end())
-                        return ENBT::UUID();
+                        return enbt::raw_uuid();
                     return it->second;
                 }
 
@@ -91,7 +92,7 @@ namespace crafted_craft {
                     return ids.left.find(id) != ids.left.end();
                 }
 
-                [[nodiscard]] bool has_uuid(const ENBT::UUID& uuid) {
+                [[nodiscard]] bool has_uuid(const enbt::raw_uuid& uuid) {
                     std::unique_lock lock(mutex);
                     return ids.right.find(uuid) != ids.right.end();
                 }

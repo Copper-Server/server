@@ -1,8 +1,8 @@
-#include "../api/permissions.hpp"
+#include "permissions.hpp"
 #include "../ClientHandleHelper.hpp"
+#include "../api/permissions.hpp"
 #include "../api/players.hpp"
 #include "../log.hpp"
-#include "../plugin/main.hpp"
 
 namespace crafted_craft {
     namespace build_in_plugins {

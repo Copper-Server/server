@@ -25,12 +25,13 @@ namespace crafted_craft {
         struct action_provider {
             std::string action_tag;
             list_array<base_objects::shared_string> required_permissions_tag;
+            action_provider(const char* tag);
             action_provider(const std::string& tag);
-            action_provider(const std::string&& tag);
+            action_provider(std::string&& tag);
             action_provider(const std::string& tag, const list_array<shared_string>& requirement);
-            action_provider(const std::string&& tag, const list_array<shared_string>& requirement);
+            action_provider(std::string&& tag, const list_array<shared_string>& requirement);
             action_provider(const std::string& tag, list_array<shared_string>&& requirement);
-            action_provider(const std::string&& tag, list_array<shared_string>&& requirement);
+            action_provider(std::string&& tag, list_array<shared_string>&& requirement);
         };
 
         struct redirect_command {
@@ -108,6 +109,26 @@ namespace crafted_craft {
                 );
             }
             int32_t get_child(list_array<command>& commands_nodes, const std::string& name);
+
+            command(const char* name)
+                : name(name), suggestions("") {}
+
+            command(
+                const std::string& name = "",
+                const std::string& description = "",
+                const std::string& usage = "",
+                const std::optional<command_predicate>& argument_predicate = std::nullopt,
+                const std::optional<command_callback>& executable = std::nullopt,
+                const std::optional<redirect_command>& redirect = std::nullopt,
+                const std::variant<command_suggestion, std::string>& suggestions = ""
+            )
+                : name(name),
+                  description(description),
+                  usage(usage),
+                  argument_predicate(argument_predicate),
+                  executable(executable),
+                  redirect(redirect),
+                  suggestions(suggestions) {}
         };
 
         class command_custom_parser {
@@ -177,8 +198,6 @@ namespace crafted_craft {
             command_browser(command_browser& browser, const std::string& path);
             command_browser(command_browser&& browser) noexcept;
 
-            command_browser add_child(const std::string& name);
-            command_browser add_child(const std::string& name, command_predicate pred);
             command_browser add_child(command&& command);
             command_browser add_child(command&& command, command_predicate pred);
             command_browser add_child(command_browser& command);
@@ -191,7 +210,6 @@ namespace crafted_craft {
             command_browser& set_argument_type(const command_predicate& pred);
             command_browser& remove_argument();
 
-            command_browser& set_callback(const std::string& action, const command_callback& callback);
             command_browser& set_callback(const action_provider& action, const command_callback& callback);
 
             command_browser& set_callback(action_provider&& action, const command_callback& callback) {
@@ -228,7 +246,6 @@ namespace crafted_craft {
                 : manager(browser.manager) {}
 
             command_browser add_child(command&& command);
-            command_browser add_child(const std::string& name);
             bool remove_child(const std::string& name);
 
             list_array<command_browser> get_childs();

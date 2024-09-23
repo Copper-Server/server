@@ -130,7 +130,12 @@ namespace crafted_craft {
             }
 
             operator std::string() {
-                return operator boost::json::string&().c_str();
+                auto sv = operator std::string_view();
+                return std::string(sv.begin(), sv.end());
+            }
+
+            operator std::string_view() {
+                return operator boost::json::string&();
             }
 
             operator boost::json::string&() {
@@ -426,7 +431,7 @@ namespace crafted_craft {
                 js_iterator(js_iterator&& iterator)
                     : iterator(std::move(iterator.iterator)), inner_path(iterator.inner_path) {}
 
-                std::pair<boost::json::string, js_value> operator*() {
+                std::pair<boost::json::string_view, js_value> operator*() {
                     return {iterator->key(), js_value(inner_path + ":" + iterator->key_c_str(), iterator->value())};
                 }
 
@@ -485,7 +490,11 @@ namespace crafted_craft {
                 return js_value(path + ":" + (std::string)name, obj[name]);
             }
 
-            bool contains(std::string_view name) {
+            const js_value operator[](const boost::json::string_view& name) const {
+                return js_value(path + ":" + (std::string)name, obj[name]);
+            }
+
+            bool contains(std::string_view name) const {
                 return obj.contains(name);
             }
 
@@ -608,6 +617,11 @@ namespace crafted_craft {
             void push_back(const boost::json::value& value) {
                 obj.push_back(value);
             }
+
+            void push_back(std::string_view value) {
+                obj.push_back((boost::json::string_view)value);
+            }
+
 
             js_iterator begin() {
                 return {obj.begin(), obj.begin(), path};

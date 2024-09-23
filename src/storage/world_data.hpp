@@ -57,32 +57,20 @@ namespace crafted_craft {
         struct light_data {
             union light_item {
                 struct {
+                    //compact two values in one
                     uint8_t light_point : 4;
-                    bool lighted : 1;
-                    bool _unused : 3;
+                    uint8_t _unused : 4;
                 };
 
-                uint8_t raw;
+                uint8_t raw = 0;
             };
 
             light_item light_map[16][16][16];
         };
 
-        union block_data {
-            struct {
-                base_objects::block_id_t block_id : 15;
-                bool is_tickable : 1;
-                uint16_t block_state_data : 15;
-            };
-
-            uint32_t raw;
-
-            void tick(world_data&, sub_chunk_data& sub_chunk, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z);
-        };
-
         struct sub_chunk_data {
-            block_data blocks[16][16][16];
-            std::vector<base_objects::block_entity> block_entities;
+            base_objects::block blocks[16][16][16];
+            std::unordered_map<uint16_t, enbt::value> block_entities; //0xXYZ => block_entity
             list_array<base_objects::entity_ref> stored_entities;
             list_array<base_objects::local_block_pos> queried_for_tick;
 
@@ -91,17 +79,31 @@ namespace crafted_craft {
             light_data block_light;
             bool has_tickable_blocks = false;
             bool need_to_recalculate_light = false;
+            bool sky_lighted = false;   //set true if at least one block is lighted in this sub_chunk
+            bool block_lighted = false; //set true if at least one block is lighted in this sub_chunk
 
-            sub_chunk_data() {
+            sub_chunk_data() {}
+
+            enbt::value& get_block_entity_data(uint8_t local_x, uint8_t local_y, uint8_t local_z);
+            void get_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, std::function<void(base_objects::block& block)> on_normal, std::function<void(base_objects::block& block, enbt::value& entity_data)> on_entity);
+            void set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::full_block_data& block);
+            void set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::full_block_data&& block);
+            void for_each_block(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block& block)> func);
+        };
+
+        struct height_maps {
+            uint64_t surface[16][16];
+            uint64_t ocean_floor[16][16];
+            uint64_t motion_blocking[16][16];
+            uint64_t motion_blocking_no_leaves[16][16];
+
+            height_maps() {
                 for (int i = 0; i < 16; i++) {
                     for (int j = 0; j < 16; j++) {
-                        for (int k = 0; k < 16; k++) {
-                            blocks[i][j][k] = {0, false, 0};
-                            sky_light.light_map[i][j][k].light_point = 0;
-                            sky_light.light_map[i][j][k].lighted = false;
-                            block_light.light_map[i][j][k].light_point = 0;
-                            block_light.light_map[i][j][k].lighted = false;
-                        }
+                        surface[i][j] = 0;
+                        ocean_floor[i][j] = 0;
+                        motion_blocking[i][j] = 0;
+                        motion_blocking_no_leaves[i][j] = 0;
                     }
                 }
             }
@@ -109,33 +111,75 @@ namespace crafted_craft {
 
         class chunk_data {
             friend world_data;
-            int64_t chunk_x, chunk_z;
             bool load(const std::filesystem::path& chunk_z);
-            bool load(const ENBT& chunk_data);
+            bool load(const enbt::compound_ref& chunk_data);
             bool save(const std::filesystem::path& chunk_z);
 
         public:
-            std::chrono::high_resolution_clock::time_point last_usage;
+            height_maps height_maps;
             std::vector<sub_chunk_data> sub_chunks;
+            std::chrono::high_resolution_clock::time_point last_usage;
+            const int64_t chunk_x, chunk_z;
             bool marked_for_tick = false;
 
             chunk_data(int64_t chunk_x, int64_t chunk_z);
 
             void for_each_entity(std::function<void(base_objects::entity_ref& entity)> func);
-            void for_each_entity(std::function<void(base_objects::entity_ref& entity)> func, uint64_t sub_chunk_y);
+            void for_each_entity(uint64_t sub_chunk_y, std::function<void(base_objects::entity_ref& entity)> func);
+
+            void for_each_block_entity(std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
+            void for_each_block_entity(uint64_t sub_chunk_y, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
 
             void for_each_sub_chunk(std::function<void(sub_chunk_data& sub_chunk)> func);
-            void get_sub_chunk(std::function<void(sub_chunk_data& sub_chunk)> func, uint64_t sub_chunk_y);
+            void get_sub_chunk(uint64_t sub_chunk_y, std::function<void(sub_chunk_data& sub_chunk)> func);
 
             void query_for_tick(uint8_t local_x, uint64_t global_y, uint8_t local_z);
+
 
             void tick(world_data& world, size_t max_random_tick_for_chunk, std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time);
         };
 
         class chunk_generator {
         public:
-            virtual ENBT generate_chunk(world_data& world, int64_t chunk_x, int64_t chunk_z) = 0;
-            virtual ENBT generate_sub_chunk(world_data& world, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z) = 0;
+            virtual ~chunk_generator() {}
+
+            //Subchunk format:
+            //{
+            //  "blocks": array(16)[array(16)[sarray_ui32(16)[...]...]...], // x[y[z[]]]
+            //  "block_entities": array[
+            //      {
+            //          "x" : int,//used ui8
+            //          "y" : int,//used ui8
+            //          "z" : int,//used ui8
+            //          "id" : int,//used ui32
+            //          "state" : int, //used 15 bits of ui16
+            //          "nbt" : {any},
+            //      },
+            //      ...
+            //  ],
+            //  "entity": array[{entity data}...],
+            //  "queried_for_tick" : array[{"x":int, "y":int, "z":int}]//used ui8
+            //}
+            //** Every item in subchunk structure is optional
+            //
+            //Chunk format:
+            //{
+            //  "sub_chunks": array[
+            //      {Subchunk},
+            //      ...
+            //  ]
+            //}
+
+
+            //Returns {Chunk}
+            virtual enbt::compound generate_chunk(world_data& world, int64_t chunk_x, int64_t chunk_z) = 0;
+            //Returns {Subchunk}
+            virtual enbt::compound generate_sub_chunk(world_data& world, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z) = 0;
+
+
+            static void register_it(const base_objects::shared_string& id, base_objects::atomic_holder<chunk_generator> gen);
+            static void unregister_it(const base_objects::shared_string& id);
+            static base_objects::atomic_holder<chunk_generator> get_it(const base_objects::shared_string& id);
         };
 
         class chunk_light_processor {
@@ -155,13 +199,11 @@ namespace crafted_craft {
 
             virtual void process_chunk(world_data& world, int64_t chunk_x, int64_t chunk_z) = 0;
             virtual void process_sub_chunk(world_data& world, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z) = 0;
-            virtual void block_placed(world_data& world, int64_t block_x, uint64_t block_y, int64_t block_z) = 0;
-            virtual void block_removed(world_data& world, int64_t block_x, uint64_t block_y, int64_t block_z) = 0;
+            virtual void block_changed(world_data& world, int64_t global_x, uint64_t global_y, int64_t global_z) = 0;
 
-            virtual void block_changed(world_data& world, int64_t block_x, uint64_t block_y, int64_t block_z) {
-                block_removed(world, block_x, block_y, block_z);
-                block_placed(world, block_x, block_y, block_z);
-            }
+            static void register_it(const base_objects::shared_string& id, base_objects::atomic_holder<chunk_light_processor> processor);
+            static void unregister_it(const base_objects::shared_string& id);
+            static base_objects::atomic_holder<chunk_light_processor> get_it(const base_objects::shared_string& id);
         };
 
         class world_data {
@@ -176,9 +218,7 @@ namespace crafted_craft {
 
 
             friend class worlds_data;
-            void load();
-            void save();
-            std::string preview_world_name();
+            base_objects::shared_string preview_world_name();
             std::filesystem::path path;
 
             std::unordered_map<calc::XY<int64_t>, FuturePtr<base_objects::atomic_holder<chunk_data>>> on_load_process;
@@ -188,23 +228,32 @@ namespace crafted_craft {
 
 
             std::chrono::high_resolution_clock::time_point last_usage;
-            void make_save(int64_t chunk_x, int64_t chunk_z, bool also_erase);
-            void make_save(int64_t chunk_x, int64_t chunk_z, chunk_row::iterator, bool also_erase);
+            void make_save(int64_t chunk_x, int64_t chunk_z, bool also_unload);
+            void make_save(int64_t chunk_x, int64_t chunk_z, chunk_row::iterator&, bool also_unload);
             base_objects::atomic_holder<chunk_data> load_chunk_sync(int64_t chunk_x, int64_t chunk_z);
 
+            base_objects::atomic_holder<chunk_generator>& get_generator();
+            base_objects::atomic_holder<chunk_light_processor>& get_light_processor();
+
         public:
+            //metadata
+            void load();
+            //metadata
+            void save();
             enbt::compound general_world_data;
             enbt::compound world_game_rules;
             enbt::compound world_generator_data;
+            enbt::compound world_light_processor_data;
             enbt::compound world_records;
 
-            ENBT::UUID world_seed;
-            ENBT::UUID wandering_trader_id;
+            enbt::raw_uuid world_seed;
+            enbt::raw_uuid wandering_trader_id;
             float wandering_trader_spawn_chance = 0;
             int32_t wandering_trader_spawn_delay = 0;
-            std::string world_name;
-            std::string world_type;
-            std::string generator_id;
+            base_objects::shared_string world_name;
+            base_objects::shared_string world_type;
+            base_objects::shared_string light_processor_id;
+            base_objects::shared_string generator_id;
             std::vector<std::string> enabled_datapacks;
             std::vector<std::string> enabled_plugins;
             std::vector<std::string> enabled_features;
@@ -250,6 +299,9 @@ namespace crafted_craft {
             //returns std::nullopt if chunk already queried for async load
             std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z);
             FuturePtr<base_objects::atomic_holder<chunk_data>> request_chunk_data(int64_t chunk_x, int64_t chunk_z);
+            bool request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback);
+            void request_chunk_data(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback, std::function<void()> fault);
+
             void save_chunks();
             void await_save_chunks();
             void save_and_unload_chunks();
@@ -258,39 +310,59 @@ namespace crafted_craft {
             void save_chunk(int64_t chunk_x, int64_t chunk_z);
             void erase_chunk(int64_t chunk_x, int64_t chunk_z);
             void regenerate_chunk(int64_t chunk_x, int64_t chunk_z);
+            void reset_light_data(int64_t chunk_x, uint64_t chunk_z);
 
             void for_each_chunk(std::function<void(chunk_data& chunk)> func);
-            void for_each_chunk(base_objects::square_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func);
+            void for_each_chunk(base_objects::cubic_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func);
             void for_each_chunk(base_objects::spherical_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func);
             void for_each_sub_chunk(int64_t chunk_x, int64_t chunk_z, std::function<void(sub_chunk_data& chunk)> func);
             void get_sub_chunk(int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, std::function<void(sub_chunk_data& chunk)> func);
+            void get_chunk(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> func);
 
 
             void for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func);
-            void for_each_entity(base_objects::square_bounds_chunk bounds, std::function<void(base_objects::entity_ref& entity)> func);
+            void for_each_entity(base_objects::cubic_bounds_chunk bounds, std::function<void(base_objects::entity_ref& entity)> func);
             void for_each_entity(base_objects::spherical_bounds_chunk bounds, std::function<void(base_objects::entity_ref& entity)> func);
             void for_each_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
             void for_each_entity(int64_t chunk_x, int64_t chunk_z, uint64_t sub_chunk_y, std::function<void(const base_objects::entity_ref& entity)> func);
+            void for_each_block_entity(base_objects::cubic_bounds_chunk bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
+            void for_each_block_entity(base_objects::spherical_bounds_chunk bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
+            void for_each_block_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
+            void for_each_block_entity(int64_t chunk_x, int64_t chunk_z, uint64_t sub_chunk_y, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
 
 
             void query_for_tick(int64_t global_x, uint64_t global_y, int64_t global_z);
-            bool set_block(base_objects::block block, int64_t global_x, uint64_t global_y, int64_t global_z);
-            bool place_block(base_objects::block block, int64_t global_x, uint64_t global_y, int64_t global_z);
-            bool remove_block(int64_t global_x, uint64_t global_y, int64_t global_z);
-            bool break_block(int64_t global_x, uint64_t global_y, int64_t global_z);
-            void query_block(int64_t global_x, uint64_t global_y, int64_t global_z, std::function<void(base_objects::block block)> func);
-            void query_block_entity(int64_t global_x, uint64_t global_y, int64_t global_z, std::function<void(base_objects::block_entity& block)> func);
+            void set_block(const base_objects::full_block_data& block, int64_t global_x, uint64_t global_y, int64_t global_z);
+            void set_block(base_objects::full_block_data&& block, int64_t global_x, uint64_t global_y, int64_t global_z);
+            void remove_block(int64_t global_x, uint64_t global_y, int64_t global_z);
+            void get_block(int64_t global_x, uint64_t global_y, int64_t global_z, std::function<void(base_objects::block& block)> func, std::function<void(base_objects::block& block, enbt::value& extended_data)> block_entity);
+            void query_block(int64_t global_x, uint64_t global_y, int64_t global_z, std::function<void(base_objects::block& block)> func, std::function<void(base_objects::block& block, enbt::value& extended_data)> block_entity, std::function<void()> fault);
+
+            void block_updated(int64_t global_x, uint64_t global_y, int64_t global_z);
+            void chunk_updated(int64_t chunk_x, uint64_t chunk_z);
+            void sub_chunk_updated(int64_t chunk_x, uint64_t chunk_z, uint64_t sub_chunk_y);
+
+
+            void locked(std::function<void(world_data& self)> func);
+
+            void set_block_range(base_objects::cubic_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks);
+            void set_block_range(base_objects::cubic_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks);
+            void set_block_range(base_objects::spherical_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks);
+            void set_block_range(base_objects::spherical_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks);
+
             uint64_t register_client(const base_objects::client_data_holder& client);
             void unregister_client(uint64_t);
-
             void register_entity(base_objects::entity_ref& client);
             void unregister_entity(base_objects::entity_ref& client);
+
+
+            void change_chunk_generator(const base_objects::shared_string& id);
+            void change_light_processor(const base_objects::shared_string& id);
 
 
             void tick(std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time, bool update_tps);
             //unloads unused chunks and check themselves lifetime and active operations, if expired and there no active operations, then function will return true
             bool collect_unused_data(std::chrono::high_resolution_clock::time_point current_time, size_t& unload_limit);
-
 
             //interface
             //virtual void broadcast_attach_entity(const base_objects::entity& target, const base_objects::entity& vehicle);
@@ -311,19 +383,19 @@ namespace crafted_craft {
             //virtual void broadcast_entity_velocity(const base_objects::entity& entity, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_entity_animation(const base_objects::entity& entity, base_objects::entity_animation animation, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_leash_entity(const base_objects::entity& entity, const base_objects::entity& entity_leashed_to);
-            //virtual void broadcast_particle_effect(const std::string& particle_name, calc::VECTOR src, calc::VECTOR offset, float particle_data, int particle_amount, const base_objects::client_data_holder& exclude = nullptr);
-            //virtual void broadcast_particle_effect(const std::string& particle_name, calc::VECTOR src, calc::VECTOR offset, float particle_data, int particle_amount, std::array<int, 2> data, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_particle_effect(const base_objects::shared_string& particle_name, calc::VECTOR src, calc::VECTOR offset, float particle_data, int particle_amount, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_particle_effect(const base_objects::shared_string& particle_name, calc::VECTOR src, calc::VECTOR offset, float particle_data, int particle_amount, std::array<int, 2> data, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_player_list_add_player(const base_objects::player& player, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_player_list_header_footer(const Chat& header, const Chat& footer);
             //virtual void broadcast_player_list_remove_player(const base_objects::player& player, const base_objects::client_data_holder& exclude = nullptr);
-            //virtual void broadcast_player_list_update_display_name(const base_objects::player& player, const std::string& custom_name, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_player_list_update_display_name(const base_objects::player& player, const base_objects::shared_string& custom_name, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_player_list_update_game_mode(const base_objects::player& player, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_player_list_update_ping();
             //virtual void broadcast_remove_entity_effect(const base_objects::entity& entity, int effect_id, const base_objects::client_data_holder& exclude = nullptr);
-            //virtual void broadcast_scoreboard_objective(const std::string& name, const std::string& display_name, uint8_t mode);
-            //virtual void broadcast_score_update(const std::string& objective, const std::string& player_name, int64_t score, uint8_t mode);
-            //virtual void broadcast_display_objective(const std::string& objective, base_objects::scoreboard::display_slot display);
-            //virtual void broadcast_sound_effect(const std::string& sound_name, calc::VECTOR position, float volume, float pitch, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_scoreboard_objective(const base_objects::shared_string& name, const base_objects::shared_string& display_name, uint8_t mode);
+            //virtual void broadcast_score_update(const base_objects::shared_string& objective, const base_objects::shared_string& player_name, int64_t score, uint8_t mode);
+            //virtual void broadcast_display_objective(const base_objects::shared_string& objective, base_objects::scoreboard::display_slot display);
+            //virtual void broadcast_sound_effect(const base_objects::shared_string& sound_name, calc::VECTOR position, float volume, float pitch, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_spawn_entity(base_objects::entity& entity, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_thunderbolt(calc::VECTOR block_pos, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_time_update(const base_objects::client_data_holder& exclude = nullptr);
@@ -363,7 +435,7 @@ namespace crafted_craft {
 
         class worlds_data {
             base_objects::ServerConfiguration& configuration;
-            fast_task::task_mutex mutex;
+            fast_task::task_recursive_mutex mutex;
             std::filesystem::path base_path;
             std::unordered_map<uint64_t, base_objects::atomic_holder<world_data>> cached_worlds;
             std::chrono::high_resolution_clock::time_point last_tps_calculated = std::chrono::high_resolution_clock::now();
@@ -388,10 +460,10 @@ namespace crafted_craft {
             worlds_data(base_objects::ServerConfiguration& configuration, const std::filesystem::path& base_path);
 
             bool exists(uint64_t world_id);
-            bool exists(const std::string& name);
+            bool exists(const base_objects::shared_string& name);
             const list_array<uint64_t>& get_list();
-            std::string get_name(uint64_t world_id);
-            uint64_t get_id(const std::string& name);
+            base_objects::shared_string get_name(uint64_t world_id);
+            uint64_t get_id(const base_objects::shared_string& name);
 
 
             base_objects::atomic_holder<world_data> get(uint64_t world_id);
@@ -406,6 +478,10 @@ namespace crafted_craft {
             void unload_all();
             void erase(uint64_t world_id);
 
+            void locked(std::function<void(worlds_data& self)> func);
+
+            uint64_t create(const base_objects::shared_string& name);
+            uint64_t create(const base_objects::shared_string& name, std::function<void(world_data& world)> init);
 
             void for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func);
             void for_each_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
@@ -414,6 +490,8 @@ namespace crafted_craft {
             void for_each_entity(uint64_t world_id, std::function<void(const base_objects::entity_ref& entity)> func);
             void for_each_entity(uint64_t world_id, int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
             void for_each_entity(uint64_t world_id, int64_t chunk_x, int64_t chunk_z, uint64_t sub_chunk_y, std::function<void(const base_objects::entity_ref& entity)> func);
+
+            void for_each_world(std::function<void(uint64_t id, world_data& world)> func);
 
             //use only on tick task, returns nanoseconds to sleep
             std::chrono::nanoseconds apply_tick(std::mt19937& random_engine);

@@ -87,7 +87,7 @@ namespace crafted_craft {
 
             std::optional<DeathLocation> last_death_location;
 
-            std::optional<ENBT::UUID> ride_entity_id;
+            std::optional<enbt::raw_uuid> ride_entity_id;
 
             list_array<shared_string> permission_groups;
 
@@ -97,10 +97,10 @@ namespace crafted_craft {
             list_array<shared_string> instant_granted_actions;
 
             //sent to client
-            ENBT additional_data = ENBT::compound();
+            enbt::value additional_data = enbt::compound();
 
             //for server plugins
-            ENBT local_data = ENBT::compound();
+            enbt::value local_data = enbt::compound();
 
 
             player() = default;

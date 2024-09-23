@@ -16,6 +16,12 @@ namespace crafted_craft {
             return *this;
         }
 
+        slot_component::container::~container() {
+            for (int i = 0; i < 256; i++) {
+                delete items[i];
+            }
+        }
+
         std::string item_attribute::id_to_attribute_name(int32_t id) {
             switch (id) {
             case 0:
@@ -273,7 +279,7 @@ namespace crafted_craft {
                     slot_component::attribute_modifiers build_modifiers;
                     for (auto& modifier : modifiers) {
                         int32_t type_id = item_attribute::attribute_name_to_id(modifier["AttributeName"]);
-                        ENBT::UUID uid = modifier["UUID"];
+                        enbt::raw_uuid uid = modifier["UUID"];
                         std::string name = (std::string)modifier["AttributeName"];
                         double value = (double)modifier["Amount"];
                         auto operation = item_attribute::id_to_operation((int32_t)modifier["Operation"]);

@@ -269,14 +269,14 @@ namespace crafted_craft {
                     std::optional<std::string> signature;
                 };
 
-                ENBT::UUID player_id;
+                enbt::raw_uuid player_id;
                 std::string name;
                 list_array<property> properties;
             };
 
             struct player_actions_initialize_chat {
-                ENBT::UUID player_id;
-                std::optional<ENBT::UUID> chat_session_id;
+                enbt::raw_uuid player_id;
+                std::optional<enbt::raw_uuid> chat_session_id;
                 int64_t public_key_expiry_time;
                 //max 512 bytes
                 list_array<uint8_t> public_key;
@@ -285,22 +285,22 @@ namespace crafted_craft {
             };
 
             struct player_actions_update_gamemode {
-                ENBT::UUID player_id;
+                enbt::raw_uuid player_id;
                 int32_t gamemode;
             };
 
             struct player_actions_update_listed {
-                ENBT::UUID player_id;
+                enbt::raw_uuid player_id;
                 bool listed;
             };
 
             struct player_actions_update_latency {
-                ENBT::UUID player_id;
+                enbt::raw_uuid player_id;
                 int32_t latency; //ms
             };
 
             struct player_actions_update_display_name {
-                ENBT::UUID player_id;
+                enbt::raw_uuid player_id;
                 std::optional<Chat> display_name;
             };
 
@@ -346,7 +346,7 @@ namespace crafted_craft {
 
             struct attributes {
                 struct modifier {
-                    ENBT::UUID uuid;
+                    enbt::raw_uuid uuid;
                     double amount;
                     int8_t operation; //0:addition/subtraction, 1:addition/subtraction by %, 2:multiplication by %
                 };

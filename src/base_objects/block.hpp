@@ -1,6 +1,7 @@
 #pragma once
 #include "../library/enbt.hpp"
 #include "../library/list_array.hpp"
+#include "shared_string.hpp"
 #include <cstdint>
 #include <map>
 #include <mutex>
@@ -13,13 +14,13 @@ namespace crafted_craft {
     namespace storage {
         class world_data;
         struct sub_chunk_data;
-        union block_data;
     }
 
     namespace base_objects {
-        struct block_entity;
+        union block;
+        typedef uint16_t block_id_t;
 
-        struct full_block_data {
+        struct static_block_data {
             template <size_t size>
             static consteval uint64_t get_max_uint64_t_value() {
                 struct {
@@ -32,16 +33,15 @@ namespace crafted_craft {
             uint64_t break_resistance : 11;      //-1 => unbreakable, to get real value divide by 100
             uint64_t explode_resistance : 11;    //-1 => unexplodable
             uint64_t move_weight : 7;            //-1 => unmovable
-            uint64_t light_pass : 6;             //-1 => unpassable
+            uint64_t light_pass_block : 6;       //-1 => unpassable
             uint64_t emit_light : 6;             // 0=> do not emit light
             uint64_t flame_resistance : 10;      //-1 => full resist
             uint64_t can_transmit_redstone : 2;  // 0 - no, 1 - yes, 2 - custom logic
             uint64_t emit_redstone_strength : 5; // 0=> do not emit redstone signal
-            uint64_t _unused___ : 6;
-
-            bool in_block(float x, float y, float z) const {
-                return false; // hitbox->in(x, y, z);
-            }
+            uint64_t is_block_entity : 1;        // 0=> no, 1=> yes
+            uint64_t is_solid : 1;               // 0=> no, 1=> yes, used for height_map
+            uint64_t motion_blocking : 1;        // 0=> no, 1=> yes, used for height_map
+            uint64_t _unused___ : 3;
 
             bool can_explode(uint32_t explode_strength) const {
                 if (explode_resistance == get_max_uint64_t_value<11>())
@@ -55,82 +55,92 @@ namespace crafted_craft {
                 return break_resistance < break_strength;
             }
 
-            std::function<void(storage::world_data&, storage::sub_chunk_data&, storage::block_data& data, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z)> on_tick;
-            std::function<void(storage::world_data&, storage::sub_chunk_data&, block_entity& data, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z)> as_entity_on_tick;
+            //on tick first checks `is_block_entity` and if true, checks `as_entity_on_tick` if one of them false/undefined then checks `on_tick`, if undefined then do nothing
+            std::function<void(storage::world_data&, storage::sub_chunk_data&, block& data, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked)> on_tick;
+            std::function<void(storage::world_data&, storage::sub_chunk_data&, block& data, enbt::value& extended_data, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked)> as_entity_on_tick;
 
-            full_block_data()
+            std::unordered_map<std::string, std::vector<std::string>> states;
+            std::unordered_map<block_id_t, std::unordered_map<std::string, std::string>> assigned_states;
+            block_id_t default_state;
+            enbt::compound defintion;
+            base_objects::shared_string name;
+
+            static_block_data()
                 : break_resistance(get_max_uint64_t_value<11>()),
                   explode_resistance(get_max_uint64_t_value<11>()),
                   move_weight(-1),
-                  light_pass(-1),
+                  light_pass_block(-1),
                   emit_light(0),
                   flame_resistance(-1),
                   can_transmit_redstone(0),
                   emit_redstone_strength(0),
+                  is_block_entity(0),
+                  is_solid(0),
+                  motion_blocking(0),
                   _unused___(0) {
             }
 
-            full_block_data(uint16_t breakResist, uint16_t explodeResist, uint8_t moveWeight, uint8_t lightPass, uint8_t emitLight, uint16_t flameResist, uint8_t canTransmitRedstone, uint8_t emitRedstoneStrength) {
-                break_resistance = get_max_uint64_t_value<11>() < breakResist ? get_max_uint64_t_value<11>() : breakResist;
-                explode_resistance = get_max_uint64_t_value<11>() < explodeResist ? get_max_uint64_t_value<11>() : explodeResist;
-                move_weight = get_max_uint64_t_value<7>() < moveWeight ? get_max_uint64_t_value<7>() : moveWeight;
-                light_pass = get_max_uint64_t_value<6>() < lightPass ? get_max_uint64_t_value<6>() : lightPass;
-                emit_light = get_max_uint64_t_value<6>() < emitLight ? get_max_uint64_t_value<6>() : emitLight;
-                flame_resistance = get_max_uint64_t_value<10>() < flameResist ? get_max_uint64_t_value<10>() : flameResist;
-                can_transmit_redstone = get_max_uint64_t_value<2>() < canTransmitRedstone ? get_max_uint64_t_value<2>() : canTransmitRedstone;
-                emit_redstone_strength = get_max_uint64_t_value<5>() < emitRedstoneStrength ? get_max_uint64_t_value<5>() : emitRedstoneStrength;
-                _unused___ = 0;
+            static_block_data(uint16_t break_resist, uint16_t explode_resist, uint8_t move_weight, uint8_t light_pass_block, uint8_t emit_light, uint16_t flame_resist, uint8_t can_transmit_redstone, uint8_t emit_redstone_strength, bool is_block_entity, bool is_solid, bool motion_blocking) {
+                this->break_resistance = get_max_uint64_t_value<11>() < break_resist ? get_max_uint64_t_value<11>() : break_resist;
+                this->explode_resistance = get_max_uint64_t_value<11>() < explode_resist ? get_max_uint64_t_value<11>() : explode_resist;
+                this->move_weight = get_max_uint64_t_value<7>() < move_weight ? get_max_uint64_t_value<7>() : move_weight;
+                this->light_pass_block = get_max_uint64_t_value<6>() < light_pass_block ? get_max_uint64_t_value<6>() : light_pass_block;
+                this->emit_light = get_max_uint64_t_value<6>() < emit_light ? get_max_uint64_t_value<6>() : emit_light;
+                this->flame_resistance = get_max_uint64_t_value<10>() < flame_resist ? get_max_uint64_t_value<10>() : flame_resist;
+                this->can_transmit_redstone = get_max_uint64_t_value<2>() < can_transmit_redstone ? get_max_uint64_t_value<2>() : can_transmit_redstone;
+                this->emit_redstone_strength = get_max_uint64_t_value<5>() < emit_redstone_strength ? get_max_uint64_t_value<5>() : emit_redstone_strength;
+                this->is_block_entity = is_block_entity;
+                this->is_solid = is_solid;
+                this->motion_blocking = motion_blocking;
+                this->_unused___ = 0;
             }
-
-        private:
         };
 
-        typedef uint16_t block_id_t;
-
-        class block {
-            static std::unordered_map<std::string, list_array<block>> tags;
-            static std::unordered_map<block_id_t, full_block_data> full_block_data_;
-            static block_id_t block_adder;
-
-        public:
+        union block {
             static void initialize();
 
-            static block_id_t addNewBlock(const full_block_data& new_block) {
+            static block_id_t addNewStatelessBlock(static_block_data&& new_block) {
+                if (named_full_block_data.contains(new_block.name))
+                    throw std::runtime_error("Block with " + new_block.name.get() + " name already defined.");
+
                 struct {
                     block_id_t id : 15;
-                    block_id_t max_id : 15 = 0x7FFF;
                 } bound_check;
 
-                bound_check.id = block_adder + 1;
-                if (bound_check.id == bound_check.max_id)
+                bound_check.id = full_block_data_.size();
+                if (size_t(bound_check.id) != full_block_data_.size())
                     throw std::out_of_range("Blocks count out of range, block can't added");
-                full_block_data_[block_adder++] = new_block;
+                auto block_ = std::make_shared<static_block_data>(std::move(new_block));
+                named_full_block_data[block_->name] = block_;
+                full_block_data_.emplace_back(block_);
+                return bound_check.id;
             }
 
-            bool inTagFamily(std::string tag) const {
-                if (tags.contains(tag))
-                    for (auto& it : tags[tag])
-                        if (it == *this)
-                            return true;
-                return false;
+            static void access_full_block_data(std::function<void(std::vector<std::shared_ptr<static_block_data>>&, std::unordered_map<base_objects::shared_string, std::shared_ptr<static_block_data>>&)> access) {
+                access(full_block_data_, named_full_block_data);
             }
 
-            void joinTagFamily(std::string tag) {
-                auto& it = tags[tag];
-                if (std::find(it.begin(), it.end(), *this) == it.end())
-                    it.push_back(*this);
+            static block_id_t addNewStatelessBlock(const static_block_data& new_block) {
+                return addNewStatelessBlock(static_block_data(new_block));
             }
 
-            void outTagFamily(std::string tag) {
-                auto& it = tags[tag];
-                it.remove_one([this](auto& it) { return it == *this; });
-            }
+            enum class tick_opt : uint16_t {
+                undefined,
+                block_tickable,
+                entity_tickable,
+                no_tick
+            };
 
-            block_id_t id : 15;
+            struct {
+                base_objects::block_id_t id : 15;
+                uint16_t block_state_data : 15;
+                tick_opt tickable : 2;
+            };
 
-            block(block_id_t block_id = 0)
-                : id(block_id) {
-            }
+            uint32_t raw;
+
+            block(block_id_t block_id = 0, uint16_t block_state_data = 0)
+                : id(block_id), block_state_data(block_state_data), tickable(tick_opt::undefined) {}
 
             block(const block& copy) {
                 operator=(copy);
@@ -150,92 +160,9 @@ namespace crafted_craft {
                 return *this;
             }
 
-            const full_block_data& getStaticData() const {
-                return full_block_data_[id];
+            const static_block_data& getStaticData() const {
+                return *full_block_data_[id];
             }
-
-            int16_t getMoveWeight() const {
-                return full_block_data_[id].move_weight;
-            }
-
-            struct TickAnswer {
-                enum class Behavior : uint8_t {
-                    done,
-                    _break,
-                    _remove,
-                    break_box,
-                    remove_box,
-
-                    add_to_be_ticked_next,
-
-                    check_can_move_and_move_blocks,
-                    check_can_move_and_move_blocks_then_add_new_blocks,
-
-                    move_blocks,
-                    move_blocks_then_add_new_blocks,
-
-                    update_now,
-                    update_now_except_ourself,
-                    update_now_except_ticked,
-
-                    clone
-                };
-                enum class PosMode : uint8_t {
-                    as_pos,
-                    as_box,
-                    as_tunnels
-                };
-                Behavior behavior : 4;
-                PosMode mode : 2;
-                uint8_t x : 4;
-                uint8_t y : 4;
-                uint8_t z : 4;
-                uint8_t X : 4;
-                uint8_t Y : 4;
-                uint8_t Z : 4;
-                int8_t move_x : 5;
-                int8_t move_y : 5;
-                int8_t move_z : 5;
-                block* block;
-
-                TickAnswer(Behavior beh, PosMode pm = PosMode::as_pos, uint8_t xbs = 0, uint8_t ybs = 0, uint8_t zbs = 0, uint8_t Xbs = 0, uint8_t Ybs = 0, uint8_t Zbs = 0, uint8_t mx = 0, uint8_t my = 0, uint8_t mz = 0) {
-                    behavior = beh;
-                    mode = pm;
-                    x = xbs;
-                    y = ybs;
-                    z = zbs;
-                    X = Xbs;
-                    Y = Ybs;
-                    Z = Zbs;
-                    move_x = mx;
-                    move_y = my;
-                    move_z = mz;
-                    block = nullptr;
-                }
-
-                TickAnswer(Behavior beh, base_objects::block bl, PosMode pm = PosMode::as_tunnels, uint8_t xbs = 0, uint8_t ybs = 0, uint8_t zbs = 0, uint8_t Xbs = 0, uint8_t Ybs = 0, uint8_t Zbs = 0, uint8_t mx = 0, uint8_t my = 0, uint8_t mz = 0) {
-                    behavior = beh;
-                    mode = pm;
-                    x = xbs;
-                    y = ybs;
-                    z = zbs;
-                    X = Xbs;
-                    Y = Ybs;
-                    Z = Zbs;
-                    move_x = mx;
-                    move_y = my;
-                    move_z = mz;
-                    block = new base_objects::block(bl);
-                }
-            };
-            enum class TickReason : uint8_t {
-                present,
-                next_tick,
-                moved,
-                near_changed,
-                removed,
-                eaten
-            };
 
             bool operator==(const block& b) const {
                 return id == b.id;
@@ -245,24 +172,36 @@ namespace crafted_craft {
                 return id != b.id;
             }
 
-            TickAnswer Tick(TickReason reason) {
-                return TickAnswer(TickAnswer::Behavior::done);
+            void tick(storage::world_data&, storage::sub_chunk_data& sub_chunk, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked);
+
+            static tick_opt resolve_tickable(base_objects::block_id_t block_id);
+            bool is_tickable();
+            bool is_tickable() const;
+
+            bool is_block_entity() const {
+                return getStaticData().is_block_entity;
             }
+
+            static_block_data& get_block(const base_objects::shared_string& name) {
+                return *named_full_block_data.at(name);
+            }
+
+        private:
+            static std::unordered_map<base_objects::shared_string, std::shared_ptr<static_block_data>> named_full_block_data;
+            static std::vector<std::shared_ptr<static_block_data>> full_block_data_;
         };
+
+        struct block_entity {
+            block block;
+            enbt::value data;
+        };
+
+        using full_block_data = std::variant<block, block_entity>;
 
         struct local_block_pos {
             uint8_t x : 4;
             uint8_t y : 4;
             uint8_t z : 4;
-        };
-
-        struct block_entity {
-            ENBT nbt;
-            int32_t type;
-            block block_id;
-            int8_t x : 4;
-            int8_t y : 4;
-            int8_t z : 4;
         };
 
         union compressed_block_state {

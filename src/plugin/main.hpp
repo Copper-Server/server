@@ -196,28 +196,28 @@ namespace crafted_craft {
         }
 
         PluginRegistrationPtr get_bind_plugin(registration_on on, const std::string& channel) const {
-            return protected_values.get([&](const protected_values_t& vals) {
+            return protected_values.get([&](const protected_values_t& vals) -> PluginRegistrationPtr {
                 switch (on) {
                 case registration_on::login: {
                     auto it = vals.registration.login.plugins.find(channel);
                     if (it != vals.registration.login.plugins.end())
                         return it->second;
                     else
-                        nullptr;
+                        return nullptr;
                 }
                 case registration_on::configuration: {
                     auto it = vals.registration.configuration.plugins.find(channel);
                     if (it != vals.registration.configuration.plugins.end())
                         return it->second;
                     else
-                        nullptr;
+                        return nullptr;
                 }
                 case registration_on::play: {
                     auto it = vals.registration.play.plugins.find(channel);
                     if (it != vals.registration.play.plugins.end())
                         return it->second;
                     else
-                        nullptr;
+                        return nullptr;
                 }
                 default:
                     throw std::runtime_error("Unknown registration");
@@ -308,6 +308,30 @@ namespace crafted_craft {
 
             for (auto& [name, plugin] : plugins)
                 plugin->OnLoadComplete(plugin);
+        }
+
+        void callUnload() {
+            std::unordered_map<std::string, PluginRegistrationPtr> plugins;
+            protected_values.get(
+                [&](const protected_values_t& vals) {
+                    plugins = vals.plugins;
+                }
+            );
+            for (auto& [name, plugin] : plugins) {
+                plugin->OnUnload(plugin);
+            }
+        }
+
+        void callFaultUnload() {
+            std::unordered_map<std::string, PluginRegistrationPtr> plugins;
+            protected_values.get(
+                [&](const protected_values_t& vals) {
+                    plugins = vals.plugins;
+                }
+            );
+            for (auto& [name, plugin] : plugins) {
+                plugin->OnFaultUnload(plugin);
+            }
         }
     };
 

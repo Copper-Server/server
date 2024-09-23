@@ -51,7 +51,7 @@ namespace crafted_craft {
                 };
 
                 struct player_session {
-                    ENBT::UUID session_id;
+                    enbt::raw_uuid session_id;
 
                     struct public_key_t {
                         list_array<uint8_t> public_key;
@@ -231,7 +231,7 @@ namespace crafted_craft {
                 };
 
                 struct resource_pack_response {
-                    ENBT::UUID uuid;
+                    enbt::raw_uuid uuid;
                     int32_t result;
                 };
 
@@ -307,7 +307,7 @@ namespace crafted_craft {
                 };
 
                 struct spectator_teleport {
-                    ENBT::UUID target;
+                    enbt::raw_uuid target;
                 };
                 struct use_item_on{
                     int32_t hand;

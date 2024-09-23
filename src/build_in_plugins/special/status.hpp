@@ -38,8 +38,8 @@ namespace crafted_craft {
                 }
 
                 //string also can be Chat json object!
-                list_array<std::pair<std::string, ENBT::UUID>> OnlinePlayersSample() override {
-                    list_array<std::pair<std::string, ENBT::UUID>> result;
+                list_array<std::pair<std::string, enbt::raw_uuid>> OnlinePlayersSample() override {
+                    list_array<std::pair<std::string, enbt::raw_uuid>> result;
                     size_t i = 0;
                     online_players.iterate_players_not_state(crafted_craft::base_objects::SharedClientData::packets_state_t::protocol_state::initialization, [&](const crafted_craft::base_objects::SharedClientData& player) {
                         if (i < config.status.sample_players_count) {
@@ -69,7 +69,7 @@ namespace crafted_craft {
                 }
 
                 //return empty string if no icon, icon must be 64x64 and png format in base64
-                virtual std::string ServerIcon() {
+                std::string ServerIcon() override {
                     auto& icon = config.status.favicon;
                     std::lock_guard lock(cached_icon_mutex);
                     if (cached_icon.size() > 0)

@@ -162,7 +162,7 @@ namespace crafted_craft {
             template <class T>
             size_t register_event(base_objects::event<T>& event_ref, base_objects::event<T>::function&& fn) {
                 return protected_vals.set([&](protected_vals_t& vals) {
-                    vals.cleanup_list[vals.next_id++] = {event_ref.join(base_objects::event_priority::avg, false, fn), event, base_objects::event_priority::avg, false};
+                    vals.cleanup_list[vals.next_id++] = {event_ref.join(base_objects::event_priority::avg, false, fn), event_ref, base_objects::event_priority::avg, false};
                     return vals.next_id - 1;
                 });
             }
@@ -170,7 +170,7 @@ namespace crafted_craft {
             template <class T>
             size_t register_event(base_objects::event<T>& event_ref, base_objects::event_priority priority, base_objects::event<T>::function&& fn) {
                 return protected_vals.set([&](protected_vals_t& vals) {
-                    vals.cleanup_list[vals.next_id++] = {event_ref.join(priority, false, fn), event, priority, false};
+                    vals.cleanup_list[vals.next_id++] = {event_ref.join(priority, false, fn), event_ref, priority, false};
                     return vals.next_id - 1;
                 });
             }
@@ -178,7 +178,7 @@ namespace crafted_craft {
             template <class T>
             size_t register_event(base_objects::event<T>& event_ref, base_objects::event_priority priority, bool async_mode, base_objects::event<T>::function&& fn) {
                 return protected_vals.set([&](protected_vals_t& vals) {
-                    vals.cleanup_list[vals.next_id++] = {event_ref.join(priority, async_mode, fn), event, priority, async_mode};
+                    vals.cleanup_list[vals.next_id++] = {event_ref.join(priority, async_mode, fn), event_ref, priority, async_mode};
                     return vals.next_id - 1;
                 });
             }

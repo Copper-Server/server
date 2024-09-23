@@ -4,59 +4,122 @@
 namespace crafted_craft {
     namespace storage {
 
+        template <class T>
+        T convert_chunk_global_pos(T pos) {
+            if (pos == 0)
+                return 0;
+            if (pos < 0)
+                return (pos + 1) / 16 - 1;
+            return pos / 16;
+        }
+
+        template <class T>
+        T convert_chunk_local_pos(T pos) {
+            if (pos == 0)
+                return 0;
+            if (pos < 0)
+                return 16 + (pos % 16);
+            return pos % 16;
+        }
+
+
         class world_data;
         class worlds_data;
 
-        void block_data::tick(world_data& world, sub_chunk_data& sub_chunk, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z) {
-            if (is_tickable) {
-                auto& tick = base_objects::block(block_id).getStaticData().on_tick;
-                if (tick) {
-                    tick(world, sub_chunk, *this, chunk_x, sub_chunk_y, chunk_z, local_x, local_y, local_z);
-                } else
-                    is_tickable = false;
-            }
+        enbt::value& sub_chunk_data::get_block_entity_data(uint8_t local_x, uint8_t local_y, uint8_t local_z) {
+            return block_entities[local_z | (local_y << 4) | (local_x << 8)];
+        }
+
+        void sub_chunk_data::get_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, std::function<void(base_objects::block& block)> on_normal, std::function<void(base_objects::block& block, enbt::value& entity_data)> on_entity) {
+            auto& block = blocks[local_x][local_y][local_z];
+            if (block.is_block_entity())
+                on_entity(block, get_block_entity_data(local_x, local_y, local_z));
+            else
+                on_normal(block);
+        }
+
+        void sub_chunk_data::set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::full_block_data& block) {
+            std::visit(
+                [&](auto& block) {
+                    using T = std::decay_t<decltype(block)>;
+                    if constexpr (std::is_same_v<T, base_objects::block>) {
+                        blocks[local_x][local_y][local_z] = block;
+                        block_entities.erase(local_z | (local_y << 4) | (local_x << 8));
+                    } else {
+                        blocks[local_x][local_y][local_z] = block.block;
+                        get_block_entity_data(local_x, local_y, local_z) = block.data;
+                    }
+                },
+                block
+            );
+        }
+
+        void sub_chunk_data::set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::full_block_data&& block) {
+            std::visit(
+                [&](auto& block) {
+                    using T = std::decay_t<decltype(block)>;
+                    if constexpr (std::is_same_v<T, base_objects::block>) {
+                        blocks[local_x][local_y][local_z] = block;
+                        block_entities.erase(local_z | (local_y << 4) | (local_x << 8));
+                    } else {
+                        blocks[local_x][local_y][local_z] = block.block;
+                        get_block_entity_data(local_x, local_y, local_z) = std::move(block.data);
+                    }
+                },
+                block
+            );
+        }
+
+        void sub_chunk_data::for_each_block(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block& block)> func) {
+            for (uint8_t x = 0; x < 16; x++)
+                for (uint8_t y = 0; y < 16; y++)
+                    for (uint8_t z = 0; z < 16; z++)
+                        func(x, y, z, blocks[x][y][z]);
         }
 
         bool chunk_data::load(const std::filesystem::path& chunk_z) {
             std::ifstream file(chunk_z, std::ios::binary);
             if (!file.is_open())
                 return false;
-            ENBT chunk_data_file = ENBTHelper::ReadToken(file);
+            enbt::value chunk_data_file = enbt::io_helper::read_token(file);
             file.close();
-            return load(chunk_data_file);
+            auto ref = enbt::compound::make_ref(chunk_data_file);
+            return load(ref);
         }
 
-        bool valid_sub_chunk_size(const ENBT& x) {
-            auto dim_0 = enbt::fixed_array::make_ref(x);
-            if (dim_0.size() != 16)
+        bool valid_sub_chunk_size(const enbt::value& chunk) {
+            try {
+                auto dim_0 = enbt::fixed_array::make_ref(chunk);
+                if (dim_0.size() != 16)
+                    return false;
+                for (auto& x : dim_0) {
+                    auto dim_1 = enbt::fixed_array::make_ref(x);
+                    if (dim_1.size() != 16)
+                        return false;
+                    for (auto& y : dim_1) {
+                        if (y.size() != 16)
+                            return false;
+                    }
+                }
+            } catch (...) {
                 return false;
-
-            auto dim_1 = enbt::fixed_array::make_ref(x);
-            if (dim_1.size() != 16)
-                return false;
-
-            auto dim_2 = enbt::fixed_array::make_ref(x);
-            if (dim_2.size() != 16)
-                return false;
+            }
 
             return true;
         }
 
-        void load_light_data(const ENBT& x, light_data& data, bool& need_to_recalculate_light) {
-            if (!valid_sub_chunk_size(x)) {
+        void load_light_data(const enbt::value& chunk, light_data& data, bool& need_to_recalculate_light) {
+            if (!valid_sub_chunk_size(chunk)) {
                 need_to_recalculate_light = true;
                 return;
             }
 
-            auto x_ref = enbt::fixed_array::make_ref(x);
             size_t x_ = 0;
-            for (auto& x : x_ref) {
-                auto x_ref = enbt::fixed_array::make_ref(x);
+            for (auto& x : enbt::fixed_array::make_ref(chunk)) {
                 size_t y_ = 0;
-                for (auto& y : x_ref) {
-                    auto y_ref = enbt::fixed_array::make_ref(y);
+                for (auto& y : enbt::fixed_array::make_ref(x)) {
                     size_t z_ = 0;
-                    for (auto& z : y_ref)
+                    for (auto& z : enbt::simple_array_ui8::make_ref(y))
                         data.light_map[x_][y_][z_++].raw = z;
                     ++y_;
                 }
@@ -64,18 +127,15 @@ namespace crafted_craft {
             }
         }
 
-        void load_block_data(const ENBT& x, block_data (&data)[16][16][16], bool& has_tickable_blocks) {
-            auto x_ref = enbt::fixed_array::make_ref(x);
+        void load_block_data(const enbt::value& chunk, base_objects::block (&data)[16][16][16], bool& has_tickable_blocks) {
             size_t x_ = 0;
-            for (auto& x : x_ref) {
-                auto x_ref = enbt::fixed_array::make_ref(x);
+            for (auto& x : enbt::fixed_array::make_ref(chunk)) {
                 size_t y_ = 0;
-                for (auto& y : x_ref) {
-                    auto y_ref = enbt::fixed_array::make_ref(y);
+                for (auto& y : enbt::fixed_array::make_ref(x)) {
                     size_t z_ = 0;
-                    for (auto& z : y_ref) {
+                    for (auto z : enbt::simple_array_ui32::make_ref(y)) {
                         data[x_][y_][z_].raw = z;
-                        has_tickable_blocks |= data[x_][y_][z_].is_tickable;
+                        has_tickable_blocks |= data[x_][y_][z_].is_tickable();
                         ++z_;
                     }
                     ++y_;
@@ -84,110 +144,132 @@ namespace crafted_craft {
             }
         }
 
-        bool chunk_data::load(const ENBT& chunk_data) {
-            for (auto [empty_name, sub_chunk] : chunk_data["sub_chunks"]) {
-                sub_chunk_data sub_chunk_data;
-                auto& blocks = sub_chunk["blocks"];
-                if (!valid_sub_chunk_size(blocks))
-                    return false;
-                load_block_data(blocks, sub_chunk_data.blocks, sub_chunk_data.has_tickable_blocks);
-                for (auto [empty_, entity] : sub_chunk["entities"]) {
-                    sub_chunk_data.stored_entities.push_back(base_objects::entity::load_from_enbt(enbt::compound::make_ref(entity)));
+
+
+        bool chunk_data::load(const enbt::compound_ref& chunk_data) {
+            if (!chunk_data.contains("sub_chunks"))
+                return false;
+            auto sub_chunks_ref = enbt::fixed_array::make_ref(chunk_data["sub_chunks"]);
+            sub_chunks.reserve(sub_chunks_ref.size());
+            for (auto& sub_chunk : sub_chunks_ref) {
+                std::shared_ptr<storage::sub_chunk_data> sub_chunk_data = std::make_shared<storage::sub_chunk_data>();
+                if (sub_chunk.contains("blocks")) {
+                    auto& blocks = sub_chunk["blocks"];
+                    if (!valid_sub_chunk_size(blocks))
+                        return false;
+                    load_block_data(blocks, sub_chunk_data->blocks, sub_chunk_data->has_tickable_blocks);
                 }
-                for (auto [empty_, block_entity] : sub_chunk["block_entities"]) {
-                    base_objects::block_entity be;
-                    be.block_id = base_objects::block(block_entity["id"]);
-                    be.nbt = block_entity["nbt"];
-                    be.type = block_entity["type"];
-                    be.x = block_entity["x"];
-                    be.y = block_entity["y"];
-                    be.z = block_entity["z"];
-                    sub_chunk_data.block_entities.push_back(std::move(be));
+                if (sub_chunk.contains("entities")) {
+                    for (auto& entity : enbt::fixed_array::make_ref(sub_chunk["entities"])) {
+                        sub_chunk_data->stored_entities.push_back(base_objects::entity::load_from_enbt(enbt::compound::make_ref(entity)));
+                    }
                 }
-                load_light_data(sub_chunk["block_light"], sub_chunk_data.block_light, sub_chunk_data.need_to_recalculate_light);
-                load_light_data(sub_chunk["sky_light"], sub_chunk_data.sky_light, sub_chunk_data.need_to_recalculate_light);
-                for (auto [empty_, query] : sub_chunk["queried_for_tick"])
-                    sub_chunk_data.queried_for_tick.push_back({query["x"], query["y"], query["z"]});
-                sub_chunks.push_back(std::move(sub_chunk_data));
+                if (sub_chunk.contains("block_entities")) {
+                    for (auto& block_entity : enbt::fixed_array::make_ref(sub_chunk["block_entities"])) {
+                        base_objects::local_block_pos local_pos;
+                        const enbt::value& nbt = block_entity["data"];
+                        local_pos.x = block_entity["x"];
+                        local_pos.y = block_entity["y"];
+                        local_pos.z = block_entity["z"];
+                        sub_chunk_data->blocks[local_pos.x][local_pos.y][local_pos.z] = base_objects::block{
+                            (base_objects::block_id_t) block_entity["id"]
+                        };
+                        sub_chunk_data->block_entities[local_pos.z | (local_pos.y << 4) | (local_pos.x << 8)] = nbt;
+                    }
+                }
+                if (sub_chunk.contains("block_light")) {
+                    load_light_data(sub_chunk["block_light"], sub_chunk_data->block_light, sub_chunk_data->need_to_recalculate_light);
+                } else
+                    sub_chunk_data->need_to_recalculate_light = true;
+
+                if (sub_chunk.contains("queried_for_tick"))
+                    for (auto& query : enbt::fixed_array::make_ref(sub_chunk["queried_for_tick"]))
+                        sub_chunk_data->queried_for_tick.push_back({query["x"], query["y"], query["z"]});
+                sub_chunks.push_back(std::move(*sub_chunk_data));
             }
             return true;
         }
 
         bool chunk_data::save(const std::filesystem::path& chunk_z) {
+            std::filesystem::create_directories(chunk_z.parent_path());
             std::ofstream file(chunk_z, std::ios::binary);
             if (!file.is_open())
                 return false;
             enbt::compound chunk_data_file;
-            enbt::dynamic_array enbt_sub_chunks;
+            enbt::fixed_array enbt_sub_chunks;
             for (auto& sub_chunk : sub_chunks) {
                 enbt::compound sub_chunk_data;
                 {
-                    enbt::fixed_array blocks(16);
+                    enbt::fixed_array x_axis(16);
                     for (size_t x = 0; x < 16; x++) {
-                        enbt::fixed_array x_axis(16);
+                        enbt::fixed_array y_axis(16);
                         for (size_t y = 0; y < 16; y++) {
-                            enbt::fixed_array y_axis(16);
+                            enbt::simple_array_ui32 z_axis(16);
                             for (size_t z = 0; z < 16; z++)
-                                y_axis.set(z, sub_chunk.blocks[x][y][z].raw);
-                            x_axis.set(y, std::move(y_axis));
+                                z_axis[z] = sub_chunk.blocks[x][y][z].raw;
+                            y_axis.set(y, std::move(z_axis));
                         }
-                        blocks.set(x, std::move(x_axis));
+                        x_axis.set(x, std::move(y_axis));
                     }
-                    sub_chunk_data["blocks"] = std::move(blocks);
+                    sub_chunk_data["blocks"] = std::move(x_axis);
                 }
                 {
-                    enbt::fixed_array entities(sub_chunk.stored_entities.size());
-                    size_t i = 0;
+                    enbt::fixed_array entities;
                     for (auto& entity : sub_chunk.stored_entities)
-                        entities.set(i++, entity->copy_to_enbt());
+                        entities.push_back(entity->copy_to_enbt());
                     sub_chunk_data["entities"] = std::move(entities);
                 }
                 {
-                    enbt::dynamic_array block_entities;
-                    for (auto& block_entity : sub_chunk.block_entities) {
+                    enbt::fixed_array block_entities(sub_chunk.block_entities.size());
+                    for (auto& [_pos, data] : sub_chunk.block_entities) {
+                        base_objects::local_block_pos pos;
+                        pos.x = _pos >> 8;
+                        pos.y = (_pos >> 4) & 0xF;
+                        pos.z = _pos & 0xF;
+
                         enbt::compound be;
-                        be["id"] = block_entity.block_id.id;
-                        be["nbt"] = block_entity.nbt;
-                        be["type"] = block_entity.type;
-                        be["x"] = block_entity.x;
-                        be["y"] = block_entity.y;
-                        be["z"] = block_entity.z;
+                        be["id"] = sub_chunk.blocks[pos.x][pos.y][pos.z].id;
+                        be["state"] = sub_chunk.blocks[pos.x][pos.y][pos.z].block_state_data;
+                        be["nbt"] = data;
+                        be["x"] = pos.x;
+                        be["y"] = pos.y;
+                        be["z"] = pos.z;
                         block_entities.push_back(std::move(be));
                     }
                     sub_chunk_data["block_entities"] = std::move(block_entities);
                 }
                 if (!sub_chunk.need_to_recalculate_light) {
                     {
-                        enbt::fixed_array block_light(16);
+                        enbt::fixed_array x_axis(16);
                         for (size_t x = 0; x < 16; x++) {
-                            enbt::fixed_array x_axis(16);
+                            enbt::fixed_array y_axis(16);
                             for (size_t y = 0; y < 16; y++) {
-                                enbt::fixed_array y_axis(16);
+                                enbt::simple_array_ui8 z_axis(16);
                                 for (size_t z = 0; z < 16; z++)
-                                    y_axis.set(z, sub_chunk.block_light.light_map[x][y][z].raw);
-                                x_axis.set(y, std::move(y_axis));
+                                    z_axis[z] = sub_chunk.block_light.light_map[x][y][z].raw;
+                                y_axis.set(y, std::move(z_axis));
                             }
-                            block_light.set(x, std::move(x_axis));
+                            x_axis.set(x, std::move(y_axis));
                         }
-                        sub_chunk_data["block_light"] = std::move(block_light);
+                        sub_chunk_data["block_light"] = std::move(x_axis);
                     }
                     {
-                        enbt::fixed_array sky_light(16);
+                        enbt::fixed_array x_axis(16);
                         for (size_t x = 0; x < 16; x++) {
-                            enbt::fixed_array x_axis(16);
+                            enbt::fixed_array y_axis(16);
                             for (size_t y = 0; y < 16; y++) {
-                                enbt::fixed_array y_axis(16);
+                                enbt::simple_array_ui8 z_axis(16);
                                 for (size_t z = 0; z < 16; z++)
-                                    y_axis.set(z, sub_chunk.sky_light.light_map[x][y][z].raw);
-                                x_axis.set(y, std::move(y_axis));
+                                    z_axis[z] = sub_chunk.sky_light.light_map[x][y][z].raw;
+                                y_axis.set(y, std::move(z_axis));
                             }
-                            sky_light.set(x, std::move(x_axis));
+                            x_axis.set(x, std::move(y_axis));
                         }
-                        sub_chunk_data["sky_light"] = std::move(sky_light);
+                        sub_chunk_data["sky_light"] = std::move(x_axis);
                     }
                 }
                 if (!sub_chunk.queried_for_tick.empty()) {
-                    enbt::dynamic_array queried_for_tick;
+                    enbt::fixed_array queried_for_tick;
                     for (auto& query : sub_chunk.queried_for_tick) {
                         enbt::compound q;
                         q["x"] = query.x;
@@ -200,7 +282,7 @@ namespace crafted_craft {
                 enbt_sub_chunks.push_back(std::move(sub_chunk_data));
             }
             chunk_data_file["sub_chunks"] = std::move(enbt_sub_chunks);
-            ENBTHelper::WriteToken(file, chunk_data_file);
+            enbt::io_helper::write_token(file, (const enbt::value&)chunk_data_file);
             file.close();
             return true;
         }
@@ -214,7 +296,29 @@ namespace crafted_craft {
                     func(entity);
         }
 
-        void chunk_data::for_each_entity(std::function<void(base_objects::entity_ref& entity)> func, uint64_t sub_chunk_y) {
+        void chunk_data::for_each_block_entity(std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+            for (auto& sub_chunk : sub_chunks)
+                for (auto& [_pos, data] : sub_chunk.block_entities) {
+                    base_objects::local_block_pos pos;
+                    pos.x = _pos >> 8;
+                    pos.y = (_pos >> 4) & 0xF;
+                    pos.z = _pos & 0xF;
+                    func(sub_chunk.blocks[pos.x][pos.y][pos.z], data);
+                }
+        }
+
+        void chunk_data::for_each_block_entity(uint64_t sub_chunk_y, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+            if (sub_chunk_y < sub_chunks.size())
+                for (auto& [_pos, data] : sub_chunks[sub_chunk_y].block_entities) {
+                    base_objects::local_block_pos pos;
+                    pos.x = _pos >> 8;
+                    pos.y = (_pos >> 4) & 0xF;
+                    pos.z = _pos & 0xF;
+                    func(sub_chunks[sub_chunk_y].blocks[pos.x][pos.y][pos.z], data);
+                }
+        }
+
+        void chunk_data::for_each_entity(uint64_t sub_chunk_y, std::function<void(base_objects::entity_ref& entity)> func) {
             if (sub_chunk_y < sub_chunks.size())
                 for (auto& entity : sub_chunks[sub_chunk_y].stored_entities)
                     func(entity);
@@ -225,7 +329,7 @@ namespace crafted_craft {
                 func(sub_chunk);
         }
 
-        void chunk_data::get_sub_chunk(std::function<void(sub_chunk_data& sub_chunk)> func, uint64_t sub_chunk_y) {
+        void chunk_data::get_sub_chunk(uint64_t sub_chunk_y, std::function<void(sub_chunk_data& sub_chunk)> func) {
             if (sub_chunk_y < sub_chunks.size())
                 func(sub_chunks[sub_chunk_y]);
         }
@@ -237,8 +341,6 @@ namespace crafted_craft {
         }
 
         void chunk_data::tick(world_data& world, size_t max_random_tick_for_chunk, std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time) {
-            if (!marked_for_tick)
-                return;
             last_usage = current_time;
 
 
@@ -248,7 +350,7 @@ namespace crafted_craft {
                     entity->tick();
 
                 for (auto& query : sub_chunk.queried_for_tick)
-                    sub_chunk.blocks[query.x][query.y][query.z].tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, query.x, query.y, query.z);
+                    sub_chunk.blocks[query.x][query.y][query.z].tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, query.x, query.y, query.z, false);
                 sub_chunk.queried_for_tick.clear();
 
 
@@ -256,10 +358,10 @@ namespace crafted_craft {
                     for (size_t x = 0; x < 16; x++)
                         for (size_t y = 0; y < 16; y++)
                             for (size_t z = 0; z < 16; z++)
-                                if (sub_chunk.blocks[x][y][z].is_tickable)
+                                if (sub_chunk.blocks[x][y][z].tickable != base_objects::block::tick_opt::no_tick)
                                     if (max_random_tick_for_chunk > 0) {
                                         if (random_engine() & 1) {
-                                            sub_chunk.blocks[x][y][z].tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, x, y, z);
+                                            sub_chunk.blocks[x][y][z].tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, x, y, z, true);
                                             --max_random_tick_for_chunk;
                                         }
                                     }
@@ -268,15 +370,56 @@ namespace crafted_craft {
             }
         }
 
-        void world_data::make_save(int64_t chunk_x, int64_t chunk_z, bool also_erase) {
-            if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
-                if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
-                    make_save(chunk_x, chunk_z, y_axis, also_erase);
+        fast_task::protected_value<std::unordered_map<base_objects::shared_string, base_objects::atomic_holder<chunk_generator>>> chunk_generators;
+
+        void chunk_generator::register_it(const base_objects::shared_string& id, base_objects::atomic_holder<chunk_generator> gen) {
+            chunk_generators.set([&](auto& map) {
+                map[id] = std::move(gen);
+            });
         }
 
-        void world_data::make_save(int64_t chunk_x, int64_t chunk_z, chunk_row::iterator item, bool also_erase) {
+        void chunk_generator::unregister_it(const base_objects::shared_string& id) {
+            chunk_generators.set([&](auto& map) {
+                map.erase(id);
+            });
+        }
+
+        base_objects::atomic_holder<chunk_generator> chunk_generator::get_it(const base_objects::shared_string& id) {
+            return chunk_generators.set([&](auto& map) {
+                return map.at(id);
+            });
+        }
+
+        fast_task::protected_value<std::unordered_map<base_objects::shared_string, base_objects::atomic_holder<chunk_light_processor>>> light_orocessors;
+
+        void chunk_light_processor::register_it(const base_objects::shared_string& id, base_objects::atomic_holder<chunk_light_processor> processor) {
+            light_orocessors.set([&](auto& map) {
+                map[id] = std::move(processor);
+            });
+        }
+
+        void chunk_light_processor::unregister_it(const base_objects::shared_string& id) {
+            light_orocessors.set([&](auto& map) {
+                map.erase(id);
+            });
+        }
+
+        base_objects::atomic_holder<chunk_light_processor> chunk_light_processor::get_it(const base_objects::shared_string& id) {
+            return light_orocessors.set([&](auto& map) {
+                return map.at(id);
+            });
+        }
+
+        void world_data::make_save(int64_t chunk_x, int64_t chunk_z, bool also_unload) {
+            if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
+                if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
+                    make_save(chunk_x, chunk_z, y_axis, also_unload);
+        }
+
+        void world_data::make_save(int64_t chunk_x, int64_t chunk_z, chunk_row::iterator& item, bool also_unload) {
             if (auto process = on_save_process.find({chunk_x, chunk_z}); process == on_save_process.end()) {
                 auto& chunk = item->second;
+                ++item;
                 on_save_process[{chunk_x, chunk_z}] = Future<bool>::start(
                     [this, chunk, chunk_x, chunk_z] {
                         try {
@@ -290,7 +433,7 @@ namespace crafted_craft {
                     }
                 );
             }
-            if (also_erase)
+            if (also_unload)
                 if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
                     x_axis->second.erase(chunk_z);
         }
@@ -298,12 +441,10 @@ namespace crafted_craft {
         base_objects::atomic_holder<chunk_data> world_data::load_chunk_sync(int64_t chunk_x, int64_t chunk_z) {
             auto chunk = base_objects::atomic_holder<chunk_data>(new chunk_data(chunk_x, chunk_z));
             if (!chunk->load(path / "chunks" / std::to_string(chunk_x) / (std::to_string(chunk_z) + ".dat"))) {
-                if (generator) {
-                    if (!chunk->load(generator->generate_chunk(*this, chunk_x, chunk_z)))
-                        return nullptr;
-                } else
+                if (!chunk->load(get_generator()->generate_chunk(*this, chunk_x, chunk_z)))
                     return nullptr;
             }
+            get_light_processor();
             uint64_t y = 0;
             chunk->for_each_sub_chunk([&](sub_chunk_data& sub_chunk) {
                 if (sub_chunk.need_to_recalculate_light)
@@ -311,6 +452,18 @@ namespace crafted_craft {
                 ++y;
             });
             return chunk;
+        }
+
+        base_objects::atomic_holder<chunk_generator>& world_data::get_generator() {
+            if (!generator)
+                generator = chunk_generator::get_it(light_processor_id);
+            return generator;
+        }
+
+        base_objects::atomic_holder<chunk_light_processor>& world_data::get_light_processor() {
+            if (!light_processor)
+                light_processor = chunk_light_processor::get_it(light_processor_id);
+            return light_processor;
         }
 
         template <class T>
@@ -323,7 +476,7 @@ namespace crafted_craft {
         }
 
         template <class T>
-        std::vector<T> from_fixed_array(const ENBT& abstract) {
+        std::vector<T> from_fixed_array(const enbt::value& abstract) {
             auto arr = enbt::fixed_array::make_ref(abstract);
             std::vector<T> res;
             res.reserve(arr.size());
@@ -342,7 +495,7 @@ namespace crafted_craft {
         }
 
         template <class T, class _FN>
-        std::vector<T> from_fixed_array(const ENBT& abstract, _FN&& cast_fn) {
+        std::vector<T> from_fixed_array(const enbt::value& abstract, _FN&& cast_fn) {
             auto arr = enbt::fixed_array::make_ref(abstract);
             std::vector<T> res;
             res.reserve(arr.size());
@@ -356,7 +509,7 @@ namespace crafted_craft {
             std::ifstream file(path / "world.dat", std::ios::binary);
             if (!file.is_open())
                 throw std::runtime_error("Can't open world file");
-            ENBT world_data_file_ = ENBTHelper::ReadToken(file);
+            enbt::value world_data_file_ = enbt::io_helper::read_token(file);
             auto world_data_file = enbt::compound::make_ref(world_data_file_);
             file.close();
             general_world_data = world_data_file["general_world_data"];
@@ -367,16 +520,17 @@ namespace crafted_craft {
             wandering_trader_id = world_data_file["wandering_trader_id"];
             wandering_trader_spawn_chance = world_data_file["wandering_trader_spawn_chance"];
             wandering_trader_spawn_delay = world_data_file["wandering_trader_spawn_delay"];
-            world_name = (std::string)world_data_file["world_name"];
-            world_type = (std::string)world_data_file["world_type"];
-            generator_id = (std::string)world_data_file["generator_id"];
+            world_name = (base_objects::shared_string)(std::string)world_data_file["world_name"];
+            light_processor_id = (base_objects::shared_string)(std::string)world_data_file["light_processor_id"];
+            world_type = (base_objects::shared_string)(std::string)world_data_file["world_type"];
+            generator_id = (base_objects::shared_string)(std::string)world_data_file["generator_id"];
             enabled_datapacks = from_fixed_array<std::string>(world_data_file["enabled_datapacks"]);
             enabled_plugins = from_fixed_array<std::string>(world_data_file["enabled_plugins"]);
             enabled_features = from_fixed_array<std::string>(world_data_file["enabled_features"]);
-            load_points = from_fixed_array<base_objects::cubic_bounds_chunk>(world_data_file["load_points"], [](const ENBT& enbt) {
+            load_points = from_fixed_array<base_objects::cubic_bounds_chunk>(world_data_file["load_points"], [](const enbt::value& enbt) {
                 return base_objects::cubic_bounds_chunk(enbt["x1"], enbt["z1"], enbt["x2"], enbt["z2"]);
             });
-            load_points_sphere = from_fixed_array<base_objects::spherical_bounds_chunk>(world_data_file["load_points_sphere"], [](const ENBT& enbt) {
+            load_points_sphere = from_fixed_array<base_objects::spherical_bounds_chunk>(world_data_file["load_points_sphere"], [](const enbt::value& enbt) {
                 return base_objects::spherical_bounds_chunk(enbt["x"], enbt["z"], enbt["radius"]);
             });
 
@@ -412,6 +566,7 @@ namespace crafted_craft {
 
         void world_data::save() {
             std::unique_lock lock(mutex);
+            std::filesystem::create_directories(path);
             std::ofstream file(path / "world.dat", std::ios::binary);
             if (!file.is_open())
                 throw std::runtime_error("Can't open world file");
@@ -424,9 +579,10 @@ namespace crafted_craft {
             world_data_file["wandering_trader_id"] = wandering_trader_id;
             world_data_file["wandering_trader_spawn_chance"] = wandering_trader_spawn_chance;
             world_data_file["wandering_trader_spawn_delay"] = wandering_trader_spawn_delay;
-            world_data_file["world_name"] = world_name;
-            world_data_file["world_type"] = world_type;
-            world_data_file["generator_id"] = generator_id;
+            world_data_file["world_name"] = world_name.get();
+            world_data_file["world_type"] = world_type.get();
+            world_data_file["light_processor_id"] = light_processor_id.get();
+            world_data_file["generator_id"] = generator_id.get();
             world_data_file["enabled_datapacks"] = to_fixed_array(enabled_datapacks);
             world_data_file["enabled_plugins"] = to_fixed_array(enabled_plugins);
             world_data_file["enabled_features"] = to_fixed_array(enabled_features);
@@ -477,16 +633,16 @@ namespace crafted_craft {
             if (enable_entity_light_source_updates)
                 world_data_file["enable_entity_light_source_updates"] = true;
 
-            ENBTHelper::WriteToken(file, world_data_file);
+            enbt::io_helper::write_token(file, (const enbt::value&)world_data_file);
         }
 
-        std::string world_data::preview_world_name() {
+        base_objects::shared_string world_data::preview_world_name() {
             std::unique_lock lock(mutex);
             std::ifstream file(path / "world.dat", std::ios::binary);
             if (!file.is_open())
                 throw std::runtime_error("Can't open world file");
-            ENBTHelper::MoveToValuePath(file, "world_name");
-            return (std::string)ENBTHelper::ReadToken(file);
+            enbt::io_helper::move_to_value_path(file, "world_name");
+            return (base_objects::shared_string)(std::string)enbt::io_helper::read_token(file);
         }
 
         world_data::world_data(const std::filesystem::path& path)
@@ -511,8 +667,13 @@ namespace crafted_craft {
 
             if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end())
                 return chunks[chunk_x][chunk_z] = load_chunk_sync(chunk_x, chunk_z);
-            else
-                return std::nullopt;
+            else {
+                auto res = process->second;
+                lock.unlock();
+                res->wait();
+                lock.lock();
+                return request_chunk_data_sync(chunk_x, chunk_z);
+            }
         }
 
         FuturePtr<base_objects::atomic_holder<chunk_data>> world_data::request_chunk_data(int64_t chunk_x, int64_t chunk_z) {
@@ -525,6 +686,8 @@ namespace crafted_craft {
                 return on_load_process[{chunk_x, chunk_z}] = Future<base_objects::atomic_holder<chunk_data>>::start(
                            [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
                                auto chunk = load_chunk_sync(chunk_x, chunk_z);
+                               if (!chunk)
+                                   return nullptr;
                                std::unique_lock lock(mutex);
                                on_load_process.erase({chunk_x, chunk_z});
                                return chunks[chunk_x][chunk_z] = chunk;
@@ -532,6 +695,59 @@ namespace crafted_craft {
                        );
             else
                 return process->second;
+        }
+
+        bool world_data::request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback) {
+            std::unique_lock lock(mutex);
+            if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
+                if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end()) {
+                    callback(*y_axis->second);
+                    return true;
+                }
+
+            if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end()) {
+                auto res = load_chunk_sync(chunk_x, chunk_z);
+                if (res)
+                    callback(*(chunks[chunk_x][chunk_z] = res));
+                else
+                    return false;
+                return true;
+            } else {
+                auto res = process->second;
+                lock.unlock();
+                res->wait();
+                lock.lock();
+                return request_chunk_data_sync(chunk_x, chunk_z, callback);
+            }
+        }
+
+        void world_data::request_chunk_data(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback, std::function<void()> fault) {
+            std::unique_lock lock(mutex);
+            if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
+                if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end()) {
+                    callback(*y_axis->second);
+                    return;
+                }
+
+            if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end())
+                on_load_process[{chunk_x, chunk_z}] = Future<base_objects::atomic_holder<chunk_data>>::start(
+                    [this, chunk_x, chunk_z, callback, fault]() -> base_objects::atomic_holder<chunk_data> {
+                        auto chunk = load_chunk_sync(chunk_x, chunk_z);
+                        std::unique_lock lock(mutex);
+                        on_load_process.erase({chunk_x, chunk_z});
+                        chunks[chunk_x][chunk_z] = chunk;
+                        if (chunk)
+                            callback(*chunk);
+                        else
+                            fault();
+                        return chunk;
+                    }
+                );
+            else
+                return process->second->when_ready([this, chunk_x, chunk_z, callback, fault](base_objects::atomic_holder<chunk_data> chunk) {
+                    if (!request_chunk_data_sync(chunk_x, chunk_z, callback))
+                        fault();
+                });
         }
 
         void world_data::await_save_chunks() {
@@ -598,6 +814,12 @@ namespace crafted_craft {
                 );
         }
 
+        void world_data::reset_light_data(int64_t chunk_x, uint64_t chunk_z) {
+            std::unique_lock lock(mutex);
+            get_light_processor()->process_chunk(*this, chunk_x, chunk_z);
+        }
+
+
         void world_data::for_each_chunk(std::function<void(chunk_data& chunk)> func) {
             std::unique_lock lock(mutex);
             for (auto& [x, x_axis] : chunks)
@@ -605,7 +827,7 @@ namespace crafted_craft {
                     func(*chunk);
         }
 
-        void world_data::for_each_chunk(base_objects::square_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func) {
+        void world_data::for_each_chunk(base_objects::cubic_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func) {
             std::unique_lock lock(mutex);
             for (int64_t x = bounds.x1; x <= bounds.x2; x++)
                 for (int64_t z = bounds.z1; z <= bounds.z2; z++)
@@ -634,7 +856,14 @@ namespace crafted_craft {
             std::unique_lock lock(mutex);
             if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
                 if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
-                    chunk->second->get_sub_chunk(func, sub_chunk_y);
+                    chunk->second->get_sub_chunk(sub_chunk_y, func);
+        }
+
+        void world_data::get_chunk(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> func) {
+            std::unique_lock lock(mutex);
+            if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
+                if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
+                    func(*chunk->second);
         }
 
         void world_data::for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func) {
@@ -644,13 +873,13 @@ namespace crafted_craft {
                     chunk->for_each_entity(func);
         }
 
-        void world_data::for_each_entity(base_objects::square_bounds_chunk bounds, std::function<void(base_objects::entity_ref& entity)> func) {
+        void world_data::for_each_entity(base_objects::cubic_bounds_chunk bounds, std::function<void(base_objects::entity_ref& entity)> func) {
             std::unique_lock lock(mutex);
-            for (int64_t x = bounds.x1; x <= bounds.x2; x++)
-                for (int64_t z = bounds.z1; z <= bounds.z2; z++)
-                    if (auto x_axis = chunks.find(x); x_axis != chunks.end())
-                        if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
-                            chunk->second->for_each_entity(func);
+            bounds.enum_points([&](int64_t x, int64_t z) {
+                if (auto x_axis = chunks.find(x); x_axis != chunks.end())
+                    if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
+                        chunk->second->for_each_entity(func);
+            });
         }
 
         void world_data::for_each_entity(base_objects::spherical_bounds_chunk bounds, std::function<void(base_objects::entity_ref& entity)> func) {
@@ -674,7 +903,36 @@ namespace crafted_craft {
             std::unique_lock lock(mutex);
             if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
                 if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
-                    chunk->second->for_each_entity(func, sub_chunk_y);
+                    chunk->second->for_each_entity(sub_chunk_y, func);
+        }
+
+        void world_data::for_each_block_entity(base_objects::cubic_bounds_chunk bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+            std::unique_lock lock(mutex);
+            bounds.enum_points([&](int64_t x, int64_t z) {
+                if (auto x_axis = chunks.find(x); x_axis != chunks.end())
+                    if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
+                        chunk->second->for_each_block_entity(func);
+            }
+            );
+        }
+
+        void world_data::for_each_block_entity(base_objects::spherical_bounds_chunk bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+            std::unique_lock lock(mutex);
+            bounds.enum_points([&](int64_t x, int64_t z) {
+                if (auto x_axis = chunks.find(x); x_axis != chunks.end())
+                    if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
+                        chunk->second->for_each_block_entity(func);
+            });
+        }
+
+        void world_data::for_each_block_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+            std::unique_lock lock(mutex);
+            get_chunk(chunk_x, chunk_z, [&](auto& chunk) { chunk.for_each_block_entity(func); });
+        }
+
+        void world_data::for_each_block_entity(int64_t chunk_x, int64_t chunk_z, uint64_t sub_chunk_y, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+            std::unique_lock lock(mutex);
+            get_chunk(chunk_x, chunk_z, [&](auto& chunk) { chunk.for_each_block_entity(sub_chunk_y, func); });
         }
 
         void world_data::query_for_tick(int64_t global_x, uint64_t global_y, int64_t global_z) {
@@ -684,6 +942,171 @@ namespace crafted_craft {
             if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
                 if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
                     chunk->second->query_for_tick(global_x & 15, global_y, global_z & 15);
+        }
+
+        void world_data::set_block(const base_objects::full_block_data& block, int64_t global_x, uint64_t global_y, int64_t global_z) {
+            get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
+                sub_chunk.set_block(global_x & 15, global_y & 15, global_z & 15, block);
+                get_light_processor()->block_changed(*this, global_x, global_y, global_z);
+            });
+        }
+
+        void world_data::set_block(base_objects::full_block_data&& block, int64_t global_x, uint64_t global_y, int64_t global_z) {
+            get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
+                sub_chunk.set_block(global_x & 15, global_y & 15, global_z & 15, std::move(block));
+                get_light_processor()->block_changed(*this, global_x, global_y, global_z);
+            });
+        }
+
+        void world_data::remove_block(int64_t global_x, uint64_t global_y, int64_t global_z) {
+            get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
+                sub_chunk.set_block(global_x & 15, global_y & 15, global_z & 15, base_objects::block());
+                get_light_processor()->block_changed(*this, global_x, global_y, global_z);
+            });
+        }
+
+        void world_data::get_block(int64_t global_x, uint64_t global_y, int64_t global_z, std::function<void(base_objects::block& block)> func, std::function<void(base_objects::block& block, enbt::value& extended_data)> block_entity) {
+            get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
+                sub_chunk.get_block(global_x & 15, global_y & 15, global_z & 15, func, block_entity);
+            });
+        }
+
+        void world_data::query_block(int64_t global_x, uint64_t global_y, int64_t global_z, std::function<void(base_objects::block& block)> func, std::function<void(base_objects::block& block, enbt::value& extended_data)> block_entity, std::function<void()> fault) {
+            request_chunk_data(
+                global_x >> 4,
+                global_z >> 4,
+                [&](chunk_data& chunk) {
+                    chunk.get_sub_chunk(
+                        global_y >> 4,
+                        [&, block_entity, func](sub_chunk_data& sub_chunk) {
+                            sub_chunk.get_block(global_x & 15, global_y & 15, global_z & 15, func, block_entity);
+                        }
+                    );
+                },
+                fault
+            );
+        }
+
+        void world_data::block_updated(int64_t global_x, uint64_t global_y, int64_t global_z) {
+            std::unique_lock lock(mutex);
+            get_light_processor()->block_changed(*this, global_x, global_y, global_z);
+        }
+
+        void world_data::chunk_updated(int64_t chunk_x, uint64_t chunk_z) {
+            std::unique_lock lock(mutex);
+            get_light_processor()->process_chunk(*this, chunk_x, chunk_z);
+        }
+
+        void world_data::sub_chunk_updated(int64_t chunk_x, uint64_t chunk_z, uint64_t sub_chunk_y) {
+            std::unique_lock lock(mutex);
+            get_light_processor()->process_sub_chunk(*this, chunk_x, sub_chunk_y, chunk_z);
+        }
+
+        void world_data::locked(std::function<void(world_data& self)> func) {
+            std::unique_lock lock(mutex);
+            func(*this);
+        }
+
+        void world_data::set_block_range(base_objects::cubic_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks) {
+            if (blocks.size() == bounds.count()) {
+                size_t i = 0;
+                locked([&](storage::world_data& world) {
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        world.set_block(blocks[i++], x, y, z);
+                    });
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        get_light_processor()->block_changed(*this, x, y, z);
+                    });
+                });
+            } else {
+                size_t i = 0;
+                size_t max = blocks.size();
+                locked([&](storage::world_data& world) {
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        world.set_block(blocks[i++], x, y, z);
+                        if (i == max)
+                            i = 0;
+                    });
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        get_light_processor()->block_changed(*this, x, y, z);
+                    });
+                });
+            }
+        }
+
+        void world_data::set_block_range(base_objects::cubic_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks) {
+            if (blocks.size() == bounds.count()) {
+                size_t i = 0;
+                locked([&](storage::world_data& world) {
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        world.set_block(std::move(blocks[i++]), x, y, z);
+                    });
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        get_light_processor()->block_changed(*this, x, y, z);
+                    });
+                });
+            } else {
+                size_t i = 0;
+                size_t max = blocks.size();
+                locked([&](storage::world_data& world) {
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        world.set_block(std::move(blocks[i++]), x, y, z);
+                        if (++i == max)
+                            i = 0;
+                    });
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        get_light_processor()->block_changed(*this, x, y, z);
+                    });
+                });
+            }
+        }
+
+        void world_data::set_block_range(base_objects::spherical_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks) {
+            if (blocks.size() == bounds.count()) {
+                size_t i = 0;
+                locked([&](storage::world_data& world) {
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        world.set_block(blocks[i++], x, y, z);
+                    });
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        get_light_processor()->block_changed(*this, x, y, z);
+                    });
+                });
+            } else {
+                size_t i = 0;
+                size_t max = blocks.size();
+                locked([&](storage::world_data& world) {
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        world.set_block(blocks[i++], x, y, z);
+                    });
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        get_light_processor()->block_changed(*this, x, y, z);
+                    });
+                    if (++i == max)
+                        i = 0;
+                });
+            }
+        }
+
+        void world_data::set_block_range(base_objects::spherical_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks) {
+            if (blocks.size() == bounds.count()) {
+                size_t i = 0;
+                locked([&](storage::world_data& world) {
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        world.set_block(std::move(blocks[i++]), x, y, z);
+                    });
+                });
+            } else {
+                size_t i = 0;
+                size_t max = blocks.size();
+                locked([&](storage::world_data& world) {
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        world.set_block(std::move(blocks[i++]), x, y, z);
+                        if (i++ == max)
+                            i = 0;
+                    });
+                });
+            }
         }
 
         uint64_t world_data::register_client(const base_objects::client_data_holder& client) {
@@ -712,6 +1135,18 @@ namespace crafted_craft {
             //TODO NOTIFY CLIENTS AND ENTITIES
         }
 
+        void world_data::change_chunk_generator(const base_objects::shared_string& id) {
+            std::unique_lock lock(mutex);
+            light_processor = nullptr;
+            light_processor_id = id;
+        }
+
+        void world_data::change_light_processor(const base_objects::shared_string& id) {
+            std::unique_lock lock(mutex);
+            light_processor = nullptr;
+            light_processor_id = id;
+        }
+
         void world_data::tick(std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time, bool update_tps) {
             std::unique_lock lock(mutex);
 
@@ -720,16 +1155,16 @@ namespace crafted_craft {
 
             for (auto& bound_init : load_points)
                 bound_init.enum_points([this](int64_t x, int64_t z) {
-                    auto res = request_chunk_data_sync(x, z);
-                    if (res.has_value())
-                        res.value()->marked_for_tick = true;
+                    auto res = request_chunk_data(x, z);
+                    if (res->is_ready())
+                        res->get()->marked_for_tick = true;
                 });
 
             for (auto& bound_init : load_points_sphere)
                 bound_init.enum_points([this](int64_t x, int64_t z) {
-                    auto res = request_chunk_data_sync(x, z);
-                    if (res.has_value())
-                        res.value()->marked_for_tick = true;
+                    auto res = request_chunk_data(x, z);
+                    if (res->is_ready())
+                        res->get()->marked_for_tick = true;
                 });
 
 
@@ -742,9 +1177,9 @@ namespace crafted_craft {
                     distance
                 )
                     .enum_points([this](int64_t x, int64_t z) {
-                        if (auto x_axis = chunks.find(x); x_axis != chunks.end())
-                            if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
-                                chunk->second->marked_for_tick = true;
+                        auto res = request_chunk_data(x, z);
+                        if (res->is_ready())
+                            res->get()->marked_for_tick = true;
                     });
             }
 
@@ -800,11 +1235,14 @@ namespace crafted_craft {
                 auto begin = x_axis.begin();
                 auto end = x_axis.end();
                 while (begin != end && unload_limit) {
-                    if (begin->second->last_usage + chunk_lifetime < current_time) {
-                        make_save(x, begin->first, begin, true);
-                        --unload_limit;
-                    }
-                    ++begin;
+                    if (!begin->second->last_usage.time_since_epoch().count()) {
+                        if (begin->second->last_usage + chunk_lifetime < current_time) {
+                            make_save(x, begin->first, begin, true);
+                            --unload_limit;
+                        } else
+                            ++begin;
+                    } else
+                        ++begin;
                 }
                 if (!unload_limit)
                     break;
@@ -813,7 +1251,6 @@ namespace crafted_craft {
         }
 
 #pragma region worlds_data
-
 
         base_objects::atomic_holder<world_data> worlds_data::load(uint64_t world_id) {
             if (cached_worlds.find(world_id) == cached_worlds.end()) {
@@ -862,7 +1299,7 @@ namespace crafted_craft {
             return cached_ids.contains(world_id);
         }
 
-        bool worlds_data::exists(const std::string& name) {
+        bool worlds_data::exists(const base_objects::shared_string& name) {
             return get_id(name) != -1;
         }
 
@@ -871,7 +1308,7 @@ namespace crafted_craft {
             return get_ids();
         }
 
-        std::string worlds_data::get_name(uint64_t world_id) {
+        base_objects::shared_string worlds_data::get_name(uint64_t world_id) {
             std::unique_lock lock(mutex);
             if (auto on_load = cached_worlds.find(world_id); on_load != cached_worlds.end())
                 return on_load->second->world_name;
@@ -883,7 +1320,7 @@ namespace crafted_craft {
                 throw std::runtime_error("World with id " + std::to_string(world_id) + " not found.");
         }
 
-        uint64_t worlds_data::get_id(const std::string& name) {
+        uint64_t worlds_data::get_id(const base_objects::shared_string& name) {
             std::unique_lock lock(mutex);
             for (auto& world : cached_worlds)
                 if (world.second->world_name == name)
@@ -963,6 +1400,41 @@ namespace crafted_craft {
             cached_worlds.erase(world_id);
         }
 
+        uint64_t worlds_data::create(const base_objects::shared_string& name) {
+            std::unique_lock lock(mutex);
+            if (get_id(name) != -1)
+                throw std::runtime_error("World with name " + name.get() + " already exists.");
+            uint64_t id = 0;
+            while (exists(id))
+                id++;
+            cached_ids.push_back(id);
+            cached_worlds[id] = new world_data(base_path / std::to_string(id));
+            cached_worlds[id]->world_name = name;
+            cached_worlds[id]->save();
+            return id;
+        }
+
+        uint64_t worlds_data::create(const base_objects::shared_string& name, std::function<void(world_data& world)> init) {
+            std::unique_lock lock(mutex);
+            if (get_id(name) != -1)
+                throw std::runtime_error("World with name " + name.get() + " already exists.");
+            uint64_t id = 0;
+            while (exists(id))
+                id++;
+            base_objects::atomic_holder<world_data> world = new world_data(base_path / std::to_string(id));
+            init(*world);
+            cached_ids.push_back(id);
+            cached_worlds[id] = world;
+            cached_worlds[id]->world_name = name;
+            cached_worlds[id]->save();
+            return id;
+        }
+
+        void worlds_data::locked(std::function<void(worlds_data& self)> func) {
+            std::unique_lock lock(mutex);
+            func(*this);
+        }
+
         void worlds_data::for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func) {
             std::unique_lock lock(mutex);
             for (auto& [id, world] : cached_worlds)
@@ -1005,6 +1477,12 @@ namespace crafted_craft {
                 world->second->for_each_entity(chunk_x, chunk_z, sub_chunk_y, func);
         }
 
+        void worlds_data::for_each_world(std::function<void(uint64_t id, world_data& world)> func) {
+            std::unique_lock lock(mutex);
+            for (auto& [id, world] : cached_worlds)
+                func(id, *world);
+        }
+
         std::chrono::nanoseconds worlds_data::apply_tick(std::mt19937& random_engine) {
             std::unique_lock lock(mutex);
             if (!ticks_per_second)
@@ -1015,6 +1493,8 @@ namespace crafted_craft {
 
             list_array<std::pair<int64_t, base_objects::atomic_holder<world_data>>> worlds_to_tick;
             for (auto& [id, world] : cached_worlds) {
+                if (!world->last_usage.time_since_epoch().count())
+                    world->last_usage = current_time;
                 auto elapsed = current_time - world->last_usage - world->tick_speed;
                 if (elapsed >= std::chrono::milliseconds(0)) {
                     worlds_to_tick.push_back({id, world});
@@ -1022,13 +1502,14 @@ namespace crafted_craft {
                         time_to_sleep = elapsed;
                 }
             }
-
             lock.unlock();
 
             list_array<uint64_t> to_unload_worlds;
 
+
             for (auto& [id, world] : worlds_to_tick) {
                 world->tick(random_engine, current_time, calculate_tps);
+
                 size_t unload_speed = configuration.world.unload_speed;
                 if (world->collect_unused_data(current_time, unload_speed))
                     to_unload_worlds.push_back(id);

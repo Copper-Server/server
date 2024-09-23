@@ -26,8 +26,8 @@ namespace crafted_craft {
             }
 
             namespace uuid {
-                std::string to(ENBT::UUID id);
-                ENBT::UUID from(std::string_view id);
+                std::string to(enbt::raw_uuid id);
+                enbt::raw_uuid from(std::string_view id);
             }
 
             namespace string {
@@ -37,8 +37,8 @@ namespace crafted_craft {
             }
 
             namespace json {
-                boost::json::value to_json(const ENBT& enbt);
-                ENBT from_json(const boost::json::value& json);
+                boost::json::value to_json(const enbt::value& enbt);
+                enbt::value from_json(const boost::json::value& json);
             }
         }
     }

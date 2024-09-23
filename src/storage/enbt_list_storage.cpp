@@ -19,17 +19,17 @@ namespace crafted_craft {
                 return;
             data.set([&](auto& value) {
                 while (!file.eof()) {
-                    std::string key = (std::string)ENBTHelper::ReadString(file);
+                    std::string key = (std::string)enbt::io_helper::read_string(file);
                     if (file.eof())
                         break;
-                    value[key] = ENBTHelper::ReadToken(file);
+                    value[key] = enbt::io_helper::read_token(file);
                 }
             });
             _is_loaded = true;
             file.close();
         }
 
-        void enbt_list_storage::add(const std::string& key, const ENBT& enbt) {
+        void enbt_list_storage::add(const std::string& key, const enbt::value& enbt) {
             bool save = false;
             data.set([&](auto& value) {
                 if (value.find(key) == value.end()) {
@@ -40,14 +40,14 @@ namespace crafted_craft {
             if (save) {
                 std::fstream file;
                 file.open(path, std::ios::out | std::ios::app | std::ios::binary);
-                ENBTHelper::WriteString(file, key);
-                ENBTHelper::WriteToken(file, enbt);
+                enbt::io_helper::write_string(file, key);
+                enbt::io_helper::write_token(file, enbt);
                 file.flush();
                 file.close();
             }
         }
 
-        void enbt_list_storage::update(const std::string& key, const ENBT& enbt) {
+        void enbt_list_storage::update(const std::string& key, const enbt::value& enbt) {
             bool save = false;
             data.set([&](auto& value) {
                 auto it = value.find(key);
@@ -62,8 +62,8 @@ namespace crafted_craft {
                 file.open(path, std::ios::out | std::ios::trunc | std::ios::binary);
                 data.get([&](auto& value) {
                     for (const auto& [key, value] : value) {
-                        ENBTHelper::WriteString(file, key);
-                        ENBTHelper::WriteToken(file, value);
+                        enbt::io_helper::write_string(file, key);
+                        enbt::io_helper::write_token(file, value);
                     }
                 });
                 file.flush();
@@ -71,8 +71,8 @@ namespace crafted_craft {
             }
         }
 
-        std::optional<ENBT> enbt_list_storage::get(const std::string& key) {
-            return data.get([&](auto& value) -> std::optional<ENBT> {
+        std::optional<enbt::value> enbt_list_storage::get(const std::string& key) {
+            return data.get([&](auto& value) -> std::optional<enbt::value> {
                 auto it = value.find(key);
                 if (it != value.end())
                     return std::optional(it->second);
@@ -101,8 +101,8 @@ namespace crafted_craft {
                 file.open(path, std::ios::out | std::ios::trunc);
                 data.get([&](auto& value) {
                     for (const auto& [key, value] : value) {
-                        ENBTHelper::WriteString(file, key);
-                        ENBTHelper::WriteToken(file, value);
+                        enbt::io_helper::write_string(file, key);
+                        enbt::io_helper::write_token(file, value);
                     }
                 });
                 file.flush();

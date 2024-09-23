@@ -8,14 +8,17 @@
 
 using namespace crafted_craft;
 
+
 int main() {
     using type = std::add_lvalue_reference_t<std::add_const_t<void>>;
     log::commands::init();
+    log::info("Initializer thread", "Initializing server...");
+    resources::load_blocks();
     resources::initialize_registers();
     resources::initialize_entities();
 
-    fast_task::task::create_executor();
-    fast_task::task::task::enable_task_naming = true;
+    fast_task::task::create_executor(10);
+    fast_task::task::task::enable_task_naming = false;
     try {
         boost::asio::io_service service;
         Server server(&service, "localhost", 1234);
@@ -38,15 +41,18 @@ int main() {
             server.start();
         } catch (...) {
             log::fatal("Initializer thread", "An error occurred while starting the tcp server, shutting down...");
+            pluginManagement.callFaultUnload();
             fast_task::task::shutDown();
             return 1;
         }
     } catch (...) {
         log::fatal("Initializer thread", "An error occurred while initializing the server, shutting down...");
+        pluginManagement.callFaultUnload();
         fast_task::task::shutDown();
         return 1;
     }
-    log::commands::deinit();
+    pluginManagement.callUnload();
     fast_task::task::shutDown();
+    log::commands::deinit();
     return 0;
 }

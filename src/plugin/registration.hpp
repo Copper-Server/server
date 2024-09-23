@@ -77,6 +77,8 @@ namespace crafted_craft {
             clean_up_registered_events();
         }
 
+        virtual void OnFaultUnload(const std::shared_ptr<PluginRegistration>&) {}
+
         virtual void OnCommandsLoad(const std::shared_ptr<PluginRegistration>&, base_objects::command_root_browser&) {}
 
         virtual void OnCommandsLoadComplete(const std::shared_ptr<PluginRegistration>&, base_objects::command_root_browser&) {}

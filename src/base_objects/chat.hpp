@@ -396,42 +396,42 @@ namespace crafted_craft {
 
         std::optional<bool> GetBold() {
             if (defined_bold)
-                return std::make_optional<bool>(bold);
+                return std::make_optional<bool>((bool)bold);
             else
                 return std::nullopt;
         }
 
         std::optional<bool> GetItalic() {
             if (defined_italic)
-                return std::make_optional<bool>(italic);
+                return std::make_optional<bool>((bool)italic);
             else
                 return std::nullopt;
         }
 
         std::optional<bool> GetUnderlined() {
             if (defined_underlined)
-                return std::make_optional<bool>(underlined);
+                return std::make_optional<bool>((bool)underlined);
             else
                 return std::nullopt;
         }
 
         std::optional<bool> GetStrikethrough() {
             if (defined_strikethrough)
-                return std::make_optional<bool>(strikethrough);
+                return std::make_optional<bool>((bool)strikethrough);
             else
                 return std::nullopt;
         }
 
         std::optional<bool> GetObfuscated() {
             if (defined_obfuscated)
-                return std::make_optional<bool>(obfuscated);
+                return std::make_optional<bool>((bool)obfuscated);
             else
                 return std::nullopt;
         }
 
         std::string ToStr() const;
         static Chat fromStr(const std::string& str);
-            ENBT ToENBT() const;
+        enbt::value ToENBT() const;
         list_array<uint8_t> ToTextComponent() const;
 
         void removeColor() {
@@ -452,7 +452,7 @@ namespace crafted_craft {
 
         static Chat parseToChat(const std::string& string);
         static Chat fromTextComponent(const list_array<uint8_t>& enbt);
-        static Chat fromEnbt(const ENBT& enbt);
+        static Chat fromEnbt(const enbt::value& enbt);
         std::string to_ansi_console() const;
 
     private:

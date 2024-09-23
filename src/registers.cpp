@@ -42,11 +42,11 @@ namespace crafted_craft {
             auto y = t->second.find(tag);
             if (y == t->second.end())
                 return empty;
-            return t->second;
+            return y->second;
         }
 
         const list_array<std::string>& unfold_tag(const std::string& type, const std::string& tag) {
-            return unfold_tag(default_namespace, tag);
+            return unfold_tag(type, default_namespace, tag);
         }
     }
 }

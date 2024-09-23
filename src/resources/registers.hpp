@@ -32,6 +32,9 @@ namespace crafted_craft {
 
         //optimizes tags access and sets ids for all registers
         void load_registers_complete();
+
+
+        void load_blocks();
     }
 }
 #endif /* SRC_RESOURCES_REGISTERS */

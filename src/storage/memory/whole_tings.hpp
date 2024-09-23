@@ -121,8 +121,8 @@ namespace crafted_craft {
                             struct equipment_t {
                                 std::optional<std::variant<base_objects::shared_string, std::vector<base_objects::shared_string>, std::string>> items; //ID, list of IDs or tag
                                 std::optional<condition_value<int32_t>> count;
-                                std::optional<ENBT> components;
-                                std::optional<ENBT> predicates; //sub predicates
+                                std::optional<enbt::value> components;
+                                std::optional<enbt::value> predicates; //sub predicates
                             };
 
                             struct flags_t {
@@ -229,10 +229,10 @@ namespace crafted_craft {
                             std::function<void(
                                 base_objects::entity& attacker,
                                 base_objects::entity& victim,
-                                ENBT& effect_data
+                                enbt::value& effect_data
                             )>
                                 callback;
-                            ENBT effect_data;
+                            enbt::value effect_data;
                         };
 
                         struct set {
@@ -302,10 +302,10 @@ namespace crafted_craft {
                                 base_objects::entity& attacker,
                                 base_objects::entity& victim,
                                 base_objects::entity& damaging_entity,
-                                ENBT& effect_data
+                                enbt::value& effect_data
                             )>
                                 callback;
-                            ENBT effect_data;
+                            enbt::value effect_data;
                         };
 
                         //only in location based effect

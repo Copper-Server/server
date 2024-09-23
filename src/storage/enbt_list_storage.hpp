@@ -11,16 +11,16 @@
 namespace crafted_craft {
     namespace storage {
         class enbt_list_storage {
-            fast_task::protected_value<std::unordered_map<std::string, ENBT>> data;
+            fast_task::protected_value<std::unordered_map<std::string, enbt::value>> data;
             std::filesystem::path path;
             bool _is_loaded = false;
 
         public:
             enbt_list_storage(const std::filesystem::path& path);
 
-            void add(const std::string& value, const ENBT& enbt);
-            void update(const std::string& value, const ENBT& enbt);
-            std::optional<ENBT> get(const std::string& value);
+            void add(const std::string& value, const enbt::value& enbt);
+            void update(const std::string& value, const enbt::value& enbt);
+            std::optional<enbt::value> get(const std::string& value);
             bool contains(const std::string& value);
             void remove(const std::string& value);
 

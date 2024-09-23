@@ -9,7 +9,7 @@ namespace crafted_craft {
     namespace base_objects {
         class shared_string {
             static fast_task::protected_value<std::unordered_set<shared_string>> global;
-            static shared_string make_shared(const std::string_view& str);
+            static shared_string make_shared(std::string_view str);
             void leave();
 
             std::string* ref;
@@ -19,19 +19,21 @@ namespace crafted_craft {
 
         public:
             shared_string();
+
+            template <size_t len>
+            shared_string(const char (&str)[len])
+                : shared_string(str, len) {}
+
             shared_string(const char* str, size_t len = -1);
-            shared_string(const std::string_view& str);
+            shared_string(std::string_view str);
             shared_string(const std::string& str);
+            shared_string(std::string&& str);
             shared_string(const shared_string& str);
             shared_string(shared_string&& str) noexcept;
 
             ~shared_string();
 
-            shared_string& operator=(const std::string_view& str) {
-                return *this = make_shared(str);
-            }
-
-            shared_string& operator=(const std::string& str) {
+            shared_string& operator=(std::string_view str) {
                 return *this = make_shared(str);
             }
 
@@ -39,7 +41,7 @@ namespace crafted_craft {
             shared_string& operator=(shared_string&& str);
 
             std::string operator+(const shared_string& str) const;
-            std::string operator+(const std::string& str) const;
+            std::string operator+(std::string_view str) const;
 
             bool operator==(const shared_string& str) const noexcept {
                 if (str.ref == ref)
@@ -47,7 +49,7 @@ namespace crafted_craft {
                 return *str.ref == *ref;
             }
 
-            bool operator==(const std::string& str) const noexcept {
+            bool operator==(std::string_view str) const noexcept {
                 return str == *ref;
             }
 
@@ -57,7 +59,7 @@ namespace crafted_craft {
                 return *str.ref != *ref;
             }
 
-            bool operator!=(const std::string& str) const noexcept {
+            bool operator!=(std::string_view str) const noexcept {
                 return str != *ref;
             }
 
@@ -67,7 +69,7 @@ namespace crafted_craft {
                 return *str.ref <=> *ref;
             }
 
-            std::strong_ordering operator<=>(const std::string& str) const noexcept {
+            std::strong_ordering operator<=>(std::string_view str) const noexcept {
                 return str <=> *ref;
             }
 
@@ -78,6 +80,10 @@ namespace crafted_craft {
             }
         };
     }
+}
+
+inline crafted_craft::base_objects::shared_string operator""_ss(const char* str, size_t len) {
+    return crafted_craft::base_objects::shared_string(str, len);
 }
 
 namespace std {

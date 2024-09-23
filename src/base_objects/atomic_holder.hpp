@@ -125,12 +125,10 @@ namespace crafted_craft {
 
             bool is_last() {
                 return ref_count ? *ref_count == 1 : false;
-                if (ref_count)
-                    return;
             }
 
             size_t use_count() const {
-                return ref_count ? *ref_count : 0;
+                return ref_count ? ref_count->load() : size_t(0);
             }
 
             void reset() {

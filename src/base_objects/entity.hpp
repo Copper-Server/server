@@ -18,7 +18,7 @@ namespace crafted_craft {
         using entity_ref = atomic_holder<entity>;
 
 
-        class block;
+        union block;
     }
 
     namespace storage {
@@ -29,7 +29,7 @@ namespace crafted_craft {
 
 
         struct entity_data {
-            list_array<std::string> entity_aliases; //string entity ids(checks from first to last, if none found in `initialize_entities()` throws)
+            list_array<std::string> entity_aliases; //string entity ids(checks from first to last, if none found in `initialize_entities()` throws) implicitly uses id first
             std::string id;
             std::string name;
             std::string translation_resource_key;
@@ -71,9 +71,9 @@ namespace crafted_craft {
         };
 
         struct entity {
-            ENBT::UUID id;
-            ENBT nbt;
-            ENBT server_data;
+            enbt::raw_uuid id;
+            enbt::value nbt;
+            enbt::value server_data;
             calc::VECTOR position;
             calc::VECTOR motion;
             calc::VECTOR rotation;
@@ -89,7 +89,7 @@ namespace crafted_craft {
             const entity_data& const_data();
 
             entity_ref copy() const;
-            ENBT copy_to_enbt() const;
+            enbt::value copy_to_enbt() const;
 
 
             static entity_ref create(uint16_t id);

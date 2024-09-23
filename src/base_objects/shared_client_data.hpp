@@ -66,8 +66,8 @@ namespace crafted_craft {
             };
 
             struct packets_state_t {
-                std::unordered_set<ENBT::UUID> active_resource_packs;
-                std::unordered_map<ENBT::UUID, ResourcePackData> pending_resource_packs;
+                std::unordered_set<enbt::raw_uuid> active_resource_packs;
+                std::unordered_map<enbt::raw_uuid, ResourcePackData> pending_resource_packs;
                 std::list<int32_t> pending_teleport_ids;
                 int32_t entity_id_generator;
                 int32_t current_block_sequence_id = 0;

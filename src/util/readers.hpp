@@ -107,9 +107,9 @@ namespace crafted_craft {
     template <class Res>
     static Res ReadVar(ArrayStream& data) {
         size_t len = sizeof(Res);
-        Res res = ENBT::fromVar<Res>(data.arrau + data.r, len);
+        Res res = enbt::value::fromVar<Res>(data.arrau + data.r, len);
         data.r += len;
-        ENBT::ConvertEndian(std::endian::little, res);
+        enbt::endian_helpers::convert_endian(std::endian::little, res);
         return res;
     }
 
@@ -121,7 +121,7 @@ namespace crafted_craft {
 
         constexpr size_t buf_len = sizeof(ResultT) + (sizeof(ResultT) / 7) + 1;
         uint8_t buf[buf_len];
-        size_t len = ENBT::toVar(buf, buf_len, ENBT::ConvertEndian<ResultT>(std::endian::little, (ResultT)val));
+        size_t len = enbt::value::toVar(buf, buf_len, enbt::endian_helpers::convert_endian<ResultT>(std::endian::little, (ResultT)val));
         for (size_t i = 0; i < len; i++)
             data.push_back(buf[i]);
     }
@@ -134,29 +134,29 @@ namespace crafted_craft {
 
         constexpr size_t buf_len = sizeof(T) + (sizeof(T) / 7) + 1;
         uint8_t buf[buf_len];
-        size_t len = ENBT::toVar(buf, buf_len, ENBT::ConvertEndian<ResultT>(std::endian::little, (ResultT)val));
+        size_t len = enbt::value::toVar(buf, buf_len, enbt::endian_helpers::convert_endian<ResultT>(std::endian::little, (ResultT)val));
         for (size_t i = 0; i < len; i++)
             data.write(buf[i]);
     }
 
-    static void WriteUUID(const ENBT::UUID& val, list_array<uint8_t>& data) {
-        ENBT::UUID temp = ENBT::ConvertEndian(std::endian::big, val);
+    static void WriteUUID(const enbt::raw_uuid& val, list_array<uint8_t>& data) {
+        enbt::raw_uuid temp = enbt::endian_helpers::convert_endian(std::endian::big, val);
         uint8_t* tmp = (uint8_t*)&temp;
         for (size_t i = 0; i < 16; i++)
             data.push_back(tmp[i]);
     }
 
-    static ENBT::UUID ReadUUID(ArrayStream& data) {
-        ENBT::UUID temp;
+    static enbt::raw_uuid ReadUUID(ArrayStream& data) {
+        enbt::raw_uuid temp;
         uint8_t* tmp = (uint8_t*)&temp;
         for (size_t i = 0; i < 16; i++)
             tmp[i] = data.read();
-        return ENBT::ConvertEndian(std::endian::big, temp);
+        return enbt::endian_helpers::convert_endian(std::endian::big, temp);
     }
 
     template <class T>
     static void WriteValue(const T& val, list_array<uint8_t>& data) {
-        T temp = ENBT::ConvertEndian(std::endian::big, val);
+        T temp = enbt::endian_helpers::convert_endian(std::endian::big, val);
         uint8_t* tmp = (uint8_t*)&temp;
         for (size_t i = 0; i < sizeof(T); i++)
             data.push_back(tmp[i]);
@@ -167,7 +167,7 @@ namespace crafted_craft {
         uint8_t tmp[sizeof(T)];
         for (size_t i = 0; i < sizeof(T); i++)
             tmp[i] = data.read();
-        return ENBT::ConvertEndian(std::endian::big, *(T*)tmp);
+        return enbt::endian_helpers::convert_endian(std::endian::big, *(T*)tmp);
     }
 
     static std::string ReadString(ArrayStream& data, int32_t max_string_len) {
@@ -229,7 +229,7 @@ namespace crafted_craft {
         return res;
     }
 
-    static std::string UUID2String(const ENBT::UUID& uuid) {
+    static std::string UUID2String(const enbt::raw_uuid& uuid) {
         char buf[36];
         size_t index = 0;
         for (size_t i = 0; i < 16; i++) {

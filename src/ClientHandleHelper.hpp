@@ -132,7 +132,7 @@ namespace crafted_craft {
         boost::asio::ip::tcp::acceptor TCPacceptor;
         boost::asio::thread_pool threads;
 
-        std::mutex close_mutex;
+        std::recursive_mutex close_mutex;
         std::list<TCPsession*> queried_close;
         std::unordered_set<TCPsession*> sessions;
         RSA* server_rsa_key;

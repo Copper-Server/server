@@ -14,7 +14,7 @@ namespace crafted_craft {
 #pragma region CLIENT/SERVER
         struct IntegerDistribution {
             std::string type;
-            ENBT value;
+            enbt::value value;
         };
 
         struct ArmorTrimMaterial {
@@ -40,7 +40,7 @@ namespace crafted_craft {
             struct Particle {
                 struct {
                     std::string type;
-                    ENBT options;
+                    enbt::value options;
                 } options;
 
                 float probability;

@@ -3,8 +3,8 @@
 
 namespace crafted_craft {
     namespace storage {
-        static void extract_slot(ENBT& data, base_objects::slot& slot) {
-            ENBT* res = data.getOptional();
+        static void extract_slot(enbt::value& data, base_objects::slot& slot) {
+            enbt::value* res = data.get_optional();
             if (res == nullptr) {
                 slot.reset();
                 return;
@@ -16,7 +16,7 @@ namespace crafted_craft {
             slot = slot_data.unpack();
         }
 
-        static ENBT compact_slot(base_objects::slot& slot) {
+        static enbt::value compact_slot(base_objects::slot& slot) {
             if (slot) {
                 enbt::compound compound;
 
@@ -24,9 +24,9 @@ namespace crafted_craft {
                 compound["id"] = slot_data.id;
                 compound["count"] = slot_data.count;
                 compound["nbt"] = slot_data.nbt;
-                return ENBT::optional((ENBT&&)std::move(compound));
+                return enbt::optional((enbt::value&&)std::move(compound));
             }
-            return ENBT::optional();
+            return enbt::optional();
         }
 
         player_data::player_data(const std::filesystem::path& path)
@@ -42,7 +42,7 @@ namespace crafted_craft {
                     save();
                 return;
             }
-            ENBT file_data = ENBTHelper::ReadToken(file);
+            enbt::value file_data = enbt::io_helper::read_token(file);
             file.close();
             {
                 auto abilities = enbt::compound::make_ref(file_data["abilities"]);
@@ -155,19 +155,19 @@ namespace crafted_craft {
             } else
                 player.last_death_location.reset();
             if (file_data.contains("ride_entity_id"))
-                player.ride_entity_id = (ENBT::UUID)file_data["ride_entity_id"];
+                player.ride_entity_id = (enbt::raw_uuid)file_data["ride_entity_id"];
             else
                 player.ride_entity_id.reset();
 
             if (file_data.contains("additional_data"))
-                player.additional_data = ENBT::optional(file_data["additional_data"]);
+                player.additional_data = enbt::optional(file_data["additional_data"]);
             else
-                player.additional_data = ENBT::optional();
+                player.additional_data = enbt::optional();
             if (file_data.contains("local_data"))
-                player.local_data = ENBT::optional(file_data["local_data"]);
+                player.local_data = enbt::optional(file_data["local_data"]);
 
             else
-                player.local_data = ENBT::optional();
+                player.local_data = enbt::optional();
         }
 
         void player_data::save() {
@@ -272,19 +272,19 @@ namespace crafted_craft {
                 as_file_data["death_location"] = death_location;
             }
             if (player.ride_entity_id.has_value())
-                as_file_data["ride_entity_id"] = (ENBT::UUID)player.ride_entity_id.value();
+                as_file_data["ride_entity_id"] = (enbt::raw_uuid)player.ride_entity_id.value();
 
-            if (!player.additional_data.type_equal(ENBT::Type::none))
+            if (!player.additional_data.type_equal(enbt::type::none))
                 as_file_data["additional_data"] = player.additional_data;
 
-            if (!player.local_data.type_equal(ENBT::Type::none))
+            if (!player.local_data.type_equal(enbt::type::none))
                 as_file_data["local_data"] = player.local_data;
             std::ofstream file(path, std::ios::binary);
             if (!file.is_open()) {
                 file.close();
                 throw std::runtime_error("Failed to open file: " + path.string());
             }
-            ENBTHelper::WriteToken(file, as_file_data);
+            enbt::io_helper::write_token(file, as_file_data);
             file.flush();
             file.close();
         }

@@ -1,6 +1,6 @@
 {
     "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
-    "name": "attach-a",
+    "name": "crafted-craft",
     "version": "0.1.0",
     "dependencies": [
         {
@@ -19,6 +19,7 @@
         "utfcpp",
         "gtest",
         "zlib",
-        "lionkor-commandline"
+        "lionkor-commandline",
+        "cmakerc"
     ]
 }

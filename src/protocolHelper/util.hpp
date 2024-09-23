@@ -129,12 +129,12 @@ namespace crafted_craft {
             legacy_motd.push_back(u'\0'); //why legacy need to know about online players?
             if constexpr (std::endian::native != std::endian::big)
                 for (char16_t& it : legacy_motd)
-                    it = ENBT::ConvertEndian(std::endian::big, it);
+                    it = enbt::endian_helpers::convert_endian(std::endian::big, it);
             list_array<uint8_t> response;
             response.push_back(0xFF); //KICK packet
             uint16_t len = legacy_motd.size();
             if constexpr (std::endian::native != std::endian::big)
-                len = ENBT::ConvertEndian(std::endian::big, len);
+                len = enbt::endian_helpers::convert_endian(std::endian::big, len);
             response.push_back(uint8_t(len >> 8));
             response.push_back(uint8_t(len & 0xFF));
             response.push_back(reinterpret_cast<uint8_t*>(legacy_motd.data()), legacy_motd.size() * 2);

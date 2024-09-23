@@ -46,11 +46,11 @@ namespace crafted_craft {
 
             Response removeResourcePacks(SharedClientData& client);
 
-            Response removeResourcePack(SharedClientData& client, const ENBT::UUID& pack_id);
+            Response removeResourcePack(SharedClientData& client, const enbt::raw_uuid& pack_id);
 
-            Response addResourcePack(SharedClientData& client, const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced);
+            Response addResourcePack(SharedClientData& client, const enbt::raw_uuid& pack_id, const std::string& url, const std::string& hash, bool forced);
 
-            Response addResourcePackPrompted(SharedClientData& client, const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced, const Chat& prompt);
+            Response addResourcePackPrompted(SharedClientData& client, const enbt::raw_uuid& pack_id, const std::string& url, const std::string& hash, bool forced, const Chat& prompt);
 
             Response storeCookie(SharedClientData& client, const std::string& key, const list_array<uint8_t>& payload);
 
@@ -82,23 +82,23 @@ namespace crafted_craft {
 
             Response setBlockDestroyStage(SharedClientData& client, const base_objects::entity& entity, Position block, uint8_t stage);
 
-            Response blockEntityData(SharedClientData& client, Position block, int32_t type, const ENBT& data);
+            Response blockEntityData(SharedClientData& client, Position block, int32_t type, const enbt::value& data);
 
             Response blockAction(SharedClientData& client, Position block, int32_t action_id, int32_t param, int32_t block_type);
 
             Response blockUpdate(SharedClientData& client, Position block, int32_t block_type);
 
-            Response bossBarAdd(SharedClientData& client, const ENBT::UUID& id, const Chat& title, float health, int32_t color, int32_t division, uint8_t flags);
+            Response bossBarAdd(SharedClientData& client, const enbt::raw_uuid& id, const Chat& title, float health, int32_t color, int32_t division, uint8_t flags);
 
-            Response bossBarRemove(SharedClientData& client, const ENBT::UUID& id);
+            Response bossBarRemove(SharedClientData& client, const enbt::raw_uuid& id);
 
-            Response bossBarUpdateHealth(SharedClientData& client, const ENBT::UUID& id, float health);
+            Response bossBarUpdateHealth(SharedClientData& client, const enbt::raw_uuid& id, float health);
 
-            Response bossBarUpdateTitle(SharedClientData& client, const ENBT::UUID& id, const Chat& title);
+            Response bossBarUpdateTitle(SharedClientData& client, const enbt::raw_uuid& id, const Chat& title);
 
-            Response bossBarUpdateStyle(SharedClientData& client, const ENBT::UUID& id, int32_t color, int32_t division);
+            Response bossBarUpdateStyle(SharedClientData& client, const enbt::raw_uuid& id, int32_t color, int32_t division);
 
-            Response bossBarUpdateFlags(SharedClientData& client, const ENBT::UUID& id, uint8_t flags);
+            Response bossBarUpdateFlags(SharedClientData& client, const enbt::raw_uuid& id, uint8_t flags);
 
             Response changeDifficulty(SharedClientData& client, uint8_t difficulty, bool locked);
 
@@ -194,7 +194,7 @@ namespace crafted_craft {
 
             Response playerAbilities(SharedClientData& client, uint8_t flags, float flying_speed, float field_of_view);
 
-            Response playerChatMessage(SharedClientData& client, ENBT::UUID sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<ENBT> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name);
+            Response playerChatMessage(SharedClientData& client, enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<enbt::value> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name);
 
             Response endCombat(SharedClientData& client, int32_t duration);
 
@@ -202,7 +202,7 @@ namespace crafted_craft {
 
             Response combatDeath(SharedClientData& client, int32_t player_id, const Chat& message);
 
-            Response playerInfoRemove(SharedClientData& client, const list_array<ENBT::UUID>& players);
+            Response playerInfoRemove(SharedClientData& client, const list_array<enbt::raw_uuid>& players);
 
             Response playerInfoAdd(SharedClientData& client, const list_array<base_objects::packets::player_actions_add>& add_players);
 
@@ -234,9 +234,9 @@ namespace crafted_craft {
 
             Response removeResourcePacks(SharedClientData& client);
 
-            Response removeResourcePack(SharedClientData& client, ENBT::UUID id);
+            Response removeResourcePack(SharedClientData& client, enbt::raw_uuid id);
 
-            Response addResourcePack(SharedClientData& client, ENBT::UUID id, const std::string& url, const std::string& hash, bool forced, const std::optional<Chat>& prompt);
+            Response addResourcePack(SharedClientData& client, enbt::raw_uuid id, const std::string& url, const std::string& hash, bool forced, const std::optional<Chat>& prompt);
 
             Response respawn(SharedClientData& client, int32_t dimension_type, const std::string& dimension_name, long hashed_seed, uint8_t gamemode, uint8_t previous_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, bool keep_attributes, bool keep_metadata);
 
@@ -286,7 +286,7 @@ namespace crafted_craft {
 
             Response updateObjectivesCreate(SharedClientData& client, const std::string& objective_name, const Chat& display_name, int32_t render_type);
 
-            Response updateObjectivesCreateStyled(SharedClientData& client, const std::string& objective_name, const Chat& display_name, int32_t render_type, const ENBT& style);
+            Response updateObjectivesCreateStyled(SharedClientData& client, const std::string& objective_name, const Chat& display_name, int32_t render_type, const enbt::value& style);
 
             Response updateObjectivesCreateFixed(SharedClientData& client, const std::string& objective_name, const Chat& display_name, int32_t render_type, const Chat& content);
 
@@ -294,7 +294,7 @@ namespace crafted_craft {
 
             Response updateObjectivesInfo(SharedClientData& client, const std::string& objective_name, const Chat& display_name, int32_t render_type);
 
-            Response updateObjectivesInfoStyled(SharedClientData& client, const std::string& objective_name, const Chat& display_name, int32_t render_type, const ENBT& style);
+            Response updateObjectivesInfoStyled(SharedClientData& client, const std::string& objective_name, const Chat& display_name, int32_t render_type, const enbt::value& style);
 
             Response updateObjectivesInfoFixed(SharedClientData& client, const std::string& objective_name, const Chat& display_name, int32_t render_type, const Chat& content);
 
@@ -312,7 +312,7 @@ namespace crafted_craft {
 
             Response setScore(SharedClientData& client, const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name);
 
-            Response setScoreStyled(SharedClientData& client, const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, const ENBT& styled);
+            Response setScoreStyled(SharedClientData& client, const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, const enbt::value& styled);
 
             Response setScoreFixed(SharedClientData& client, const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, Chat content);
 
@@ -352,7 +352,7 @@ namespace crafted_craft {
 
             Response setTabListHeaderAndFooter(SharedClientData& client, const Chat& header, const Chat& footer);
 
-            Response tagQueryResponse(SharedClientData& client, int32_t transaction_id, const ENBT& nbt);
+            Response tagQueryResponse(SharedClientData& client, int32_t transaction_id, const enbt::value& nbt);
 
             Response pickupItem(SharedClientData& client, int32_t collected_entity_id, int32_t collector_entity_id, int32_t pickup_item_count);
 

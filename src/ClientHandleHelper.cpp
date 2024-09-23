@@ -22,6 +22,10 @@
     }
 
 namespace crafted_craft {
+    TCPclient* first_client_holder;
+    std::atomic_uint64_t TCPsession::id_gen;
+    bool TCPsession::do_log_connection_errors = true;
+
 
     base_objects::Response TCPclient::OnSwitch() {
         return base_objects::Response::Empty();
@@ -191,7 +195,7 @@ namespace crafted_craft {
     }
 
     void Server::make_clean_up() {
-        std::unique_lock<std::mutex> lock(close_mutex);
+        std::unique_lock lock(close_mutex);
         std::list<TCPsession*> to_clean;
         to_clean.swap(queried_close);
         for (auto it : to_clean)
@@ -205,7 +209,7 @@ namespace crafted_craft {
     }
 
     void Server::close_session(TCPsession* session) {
-        std::unique_lock<std::mutex> lock(close_mutex);
+        std::unique_lock lock(close_mutex);
         queried_close.push_back(session);
     }
 
@@ -214,7 +218,7 @@ namespace crafted_craft {
         if (first_client_holder->DoDisconnect(session->sock.remote_endpoint().address()))
             session->sock.close();
         else {
-            std::unique_lock<std::mutex> lock(close_mutex);
+            std::unique_lock lock(close_mutex);
             if (sessions.insert(session).second)
                 session->connect();
             else
@@ -358,15 +362,12 @@ namespace crafted_craft {
 
     void Server::stop() {
         if (!disabled) {
+            std::lock_guard lock(close_mutex);
             make_clean_up();
             TCPacceptor.close();
-            {
-                std::lock_guard<std::mutex> lock(close_mutex);
-                for (auto it : sessions)
-                    it->disconnect();
-                disabled = true;
-            }
-
+            for (auto it : sessions)
+                it->disconnect();
+            disabled = true;
             service->stop();
         } else
             throw std::exception("tcp server already stoped");

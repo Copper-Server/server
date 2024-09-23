@@ -138,7 +138,7 @@ namespace crafted_craft {
                                         element["description"] = std::get<Chat>(it.description).ToENBT();
                                     tmp["element"] = std::move(element);
                                 }
-                                _armorTrimMaterials.push_back((ENBT&&)std::move(tmp));
+                                _armorTrimMaterials.push_back((enbt::value&&)std::move(tmp));
                             }
                             enbt::compound entry;
                             entry["type"] = "minecraft:trim_material";
@@ -162,7 +162,7 @@ namespace crafted_craft {
                                     element["decal"] = it.decal;
                                     tmp["element"] = std::move(element);
                                 }
-                                _armorTrimPatterns.push_back((ENBT&&)std::move(tmp));
+                                _armorTrimPatterns.push_back((enbt::value&&)std::move(tmp));
                             }
                             enbt::compound entry;
                             entry["type"] = "minecraft:trim_pattern";
@@ -235,7 +235,7 @@ namespace crafted_craft {
                                     }
                                     tmp["element"] = std::move(element);
                                 }
-                                _biomes.push_back((ENBT&&)std::move(tmp));
+                                _biomes.push_back((enbt::value&&)std::move(tmp));
                             }
                             enbt::compound entry;
                             entry["type"] = "minecraft:worldgen/biome";
@@ -256,7 +256,7 @@ namespace crafted_craft {
                                         {
                                             it.chat->style.GetExtra().clear();
                                             it.chat->style.SetText("");
-                                            ENBT style = it.chat->style.ToENBT();
+                                            enbt::value style = it.chat->style.ToENBT();
                                             style.remove("text");
                                             chat["style"] = std::move(style);
                                         }
@@ -273,7 +273,7 @@ namespace crafted_craft {
                                         {
                                             it.narration->style.GetExtra().clear();
                                             it.narration->style.SetText("");
-                                            ENBT style = it.chat->style.ToENBT();
+                                            enbt::value style = it.chat->style.ToENBT();
                                             style.remove("text");
                                             narration["style"] = std::move(style);
                                         }
@@ -285,7 +285,7 @@ namespace crafted_craft {
                                     }
                                     tmp["element"] = std::move(element);
                                 }
-                                _chatTypes.push_back((ENBT&&)std::move(tmp));
+                                _chatTypes.push_back((enbt::value&&)std::move(tmp));
                             }
                             enbt::compound entry;
                             entry["type"] = "minecraft:chat_type";
@@ -365,7 +365,7 @@ namespace crafted_craft {
                                     }
                                     tmp["element"] = std::move(element);
                                 }
-                                _damageTypes.push_back((ENBT&&)std::move(tmp));
+                                _damageTypes.push_back((enbt::value&&)std::move(tmp));
                             }
                             enbt::compound entry;
                             entry["type"] = "minecraft:damage_type";
@@ -409,14 +409,14 @@ namespace crafted_craft {
                                     element["bed_works"] = it.bed_works;
                                     tmp["element"] = std::move(element);
                                 }
-                                _dimensionTypes.push_back((ENBT&&)std::move(tmp));
+                                _dimensionTypes.push_back((enbt::value&&)std::move(tmp));
                             }
                             enbt::compound entry;
                             entry["type"] = "minecraft:dimension_type";
                             entry["value"] = std::move(_dimensionTypes);
                             nbt["minecraft:dimension_type"] = std::move(entry);
                         }
-                        data.push_back(NBT::build((ENBT&)nbt).get_as_network());
+                        data.push_back(NBT::build((enbt::value&)nbt).get_as_network());
                     }
                     return Response::Answer({data});
                 }
@@ -425,7 +425,7 @@ namespace crafted_craft {
                     return Response::Answer({list_array<uint8_t>::concat(0x06, false)});
                 }
 
-                Response removeResourcePack(const ENBT::UUID& pack_id) {
+                Response removeResourcePack(const enbt::raw_uuid& pack_id) {
                     list_array<uint8_t> packet;
                     packet.reserve(18);
                     packet.push_back(0x06);
@@ -434,7 +434,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response addResourcePack(SharedClientData& client, const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced) {
+                Response addResourcePack(SharedClientData& client, const enbt::raw_uuid& pack_id, const std::string& url, const std::string& hash, bool forced) {
                     list_array<uint8_t> packet;
                     packet.reserve(20 + url.size() + 2 + hash.size());
                     packet.push_back(0x07);
@@ -447,7 +447,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response addResourcePackPrompted(SharedClientData& client, const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced, const Chat& prompt) {
+                Response addResourcePackPrompted(SharedClientData& client, const enbt::raw_uuid& pack_id, const std::string& url, const std::string& hash, bool forced, const Chat& prompt) {
                     list_array<uint8_t> packet;
                     packet.reserve(20 + url.size() + 2 + hash.size());
                     packet.push_back(0x07);
@@ -528,7 +528,7 @@ namespace crafted_craft {
                     WriteValue<int8_t>(res.y, packet);
                     res = calc::to_yaw_pitch(entity.head_rotation);
                     WriteValue<int8_t>(res.y, packet);
-                    WriteVar<int32_t>(entity.nbt, packet);
+                    WriteVar<int32_t>((int32_t)entity.nbt, packet);
                     auto velocity = calc::minecraft::packets::velocity(entity.motion);
                     WriteValue<int16_t>(velocity.x, packet);
                     WriteValue<int16_t>(velocity.y, packet);
@@ -588,7 +588,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response blockEntityData(Position block, int32_t type, const ENBT& data) {
+                Response blockEntityData(Position block, int32_t type, const enbt::value& data) {
 
                     list_array<uint8_t> packet;
                     packet.reserve(13);
@@ -621,7 +621,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response bossBarAdd(const ENBT::UUID& id, const Chat& title, float health, int32_t color, int32_t division, uint8_t flags) {
+                Response bossBarAdd(const enbt::raw_uuid& id, const Chat& title, float health, int32_t color, int32_t division, uint8_t flags) {
                     list_array<uint8_t> packet;
                     packet.reserve(4 * 4 + 1 + 16 + 2);
                     packet.push_back(0x0A);
@@ -635,7 +635,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response bossBarRemove(const ENBT::UUID& id) {
+                Response bossBarRemove(const enbt::raw_uuid& id) {
                     list_array<uint8_t> packet;
                     packet.reserve(18);
                     packet.push_back(0x0A);
@@ -644,7 +644,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response bossBarUpdateHealth(const ENBT::UUID& id, float health) {
+                Response bossBarUpdateHealth(const enbt::raw_uuid& id, float health) {
                     list_array<uint8_t> packet;
                     packet.reserve(21);
                     packet.push_back(0x0A);
@@ -654,7 +654,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response bossBarUpdateTitle(const ENBT::UUID& id, const Chat& title) {
+                Response bossBarUpdateTitle(const enbt::raw_uuid& id, const Chat& title) {
                     list_array<uint8_t> packet;
                     packet.reserve(1 + 16 + 2);
                     packet.push_back(0x0A);
@@ -664,7 +664,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response bossBarUpdateStyle(const ENBT::UUID& id, int32_t color, int32_t division) {
+                Response bossBarUpdateStyle(const enbt::raw_uuid& id, int32_t color, int32_t division) {
                     list_array<uint8_t> packet;
                     packet.reserve(25);
                     packet.push_back(0x0A);
@@ -675,7 +675,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response bossBarUpdateFlags(const ENBT::UUID& id, uint8_t flags) {
+                Response bossBarUpdateFlags(const enbt::raw_uuid& id, uint8_t flags) {
                     list_array<uint8_t> packet;
                     packet.reserve(21);
                     packet.push_back(0x0A);
@@ -863,7 +863,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response deleteMessage(uint8_t (&signature)[256]) {
+                Response deleteMessageBySignature(uint8_t (&signature)[256]) {
                     list_array<uint8_t> packet;
                     packet.reserve(12 + 256);
                     packet.push_back(0x1A);
@@ -872,7 +872,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response deleteMessage(int32_t message_id) {
+                Response deleteMessageByID(int32_t message_id) {
                     list_array<uint8_t> packet;
                     packet.reserve(12 + 4);
                     packet.push_back(0x1A);
@@ -1150,7 +1150,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown) {
+                Response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, bool __unused) {
                     list_array<uint8_t> packet;
                     packet.reserve(1 + 4 + 1 + 4 + 1 + 4 + 1 + 4);
                     packet.push_back(0x29);
@@ -1356,7 +1356,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response playerChatMessage(ENBT::UUID sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, const std::optional<ENBT>& __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
+                Response playerChatMessage(enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, const std::optional<enbt::value>& __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
                     if (prev_messages.size() > 20)
                         throw std::runtime_error("too many prev messages");
                     list_array<uint8_t> packet;
@@ -1420,9 +1420,9 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response playerInfoRemove(const list_array<ENBT::UUID>& players) {
+                Response playerInfoRemove(const list_array<enbt::raw_uuid>& players) {
                     list_array<uint8_t> packet;
-                    packet.reserve(1 + 4 + players.size() * sizeof(ENBT::UUID));
+                    packet.reserve(1 + 4 + players.size() * sizeof(enbt::raw_uuid));
                     packet.push_back(0x3B);
                     WriteVar<int32_t>(players.size(), packet);
                     for (auto& it : players)
@@ -1648,7 +1648,7 @@ namespace crafted_craft {
                     return Response::Answer({list_array<uint8_t>::concat(0x43, false)});
                 }
 
-                Response removeResourcePack(ENBT::UUID id) {
+                Response removeResourcePack(enbt::raw_uuid id) {
                     list_array<uint8_t> packet;
                     packet.reserve(1 + 1 + 16);
                     packet.push_back(0x43);
@@ -1657,7 +1657,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response addResourcePack(ENBT::UUID id, const std::string& url, const std::string& hash, bool forced, const std::optional<Chat>& prompt) {
+                Response addResourcePack(enbt::raw_uuid id, const std::string& url, const std::string& hash, bool forced, const std::optional<Chat>& prompt) {
                     list_array<uint8_t> packet;
                     packet.reserve(1 + 1 + 16 + url.size() + hash.size() + 1);
                     packet.push_back(0x44);
@@ -1913,7 +1913,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response updateObjectivesCreateStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const ENBT& style) {
+                Response updateObjectivesCreateStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const enbt::value& style) {
                     list_array<uint8_t> packet;
                     packet.reserve(1 + 1 + objective_name.size() + 1 + 1 + 1);
                     packet.push_back(0x5C);
@@ -1962,7 +1962,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response updateObjectivesInfoStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const ENBT& style) {
+                Response updateObjectivesInfoStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const enbt::value& style) {
                     list_array<uint8_t> packet;
                     packet.reserve(1 + 1 + objective_name.size() + 1 + 1 + 1);
                     packet.push_back(0x5C);
@@ -2083,7 +2083,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response setScoreStyled(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, const ENBT& styled) {
+                Response setScoreStyled(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, const enbt::value& styled) {
                     list_array<uint8_t> packet;
                     packet.reserve(1 + entity_name.size() + objective_name.size() + 4 + 1 + 1);
                     packet.push_back(0x5F);
@@ -2290,7 +2290,7 @@ namespace crafted_craft {
                     return Response::Answer({list_array<uint8_t>::concat(0x6A, header.ToTextComponent(), footer.ToTextComponent())});
                 }
 
-                Response tagQueryResponse(int32_t transaction_id, const ENBT& nbt) {
+                Response tagQueryResponse(int32_t transaction_id, const enbt::value& nbt) {
                     list_array<uint8_t> packet;
                     packet.reserve(1 + 4);
                     packet.push_back(0x6B);
@@ -2400,7 +2400,7 @@ namespace crafted_craft {
                     return Response::Answer({std::move(packet)});
                 }
 
-                Response entityEffect(int32_t entity_id, int32_t effect_id, int8_t amplifier, int32_t duration, int8_t flags, const std::optional<ENBT>& factor_codec) {
+                Response entityEffect(int32_t entity_id, int32_t effect_id, int8_t amplifier, int32_t duration, int8_t flags, const std::optional<enbt::value>& factor_codec) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x72);
                     WriteVar<int32_t>(entity_id, packet);

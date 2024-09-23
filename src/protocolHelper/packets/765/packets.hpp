@@ -39,11 +39,11 @@ namespace crafted_craft {
 
                 Response removeResourcePacks();
 
-                Response removeResourcePack(const ENBT::UUID& pack_id);
+                Response removeResourcePack(const enbt::raw_uuid& pack_id);
 
-                Response addResourcePack(SharedClientData& client, const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced);
+                Response addResourcePack(SharedClientData& client, const enbt::raw_uuid& pack_id, const std::string& url, const std::string& hash, bool forced);
 
-                Response addResourcePackPrompted(SharedClientData& client, const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced, const Chat& prompt);
+                Response addResourcePackPrompted(SharedClientData& client, const enbt::raw_uuid& pack_id, const std::string& url, const std::string& hash, bool forced, const Chat& prompt);
 
                 Response setFeatureFlags(const list_array<std::string>& features);
 
@@ -61,17 +61,17 @@ namespace crafted_craft {
 
                 Response setBlockDestroyStage(const base_objects::entity& entity, Position block, uint8_t stage);
 
-                Response blockEntityData(Position block, int32_t type, const ENBT& data);
+                Response blockEntityData(Position block, int32_t type, const enbt::value& data);
                 //block_type is from "minecraft:block" registry, not a block state.
                 Response blockAction(Position block, int32_t action_id, int32_t param, int32_t block_type);
                 //block_type is from "minecraft:block" registry, not a block state.
                 Response blockUpdate(Position block, int32_t block_type);
-                Response bossBarAdd(const ENBT::UUID& id, const Chat& title, float health, int32_t color, int32_t division, uint8_t flags);
-                Response bossBarRemove(const ENBT::UUID& id);
-                Response bossBarUpdateHealth(const ENBT::UUID& id, float health);
-                Response bossBarUpdateTitle(const ENBT::UUID& id, const Chat& title);
-                Response bossBarUpdateStyle(const ENBT::UUID& id, int32_t color, int32_t division);
-                Response bossBarUpdateFlags(const ENBT::UUID& id, uint8_t flags);
+                Response bossBarAdd(const enbt::raw_uuid& id, const Chat& title, float health, int32_t color, int32_t division, uint8_t flags);
+                Response bossBarRemove(const enbt::raw_uuid& id);
+                Response bossBarUpdateHealth(const enbt::raw_uuid& id, float health);
+                Response bossBarUpdateTitle(const enbt::raw_uuid& id, const Chat& title);
+                Response bossBarUpdateStyle(const enbt::raw_uuid& id, int32_t color, int32_t division);
+                Response bossBarUpdateFlags(const enbt::raw_uuid& id, uint8_t flags);
                 Response changeDifficulty(uint8_t difficulty, bool locked);
                 Response chunkBatchFinished(int32_t count);
                 Response chunkBatchStart();
@@ -174,13 +174,13 @@ namespace crafted_craft {
                 Response pingResponse(int32_t id);
                 Response placeGhostRecipe(int32_t windows_id, const std::string& recipe_id);
                 Response playerAbilities(uint8_t flags, float flying_speed, float field_of_view);
-                Response playerChatMessage(ENBT::UUID sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, const std::optional<ENBT>& __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name);
+                Response playerChatMessage(enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, const std::optional<enbt::value>& __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name);
                 //UNUSED by Notchian client
                 Response endCombat(int32_t duration);
                 //UNUSED by Notchian client
                 Response enterCombat();
                 Response combatDeath(int32_t player_id, const Chat& message);
-                Response playerInfoRemove(const list_array<ENBT::UUID>& players);
+                Response playerInfoRemove(const list_array<enbt::raw_uuid>& players);
                 Response playerInfoAdd(const list_array<base_objects::packets::player_actions_add>& add_players);
                 Response playerInfoInitializeChat(const list_array<base_objects::packets::player_actions_initialize_chat>& initialize_chat);
                 Response playerInfoUpdateGameMode(const list_array<base_objects::packets::player_actions_update_gamemode>& update_game_mode);
@@ -196,8 +196,8 @@ namespace crafted_craft {
                 Response removeEntityEffect(int32_t entity_id, int32_t effect_id);
                 Response resetScore(const std::string& entity_name, const std::optional<std::string>& objective_name);
                 Response removeResourcePacks();
-                Response removeResourcePack(ENBT::UUID id);
-                Response addResourcePack(ENBT::UUID id, const std::string& url, const std::string& hash, bool forced, const std::optional<Chat>& prompt);
+                Response removeResourcePack(enbt::raw_uuid id);
+                Response addResourcePack(enbt::raw_uuid id, const std::string& url, const std::string& hash, bool forced, const std::optional<Chat>& prompt);
                 Response respawn(int32_t dimension_type, const std::string& dimension_name, long hashed_seed, uint8_t gamemode, uint8_t previous_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, bool keep_attributes, bool keep_metadata);
 
                 Response setHeadRotation(int32_t entity_id, calc::VECTOR head_rotation);
@@ -229,11 +229,11 @@ namespace crafted_craft {
                 Response setHealth(float health, int32_t food, float saturation);
 
                 Response updateObjectivesCreate(const std::string& objective_name, const Chat& display_name, int32_t render_type);
-                Response updateObjectivesCreateStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const ENBT& style);
+                Response updateObjectivesCreateStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const enbt::value& style);
                 Response updateObjectivesCreateFixed(const std::string& objective_name, const Chat& display_name, int32_t render_type, const Chat& content);
                 Response updateObjectivesRemove(const std::string& objective_name);
                 Response updateObjectivesInfo(const std::string& objective_name, const Chat& display_name, int32_t render_type);
-                Response updateObjectivesInfoStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const ENBT& style);
+                Response updateObjectivesInfoStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const enbt::value& style);
                 Response updateObjectivesInfoFixed(const std::string& objective_name, const Chat& display_name, int32_t render_type, const Chat& content);
 
                 Response setPassengers(int32_t vehicle_entity_id, const list_array<int32_t>& passengers);
@@ -247,7 +247,7 @@ namespace crafted_craft {
 
 
                 Response setScore(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name);
-                Response setScoreStyled(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, const ENBT& styled);
+                Response setScoreStyled(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, const enbt::value& styled);
                 Response setScoreFixed(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, Chat content);
 
                 Response setSimulationDistance(int32_t distance);
@@ -272,7 +272,7 @@ namespace crafted_craft {
                 Response systemChatMessage(const Chat& message);
                 Response systemChatMessageOverlay(const Chat& message);
                 Response setTabListHeaderAndFooter(const Chat& header, const Chat& footer);
-                Response tagQueryResponse(int32_t transaction_id, const ENBT& nbt);
+                Response tagQueryResponse(int32_t transaction_id, const enbt::value& nbt);
                 Response pickupItem(int32_t collected_entity_id, int32_t collector_entity_id, int32_t pickup_item_count);
                 Response teleportEntity(int32_t entity_id, calc::VECTOR pos, float yaw, float pitch, bool on_ground);
                 Response setTickingState(float tick_rate, bool is_frozen);
@@ -280,7 +280,7 @@ namespace crafted_craft {
                 Response updateAdvancements(bool reset, const list_array<base_objects::packets::advancements_maping>& advancement_mapping, const list_array<std::string>& remove_advancements, const list_array<base_objects::packets::advancement_progress>& progress_advancements);
                 Response updateAttributes(int32_t entity_id, const list_array<base_objects::packets::attributes>& properties);
 
-                Response entityEffect(int32_t entity_id, int32_t effect_id, int8_t amplifier, int32_t duration, int8_t flags, const std::optional<ENBT>& factor_codec);
+                Response entityEffect(int32_t entity_id, int32_t effect_id, int8_t amplifier, int32_t duration, int8_t flags, const std::optional<enbt::value>& factor_codec);
                 Response entityEffect(int32_t entity_id, int32_t effect_id, int8_t amplifier, int32_t duration, int8_t flags);
 
                 Response updateRecipes(const std::vector<base_objects::recipe>& recipes);

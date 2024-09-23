@@ -11,7 +11,7 @@ namespace crafted_craft {
     namespace base_objects {
         struct item_attribute {
             int32_t id;
-            ENBT::UUID uid;
+            enbt::raw_uuid uid;
             std::string name;
             double value;
             enum class operation_e {
@@ -121,7 +121,7 @@ namespace crafted_craft {
             }
 
             struct custom_data {
-                ENBT value;
+                enbt::value value;
             };
 
             struct max_stack_size {
@@ -201,7 +201,7 @@ namespace crafted_craft {
             };
 
             struct intangible_projectile {
-                ENBT value; //sent empty nbt in notchain server
+                enbt::value value; //sent empty nbt in notchain server
             };
 
             struct food {
@@ -241,7 +241,7 @@ namespace crafted_craft {
             };
 
             struct map_decorations {
-                ENBT value;
+                enbt::value value;
             };
 
             enum class map_post_processing {
@@ -302,19 +302,19 @@ namespace crafted_craft {
             };
 
             struct debug_stick_state {
-                ENBT previous_state;
+                enbt::value previous_state;
             };
 
             struct entity_data {
-                ENBT value;
+                enbt::value value;
             };
 
             struct bucket_entity_data {
-                ENBT value;
+                enbt::value value;
             };
 
             struct block_entity_data {
-                ENBT value;
+                enbt::value value;
             };
 
             struct instrument {
@@ -351,7 +351,7 @@ namespace crafted_craft {
             };
 
             struct recipes {
-                ENBT value;
+                enbt::value value;
             };
 
             struct lodestone_tracker {
@@ -383,7 +383,7 @@ namespace crafted_craft {
                 };
 
                 std::optional<std::string> name;
-                std::optional<ENBT::UUID> uid;
+                std::optional<enbt::raw_uuid> uid;
                 list_array<property_t> properties;
             };
 
@@ -426,11 +426,7 @@ namespace crafted_craft {
                     }
                 }
 
-                ~container() {
-                    for (int i = 0; i < 256; i++) {
-                        delete items[i];
-                    }
-                }
+                ~container();
 
                 container& operator=(const container&);
 
@@ -454,7 +450,7 @@ namespace crafted_craft {
 
             struct bees {
                 struct bee {
-                    ENBT entity_data;
+                    enbt::value entity_data;
                     int32_t ticks_in_hive;
                     int32_t min_ticks_in_hive;
                 };
@@ -467,7 +463,7 @@ namespace crafted_craft {
             };
 
             struct container_loot {
-                ENBT data;
+                enbt::value data;
             };
 
             using unified
@@ -532,7 +528,7 @@ namespace crafted_craft {
         }
 
         struct slot_data_storage {
-            std::optional<ENBT> nbt;
+            std::optional<enbt::value> nbt;
             int32_t id = 0;
             uint8_t count = 0;
             slot_data unpack() const;

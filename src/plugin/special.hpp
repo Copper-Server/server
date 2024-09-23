@@ -46,7 +46,7 @@ namespace crafted_craft {
         }
 
         //string also can be Chat json object!
-        virtual list_array<std::pair<std::string, ENBT::UUID>> OnlinePlayersSample() {
+        virtual list_array<std::pair<std::string, enbt::raw_uuid>> OnlinePlayersSample() {
             return {};
         }
 

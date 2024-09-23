@@ -22,8 +22,6 @@ namespace crafted_craft {
                 shared_string type = "default";
                 size_t unload_speed = 10; //max 1000 chunks per tick
 
-                bool generate_structures = true;
-
                 std::unordered_map<shared_string, std::string> generator_settings = {};
             } world;
 
@@ -128,12 +126,18 @@ namespace crafted_craft {
                 /*[runtime]*/ const std::filesystem::path base_path = std::filesystem::current_path();
 
                 std::string storage_folder = "storage";
+                std::string worlds_folder = "storage/worlds";
 
                 std::filesystem::path get_storage_path() const {
                     return base_path / storage_folder;
                 }
+
+                std::filesystem::path get_worlds_path() const {
+                    return base_path / worlds_folder;
+                }
             } server;
 
+            //allowed dimensions to visit to player without the `action.world.transfer.disallowed` permission
             std::unordered_set<shared_string> allowed_dimensions = {"overworld"};
 
 

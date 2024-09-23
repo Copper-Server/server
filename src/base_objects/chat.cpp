@@ -7,8 +7,8 @@ namespace crafted_craft {
     Chat Chat::parseToChat(const std::string& string) {
         list_array<Chat> result;
 
-        constexpr const wchar_t format_symbol = '§';
-        constexpr const char format_symbol_parts[2] = {0xC2, 0xA7};
+        constexpr const uint32_t format_symbol = U'§';
+        constexpr const unsigned char format_symbol_parts[2] = {0xC2, 0xA7};
         Chat current_chat;
 
         bool format_command = false;
@@ -269,7 +269,7 @@ namespace crafted_craft {
         return result;
     }
 
-    Chat Chat::fromEnbt(const ENBT& enbt) {
+    Chat Chat::fromEnbt(const enbt::value& enbt) {
         Chat result;
         auto entry = enbt::compound::make_ref(enbt);
 
@@ -307,7 +307,7 @@ namespace crafted_craft {
 
         if (entry.contains("clickEvent")) {
             auto click_event = enbt::compound::make_ref(entry["clickEvent"]);
-            std::string& action = click_event["action"];
+            const std::string& action = (const std::string&)click_event["action"];
             auto& value = click_event["value"];
             if (action == "open_url")
                 result.SetClickEventOpenUrl(value);
@@ -325,7 +325,7 @@ namespace crafted_craft {
         }
         if (entry.contains("hoverEvent")) {
             auto hover_event = enbt::compound::make_ref(entry["hoverEvent"]);
-            std::string& action = hover_event["action"];
+            const std::string& action = (const std::string&)hover_event["action"];
             auto& content = hover_event["content"];
             if (action == "show_item") {
                 if (content.contains("tag"))
@@ -499,7 +499,7 @@ namespace crafted_craft {
         return str;
     }
 
-    Chat fromJson(util::js_object json) {
+    Chat fromJson(util::js_object&& json) {
         using namespace util;
         Chat result;
         if (json.contains("text"))
@@ -590,7 +590,7 @@ namespace crafted_craft {
             return fromJson(util::js_object::get_object(json_hold));
     }
 
-    ENBT Chat::ToENBT() const {
+    enbt::value Chat::ToENBT() const {
         enbt::compound enbt;
         if (text) {
             if (text_is_translation)

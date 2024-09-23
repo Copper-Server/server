@@ -510,22 +510,24 @@ namespace crafted_craft {
             }
         }
 
+        action_provider::action_provider(const char* tag)
+            : action_tag(tag) {}
         action_provider::action_provider(const std::string& tag)
             : action_tag(tag) {}
 
-        action_provider::action_provider(const std::string&& tag)
+        action_provider::action_provider(std::string&& tag)
             : action_tag(std::move(tag)) {}
 
         action_provider::action_provider(const std::string& tag, const list_array<shared_string>& requirement)
             : action_tag(tag), required_permissions_tag(requirement) {}
 
-        action_provider::action_provider(const std::string&& tag, const list_array<shared_string>& requirement)
+        action_provider::action_provider(std::string&& tag, const list_array<shared_string>& requirement)
             : action_tag(std::move(tag)), required_permissions_tag(requirement) {}
 
         action_provider::action_provider(const std::string& tag, list_array<shared_string>&& requirement)
             : action_tag(tag), required_permissions_tag(std::move(requirement)) {}
 
-        action_provider::action_provider(const std::string&& tag, list_array<shared_string>&& requirement)
+        action_provider::action_provider(std::string&& tag, list_array<shared_string>&& requirement)
             : action_tag(std::move(tag)), required_permissions_tag(std::move(requirement)) {}
 
         int32_t command::get_child(list_array<command>& command_nodes, const std::string& name) {
@@ -1095,10 +1097,6 @@ namespace crafted_craft {
         command_root_browser::command_root_browser(command_manager& manager)
             : manager(manager) {}
 
-        command_browser command_root_browser::add_child(const std::string& name) {
-            return add_child(command{name});
-        }
-
         command_browser command_root_browser::add_child(command&& command) {
             if (manager.command_nodes.size() >= INT32_MAX)
                 throw std::runtime_error("command nodes limit reached");
@@ -1197,21 +1195,13 @@ namespace crafted_craft {
               current_command(manager.command_nodes[current_id = get_index(manager.command_nodes, path)]) {}
 
         command_browser::command_browser(command_browser& browser, const std::string& path)
-            : manager(manager),
+            : manager(browser.manager),
               current_command(manager.command_nodes[current_id = get_index(manager.command_nodes, path, browser.current_id)]) {}
 
         command_browser::command_browser(command_browser&& browser) noexcept
             : manager(browser.manager),
               current_id(browser.current_id),
               current_command(browser.current_command) {}
-
-        command_browser command_browser::add_child(const std::string& name) {
-            return add_child(command{name});
-        }
-
-        command_browser command_browser::add_child(const std::string& name, command_predicate pred) {
-            return add_child(command{name}, std::move(pred));
-        }
 
         command_browser command_browser::add_child(command&& command) {
             if (!is_valid())
@@ -1332,15 +1322,6 @@ namespace crafted_craft {
                 throw std::runtime_error("command has been deleted");
 
             current_command.argument_predicate = std::nullopt;
-            return *this;
-        }
-
-        command_browser& command_browser::set_callback(const std::string& action, const command_callback& callback) {
-            if (!is_valid())
-                throw std::runtime_error("command has been deleted");
-
-            current_command.executable = callback;
-            apply_action_command(current_command, action);
             return *this;
         }
 

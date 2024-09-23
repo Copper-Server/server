@@ -10,15 +10,23 @@ namespace crafted_craft {
             int64_t x2;
             int64_t z2;
 
+            cubic_bounds_chunk(int64_t set_x1, int64_t set_z1, int64_t set_x2, int64_t set_z2)
+                : x1(set_x1), z1(set_z1), x2(set_x2), z2(set_z2) {
+                if (x1 > x2)
+                    std::swap(x1, x2);
+                if (z1 > z2)
+                    std::swap(z1, z2);
+            }
+
             template <class _FN>
-            void enum_points(_FN fn) {
+            void enum_points(_FN fn) const {
                 for (int64_t i = x1; i <= x2; i++)
                     for (int64_t j = z1; j <= z2; j++)
                         fn(i, j);
             }
 
             template <class _FN>
-            void enum_points_from_center(_FN fn) {
+            void enum_points_from_center(_FN fn) const {
                 int64_t centerX = (x1 + x2) / 2;
                 int64_t centerZ = (z1 + z2) / 2;
 
@@ -47,12 +55,16 @@ namespace crafted_craft {
                 }
             }
 
-            bool in_bounds(int64_t x, int64_t z) {
+            bool in_bounds(int64_t x, int64_t z) const {
                 return x >= x1 && x <= x2 && z >= z1 && z <= z2;
             }
 
-            bool out_of_bounds(int64_t x, int64_t z) {
+            bool out_of_bounds(int64_t x, int64_t z) const {
                 return !in_bounds(x, z);
+            }
+
+            size_t count() const {
+                return (x2 - x1 + 1) * (z2 - z1 + 1);
             }
         };
 
@@ -62,7 +74,7 @@ namespace crafted_craft {
             int64_t radius;
 
             template <class _FN>
-            void enum_points(_FN fn) {
+            void enum_points(_FN fn) const {
                 int64_t max_x = center_x + radius;
                 int64_t max_z = center_z + radius;
                 for (int64_t i = center_x - radius; i <= max_x; i++)
@@ -71,7 +83,7 @@ namespace crafted_craft {
             }
 
             template <class _FN>
-            void enum_points_from_center(_FN fn) {
+            void enum_points_from_center(_FN fn) const {
                 fn(center_x, center_z);
                 for (int64_t layer = 1; layer <= radius; ++layer) {
                     for (int64_t i = -layer + 1; i < layer; ++i) {
@@ -87,12 +99,16 @@ namespace crafted_craft {
                 }
             }
 
-            bool in_bounds(int64_t x, int64_t z) {
+            bool in_bounds(int64_t x, int64_t z) const {
                 return x >= (center_x - radius) && x <= (center_x + radius) && z >= (center_z - radius) && z <= (center_z + radius);
             }
 
-            bool out_of_bounds(int64_t x, int64_t z) {
+            bool out_of_bounds(int64_t x, int64_t z) const {
                 return !in_bounds(x, z);
+            }
+
+            size_t count() {
+                return (radius * 2 + 1) * (radius * 2 + 1);
             }
         };
 
@@ -104,20 +120,34 @@ namespace crafted_craft {
             int64_t y2;
             int64_t z2;
 
+            cubic_bounds_block(int64_t set_x1, int64_t set_y1, int64_t set_z1, int64_t set_x2, int64_t set_y2, int64_t set_z2)
+                : x1(set_x1), y1(set_y1), z1(set_z1), x2(set_x2), y2(set_y2), z2(set_z2) {
+                if (x1 > x2)
+                    std::swap(x1, x2);
+                if (y1 > y2)
+                    std::swap(y1, y2);
+                if (z1 > z2)
+                    std::swap(z1, z2);
+            }
+
             template <class _FN>
-            void enum_points(_FN fn) {
+            void enum_points(_FN fn) const {
                 for (int64_t i = x1; i <= x2; i++)
                     for (int64_t j = y1; j <= y2; j++)
                         for (int64_t k = z1; k <= z2; k++)
                             fn(i, j, k);
             }
 
-            bool in_bounds(int64_t x, int64_t y, int64_t z) {
+            bool in_bounds(int64_t x, int64_t y, int64_t z) const {
                 return x >= x1 && x <= x2 && y >= y1 && y <= y2 && z >= z1 && z <= z2;
             }
 
-            bool out_of_bounds(int64_t x, int64_t y, int64_t z) {
+            bool out_of_bounds(int64_t x, int64_t y, int64_t z) const {
                 return !in_bounds(x, y, z);
+            }
+
+            size_t count() const {
+                return (x2 - x1 + 1) * (y2 - y1 + 1) * (z2 - z1 + 1);
             }
         };
 
@@ -127,7 +157,7 @@ namespace crafted_craft {
             double radius;
 
             template <class _FN>
-            void enum_points(_FN fn) {
+            void enum_points(_FN fn) const {
                 double radius2 = radius * radius;
                 int64_t start_x = x - radius;
                 int64_t end_x = x + radius;
@@ -142,23 +172,27 @@ namespace crafted_craft {
                             fn(i, j);
             }
 
-            bool in_bounds(int64_t x, int64_t z) {
+            bool in_bounds(int64_t x, int64_t z) const {
                 return ((x - this->x) * (x - this->x) + (z - this->z) * (z - this->z)) <= radius * radius;
             }
 
-            bool out_of_bounds(int64_t x, int64_t z) {
+            bool out_of_bounds(int64_t x, int64_t z) const {
                 return !in_bounds(x, z);
+            }
+
+            size_t count() const {
+                return (radius * 2 + 1) * (radius * 2 + 1);
             }
         };
 
-        struct spherical_bounds_blocks {
+        struct spherical_bounds_block {
             int64_t x;
             int64_t y;
             int64_t z;
             double radius;
 
             template <class _FN>
-            void enum_points(_FN fn) {
+            void enum_points(_FN fn) const {
                 double radius2 = radius * radius;
                 int64_t start_x = x - radius;
                 int64_t end_x = x + radius;
@@ -176,23 +210,18 @@ namespace crafted_craft {
                                 fn(i, j, k);
             }
 
-            bool in_bounds(int64_t x, int64_t y, int64_t z) {
+            bool in_bounds(int64_t x, int64_t y, int64_t z) const {
                 return ((x - this->x) * (x - this->x) + (y - this->y) * (y - this->y) + (z - this->z) * (z - this->z)) <= radius * radius;
             }
 
-            bool out_of_bounds(int64_t x, int64_t y, int64_t z) {
+            bool out_of_bounds(int64_t x, int64_t y, int64_t z) const {
                 return !in_bounds(x, y, z);
             }
+
+            size_t count() const {
+                return (radius * 2 + 1) * (radius * 2 + 1) * (radius * 2 + 1);
+            }
         };
-
-        struct square_bounds_chunk {
-            int64_t x1;
-            int64_t z1;
-
-            int64_t x2;
-            int64_t z2;
-        };
-
         struct bounding {
             double xz;
             double y;

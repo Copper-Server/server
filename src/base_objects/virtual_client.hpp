@@ -22,11 +22,11 @@ namespace crafted_craft {
                 client->player_data.local_data["virtual_client"] = name;
                 client->player_data.gamemode = -1;
                 client->player_data.op_level = 4;
-                client->player_data.world_id = "virtual_client astral space";
+                client->player_data.world_id = shared_string("virtual_client astral space");
                 client->player_data.health = 999999.0f;
                 client->player_data.on_ground = true;
 
-                client->packets_state.protocol_version = -1;
+                client->packets_state.protocol_version = 767;
                 client->packets_state.state = SharedClientData::packets_state_t::protocol_state::play;
                 client->special_callback = [this](SharedClientData& self) {
                     self.getPendingPackets().for_each([&](auto packet) {
@@ -44,7 +44,7 @@ namespace crafted_craft {
             std::function<void(int32_t message_id)> deleteMessage;
 
             std::function<void(const Chat& message, int32_t chat_type, const Chat& sender, std::optional<Chat> target_name)> disguisedChatMessage;
-            std::function<void(ENBT::UUID sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<ENBT> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name)> playerChatMessage;
+            std::function<void(enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<enbt::value> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name)> playerChatMessage;
 
             std::function<void(const Chat& message)> systemChatMessage;
             std::function<void(const Chat& message)> systemChatMessageOverlay;

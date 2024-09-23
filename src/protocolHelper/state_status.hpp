@@ -76,7 +76,7 @@ namespace crafted_craft {
                 return Response::Disconnect({packet.to_vector()});
         }
 
-        virtual Response TooLargePacket() {
+        Response TooLargePacket() override {
             return Response::Disconnect();
         }
 

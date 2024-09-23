@@ -2,11 +2,13 @@
 #include "../base_objects/entity.hpp"
 #include "../util/conversions.hpp"
 #include "../util/json_helpers.hpp"
+#include "embed/blocks.json.hpp"
+
 
 namespace crafted_craft {
     namespace resources {
         template <class T, class Iterator>
-        void id_assigner(std::unordered_map<std::string, T>& map, std::vector<Iterator>& cache) {
+        void id_assigner(std::unordered_map<std::string, T>& map, list_array<Iterator>& cache) {
             size_t i = 0;
             auto it = map.begin();
             auto end = map.end();
@@ -21,7 +23,7 @@ namespace crafted_craft {
         void check_override(std::unordered_map<std::string, T>& map, const std::string& id, const char (&type_name)[length]) {
             auto it = map.find(id);
             if (it != map.end())
-                if (!it->allow_override)
+                if (!it->second.allow_override)
                     throw std::runtime_error("This " + std::string(type_name) + " is already defined and does not allow override. [" + id + "]");
         }
 
@@ -4606,9 +4608,9 @@ namespace crafted_craft {
                 throw std::runtime_error("Failed to read file: " + file_path.string());
             js_object pattern_js = js_object::get_object(res.value());
             ArmorTrimPattern pattern;
-            pattern.assert_id = pattern_js["assert_id"];
+            pattern.assert_id = (std::string)pattern_js["assert_id"];
             pattern.decal = pattern_js["decal"];
-            pattern.template_item = pattern_js["template_item"];
+            pattern.template_item = (std::string)pattern_js["template_item"];
             {
                 auto desc = pattern_js["description"];
                 if (desc.get().is_string())
@@ -4627,8 +4629,8 @@ namespace crafted_craft {
                 throw std::runtime_error("Failed to read file: " + file_path.string());
             js_object material_js = js_object::get_object(res.value());
             ArmorTrimMaterial material;
-            material.asset_name = material_js["texture"];
-            material.ingredient = material_js["ingredient"];
+            material.asset_name = (std::string)material_js["texture"];
+            material.ingredient = (std::string)material_js["ingredient"];
             material.item_model_index = material_js["item_model_index"];
             {
                 auto desc = material_js["description"];
@@ -4653,9 +4655,9 @@ namespace crafted_craft {
                 throw std::runtime_error("Failed to read file: " + file_path.string());
             js_object variant_js = js_object::get_object(res.value());
             WolfVariant variant;
-            variant.wild_texture = variant_js["wild_texture"];
-            variant.tame_texture = variant_js["tame_texture"];
-            variant.angry_texture = variant_js["angry_texture"];
+            variant.wild_texture = (std::string)variant_js["wild_texture"];
+            variant.tame_texture = (std::string)variant_js["tame_texture"];
+            variant.angry_texture = (std::string)variant_js["angry_texture"];
             auto biomes = js_array::get_array(variant_js["biomes"]);
             variant.biomes.reserve(biomes.size());
             for (auto&& biome : biomes)
@@ -4680,15 +4682,15 @@ namespace crafted_craft {
                     js_object monster_spawn_light_level_js = js_object::get_object(monster_spawn_light_level);
                     IntegerDistribution monster_spawn_light_level_;
                     monster_spawn_light_level_.value = conversions::json::from_json(monster_spawn_light_level_js["value"].get());
-                    monster_spawn_light_level_.type = monster_spawn_light_level_js["type"];
+                    monster_spawn_light_level_.type = (std::string)monster_spawn_light_level_js["type"];
                     type.monster_spawn_light_level = std::move(monster_spawn_light_level_);
                 }
             }
             if (type_js.contains("fixed_time"))
                 type.fixed_time = type_js["fixed_time"];
 
-            type.infiniburn = type_js["infiniburn"];
-            type.effects = type_js["effects"];
+            type.infiniburn = (std::string)type_js["infiniburn"];
+            type.effects = (std::string)type_js["effects"];
             type.coordinate_scale = type_js["coordinate_scale"];
             type.ambient_light = type_js["ambient_light"];
             type.min_y = type_js["min_y"];
@@ -4714,7 +4716,7 @@ namespace crafted_craft {
                 throw std::runtime_error("Failed to read file: " + file_path.string());
             js_object type_js = js_object::get_object(res.value());
             DamageType type;
-            type.message_id = type_js["message_id"];
+            type.message_id = (std::string)type_js["message_id"];
             std::string scaling = type_js["scaling"];
             if (scaling == "never")
                 type.scaling = DamageType::ScalingType::never;
@@ -4767,8 +4769,8 @@ namespace crafted_craft {
                 throw std::runtime_error("Failed to read file: " + file_path.string());
             js_object pattern_js = js_object::get_object(res.value());
             BannerPattern pattern;
-            pattern.asset_id = pattern_js["asset_id"];
-            pattern.translation_key = pattern_js["translation_key"];
+            pattern.asset_id = (std::string)pattern_js["asset_id"];
+            pattern.translation_key = (std::string)pattern_js["translation_key"];
             bannerPatterns[id] = std::move(pattern);
         }
 
@@ -4780,7 +4782,7 @@ namespace crafted_craft {
                 throw std::runtime_error("Failed to read file: " + file_path.string());
             js_object variant_js = js_object::get_object(res.value());
             PaintingVariant variant;
-            variant.asset_id = variant_js["asset_id"];
+            variant.asset_id = (std::string)variant_js["asset_id"];
             variant.height = variant_js["height"];
             variant.width = variant_js["width"];
             paintingVariants[id] = std::move(variant);
@@ -4791,11 +4793,11 @@ namespace crafted_craft {
             for (auto&& tag : js_array::get_array(val)) {
                 std::string the_tag;
                 if (tag.get().is_string())
-                    the_tag = tag;
+                    the_tag = (std::string)tag;
                 else {
                     auto tag_ = js_object::get_object(tag);
                     if (tag_.contains("id")) {
-                        the_tag = tag_["id"];
+                        the_tag = (std::string)tag_["id"];
                     } else
                         throw std::runtime_error("Unknown tag type");
                 }
@@ -4862,6 +4864,94 @@ namespace crafted_craft {
                 load_file_tags(file_path, tag_type, namespace_, path_);
             } else
                 throw std::runtime_error("Unknown type: " + type);
+        }
+
+        static inline uint64_t as_uint(const boost::json::value& val) {
+            if (val.is_int64())
+                return val.as_int64();
+            else if (val.is_uint64())
+                return val.as_uint64();
+            else
+                throw std::runtime_error("Invalid value type");
+        }
+
+        void load_blocks() {
+            auto parsed = boost::json::parse(std::string_view((const char*)resources__blocks.data(), resources__blocks.size()));
+
+            base_objects::block::access_full_block_data(std::function(
+                [&](
+                    std::vector<std::shared_ptr<base_objects::static_block_data>>& full_block_data_,
+                    std::unordered_map<base_objects::shared_string, std::shared_ptr<base_objects::static_block_data>>& named_full_block_data
+                ) {
+                    size_t usable = 30000;
+                    full_block_data_.resize(usable);
+                    for (auto&& [name, decl] : parsed.as_object()) {
+                        std::unordered_map<std::string, std::vector<std::string>> properties_def;
+                        if (decl.as_object().contains("properties")) {
+                            for (auto&& [prop_name, prop] : decl.at("properties").as_object()) {
+                                std::vector<std::string> prop_list;
+                                for (auto&& prop_val : prop.as_array()) {
+                                    prop_list.push_back((std::string)prop_val.as_string());
+                                }
+                                properties_def[(std::string)prop_name] = std::move(prop_list);
+                            }
+                        }
+
+                        std::unordered_map<base_objects::block_id_t, std::unordered_map<std::string, std::string>> associated_states;
+                        std::optional<base_objects::block_id_t> default_associated_state;
+                        for (auto&& state : decl.at("states").as_array()) {
+                            auto&& state_ = state.as_object();
+                            base_objects::block_id_t id = as_uint(state_.at("id"));
+
+                            std::unordered_map<std::string, std::string> state_properties;
+                            if (state_.contains("properties")) {
+                                for (auto&& [prop_name, prop] : state_.at("properties").as_object())
+                                    state_properties[prop_name] = (std::string)prop.as_string();
+                            }
+
+                            if (state_.contains("default")) {
+                                if (state_.at("default").as_bool())
+                                    default_associated_state = id;
+                            }
+                            associated_states[id] = std::move(state_properties);
+                        }
+
+                        auto data = std::make_shared<base_objects::static_block_data>();
+
+
+                        for (auto& [id, _unused] : associated_states) {
+                            if (full_block_data_[id] != nullptr) {
+                                throw std::runtime_error("Duplicate block id: " + std::to_string(id));
+                            }
+                            full_block_data_[id] = data;
+                        }
+                        if (named_full_block_data.contains((std::string)name))
+                            throw std::runtime_error("Duplicate block name: " + (std::string)name);
+
+
+                        data->name = name;
+                        data->default_state = default_associated_state.value_or(associated_states.begin()->first);
+                        data->states = std::move(properties_def);
+                        data->assigned_states = std::move(associated_states);
+                        data->defintion = util::conversions::json::from_json(decl.at("definition"));
+
+                        named_full_block_data[(std::string_view)name] = std::move(data);
+                    }
+
+                    for (auto it = full_block_data_.rbegin(); it != full_block_data_.rend(); ++it) {
+                        if (*it != nullptr)
+                            break;
+                        --usable;
+                    }
+                    full_block_data_.resize(usable);
+                    for (auto it = full_block_data_.begin(); it != full_block_data_.end(); ++it) {
+                        if (*it == nullptr) {
+                            throw std::runtime_error("Gap between block definitions");
+                        }
+                    }
+                    full_block_data_.shrink_to_fit();
+                }
+            ));
         }
     }
 }

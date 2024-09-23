@@ -375,15 +375,15 @@ namespace crafted_craft {
                 return selectors::configuration::removeResourcePacks.call(client);
             }
 
-            Response removeResourcePack(SharedClientData& client, const ENBT::UUID& pack_id) {
+            Response removeResourcePack(SharedClientData& client, const enbt::raw_uuid& pack_id) {
                 return selectors::configuration::removeResourcePack.call(client, pack_id);
             }
 
-            Response addResourcePack(SharedClientData& client, const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced) {
+            Response addResourcePack(SharedClientData& client, const enbt::raw_uuid& pack_id, const std::string& url, const std::string& hash, bool forced) {
                 return selectors::configuration::addResourcePack.call(client, client, pack_id, url, hash, forced);
             }
 
-            Response addResourcePackPrompted(SharedClientData& client, const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced, const Chat& prompt) {
+            Response addResourcePackPrompted(SharedClientData& client, const enbt::raw_uuid& pack_id, const std::string& url, const std::string& hash, bool forced, const Chat& prompt) {
                 return selectors::configuration::addResourcePackPrompted.call(client, client, pack_id, url, hash, forced, prompt);
             };
 
@@ -445,7 +445,7 @@ namespace crafted_craft {
                 return selectors::play::setBlockDestroyStage.call(client, entity, block, stage);
             }
 
-            Response blockEntityData(SharedClientData& client, Position block, int32_t type, const ENBT& data) {
+            Response blockEntityData(SharedClientData& client, Position block, int32_t type, const enbt::value& data) {
                 return selectors::play::blockEntityData.call(client, block, type, data);
             }
 
@@ -457,27 +457,27 @@ namespace crafted_craft {
                 return selectors::play::blockUpdate.call(client, block, block_type);
             }
 
-            Response bossBarAdd(SharedClientData& client, const ENBT::UUID& id, const Chat& title, float health, int32_t color, int32_t division, uint8_t flags) {
+            Response bossBarAdd(SharedClientData& client, const enbt::raw_uuid& id, const Chat& title, float health, int32_t color, int32_t division, uint8_t flags) {
                 return selectors::play::bossBarAdd.call(client, id, title, health, color, division, flags);
             }
 
-            Response bossBarRemove(SharedClientData& client, const ENBT::UUID& id) {
+            Response bossBarRemove(SharedClientData& client, const enbt::raw_uuid& id) {
                 return selectors::play::bossBarRemove.call(client, id);
             }
 
-            Response bossBarUpdateHealth(SharedClientData& client, const ENBT::UUID& id, float health) {
+            Response bossBarUpdateHealth(SharedClientData& client, const enbt::raw_uuid& id, float health) {
                 return selectors::play::bossBarUpdateHealth.call(client, id, health);
             }
 
-            Response bossBarUpdateTitle(SharedClientData& client, const ENBT::UUID& id, const Chat& title) {
+            Response bossBarUpdateTitle(SharedClientData& client, const enbt::raw_uuid& id, const Chat& title) {
                 return selectors::play::bossBarUpdateTitle.call(client, id, title);
             }
 
-            Response bossBarUpdateStyle(SharedClientData& client, const ENBT::UUID& id, int32_t color, int32_t division) {
+            Response bossBarUpdateStyle(SharedClientData& client, const enbt::raw_uuid& id, int32_t color, int32_t division) {
                 return selectors::play::bossBarUpdateStyle.call(client, id, color, division);
             }
 
-            Response bossBarUpdateFlags(SharedClientData& client, const ENBT::UUID& id, uint8_t flags) {
+            Response bossBarUpdateFlags(SharedClientData& client, const enbt::raw_uuid& id, uint8_t flags) {
                 return selectors::play::bossBarUpdateFlags.call(client, id, flags);
             }
 
@@ -669,7 +669,7 @@ namespace crafted_craft {
                 return selectors::play::playerAbilities.call(client, flags, flying_speed, field_of_view);
             }
 
-            Response playerChatMessage(SharedClientData& client, ENBT::UUID sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<ENBT> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
+            Response playerChatMessage(SharedClientData& client, enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<enbt::value> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
                 return selectors::play::playerChatMessage.call(client, sender, index, signature, message, timestamp, salt, prev_messages, __UNDEFINED__FIELD__, filter_type, filtered_symbols_bitfield, chat_type, sender_name, target_name);
             }
 
@@ -685,7 +685,7 @@ namespace crafted_craft {
                 return selectors::play::combatDeath.call(client, player_id, message);
             }
 
-            Response playerInfoRemove(SharedClientData& client, const list_array<ENBT::UUID>& players) {
+            Response playerInfoRemove(SharedClientData& client, const list_array<enbt::raw_uuid>& players) {
                 return selectors::play::playerInfoRemove.call(client, players);
             }
 
@@ -749,11 +749,11 @@ namespace crafted_craft {
                 return selectors::play::removeResourcePacks.call(client);
             }
 
-            Response removeResourcePack(SharedClientData& client, ENBT::UUID id) {
+            Response removeResourcePack(SharedClientData& client, enbt::raw_uuid id) {
                 return selectors::play::removeResourcePack.call(client, id);
             }
 
-            Response addResourcePack(SharedClientData& client, ENBT::UUID id, const std::string& url, const std::string& hash, bool forced, const std::optional<Chat>& prompt) {
+            Response addResourcePack(SharedClientData& client, enbt::raw_uuid id, const std::string& url, const std::string& hash, bool forced, const std::optional<Chat>& prompt) {
                 return selectors::play::addResourcePack.call(client, id, url, hash, forced, prompt);
             }
 
@@ -853,7 +853,7 @@ namespace crafted_craft {
                 return selectors::play::updateObjectivesCreate.call(client, objective_name, display_name, render_type);
             }
 
-            Response updateObjectivesCreateStyled(SharedClientData& client, const std::string& objective_name, const Chat& display_name, int32_t render_type, const ENBT& style) {
+            Response updateObjectivesCreateStyled(SharedClientData& client, const std::string& objective_name, const Chat& display_name, int32_t render_type, const enbt::value& style) {
                 return selectors::play::updateObjectivesCreateStyled.call(client, objective_name, display_name, render_type, style);
             }
 
@@ -869,7 +869,7 @@ namespace crafted_craft {
                 return selectors::play::updateObjectivesInfo.call(client, objective_name, display_name, render_type);
             }
 
-            Response updateObjectivesInfoStyled(SharedClientData& client, const std::string& objective_name, const Chat& display_name, int32_t render_type, const ENBT& style) {
+            Response updateObjectivesInfoStyled(SharedClientData& client, const std::string& objective_name, const Chat& display_name, int32_t render_type, const enbt::value& style) {
                 return selectors::play::updateObjectivesInfoStyled.call(client, objective_name, display_name, render_type, style);
             }
 
@@ -905,7 +905,7 @@ namespace crafted_craft {
                 return selectors::play::setScore.call(client, entity_name, objective_name, value, display_name);
             }
 
-            Response setScoreStyled(SharedClientData& client, const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, const ENBT& styled) {
+            Response setScoreStyled(SharedClientData& client, const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, const enbt::value& styled) {
                 return selectors::play::setScoreStyled.call(client, entity_name, objective_name, value, display_name, styled);
             }
 
@@ -985,7 +985,7 @@ namespace crafted_craft {
                 return selectors::play::setTabListHeaderAndFooter.call(client, header, footer);
             }
 
-            Response tagQueryResponse(SharedClientData& client, int32_t transaction_id, const ENBT& nbt) {
+            Response tagQueryResponse(SharedClientData& client, int32_t transaction_id, const enbt::value& nbt) {
                 return selectors::play::tagQueryResponse.call(client, transaction_id, nbt);
             }
 

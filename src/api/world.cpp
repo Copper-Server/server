@@ -1,0 +1,82 @@
+
+#include "../ClientHandleHelper.hpp"
+#include "../storage/world_data.hpp"
+#include <functional>
+
+namespace crafted_craft {
+    namespace api {
+        namespace world {
+            storage::worlds_data* worlds_data = nullptr;
+
+            void register_worlds_data(storage::worlds_data& worlds) {
+                if (!worlds_data)
+                    worlds_data = &worlds;
+                else
+                    throw std::runtime_error("Worlds already registered");
+            }
+
+            storage::worlds_data& get_worlds() {
+                if (worlds_data)
+                    return *worlds_data;
+                else
+                    throw std::runtime_error("Worlds not yet registered");
+            }
+
+            void unload(uint64_t world_id) {
+                get_worlds().save_and_unload(world_id);
+            }
+
+            void save(uint64_t world_id) {
+                get_worlds().save(world_id);
+            }
+
+            void save_all() {
+                get_worlds().save_all();
+            }
+
+            void iterate(std::function<void(uint64_t world, storage::world_data& data)> callback) {
+                get_worlds().for_each_world(callback);
+            }
+
+            void get(uint64_t world_id, std::function<void(storage::world_data& data)> callback) {
+                callback(*get_worlds().get(world_id));
+            }
+
+            void get(const std::string& name, std::function<void(storage::world_data& data)> callback) {
+                callback(*get_worlds().get(get_worlds().get_id(name)));
+            }
+
+            uint64_t resolve_id(const std::string& name) {
+                return get_worlds().get_id(name);
+            }
+
+            void pre_load_world(uint64_t world_id) {
+                get_worlds().get(world_id);
+            }
+
+            uint64_t pre_load_world(const std::string& name, std::function<void(storage::world_data& world)> initialization) {
+                auto id = get_worlds().get_id(name);
+                if (id == -1) {
+                    if (initialization)
+                        get_worlds().create(name, initialization);
+                    else
+                        throw std::runtime_error("World with name " + name + " does not exists.");
+                } else
+                    get_worlds().get(id);
+                return id;
+            }
+
+            uint64_t create(const std::string& name) {
+                return get_worlds().create(name);
+            }
+
+            uint64_t create(
+                const std::string& name,
+                std::function<void(storage::world_data& world)> callback
+            ) {
+                return get_worlds().create(name, callback);
+            }
+
+        }
+    }
+}

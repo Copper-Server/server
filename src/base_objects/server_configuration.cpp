@@ -44,7 +44,6 @@ namespace crafted_craft {
                 cfg.world.seed = world["seed"].or_apply(cfg.world.seed.get());
                 cfg.world.type = world["type"].or_apply(cfg.world.type.get());
                 cfg.world.unload_speed = world["unload_speed"].or_apply(cfg.world.unload_speed);
-                cfg.world.generate_structures = world["generate_structures"].or_apply(cfg.world.generate_structures);
                 {
                     auto generator_settings = js_object::get_object(world["generator_settings"]);
                     if (generator_settings.empty())
@@ -53,7 +52,7 @@ namespace crafted_craft {
                     else {
                         cfg.world.generator_settings.clear();
                         for (auto&& [key, value] : generator_settings)
-                            cfg.world.generator_settings[(std::string)key] = generator_settings[(std::string)key];
+                            cfg.world.generator_settings[(shared_string)(std::string_view)key] = (std::string)generator_settings[key];
                     }
                 }
             }
@@ -107,7 +106,7 @@ namespace crafted_craft {
                         auto block_ids = js_array::get_array(anti_cheat["block_ids"]);
                         if (block_ids.empty()) {
                             for (auto& id : cfg.anti_cheat.xray.block_ids)
-                                block_ids.push_back(id.c_str());
+                                block_ids.push_back(id);
                         } else {
                             size_t arr_siz = block_ids.size();
                             for (size_t i = 0; i < arr_siz; i++)
@@ -144,8 +143,8 @@ namespace crafted_craft {
             }
             {
                 auto status = js_object::get_object(data["status"]);
-                cfg.status.server_name = status["server_name"].or_apply(cfg.status.server_name);
-                cfg.status.description = status["description"].or_apply(cfg.status.description);
+                cfg.status.server_name = (std::string)status["server_name"].or_apply(cfg.status.server_name);
+                cfg.status.description = (std::string)status["description"].or_apply(cfg.status.description);
                 calculate_favicon = (boost::json::string)status["favicon_path"].or_apply(std::string()) != cfg.status.favicon_path;
                 cfg.status.favicon_path = (std::string)status["favicon_path"].or_apply(std::string());
                 cfg.status.sample_players_count = status["sample_players_count"].or_apply(cfg.status.sample_players_count);
@@ -155,9 +154,17 @@ namespace crafted_craft {
             {
                 auto server = js_object::get_object(data["server"]);
                 auto& folder = (boost::json::string&)server["storage_folder"].or_apply(cfg.server.storage_folder);
+                auto& worlds = (boost::json::string&)server["storage_folder"].or_apply(cfg.server.worlds_folder);
 
-                if (folder.find_first_of(".,/\\#$%^&*()`~'\":;|?!<>") != folder.npos)
-                    log::warn("server", "server config: root.server.storage_folder contains special symbol .,/\\#$%^&*()`~'\":;|?!<>, item has been ignored");
+                if (folder.find_first_of(".,\\#$%^&*()`~'\":;|?!<>") != folder.npos)
+                    log::warn("server", "server config: root.server.storage_folder contains special symbol .,\\#$%^&*()`~'\":;|?!<>, item has been ignored");
+                else {
+                    cfg.server.storage_folder = (std::string)folder;
+                    std::filesystem::create_directories(cfg.server.get_storage_path());
+                }
+
+                if (worlds.find_first_of(".,\\#$%^&*()`~'\":;|?!<>") != worlds.npos)
+                    log::warn("server", "server config: root.server.worlds_folder contains special symbol .,\\#$%^&*()`~'\":;|?!<>, item has been ignored");
                 else {
                     cfg.server.storage_folder = (std::string)folder;
                     std::filesystem::create_directories(cfg.server.get_storage_path());
@@ -167,7 +174,7 @@ namespace crafted_craft {
                 auto allowed_dimensions = js_array::get_array(data["allowed_dimensions"]);
                 if (allowed_dimensions.empty()) {
                     for (auto& id : cfg.allowed_dimensions)
-                        allowed_dimensions.push_back(id.get().c_str());
+                        allowed_dimensions.push_back(id.get());
                 } else {
                     size_t arr_siz = allowed_dimensions.size();
                     for (size_t i = 0; i < arr_siz; i++)
@@ -189,8 +196,8 @@ namespace crafted_craft {
                     res.resize(file_size);
                     file.read((char*)res.data(), res.size());
                     uint32_t width = 0, height = 0;
-                    width = ENBT::ConvertEndian(std::endian::big, *(uint32_t*)&res[16]);
-                    height = ENBT::ConvertEndian(std::endian::big, *(uint32_t*)&res[20]);
+                    width = enbt::endian_helpers::convert_endian(std::endian::big, *(uint32_t*)&res[16]);
+                    height = enbt::endian_helpers::convert_endian(std::endian::big, *(uint32_t*)&res[20]);
 
                     if (width != 64 || height != 64) {
                         log::error("server", "Failed to read favicon, icon resolution not equal to 64x64, skipping...");

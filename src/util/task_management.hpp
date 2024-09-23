@@ -26,6 +26,7 @@ struct Future {
             }
             std::lock_guard guard(future->task_mt);
             future->_is_ready = true;
+            future->task_cv.notify_all();
         }));
         return future;
     }
@@ -69,7 +70,7 @@ struct Future {
         }
     }
 
-    bool is_ready() const {
+    bool is_ready()  {
         std::unique_lock lock(task_mt);
         return _is_ready;
     }
@@ -111,6 +112,7 @@ struct Future<void> {
             }
             std::lock_guard guard(future->task_mt);
             future->_is_ready = true;
+            future->task_cv.notify_all();
         }));
         return future;
     }
@@ -223,6 +225,7 @@ namespace future {
             };
             std::lock_guard guard(new_future->task_mt);
             new_future->_is_ready = true;
+            new_future->task_cv.notify_all();
         });
         return new_future;
     }
@@ -247,6 +250,7 @@ namespace future {
             };
             std::lock_guard guard(new_future->task_mt);
             new_future->_is_ready = true;
+            new_future->task_cv.notify_all();
         });
         return new_future;
     }
@@ -285,15 +289,9 @@ namespace future {
     }
 }
 
-
-template <class T>
-auto make_ready_future(const T& value) {
-    return Future<std::remove_reference_t<std::remove_cv_t<T>>>::make_ready(value);
-}
-
 template <class T>
 auto make_ready_future(T&& value) {
-    return Future<std::remove_reference_t<std::remove_cv_t<T>>>::make_ready(std::move(value));
+    return Future<std::remove_reference_t<std::remove_cv_t<T>>>::make_ready(std::forward<T>(value));
 }
 
 

@@ -307,7 +307,7 @@ namespace crafted_craft {
                     }
                 }
 
-                std::string to(ENBT::UUID id) {
+                std::string to(enbt::raw_uuid id) {
                     std::string res;
                     __internal__::addHex(res, id.data[0]);
                     __internal__::addHex(res, id.data[1]);
@@ -332,8 +332,8 @@ namespace crafted_craft {
                     return res;
                 }
 
-                ENBT::UUID from(std::string_view id) {
-                    ENBT::UUID res;
+                enbt::raw_uuid from(std::string_view id) {
+                    enbt::raw_uuid res;
                     uint8_t index = 0;
                     char cache;
                     bool cached = false;
@@ -352,7 +352,6 @@ namespace crafted_craft {
                     }
                     return res;
                 }
-
             }
 
             namespace string {
@@ -540,15 +539,15 @@ namespace crafted_craft {
             }
 
             namespace json {
-                boost::json::value to_json(const ENBT& enbt) {
+                boost::json::value to_json(const enbt::value& enbt) {
                     auto type_id = enbt.type_id();
                     switch (type_id.type) {
-                        using enum ENBT::Type;
+                        using enum enbt::type;
                     case none:
                         return boost::json::value();
                     case integer:
                         switch (type_id.length) {
-                            using enum ENBT::TypeLen;
+                            using enum enbt::type_len;
                         case Tiny:
                             if (type_id.is_signed)
                                 return boost::json::value((int8_t)enbt);
@@ -569,19 +568,35 @@ namespace crafted_craft {
                                 return boost::json::value((int64_t)enbt);
                             else
                                 return boost::json::value((uint64_t)enbt);
+                        default:
+                            throw std::runtime_error("Unknown type");
                         }
                         break;
                     case floating:
                         switch (type_id.length) {
-                            using enum ENBT::TypeLen;
+                            using enum enbt::type_len;
+                        case Tiny:
+                        case Short:
                         case Default:
                             return boost::json::value((float)enbt);
                         case Long:
                             return boost::json::value((double)enbt);
+                        default:
+                            throw std::runtime_error("Unknown type");
                         }
                     case var_integer:
                         switch (type_id.length) {
-                            using enum ENBT::TypeLen;
+                            using enum enbt::type_len;
+                        case Tiny:
+                            if (type_id.is_signed)
+                                return boost::json::value((int8_t)enbt);
+                            else
+                                return boost::json::value((uint8_t)enbt);
+                        case Short:
+                            if (type_id.is_signed)
+                                return boost::json::value((int16_t)enbt);
+                            else
+                                return boost::json::value((uint16_t)enbt);
                         case Default:
                             if (type_id.is_signed)
                                 return boost::json::value((int32_t)enbt);
@@ -592,50 +607,52 @@ namespace crafted_craft {
                                 return boost::json::value((int64_t)enbt);
                             else
                                 return boost::json::value((uint64_t)enbt);
+                        default:
+                            throw std::runtime_error("Unknown type");
                         }
                     case uuid:
-                        return boost::json::value(uuid::to((ENBT::UUID)enbt));
+                        return boost::json::value(uuid::to((enbt::raw_uuid)enbt));
                     case sarray: {
                         boost::json::array result;
                         switch (type_id.length) {
-                            using enum ENBT::TypeLen;
+                            using enum enbt::type_len;
                         case Tiny:
                             if (type_id.is_signed) {
-                                auto arr = enbt::simple_array_ref_ui8::make_ref(enbt);
+                                auto arr = enbt::simple_array_ref_i8::make_ref(enbt);
                                 for (auto& item : arr)
                                     result.push_back(boost::json::value((int8_t)item));
                             } else {
-                                auto arr = enbt::simple_array_ref_i8::make_ref(enbt);
+                                auto arr = enbt::simple_array_ref_ui8::make_ref(enbt);
                                 for (auto& item : arr)
                                     result.push_back(boost::json::value((uint8_t)item));
                             }
                         case Short:
                             if (type_id.is_signed) {
-                                auto arr = enbt::simple_array_ref_ui16::make_ref(enbt);
+                                auto arr = enbt::simple_array_ref_i16::make_ref(enbt);
                                 for (auto& item : arr)
                                     result.push_back(boost::json::value((int16_t)item));
                             } else {
-                                auto arr = enbt::simple_array_ref_i16::make_ref(enbt);
+                                auto arr = enbt::simple_array_ref_ui16::make_ref(enbt);
                                 for (auto& item : arr)
                                     result.push_back(boost::json::value((uint16_t)item));
                             }
                         case Default:
                             if (type_id.is_signed) {
-                                auto arr = enbt::simple_array_ref_ui32::make_ref(enbt);
+                                auto arr = enbt::simple_array_ref_i32::make_ref(enbt);
                                 for (auto& item : arr)
                                     result.push_back(boost::json::value((int32_t)item));
                             } else {
-                                auto arr = enbt::simple_array_ref_i32::make_ref(enbt);
+                                auto arr = enbt::simple_array_ref_ui32::make_ref(enbt);
                                 for (auto& item : arr)
                                     result.push_back(boost::json::value((uint32_t)item));
                             }
                         case Long:
                             if (type_id.is_signed) {
-                                auto arr = enbt::simple_array_ref_ui64::make_ref(enbt);
+                                auto arr = enbt::simple_array_ref_i64::make_ref(enbt);
                                 for (auto& item : arr)
                                     result.push_back(boost::json::value((int64_t)item));
                             } else {
-                                auto arr = enbt::simple_array_ref_i64::make_ref(enbt);
+                                auto arr = enbt::simple_array_ref_ui64::make_ref(enbt);
                                 for (auto& item : arr)
                                     result.push_back(boost::json::value((uint64_t)item));
                             }
@@ -660,16 +677,9 @@ namespace crafted_craft {
                             result.push_back(to_json(item));
                         return result;
                     }
-                    case structure: {
-                        boost::json::array result;
-                        size_t size = enbt.size();
-                        for (size_t i = 0; i < size; i++)
-                            result.push_back(to_json(enbt[i]));
-                        return result;
-                    }
                     case optional: {
                         if (enbt.contains())
-                            return to_json(*enbt.getOptional());
+                            return to_json(*enbt.get_optional());
                         else
                             return boost::json::value();
                     }
@@ -678,33 +688,33 @@ namespace crafted_craft {
                     case string:
                         return boost::json::value(string::to_transport((std::string)enbt));
                     case log_item:
-                        return boost::json::value(to_json(ENBT::from_log_item(enbt)));
+                        return boost::json::value(to_json(enbt::from_log_item(enbt)));
                     default:
                         throw std::runtime_error("Unknown type");
                     }
                 }
 
-                ENBT from_json(const boost::json::value& json) {
+                enbt::value from_json(const boost::json::value& json) {
                     switch (json.kind()) {
                     case boost::json::kind::null:
-                        return ENBT();
+                        return enbt::value();
                     case boost::json::kind::bool_:
-                        return ENBT(json.as_bool());
+                        return enbt::value(json.as_bool());
                     case boost::json::kind::int64:
-                        return ENBT(json.as_int64());
+                        return enbt::value(json.as_int64());
                     case boost::json::kind::uint64:
-                        return ENBT(json.as_uint64());
+                        return enbt::value(json.as_uint64());
                     case boost::json::kind::double_:
-                        return ENBT(json.as_double());
+                        return enbt::value(json.as_double());
                     case boost::json::kind::string:
-                        return ENBT(string::to_direct(json.as_string()));
+                        return enbt::value(string::to_direct(json.as_string()));
                     case boost::json::kind::array: {
                         auto arr = json.as_array();
-                        std::vector<ENBT> result;
+                        std::vector<enbt::value> result;
                         result.reserve(arr.size());
                         for (auto& item : arr)
                             result.push_back(from_json(item));
-                        return ENBT::dynamic_array(std::move(result));
+                        return enbt::dynamic_array(std::move(result));
                     }
                     case boost::json::kind::object: {
                         auto obj = json.as_object();

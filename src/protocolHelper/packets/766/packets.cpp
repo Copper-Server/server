@@ -170,7 +170,7 @@ namespace crafted_craft {
                         WriteIdentifier(part, name);
                         part.push_back(data.size());
                         if (data.size())
-                            part.push_back(NBT::build((ENBT&)data).get_as_network());
+                            part.push_back(NBT::build((enbt::value&)data).get_as_network());
                     });
                     return part;
                 }
@@ -297,7 +297,7 @@ namespace crafted_craft {
                                         {
                                             it.chat->style.GetExtra().clear();
                                             it.chat->style.SetText("");
-                                            ENBT style = it.chat->style.ToENBT();
+                                            enbt::value style = it.chat->style.ToENBT();
                                             style.remove("text");
                                             chat["style"] = std::move(style);
                                         }
@@ -314,7 +314,7 @@ namespace crafted_craft {
                                         {
                                             it.narration->style.GetExtra().clear();
                                             it.narration->style.SetText("");
-                                            ENBT style = it.chat->style.ToENBT();
+                                            enbt::value style = it.chat->style.ToENBT();
                                             style.remove("text");
                                             narration["style"] = std::move(style);
                                         }
@@ -474,19 +474,19 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response removeResourcePack(const ENBT::UUID& pack_id) {
+                Response removeResourcePack(const enbt::raw_uuid& pack_id) {
                     auto res = release_765::configuration::removeResourcePack(pack_id);
                     res.data[0].data[0] = 0x08;
                     return res;
                 }
 
-                Response addResourcePack(SharedClientData& client, const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced) {
+                Response addResourcePack(SharedClientData& client, const enbt::raw_uuid& pack_id, const std::string& url, const std::string& hash, bool forced) {
                     auto res = release_765::configuration::addResourcePack(client, pack_id, url, hash, forced);
                     res.data[0].data[0] = 0x09;
                     return res;
                 }
 
-                Response addResourcePackPrompted(SharedClientData& client, const ENBT::UUID& pack_id, const std::string& url, const std::string& hash, bool forced, const Chat& prompt) {
+                Response addResourcePackPrompted(SharedClientData& client, const enbt::raw_uuid& pack_id, const std::string& url, const std::string& hash, bool forced, const Chat& prompt) {
                     auto res = release_765::configuration::addResourcePackPrompted(client, pack_id, url, hash, forced, prompt);
                     res.data[0].data[0] = 0x09;
                     return res;
@@ -569,7 +569,7 @@ namespace crafted_craft {
                     return release_765::play::setBlockDestroyStage(entity, block, stage);
                 }
 
-                Response blockEntityData(Position block, int32_t type, const ENBT& data) {
+                Response blockEntityData(Position block, int32_t type, const enbt::value& data) {
                     return release_765::play::blockEntityData(block, type, data);
                 }
 
@@ -581,27 +581,27 @@ namespace crafted_craft {
                     return release_765::play::blockUpdate(block, block_type);
                 }
 
-                Response bossBarAdd(const ENBT::UUID& id, const Chat& title, float health, int32_t color, int32_t division, uint8_t flags) {
+                Response bossBarAdd(const enbt::raw_uuid& id, const Chat& title, float health, int32_t color, int32_t division, uint8_t flags) {
                     return release_765::play::bossBarAdd(id, title, health, color, division, flags);
                 }
 
-                Response bossBarRemove(const ENBT::UUID& id) {
+                Response bossBarRemove(const enbt::raw_uuid& id) {
                     return release_765::play::bossBarRemove(id);
                 }
 
-                Response bossBarUpdateHealth(const ENBT::UUID& id, float health) {
+                Response bossBarUpdateHealth(const enbt::raw_uuid& id, float health) {
                     return release_765::play::bossBarUpdateHealth(id, health);
                 }
 
-                Response bossBarUpdateTitle(const ENBT::UUID& id, const Chat& title) {
+                Response bossBarUpdateTitle(const enbt::raw_uuid& id, const Chat& title) {
                     return release_765::play::bossBarUpdateTitle(id, title);
                 }
 
-                Response bossBarUpdateStyle(const ENBT::UUID& id, int32_t color, int32_t division) {
+                Response bossBarUpdateStyle(const enbt::raw_uuid& id, int32_t color, int32_t division) {
                     return release_765::play::bossBarUpdateStyle(id, color, division);
                 }
 
-                Response bossBarUpdateFlags(const ENBT::UUID& id, uint8_t flags) {
+                Response bossBarUpdateFlags(const enbt::raw_uuid& id, uint8_t flags) {
                     return release_765::play::bossBarUpdateFlags(id, flags);
                 }
 
@@ -929,7 +929,7 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response playerChatMessage(ENBT::UUID sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, const std::optional<ENBT>& __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
+                Response playerChatMessage(enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, const std::optional<enbt::value>& __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
                     auto res = release_765::play::playerChatMessage(sender, index, signature, message, timestamp, salt, prev_messages, __UNDEFINED__FIELD__, filter_type, filtered_symbols_bitfield, chat_type, sender_name, target_name);
                     res.data[0].data[0] = 0x39;
                     return res;
@@ -953,7 +953,7 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response playerInfoRemove(const list_array<ENBT::UUID>& players) {
+                Response playerInfoRemove(const list_array<enbt::raw_uuid>& players) {
                     auto res = release_765::play::playerInfoRemove(players);
                     res.data[0].data[0] = 0x3D;
                     return res;
@@ -1049,13 +1049,13 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response removeResourcePack(ENBT::UUID id) {
+                Response removeResourcePack(enbt::raw_uuid id) {
                     auto res = release_765::play::removeResourcePack(id);
                     res.data[0].data[0] = 0x45;
                     return res;
                 }
 
-                Response addResourcePack(ENBT::UUID id, const std::string& url, const std::string& hash, bool forced, const std::optional<Chat>& prompt) {
+                Response addResourcePack(enbt::raw_uuid id, const std::string& url, const std::string& hash, bool forced, const std::optional<Chat>& prompt) {
                     auto res = release_765::play::addResourcePack(id, url, hash, forced, prompt);
                     res.data[0].data[0] = 0x46;
                     return res;
@@ -1227,7 +1227,7 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response updateObjectivesCreateStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const ENBT& style) {
+                Response updateObjectivesCreateStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const enbt::value& style) {
                     auto res = release_765::play::updateObjectivesCreateStyled(objective_name, display_name, render_type, style);
                     res.data[0].data[0] = 0x5E;
                     return res;
@@ -1251,7 +1251,7 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response updateObjectivesInfoStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const ENBT& style) {
+                Response updateObjectivesInfoStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const enbt::value& style) {
                     auto res = release_765::play::updateObjectivesInfoStyled(objective_name, display_name, render_type, style);
                     res.data[0].data[0] = 0x5E;
                     return res;
@@ -1305,7 +1305,7 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response setScoreStyled(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, const ENBT& styled) {
+                Response setScoreStyled(const std::string& entity_name, const std::string& objective_name, int32_t value, const std::optional<Chat>& display_name, const enbt::value& styled) {
                     auto res = release_765::play::setScoreStyled(entity_name, objective_name, value, display_name, styled);
                     res.data[0].data[0] = 0x61;
                     return res;
@@ -1431,7 +1431,7 @@ namespace crafted_craft {
                     return res;
                 }
 
-                Response tagQueryResponse(int32_t transaction_id, const ENBT& nbt) {
+                Response tagQueryResponse(int32_t transaction_id, const enbt::value& nbt) {
                     auto res = release_765::play::tagQueryResponse(transaction_id, nbt);
                     res.data[0].data[0] = 0x6E;
                     return res;

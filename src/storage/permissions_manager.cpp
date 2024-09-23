@@ -372,7 +372,7 @@ namespace crafted_craft {
                         base_objects::shared_string shared_tag(key.data(), key.size());
                         auto& read = values.actions[shared_tag];
                         for (auto item : js_array::get_array(value))
-                            read.push_back((std::string)item);
+                            read.push_back((std::string_view)item);
                         read.commit();
                         declared_actions.push_back(std::move(shared_tag));
                     }
@@ -410,22 +410,22 @@ namespace crafted_craft {
                     }
                     for (auto&& [permission_tag, value] : values.permissions) {
                         if (!declared_permissions.contains(permission_tag)) {
-                            permissions_obj[permission_tag.get()] =
-                                value.description.empty()
-                                    ? boost::json::object{
-                                          {"instant_grant", value.instant_grant},
-                                          {"permission_level", value.permission_level},
-                                          {"instant_grant", value.instant_grant},
-                                          {"reverse_mode", value.reverse_mode},
-                                          {"important", value.important},
-                                      }
-                                    : boost::json::object{
-                                          {"description", value.description},
-                                          {"permission_level", value.permission_level},
-                                          {"instant_grant", value.instant_grant},
-                                          {"reverse_mode", value.reverse_mode},
-                                          {"important", value.important},
-                                      };
+                            permissions_obj[permission_tag.get()]
+                                = value.description.empty()
+                                      ? boost::json::object{
+                                            {"instant_grant", (bool)value.instant_grant},
+                                            {"permission_level", (bool)value.permission_level},
+                                            {"instant_grant", (bool)value.instant_grant},
+                                            {"reverse_mode", (bool)value.reverse_mode},
+                                            {"important", (bool)value.important},
+                                        }
+                                      : boost::json::object{
+                                            {"description", value.description},
+                                            {"permission_level", value.permission_level},
+                                            {"instant_grant", (bool)value.instant_grant},
+                                            {"reverse_mode", (bool)value.reverse_mode},
+                                            {"important", (bool)value.important},
+                                        };
                         }
                     }
                 }

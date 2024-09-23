@@ -4,7 +4,7 @@ namespace crafted_craft {
     namespace base_objects {
         fast_task::protected_value<std::unordered_set<shared_string>> shared_string::global;
 
-        shared_string shared_string::make_shared(const std::string_view& str) {
+        shared_string shared_string::make_shared(std::string_view str) {
             shared_string res(new std::string(str), nullptr);
             return global.set([&](std::unordered_set<shared_string>& val) {
                 auto it = val.find(res);
@@ -49,10 +49,13 @@ namespace crafted_craft {
                     : make_shared(std::string_view(str, len));
         }
 
-        shared_string::shared_string(const std::string_view& str)
+        shared_string::shared_string(std::string_view str)
             : shared_string(make_shared(str)) {}
 
         shared_string::shared_string(const std::string& str)
+            : shared_string(make_shared(str)) {}
+
+        shared_string::shared_string(std::string&& str)
             : shared_string(make_shared(str)) {}
 
         shared_string::shared_string(const shared_string& str)
@@ -96,8 +99,8 @@ namespace crafted_craft {
             return *ref + *str.ref;
         }
 
-        std::string shared_string::operator+(const std::string& str) const {
-            return *ref + str;
+        std::string shared_string::operator+(std::string_view str) const {
+            return *ref + (std::string)str;
         }
 
         const std::string& shared_string::get() const noexcept {

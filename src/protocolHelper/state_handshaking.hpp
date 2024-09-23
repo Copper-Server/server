@@ -32,7 +32,7 @@ namespace crafted_craft {
             uint8_t tmp[sizeof(T)];
             for (size_t i = 0; i < sizeof(T); i++)
                 tmp[i] = data.read();
-            return ENBT::ConvertEndian(std::endian::big, *(T*)tmp);
+            return enbt::endian_helpers::convert_endian(std::endian::big, *(T*)tmp);
         }
 
         Response WorkPacket(ArrayStream& data) override {
@@ -78,7 +78,7 @@ namespace crafted_craft {
             }
         }
 
-        virtual Response TooLargePacket() {
+        Response TooLargePacket() override {
             return Response::Disconnect();
         }
 

@@ -1,0 +1,58 @@
+if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed.exe)
+    message(STATUS "Configuring binary_embed tool...")
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out)
+
+
+    execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed 
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out
+        RESULT_VARIABLE result
+        OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out/binary_embed.log
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out/binary_embed_error.log
+    )
+
+    if(result)
+        message(FATAL_ERROR "Failed to build binary_embed, see binary_embed_error.log for details in ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed/out")
+    endif()
+
+    message(STATUS "Building binary_embed tool...")
+    execute_process(COMMAND ${CMAKE_COMMAND} --build . --config Release --target binary_embed
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out
+        RESULT_VARIABLE result
+        OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out/binary_embed_build.log
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out/binary_embed_build_error.log
+    )
+
+    if(result)
+        message(FATAL_ERROR "Failed to build binary_embed, see binary_embed_build_error.log for details in ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed/out")
+    endif()
+
+    message(STATUS "binary_embed tool built successfully")
+    file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out)
+endif()
+
+
+
+function(build_resource name input_file)
+    cmake_path(GET input_file PARENT_PATH result_path)
+    cmake_path(GET input_file FILENAME result_name)
+
+    set(result_file ${result_path}/embed/${result_name}.cpp)
+    message(STATUS "Checking resource${name}...")
+    if(NOT EXISTS ${result_file})
+        message(STATUS "Building resource ${name} from ${input_file} to ${result_file}...")
+        file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed)
+        execute_process(
+            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed.exe ${name} ${input_file} 
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            RESULT_VARIABLE result
+            OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed/${name}.log
+            ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed/${name}_error.log
+        )
+        if(result)
+            message(FATAL_ERROR "Failed to build resource ${input_file} to ${result_name} ${result_file}")
+        endif()
+
+        message(STATUS "Resource ${name} built successfully")
+        file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
+    endif()
+endfunction(build_resource)
