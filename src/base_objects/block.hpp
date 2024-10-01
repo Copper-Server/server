@@ -7,6 +7,9 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+
+#include <boost/bimap.hpp>
+#include <boost/bimap/unordered_set_of.hpp>
 #pragma pack(push)
 #pragma pack(1)
 
@@ -21,6 +24,17 @@ namespace crafted_craft {
         typedef uint16_t block_id_t;
 
         struct static_block_data {
+            struct block_state_hash {
+                size_t operator()(const std::unordered_map<std::string, std::string>& value) const noexcept {
+                    size_t result = 0;
+                    std::hash<std::string> string_hasher;
+                    for (auto& [key, value] : value) {
+                        result ^= string_hasher(key) & string_hasher(value);
+                    }
+                    return result;
+                }
+            };
+
             template <size_t size>
             static consteval uint64_t get_max_uint64_t_value() {
                 struct {
@@ -60,10 +74,15 @@ namespace crafted_craft {
             std::function<void(storage::world_data&, storage::sub_chunk_data&, block& data, enbt::value& extended_data, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked)> as_entity_on_tick;
 
             std::unordered_map<std::string, std::vector<std::string>> states;
-            std::unordered_map<block_id_t, std::unordered_map<std::string, std::string>> assigned_states;
+
+            boost::bimaps::bimap<
+                boost::bimaps::unordered_set_of<block_id_t>,
+                boost::bimaps::unordered_set_of<std::unordered_map<std::string, std::string>,block_state_hash>>
+                assigned_states;
             block_id_t default_state = 0;
             enbt::compound defintion;
             base_objects::shared_string name;
+
 
             enum class tick_opt : uint16_t {
                 undefined,
@@ -231,7 +250,7 @@ namespace crafted_craft {
                 return getStaticData().is_block_entity;
             }
 
-            static_block_data& get_block(const base_objects::shared_string& name) {
+            static static_block_data& get_block(const base_objects::shared_string& name) {
                 return *named_full_block_data.at(name);
             }
 

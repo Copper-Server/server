@@ -73,6 +73,7 @@ namespace crafted_craft {
 
         struct sub_chunk_data {
             base_objects::block blocks[16][16][16];
+            uint32_t biomes[4][4][4];
             std::unordered_map<uint16_t, enbt::value> block_entities; //0xXYZ => block_entity
             list_array<base_objects::entity_ref> stored_entities;
             list_array<base_objects::local_block_pos> queried_for_tick;
@@ -91,6 +92,8 @@ namespace crafted_craft {
             void get_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, std::function<void(base_objects::block& block)> on_normal, std::function<void(base_objects::block& block, enbt::value& entity_data)> on_entity);
             void set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::full_block_data& block);
             void set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::full_block_data&& block);
+            uint32_t get_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z);
+            void set_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z, uint32_t id);
             void for_each_block(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block& block)> func);
         };
 
@@ -209,6 +212,12 @@ namespace crafted_craft {
             static base_objects::atomic_holder<chunk_light_processor> get_it(const base_objects::shared_string& id);
         };
 
+        enum class block_set_mode {
+            replace,
+            destroy,
+            keep,
+        };
+
         class world_data {
 
             using chunk_row = std::unordered_map<uint64_t, base_objects::atomic_holder<chunk_data>>;
@@ -277,7 +286,7 @@ namespace crafted_craft {
             int64_t day_time = 0;
             int64_t time = 0;
             size_t max_random_tick_for_chunk = 100;
-            std::chrono::milliseconds tick_speed = std::chrono::milliseconds(1000) / 20;
+            uint64_t ticks_per_second = 20;
             std::chrono::milliseconds chunk_lifetime = std::chrono::seconds(1);
             std::chrono::milliseconds world_lifetime = std::chrono::seconds(50);
 
@@ -337,8 +346,8 @@ namespace crafted_craft {
 
 
             void query_for_tick(int64_t global_x, uint64_t global_y, int64_t global_z);
-            void set_block(const base_objects::full_block_data& block, int64_t global_x, uint64_t global_y, int64_t global_z);
-            void set_block(base_objects::full_block_data&& block, int64_t global_x, uint64_t global_y, int64_t global_z);
+            void set_block(const base_objects::full_block_data& block, int64_t global_x, uint64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
+            void set_block(base_objects::full_block_data&& block, int64_t global_x, uint64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
             void remove_block(int64_t global_x, uint64_t global_y, int64_t global_z);
             void get_block(int64_t global_x, uint64_t global_y, int64_t global_z, std::function<void(base_objects::block& block)> func, std::function<void(base_objects::block& block, enbt::value& extended_data)> block_entity);
             void query_block(int64_t global_x, uint64_t global_y, int64_t global_z, std::function<void(base_objects::block& block)> func, std::function<void(base_objects::block& block, enbt::value& extended_data)> block_entity, std::function<void()> fault);
@@ -350,10 +359,19 @@ namespace crafted_craft {
 
             void locked(std::function<void(world_data& self)> func);
 
-            void set_block_range(base_objects::cubic_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks);
-            void set_block_range(base_objects::cubic_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks);
-            void set_block_range(base_objects::spherical_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks);
-            void set_block_range(base_objects::spherical_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks);
+            void set_block_range(base_objects::cubic_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks, block_set_mode mode = block_set_mode::replace);
+            void set_block_range(base_objects::cubic_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks, block_set_mode mode = block_set_mode::replace);
+            void set_block_range(base_objects::spherical_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks, block_set_mode mode = block_set_mode::replace);
+            void set_block_range(base_objects::spherical_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks, block_set_mode mode = block_set_mode::replace);
+
+
+            uint32_t get_biome(int64_t global_x, uint64_t global_y, int64_t global_z);
+            void set_biome(int64_t global_x, uint64_t global_y, int64_t global_z, uint32_t id);
+            void set_biome_range(base_objects::cubic_bounds_block bounds, const list_array<uint32_t>& blocks, block_set_mode mode = block_set_mode::replace);
+            void set_biome_range(base_objects::cubic_bounds_block bounds, list_array<uint32_t>&& blocks, block_set_mode mode = block_set_mode::replace);
+            void set_biome_range(base_objects::spherical_bounds_block bounds, const list_array<uint32_t>& blocks, block_set_mode mode = block_set_mode::replace);
+            void set_biome_range(base_objects::spherical_bounds_block bounds, list_array<uint32_t>&& blocks, block_set_mode mode = block_set_mode::replace);
+
 
             uint64_t register_client(const base_objects::client_data_holder& client);
             void unregister_client(uint64_t);
@@ -365,7 +383,7 @@ namespace crafted_craft {
             void change_light_processor(const base_objects::shared_string& id);
 
 
-            void tick(std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time, bool update_tps);
+            void tick(std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time);
             //unloads unused chunks and check themselves lifetime and active operations, if expired and there no active operations, then function will return true
             bool collect_unused_data(std::chrono::high_resolution_clock::time_point current_time, size_t& unload_limit);
 
@@ -409,7 +427,7 @@ namespace crafted_craft {
 
 
             struct profiling_data {
-                std::chrono::milliseconds tick_time = std::chrono::milliseconds(0);
+                std::chrono::high_resolution_clock::time_point last_tick = std::chrono::high_resolution_clock::now();
                 uint64_t got_ticks = 0;
                 double tps_for_world = 0;
 
@@ -436,6 +454,9 @@ namespace crafted_craft {
                 std::function<void(world_data& world, std::chrono::milliseconds tick_time)> slow_world_tick_callback = nullptr;
                 std::function<void(world_data& world)> got_tps_update = nullptr;
             } profiling;
+
+            //tick sync
+            std::chrono::nanoseconds accumulated_time{0};
         };
 
         class worlds_data {
@@ -451,6 +472,7 @@ namespace crafted_craft {
             list_array<uint64_t> cached_ids;
             const list_array<uint64_t>& get_ids();
 
+
         public:
             base_objects::event<uint64_t> on_world_loaded;
             base_objects::event<uint64_t> on_world_unloaded;
@@ -459,7 +481,7 @@ namespace crafted_craft {
             uint64_t base_world_id = -1;
 
             //calculated
-            double tps = 0;
+            double tps = 1;
 
 
             worlds_data(base_objects::ServerConfiguration& configuration, const std::filesystem::path& base_path);
@@ -499,8 +521,7 @@ namespace crafted_craft {
 
             void for_each_world(std::function<void(uint64_t id, world_data& world)> func);
 
-            //use only on tick task, returns nanoseconds to sleep
-            std::chrono::nanoseconds apply_tick(std::mt19937& random_engine);
+            void apply_tick(std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time, std::chrono::nanoseconds elapsed);
         };
     } // namespace storage
 } // namespace crafted_craft

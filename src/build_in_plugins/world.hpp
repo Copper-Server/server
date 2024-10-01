@@ -16,6 +16,8 @@ namespace crafted_craft {
 
         public:
             WorldManagementPlugin();
+
+            void OnRegister(const PluginRegistrationPtr& self);
             void OnLoad(const PluginRegistrationPtr& self) override;
             void OnUnload(const PluginRegistrationPtr& self) override;
             void OnFaultUnload(const PluginRegistrationPtr& self) override;

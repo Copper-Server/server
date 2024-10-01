@@ -22,6 +22,13 @@ namespace crafted_craft {
                 shared_string type = "default";
                 size_t unload_speed = 10; //max 1000 chunks per tick
 
+                struct {
+                    int64_t x = 0;
+                    int64_t y = 64;
+                    int64_t z = 0;
+                    float yaw = 0;
+                } spawn;
+
                 std::unordered_map<shared_string, std::string> generator_settings = {};
             } world;
 

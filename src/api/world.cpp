@@ -77,6 +77,17 @@ namespace crafted_craft {
                 return get_worlds().create(name, callback);
             }
 
+            base_objects::event<uint64_t>& on_world_loaded() {
+                return get_worlds().on_world_loaded;
+            }
+
+            base_objects::event<uint64_t>& on_world_unloaded() {
+                return get_worlds().on_world_unloaded;
+            }
+
+            base_objects::event<double>& on_tps_changed() {
+                return get_worlds().on_tps_changed;
+            }
         }
     }
 }

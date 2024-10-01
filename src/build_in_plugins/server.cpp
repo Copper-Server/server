@@ -2,6 +2,7 @@
 #include "../api/command.hpp"
 #include "../api/console.hpp"
 #include "../api/players.hpp"
+#include "../api/world.hpp"
 #include "../log.hpp"
 #include "../plugin/main.hpp"
 #include "../plugin/registration.hpp"
@@ -24,6 +25,13 @@ namespace crafted_craft {
             } catch (const std::exception& ex) {
                 log::error("Server", std::string("[permissions] Failed to load permission file because: ") + ex.what());
             }
+
+            register_event(api::world::on_tps_changed(), [this](double tps) {
+                this->tps = tps;
+                log::info("Server", std::to_string(tps));
+                return false;
+            });
+
             api::command::register_manager(manager);
             manager.reload_commands();
             log::info("Server", "server handler loaded.");
@@ -41,82 +49,90 @@ namespace crafted_craft {
         }
 
         void ServerPlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
-            using predicate = base_objects::predicate;
-            using pred_string = base_objects::predicates::string;
-            using cmd_pred_string = base_objects::predicates::command::string;
+            using predicate = base_objects::parser;
+            using pred_string = base_objects::parsers::string;
+            using cmd_pred_string = base_objects::parsers::command::string;
             {
                 browser.add_child({"help", "returns list of commands", ""})
-                    .set_callback("command.help", [browser, this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
-                        api::players::calls::on_system_message({client, {"help for all commands:\n" + browser.get_documentation()}});
+                    .set_callback("command.help", [browser, this](const list_array<predicate>& args, base_objects::command_context& context) {
+                        api::players::calls::on_system_message({context.executor, {"help for all commands:\n" + browser.get_documentation()}});
                     })
                     .add_child({"[command]", "returns help for command", "/help [command]"}, cmd_pred_string::greedy_phrase)
-                    .set_callback("command.help", [browser, this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                    .set_callback("command.help", [browser, this](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto command = browser.open(std::get<pred_string>(args[0]).value);
                         if (!command.is_valid())
-                            api::players::calls::on_system_message({client, {"Command not found"}});
+                            api::players::calls::on_system_message({context.executor, {"Command not found"}});
                         else
-                            api::players::calls::on_system_message({client, {command.get_documentation()}});
+                            api::players::calls::on_system_message({context.executor, {command.get_documentation()}});
                     });
 
-                browser.add_child({"?", "help alias"}).set_redirect("help", [browser](base_objects::command& cmd, const list_array<predicate>& args, const std::string& left, base_objects::client_data_holder& client) {
-                    browser.get_manager().execute_command_from(left, cmd, client);
+                browser.add_child({"?", "help alias"}).set_redirect("help", [browser](base_objects::command& cmd, const list_array<predicate>& args, const std::string& left, base_objects::command_context& context) {
+                    browser.get_manager().execute_command_from(left, cmd, context);
                 });
             }
             {
                 browser.add_child({"version", "returns server version", "/version"})
-                    .set_callback("command.version", [this](const list_array<predicate>&, base_objects::client_data_holder& client) {
-                        api::players::calls::on_system_message({client, {"Server version: 1.0.0. Build: " __DATE__ " " __TIME__}});
+                    .set_callback("command.version", [this](const list_array<predicate>&, base_objects::command_context& context) {
+                        api::players::calls::on_system_message({context.executor, {"Server version: 1.0.0. Build: " __DATE__ " " __TIME__}});
+                    });
+            }
+            {
+                browser.add_child({"tps", "returns server ticking", "/tps"})
+                    .set_callback("command.tps", [this](const list_array<predicate>&, base_objects::command_context& context) {
+                        api::players::calls::on_system_message({context.executor, {"Server ticking: " + std::to_string(tps)}});
                     });
             }
             {
                 browser.add_child("kick")
                     .add_child("<player>", cmd_pred_string::quotable_phrase)
-                    .set_callback("command.kick", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                    .set_callback("command.kick", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto target = Server::instance().online_players.get_player(
                             SharedClientData::packets_state_t::protocol_state::play,
                             std::get<pred_string>(args[0]).value
                         );
                         if (!target) {
-                            api::players::calls::on_system_message({client, "Player not found"});
+                            api::players::calls::on_system_message({context.executor, "Player not found"});
                             return;
                         }
                         if (Server::instance().permissions_manager.has_rights("misc.operator_protection.kick", target)) {
-                            api::players::calls::on_system_message({client, "You can't kick this player"});
+                            api::players::calls::on_system_message({context.executor, "You can't kick this player"});
                             return;
                         }
                         api::players::calls::on_player_kick({target, "kicked by admin"});
                     })
                     .add_child({"[reason]", "kick player with reason", "/kick <player> [reason]"}, cmd_pred_string::greedy_phrase)
-                    .set_callback("command.kick", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                    .set_callback("command.kick", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto target = Server::instance().online_players.get_player(
                             SharedClientData::packets_state_t::protocol_state::play,
                             std::get<pred_string>(args[0]).value
                         );
                         if (!target) {
-                            api::players::calls::on_system_message({client, "Player not found"});
+                            api::players::calls::on_system_message({context.executor, "Player not found"});
                             return;
                         }
                         if (Server::instance().permissions_manager.has_rights("misc.operator_protection.kick", target)) {
-                            api::players::calls::on_system_message({client, "You can't kick this player"});
+                            api::players::calls::on_system_message({context.executor, "You can't kick this player"});
                             return;
                         }
                         if (target)
                             api::players::calls::on_player_kick({target, Chat::parseToChat(std::get<pred_string>(args[1]).value)});
                         else
-                            api::players::calls::on_system_message({client, "Player not found"});
+                            api::players::calls::on_system_message({context.executor, "Player not found"});
                     });
             }
             {
                 browser.add_child({"stop", "stop server", "/stop"})
-                    .set_callback("command.stop", [this](const list_array<predicate>&, base_objects::client_data_holder& client) {
+                    .set_callback("command.stop", [this](const list_array<predicate>&, base_objects::command_context& context) {
                         Server::instance().stop();
                     });
             }
+
+
             {
                 auto _config = browser.add_child("config");
                 _config
                     .add_child({"reload", "reloads config from file", "/config reload"})
-                    .set_callback({"command.config.reload", {"console"}}, [&](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                    .set_callback({"command.config.reload", {"console"}}, [&](const list_array<predicate>& args, base_objects::command_context& context) {
                         Server::instance().config.load(Server::instance().config.server.base_path);
                         pluginManagement.registeredPlugins().for_each([&](const PluginRegistrationPtr& plugin) {
                             plugin->OnConfigReload(plugin, Server::instance().config);
@@ -125,9 +141,9 @@ namespace crafted_craft {
                 _config.add_child("set")
                     .add_child("<config item>", cmd_pred_string::quotable_phrase)
                     .add_child({"<value>", "updates config in file and applies for program", "/config set <config item> <value>"}, cmd_pred_string::greedy_phrase)
-                    .set_callback({"command.config.set", {"console"}}, [&](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                    .set_callback({"command.config.set", {"console"}}, [&](const list_array<predicate>& args, base_objects::command_context& context) {
                         Server::instance().config.set(Server::instance().config.server.base_path, std::get<pred_string>(args[0]).value, std::get<pred_string>(args[1]).value);
-                        api::players::calls::on_system_message({client, {"Config updated"}});
+                        api::players::calls::on_system_message({context.executor, {"Config updated"}});
                         pluginManagement.registeredPlugins().for_each([&](const PluginRegistrationPtr& plugin) {
                             plugin->OnConfigReload(plugin, Server::instance().config);
                         });
@@ -135,14 +151,14 @@ namespace crafted_craft {
                 _config
                     .add_child("get")
                     .add_child({"<config item>", "returns config value", "/config get <config item>"}, cmd_pred_string::quotable_phrase)
-                    .set_callback({"command.config.get", {"console"}}, [&](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                    .set_callback({"command.config.get", {"console"}}, [&](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto value = Server::instance().config.get(std::get<pred_string>(args[0]).value);
                         while (value.ends_with('\n') | value.ends_with('\r'))
                             value.pop_back();
                         if (value.contains("\n"))
-                            api::players::calls::on_system_message({client, {"Config value: \n" + value}});
+                            api::players::calls::on_system_message({context.executor, {"Config value: \n" + value}});
                         else
-                            api::players::calls::on_system_message({client, {"Config value: " + value}});
+                            api::players::calls::on_system_message({context.executor, {"Config value: " + value}});
                     });
             }
         }

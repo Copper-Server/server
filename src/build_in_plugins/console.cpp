@@ -13,7 +13,7 @@ namespace crafted_craft {
 
 
         void add_log_type_suggestion(base_objects::command_browser& browser) {
-            browser.set_suggestion_callback([](const std::string& current, base_objects::client_data_holder& client) {
+            browser.set_suggestion_callback([](const std::string& current, base_objects::command_context& context) {
                 auto suggestions = list_array<std::string>{
                     "info",
                     "warn",
@@ -79,8 +79,9 @@ namespace crafted_craft {
                     else
                         insertion_ = insertion_.substr(0, it) + ' ';
                 }
+                base_objects::command_context context(console_data.client);
                 return api::command::get_manager()
-                    .request_suggestions(tmp, console_data.client)
+                    .request_suggestions(tmp, context)
                     .transform([&insertion_](auto&& suggestion) { return insertion_ + suggestion; })
                     .sort()
                     .to_container<std::vector<std::string>>();
@@ -106,9 +107,9 @@ namespace crafted_craft {
         }
 
         void ConsolePlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
-            using predicate = base_objects::predicate;
-            using pred_string = base_objects::predicates::string;
-            using cmd_pred_string = base_objects::predicates::command::string;
+            using predicate = base_objects::parser;
+            using pred_string = base_objects::parsers::string;
+            using cmd_pred_string = base_objects::parsers::command::string;
             {
                 auto _console = browser.add_child("console");
                 auto _log = _console.add_child("log");
@@ -117,7 +118,7 @@ namespace crafted_craft {
                         = _log
                               .add_child("enable")
                               .add_child({"<log level>"}, cmd_pred_string::quotable_phrase)
-                              .set_callback({"command.console.log.enable", {"console"}}, [](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                              .set_callback({"command.console.log.enable", {"console"}}, [](const list_array<predicate>& args, base_objects::command_context& context) {
                                   auto& level = std::get<pred_string>(args[0]).value;
                                   if (level == "info")
                                       log::enable_log_level(log::level::info);
@@ -142,7 +143,7 @@ namespace crafted_craft {
                         = _log
                               .add_child("disable")
                               .add_child({"<log level>"}, cmd_pred_string::quotable_phrase)
-                              .set_callback({"command.console.log.disable", {"console"}}, [](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                              .set_callback({"command.console.log.disable", {"console"}}, [](const list_array<predicate>& args, base_objects::command_context& context) {
                                   auto& level = std::get<pred_string>(args[0]).value;
                                   if (level == "info")
                                       log::disable_log_level(log::level::info);
@@ -167,7 +168,7 @@ namespace crafted_craft {
                     add_log_type_suggestion(disable);
                 }
                 _console.add_child("clear")
-                    .set_callback({"command.console.clear", {"console"}}, [](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                    .set_callback({"command.console.clear", {"console"}}, [](const list_array<predicate>& args, base_objects::command_context& context) {
                         log::clear();
                     });
             }

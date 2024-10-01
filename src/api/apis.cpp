@@ -159,7 +159,8 @@ namespace crafted_craft {
                 if (!console_data)
                     throw std::runtime_error("Virtual client for console not yet registered");
 
-                api::command::get_manager().execute_command(command, console_data->client);
+                base_objects::command_context context(console_data->client);
+                api::command::get_manager().execute_command(command, context);
             }
 
             bool console_enabled() {

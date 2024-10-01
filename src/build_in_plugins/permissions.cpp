@@ -58,22 +58,22 @@ namespace crafted_craft {
         }
 
         void PermissionsPlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
-            using predicate = base_objects::predicate;
-            using pred_string = base_objects::predicates::string;
-            using cmd_pred_string = base_objects::predicates::command::string;
+            using predicate = base_objects::parser;
+            using pred_string = base_objects::parsers::string;
+            using cmd_pred_string = base_objects::parsers::command::string;
             auto permissions = browser.add_child("permissions");
-            permissions.add_child("reload").set_callback("command.permissions.reload", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
-                api::players::calls::on_system_message({client, "Reloading permissions..."});
+            permissions.add_child("reload").set_callback("command.permissions.reload", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                api::players::calls::on_system_message({context.executor, "Reloading permissions..."});
                 api::permissions::make_sync();
                 Server::instance().online_players.iterate_online([&](base_objects::SharedClientData& client_ref) {
                     update_perm(client_ref);
                     return false;
                 });
-                api::players::calls::on_system_message({client, "Permissions reload complete."});
+                api::players::calls::on_system_message({context.executor, "Permissions reload complete."});
             });
             {
                 auto list = permissions.add_child("list");
-                list.add_child("group").set_callback("command.permissions.list.group", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                list.add_child("group").set_callback("command.permissions.list.group", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                     list_array<base_objects::shared_string> enumerate;
                     bool overflow = false;
                     api::permissions::enum_groups([&](const base_objects::permission_group& group) {
@@ -84,9 +84,9 @@ namespace crafted_craft {
                     });
 
                     if (enumerate.empty())
-                        api::players::calls::on_system_message({client, "There no groups."});
+                        api::players::calls::on_system_message({context.executor, "There no groups."});
                     else if (enumerate.size() == 1)
-                        api::players::calls::on_system_message({client, "There only one group: " + enumerate[0].get()});
+                        api::players::calls::on_system_message({context.executor, "There only one group: " + enumerate[0].get()});
                     else {
                         std::string buf;
                         buf.reserve(enumerate.sum([](const base_objects::shared_string& val) {
@@ -97,10 +97,10 @@ namespace crafted_craft {
                             buf += it.get() + "\n";
                         if (overflow)
                             buf += "...\n";
-                        api::players::calls::on_system_message({client, std::move(buf)});
+                        api::players::calls::on_system_message({context.executor, std::move(buf)});
                     }
                 });
-                list.add_child("permission").set_callback("command.permissions.list.permission", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                list.add_child("permission").set_callback("command.permissions.list.permission", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                     list_array<base_objects::shared_string> enumerate;
                     bool overflow = false;
                     api::permissions::enum_permissions([&](const base_objects::permissions_object& group) {
@@ -111,9 +111,9 @@ namespace crafted_craft {
                     });
 
                     if (enumerate.empty())
-                        api::players::calls::on_system_message({client, "There no permissions."});
+                        api::players::calls::on_system_message({context.executor, "There no permissions."});
                     else if (enumerate.size() == 1)
-                        api::players::calls::on_system_message({client, "There only one permission: " + enumerate[0].get()});
+                        api::players::calls::on_system_message({context.executor, "There only one permission: " + enumerate[0].get()});
                     else {
                         std::string buf;
                         buf.reserve(enumerate.sum([](const base_objects::shared_string& val) {
@@ -126,7 +126,7 @@ namespace crafted_craft {
                             buf += it.get() + "\n";
                         if (overflow)
                             buf += "...\n";
-                        api::players::calls::on_system_message({client, std::move(buf)});
+                        api::players::calls::on_system_message({context.executor, std::move(buf)});
                     }
                 });
             }
@@ -136,19 +136,19 @@ namespace crafted_craft {
                     .add_child("list")
                     .set_redirect(
                         "permissions list group",
-                        [browser](base_objects::command& cmd, const list_array<predicate>& args, const std::string& left, base_objects::client_data_holder& client) {
-                            browser.get_manager().execute_command_from("", cmd, client);
+                        [browser](base_objects::command& cmd, const list_array<predicate>& args, const std::string& left, base_objects::command_context& context) {
+                            browser.get_manager().execute_command_from("", cmd, context);
                         }
                     );
                 {
                     group
                         .add_child("add")
                         .add_child("<name>", cmd_pred_string::quotable_phrase)
-                        .set_callback("command.permissions.group.add", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                        .set_callback("command.permissions.group.add", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                             api::permissions::add_group({std::get<pred_string>(args[0]).value});
                         })
                         .add_child("<values>", cmd_pred_string::greedy_phrase)
-                        .set_callback("command.permissions.group.add:with_values", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                        .set_callback("command.permissions.group.add:with_values", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                             auto permissions = list_array<char>(std::get<pred_string>(args[1]).value).split_by(' ').convert<base_objects::shared_string>([](const list_array<char>& a) {
                                 return base_objects::shared_string(a.data(), a.size());
                             });
@@ -159,10 +159,10 @@ namespace crafted_craft {
             {
                 browser.add_child("op")
                     .add_child({"<player>", "op player", "/op <player>"}, cmd_pred_string::greedy_phrase)
-                    .set_callback("command.op", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                    .set_callback("command.op", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto& player_name = std::get<pred_string>(args[0]).value;
                         if (op_list.contains(player_name)) {
-                            api::players::calls::on_system_message({client, "This player already operator."});
+                            api::players::calls::on_system_message({context.executor, "This player already operator."});
                             return;
                         }
                         op_list.add(player_name);
@@ -179,7 +179,7 @@ namespace crafted_craft {
             {
                 browser.add_child("deop")
                     .add_child({"<player>", "deop player", "/deop <player>"}, cmd_pred_string::greedy_phrase)
-                    .set_callback("command.deop", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                    .set_callback("command.deop", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto& player_name = std::get<pred_string>(args[0]).value;
                         op_list.remove(player_name);
                         auto target = Server::instance().online_players.get_player(

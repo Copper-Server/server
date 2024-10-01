@@ -1,5 +1,5 @@
-#ifndef SRC_BASE_OBJECTS_PREDICATES
-#define SRC_BASE_OBJECTS_PREDICATES
+#ifndef SRC_BASE_OBJECTS_PARSERS
+#define SRC_BASE_OBJECTS_PARSERS
 #include "../library/enbt.hpp"
 #include <cstdint>
 #include <string>
@@ -7,11 +7,12 @@
 
 namespace crafted_craft {
     namespace base_objects {
-        namespace predicates {
+        namespace parsers {
             namespace command {
                 class custom_virtual_base {
                 public:
                     virtual ~custom_virtual_base() {}
+
                     virtual std::string name() = 0;
                     virtual custom_virtual_base* make_copy() const = 0;
                 };
@@ -84,6 +85,9 @@ namespace crafted_craft {
                 };
 
                 struct color {
+                };
+
+                struct block_pos {
                 };
 
                 struct column_pos {
@@ -200,6 +204,7 @@ namespace crafted_craft {
             class custom_virtual_base {
             public:
                 virtual ~custom_virtual_base() {}
+
                 virtual std::string name() = 0;
             };
 
@@ -279,6 +284,15 @@ namespace crafted_craft {
                 green = 13,
                 red = 14,
                 black = 15,
+            };
+
+            struct block_pos {
+                int64_t x;
+                int64_t y;
+                int64_t z;
+                bool x_relative = false;
+                bool y_relative = false;
+                bool z_relative = false;
             };
 
             struct column_pos {
@@ -595,91 +609,93 @@ namespace crafted_craft {
             };
         }
 
-        using predicate = std::variant<
-            predicates::_bool,
-            predicates::_double,
-            predicates::_float,
-            predicates::_integer,
-            predicates::_long,
-            predicates::string,
-            predicates::angle,
-            predicates::block,
-            predicates::color,
-            predicates::column_pos,
-            predicates::component,
-            predicates::dimension,
-            predicates::entity,
-            predicates::entity_anchor,
-            predicates::heightmap,
-            predicates::item,
-            predicates::item_slot,
-            predicates::item_stack,
-            predicates::message,
-            predicates::nbt_compound_tag,
-            predicates::nbt_path,
-            predicates::nbt,
-            predicates::objective,
-            predicates::objective_criteria,
-            predicates::operation,
-            predicates::particle,
-            predicates::resource,
-            predicates::resource_key,
-            predicates::resource_location,
-            predicates::resource_or_tag,
-            predicates::rotation,
-            predicates::score_holder,
-            predicates::team,
-            predicates::template_mirror,
-            predicates::time,
-            predicates::uuid,
-            predicates::vec2,
-            predicates::vec3,
-            predicates::custom_virtual
+        using parser = std::variant<
+            parsers::_bool,
+            parsers::_double,
+            parsers::_float,
+            parsers::_integer,
+            parsers::_long,
+            parsers::string,
+            parsers::angle,
+            parsers::block,
+            parsers::color,
+            parsers::block_pos,
+            parsers::column_pos,
+            parsers::component,
+            parsers::dimension,
+            parsers::entity,
+            parsers::entity_anchor,
+            parsers::heightmap,
+            parsers::item,
+            parsers::item_slot,
+            parsers::item_stack,
+            parsers::message,
+            parsers::nbt_compound_tag,
+            parsers::nbt_path,
+            parsers::nbt,
+            parsers::objective,
+            parsers::objective_criteria,
+            parsers::operation,
+            parsers::particle,
+            parsers::resource,
+            parsers::resource_key,
+            parsers::resource_location,
+            parsers::resource_or_tag,
+            parsers::rotation,
+            parsers::score_holder,
+            parsers::team,
+            parsers::template_mirror,
+            parsers::time,
+            parsers::uuid,
+            parsers::vec2,
+            parsers::vec3,
+            parsers::custom_virtual
 
             >;
 
 
-        using command_predicate = std::variant<
-            predicates::command::_bool,
-            predicates::command::_double,
-            predicates::command::_float,
-            predicates::command::_integer,
-            predicates::command::_long,
-            predicates::command::string,
-            predicates::command::angle,
-            predicates::command::block,
-            predicates::command::color,
-            predicates::command::column_pos,
-            predicates::command::component,
-            predicates::command::dimension,
-            predicates::command::entity,
-            predicates::command::entity_anchor,
-            predicates::command::heightmap,
-            predicates::command::item,
-            predicates::command::item_slot,
-            predicates::command::item_stack,
-            predicates::command::message,
-            predicates::command::nbt_compound_tag,
-            predicates::command::nbt_path,
-            predicates::command::nbt,
-            predicates::command::objective,
-            predicates::command::objective_criteria,
-            predicates::command::operation,
-            predicates::command::particle,
-            predicates::command::resource,
-            predicates::command::resource_key,
-            predicates::command::resource_location,
-            predicates::command::resource_or_tag,
-            predicates::command::rotation,
-            predicates::command::score_holder,
-            predicates::command::team,
-            predicates::command::template_mirror,
-            predicates::command::time,
-            predicates::command::uuid,
-            predicates::command::vec2,
-            predicates::command::vec3,
-            predicates::command::custom_virtual>;
+        using command_parser = std::variant<
+            parsers::command::_bool,
+            parsers::command::_double,
+            parsers::command::_float,
+            parsers::command::_integer,
+            parsers::command::_long,
+            parsers::command::string,
+            parsers::command::angle,
+            parsers::command::block,
+            parsers::command::color,
+            parsers::command::block_pos,
+            parsers::command::column_pos,
+            parsers::command::component,
+            parsers::command::dimension,
+            parsers::command::entity,
+            parsers::command::entity_anchor,
+            parsers::command::heightmap,
+            parsers::command::item,
+            parsers::command::item_slot,
+            parsers::command::item_stack,
+            parsers::command::message,
+            parsers::command::nbt_compound_tag,
+            parsers::command::nbt_path,
+            parsers::command::nbt,
+            parsers::command::objective,
+            parsers::command::objective_criteria,
+            parsers::command::operation,
+            parsers::command::particle,
+            parsers::command::resource,
+            parsers::command::resource_key,
+            parsers::command::resource_location,
+            parsers::command::resource_or_tag,
+            parsers::command::rotation,
+            parsers::command::score_holder,
+            parsers::command::team,
+            parsers::command::template_mirror,
+            parsers::command::time,
+            parsers::command::uuid,
+            parsers::command::vec2,
+            parsers::command::vec3,
+            parsers::command::custom_virtual>;
     }
 }
 
-#endif /* SRC_BASE_OBJECTS_PREDICATES */
+#endif /* SRC_BASE_OBJECTS_PARSERS */

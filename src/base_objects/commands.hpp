@@ -1,10 +1,11 @@
 #ifndef SRC_BASE_OBJECTS_COMMANDS
 #define SRC_BASE_OBJECTS_COMMANDS
+#include "../library/enbt.hpp"
 #include "../library/list_array.hpp"
 #include "chat.hpp"
 #include "packets.hpp"
+#include "parsers.hpp"
 #include "permissions.hpp"
-#include "predicates.hpp"
 #include "shared_client_data.hpp"
 #include <functional>
 #include <optional>
@@ -21,14 +22,28 @@ namespace crafted_craft {
                 : exception(exception), pos(pos) {}
         };
 
+        struct command_context {
+            client_data_holder& executor;
+            enbt::compound other_data;
+            //for player, position, rotation, motion, and world_id automatically copied to other_data
+            //command result must be set in other_data at "result" value
+
+            void apply_executor_data();
+
+            command_context(client_data_holder& executor, bool apply_data = true)
+                : executor(executor) {
+                if (apply_data)
+                    apply_executor_data();
+            }
+        };
 
         struct command;
-        using command_callback = std::function<void(const list_array<predicate>&, client_data_holder&)>;
+        using command_callback = std::function<void(const list_array<parser>&, command_context&)>;
 
-        using command_redirect = std::function<void(command& target, const list_array<predicate>&, const std::string&, client_data_holder&)>;
+        using command_redirect = std::function<void(command& target, const list_array<parser>&, const std::string&, command_context&)>;
 
 
-        using command_suggestion = std::function<list_array<std::string>(const std::string& current, client_data_holder&)>;
+        using command_suggestion = std::function<list_array<std::string>(const std::string& current, command_context&)>;
 
         struct action_provider {
             std::string action_tag;
@@ -51,7 +66,7 @@ namespace crafted_craft {
             std::string name;
             std::string description;
             std::string usage;
-            std::optional<command_predicate> argument_predicate;
+            std::optional<command_parser> argument_predicate;
             std::optional<command_callback> executable;
             std::optional<redirect_command> redirect;
             std::variant<command_suggestion, std::string> suggestions;
@@ -116,6 +131,7 @@ namespace crafted_craft {
                     suggestions
                 );
             }
+
             int32_t get_child(list_array<command>& commands_nodes, const std::string& name);
 
             command(const char* name)
@@ -125,7 +141,7 @@ namespace crafted_craft {
                 const std::string& name = "",
                 const std::string& description = "",
                 const std::string& usage = "",
-                const std::optional<command_predicate>& argument_predicate = std::nullopt,
+                const std::optional<command_parser>& argument_predicate = std::nullopt,
                 const std::optional<command_callback>& executable = std::nullopt,
                 const std::optional<redirect_command>& redirect = std::nullopt,
                 const std::variant<command_suggestion, std::string>& suggestions = ""
@@ -141,20 +157,20 @@ namespace crafted_craft {
 
         class command_custom_parser {
         public:
-            std::vector<predicate> native_predicates;
+            std::vector<parser> native_predicates;
             command_suggestion suggestions_provider;
 
-            virtual predicates::custom_virtual parse(predicates::command::custom_virtual& cfg, std::string& part, std::string& path) = 0;
+            virtual parsers::custom_virtual parse(parsers::command::custom_virtual& cfg, std::string& part, std::string& path) = 0;
             virtual std::string name() = 0;
         };
 
-        using named_suggestion_provider = std::function<list_array<std::string>(command& cmd, const std::string& name, const std::string& current, client_data_holder&)>;
+        using named_suggestion_provider = std::function<list_array<std::string>(command& cmd, const std::string& name, const std::string& current, command_context&)>;
 
         class command_manager {
             std::unordered_map<std::string, std::shared_ptr<command_custom_parser>> custom_parsers;
             std::unordered_map<std::string, named_suggestion_provider> named_suggestion_providers = {
                 {"minecraft:ask_server",
-                 named_suggestion_provider([](command& cmd, const std::string&, const std::string&, client_data_holder&) -> list_array<std::string> {
+                 named_suggestion_provider([](command& cmd, const std::string&, const std::string&, command_context&) -> list_array<std::string> {
                      return {cmd.name};
                  })}
             };
@@ -179,9 +195,9 @@ namespace crafted_craft {
             command_custom_parser& get_parser(const std::string& name);
             void unregister_parser(const std::string& name);
 
-            void execute_command(const std::string& command_string, client_data_holder&);
-            void execute_command_from(const std::string& command_string, command& cmd, client_data_holder&);
-            list_array<std::string> request_suggestions(const std::string& command, client_data_holder&);
+            void execute_command(const std::string& command_string, command_context&);
+            void execute_command_from(const std::string& command_string, command& cmd, command_context&);
+            list_array<std::string> request_suggestions(const std::string& command, command_context&);
 
             const list_array<uint8_t>& compile_to_graph();
             bool is_graph_fresh() const;
@@ -207,7 +223,7 @@ namespace crafted_craft {
             command_browser(command_browser&& browser) noexcept;
 
             command_browser add_child(command&& command);
-            command_browser add_child(command&& command, command_predicate pred);
+            command_browser add_child(command&& command, command_parser pred);
             command_browser add_child(command_browser& command);
             bool remove_child(const std::string& name);
             list_array<command_browser> get_childs();
@@ -215,7 +231,7 @@ namespace crafted_craft {
             command_browser& set_redirect(const std::string& path, command_redirect redirect);
             command_browser& remove_redirect();
 
-            command_browser& set_argument_type(const command_predicate& pred);
+            command_browser& set_argument_type(const command_parser& pred);
             command_browser& remove_argument();
 
             command_browser& set_callback(const action_provider& action, const command_callback& callback);

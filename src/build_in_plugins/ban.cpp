@@ -22,51 +22,51 @@ namespace crafted_craft {
         }
 
         void BanPlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
-            using predicate = base_objects::predicate;
-            using pred_string = base_objects::predicates::string;
-            using cmd_pred_string = base_objects::predicates::command::string;
+            using predicate = base_objects::parser;
+            using pred_string = base_objects::parsers::string;
+            using cmd_pred_string = base_objects::parsers::command::string;
             {
                 browser.add_child({"ban", "", ""})
                     .add_child({"<player>", "ban player", "/ban <player>"}, cmd_pred_string::quotable_phrase)
-                    .set_callback("command.ban", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                    .set_callback("command.ban", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto& player_name = std::get<pred_string>(args[0]).value;
-                        if (api::ban::on_ban({player_name, client->name, ""}))
+                        if (api::ban::on_ban({player_name, context.executor->name, ""}))
                             return;
 
                         if (banned_players.contains(player_name)) {
-                            api::players::calls::on_system_message({client, {"Player " + player_name + " has been already banned."}});
+                            api::players::calls::on_system_message({context.executor, {"Player " + player_name + " has been already banned."}});
                             return;
                         }
                         banned_players.add(player_name, {});
-                        api::players::calls::on_system_message({client, {"Player " + player_name + " has been banned."}});
+                        api::players::calls::on_system_message({context.executor, {"Player " + player_name + " has been banned."}});
                     })
                     .add_child({"[reason]", "ban player with reason", "/ban <player> [reason]"}, cmd_pred_string::greedy_phrase)
-                    .set_callback("command.ban:reason", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                    .set_callback("command.ban:reason", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto& player_name = std::get<pred_string>(args[0]).value;
                         auto& reason = std::get<pred_string>(args[1]).value;
-                        if (api::ban::on_ban({player_name, client->name, reason}))
+                        if (api::ban::on_ban({player_name, context.executor->name, reason}))
                             return;
                         if (banned_players.contains(player_name)) {
-                            api::players::calls::on_system_message({client, {"Player " + player_name + " has been already banned."}});
+                            api::players::calls::on_system_message({context.executor, {"Player " + player_name + " has been already banned."}});
                             return;
                         }
                         banned_players.add(player_name, reason);
-                        api::players::calls::on_system_message({client, {"Player " + player_name + " has been banned"}});
+                        api::players::calls::on_system_message({context.executor, {"Player " + player_name + " has been banned"}});
                     });
             }
             {
                 auto& pardon = browser.add_child({"pardon", "", ""})
                                    .add_child({"<player>", "pardon player", "/pardon <player>"}, cmd_pred_string::quotable_phrase)
-                                   .set_callback("command.pardon", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                                   .set_callback("command.pardon", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                                        auto& player_name = std::get<pred_string>(args[0]).value;
-                                       if (api::ban::on_pardon({player_name, client->name, ""}))
+                                       if (api::ban::on_pardon({player_name, context.executor->name, ""}))
                                            return;
                                        if (!banned_players.contains(player_name)) {
-                                           api::players::calls::on_system_message({client, {"Player " + player_name + " has not been banned."}});
+                                           api::players::calls::on_system_message({context.executor, {"Player " + player_name + " has not been banned."}});
                                            return;
                                        }
                                        banned_players.remove(player_name);
-                                       api::players::calls::on_system_message({client, {"Player " + player_name + " has been pardoned."}});
+                                       api::players::calls::on_system_message({context.executor, {"Player " + player_name + " has been pardoned."}});
                                    });
                 browser.add_child({"unban", "pardon alias"}).add_child(pardon);
             }
@@ -77,13 +77,13 @@ namespace crafted_craft {
                         ban_list.add_child({"players", "list all banned players", "/banlist players"});
 
 
-                    players.set_callback("command.banlist.players", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                    players.set_callback("command.banlist.players", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         bool max_reached = false;
                         auto banned = banned_players.keys(100, max_reached);
                         if (banned.size() == 0) {
-                            api::players::calls::on_system_message({client, {"There are no banned players."}});
+                            api::players::calls::on_system_message({context.executor, {"There are no banned players."}});
                         } else if (banned.size() == 1) {
-                            api::players::calls::on_system_message({client, {"There is only one banned player:" + banned.back()}});
+                            api::players::calls::on_system_message({context.executor, {"There is only one banned player:" + banned.back()}});
                         } else {
                             std::string last_item = banned.back();
                             banned.pop_back();
@@ -96,13 +96,13 @@ namespace crafted_craft {
                                 message += "and " + last_item + '.';
                             } else
                                 message += last_item + ", ...";
-                            api::players::calls::on_system_message({client, {message}});
+                            api::players::calls::on_system_message({context.executor, {message}});
                         }
                     });
 
                     players
                         .add_child({"detailed", "list all banned players with reasons", "/banlist players detailed"})
-                        .set_callback("command.banlist.players.detailed", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                        .set_callback("command.banlist.players.detailed", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                             std::string message = "List of banned players:\n";
                             banned_players.for_each(
                                 100,
@@ -114,28 +114,28 @@ namespace crafted_craft {
                                 }
                             );
                             message.erase(message.size() - 1, 1);
-                            api::players::calls::on_system_message({client, {message}});
+                            api::players::calls::on_system_message({context.executor, {message}});
                         });
 
                     players
                         .add_child({"contains", "", ""})
                         .add_child({"<player>", "returns if the player in list", "/banlist players contains <player>"}, cmd_pred_string::quotable_phrase)
-                        .set_callback("command.banlist.players.contains", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                        .set_callback("command.banlist.players.contains", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                             auto& player_name = std::get<pred_string>(args[0]).value;
-                            api::players::calls::on_system_message({client, {"Player " + player_name + (banned_players.contains(player_name) ? " is in the list." : " is not in the list.")}});
+                            api::players::calls::on_system_message({context.executor, {"Player " + player_name + (banned_players.contains(player_name) ? " is in the list." : " is not in the list.")}});
                         });
                 }
                 {
                     auto ips =
                         ban_list.add_child({"ips", "list all banned ips", "/banlist ips"});
 
-                    ips.set_callback("command.banlist.ips", [this](const list_array<predicate>&, base_objects::client_data_holder& client) {
+                    ips.set_callback("command.banlist.ips", [this](const list_array<predicate>&, base_objects::command_context& context) {
                         bool max_reached = false;
                         auto banned = banned_ips.keys(100, max_reached);
                         if (banned.size() == 0) {
-                            api::players::calls::on_system_message({client, {"There are no banned ips."}});
+                            api::players::calls::on_system_message({context.executor, {"There are no banned ips."}});
                         } else if (banned.size() == 1) {
-                            api::players::calls::on_system_message({client, {"There is only one banned ip:" + banned.back()}});
+                            api::players::calls::on_system_message({context.executor, {"There is only one banned ip:" + banned.back()}});
                         } else {
                             std::string last_item = banned.back();
                             banned.pop_back();
@@ -148,12 +148,12 @@ namespace crafted_craft {
                                 message += "and " + last_item + '.';
                             } else
                                 message += last_item + ", ...";
-                            api::players::calls::on_system_message({client, {message}});
+                            api::players::calls::on_system_message({context.executor, {message}});
                         }
                     });
                     ips
                         .add_child({"detailed", "list all banned ips with reasons", "/banlist ips detailed"})
-                        .set_callback("command.banlist.ips.detailed", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                        .set_callback("command.banlist.ips.detailed", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                             std::string message = "List of banned ips:\n";
                             banned_ips.for_each(
                                 100,
@@ -164,59 +164,59 @@ namespace crafted_craft {
                                     message += "...\n";
                                 }
                             );
-                            api::players::calls::on_system_message({client, {message}});
+                            api::players::calls::on_system_message({context.executor, {message}});
                         });
 
                     ips
                         .add_child({"contains", "", ""})
                         .add_child({"<player>", "returns if IP in list", "/banlist ips contains <ip>"}, cmd_pred_string::quotable_phrase)
-                        .set_callback("command.banlist.ips.contains", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                        .set_callback("command.banlist.ips.contains", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                             auto& ip = std::get<pred_string>(args[0]).value;
-                            api::players::calls::on_system_message({client, {"IP " + ip + (banned_players.contains(ip) ? " is in the list." : " is not in the list.")}});
+                            api::players::calls::on_system_message({context.executor, {"IP " + ip + (banned_players.contains(ip) ? " is in the list." : " is not in the list.")}});
                         });
                 }
             }
             {
                 browser.add_child({"ban-ip"})
                     .add_child({"<ip>", "ban ip", "/ban-ip <ip>"}, cmd_pred_string::quotable_phrase)
-                    .set_callback("command.ban-ip", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                    .set_callback("command.ban-ip", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto& ip = std::get<pred_string>(args[0]).value;
-                        api::ban::on_ban_ip({ip, client->name, ""});
+                        api::ban::on_ban_ip({ip, context.executor->name, ""});
 
                         if (banned_ips.contains(ip)) {
-                            api::players::calls::on_system_message({client, {"IP " + ip + " has been already banned."}});
+                            api::players::calls::on_system_message({context.executor, {"IP " + ip + " has been already banned."}});
                             return;
                         }
                         banned_ips.add(ip, {});
-                        api::players::calls::on_system_message({client, {"IP " + ip + " has been banned."}});
+                        api::players::calls::on_system_message({context.executor, {"IP " + ip + " has been banned."}});
                     })
                     .add_child({"[reason]", "ban ip with reason", "/ban-ip <ip> [reason]"}, cmd_pred_string::greedy_phrase)
-                    .set_callback("command.ban-ip:reason", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                    .set_callback("command.ban-ip:reason", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto& ip = std::get<pred_string>(args[0]).value;
                         auto& reason = std::get<pred_string>(args[1]).value;
-                        api::ban::on_ban_ip({ip, client->name, reason});
+                        api::ban::on_ban_ip({ip, context.executor->name, reason});
                         if (banned_ips.contains(ip)) {
-                            api::players::calls::on_system_message({client, {"IP " + ip + " has been already banned."}});
+                            api::players::calls::on_system_message({context.executor, {"IP " + ip + " has been already banned."}});
                             return;
                         }
                         banned_ips.add(ip, reason);
-                        api::players::calls::on_system_message({client, {"IP " + ip + " has been banned."}});
+                        api::players::calls::on_system_message({context.executor, {"IP " + ip + " has been banned."}});
                     });
             }
             {
                 auto& pardon_ip = browser.add_child({"pardon-ip"})
                                       .add_child({"<ip>", "pardon ip", "/pardon-ip <ip>"}, cmd_pred_string::quotable_phrase)
-                                      .set_callback("command.pardon-ip", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                                      .set_callback("command.pardon-ip", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                                           auto& ip = std::get<pred_string>(args[0]).value;
-                                          api::ban::on_pardon_ip({ip, client->name, ""});
+                                          api::ban::on_pardon_ip({ip, context.executor->name, ""});
 
                                           if (!banned_ips.contains(ip)) {
-                                              api::players::calls::on_system_message({client, {"IP " + ip + " has not been banned."}});
+                                              api::players::calls::on_system_message({context.executor, {"IP " + ip + " has not been banned."}});
                                               return;
                                           }
 
                                           banned_ips.remove(ip);
-                                          api::players::calls::on_system_message({client, {"IP " + ip + " has been pardoned."}});
+                                          api::players::calls::on_system_message({context.executor, {"IP " + ip + " has been pardoned."}});
                                       });
                 browser.add_child({"unban-ip", "pardon-ip alias"}).add_child(pardon_ip);
             }

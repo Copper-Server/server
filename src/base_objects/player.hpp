@@ -36,6 +36,12 @@ namespace crafted_craft {
                 float pitch = 0;
             } position;
 
+            struct Motion {
+                double x = 0;
+                double y = 0;
+                double z = 0;
+            } motion;
+
             struct Inventory {
                 slot crafting_output;
                 slot crafting[4];

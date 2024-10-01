@@ -146,9 +146,9 @@ namespace crafted_craft {
                     return players;
                 }
 
-                void apply_selector(base_objects::client_data_holder& caller, const std::string& selector, const std::function<void(base_objects::SharedClientData&)>& callback) {
+                void apply_selector(base_objects::client_data_holder& caller, const std::string& selector, const std::function<void(base_objects::SharedClientData&)>& callback, const std::function<void()>& not_found) {
                     std::unique_lock lock(mutex);
-                                }
+                }
 
                 void iterate_online(const std::function<bool(base_objects::SharedClientData&)>& callback) {
                     iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state::play, callback);

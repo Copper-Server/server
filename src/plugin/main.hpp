@@ -319,6 +319,7 @@ namespace crafted_craft {
             );
             for (auto& [name, plugin] : plugins) {
                 plugin->OnUnload(plugin);
+                plugin->clean_up_registered_events();
             }
         }
 
@@ -331,6 +332,7 @@ namespace crafted_craft {
             );
             for (auto& [name, plugin] : plugins) {
                 plugin->OnFaultUnload(plugin);
+                plugin->clean_up_registered_events();
             }
         }
     };

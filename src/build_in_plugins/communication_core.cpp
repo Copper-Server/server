@@ -175,40 +175,40 @@ namespace crafted_craft {
         }
 
         void CommunicationCorePlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
-            using predicate = base_objects::predicate;
-            using pred_string = base_objects::predicates::string;
-            using cmd_pred_string = base_objects::predicates::command::string;
-            using cmd_pred_entity = base_objects::predicates::command::entity;
+            using predicate = base_objects::parser;
+            using pred_string = base_objects::parsers::string;
+            using cmd_pred_string = base_objects::parsers::command::string;
+            using cmd_pred_entity = base_objects::parsers::command::entity;
             browser.add_child("broadcast")
                 .add_child({"<message>", "broadcast <message>", "Broadcast a message to all players"}, cmd_pred_string::greedy_phrase)
-                .set_callback("command.broadcast", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                .set_callback("command.broadcast", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                     api::players::calls::on_system_message_broadcast(Chat::parseToChat(std::get<pred_string>(args[0]).value));
                 });
             browser.add_child("msg")
                 .add_child("<target>", cmd_pred_string::quotable_phrase)
                 .add_child({"<message>", "msg <target> <message>", "Send private message to specified player"}, cmd_pred_string::greedy_phrase)
-                .set_callback("command.msg", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                .set_callback("command.msg", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                     auto target = Server::instance().online_players.get_player(std::get<pred_string>(args[0]).value);
                     if (!target) {
-                        api::players::calls::on_system_message({client, "Player not found"});
+                        api::players::calls::on_system_message({context.executor, "Player not found"});
                         return;
                     }
                     Chat message = Chat::parseToChat(std::get<pred_string>(args[1]).value);
-                    api::players::calls::on_system_message({client, {"To " + target->name + ": ", message}});
-                    api::players::calls::on_system_message({target, {"From " + client->name + ": ", message}});
+                    api::players::calls::on_system_message({context.executor, {"To " + target->name + ": ", message}});
+                    api::players::calls::on_system_message({target, {"From " + context.executor->name + ": ", message}});
                 });
             browser.add_child("chat")
                 .add_child({"<message>", "chat <message>", "Send message to chat"}, cmd_pred_string::greedy_phrase)
-                .set_callback("command.chat", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
-                    api::players::calls::on_system_message_broadcast({"[" + client->name + "] ", Chat::parseToChat(std::get<pred_string>(args[0]).value)});
+                .set_callback("command.chat", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                    api::players::calls::on_system_message_broadcast({"[" + context.executor->name + "] ", Chat::parseToChat(std::get<pred_string>(args[0]).value)});
                 });
             browser.add_child("whoami")
-                .set_callback("command.whoami", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
-                    api::players::calls::on_system_message({client, "You are " + client->name});
+                .set_callback("command.whoami", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                    api::players::calls::on_system_message({context.executor, "You are " + context.executor->name});
                 });
             browser.add_child("tellraw")
                 .add_child({"<message>", "tellraw <message>", "Broadcast raw message for everyone."}, cmd_pred_string::greedy_phrase)
-                .set_callback("command.tellraw", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                .set_callback("command.tellraw", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                     api::players::calls::on_system_message_broadcast(Chat::fromStr(std::get<pred_string>(args[0]).value));
                 });
             {
@@ -216,9 +216,9 @@ namespace crafted_craft {
                                  .add_child("title")
                                  .add_child("<target>", cmd_pred_entity{.only_player_entity = true});
                 title.add_child({"clear", "title <target> clear", "Clear title"})
-                    .set_callback("command.title.clear", [this](const list_array<predicate>& args, base_objects::client_data_holder& client) {
+                    .set_callback("command.title.clear", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         //TODO
-                        //server.online_players.iterate_online([&client](SharedClientData& client) {
+                        //server.online_players.iterate_online([&context](SharedClientData& context) {
                         //    return false;
                         //});
                     });

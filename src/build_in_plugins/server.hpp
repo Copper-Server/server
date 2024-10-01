@@ -11,6 +11,7 @@ namespace crafted_craft {
     namespace build_in_plugins {
         class ServerPlugin : public PluginAutoRegister<"server", ServerPlugin> {
             storage::players_data players_data;
+            double tps = 0;
 
         public:
             base_objects::command_manager manager;

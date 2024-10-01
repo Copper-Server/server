@@ -4897,7 +4897,7 @@ namespace crafted_craft {
                             }
                         }
 
-                        std::unordered_map<base_objects::block_id_t, std::unordered_map<std::string, std::string>> associated_states;
+                        decltype(base_objects::static_block_data::assigned_states) associated_states;
                         std::optional<base_objects::block_id_t> default_associated_state;
                         for (auto&& state : decl.at("states").as_array()) {
                             auto&& state_ = state.as_object();
@@ -4913,7 +4913,7 @@ namespace crafted_craft {
                                 if (state_.at("default").as_bool())
                                     default_associated_state = id;
                             }
-                            associated_states[id] = std::move(state_properties);
+                            associated_states.insert({id, std::move(state_properties)});
                         }
 
                         auto data = std::make_shared<base_objects::static_block_data>();
@@ -4930,7 +4930,7 @@ namespace crafted_craft {
 
 
                         data->name = name;
-                        data->default_state = default_associated_state.value_or(associated_states.begin()->first);
+                        data->default_state = default_associated_state.value_or(associated_states.left.begin()->first);
                         data->states = std::move(properties_def);
                         data->assigned_states = std::move(associated_states);
                         data->defintion = util::conversions::json::from_json(decl.at("definition"));

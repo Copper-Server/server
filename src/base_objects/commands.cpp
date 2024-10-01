@@ -6,6 +6,18 @@
 
 namespace crafted_craft {
     namespace base_objects {
+        void command_context::apply_executor_data() {
+            other_data["x"] = executor->player_data.position.x;
+            other_data["y"] = executor->player_data.position.y;
+            other_data["z"] = executor->player_data.position.z;
+            other_data["yaw"] = executor->player_data.position.yaw;
+            other_data["pitch"] = executor->player_data.position.pitch;
+
+            other_data["motion_x"] = executor->player_data.motion.x;
+            other_data["motion_y"] = executor->player_data.motion.y;
+            other_data["motion_y"] = executor->player_data.motion.y;
+        }
+
         void next_token(std::string& part, std::string& path) {
             auto split = path.find(' ');
             if (split == std::string::npos)
@@ -16,9 +28,10 @@ namespace crafted_craft {
             }
         }
 
+
         namespace pred {
-            std::optional<predicates::angle> parse(command_manager& manager, predicates::command::angle& cfg, std::string& part, std::string& path) {
-                predicates::angle res;
+            std::optional<parsers::angle> parse(command_manager& manager, parsers::command::angle& cfg, std::string& part, std::string& path) {
+                parsers::angle res;
                 if (part.starts_with('~')) {
                     res.relative = true;
                     res.yaw = part.empty() ? 0 : std::stof(part.substr(1));
@@ -30,54 +43,98 @@ namespace crafted_craft {
                 return res;
             }
 
-            std::optional<predicates::block> parse(command_manager& manager, predicates::command::block& cfg, std::string& part, std::string& path) {
-                return {}; //TODO
+            std::optional<parsers::block> parse(command_manager& manager, parsers::command::block& cfg, std::string& part, std::string& path){
+                parsers::block res;
+                auto id = part;
+                next_token(part, path);
+                try{
+                    auto& block_data = base_objects::block::get_block(id);
+                    if (part.starts_with('[')){
+                        //TODO
+                    }
+                    if(part.starts_with('{')){
+                        //TODO
+                    }
+                    path = part + ' ' + path;
+                }catch(const std::out_of_range&){
+                    throw std::runtime_error("The block " + part + "not found");
+                }
+                return res;
             }
 
-            std::optional<predicates::color> parse(command_manager& manager, predicates::command::color& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::color> parse(command_manager& manager, parsers::command::color& cfg, std::string& part, std::string& path) {
                 if (part == "white")
-                    return predicates::color::white;
+                    return parsers::color::white;
                 else if (part == "orange")
-                    return predicates::color::orange;
+                    return parsers::color::orange;
                 else if (part == "magenta")
-                    return predicates::color::magenta;
+                    return parsers::color::magenta;
                 else if (part == "light_blue")
-                    return predicates::color::light_blue;
+                    return parsers::color::light_blue;
                 else if (part == "yellow")
-                    return predicates::color::yellow;
+                    return parsers::color::yellow;
                 else if (part == "lime")
-                    return predicates::color::lime;
+                    return parsers::color::lime;
                 else if (part == "pink")
-                    return predicates::color::pink;
+                    return parsers::color::pink;
                 else if (part == "gray")
-                    return predicates::color::gray;
+                    return parsers::color::gray;
                 else if (part == "light_gray")
-                    return predicates::color::light_gray;
+                    return parsers::color::light_gray;
                 else if (part == "cyan")
-                    return predicates::color::cyan;
+                    return parsers::color::cyan;
                 else if (part == "purple")
-                    return predicates::color::purple;
+                    return parsers::color::purple;
                 else if (part == "blue")
-                    return predicates::color::blue;
+                    return parsers::color::blue;
                 else if (part == "brown")
-                    return predicates::color::brown;
+                    return parsers::color::brown;
                 else if (part == "green")
-                    return predicates::color::green;
+                    return parsers::color::green;
                 else if (part == "red")
-                    return predicates::color::red;
+                    return parsers::color::red;
                 else if (part == "black")
-                    return predicates::color::black;
+                    return parsers::color::black;
                 else
                     return std::nullopt;
             }
 
-            std::optional<predicates::column_pos> parse(command_manager& manager, predicates::command::column_pos& cfg, std::string& part, std::string& path) {
-                predicates::column_pos res;
+            std::optional<parsers::block_pos> parse(command_manager& manager, parsers::command::block_pos& cfg, std::string& part, std::string& path) {
+                parsers::block_pos res;
                 if (part.starts_with('~')) {
                     res.x_relative = true;
                     res.x = part.empty() ? 0 : std::stof(part.substr(1));
                 } else if (part.size())
-                    res.x = std::stof(part.substr(1));
+                    res.x = std::stof(part);
+                else
+                    return std::nullopt;
+
+                next_token(part, path);
+                if (part.starts_with('~')) {
+                    res.y_relative = true;
+                    res.y = part.empty() ? 0 : std::stof(part.substr(1));
+                } else if (part.size())
+                    res.y = std::stof(part);
+                else
+                    return std::nullopt;
+                next_token(part, path);
+                if (part.starts_with('~')) {
+                    res.z_relative = true;
+                    res.z = part.empty() ? 0 : std::stof(part.substr(1));
+                } else if (part.size())
+                    res.z = std::stof(part);
+                else
+                    return std::nullopt;
+                return res;
+            }
+
+            std::optional<parsers::column_pos> parse(command_manager& manager, parsers::command::column_pos& cfg, std::string& part, std::string& path) {
+                parsers::column_pos res;
+                if (part.starts_with('~')) {
+                    res.x_relative = true;
+                    res.x = part.empty() ? 0 : std::stof(part.substr(1));
+                } else if (part.size())
+                    res.x = std::stof(part);
                 else
                     return std::nullopt;
 
@@ -86,38 +143,38 @@ namespace crafted_craft {
                     res.z_relative = true;
                     res.z = part.empty() ? 0 : std::stof(part.substr(1));
                 } else if (part.size())
-                    res.z = std::stof(part.substr(1));
+                    res.z = std::stof(part);
                 else
                     return std::nullopt;
                 return res;
             }
 
-            std::optional<predicates::component> parse(command_manager& manager, predicates::command::component& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::component> parse(command_manager& manager, parsers::command::component& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::dimension> parse(command_manager& manager, predicates::command::dimension& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::dimension> parse(command_manager& manager, parsers::command::dimension& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::entity> parse(command_manager& manager, predicates::command::entity& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::entity> parse(command_manager& manager, parsers::command::entity& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::entity_anchor> parse(command_manager& manager, predicates::command::entity_anchor& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::entity_anchor> parse(command_manager& manager, parsers::command::entity_anchor& cfg, std::string& part, std::string& path) {
                 if (part == "eyes")
-                    return predicates::entity_anchor::eyes;
+                    return parsers::entity_anchor::eyes;
                 else if (part == "feet")
-                    return predicates::entity_anchor::feet;
+                    return parsers::entity_anchor::feet;
                 else
                     return std::nullopt;
             }
 
-            std::optional<predicates::float_range> parse(command_manager& manager, predicates::command::float_range& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::float_range> parse(command_manager& manager, parsers::command::float_range& cfg, std::string& part, std::string& path) {
                 size_t pos = part.find("..");
                 if (pos == std::string::npos)
                     return std::nullopt;
-                predicates::float_range res;
+                parsers::float_range res;
 
                 std::string begin = part.substr(0, pos);
                 std::string end = part.substr(pos + 1);
@@ -132,45 +189,45 @@ namespace crafted_craft {
                 return res;
             }
 
-            std::optional<predicates::function> parse(command_manager& manager, predicates::command::function& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::function> parse(command_manager& manager, parsers::command::function& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::game_profile> parse(command_manager& manager, predicates::command::game_profile& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::game_profile> parse(command_manager& manager, parsers::command::game_profile& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::gamemode> parse(command_manager& manager, predicates::command::gamemode& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::gamemode> parse(command_manager& manager, parsers::command::gamemode& cfg, std::string& part, std::string& path) {
                 if (part == "survival")
-                    return predicates::gamemode::survival;
+                    return parsers::gamemode::survival;
                 else if (part == "creative")
-                    return predicates::gamemode::creative;
+                    return parsers::gamemode::creative;
                 else if (part == "adventure")
-                    return predicates::gamemode::adventure;
+                    return parsers::gamemode::adventure;
                 else if (part == "spectator")
-                    return predicates::gamemode::spectator;
+                    return parsers::gamemode::spectator;
                 else
                     return std::nullopt;
             }
 
-            std::optional<predicates::heightmap> parse(command_manager& manager, predicates::command::heightmap& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::heightmap> parse(command_manager& manager, parsers::command::heightmap& cfg, std::string& part, std::string& path) {
                 if (part == "motion_blocking")
-                    return predicates::heightmap::motion_blocking;
+                    return parsers::heightmap::motion_blocking;
                 else if (part == "motion_blocking_no_leaves")
-                    return predicates::heightmap::motion_blocking_no_leaves;
+                    return parsers::heightmap::motion_blocking_no_leaves;
                 else if (part == "ocean_floor")
-                    return predicates::heightmap::ocean_floor;
+                    return parsers::heightmap::ocean_floor;
                 else if (part == "world_surface")
-                    return predicates::heightmap::world_surface;
+                    return parsers::heightmap::world_surface;
                 else
                     return std::nullopt;
             }
 
-            std::optional<predicates::int_range> parse(command_manager& manager, predicates::command::int_range& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::int_range> parse(command_manager& manager, parsers::command::int_range& cfg, std::string& part, std::string& path) {
                 size_t pos = part.find("..");
                 if (pos == std::string::npos)
                     return std::nullopt;
-                predicates::int_range res;
+                parsers::int_range res;
 
                 std::string begin = part.substr(0, pos);
                 std::string end = part.substr(pos + 1);
@@ -185,110 +242,110 @@ namespace crafted_craft {
                 return res;
             }
 
-            std::optional<predicates::item> parse(command_manager& manager, predicates::command::item& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::item> parse(command_manager& manager, parsers::command::item& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::item_slot> parse(command_manager& manager, predicates::command::item_slot& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::item_slot> parse(command_manager& manager, parsers::command::item_slot& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::item_stack> parse(command_manager& manager, predicates::command::item_stack& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::item_stack> parse(command_manager& manager, parsers::command::item_stack& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::message> parse(command_manager& manager, predicates::command::message& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::message> parse(command_manager& manager, parsers::command::message& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::nbt> parse(command_manager& manager, predicates::command::nbt& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::nbt> parse(command_manager& manager, parsers::command::nbt& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::nbt_compound_tag> parse(command_manager& manager, predicates::command::nbt_compound_tag& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::nbt_compound_tag> parse(command_manager& manager, parsers::command::nbt_compound_tag& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::nbt_path> parse(command_manager& manager, predicates::command::nbt_path& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::nbt_path> parse(command_manager& manager, parsers::command::nbt_path& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::objective> parse(command_manager& manager, predicates::command::objective& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::objective> parse(command_manager& manager, parsers::command::objective& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::objective_criteria> parse(command_manager& manager, predicates::command::objective_criteria& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::objective_criteria> parse(command_manager& manager, parsers::command::objective_criteria& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::operation> parse(command_manager& manager, predicates::command::operation& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::operation> parse(command_manager& manager, parsers::command::operation& cfg, std::string& part, std::string& path) {
                 if (part == "=")
-                    return predicates::operation::assignment;
+                    return parsers::operation::assignment;
                 else if (part == "+=")
-                    return predicates::operation::addition;
+                    return parsers::operation::addition;
                 else if (part == "-=")
-                    return predicates::operation::subtraction;
+                    return parsers::operation::subtraction;
                 else if (part == "*=")
-                    return predicates::operation::multiplication;
+                    return parsers::operation::multiplication;
                 else if (part == "/=")
-                    return predicates::operation::floor_division;
+                    return parsers::operation::floor_division;
                 else if (part == "%=")
-                    return predicates::operation::modulus;
+                    return parsers::operation::modulus;
                 else if (part == "><")
-                    return predicates::operation::swapping;
+                    return parsers::operation::swapping;
                 else if (part == "<")
-                    return predicates::operation::minimum;
+                    return parsers::operation::minimum;
                 else if (part == ">")
-                    return predicates::operation::maximum;
+                    return parsers::operation::maximum;
                 else
                     return std::nullopt;
             }
 
-            std::optional<predicates::particle> parse(command_manager& manager, predicates::command::particle& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::particle> parse(command_manager& manager, parsers::command::particle& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::resource> parse(command_manager& manager, predicates::command::resource& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::resource> parse(command_manager& manager, parsers::command::resource& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::resource_key> parse(command_manager& manager, predicates::command::resource_key& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::resource_key> parse(command_manager& manager, parsers::command::resource_key& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::resource_location> parse(command_manager& manager, predicates::command::resource_location& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::resource_location> parse(command_manager& manager, parsers::command::resource_location& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::resource_or_tag> parse(command_manager& manager, predicates::command::resource_or_tag& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::resource_or_tag> parse(command_manager& manager, parsers::command::resource_or_tag& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::resource_or_tag_key> parse(command_manager& manager, predicates::command::resource_or_tag_key& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::resource_or_tag_key> parse(command_manager& manager, parsers::command::resource_or_tag_key& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::rotation> parse(command_manager& manager, predicates::command::rotation& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::rotation> parse(command_manager& manager, parsers::command::rotation& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::score_holder> parse(command_manager& manager, predicates::command::score_holder& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::score_holder> parse(command_manager& manager, parsers::command::score_holder& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::scoreboard_slot> parse(command_manager& manager, predicates::command::scoreboard_slot& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::scoreboard_slot> parse(command_manager& manager, parsers::command::scoreboard_slot& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::state> parse(command_manager& manager, predicates::command::state& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::state> parse(command_manager& manager, parsers::command::state& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::string> parse(command_manager& manager, predicates::command::string& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::string> parse(command_manager& manager, parsers::command::string& cfg, std::string& part, std::string& path) {
                 switch (cfg) {
-                case predicates::command::string::single_word:
-                    return predicates::string(part);
-                case predicates::command::string::quotable_phrase:
+                case parsers::command::string::single_word:
+                    return parsers::string(part);
+                case parsers::command::string::quotable_phrase:
                     if (part[0] == '"') {
                         std::string phrase = part + ' ' + path;
                         auto pos = util::conversions::string::direct_find(phrase, '"');
@@ -298,34 +355,34 @@ namespace crafted_craft {
                         bool has_space = phrase.find(' ', pos + 1) != std::string::npos;
                         path = phrase.substr(pos + 1 + has_space);
                     }
-                    return predicates::string(part);
+                    return parsers::string(part);
 
-                case predicates::command::string::greedy_phrase: {
+                case parsers::command::string::greedy_phrase: {
                     auto phrase = part + ' ' + path;
                     path.clear();
-                    return predicates::string(phrase);
+                    return parsers::string(phrase);
                 }
                 default:
                     return std::nullopt;
                 }
             }
 
-            std::optional<predicates::swizzle> parse(command_manager& manager, predicates::command::swizzle& cfg, std::string& part, std::string& path) {
-                predicates::swizzle result;
-                predicates::swizzle::coord current = predicates::swizzle::coord::undefined;
+            std::optional<parsers::swizzle> parse(command_manager& manager, parsers::command::swizzle& cfg, std::string& part, std::string& path) {
+                parsers::swizzle result;
+                parsers::swizzle::coord current = parsers::swizzle::coord::undefined;
                 bool v0_set = false;
                 bool v1_set = false;
                 bool v2_set = false;
                 for (char ch : part) {
                     switch (ch) {
                     case 'x':
-                        current = predicates::swizzle::coord::x;
+                        current = parsers::swizzle::coord::x;
                         break;
                     case 'y':
-                        current = predicates::swizzle::coord::y;
+                        current = parsers::swizzle::coord::y;
                         break;
                     case 'z':
-                        current = predicates::swizzle::coord::z;
+                        current = parsers::swizzle::coord::z;
                         break;
                     default:
                         return std::nullopt;
@@ -350,35 +407,35 @@ namespace crafted_craft {
                 return result;
             }
 
-            std::optional<predicates::team> parse(command_manager& manager, predicates::command::team& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::team> parse(command_manager& manager, parsers::command::team& cfg, std::string& part, std::string& path) {
                 return {}; //TODO
             }
 
-            std::optional<predicates::template_mirror> parse(command_manager& manager, predicates::command::template_mirror& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::template_mirror> parse(command_manager& manager, parsers::command::template_mirror& cfg, std::string& part, std::string& path) {
                 if (part == "none")
-                    return predicates::template_mirror::none;
+                    return parsers::template_mirror::none;
                 else if (part == "front_back")
-                    return predicates::template_mirror::front_back;
+                    return parsers::template_mirror::front_back;
                 else if (part == "left_right")
-                    return predicates::template_mirror::left_right;
+                    return parsers::template_mirror::left_right;
                 else
                     return std::nullopt;
             }
 
-            std::optional<predicates::template_rotation> parse(command_manager& manager, predicates::command::template_rotation& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::template_rotation> parse(command_manager& manager, parsers::command::template_rotation& cfg, std::string& part, std::string& path) {
                 if (part == "none")
-                    return predicates::template_rotation::none;
+                    return parsers::template_rotation::none;
                 else if (part == "clockwise_90")
-                    return predicates::template_rotation::clockwise_90;
+                    return parsers::template_rotation::clockwise_90;
                 else if (part == "counterclockwise_90")
-                    return predicates::template_rotation::counterclockwise_90;
+                    return parsers::template_rotation::counterclockwise_90;
                 else if (part == "180")
-                    return predicates::template_rotation::_180;
+                    return parsers::template_rotation::_180;
                 else
                     return std::nullopt;
             }
 
-            std::optional<predicates::time> parse(command_manager& manager, predicates::command::time& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::time> parse(command_manager& manager, parsers::command::time& cfg, std::string& part, std::string& path) {
                 int64_t value = 0;
                 try {
                     if (part.ends_with('d')) {
@@ -396,20 +453,20 @@ namespace crafted_craft {
                 }
                 if (value < cfg.min)
                     return std::nullopt;
-                return predicates::time{value};
+                return parsers::time{value};
             }
 
-            std::optional<predicates::uuid> parse(command_manager& manager, predicates::command::uuid& cfg, std::string& part, std::string& path) {
-                return predicates::uuid{util::conversions::uuid::from(part)};
+            std::optional<parsers::uuid> parse(command_manager& manager, parsers::command::uuid& cfg, std::string& part, std::string& path) {
+                return parsers::uuid{util::conversions::uuid::from(part)};
             }
 
-            std::optional<predicates::vec2> parse(command_manager& manager, predicates::command::vec2& cfg, std::string& part, std::string& path) {
-                predicates::vec2 res;
+            std::optional<parsers::vec2> parse(command_manager& manager, parsers::command::vec2& cfg, std::string& part, std::string& path) {
+                parsers::vec2 res;
                 if (part.starts_with('~')) {
                     res.relative[0] = true;
                     res.v[0] = part.empty() ? 0 : std::stof(part.substr(1));
                 } else if (part.size())
-                    res.v[0] = std::stof(part.substr(1));
+                    res.v[0] = std::stof(part);
                 else
                     return std::nullopt;
 
@@ -418,19 +475,19 @@ namespace crafted_craft {
                     res.relative[1] = true;
                     res.v[1] = part.empty() ? 0 : std::stof(part.substr(1));
                 } else if (part.size())
-                    res.v[1] = std::stof(part.substr(1));
+                    res.v[1] = std::stof(part);
                 else
                     return std::nullopt;
                 return res;
             }
 
-            std::optional<predicates::vec3> parse(command_manager& manager, predicates::command::vec3& cfg, std::string& part, std::string& path) {
-                predicates::vec3 res;
+            std::optional<parsers::vec3> parse(command_manager& manager, parsers::command::vec3& cfg, std::string& part, std::string& path) {
+                parsers::vec3 res;
                 if (part.starts_with('~')) {
                     res.relative[0] = true;
                     res.v[0] = part.empty() ? 0 : std::stof(part.substr(1));
                 } else if (part.size())
-                    res.v[0] = std::stof(part.substr(1));
+                    res.v[0] = std::stof(part);
                 else
                     return std::nullopt;
 
@@ -439,7 +496,7 @@ namespace crafted_craft {
                     res.relative[1] = true;
                     res.v[1] = part.empty() ? 0 : std::stof(part.substr(1));
                 } else if (part.size())
-                    res.v[1] = std::stof(part.substr(1));
+                    res.v[1] = std::stof(part);
                 else
                     return std::nullopt;
                 next_token(part, path);
@@ -447,21 +504,21 @@ namespace crafted_craft {
                     res.relative[2] = true;
                     res.v[2] = part.empty() ? 0 : std::stof(part.substr(1));
                 } else if (part.size())
-                    res.v[2] = std::stof(part.substr(1));
+                    res.v[2] = std::stof(part);
                 else
                     return std::nullopt;
 
                 return res;
             }
 
-            std::optional<predicates::_bool> parse(command_manager& manager, predicates::command::_bool& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::_bool> parse(command_manager& manager, parsers::command::_bool& cfg, std::string& part, std::string& path) {
                 if (part == "true" || part == "false")
-                    return predicates::_bool{part == "true"};
+                    return parsers::_bool{part == "true"};
                 else
                     return std::nullopt;
             }
 
-            std::optional<predicates::_double> parse(command_manager& manager, predicates::command::_double& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::_double> parse(command_manager& manager, parsers::command::_double& cfg, std::string& part, std::string& path) {
                 try {
                     double value = std::stod(part);
                     if (cfg.min)
@@ -470,7 +527,7 @@ namespace crafted_craft {
                     if (cfg.max)
                         if (value > *cfg.max)
                             return std::nullopt;
-                    return predicates::_double{value};
+                    return parsers::_double{value};
                 }
 
                 catch (...) {
@@ -478,7 +535,7 @@ namespace crafted_craft {
                 }
             }
 
-            std::optional<predicates::_float> parse(command_manager& manager, predicates::command::_float& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::_float> parse(command_manager& manager, parsers::command::_float& cfg, std::string& part, std::string& path) {
                 try {
                     float value = std::stof(part);
                     if (cfg.min)
@@ -487,13 +544,13 @@ namespace crafted_craft {
                     if (cfg.max)
                         if (value > *cfg.max)
                             return std::nullopt;
-                    return predicates::_float{value};
+                    return parsers::_float{value};
                 } catch (...) {
                     return std::nullopt;
                 }
             }
 
-            std::optional<predicates::_integer> parse(command_manager& manager, predicates::command::_integer& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::_integer> parse(command_manager& manager, parsers::command::_integer& cfg, std::string& part, std::string& path) {
                 try {
                     int32_t value = std::stoi(part);
                     if (cfg.min)
@@ -502,13 +559,13 @@ namespace crafted_craft {
                     if (cfg.max)
                         if (value > *cfg.max)
                             return std::nullopt;
-                    return predicates::_integer{value};
+                    return parsers::_integer{value};
                 } catch (...) {
                     return std::nullopt;
                 }
             }
 
-            std::optional<predicates::_long> parse(command_manager& manager, predicates::command::_long& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::_long> parse(command_manager& manager, parsers::command::_long& cfg, std::string& part, std::string& path) {
                 try {
                     int32_t value = std::stoll(part);
                     if (cfg.min)
@@ -517,19 +574,20 @@ namespace crafted_craft {
                     if (cfg.max)
                         if (value > *cfg.max)
                             return std::nullopt;
-                    return predicates::_long{value};
+                    return parsers::_long{value};
                 } catch (...) {
                     return std::nullopt;
                 }
             }
 
-            std::optional<predicates::custom_virtual> parse(command_manager& manager, predicates::command::custom_virtual& cfg, std::string& part, std::string& path) {
+            std::optional<parsers::custom_virtual> parse(command_manager& manager, parsers::command::custom_virtual& cfg, std::string& part, std::string& path) {
                 return manager.get_parser(cfg.value->name()).parse(cfg, part, path);
             }
         }
 
         action_provider::action_provider(const char* tag)
             : action_tag(tag) {}
+
         action_provider::action_provider(const std::string& tag)
             : action_tag(tag) {}
 
@@ -569,7 +627,6 @@ namespace crafted_craft {
                 return get_child(command_nodes, name);
             }
         }
-
 
         int32_t get_index(list_array<command>& command_nodes, const std::string& path, int32_t current_ = 0) {
             if (current_ < 0)
@@ -663,12 +720,12 @@ namespace crafted_craft {
             return get_index(const_cast<list_array<command>&>(command_nodes), path, current_);
         }
 
-        std::optional<predicate> find_argument_no_except(command_manager& mngr, list_array<command>& command_nodes, command*& command, std::string& string, std::string& rest) {
+        std::optional<parser> find_argument_no_except(command_manager& mngr, list_array<command>& command_nodes, command*& command, std::string& string, std::string& rest) {
             for (auto child_id : command->childs) {
                 auto& child = command_nodes[child_id];
                 if (child.argument_predicate) {
                     auto res = std::visit(
-                        [&](auto& predicate_cfg) -> std::optional<predicate> {
+                        [&](auto& predicate_cfg) -> std::optional<parser> {
                             auto res = pred::parse(mngr, predicate_cfg, string, rest);
                             if (res) {
                                 command = &child;
@@ -685,7 +742,7 @@ namespace crafted_craft {
             return std::nullopt;
         }
 
-        predicate find_argument(command_manager& mngr, list_array<command>& command_nodes, command*& command, std::string& string, std::string& rest) {
+        parser find_argument(command_manager& mngr, list_array<command>& command_nodes, command*& command, std::string& string, std::string& rest) {
             auto res = find_argument_no_except(mngr, command_nodes, command, string, rest);
             if (res)
                 return std::move(*res);
@@ -761,16 +818,15 @@ namespace crafted_craft {
             custom_parsers.erase(name);
         }
 
-
-        void command_manager::execute_command(const std::string& command_string, client_data_holder& data) {
+        void command_manager::execute_command(const std::string& command_string, command_context& data) {
             execute_command_from(command_string, command_nodes[0], data);
         }
 
-        void command_manager::execute_command_from(const std::string& command_string, command& cmd, client_data_holder& data) {
+        void command_manager::execute_command_from(const std::string& command_string, command& cmd, command_context& data) {
             if (!belongs(&cmd))
                 return;
             std::string path = command_string;
-            list_array<predicate> args;
+            list_array<parser> args;
             command* current = &cmd;
 
 
@@ -807,12 +863,12 @@ namespace crafted_craft {
                 return (routine->redirect_routine)(command_nodes[routine->target_command], args, path, data);
             } else {
                 if (current->executable) {
-                    if (Server::instance().permissions_manager.has_rights(current->action_name, data))
+                    if (Server::instance().permissions_manager.has_rights(current->action_name, data.executor))
                         return (*current->executable)(args, data);
                     else
                         throw std::exception("Not enough permissions for this command.");
-                } else{
-                    if (current->childs.size() == 1){
+                } else {
+                    if (current->childs.size() == 1) {
                         auto& usage = command_nodes[current->childs[0]].usage;
                         if (!usage.empty())
                             throw std::invalid_argument("Incomplete command, usage: " + usage);
@@ -824,17 +880,17 @@ namespace crafted_craft {
             }
         }
 
-        bool has_accessible_callbacks_child(command* current, list_array<command>& command_nodes, client_data_holder& data) {
+        bool has_accessible_callbacks_child(command* current, list_array<command>& command_nodes, command_context& data) {
             return current->childs.contains_one([&](int32_t id) {
                 auto& command = command_nodes[id];
                 if (command.executable)
-                    return Server::instance().permissions_manager.has_rights(command.action_name, data);
+                    return Server::instance().permissions_manager.has_rights(command.action_name, data.executor);
                 else
                     return has_accessible_callbacks_child(&command, command_nodes, data);
             });
         }
 
-        list_array<std::string> extract_suggestions(command* current, std::unordered_map<std::string, named_suggestion_provider>& named_suggestion_providers, list_array<command>& command_nodes, const std::string& part, client_data_holder& data) {
+        list_array<std::string> extract_suggestions(command* current, std::unordered_map<std::string, named_suggestion_provider>& named_suggestion_providers, list_array<command>& command_nodes, const std::string& part, command_context& data) {
             list_array<std::string> suggestions;
             current->childs.for_each([&](int32_t id) {
                 auto& command = command_nodes[id];
@@ -842,7 +898,7 @@ namespace crafted_craft {
                     if (!has_accessible_callbacks_child(&command, command_nodes, data))
                         return;
                 if (command.executable)
-                    if (!Server::instance().permissions_manager.has_rights(command.action_name, data))
+                    if (!Server::instance().permissions_manager.has_rights(command.action_name, data.executor))
                         return;
 
                 if (command.name.starts_with(part)) {
@@ -869,10 +925,10 @@ namespace crafted_craft {
             return suggestions;
         }
 
-        list_array<std::string> command_manager::request_suggestions(const std::string& command_string, client_data_holder& data) {
+        list_array<std::string> command_manager::request_suggestions(const std::string& command_string, command_context& data) {
             bool ends_with_space = command_string.ends_with(' ');
             std::string path = command_string;
-            list_array<predicate> args;
+            list_array<parser> args;
             command* current = &command_nodes[0];
 
             while (path.size() > 0 || !current->redirect) {
@@ -922,17 +978,17 @@ namespace crafted_craft {
             return {};
         }
 
-        void build_parser(packets::command_node& node, const command_predicate& command) {
+        void build_parser(packets::command_node& node, const command_parser& command) {
             std::visit(
                 [&](auto& it) {
                     using T = std::decay_t<decltype(it)>;
-                    if constexpr (std::is_same_v<T, predicates::command::_bool>) {
+                    if constexpr (std::is_same_v<T, parsers::command::_bool>) {
                         node.parser_id = packets::command_node::parsers::brigadier_bool;
                     } else if constexpr (
-                        std::is_same_v<T, predicates::command::_double>
-                        || std::is_same_v<T, predicates::command::_float>
-                        || std::is_same_v<T, predicates::command::_integer>
-                        || std::is_same_v<T, predicates::command::_long>
+                        std::is_same_v<T, parsers::command::_double>
+                        || std::is_same_v<T, parsers::command::_float>
+                        || std::is_same_v<T, parsers::command::_integer>
+                        || std::is_same_v<T, parsers::command::_long>
                     ) {
                         node.parser_id = packets::command_node::parsers::brigadier_long;
                         packets::command_node::properties_t prop;
@@ -947,80 +1003,80 @@ namespace crafted_craft {
                         }
                         prop.flags = flags;
                         node.properties = prop;
-                    } else if constexpr (std::is_same_v<T, predicates::command::string>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::string>) {
                         node.parser_id = packets::command_node::parsers::brigadier_string;
                         node.properties = {.flags = (int8_t)it};
-                    } else if constexpr (std::is_same_v<T, predicates::command::angle>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::angle>) {
                         node.parser_id = packets::command_node::parsers::minecraft_angle;
-                    } else if constexpr (std::is_same_v<T, predicates::command::block>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::block>) {
                         node.parser_id = packets::command_node::parsers::minecraft_block_predicate;
-                    } else if constexpr (std::is_same_v<T, predicates::command::color>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::color>) {
                         node.parser_id = packets::command_node::parsers::minecraft_color;
-                    } else if constexpr (std::is_same_v<T, predicates::command::column_pos>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::column_pos>) {
                         node.parser_id = packets::command_node::parsers::minecraft_column_pos;
-                    } else if constexpr (std::is_same_v<T, predicates::command::component>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::component>) {
                         node.parser_id = packets::command_node::parsers::minecraft_component;
-                    } else if constexpr (std::is_same_v<T, predicates::command::dimension>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::dimension>) {
                         node.parser_id = packets::command_node::parsers::minecraft_dimension;
-                    } else if constexpr (std::is_same_v<T, predicates::command::entity>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::entity>) {
                         node.parser_id = packets::command_node::parsers::minecraft_entity;
                         node.properties = {.flags = (int(it.only_one_entity) | (int(it.only_player_entity) << 1))};
-                    } else if constexpr (std::is_same_v<T, predicates::command::entity_anchor>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::entity_anchor>) {
                         node.parser_id = packets::command_node::parsers::minecraft_entity_anchor;
-                    } else if constexpr (std::is_same_v<T, predicates::command::heightmap>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::heightmap>) {
                         node.parser_id = packets::command_node::parsers::minecraft_heightmap;
-                    } else if constexpr (std::is_same_v<T, predicates::command::item>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::item>) {
                         node.parser_id = packets::command_node::parsers::minecraft_item_predicate;
-                    } else if constexpr (std::is_same_v<T, predicates::command::item_slot>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::item_slot>) {
                         node.parser_id = packets::command_node::parsers::minecraft_item_slot;
-                    } else if constexpr (std::is_same_v<T, predicates::command::item_stack>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::item_stack>) {
                         node.parser_id = packets::command_node::parsers::minecraft_item_stack;
-                    } else if constexpr (std::is_same_v<T, predicates::command::message>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::message>) {
                         node.parser_id = packets::command_node::parsers::minecraft_message;
-                    } else if constexpr (std::is_same_v<T, predicates::command::nbt_compound_tag>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::nbt_compound_tag>) {
                         node.parser_id = packets::command_node::parsers::minecraft_nbt_tag;
-                    } else if constexpr (std::is_same_v<T, predicates::command::nbt_path>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::nbt_path>) {
                         node.parser_id = packets::command_node::parsers::minecraft_nbt_path;
-                    } else if constexpr (std::is_same_v<T, predicates::command::nbt>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::nbt>) {
                         node.parser_id = packets::command_node::parsers::minecraft_nbt;
-                    } else if constexpr (std::is_same_v<T, predicates::command::objective>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::objective>) {
                         node.parser_id = packets::command_node::parsers::minecraft_objective;
-                    } else if constexpr (std::is_same_v<T, predicates::command::objective_criteria>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::objective_criteria>) {
                         node.parser_id = packets::command_node::parsers::minecraft_objective_criteria;
-                    } else if constexpr (std::is_same_v<T, predicates::command::operation>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::operation>) {
                         node.parser_id = packets::command_node::parsers::minecraft_operation;
-                    } else if constexpr (std::is_same_v<T, predicates::command::particle>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::particle>) {
                         node.parser_id = packets::command_node::parsers::minecraft_particle;
-                    } else if constexpr (std::is_same_v<T, predicates::command::resource>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::resource>) {
                         node.parser_id = packets::command_node::parsers::minecraft_resource;
                         node.properties = {.registry = it.suggestion_registry};
-                    } else if constexpr (std::is_same_v<T, predicates::command::resource_key>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::resource_key>) {
                         node.parser_id = packets::command_node::parsers::minecraft_resource_key;
                         node.properties = {.registry = it.suggestion_registry};
-                    } else if constexpr (std::is_same_v<T, predicates::command::resource_location>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::resource_location>) {
                         node.parser_id = packets::command_node::parsers::minecraft_resource_location;
-                    } else if constexpr (std::is_same_v<T, predicates::command::resource_or_tag>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::resource_or_tag>) {
                         node.parser_id = packets::command_node::parsers::minecraft_resource_or_tag;
                         node.properties = {.registry = it.suggestion_registry};
-                    } else if constexpr (std::is_same_v<T, predicates::command::rotation>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::rotation>) {
                         node.parser_id = packets::command_node::parsers::minecraft_rotation;
-                    } else if constexpr (std::is_same_v<T, predicates::command::score_holder>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::score_holder>) {
                         node.parser_id = packets::command_node::parsers::minecraft_score_holder;
-                    } else if constexpr (std::is_same_v<T, predicates::command::team>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::team>) {
                         node.parser_id = packets::command_node::parsers::minecraft_team;
-                    } else if constexpr (std::is_same_v<T, predicates::command::template_mirror>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::template_mirror>) {
                         node.parser_id = packets::command_node::parsers::minecraft_template_mirror;
-                    } else if constexpr (std::is_same_v<T, predicates::command::time>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::time>) {
                         node.parser_id = packets::command_node::parsers::minecraft_time;
-                    } else if constexpr (std::is_same_v<T, predicates::command::uuid>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::uuid>) {
                         node.parser_id = packets::command_node::parsers::minecraft_uuid;
-                    } else if constexpr (std::is_same_v<T, predicates::command::vec2>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::vec2>) {
                         node.parser_id = packets::command_node::parsers::minecraft_vec2;
-                    } else if constexpr (std::is_same_v<T, predicates::command::vec3>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::vec3>) {
                         node.parser_id = packets::command_node::parsers::minecraft_vec3;
-                    } else if constexpr (std::is_same_v<T, predicates::command::custom_virtual>) {
+                    } else if constexpr (std::is_same_v<T, parsers::command::custom_virtual>) {
                         node.parser_id = packets::command_node::parsers::brigadier_string;
-                        node.properties = {.flags = (int8_t)predicates::command::string::single_word};
+                        node.properties = {.flags = (int8_t)parsers::command::string::single_word};
                     } else {
                         assert((false && __LINE__ && __FILE__ " Failed to convert command predicate to parser"));
                     }
@@ -1101,7 +1157,6 @@ namespace crafted_craft {
         bool command_manager::belongs(command* _command) {
             return command_nodes.contains_one([_command](const command& c) { return &c == _command; });
         }
-
 
         void command_manager::reload_commands() {
             command_nodes.clear();
@@ -1245,7 +1300,7 @@ namespace crafted_craft {
             return command_browser(manager, int32_t(manager.command_nodes.size() - 1));
         }
 
-        command_browser command_browser::add_child(command&& command, command_predicate pred) {
+        command_browser command_browser::add_child(command&& command, command_parser pred) {
             command.argument_predicate = pred;
             return add_child(std::move(command));
         }
@@ -1332,7 +1387,7 @@ namespace crafted_craft {
             return *this;
         }
 
-        command_browser& command_browser::set_argument_type(const command_predicate& pred) {
+        command_browser& command_browser::set_argument_type(const command_parser& pred) {
             if (!is_valid())
                 throw std::runtime_error("command has been deleted");
 
@@ -1365,7 +1420,6 @@ namespace crafted_craft {
             current_command.action_name.clear();
             return *this;
         }
-
 
         command_browser& command_browser::set_suggestion(const std::string& suggestion_type) {
             if (!is_valid())

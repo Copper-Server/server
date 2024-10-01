@@ -72,6 +72,14 @@ namespace crafted_craft {
             );
         }
 
+        uint32_t sub_chunk_data::get_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z) {
+            return biomes[2 >> local_x][2 >> local_y][2 >> local_z];
+        }
+
+        void sub_chunk_data::set_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z, uint32_t id) {
+            biomes[2 >> local_x][2 >> local_y][2 >> local_z] = id;
+        }
+
         void sub_chunk_data::for_each_block(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block& block)> func) {
             for (uint8_t x = 0; x < 16; x++)
                 for (uint8_t y = 0; y < 16; y++)
@@ -82,9 +90,9 @@ namespace crafted_craft {
         bool chunk_data::load(const std::filesystem::path& chunk_z) {
             if (!std::filesystem::exists(chunk_z))
                 return false;
+            std::ifstream file(chunk_z, std::ios::binary);
             if (std::filesystem::file_size(chunk_z) == 0)
                 return false;
-            std::ifstream file(chunk_z, std::ios::binary);
             if (!file.is_open())
                 return false;
             boost::iostreams::filtering_istream filter;
@@ -154,8 +162,6 @@ namespace crafted_craft {
             }
         }
 
-
-
         bool chunk_data::load(const enbt::compound_ref& chunk_data) {
             if (!chunk_data.contains("sub_chunks"))
                 return false;
@@ -182,7 +188,7 @@ namespace crafted_craft {
                         local_pos.y = block_entity["y"];
                         local_pos.z = block_entity["z"];
                         sub_chunk_data->blocks[local_pos.x][local_pos.y][local_pos.z] = base_objects::block{
-                            (base_objects::block_id_t) block_entity["id"]
+                            (base_objects::block_id_t)block_entity["id"]
                         };
                         sub_chunk_data->block_entities[local_pos.z | (local_pos.y << 4) | (local_pos.x << 8)] = nbt;
                     }
@@ -432,7 +438,7 @@ namespace crafted_craft {
             if (auto process = on_save_process.find({chunk_x, chunk_z}); process == on_save_process.end()) {
                 auto& chunk = item->second;
                 on_save_process[{chunk_x, chunk_z}] = Future<bool>::start(
-                    [this, chunk, chunk_x, chunk_z] {
+                    [this, chunk, chunk_x, chunk_z, also_unload] {
                         try {
                             chunk->save(path / "chunks" / std::to_string(chunk_x) / (std::to_string(chunk_z) + ".dat"));
                         } catch (...) {
@@ -440,13 +446,13 @@ namespace crafted_craft {
                         }
                         std::unique_lock lock(mutex);
                         on_save_process.erase({chunk_x, chunk_z});
+
+                        if (also_unload)
+                            if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
+                                x_axis->second.erase(chunk_z);
                         return true;
                     }
                 );
-            }
-            if (also_unload) {
-                if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
-                    x_axis->second.erase(item);
             }
         }
 
@@ -551,7 +557,7 @@ namespace crafted_craft {
             day_time = load_from_nbt["day_time"];
             time = load_from_nbt["time"];
             max_random_tick_for_chunk = load_from_nbt["max_random_tick_for_chunk"];
-            tick_speed = std::chrono::milliseconds((long long)load_from_nbt["tick_speed"]);
+            ticks_per_second = (uint64_t)load_from_nbt["ticks_per_second"];
             chunk_lifetime = std::chrono::milliseconds((long long)load_from_nbt["chunk_lifetime"]);
             world_lifetime = std::chrono::milliseconds((long long)load_from_nbt["world_lifetime"]);
             clear_weather_time = load_from_nbt["clear_weather_time"];
@@ -571,17 +577,17 @@ namespace crafted_craft {
 
         void world_data::load() {
             std::unique_lock lock(mutex);
-            std::ifstream file(path / "world.dat", std::ios::binary);
+            std::ifstream file(path / "world.senbt", std::ios::binary);
             if (!file.is_open())
                 throw std::runtime_error("Can't open world file");
-            enbt::value world_data_file_ = enbt::io_helper::read_token(file);
-            load(enbt::compound::make_ref(world_data_file_));
+            std::string res((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+            load(enbt::compound::make_ref(senbt::parse(res)));
         }
 
         void world_data::save() {
             std::unique_lock lock(mutex);
             std::filesystem::create_directories(path);
-            std::ofstream file(path / "world.dat", std::ios::binary);
+            std::ofstream file(path / "world.senbt", std::ios::binary);
             if (!file.is_open())
                 throw std::runtime_error("Can't open world file");
             enbt::compound world_data_file;
@@ -627,7 +633,7 @@ namespace crafted_craft {
             world_data_file["day_time"] = day_time;
             world_data_file["time"] = time;
             world_data_file["max_random_tick_for_chunk"] = max_random_tick_for_chunk;
-            world_data_file["tick_speed"] = tick_speed.count();
+            world_data_file["ticks_per_second"] = ticks_per_second;
             world_data_file["chunk_lifetime"] = chunk_lifetime.count();
             world_data_file["world_lifetime"] = world_lifetime.count();
             world_data_file["clear_weather_time"] = clear_weather_time;
@@ -647,16 +653,17 @@ namespace crafted_craft {
             if (enable_entity_light_source_updates)
                 world_data_file["enable_entity_light_source_updates"] = true;
 
-            enbt::io_helper::write_token(file, (const enbt::value&)world_data_file);
+            auto stringized = senbt::serialize(world_data_file, false, true);
+            file.write(stringized.data(), stringized.size());
         }
 
         base_objects::shared_string world_data::preview_world_name() {
             std::unique_lock lock(mutex);
-            std::ifstream file(path / "world.dat", std::ios::binary);
+            std::ifstream file(path / "world.senbt", std::ios::binary);
             if (!file.is_open())
                 throw std::runtime_error("Can't open world file");
-            enbt::io_helper::move_to_value_path(file, "world_name");
-            return (base_objects::shared_string)(std::string)enbt::io_helper::read_token(file);
+            std::string res((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+            return (base_objects::shared_string)(std::string)senbt::parse(res)["world_name"];
         }
 
         world_data::world_data(const std::filesystem::path& path)
@@ -833,7 +840,6 @@ namespace crafted_craft {
             get_light_processor()->process_chunk(*this, chunk_x, chunk_z);
         }
 
-
         void world_data::for_each_chunk(std::function<void(chunk_data& chunk)> func) {
             std::unique_lock lock(mutex);
             for (auto& [x, x_axis] : chunks)
@@ -958,14 +964,14 @@ namespace crafted_craft {
                     chunk->second->query_for_tick(global_x & 15, global_y, global_z & 15);
         }
 
-        void world_data::set_block(const base_objects::full_block_data& block, int64_t global_x, uint64_t global_y, int64_t global_z) {
+        void world_data::set_block(const base_objects::full_block_data& block, int64_t global_x, uint64_t global_y, int64_t global_z, block_set_mode mode) {
             get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
                 sub_chunk.set_block(global_x & 15, global_y & 15, global_z & 15, block);
                 get_light_processor()->block_changed(*this, global_x, global_y, global_z);
             });
         }
 
-        void world_data::set_block(base_objects::full_block_data&& block, int64_t global_x, uint64_t global_y, int64_t global_z) {
+        void world_data::set_block(base_objects::full_block_data&& block, int64_t global_x, uint64_t global_y, int64_t global_z, block_set_mode mode) {
             get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
                 sub_chunk.set_block(global_x & 15, global_y & 15, global_z & 15, std::move(block));
                 get_light_processor()->block_changed(*this, global_x, global_y, global_z);
@@ -1021,12 +1027,12 @@ namespace crafted_craft {
             func(*this);
         }
 
-        void world_data::set_block_range(base_objects::cubic_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks) {
+        void world_data::set_block_range(base_objects::cubic_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks, block_set_mode mode) {
             if (blocks.size() == bounds.count()) {
                 size_t i = 0;
                 locked([&](storage::world_data& world) {
                     bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                        world.set_block(blocks[i++], x, y, z);
+                        world.set_block(blocks[i++], x, y, z, mode);
                     });
                     bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
                         get_light_processor()->block_changed(*this, x, y, z);
@@ -1037,7 +1043,7 @@ namespace crafted_craft {
                 size_t max = blocks.size();
                 locked([&](storage::world_data& world) {
                     bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                        world.set_block(blocks[i++], x, y, z);
+                        world.set_block(blocks[i++], x, y, z, mode);
                         if (i == max)
                             i = 0;
                     });
@@ -1048,12 +1054,12 @@ namespace crafted_craft {
             }
         }
 
-        void world_data::set_block_range(base_objects::cubic_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks) {
+        void world_data::set_block_range(base_objects::cubic_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks, block_set_mode mode) {
             if (blocks.size() == bounds.count()) {
                 size_t i = 0;
                 locked([&](storage::world_data& world) {
                     bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                        world.set_block(std::move(blocks[i++]), x, y, z);
+                        world.set_block(std::move(blocks[i++]), x, y, z, mode);
                     });
                     bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
                         get_light_processor()->block_changed(*this, x, y, z);
@@ -1064,7 +1070,7 @@ namespace crafted_craft {
                 size_t max = blocks.size();
                 locked([&](storage::world_data& world) {
                     bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                        world.set_block(std::move(blocks[i++]), x, y, z);
+                        world.set_block(std::move(blocks[i++]), x, y, z, mode);
                         if (++i == max)
                             i = 0;
                     });
@@ -1075,12 +1081,12 @@ namespace crafted_craft {
             }
         }
 
-        void world_data::set_block_range(base_objects::spherical_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks) {
+        void world_data::set_block_range(base_objects::spherical_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks, block_set_mode mode) {
             if (blocks.size() == bounds.count()) {
                 size_t i = 0;
                 locked([&](storage::world_data& world) {
                     bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                        world.set_block(blocks[i++], x, y, z);
+                        world.set_block(blocks[i++], x, y, z, mode);
                     });
                     bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
                         get_light_processor()->block_changed(*this, x, y, z);
@@ -1091,7 +1097,7 @@ namespace crafted_craft {
                 size_t max = blocks.size();
                 locked([&](storage::world_data& world) {
                     bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                        world.set_block(blocks[i++], x, y, z);
+                        world.set_block(blocks[i++], x, y, z, mode);
                     });
                     bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
                         get_light_processor()->block_changed(*this, x, y, z);
@@ -1102,12 +1108,12 @@ namespace crafted_craft {
             }
         }
 
-        void world_data::set_block_range(base_objects::spherical_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks) {
+        void world_data::set_block_range(base_objects::spherical_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks, block_set_mode mode) {
             if (blocks.size() == bounds.count()) {
                 size_t i = 0;
                 locked([&](storage::world_data& world) {
                     bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                        world.set_block(std::move(blocks[i++]), x, y, z);
+                        world.set_block(std::move(blocks[i++]), x, y, z, mode);
                     });
                 });
             } else {
@@ -1115,8 +1121,106 @@ namespace crafted_craft {
                 size_t max = blocks.size();
                 locked([&](storage::world_data& world) {
                     bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                        world.set_block(std::move(blocks[i++]), x, y, z);
+                        world.set_block(std::move(blocks[i++]), x, y, z, mode);
                         if (i++ == max)
+                            i = 0;
+                    });
+                });
+            }
+        }
+
+        uint32_t world_data::get_biome(int64_t global_x, uint64_t global_y, int64_t global_z) {
+            uint32_t res = 0;
+            get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
+                res = sub_chunk.get_biome(global_x & 15, global_y & 15, global_z & 15);
+            });
+            return res;
+        }
+
+        void world_data::set_biome(int64_t global_x, uint64_t global_y, int64_t global_z, uint32_t id) {
+            get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
+                sub_chunk.set_biome(global_x & 15, global_y & 15, global_z & 15, id);
+            });
+        }
+
+        void world_data::set_biome_range(base_objects::cubic_bounds_block bounds, const list_array<uint32_t>& blocks, block_set_mode mode) {
+            if (blocks.size() == bounds.count()) {
+                size_t i = 0;
+                locked([&](storage::world_data& world) {
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        world.set_biome(x, y, z, blocks[i++]);
+                    });
+                });
+            } else {
+                size_t i = 0;
+                size_t max = blocks.size();
+                locked([&](storage::world_data& world) {
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        world.set_biome(x, y, z, blocks[i++]);
+                        if (i == max)
+                            i = 0;
+                    });
+                });
+            }
+        }
+
+        void world_data::set_biome_range(base_objects::cubic_bounds_block bounds, list_array<uint32_t>&& blocks, block_set_mode mode) {
+            if (blocks.size() == bounds.count()) {
+                size_t i = 0;
+                locked([&](storage::world_data& world) {
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        world.set_biome(x, y, z, blocks[i++]);
+                    });
+                });
+            } else {
+                size_t i = 0;
+                size_t max = blocks.size();
+                locked([&](storage::world_data& world) {
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        world.set_biome(x, y, z, blocks[i++]);
+                        if (i == max)
+                            i = 0;
+                    });
+                });
+            }
+        }
+
+        void world_data::set_biome_range(base_objects::spherical_bounds_block bounds, const list_array<uint32_t>& blocks, block_set_mode mode) {
+            if (blocks.size() == bounds.count()) {
+                size_t i = 0;
+                locked([&](storage::world_data& world) {
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        world.set_biome(x, y, z, blocks[i++]);
+                    });
+                });
+            } else {
+                size_t i = 0;
+                size_t max = blocks.size();
+                locked([&](storage::world_data& world) {
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        world.set_biome(x, y, z, blocks[i++]);
+                        if (i == max)
+                            i = 0;
+                    });
+                });
+            }
+        }
+
+        void world_data::set_biome_range(base_objects::spherical_bounds_block bounds, list_array<uint32_t>&& blocks, block_set_mode mode) {
+            if (blocks.size() == bounds.count()) {
+                size_t i = 0;
+                locked([&](storage::world_data& world) {
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        world.set_biome(x, y, z, blocks[i++]);
+                    });
+                });
+            } else {
+                size_t i = 0;
+                size_t max = blocks.size();
+                locked([&](storage::world_data& world) {
+                    bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                        world.set_biome(x, y, z, blocks[i++]);
+                        if (i == max)
                             i = 0;
                     });
                 });
@@ -1161,7 +1265,7 @@ namespace crafted_craft {
             light_processor_id = id;
         }
 
-        void world_data::tick(std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time, bool update_tps) {
+        void world_data::tick(std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time) {
             std::unique_lock lock(mutex);
 
             last_usage = current_time;
@@ -1210,6 +1314,7 @@ namespace crafted_craft {
                     chunk->tick(*this, local_ticks, random_engine, current_time);
                 });
             } else {
+                const auto tick_speed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::duration<double>(1) / ticks_per_second);
                 auto tick_local_time = current_time;
                 to_tick_chunks.take().for_each([&](auto&& chunk) {
                     auto local_ticks = max_random_tick_for_chunk;
@@ -1224,18 +1329,20 @@ namespace crafted_craft {
                     tick_local_time = actual_time;
                 });
                 ++profiling.got_ticks;
-                auto current_tick_speed = std::chrono::duration_cast<std::chrono::milliseconds>(tick_local_time - current_time);
-                if (update_tps) {
-                    profiling.tps_for_world = double(profiling.got_ticks) / current_tick_speed.count() * 1000;
+                auto current_tick_speed = tick_local_time - current_time;
+                if (tick_local_time - profiling.last_tick >= std::chrono::seconds(1)) {
+                    auto elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(tick_local_time - profiling.last_tick).count();
+                    profiling.tps_for_world = profiling.got_ticks / elapsed;
                     if (profiling.got_tps_update)
                         profiling.got_tps_update(*this);
+                    profiling.last_tick = tick_local_time;
                     profiling.got_ticks = 0;
                 }
 
                 auto slow_world_threshold = tick_speed * profiling.slow_world_tick_callback_threshold;
                 if (slow_world_threshold < current_tick_speed)
                     if (profiling.slow_world_tick_callback)
-                        profiling.slow_world_tick_callback(*this, current_tick_speed);
+                        profiling.slow_world_tick_callback(*this, std::chrono::duration_cast<std::chrono::milliseconds>(current_tick_speed));
             }
         }
 
@@ -1272,6 +1379,7 @@ namespace crafted_craft {
 #pragma region worlds_data
 
         base_objects::atomic_holder<world_data> worlds_data::load(uint64_t world_id) {
+            std::unique_lock lock(mutex);
             if (cached_worlds.find(world_id) == cached_worlds.end()) {
                 auto path = base_path / std::to_string(world_id);
                 if (!std::filesystem::exists(path))
@@ -1279,7 +1387,9 @@ namespace crafted_craft {
 
                 auto world = base_objects::atomic_holder<world_data>(new world_data(path.string()));
                 world->load();
-                return cached_worlds[world_id] = world;
+                auto& res = cached_worlds[world_id] = world;
+                on_world_loaded(world_id);
+                return res;
             }
             return cached_worlds[world_id];
         }
@@ -1291,6 +1401,7 @@ namespace crafted_craft {
         }
 
         const list_array<uint64_t>& worlds_data::get_ids() {
+            std::unique_lock lock(mutex);
             if (!cached_ids.empty())
                 return cached_ids;
             list_array<uint64_t> result;
@@ -1385,6 +1496,7 @@ namespace crafted_craft {
                 throw std::runtime_error("World not found");
             else {
                 auto& world = item->second;
+                on_world_unloaded(world_id);
                 world->save();
                 world->save_chunks();
                 world->await_save_chunks();
@@ -1395,6 +1507,7 @@ namespace crafted_craft {
         void worlds_data::save_and_unload_all() {
             std::unique_lock lock(mutex);
             for (auto& [id, world] : cached_worlds) {
+                on_world_unloaded(id);
                 world->save();
                 world->save_chunks();
                 world->await_save_chunks();
@@ -1405,11 +1518,14 @@ namespace crafted_craft {
         //be sure that world is not used by anything, otherwise will throw exception
         void worlds_data::unload(uint64_t world_id) {
             std::unique_lock lock(mutex);
+            on_world_unloaded(world_id);
             cached_worlds.erase(world_id);
         }
 
         void worlds_data::unload_all() {
             std::unique_lock lock(mutex);
+            for (auto&& [id, world] : cached_worlds)
+                on_world_unloaded(id);
             cached_worlds.clear();
         }
 
@@ -1417,6 +1533,7 @@ namespace crafted_craft {
             std::unique_lock lock(mutex);
             std::filesystem::remove_all(std::filesystem::path(base_path) / std::to_string(world_id));
             cached_worlds.erase(world_id);
+            on_world_unloaded(world_id);
         }
 
         uint64_t worlds_data::create(const base_objects::shared_string& name) {
@@ -1430,6 +1547,7 @@ namespace crafted_craft {
             cached_worlds[id] = new world_data(base_path / std::to_string(id));
             cached_worlds[id]->world_name = name;
             cached_worlds[id]->save();
+            on_world_loaded(id);
             return id;
         }
 
@@ -1446,6 +1564,7 @@ namespace crafted_craft {
             cached_worlds[id] = world;
             cached_worlds[id]->world_name = name;
             cached_worlds[id]->save();
+            on_world_loaded(id);
             return id;
         }
 
@@ -1507,50 +1626,45 @@ namespace crafted_craft {
                 func(id, *world);
         }
 
-        std::chrono::nanoseconds worlds_data::apply_tick(std::mt19937& random_engine) {
+        void worlds_data::apply_tick(std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time, std::chrono::nanoseconds ns) {
             std::unique_lock lock(mutex);
-            if (!ticks_per_second)
-                return std::chrono::milliseconds(1000);
-            auto current_time = std::chrono::high_resolution_clock::now();
-            bool calculate_tps = current_time - last_tps_calculated >= std::chrono::seconds(1);
-            std::chrono::nanoseconds time_to_sleep = std::chrono::nanoseconds(1000 * 1000000) / ticks_per_second;
-
             list_array<std::pair<int64_t, base_objects::atomic_holder<world_data>>> worlds_to_tick;
             for (auto& [id, world] : cached_worlds) {
                 if (!world->last_usage.time_since_epoch().count())
                     world->last_usage = current_time;
-                auto elapsed = current_time - world->last_usage - world->tick_speed;
-                if (elapsed >= std::chrono::milliseconds(0)) {
+                if (ticks_per_second > world->ticks_per_second) {
+                    auto tick_interval = std::chrono::nanoseconds(1'000'000'000 / world->ticks_per_second);
+                    world->accumulated_time += current_time - world->last_usage;
+                    world->last_usage = current_time;
+                    if (world->accumulated_time / tick_interval) {
+                        world->accumulated_time -= tick_interval;
+                        worlds_to_tick.push_back({id, world});
+                    }
+                } else
                     worlds_to_tick.push_back({id, world});
-                    if (time_to_sleep < elapsed)
-                        time_to_sleep = elapsed;
-                }
             }
             lock.unlock();
 
             list_array<uint64_t> to_unload_worlds;
-
-
             for (auto& [id, world] : worlds_to_tick) {
-                world->tick(random_engine, current_time, calculate_tps);
+                world->tick(random_engine, current_time);
 
                 size_t unload_speed = configuration.world.unload_speed;
                 if (world->collect_unused_data(current_time, unload_speed))
                     to_unload_worlds.push_back(id);
             }
             to_unload_worlds.for_each([this](uint64_t id) { save_and_unload(id); });
+
             lock.lock();
             got_ticks++;
             auto new_current_time = std::chrono::high_resolution_clock::now();
-            if (calculate_tps) {
-                tps = double(got_ticks) / std::chrono::duration_cast<std::chrono::milliseconds>(new_current_time - last_tps_calculated).count() * 1000;
+            if (current_time - last_tps_calculated >= std::chrono::seconds(1)) {
+                auto elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(new_current_time - last_tps_calculated).count();
+                tps = double(got_ticks) / elapsed;
                 on_tps_changed.async_notify(tps);
                 last_tps_calculated = new_current_time;
+                got_ticks = 0;
             }
-            if (new_current_time - current_time > time_to_sleep)
-                return std::chrono::nanoseconds(0);
-            else
-                return time_to_sleep - (new_current_time - current_time);
         }
 
 #pragma endregion

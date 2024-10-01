@@ -36,6 +36,10 @@ namespace crafted_craft {
                 const std::string& name,
                 std::function<void(storage::world_data& world)> callback
             );
+
+            base_objects::event<uint64_t>& on_world_loaded();
+            base_objects::event<uint64_t>& on_world_unloaded();
+            base_objects::event<double>& on_tps_changed();
         }
     }
 }
