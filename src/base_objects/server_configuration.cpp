@@ -154,7 +154,8 @@ namespace crafted_craft {
             {
                 auto server = js_object::get_object(data["server"]);
                 auto& folder = (boost::json::string&)server["storage_folder"].or_apply(cfg.server.storage_folder);
-                auto& worlds = (boost::json::string&)server["storage_folder"].or_apply(cfg.server.worlds_folder);
+                auto& worlds = (boost::json::string&)server["worlds_folder"].or_apply(cfg.server.worlds_folder);
+
 
                 if (folder.find_first_of(".,\\#$%^&*()`~'\":;|?!<>") != folder.npos)
                     log::warn("server", "server config: root.server.storage_folder contains special symbol .,\\#$%^&*()`~'\":;|?!<>, item has been ignored");
@@ -169,6 +170,14 @@ namespace crafted_craft {
                     cfg.server.storage_folder = (std::string)folder;
                     std::filesystem::create_directories(cfg.server.get_storage_path());
                 }
+                cfg.server.ip = (std::string)server["ip"].or_apply(cfg.server.ip);
+                cfg.server.port = server["port"].or_apply(cfg.server.port);
+                if (server.contains("accepting_threads"))
+                    cfg.server.accepting_threads = server["accepting_threads"];
+                if (server.contains("working_threads"))
+                    cfg.server.working_threads = server["working_threads"];
+                if (server.contains("ssl_key_length"))
+                    cfg.server.ssl_key_length = server["ssl_key_length"];
             }
             {
                 auto allowed_dimensions = js_array::get_array(data["allowed_dimensions"]);

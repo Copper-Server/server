@@ -4,8 +4,8 @@
 #include "../storage/enbt_list_storage.hpp"
 
 namespace crafted_craft {
-    class Server;
     namespace build_in_plugins {
+        //provides and manages ban system
         class BanPlugin : public PluginAutoRegister<"ban", BanPlugin> {
             storage::enbt_list_storage banned_players;
             storage::enbt_list_storage banned_ips;

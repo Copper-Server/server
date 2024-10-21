@@ -4,6 +4,7 @@
 
 namespace crafted_craft {
     namespace build_in_plugins {
+        //handles notchain plugin chanels
         class MinecraftPlugin : public PluginAutoRegister<"minecraft", MinecraftPlugin> {
         public:
             void OnLoad(const PluginRegistrationPtr& self) override;

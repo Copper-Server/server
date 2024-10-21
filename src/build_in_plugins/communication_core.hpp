@@ -3,8 +3,8 @@
 #include "../plugin/main.hpp"
 
 namespace crafted_craft {
-    class Server;
     namespace build_in_plugins {
+        //provides and manages chat system
         class CommunicationCorePlugin : public PluginAutoRegister<"communication_core", CommunicationCorePlugin> {
         public:
             CommunicationCorePlugin();

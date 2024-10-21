@@ -40,7 +40,7 @@ namespace crafted_craft {
                 }
 
                 Response loginSuccess(SharedClientData& client) {
-                    if (Server::instance().config.protocol.offline_mode)
+                    if (api::configuration::get().protocol.offline_mode)
                         client.data = Server::instance().getSessionServer().hasJoined(client.name, "", false);
                     if (!client.data)
                         return kick("Internal error");

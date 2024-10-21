@@ -1,6 +1,7 @@
 #ifndef SRC_PROTOCOLHELPER_UTIL
 #define SRC_PROTOCOLHELPER_UTIL
 #include "../ClientHandleHelper.hpp"
+#include "../api/configuration.hpp"
 #include "../base_objects/packets.hpp"
 #include "../base_objects/ptr_optional.hpp"
 #include "../base_objects/response.hpp"
@@ -255,9 +256,9 @@ namespace crafted_craft {
                     return Response::Empty();
                 if (combined[0] == 0xFE && combined[1] == 0x01) {
                     log::debug("protocol", "handle legacy status");
-                    auto& config = Server::instance().config;
+                    auto& config = api::configuration::get();
                     if (!config.status.enable)
-                        return Response::Disconnect(list_array<list_array<uint8_t>>());
+                        return Response::Disconnect();
                     else
                         return Response::Disconnect({LegacyMotdHelper(std::u8string((char8_t*)config.status.description.data(), config.status.description.size()))});
                 }

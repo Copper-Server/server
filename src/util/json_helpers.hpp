@@ -125,8 +125,32 @@ namespace crafted_craft {
                 return *this;
             }
 
-            bool is_null() const {
+            bool is_null() const noexcept {
                 return obj.is_null();
+            }
+
+            bool is_string() const noexcept {
+                return obj.is_string();
+            }
+
+            bool is_array() const noexcept {
+                return obj.is_array();
+            }
+
+            bool is_object() const noexcept {
+                return obj.is_object();
+            }
+
+            bool is_number() const noexcept {
+                return obj.is_number();
+            }
+
+            bool is_floating() const noexcept {
+                return obj.is_double();
+            }
+
+            bool is_integral() const noexcept {
+                return obj.is_int64() | obj.is_uint64();
             }
 
             operator std::string() {
@@ -166,7 +190,7 @@ namespace crafted_craft {
                 }
             }
 
-            operator bool() {
+            operator bool() const {
                 try {
                     return obj.as_bool();
                 } catch (const boost::system::system_error& err) {
@@ -175,7 +199,7 @@ namespace crafted_craft {
                 }
             }
 
-            operator int64_t() {
+            operator int64_t() const {
                 try {
                     if (obj.is_uint64())
                         if (obj.as_uint64() <= INT64_MAX)
@@ -190,7 +214,7 @@ namespace crafted_craft {
                 }
             }
 
-            operator uint64_t() {
+            operator uint64_t() const {
                 try {
                     if (obj.is_int64())
                         if (obj.as_int64() >= 0)
@@ -205,7 +229,7 @@ namespace crafted_craft {
                 }
             }
 
-            operator int32_t() {
+            operator int32_t() const {
                 int64_t val = operator int64_t();
                 if (int32_t check_overflow = val; val == check_overflow)
                     return check_overflow;
@@ -215,7 +239,7 @@ namespace crafted_craft {
                 }
             }
 
-            operator int16_t() {
+            operator int16_t() const {
                 int64_t val = operator int64_t();
                 if (int16_t check_overflow = val; val == check_overflow)
                     return check_overflow;
@@ -225,7 +249,7 @@ namespace crafted_craft {
                 }
             }
 
-            operator int8_t() {
+            operator int8_t() const {
                 int64_t val = operator int64_t();
                 if (int8_t check_overflow = val; val == check_overflow)
                     return check_overflow;
@@ -235,7 +259,7 @@ namespace crafted_craft {
                 }
             }
 
-            operator uint32_t() {
+            operator uint32_t() const {
                 uint64_t val = operator uint64_t();
                 if (uint32_t check_overflow = val; val == check_overflow)
                     return check_overflow;
@@ -245,7 +269,7 @@ namespace crafted_craft {
                 }
             }
 
-            operator uint16_t() {
+            operator uint16_t() const {
                 uint64_t val = operator uint64_t();
                 if (uint16_t check_overflow = val; val == check_overflow)
                     return check_overflow;
@@ -255,7 +279,7 @@ namespace crafted_craft {
                 }
             }
 
-            operator uint8_t() {
+            operator uint8_t() const {
                 uint64_t val = operator uint64_t();
                 if (uint8_t check_overflow = val; val == check_overflow)
                     return check_overflow;
@@ -265,7 +289,7 @@ namespace crafted_craft {
                 }
             }
 
-            operator float() {
+            operator float() const {
                 try {
                     return obj.as_double();
                 } catch (const boost::system::system_error& err) {
@@ -274,7 +298,7 @@ namespace crafted_craft {
                 }
             }
 
-            operator double() {
+            operator double() const {
                 try {
                     return obj.as_double();
                 } catch (const boost::system::system_error& err) {
@@ -406,6 +430,13 @@ namespace crafted_craft {
             boost::json::value& get() {
                 return obj;
             }
+
+            std::string to_text() const;
+
+            [[noreturn]] void parsing_error(std::string_view error_message) const {
+                auto text = std::format("Parsing error at {} : {}", path, error_message);
+                throw std::runtime_error(text);
+            }
         };
 
         class js_object {
@@ -494,6 +525,15 @@ namespace crafted_craft {
                 return js_value(path + ":" + (std::string)name, obj[name]);
             }
 
+            js_value at(const boost::json::string_view& name) const {
+                try {
+                    return js_value(path + ":" + (std::string)name, obj.at(name));
+                } catch (const boost::system::system_error&) {
+                    auto text = std::format("Not found element {} at {}.", name, path);
+                    throw std::runtime_error(text);
+                }
+            }
+
             bool contains(std::string_view name) const {
                 return obj.contains(name);
             }
@@ -519,6 +559,15 @@ namespace crafted_craft {
             template <class... Args>
             void defile_values(Args... args) {
                 (obj[args], ...);
+            }
+
+            boost::json::value& get() {
+                return obj;
+            }
+
+            [[noreturn]] void parsing_error(std::string_view error_message) const {
+                auto text = std::format("Parsing error at {} : {}", path, error_message);
+                throw std::runtime_error(text);
             }
         };
 
@@ -598,6 +647,15 @@ namespace crafted_craft {
                 return js_value(path + "[" + std::to_string(index) + "]", obj.at(index));
             }
 
+            js_value at(size_t index) {
+                try {
+                    return js_value(path + "[" + std::to_string(index) + "]", obj.at(index));
+                } catch (const boost::system::system_error&) {
+                    auto text = std::format("Not found element {} at {}.", index, path);
+                    throw std::runtime_error(text);
+                }
+            }
+
             size_t size() const {
                 return obj.size();
             }
@@ -630,9 +688,19 @@ namespace crafted_craft {
             js_iterator end() {
                 return {obj.end(), obj.begin(), path};
             }
+
+            boost::json::value& get() {
+                return obj;
+            }
+
+            [[noreturn]] void parsing_error(std::string_view error_message) const {
+                auto text = std::format("Parsing error at {} : {}", path, error_message);
+                throw std::runtime_error(text);
+            }
         };
 
         std::optional<boost::json::object> try_read_json_file(const std::filesystem::path& file_path);
+        std::optional<boost::json::object> try_read_json_file(std::string_view from_memory);
         void pretty_print(std::ostream& os, const boost::json::value& jv, std::string* indent = nullptr);
 
         inline void pretty_print(std::ostream& os, const js_value& jv) {

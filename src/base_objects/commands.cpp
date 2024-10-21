@@ -1172,6 +1172,17 @@ namespace crafted_craft {
             command_nodes.commit();
         }
 
+        std::optional<parser> command_manager::parse_string(command_parser&& config, const std::string& string) {
+            return std::visit(
+                [string = string, self = this](auto& config) mutable -> std::optional<parser> {
+                    std::string part;
+                    next_token(part, string);
+                    return pred::parse(*self, config, part, string);
+                },
+                config
+            );
+        }
+
         command_root_browser::command_root_browser(command_manager& manager)
             : manager(manager) {}
 

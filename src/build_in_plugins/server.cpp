@@ -1,6 +1,7 @@
 #include "server.hpp"
-#include "../api/command.hpp"
+#include "../api/configuration.hpp"
 #include "../api/console.hpp"
+#include "../api/internal/registrations.hpp"
 #include "../api/players.hpp"
 #include "../api/world.hpp"
 #include "../log.hpp"
@@ -13,7 +14,7 @@ namespace crafted_craft {
     namespace build_in_plugins {
 
         ServerPlugin::ServerPlugin()
-            : players_data(Server::instance().config.server.get_storage_path() / "players") {}
+            : players_data(api::configuration::get().server.get_storage_path() / "players") {}
 
         void ServerPlugin::OnRegister(const PluginRegistrationPtr& self) {
             log::info("Server", "starting server...");
@@ -25,12 +26,6 @@ namespace crafted_craft {
             } catch (const std::exception& ex) {
                 log::error("Server", std::string("[permissions] Failed to load permission file because: ") + ex.what());
             }
-
-            register_event(api::world::on_tps_changed(), [this](double tps) {
-                this->tps = tps;
-                log::info("Server", std::to_string(tps));
-                return false;
-            });
 
             api::command::register_manager(manager);
             manager.reload_commands();
@@ -74,12 +69,6 @@ namespace crafted_craft {
                 browser.add_child({"version", "returns server version", "/version"})
                     .set_callback("command.version", [this](const list_array<predicate>&, base_objects::command_context& context) {
                         api::players::calls::on_system_message({context.executor, {"Server version: 1.0.0. Build: " __DATE__ " " __TIME__}});
-                    });
-            }
-            {
-                browser.add_child({"tps", "returns server ticking", "/tps"})
-                    .set_callback("command.tps", [this](const list_array<predicate>&, base_objects::command_context& context) {
-                        api::players::calls::on_system_message({context.executor, {"Server ticking: " + std::to_string(tps)}});
                     });
             }
             {
@@ -133,26 +122,26 @@ namespace crafted_craft {
                 _config
                     .add_child({"reload", "reloads config from file", "/config reload"})
                     .set_callback({"command.config.reload", {"console"}}, [&](const list_array<predicate>& args, base_objects::command_context& context) {
-                        Server::instance().config.load(Server::instance().config.server.base_path);
+                        api::configuration::get().load(api::configuration::get().server.base_path);
                         pluginManagement.registeredPlugins().for_each([&](const PluginRegistrationPtr& plugin) {
-                            plugin->OnConfigReload(plugin, Server::instance().config);
+                            plugin->OnConfigReload(plugin, api::configuration::get());
                         });
                     });
                 _config.add_child("set")
                     .add_child("<config item>", cmd_pred_string::quotable_phrase)
                     .add_child({"<value>", "updates config in file and applies for program", "/config set <config item> <value>"}, cmd_pred_string::greedy_phrase)
                     .set_callback({"command.config.set", {"console"}}, [&](const list_array<predicate>& args, base_objects::command_context& context) {
-                        Server::instance().config.set(Server::instance().config.server.base_path, std::get<pred_string>(args[0]).value, std::get<pred_string>(args[1]).value);
+                        api::configuration::get().set(api::configuration::get().server.base_path, std::get<pred_string>(args[0]).value, std::get<pred_string>(args[1]).value);
                         api::players::calls::on_system_message({context.executor, {"Config updated"}});
                         pluginManagement.registeredPlugins().for_each([&](const PluginRegistrationPtr& plugin) {
-                            plugin->OnConfigReload(plugin, Server::instance().config);
+                            plugin->OnConfigReload(plugin, api::configuration::get());
                         });
                     });
                 _config
                     .add_child("get")
                     .add_child({"<config item>", "returns config value", "/config get <config item>"}, cmd_pred_string::quotable_phrase)
                     .set_callback({"command.config.get", {"console"}}, [&](const list_array<predicate>& args, base_objects::command_context& context) {
-                        auto value = Server::instance().config.get(std::get<pred_string>(args[0]).value);
+                        auto value = api::configuration::get().get(std::get<pred_string>(args[0]).value);
                         while (value.ends_with('\n') | value.ends_with('\r'))
                             value.pop_back();
                         if (value.contains("\n"))

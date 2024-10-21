@@ -118,7 +118,7 @@ namespace crafted_craft {
         class chunk_data {
             friend world_data;
             bool load(const std::filesystem::path& chunk_z);
-            bool load(const enbt::compound_ref& chunk_data);
+            bool load(const enbt::compound_const_ref& chunk_data);
             bool save(const std::filesystem::path& chunk_z);
 
         public:
@@ -249,7 +249,7 @@ namespace crafted_craft {
 
         public:
             //metadata
-            void load(const enbt::compound_ref& load_from_nbt);
+            void load(const enbt::compound_const_ref& load_from_nbt);
             //metadata
             void load();
             //metadata

@@ -1,6 +1,7 @@
 #include "ban.hpp"
 #include "../ClientHandleHelper.hpp"
 #include "../api/ban.hpp"
+#include "../api/configuration.hpp"
 #include "../api/players.hpp"
 #include "../base_objects/commands.hpp"
 #include "../log.hpp"
@@ -11,8 +12,8 @@
 namespace crafted_craft {
     namespace build_in_plugins {
         BanPlugin::BanPlugin()
-            : banned_players(Server::instance().config.server.get_storage_path() / +"banned_players.c_enbt"),
-              banned_ips(Server::instance().config.server.get_storage_path() / +"banned_ips.c_enbt") {
+            : banned_players(api::configuration::get().server.get_storage_path() / +"banned_players.c_enbt"),
+              banned_ips(api::configuration::get().server.get_storage_path() / +"banned_ips.c_enbt") {
             if (!banned_players.is_loaded()) {
                 log::error("BanPlugin", "Failed to load banned players list");
             }

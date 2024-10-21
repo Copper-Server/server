@@ -7,9 +7,8 @@
 #include "../storage/players_data.hpp"
 
 namespace crafted_craft {
-    class Server;
-
     namespace build_in_plugins {
+        //provides access to admin console
         class ConsolePlugin : public PluginAutoRegister<"console_interface", ConsolePlugin> {
             base_objects::virtual_client console_data;
 

@@ -1,9 +1,7 @@
 
+#include "json_helpers.hpp"
 #include "../log.hpp"
-#include <boost/json.hpp>
-#include <filesystem>
 #include <format>
-#include <fstream>
 
 namespace crafted_craft {
     namespace util {
@@ -27,6 +25,23 @@ namespace crafted_craft {
                         log::warn("server", err_string);
                         return std::nullopt;
                     }
+                }
+            }
+            return data;
+        }
+
+        std::optional<boost::json::object> try_read_json_file(std::string_view from_memory) {
+            boost::json::object data;
+            {
+                boost::system::error_code ec;
+                auto result = boost::json::parse(from_memory, ec);
+                data = result.is_object() ? std::move(result).as_object() : boost::json::object{{"root", std::move(result)}};
+                if (ec) {
+                    std::string err_string = ec.has_location()
+                                                 ? std::format("Failed to read json because:\n{}\n On:\n{}", ec.message(), ec.location().to_string())
+                                                 : std::format("Failed to read json because:\n{}", ec.message());
+                    log::warn("server", err_string);
+                    return std::nullopt;
                 }
             }
             return data;
@@ -89,6 +104,10 @@ namespace crafted_craft {
 
             if (indent->empty())
                 os << "\n";
+        }
+
+        std::string js_value::to_text() const {
+            return boost::json::serialize(obj);
         }
     }
 }

@@ -206,6 +206,9 @@ namespace crafted_craft {
 
             //every command refrence after this command become invalid, even when created by plugins in OnCommandsLoad, bc. of the commit command for optimization
             void reload_commands();
+
+
+            std::optional<parser> parse_string(command_parser&& config, const std::string& string);
         };
 
         class command_browser {

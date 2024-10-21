@@ -91,7 +91,6 @@ namespace crafted_craft {
 
         void fatal(const std::string& source, const std::string& message) {
             console::print(level::fatal, source, message);
-            std::exit(EXIT_FAILURE);
         }
 
         void clear() {

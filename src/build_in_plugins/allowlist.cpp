@@ -1,5 +1,6 @@
 #include "allowlist.hpp"
 #include "../ClientHandleHelper.hpp"
+#include "../api/configuration.hpp"
 #include "../api/players.hpp"
 #include "../base_objects/commands.hpp"
 #include "../log.hpp"
@@ -10,7 +11,7 @@ namespace crafted_craft {
 
     namespace build_in_plugins {
         AllowListPlugin::AllowListPlugin()
-            : allow_list(Server::instance().config.server.get_storage_path() / "allow_list.txt") {}
+            : allow_list(api::configuration::get().server.get_storage_path() / "allow_list.txt") {}
 
         void AllowListPlugin::OnPostLoad(const PluginRegistrationPtr& self) {
             register_event(api::allowlist::on_mode_change, base_objects::event_priority::heigh, [this](api::allowlist::allowlist_mode mode) {

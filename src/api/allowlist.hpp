@@ -2,9 +2,7 @@
 #define SRC_API_ALLOWLIST
 #include "../base_objects/event.hpp"
 
-namespace crafted_craft {
-    namespace api {
-        namespace allowlist {
+namespace crafted_craft::api::allowlist {
             enum class allowlist_mode {
                 allow,
                 block,
@@ -16,6 +14,4 @@ namespace crafted_craft {
             extern base_objects::event<std::string> on_add;
             extern base_objects::event<std::string> on_remove;
         }
-    }
-}
 #endif /* SRC_API_ALLOWLIST */

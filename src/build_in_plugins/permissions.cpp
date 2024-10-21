@@ -1,5 +1,6 @@
 #include "permissions.hpp"
 #include "../ClientHandleHelper.hpp"
+#include "../api/configuration.hpp"
 #include "../api/permissions.hpp"
 #include "../api/players.hpp"
 #include "../log.hpp"
@@ -7,7 +8,7 @@
 namespace crafted_craft {
     namespace build_in_plugins {
         PermissionsPlugin::PermissionsPlugin()
-            : op_list(Server::instance().config.server.base_path / "op_list.txt") {
+            : op_list(api::configuration::get().server.base_path / "op_list.txt") {
         }
 
         void apply_group(const base_objects::shared_string& group_name, base_objects::player& pd) {

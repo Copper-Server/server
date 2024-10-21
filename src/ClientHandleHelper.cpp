@@ -9,8 +9,10 @@
 #include "log.hpp"
 
 
-#include "api/permissions.hpp"
+#include "api/configuration.hpp"
+#include "api/internal/permissions.hpp"
 #include "api/players.hpp"
+
 
 #define OPENSSL_CHECK(OPERATION, console_output) \
     if ((OPERATION) <= 0) {                      \
@@ -315,11 +317,10 @@ namespace crafted_craft {
           ssl_key_length(ssl_key_length),
           ip(ip),
           permissions_manager(std::filesystem::current_path()) {
-        api::permissions::init_permissions(permissions_manager);
         if (global_instance)
             throw std::runtime_error("Server already initialized");
         global_instance = this;
-        config.load(std::filesystem::current_path());
+        api::permissions::init_permissions(permissions_manager);
         service = io_service;
         if (ssl_key_length) {
             server_rsa_key = RSA_generate_key(ssl_key_length, RSA_F4, nullptr, nullptr);
@@ -341,7 +342,7 @@ namespace crafted_craft {
             }
         }
         if (local_server)
-            config.protocol.offline_mode = true;
+            api::configuration::get().protocol.offline_mode = true;
     }
 
     Server::~Server() {

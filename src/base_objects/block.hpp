@@ -73,7 +73,7 @@ namespace crafted_craft {
             std::function<void(storage::world_data&, storage::sub_chunk_data&, block& data, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked)> on_tick;
             std::function<void(storage::world_data&, storage::sub_chunk_data&, block& data, enbt::value& extended_data, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked)> as_entity_on_tick;
 
-            std::unordered_map<std::string, std::vector<std::string>> states;
+            std::unordered_map<std::string, std::unordered_set<std::string>> states;
 
             boost::bimaps::bimap<
                 boost::bimaps::unordered_set_of<block_id_t>,
@@ -82,6 +82,8 @@ namespace crafted_craft {
             block_id_t default_state = 0;
             enbt::compound defintion;
             base_objects::shared_string name;
+
+            list_array<base_objects::shared_string> block_aliases; //string block ids(checks from first to last, if none found in `initialize_blocks()` throws) implicitly uses id first
 
 
             enum class tick_opt : uint16_t {
@@ -166,6 +168,14 @@ namespace crafted_craft {
                 this->motion_blocking = motion_blocking;
                 this->_unused___ = 0;
             }
+
+            //USED ONLY DURING FULL SERVER RELOAD!  DO NOT ALLOW CALL FROM THE USER CODE
+            static void reset_blocks();      //INTERNAL
+            static void initialize_blocks(); //INTERNAL, used to assign internal_block_aliases ids from block_aliases
+
+
+            static std::unordered_map<block_id_t, std::unordered_map<uint32_t, block_id_t>> internal_block_aliases; //local id -> protocol id -> block id
+            static std::unordered_map<block_id_t, std::unordered_map<std::string, uint32_t>> internal_block_aliases_protocol;
         };
 
         union block {
@@ -229,7 +239,11 @@ namespace crafted_craft {
             }
 
             const static_block_data& getStaticData() const {
-                return *full_block_data_[id];
+                return *full_block_data_.at(id);
+            }
+
+            static const static_block_data& getStaticData(block_id_t id) {
+                return *full_block_data_.at(id);
             }
 
             bool operator==(const block& b) const {

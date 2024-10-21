@@ -10,7 +10,7 @@ namespace crafted_craft {
     class TCPClientHandleHandshaking : public TCPClientHandle {
     protected:
         virtual bool AllowProtocolVersion(int proto_version) {
-            if (765 == proto_version)
+            if (767 == proto_version)
                 return true;
             else
                 return true;

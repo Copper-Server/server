@@ -11,7 +11,7 @@
 #include "../library/enbt.hpp"
 #include "../library/fast_task.hpp"
 #include "../library/list_array.hpp"
-#include "../mojang_api/session_server.hpp"
+#include "../mojang/api/session_server.hpp"
 #include "atomic_holder.hpp"
 #include "chat.hpp"
 #include "player.hpp"

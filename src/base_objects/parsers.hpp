@@ -695,6 +695,8 @@ namespace crafted_craft {
             parsers::command::vec2,
             parsers::command::vec3,
             parsers::command::custom_virtual>;
+
+        parser parse()
     }
 }
 

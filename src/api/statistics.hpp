@@ -4,9 +4,7 @@
 #include "../base_objects/shared_client_data.hpp"
 #include "../base_objects/shared_string.hpp"
 
-namespace crafted_craft {
-    namespace api {
-        namespace statistics {
+namespace crafted_craft::api::statistics {
             struct statistic_event {
                 base_objects::client_data_holder target;
                 base_objects::shared_string trigger_source;
@@ -26,8 +24,6 @@ namespace crafted_craft {
 
             using namespace minecraft;
         }
-    }
-}
 
 
 #endif /* SRC_API_STATISTICS */

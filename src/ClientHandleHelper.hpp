@@ -16,7 +16,7 @@
 #include "library/list_array.hpp"
 
 #include "base_objects/player.hpp"
-#include "mojang_api/session_server.hpp"
+#include "mojang/api/session_server.hpp"
 
 
 #include "base_objects/response.hpp"
@@ -165,8 +165,6 @@ namespace crafted_craft {
         storage::memory::online_player_storage online_players;
         storage::memory::entity_ids_map_storage entity_ids_map;
         storage::permissions_manager permissions_manager;
-
-        base_objects::ServerConfiguration config;
 
         boost::asio::io_service& getService();
         bool is_local_server();

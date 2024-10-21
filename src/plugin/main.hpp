@@ -293,6 +293,17 @@ namespace crafted_craft {
             __internal__::registration_list().clear();
         }
 
+        void callInitialization() {
+            std::unordered_map<std::string, PluginRegistrationPtr> plugins;
+            protected_values.get(
+                [&](const protected_values_t& vals) {
+                    plugins = vals.plugins;
+                }
+            );
+            for (auto& [name, plugin] : plugins)
+                plugin->OnInitialization(plugin);
+        }
+
         void callLoad() {
             std::unordered_map<std::string, PluginRegistrationPtr> plugins;
             protected_values.get(
@@ -317,8 +328,14 @@ namespace crafted_craft {
                     plugins = vals.plugins;
                 }
             );
-            for (auto& [name, plugin] : plugins) {
+            for (auto& [name, plugin] : plugins)
                 plugin->OnUnload(plugin);
+
+            for (auto& [name, plugin] : plugins)
+                plugin->OnPostUnload(plugin);
+
+            for (auto& [name, plugin] : plugins) {
+                plugin->OnUnloadComplete(plugin);
                 plugin->clean_up_registered_events();
             }
         }
@@ -334,6 +351,14 @@ namespace crafted_craft {
                 plugin->OnFaultUnload(plugin);
                 plugin->clean_up_registered_events();
             }
+        }
+
+        void unregisterAll() {
+            protected_values.set(
+                [&](protected_values_t& vals) {
+                    vals.plugins.clear();
+                }
+            );
         }
     };
 

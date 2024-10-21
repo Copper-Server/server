@@ -162,7 +162,7 @@ namespace crafted_craft {
             }
         }
 
-        bool chunk_data::load(const enbt::compound_ref& chunk_data) {
+        bool chunk_data::load(const enbt::compound_const_ref& chunk_data) {
             if (!chunk_data.contains("sub_chunks"))
                 return false;
             auto sub_chunks_ref = enbt::fixed_array::make_ref(chunk_data["sub_chunks"]);
@@ -522,7 +522,7 @@ namespace crafted_craft {
             return res;
         }
 
-        void world_data::load(const enbt::compound_ref& load_from_nbt) {
+        void world_data::load(const enbt::compound_const_ref& load_from_nbt) {
             general_world_data = load_from_nbt["general_world_data"];
             world_game_rules = load_from_nbt["world_game_rules"];
             world_generator_data = load_from_nbt["world_generator_data"];

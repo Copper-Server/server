@@ -2,7 +2,12 @@
 #define SRC_REGISTERS
 #include "base_objects/block.hpp"
 #include "base_objects/chat.hpp"
+#include "base_objects/entity.hpp"
+#include "base_objects/float_provider.hpp"
+#include "base_objects/number_provider.hpp"
+#include "base_objects/particle_data.hpp"
 #include "base_objects/position.hpp"
+#include "base_objects/slot.hpp"
 #include "library/enbt.hpp"
 #include <string>
 #include <unordered_map>
@@ -16,6 +21,40 @@ namespace crafted_craft {
             std::string type;
             enbt::value value;
         };
+
+        struct Advancement {
+            struct Display {
+                struct Icon {
+                    std::string item;
+                    std::string nbt;
+                };
+
+                Icon icon;
+                std::string title;
+                std::string frame;
+                std::string background;
+                std::string description;
+                bool show_toast;
+                bool announce_to_chat;
+                bool hidden;
+            };
+
+            struct Rewards {
+                std::vector<std::string> recipes;
+                std::vector<std::string> loot;
+                int32_t experience = 0;
+                std::string function;
+            };
+
+            std::optional<Display> display;
+            std::string parent;
+            enbt::compound criteria;
+            std::vector<std::vector<std::string>> requirements;
+            Rewards rewards;
+            bool sends_telemetry_event = false;
+        };
+
+        using JukeboxSong = base_objects::slot_component::jukebox_playable::jukebox_extended;
 
         struct ArmorTrimMaterial {
             std::string asset_name;
@@ -70,6 +109,18 @@ namespace crafted_craft {
                 bool replace_current_music = true;
             };
 
+            struct SpawnersValue {
+                std::string type;
+                uint32_t max_count;
+                uint32_t min_count;
+                uint32_t weight;
+            };
+
+            struct SpawnCostsValue {
+                double energy_budget;
+                double charge;
+            };
+
             uint32_t id;
             bool allow_override = false;
 
@@ -92,6 +143,27 @@ namespace crafted_craft {
                 std::optional<AdditionsSound> additions_sound;
                 std::optional<Music> music;
             } effects;
+
+            //server side:
+            std::unordered_map<std::string, std::vector<std::string>> carvers; //air, liquid
+            //features field divided by generation steps:
+            //RAW_GENERATION
+            //LAKES
+            //LOCAL_MODIFICATIONS
+            //UNDERGROUND_STRUCTURES
+            //SURFACE_STRUCTURES
+            //STRONGHOLDS
+            //UNDERGROUND_ORES
+            //UNDERGROUND_DECORATION
+            //FLUID_SPRINGS
+            //VEGETAL_DECORATION
+            //TOP_LAYER_MODIFICATION
+            std::vector<std::vector<std::string>> features;
+            std::unordered_map<std::string, std::vector<SpawnersValue>> spawners;
+            //mob_id>config
+            std::unordered_map<std::string, SpawnCostsValue> spawn_costs;
+
+            double creature_spawn_probability = 0;
         };
 
         struct ChatType {
@@ -217,6 +289,245 @@ namespace crafted_craft {
             std::string full_id;
         };
 
+        struct enchantment {
+            Chat description;
+            std::variant<std::string, std::vector<std::string>> exclusive_set;
+            std::variant<std::string, std::vector<std::string>> supported_items;
+            std::variant<std::string, std::vector<std::string>> primary_items;
+            std::vector<std::string> slots;
+            std::unordered_map<std::string, std::vector<enbt::compound>> effects;
+
+            struct {
+                int32_t base;
+                int32_t per_level_above_first;
+            } min_cost;
+
+            struct {
+                int32_t base;
+                int32_t per_level_above_first;
+            } max_cost;
+
+            int32_t anvil_cost;
+            int32_t weight;
+            uint8_t max_level;
+
+            uint32_t id;
+        };
+
+        struct potion {
+        };
+
+        struct item_modifier {
+        };
+
+        struct loot_table_item {
+            struct pool {
+                base_objects::number_provider rolls;
+                base_objects::number_provider bonus_rolls;
+                std::vector<enbt::compound> entries;
+                std::vector<enbt::compound> functions;
+                std::vector<enbt::compound> conditions; //predicates, can be empty
+            };
+
+            std::vector<pool> pools;
+            std::vector<enbt::compound> functions;
+            std::string type; //default: generic // used to filter loot context
+            std::optional<std::string> random_sequence;
+        };
+
+        namespace world_gen {
+            using biome = Biome;
+
+            struct configured_carver {
+                std::string type;
+
+                struct {
+                    float probability;
+                    enbt::compound y; //number provider
+
+                    struct {
+                        int32_t absolute;
+                        int32_t above_bottom;
+                        int32_t below_top;
+                    } lava_level;
+
+                    std::variant<std::string, std::vector<std::string>> replaceable;
+
+                    struct Debug_settings {
+                        bool debug;
+
+                        struct state {
+                            std::string name;
+                            std::unordered_map<std::string, std::string> properties;
+                        };
+
+                        state air_state;
+                        state water_state;
+                        state lava_state;
+                        state barrier_state;
+                    };
+
+                    std::optional<Debug_settings> debug_settings;
+
+                    enbt::compound custom_data; //virtual field, used in handlers
+                } config;
+            };
+
+            struct configured_feature {
+                std::string type;
+                enbt::compound config;
+            };
+
+            struct density_function {
+                std::string type;
+                enbt::compound custom_data; //virtual field, used in handlers
+            };
+
+            struct noise {
+                int32_t firstOctave;
+                std::vector<double> amplitudes;
+            };
+
+            struct noise_settings {
+                int32_t sea_level;
+                bool disable_mob_generation;
+                bool ore_veins_enabled;
+                bool aquifers_enabled;
+                bool legacy_random_source;
+
+                struct state {
+                    std::string name;
+                    std::unordered_map<std::string, std::string> properties;
+                };
+
+                state default_block;
+                state default_fluid;
+
+                struct spawn_target_v {
+                    struct temperature_value {
+                        float min;
+                        float max;
+                    };
+
+                    using variants = std::variant<temperature_value, std::vector<temperature_value>, float>;
+                    variants temperature;
+                    variants humidity;
+                    variants continentalness;
+                    variants erosion;
+                    variants weirdness;
+                    variants depth;
+                    float offset;
+                };
+
+                std::vector<spawn_target_v> spawn_target;
+
+                struct {
+                    int32_t min_y;
+                    int32_t height;
+                    int32_t size_horizontal;
+                    int32_t size_vertical;
+                } noise;
+
+                enbt::compound noise_router;
+                enbt::compound surface_rule;
+            };
+
+            struct placed_feature {
+                std::variant<std::string, configured_feature> feature;
+                std::vector<enbt::compound> placement;
+            };
+
+            struct processor_list {
+                std::vector<enbt::compound> processors;
+            };
+
+            struct structure {
+                struct spawn_override {
+                    struct spawn {
+                        std::string type;
+                        int32_t weight;
+                        int32_t min_count;
+                        int32_t max_count;
+                    };
+
+                    std::string bounding_box;
+                    std::vector<spawn> spawns;
+                };
+
+                std::string type;
+                std::variant<std::string, std::vector<std::string>> biomes;
+                std::string step;
+                std::string terrain_adaptation;
+                std::unordered_map<std::string, spawn_override> spawn_overrides;
+                enbt::compound custom_data; //virtual field, used in handlers
+            };
+
+            struct structure_set {
+                std::vector<std::variant<std::string, structure>> structures;
+
+                struct {
+                    int32_t salt;
+                    float frequency = 1.0;
+                    std::string frequency_reduction_method = "default";
+
+                    struct {
+                        int32_t chunk_count;
+                        std::string other_set;
+                    } exclusion_zone;
+
+                    int32_t locale_offset[3] = {0, 0, 0};
+
+                    std::string type;
+                    enbt::compound custom_data; //virtual field, used in handlers
+                } placement;
+            };
+
+            struct template_pool {
+                struct element {
+                    int32_t weight;
+
+                    struct {
+                        std::string element_type;
+                        std::string projection;
+                        enbt::compound custom_data; //virtual field, used in handlers
+                    } element;
+                };
+
+                std::string fallback;
+                std::vector<element> elements;
+            };
+
+            struct world_preset {
+                struct dimension {
+                    std::string type;
+                    enbt::compound custom_data; //virtual field, used in handlers
+                };
+
+                std::unordered_map<std::string, dimension> dimensions;
+            };
+
+            struct flat_level_generator_preset {
+                struct layer {
+                    std::string block;
+                    int32_t height;
+                };
+
+                std::string display;
+
+                struct {
+                    std::vector<layer> layers;
+                    std::string biome;
+                    bool lakes = false;
+                    bool features = false;
+                    std::vector<std::string> structure_overrides;
+                } settings;
+            };
+
+            struct multi_noise_biome_source_parameter_list {
+                std::string preset; //ref to hardcoded preset
+            };
+        }
+
 
 #pragma endregion
         //CLIENT/SERVER
@@ -242,15 +553,26 @@ namespace crafted_craft {
 
 
         //SERVER
+        extern std::unordered_map<std::string, Advancement> advancements;
+        extern std::unordered_map<std::string, JukeboxSong> jukebox_songs;
 
-        extern std::unordered_map<base_objects::block, uint16_t, base_objects::block_hash> blockPalette;
-        extern std::unordered_map<uint16_t, EntityType*> entityList;
+
+        extern std::unordered_map<uint32_t, enbt::compound> individual_registers;
+
+
+        extern std::unordered_map<std::string, potion> potions;
+        extern list_array<decltype(potions)::iterator> potions_cache;
+
+        extern std::unordered_map<std::string, enchantment> enchantments;
+        extern std::unordered_map<std::string, enbt::compound> enchantment_providers;
+        extern list_array<decltype(enchantments)::iterator> enchantments_cache;
+
+        extern std::unordered_map<std::string, loot_table_item> loot_table;
+        extern list_array<decltype(loot_table)::iterator> loot_table_cache;
+
         extern std::unordered_map<int32_t, ItemType*> itemList;
-        //entity_data
-        extern std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>>> tags; 
-            //[type][namespace][tag][values]   values can't contain other tags, parsers must resolve them
-        extern std::string default_namespace;                                                                 
-            //minecraft
+        extern std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>>> tags; //[type][namespace][tag][values]   values can't contain other tags, parsers must resolve them
+        extern std::string default_namespace;                                                                                                   //minecraft
 
 
         const list_array<std::string>& unfold_tag(const std::string& type, const std::string& namespace_, const std::string& tag);

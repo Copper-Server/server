@@ -270,6 +270,8 @@ namespace crafted_craft {
     }
 
     Chat Chat::fromEnbt(const enbt::value& enbt) {
+        if (enbt.is_string())
+            return Chat((std::string)enbt);
         Chat result;
         auto entry = enbt::compound::make_ref(enbt);
 

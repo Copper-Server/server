@@ -64,5 +64,41 @@ namespace crafted_craft {
             auto& air = full_block_data_.emplace_back();
         }
 
+        void static_block_data::reset_blocks() {
+            block::access_full_block_data([](auto& i0, auto& i1) {
+                i0.clear();
+                i1.clear();
+            });
+        }
+
+        void static_block_data::initialize_blocks() {
+            block::access_full_block_data([&](std::vector<std::shared_ptr<static_block_data>>& arr, auto& ignored) {
+                block_id_t id;
+                internal_block_aliases.clear();
+                for (auto& _block : arr) {
+                    auto& block = *_block;
+                    auto& local_aliases = internal_block_aliases[id];
+                    for (auto& [protocol, assignations] : internal_block_aliases_protocol) {
+                        if (assignations.find(block.name.get()) != assignations.end()) {
+                            local_aliases[protocol] = assignations[block.name.get()];
+                        } else {
+                            bool found = false;
+                            for (auto& alias : block.block_aliases) {
+                                if (assignations.find(alias.get()) != assignations.end()) {
+                                    local_aliases[protocol] = assignations[alias.get()];
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found)
+                                throw std::runtime_error("Block alias for " + block.name.get() + '[' + std::to_string(id) + " not found in protocol " + std::to_string(protocol));
+                        }
+                    }
+                    ++id;
+                }
+            });
+        }
+
+
     } // namespace base_objects
 }

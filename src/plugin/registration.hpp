@@ -65,6 +65,9 @@ namespace crafted_craft {
         //first initialisation
         virtual void OnRegister(const std::shared_ptr<PluginRegistration>&) {}
 
+        //called on initialization, default resources allocated, plugins registered
+        virtual void OnInitialization(const std::shared_ptr<PluginRegistration>&) {}
+
         //called after initialization
         virtual void OnLoad(const std::shared_ptr<PluginRegistration>&) {}
 
@@ -73,10 +76,13 @@ namespace crafted_craft {
 
         virtual void OnLoadComplete(const std::shared_ptr<PluginRegistration>&) {}
 
-        virtual void OnUnload(const std::shared_ptr<PluginRegistration>&) {
-            clean_up_registered_events();
-        }
+        virtual void OnUnload(const std::shared_ptr<PluginRegistration>&) {}
 
+        virtual void OnPostUnload(const std::shared_ptr<PluginRegistration>&) {}
+
+        virtual void OnUnloadComplete(const std::shared_ptr<PluginRegistration>&) {}
+
+        //emergency unload to save important data, do not use any other api except configuration
         virtual void OnFaultUnload(const std::shared_ptr<PluginRegistration>&) {}
 
         virtual void OnCommandsLoad(const std::shared_ptr<PluginRegistration>&, base_objects::command_root_browser&) {}

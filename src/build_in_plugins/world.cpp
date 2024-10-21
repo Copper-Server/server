@@ -1,5 +1,7 @@
 #include "world.hpp"
 #include "../ClientHandleHelper.hpp"
+#include "../api/configuration.hpp"
+#include "../api/internal/world.hpp"
 #include "../api/players.hpp"
 #include "../api/world.hpp"
 #include "../log.hpp"
@@ -34,10 +36,10 @@ namespace crafted_craft {
         }
 
         WorldManagementPlugin::WorldManagementPlugin()
-            : worlds_storage(Server::instance().config, Server::instance().config.server.get_worlds_path()) {
+            : worlds_storage(api::configuration::get(), api::configuration::get().server.get_worlds_path()) {
         }
 
-        void WorldManagementPlugin::OnRegister(const PluginRegistrationPtr& self) {
+        void WorldManagementPlugin::OnInitialization(const PluginRegistrationPtr& self) {
             api::world::register_worlds_data(worlds_storage);
         }
 
@@ -58,25 +60,25 @@ namespace crafted_craft {
                 return false;
             });
 
-            for (auto& it : Server::instance().config.allowed_dimensions) {
+            for (auto& it : api::configuration::get().allowed_dimensions) {
                 api::world::pre_load_world(it.get(), [&](storage::world_data& world) {
-                    world.world_type = Server::instance().config.world.type;
-                    world.world_seed = util::conversions::uuid::from(Server::instance().config.world.seed.get());
+                    world.world_type = api::configuration::get().world.type;
+                    world.world_seed = util::conversions::uuid::from(api::configuration::get().world.seed.get());
                     world.light_processor_id = "default"_ss;
                     if (world.world_name.get() == "end") {
                         world.generator_id = "end"_ss;
                     } else if (world.world_name.get() == "nether") {
                         world.generator_id = "nether"_ss;
                     } else {
-                        world.generator_id = Server::instance().config.world.type;
-                        for (auto& [name, value] : Server::instance().config.world.generator_settings)
+                        world.generator_id = api::configuration::get().world.type;
+                        for (auto& [name, value] : api::configuration::get().world.generator_settings)
                             world.world_generator_data[name.get()] = value;
                         world.load_points.push_back({10, 10, -10, -10});
                     }
                 });
                 log::info("World", it.get() + " loaded.");
             }
-            if (worlds_storage.base_world_id == -1 && !Server::instance().config.allowed_dimensions.empty()) {
+            if (worlds_storage.base_world_id == -1 && !api::configuration::get().allowed_dimensions.empty()) {
                 log::info("World", "Base world not set, setting to first world.");
                 if (auto id = worlds_storage.get_id("overworld"); id != -1) {
                     worlds_storage.base_world_id = id;
@@ -621,7 +623,7 @@ namespace crafted_craft {
             {
                 auto getworldspawn = browser.add_child("getworldspawn");
                 getworldspawn.set_callback("command.getworldspawn", [this](const list_array<predicate>&, base_objects::command_context& context) {
-                    Chat message("World spawn: x: " + std::to_string(Server::instance().config.world.spawn.x) + " y: " + std::to_string(Server::instance().config.world.spawn.y) + " z: " + std::to_string(Server::instance().config.world.spawn.z) + " yaw: " + std::to_string(Server::instance().config.world.spawn.yaw));
+                    Chat message("World spawn: x: " + std::to_string(api::configuration::get().world.spawn.x) + " y: " + std::to_string(api::configuration::get().world.spawn.y) + " z: " + std::to_string(api::configuration::get().world.spawn.z) + " yaw: " + std::to_string(api::configuration::get().world.spawn.yaw));
                     message.SetColor("green");
                     api::players::calls::on_system_message({context.executor, message});
                 });

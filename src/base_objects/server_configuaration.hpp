@@ -134,6 +134,12 @@ namespace crafted_craft {
 
                 std::string storage_folder = "storage";
                 std::string worlds_folder = "storage/worlds";
+                std::string ip = "localhost";
+                uint16_t port = 25565;
+                size_t accepting_threads = 0; //0 == auto, optional
+                size_t working_threads = 0;   //0 == auto, optional
+                size_t ssl_key_length = 1024; //1024, 2048, 4096, optional
+
 
                 std::filesystem::path get_storage_path() const {
                     return base_path / storage_folder;
@@ -145,6 +151,7 @@ namespace crafted_craft {
             } server;
 
             //allowed dimensions to visit to player without the `action.world.transfer.disallowed` permission
+            //if empty then this setting ignored
             std::unordered_set<shared_string> allowed_dimensions = {"overworld"};
 
 

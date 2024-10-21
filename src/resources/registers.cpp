@@ -2,8 +2,15 @@
 #include "../base_objects/entity.hpp"
 #include "../util/conversions.hpp"
 #include "../util/json_helpers.hpp"
+#include "../util/slot_reader.hpp"
 #include "embed/blocks.json.hpp"
+#include "embed/items.json.hpp"
 
+#include "versions/embed/765.json.hpp"
+#include "versions/embed/766.json.hpp"
+#include "versions/embed/767.json.hpp"
+
+#include "../api/recipe.hpp"
 
 namespace crafted_craft {
     namespace resources {
@@ -4488,19 +4495,16 @@ namespace crafted_craft {
             entity_data::initialize_entities();
         }
 
-        void load_file_biomes(const std::filesystem::path& file_path, const std::string& id) {
-            check_override(paintingVariants, id, "biome");
-
-            auto res = try_read_json_file(file_path);
-            if (!res)
-                throw std::runtime_error("Failed to read file: " + file_path.string());
-            js_object bio_js = js_object::get_object(res.value());
+        void load_file_biomes(js_object&& bio_js, const std::string& id) {
+            check_override(biomes, id, "biome");
             Biome bio;
             bio.downfall = bio_js["downfall"];
             bio.temperature = bio_js["temperature"];
             bio.has_precipitation = bio_js["has_precipitation"];
+            bio.creature_spawn_probability = bio_js["creature_spawn_probability"].or_apply(0.0);
             if (bio_js.contains("temperature_modifier"))
                 bio.temperature_modifier = (std::string)bio_js["temperature_modifier"];
+
             {
                 Biome::Effects effects;
                 js_object effects_js = js_object::get_object(bio_js["effects"]);
@@ -4561,7 +4565,69 @@ namespace crafted_craft {
                 }
                 bio.effects = std::move(effects);
             }
+            {
+                js_object cavers_js = js_object::get_object(bio_js["cavers"]);
+                for (auto&& [name, values] : cavers_js) {
+                    if (values.is_string()) {
+                        bio.carvers[name] = {values};
+                    } else {
+                        auto& res = bio.carvers[name];
+                        js_array arr = js_array::get_array(values);
+                        res.reserve(arr.size());
+                        for (auto&& it : arr)
+                            res.push_back(it);
+                    }
+                }
+            }
+            {
+                auto features_js = js_array::get_array(bio_js["features"]);
+                bio.features.reserve(features_js.size());
+                for (auto&& items : features_js) {
+                    auto feature_js = js_array::get_array(items);
+                    std::vector<std::string> feature;
+                    feature.reserve(feature_js.size());
+                    for (auto&& it : feature_js)
+                        feature.push_back(it);
+                    bio.features.push_back(feature);
+                }
+            }
+            {
+                js_object spawners_js = js_object::get_object(bio_js["spawners"]);
+                for (auto&& [name, values] : spawners_js) {
+                    auto& category = bio.spawners[name];
+                    auto category_values = js_array::get_array(values);
+                    category.reserve(category_values.size());
+                    for (auto&& it : category_values) {
+                        auto category_value = js_object::get_object(it);
+                        Biome::SpawnersValue value;
+                        value.type = category_value["type"];
+                        value.weight = category_value["weight"];
+                        value.weight = category_value["minCount"];
+                        value.weight = category_value["maxCount"];
+                        category.push_back(value);
+                    }
+                }
+            }
+            {
+                js_object spawn_costs_js = js_object::get_object(bio_js["spawn_costs"]);
+                for (auto&& [eid, value] : spawn_costs_js) {
+                    auto& category = bio.spawn_costs[eid];
+                    auto category_value = js_object::get_object(value);
+                    category.energy_budget = category_value["energy_budget"];
+                    category.charge = category_value["charge"];
+                }
+            }
+
             biomes[id] = std::move(bio);
+        }
+
+        void load_file_biomes(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(biomes, id, "biome");
+
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            load_file_biomes(js_object::get_object(res.value()), id);
         }
 
         ChatType::Decoration to_decoration(js_value&& json) {
@@ -4584,8 +4650,174 @@ namespace crafted_craft {
             return decoration;
         }
 
+        base_objects::number_provider read_number_provider(js_value&& value) {
+            if (value.is_number())
+                return value.is_integral() ? base_objects::number_provider_constant((int32_t)value) : base_objects::number_provider_constant((float)value);
+            else {
+                auto obj = js_object::get_object(value);
+                if (obj.contains("type")) {
+                    std::string type = obj["type"];
+
+                    if (type == "constant") {
+                        auto value = obj.at("value");
+                        return value.is_integral() ? base_objects::number_provider_constant((int32_t)value) : base_objects::number_provider_constant((float)value);
+                    } else if (type == "uniform") {
+                        std::variant<int32_t, float> min;
+                        std::variant<int32_t, float> max;
+
+                        if (obj.contains("min")) {
+                            auto min_ = obj["min"];
+                            min = min_.is_integral() ? (int32_t)min_ : (float)min_;
+                        } else if (obj.contains("min_inclusive")) {
+                            auto min_ = obj["min_inclusive"];
+                            min = min_.is_integral() ? (int32_t)min_ : (float)min_;
+                        } else
+                            min = std::numeric_limits<int32_t>::min();
+
+                        if (obj.contains("max")) {
+                            auto max_ = obj["max"];
+                            max = max_.is_integral() ? (int32_t)max_ : (float)max_;
+                        } else if (obj.contains("max_inclusive")) {
+                            auto max_ = obj["max_inclusive"];
+                            max = max_.is_integral() ? (int32_t)max_ : (float)max_;
+                        } else
+                            max = std::numeric_limits<int32_t>::max();
+
+                        return base_objects::number_provider_uniform(min, max);
+                    } else if (type == "binomial")
+                        return base_objects::number_provider_binomial(read_number_provider(obj.at("n")), read_number_provider(obj.at("p")));
+                    else if (type == "clamped_normal") {
+                        float mean = obj.at("mean");
+                        float deviation = obj.at("deviation");
+                        int32_t min_inclusive = obj.at("min_inclusive");
+                        int32_t max_inclusive = obj.at("max_inclusive");
+                        return base_objects::number_provider_clamped_normal(mean, deviation, min_inclusive, max_inclusive);
+                    } else if (type == "uniform") {
+                        std::variant<int32_t, float> min;
+                        std::variant<int32_t, float> max;
+
+                        if (obj.contains("min")) {
+                            auto min_ = obj["min"];
+                            min = min_.is_integral() ? (int32_t)min_ : (float)min_;
+                        } else if (obj.contains("min_inclusive")) {
+                            auto min_ = obj["min_inclusive"];
+                            min = min_.is_integral() ? (int32_t)min_ : (float)min_;
+                        } else
+                            min = std::numeric_limits<int32_t>::min();
+
+                        if (obj.contains("max")) {
+                            auto max_ = obj["max"];
+                            max = max_.is_integral() ? (int32_t)max_ : (float)max_;
+                        } else if (obj.contains("max_inclusive")) {
+                            auto max_ = obj["max_inclusive"];
+                            max = max_.is_integral() ? (int32_t)max_ : (float)max_;
+                        } else
+                            max = std::numeric_limits<int32_t>::max();
+
+                        return base_objects::number_provider_uniform(min, max);
+                    } else if (type == "clamped") {
+                        std::variant<int32_t, float> min;
+                        std::variant<int32_t, float> max;
+
+                        if (obj.contains("min")) {
+                            auto min_ = obj["min"];
+                            min = min_.is_integral() ? (int32_t)min_ : (float)min_;
+                        } else if (obj.contains("min_inclusive")) {
+                            auto min_ = obj["min_inclusive"];
+                            min = min_.is_integral() ? (int32_t)min_ : (float)min_;
+                        } else
+                            min = std::numeric_limits<int32_t>::min();
+
+                        if (obj.contains("max")) {
+                            auto max_ = obj["max"];
+                            max = max_.is_integral() ? (int32_t)max_ : (float)max_;
+                        } else if (obj.contains("max_inclusive")) {
+                            auto max_ = obj["max_inclusive"];
+                            max = max_.is_integral() ? (int32_t)max_ : (float)max_;
+                        } else
+                            max = std::numeric_limits<int32_t>::max();
+                        return base_objects::number_provider_clamped(min, max, read_number_provider(obj.at("source")));
+                    } else if (type == "trapezoid") {
+                        int32_t min = obj.at("min");
+                        int32_t max = obj.at("max");
+                        int32_t plateau = obj.at("plateau");
+                        return base_objects::number_provider_trapezoid(min, max, plateau);
+                    } else if (type == "weighted_list") {
+                        std::vector<std::pair<base_objects::number_provider, double>> values;
+                        auto values_js = js_array::get_array(obj.at("values"));
+                        values.reserve(values_js.size());
+                        for (auto&& value : values_js) {
+                            auto value_js = js_object::get_object(value);
+                            auto weight = value_js.contains("weight") ? value_js["weight"] : 1.0;
+                            values.push_back({read_number_provider(value_js.at("data")), weight});
+                        }
+                        return base_objects::number_provider_weighted_list(values);
+                    } else if (type == "biased_to_bottom") {
+                        std::variant<int32_t, float> min;
+                        std::variant<int32_t, float> max;
+
+                        if (obj.contains("min")) {
+                            auto min_ = obj["min"];
+                            min = min_.is_integral() ? (int32_t)min_ : (float)min_;
+                        } else if (obj.contains("min_inclusive")) {
+                            auto min_ = obj["min_inclusive"];
+                            min = min_.is_integral() ? (int32_t)min_ : (float)min_;
+                        } else
+                            min = std::numeric_limits<int32_t>::min();
+
+                        if (obj.contains("max")) {
+                            auto max_ = obj["max"];
+                            max = max_.is_integral() ? (int32_t)max_ : (float)max_;
+                        } else if (obj.contains("max_inclusive")) {
+                            auto max_ = obj["max_inclusive"];
+                            max = max_.is_integral() ? (int32_t)max_ : (float)max_;
+                        } else
+                            max = std::numeric_limits<int32_t>::max();
+
+                        return base_objects::number_provider_biased_to_bottom(min, max);
+                    } else if (type == "score") {
+                        base_objects::number_provider_score res;
+                        res.score = obj.at("score");
+                        res.scale = obj.contains("scale") ? std::optional<float>((float)obj["scale"]) : std::nullopt;
+                        auto target = js_object::get_object(obj.at("target"));
+                        std::string type = target.at("type");
+                        if (type == "fixed")
+                            res.target.value = target.at("name");
+                        else if (type == "context")
+                            res.target.value = target.at("target");
+                        else
+                            target.parsing_error("Invalid target type: " + type);
+                        return res;
+                    } else if (type == "storage") {
+                        base_objects::number_provider_storage res;
+                        res.storage = obj.at("storage");
+                        res.path = obj.at("path");
+                        return res;
+                    } else if (type == "enchantment_level")
+                        return base_objects::number_provider_enchantment_level((std::string)obj.at("amount"));
+                    else
+                        obj.parsing_error("Invalid number provider type: " + type);
+                } else {
+                    int32_t min = obj.contains("min") ? obj["min"] : std::numeric_limits<int32_t>::min();
+                    int32_t max = obj.contains("max") ? obj["max"] : std::numeric_limits<int32_t>::max();
+                    return base_objects::number_provider_uniform(min, max);
+                }
+            }
+        }
+
+        void load_file_chatType(js_object&& type_js, const std::string& id) {
+            check_override(chatTypes, id, "chat type");
+            ChatType type;
+            if (type_js.contains("chat"))
+                type.chat = to_decoration(type_js["chat"]);
+            if (type_js.contains("narration"))
+                type.narration = to_decoration(type_js["narration"]);
+
+            chatTypes[id] = std::move(type);
+        }
+
         void load_file_chatType(const std::filesystem::path& file_path, const std::string& id) {
-            check_override(paintingVariants, id, "chat type");
+            check_override(chatTypes, id, "chat type");
 
             auto res = try_read_json_file(file_path);
             if (!res)
@@ -4600,13 +4832,176 @@ namespace crafted_craft {
             chatTypes[id] = std::move(type);
         }
 
-        void load_file_armorTrimPattern(const std::filesystem::path& file_path, const std::string& id) {
-            check_override(paintingVariants, id, "armor trim pattern");
+        void load_file_advancements(js_object&& advancement_js, const std::string& id) {
+            check_override(advancements, id, "advancements");
+            Advancement advancement;
+            if (advancement_js.contains("display")) {
+                auto display_js = js_object::get_object(advancement_js["display"]);
+                Advancement::Display display;
+                {
+                    auto icon_js = js_object::get_object(display_js["icon"]);
+                    display.icon.item = icon_js["item"];
+                    if (icon_js.contains("nbt"))
+                        display.icon.nbt = icon_js["nbt"];
+                }
+                if (display_js.contains("frame"))
+                    display.frame = display_js["frame"];
+                else
+                    display.frame = "task";
 
+                display.description = display_js["description"].to_text();
+                display.title = display_js["title"].to_text();
+
+                if (display_js.contains("show_toast"))
+                    display.show_toast = display_js["show_toast"];
+                if (display_js.contains("announce_to_chat"))
+                    display.announce_to_chat = display_js["announce_to_chat"];
+                if (display_js.contains("hidden"))
+                    display.hidden = display_js["hidden"];
+            }
+            if (advancement_js.contains("parent"))
+                advancement.parent = advancement_js["parent"];
+            advancement.criteria = util::conversions::json::from_json(advancement_js["criteria"].get());
+            if (advancement_js.contains("requirements")) {
+                auto list_of_requirements_js = js_array::get_array(advancement_js["requirements"]);
+                advancement.requirements.reserve(list_of_requirements_js.size());
+                for (auto&& value : list_of_requirements_js) {
+                    auto requirements_js = js_array::get_array(value);
+                    std::vector<std::string> requirements;
+                    requirements.reserve(requirements_js.size());
+                    for (auto&& req : requirements_js)
+                        requirements.push_back(req);
+                    advancement.requirements.push_back(requirements);
+                }
+            }
+            if (advancement_js.contains("rewards")) {
+                auto rewards_js = js_object::get_object(advancement_js["rewards"]);
+                if (rewards_js.contains("recipes")) {
+                    auto recipes_js = js_array::get_array(rewards_js["recipes"]);
+                    advancement.rewards.recipes.reserve(rewards_js.size());
+                    for (auto&& req : recipes_js)
+                        advancement.rewards.recipes.push_back(req);
+                }
+                if (rewards_js.contains("loot")) {
+                    auto loot_js = js_array::get_array(rewards_js["loot"]);
+                    advancement.rewards.loot.reserve(rewards_js.size());
+                    for (auto&& req : loot_js)
+                        advancement.rewards.loot.push_back(req);
+                }
+                if (rewards_js.contains("experience"))
+                    advancement.rewards.experience = rewards_js["experience"];
+                if (rewards_js.contains("function"))
+                    advancement.rewards.function = rewards_js["function"];
+            }
+
+            if (advancement_js.contains("sends_telemetry_event"))
+                advancement.sends_telemetry_event = advancement_js["sends_telemetry_event"];
+            advancements[id] = std::move(advancement);
+        }
+
+        void load_file_advancements(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(advancements, id, "advancement");
             auto res = try_read_json_file(file_path);
             if (!res)
                 throw std::runtime_error("Failed to read file: " + file_path.string());
-            js_object pattern_js = js_object::get_object(res.value());
+            load_file_advancements(js_object::get_object(res.value()), id);
+        }
+
+        void load_file_jukebox_song(js_object&& song_js, const std::string& id) {
+            check_override(jukebox_songs, id, "jukebox song");
+            JukeboxSong song;
+            song.comparator_output = song_js["comparator_output"];
+            song.length_in_seconds = song_js["length_in_seconds"];
+            song.description = Chat::fromEnbt(util::conversions::json::from_json(song_js["description"].get()));
+            auto sound_event_js = song_js["sound_event"];
+            if (sound_event_js.is_string())
+                song.sound_event = (std::string)sound_event_js;
+            else {
+                auto sound_event_obj = js_object::get_object(sound_event_js);
+                base_objects::slot_component::inner::sound_extended ex;
+                ex.sound_name = sound_event_obj["sound_id"];
+                if (sound_event_obj.contains("range"))
+                    ex.fixed_range = sound_event_obj["range"];
+                song.sound_event = std::move(ex);
+            }
+            jukebox_songs[id] = std::move(song);
+        }
+
+        void load_file_jukebox_song(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(jukebox_songs, id, "jukebox songs");
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            load_file_jukebox_song(js_object::get_object(res.value()), id);
+        }
+
+        void load_file_loot_table(js_object&& loot_table_js, const std::string& id) {
+            check_override(loot_table, id, "loot table");
+
+            loot_table_item item;
+            if (loot_table_js.contains("type"))
+                item.type = (std::string)loot_table_js["type"];
+            else
+                item.type = "generic";
+
+            if (loot_table_js.contains("functions")) {
+                auto functions = js_array::get_array(loot_table_js["functions"]);
+                item.functions.reserve(functions.size());
+                for (auto&& function : functions) {
+                    enbt::compound comp;
+                    comp = util::conversions::json::from_json(function.get());
+                    item.functions.push_back(comp);
+                }
+            }
+
+            if (loot_table_js.contains("pools")) {
+                auto pools = js_array::get_array(loot_table_js["pools"]);
+                item.pools.reserve(pools.size());
+                for (auto&& pool_item : pools) {
+                    auto pool = js_object::get_object(pool_item);
+                    loot_table_item::pool pool_;
+                    if (pool.contains("conditions"))
+                        pool_.conditions = util::conversions::json::from_json(pool["conditions"].get());
+                    if (pool.contains("bonus_rolls"))
+                        pool_.bonus_rolls = read_number_provider(pool["bonus_rolls"]);
+
+                    if (pool.contains("functions")) {
+                        auto functions = js_array::get_array(pool["functions"]);
+                        pool_.functions.reserve(functions.size());
+                        for (auto&& function : functions) {
+                            enbt::compound comp;
+                            comp = util::conversions::json::from_json(function.get());
+                            pool_.functions.push_back(comp);
+                        }
+                    }
+                    pool_.rolls = read_number_provider(pool.at("rolls"));
+                    auto entries = js_array::get_array(pool.at("entries"));
+                    pool_.entries.reserve(entries.size());
+                    for (auto&& entry : entries) {
+                        enbt::compound comp;
+                        comp = util::conversions::json::from_json(entry.get());
+                        pool_.entries.push_back(comp);
+                    }
+                    item.pools.push_back(std::move(pool_));
+                }
+            }
+
+
+            if (loot_table_js.contains("random_sequence"))
+                item.random_sequence = loot_table_js["random_sequence"];
+            loot_table[id] = std::move(item);
+        }
+
+        void load_file_loot_table(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(armorTrimPatterns, id, "armor trim pattern");
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            load_file_loot_table(js_object::get_object(res.value()), id);
+        }
+
+        void load_file_armorTrimPattern(js_object&& pattern_js, const std::string& id) {
+            check_override(armorTrimPatterns, id, "armor trim pattern");
             ArmorTrimPattern pattern;
             pattern.assert_id = (std::string)pattern_js["assert_id"];
             pattern.decal = pattern_js["decal"];
@@ -4621,13 +5016,16 @@ namespace crafted_craft {
             armorTrimPatterns[id] = std::move(pattern);
         }
 
-        void load_file_armorTrimMaterial(const std::filesystem::path& file_path, const std::string& id) {
-            check_override(paintingVariants, id, "armor trim material");
-
+        void load_file_armorTrimPattern(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(armorTrimPatterns, id, "armor trim pattern");
             auto res = try_read_json_file(file_path);
             if (!res)
                 throw std::runtime_error("Failed to read file: " + file_path.string());
-            js_object material_js = js_object::get_object(res.value());
+            load_file_armorTrimPattern(js_object::get_object(res.value()), id);
+        }
+
+        void load_file_armorTrimMaterial(js_object&& material_js, const std::string& id) {
+            check_override(armorTrimMaterials, id, "armor trim material");
             ArmorTrimMaterial material;
             material.asset_name = (std::string)material_js["texture"];
             material.ingredient = (std::string)material_js["ingredient"];
@@ -4647,12 +5045,16 @@ namespace crafted_craft {
             armorTrimMaterials[id] = std::move(material);
         }
 
-        void load_file_wolfVariant(const std::filesystem::path& file_path, const std::string& id) {
-            check_override(paintingVariants, id, "wolf variant");
-
+        void load_file_armorTrimMaterial(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(armorTrimMaterials, id, "armor trim material");
             auto res = try_read_json_file(file_path);
             if (!res)
                 throw std::runtime_error("Failed to read file: " + file_path.string());
+            load_file_armorTrimMaterial(js_object::get_object(res.value()), id);
+        }
+
+        void load_file_wolfVariant(js_object&& variant_js, const std::string& id) {
+            check_override(wolfVariants, id, "wolf variant");
             js_object variant_js = js_object::get_object(res.value());
             WolfVariant variant;
             variant.wild_texture = (std::string)variant_js["wild_texture"];
@@ -4665,14 +5067,16 @@ namespace crafted_craft {
             wolfVariants[id] = std::move(variant);
         }
 
-        void load_file_dimensionType(const std::filesystem::path& file_path, const std::string& id) {
-            check_override(paintingVariants, id, "dimension type");
-
+        void load_file_wolfVariant(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(wolfVariants, id, "wolf variant");
             auto res = try_read_json_file(file_path);
             if (!res)
                 throw std::runtime_error("Failed to read file: " + file_path.string());
+            load_file_wolfVariant(js_object::get_object(res.value()), id);
+        }
 
-            js_object type_js = js_object::get_object(res.value());
+        void load_file_dimensionType(js_object&& type_js, const std::string& id) {
+            check_override(dimensionTypes, id, "dimension type");
             DimensionType type;
             if (type_js.contains("monster_spawn_light_level")) {
                 auto monster_spawn_light_level = type_js["monster_spawn_light_level"];
@@ -4708,13 +5112,104 @@ namespace crafted_craft {
             dimensionTypes[id] = std::move(type);
         }
 
-        void load_file_damageType(const std::filesystem::path& file_path, const std::string& id) {
-            check_override(paintingVariants, id, "damage type");
-
+        void load_file_dimensionType(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(dimensionTypes, id, "dimension type");
             auto res = try_read_json_file(file_path);
             if (!res)
                 throw std::runtime_error("Failed to read file: " + file_path.string());
-            js_object type_js = js_object::get_object(res.value());
+            load_file_dimensionType(js_object::get_object(res.value()), id);
+        }
+
+        void load_file_enchantment(js_object&& type_js, const std::string& id) {
+            check_override(enchantments, id, "enchantments");
+            enchantment type;
+            type.description = Chat::fromEnbt(util::conversions::json::from_json(type_js.at("description").get()));
+            type.max_level = type_js.at("max_level");
+            type.weight = type_js.at("weight");
+            type.anvil_cost = type_js.at("anvil_cost");
+            auto slots = js_array::get_array(type_js.at("slots"));
+            type.slots.reserve(slots.size());
+            for (auto&& slot : slots)
+                type.slots.push_back(slot);
+            if (type_js.at("exclusive_set").is_string())
+                type.exclusive_set = type_js.at("exclusive_set");
+            else {
+                auto exclusive_set_js = js_array::get_array(type_js.at("exclusive_set"));
+                std::vector<std::string> exclusive_set;
+                exclusive_set.reserve(exclusive_set_js.size());
+                for (auto&& set : exclusive_set_js)
+                    exclusive_set.push_back(set);
+                type.exclusive_set = std::move(exclusive_set);
+            }
+            if (type_js.at("supported_items").is_string())
+                type.supported_items = type_js.at("supported_items");
+            else {
+                auto supported_items_js = js_array::get_array(type_js.at("supported_items"));
+                std::vector<std::string> supported_items;
+                supported_items.reserve(supported_items_js.size());
+                for (auto&& set : supported_items_js)
+                    supported_items.push_back(set);
+                type.supported_items = std::move(supported_items);
+            }
+            if (type_js.contains("primary_items")) {
+                if (type_js.at("primary_items").is_string())
+                    type.primary_items = type_js.at("primary_items");
+                else {
+                    auto primary_items_js = js_array::get_array(type_js.at("primary_items"));
+                    std::vector<std::string> primary_items;
+                    primary_items.reserve(primary_items_js.size());
+                    for (auto&& set : primary_items_js)
+                        primary_items.push_back(set);
+                    type.primary_items = std::move(primary_items);
+                }
+            }
+            auto min_cost = js_object::get_object(type_js.at("min_cost"));
+            type.min_cost.base = min_cost.at("base");
+            type.min_cost.per_level_above_first = min_cost.at("per_level_above_first");
+
+            auto max_cost = js_object::get_object(type_js.at("max_cost"));
+            type.max_cost.base = max_cost.at("base");
+            type.max_cost.per_level_above_first = max_cost.at("per_level_above_first");
+
+            auto effects = js_object::get_object(type_js.at("effects"));
+            type.effects.reserve(effects.size());
+            for (auto&& [component_id, effect] : effects) {
+                auto list_of = js_array::get_array(effect);
+                std::vector<enbt::compound> effects;
+                effects.reserve(list_of.size());
+                for (auto&& effect : list_of) {
+                    enbt::compound comp;
+                    comp = util::conversions::json::from_json(effect.get());
+                    effects.push_back(comp);
+                }
+                type.effects[component_id] = std::move(effects);
+            }
+            enchantments[id] = std::move(type);
+        }
+
+        void load_file_enchantment(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(enchantments, id, "enchantments");
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            load_file_enchantment(js_object::get_object(res.value()), id);
+        }
+
+        void load_file_enchantment_provider(boost::json::object& type_js, const std::string& id) {
+            check_override(enchantment_providers, id, "enchantment providers");
+            enchantment_providers[id] = util::conversions::json::from_json(type_js);
+        }
+
+        void load_file_enchantment_provider(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(enchantment_providers, id, "enchantment providers");
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            load_file_enchantment_provider(res.value(), id);
+        }
+
+        void load_file_damageType(js_object&& type_js, const std::string& id) {
+            check_override(damageTypes, id, "damage type");
             DamageType type;
             type.message_id = (std::string)type_js["message_id"];
             std::string scaling = type_js["scaling"];
@@ -4725,7 +5220,7 @@ namespace crafted_craft {
             else if (scaling == "always")
                 type.scaling = DamageType::ScalingType::always;
             else
-                throw std::runtime_error("Unknown scaling type: " + scaling);
+                type_js["scaling"].parsing_error("Unknown scaling type: " + scaling);
 
             if (type_js.contains("effects")) {
                 std::string effects = type_js["effects"];
@@ -4742,7 +5237,7 @@ namespace crafted_craft {
                 else if (effects == "freezing")
                     type.effects = DamageType::EffectsType::freezing;
                 else
-                    throw std::runtime_error("Unknown effects type: " + effects);
+                    type_js["effects"].parsing_error("Unknown effects type: " + effects);
             }
 
             if (type_js.contains("death_message_type")) {
@@ -4754,38 +5249,68 @@ namespace crafted_craft {
                 else if (death_message_type == "intentional_game_design")
                     type.death_message_type = DamageType::DeathMessageType::intentional_game_design;
                 else
-                    throw std::runtime_error("Unknown death message type: " + death_message_type);
+                    type_js["death_message_type"].parsing_error("Unknown death message type: " + death_message_type);
             }
 
             type.exhaustion = type_js["exhaustion"];
             damageTypes[id] = std::move(type);
         }
 
-        void load_file_bannerPattern(const std::filesystem::path& file_path, const std::string& id) {
-            check_override(paintingVariants, id, "banner pattern");
-
+        void load_file_damageType(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(damageTypes, id, "damage type");
             auto res = try_read_json_file(file_path);
             if (!res)
                 throw std::runtime_error("Failed to read file: " + file_path.string());
-            js_object pattern_js = js_object::get_object(res.value());
+            load_file_damageType(js_object::get_object(res.value()), id);
+        }
+
+        void load_file_bannerPattern(js_object&& pattern_js, const std::string& id) {
+            check_override(bannerPatterns, id, "banner pattern");
             BannerPattern pattern;
             pattern.asset_id = (std::string)pattern_js["asset_id"];
             pattern.translation_key = (std::string)pattern_js["translation_key"];
             bannerPatterns[id] = std::move(pattern);
         }
 
-        void load_file_paintingVariant(const std::filesystem::path& file_path, const std::string& id) {
-            check_override(paintingVariants, id, "painting variant");
-
+        void load_file_bannerPattern(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(bannerPatterns, id, "banner pattern");
             auto res = try_read_json_file(file_path);
             if (!res)
                 throw std::runtime_error("Failed to read file: " + file_path.string());
-            js_object variant_js = js_object::get_object(res.value());
+            load_file_bannerPattern(js_object::get_object(res.value()), id);
+        }
+
+        void load_file_paintingVariant(js_object&& variant_js, const std::string& id) {
+            check_override(paintingVariants, id, "painting variant");
             PaintingVariant variant;
             variant.asset_id = (std::string)variant_js["asset_id"];
             variant.height = variant_js["height"];
             variant.width = variant_js["width"];
             paintingVariants[id] = std::move(variant);
+        }
+
+        void load_file_paintingVariant(const std::filesystem::path& file_path, const std::string& id) {
+            check_override(paintingVariants, id, "painting variant");
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            load_file_paintingVariant(js_object::get_object(res.value()), id);
+        }
+
+        void load_file_recipe(js_object&& variant_js, const std::string& id) {
+            if (!api::recipe::registered())
+                throw std::runtime_error("Recipe api not registered!");
+
+            enbt::compound res;
+            res = util::conversions::json::from_json(variant_js.get());
+            api::recipe::set_recipe(id, std::move(res));
+        }
+
+        void load_file_recipe(const std::filesystem::path& file_path, const std::string& id) {
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            load_file_recipe(js_object::get_object(res.value()), id);
         }
 
         void apply_tags(js_value val, const std::string& type, const std::string& namespace_, const std::string& path_) {
@@ -4796,10 +5321,7 @@ namespace crafted_craft {
                     the_tag = (std::string)tag;
                 else {
                     auto tag_ = js_object::get_object(tag);
-                    if (tag_.contains("id")) {
-                        the_tag = (std::string)tag_["id"];
-                    } else
-                        throw std::runtime_error("Unknown tag type");
+                    the_tag = (std::string)tag_.at("id");
                 }
 
                 if (the_tag.starts_with("#")) {
@@ -4810,11 +5332,7 @@ namespace crafted_craft {
             tags[type][namespace_][path_].push_back(std::move(result));
         }
 
-        void load_file_tags(const std::filesystem::path& file_path, const std::string& type, const std::string& namespace_, const std::string& path_) {
-            auto res = try_read_json_file(file_path);
-            if (!res)
-                throw std::runtime_error("Failed to read file: " + file_path.string());
-            js_object tags_ = js_object::get_object(res.value());
+        void load_file_tags(js_object&& tags_, const std::string& type, const std::string& namespace_, const std::string& path_) {
             if (tags_.contains("replace")) {
                 bool replace = tags_["replace"];
                 if (replace)
@@ -4825,41 +5343,86 @@ namespace crafted_craft {
             else if (tags_.contains("root"))
                 apply_tags(tags_["root"], type, namespace_, path_);
             else
-                throw std::runtime_error("Invalid tag file format");
+                tags_.parsing_error("Invalid tag file format");
         }
 
-        void load_register_file(const std::filesystem::path& file_path, std::string namespace_, const std::string& path_, const std::string& type) {
+        void load_file_tags(const std::filesystem::path& file_path, const std::string& type, const std::string& namespace_, const std::string& path_) {
+            auto res = try_read_json_file(file_path);
+            if (!res)
+                throw std::runtime_error("Failed to read file: " + file_path.string());
+            load_file_tags(js_object::get_object(res.value()), type, namespace_, path_);
+        }
+
+        void load_register_file(std::string_view memory, const std::string& namespace_, const std::string& path_, const std::string& type) {
+        }
+
+        void load_register_file(const std::filesystem::path& file_path, const std::string& namespace_, const std::string& path_, const std::string& type) {
             if (path_.empty())
                 throw std::runtime_error("Path is empty");
-
-            if (namespace_.empty())
-                namespace_ = default_namespace;
-            std::string id = namespace_ + ":" + path_;
-            if (type == "biomes") {
+            std::string id = (namespace_.empty() ? default_namespace : namespace_) + ":" + path_;
+            if (type == "advancement") {
+                load_file_advancements(file_path, id);
+            } else if (type == "banner_pattern")
+                load_file_bannerPattern(file_path, id);
+            else if (type == "chat_type")
+                load_file_chatType(file_path, id);
+            else if (type == "damage_type")
+                load_file_damageType(file_path, id);
+            else if (type == "dimension_type")
+                load_file_dimensionType(file_path, id);
+            else if (type == "enchantment")
+                load_file_enchantment(file_path, id);
+            else if (type == "enchantment_provider")
+                load_file_enchantment_provider(file_path, id);
+            else if (type == "jukebox_song")
+                load_file_jukebox_song(file_path, id);
+            else if (type == "loot_table")
+                load_file_loot_table(file_path, id);
+            else if (type == "painting_variant")
+                load_file_paintingVariant(file_path, id);
+            else if (type == "recipe")
+                load_file_recipe(file_path, id);
+            else if (type == "trim_pattern")
+                load_file_armorTrimPattern(file_path, id);
+            else if (type == "trim_material")
+                load_file_armorTrimMaterial(file_path, id);
+            else if (type == "wolf_variant")
+                load_file_wolfVariant(file_path, id);
+            else if (type == "worldgen/biome")
                 load_file_biomes(file_path, id);
-            } else if (type == "chatType") {
-                load_file_biomes(file_path, id);
-            } else if (type == "armorTrimPattern") {
-                load_file_biomes(file_path, id);
-            } else if (type == "armorTrimMaterial") {
-                load_file_biomes(file_path, id);
-            } else if (type == "wolfVariant") {
-                load_file_biomes(file_path, id);
-            } else if (type == "dimensionType") {
-                load_file_biomes(file_path, id);
-            } else if (type == "damageType") {
-                load_file_biomes(file_path, id);
-            } else if (type == "bannerPattern") {
-                load_file_biomes(file_path, id);
-            } else if (type == "paintingVariant") {
-                load_file_biomes(file_path, id);
-            } else if (type.starts_with("tag")) {
+            else if (type == "worldgen/configured_carver")
+                ; //load_file_biomes(file_path, id);
+            else if (type == "worldgen/configured_feature")
+                ; //load_file_biomes(file_path, id);
+            else if (type == "worldgen/density_function")
+                ; //load_file_biomes(file_path, id);
+            else if (type == "worldgen/flat_level_generator_preset")
+                ; //load_file_biomes(file_path, id);
+            else if (type == "worldgen/multi_noise_biome_source_parameter_list")
+                ; //load_file_biomes(file_path, id);
+            else if (type == "worldgen/noise")
+                ; //load_file_biomes(file_path, id);
+            else if (type == "worldgen/noise_settings")
+                ; //load_file_biomes(file_path, id);
+            else if (type == "worldgen/placed_feature")
+                ; //load_file_biomes(file_path, id);
+            else if (type == "worldgen/processor_list")
+                ; //load_file_biomes(file_path, id);
+            else if (type == "worldgen/structure")
+                ; //load_file_biomes(file_path, id);
+            else if (type == "worldgen/structure_set")
+                ; //load_file_biomes(file_path, id);
+            else if (type == "worldgen/template_pool")
+                ; //load_file_biomes(file_path, id);
+            else if (type == "worldgen/world_preset")
+                ; //load_file_biomes(file_path, id);
+            else if (type.starts_with("tag")) {
                 std::string tag_type;
-                if (type.starts_with("tags/")) {
+                if (type.starts_with("tags/"))
                     tag_type = type.substr(5);
-                } else if (type.starts_with("tag/")) {
+                else if (type.starts_with("tag/"))
                     tag_type = type.substr(4);
-                } else
+                else
                     throw std::runtime_error("Unknown type: " + type);
                 load_file_tags(file_path, tag_type, namespace_, path_);
             } else
@@ -4868,7 +5431,7 @@ namespace crafted_craft {
 
         static inline uint64_t as_uint(const boost::json::value& val) {
             if (val.is_int64())
-                return val.as_int64();
+                return val.to_number<int32_t>();
             else if (val.is_uint64())
                 return val.as_uint64();
             else
@@ -4886,13 +5449,12 @@ namespace crafted_craft {
                     size_t usable = 30000;
                     full_block_data_.resize(usable);
                     for (auto&& [name, decl] : parsed.as_object()) {
-                        std::unordered_map<std::string, std::vector<std::string>> properties_def;
+                        std::unordered_map<std::string, std::unordered_set<std::string>> properties_def;
                         if (decl.as_object().contains("properties")) {
                             for (auto&& [prop_name, prop] : decl.at("properties").as_object()) {
-                                std::vector<std::string> prop_list;
-                                for (auto&& prop_val : prop.as_array()) {
-                                    prop_list.push_back((std::string)prop_val.as_string());
-                                }
+                                std::unordered_set<std::string> prop_list;
+                                for (auto&& prop_val : prop.as_array())
+                                    prop_list.insert((std::string)prop_val.as_string());
                                 properties_def[(std::string)prop_name] = std::move(prop_list);
                             }
                         }
@@ -4952,6 +5514,28 @@ namespace crafted_craft {
                     full_block_data_.shrink_to_fit();
                 }
             ));
+        }
+
+        void load_items() {
+            auto parsed = boost::json::parse(std::string_view((const char*)resources__items.data(), resources__items.size()));
+            for (auto&& [name, decl] : parsed.as_object()) {
+                base_objects::static_slot_data slot_data;
+                slot_data.id = name;
+                std::unordered_map<std::string, base_objects::slot_component::unified> components;
+                for (auto& [name, value] : decl.as_object().at("components").as_object())
+                    components[name] = parse_component(name, value);
+                slot_data.default_components = std::move(components);
+                base_objects::slot_data::add_slot_data(std::move(slot_data));
+            }
+        }
+
+        void prepare_versions() {
+            auto parsed = boost::json::parse(std::string_view((const char*)resources__versions_765.data(), resources__versions_765.size()));
+            registers::individual_registers[765] = util::conversions::json::from_json(parsed);
+            parsed = boost::json::parse(std::string_view((const char*)resources__versions_766.data(), resources__versions_766.size()));
+            registers::individual_registers[766] = util::conversions::json::from_json(parsed);
+            parsed = boost::json::parse(std::string_view((const char*)resources__versions_767.data(), resources__versions_767.size()));
+            registers::individual_registers[767] = util::conversions::json::from_json(parsed);
         }
     }
 }

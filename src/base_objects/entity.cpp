@@ -55,7 +55,6 @@ namespace crafted_craft {
                     for (auto& [protocol, assignations] : internal_entity_aliases_protocol) {
                         if (assignations.find(entity.id) != assignations.end()) {
                             entity.internal_entity_aliases[protocol] = assignations[entity.id];
-                            continue;
                         } else {
                             bool found = false;
                             for (auto& alias : entity.entity_aliases) {
@@ -123,7 +122,7 @@ namespace crafted_craft {
             return entity_data::get_entity(entity_id);
         }
 
-        entity_ref entity::load_from_enbt(const enbt::compound_ref& nbt) {
+        entity_ref entity::load_from_enbt(const enbt::compound_const_ref& nbt) {
             entity_ref res = new entity();
             res->died = nbt["died"];
             res->entity_id = nbt["entity_id"];
@@ -171,7 +170,7 @@ namespace crafted_craft {
             return entity_data::get_entity(id).create_callback();
         }
 
-        entity_ref entity::create(uint16_t id, const enbt::compound_ref& nbt) {
+        entity_ref entity::create(uint16_t id, const enbt::compound_const_ref& nbt) {
             return entity_data::get_entity(id).create_callback_with_nbt(nbt);
         }
     }

@@ -2,7 +2,6 @@
 #define SRC_BASE_OBJECTS_ENTITY
 #include "../calculations.hpp"
 #include "../library/enbt.hpp"
-#include "../registers.hpp"
 #include "atomic_holder.hpp"
 #include "bounds.hpp"
 #include "shared_client_data.hpp"
@@ -44,13 +43,26 @@ namespace crafted_craft {
             } bounds_mode;
             bool living_entity;
             float acceleration; // block\tick
+            enbt::compound data;
+            //"data"{
+            //  "slot":{
+            //      "main_hand": id,
+            //      "off_hand": id,
+            //      "hand": [id, id, ...]
+            //      "head": id,
+            //      "chest": id,
+            //      "legs": id,
+            //      "feet": id,
+            //      "body": [id, id, id, id, ...]
+            //  }
+            //}
 
 
             std::function<void(entity& target_entity)> tick_callback;
             std::function<bool(entity& target_entity, bool force)> pre_death_callback;
             std::function<entity_ref()> create_callback;
-            std::function<entity_ref(const enbt::compound_ref&)> create_callback_with_nbt;
-            std::function<void(entity_ref& creating_entity, const enbt::compound_ref&)> create_from_enbt_callback;
+            std::function<entity_ref(const enbt::compound_const_ref&)> create_callback_with_nbt;
+            std::function<void(entity_ref& creating_entity, const enbt::compound_const_ref&)> create_from_enbt_callback;
             std::function<void(entity_ref& checking_entity, entity_data&, calc::VECTOR pos)> check_bounds; //if nullptr then used base_bounds, return true if entity is in bounds
 
 
@@ -72,8 +84,8 @@ namespace crafted_craft {
 
         struct entity {
             enbt::raw_uuid id;
-            enbt::value nbt;
-            enbt::value server_data;
+            enbt::compound nbt;
+            enbt::compound server_data;
             calc::VECTOR position;
             calc::VECTOR motion;
             calc::VECTOR rotation;
@@ -93,8 +105,8 @@ namespace crafted_craft {
 
 
             static entity_ref create(uint16_t id);
-            static entity_ref create(uint16_t id, const enbt::compound_ref& nbt);
-            static entity_ref load_from_enbt(const enbt::compound_ref& file_nbt);
+            static entity_ref create(uint16_t id, const enbt::compound_const_ref& nbt);
+            static entity_ref load_from_enbt(const enbt::compound_const_ref& file_nbt);
 
             entity() {}
 

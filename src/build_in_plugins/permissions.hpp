@@ -6,6 +6,7 @@
 
 namespace crafted_craft {
     namespace build_in_plugins {
+        //provides commands to manipulate permissions and implements OP list
         class PermissionsPlugin : public PluginAutoRegister<"permissions", PermissionsPlugin> {
             storage::list_storage op_list;
             void update_perm(base_objects::SharedClientData& client_ref);

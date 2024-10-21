@@ -1,4 +1,5 @@
 #include "packets.hpp"
+#include "../../../api/configuration.hpp"
 #include "../../util.hpp"
 #include "../765/packets.hpp"
 #include "writers_readers.hpp"
@@ -62,7 +63,7 @@ namespace crafted_craft {
                 }
 
                 Response loginSuccess(SharedClientData& client) {
-                    if (Server::instance().config.protocol.offline_mode)
+                    if (api::configuration::get().protocol.offline_mode)
                         client.data = Server::instance().getSessionServer().hasJoined(client.name, "", false);
                     if (!client.data)
                         return kick("Internal error");
@@ -97,7 +98,7 @@ namespace crafted_craft {
                     response.push_back(verify_token[1]);
                     response.push_back(verify_token[2]);
                     response.push_back(verify_token[3]);
-                    response.push_back(!Server::instance().config.protocol.offline_mode);
+                    response.push_back(!api::configuration::get().protocol.offline_mode);
                     return Response::Answer({std::move(response)});
                 }
 

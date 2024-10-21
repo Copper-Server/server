@@ -12,6 +12,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_subdirectory(tools)
 message(STATUS "Building resources")
 build_resource("resources__blocks" "src/resources/blocks.json")
+build_resource("resources__items" "src/resources/items.json")
+build_resource("resources__versions_765" "src/resources/versions/765.json")
+build_resource("resources__versions_766" "src/resources/versions/766.json")
+build_resource("resources__versions_767" "src/resources/versions/767.json")
 
 
 if(MSVC)

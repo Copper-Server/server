@@ -7,11 +7,10 @@
 #include "../storage/players_data.hpp"
 
 namespace crafted_craft {
-    class Server;
     namespace build_in_plugins {
+        //handles clients, commands, server and provides basic server commands
         class ServerPlugin : public PluginAutoRegister<"server", ServerPlugin> {
             storage::players_data players_data;
-            double tps = 0;
 
         public:
             base_objects::command_manager manager;

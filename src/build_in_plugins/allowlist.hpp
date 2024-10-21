@@ -5,8 +5,8 @@
 #include "../storage/list_storage.hpp"
 
 namespace crafted_craft {
-    class Server;
     namespace build_in_plugins {
+        //provides and manages allow list system
         class AllowListPlugin : public PluginAutoRegister<"allow_list", AllowListPlugin> {
             storage::list_storage allow_list;
             api::allowlist::allowlist_mode mode = api::allowlist::allowlist_mode::off;
