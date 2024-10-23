@@ -692,9 +692,10 @@ namespace crafted_craft {
             str_len++;
             if (char_ptr)
                 delete[] char_ptr;
-            char_ptr = new char[str_len];
+            char_ptr = new char[str_len + 1];
             for (size_t i = 0; i < str_len; i++)
                 char_ptr[i] = string[i];
+            char_ptr[str_len] = 0;
         } else if (char_ptr) {
             delete[] char_ptr;
             char_ptr = nullptr;
@@ -750,5 +751,119 @@ namespace crafted_craft {
         if (hoverEvent->show_entity)
             delete hoverEvent->show_entity;
         hoverEvent->show_entity = nullptr;
+    }
+
+    bool Chat::operator==(const Chat& other) const {
+        if (
+            defined_bold != other.defined_bold
+            | defined_italic != other.defined_italic
+            | defined_underlined != other.defined_underlined
+            | defined_strikethrough != other.defined_strikethrough
+            | defined_obfuscated != other.defined_obfuscated
+        )
+            return false;
+
+        if (
+            (!text != !other.text)
+            | (!color != !other.color)
+            | (!insertion != !other.insertion)
+            | (!font != !other.font)
+            | (!clickEvent != !other.clickEvent)
+            | (!hoverEvent != !other.hoverEvent)
+        )
+            return false;
+
+        if (text) {
+            if (text_is_translation != other.text_is_translation)
+                return false;
+            if (strcmp(text, other.text))
+                return false;
+        }
+        if (color)
+            if (strcmp(color, other.color))
+                return false;
+        if (insertion)
+            if (strcmp(insertion, other.insertion))
+                return false;
+        if (font)
+            if (strcmp(font, other.font))
+                return false;
+
+        if (clickEvent) {
+            if (
+                (!clickEvent->change_page != !other.clickEvent->change_page)
+                | (!clickEvent->copy_to_clipboard != !other.clickEvent->copy_to_clipboard)
+                | (!clickEvent->open_url != !other.clickEvent->open_url)
+                | (!clickEvent->run_command != !other.clickEvent->run_command)
+                | (!clickEvent->suggest_command != !other.clickEvent->suggest_command)
+            )
+                return false;
+
+            if (clickEvent->change_page)
+                if (*clickEvent->change_page != *other.clickEvent->change_page)
+                    return false;
+
+            if (clickEvent->copy_to_clipboard)
+                if (strcmp(clickEvent->copy_to_clipboard, other.clickEvent->copy_to_clipboard))
+                    return false;
+            if (clickEvent->open_url)
+                if (strcmp(clickEvent->open_url, other.clickEvent->open_url))
+                    return false;
+            if (clickEvent->run_command)
+                if (strcmp(clickEvent->run_command, other.clickEvent->run_command))
+                    return false;
+            if (clickEvent->suggest_command)
+                if (strcmp(clickEvent->suggest_command, other.clickEvent->suggest_command))
+                    return false;
+        }
+        if (hoverEvent) {
+            if (
+                (!hoverEvent->show_entity != !other.hoverEvent->show_entity)
+                | (!hoverEvent->show_item != !other.hoverEvent->show_item)
+                | (!hoverEvent->show_text != !other.hoverEvent->show_text)
+            )
+                return false;
+            if (hoverEvent->show_text)
+                if (strcmp(hoverEvent->show_text, other.hoverEvent->show_text))
+                    return false;
+
+            if (hoverEvent->show_entity) {
+                if (hoverEvent->show_entity->id != other.hoverEvent->show_entity->id)
+                    return false;
+                if (hoverEvent->show_entity->name != other.hoverEvent->show_entity->name)
+                    return false;
+                if (hoverEvent->show_entity->type != other.hoverEvent->show_entity->type)
+                    return false;
+            }
+
+            if (hoverEvent->show_item) {
+                if (hoverEvent->show_item->id != other.hoverEvent->show_item->id)
+                    return false;
+                if (hoverEvent->show_item->count != other.hoverEvent->show_item->count)
+                    return false;
+                if (hoverEvent->show_item->tag != other.hoverEvent->show_item->tag)
+                    return false;
+            }
+        }
+
+        if (defined_bold)
+            if (bold != other.bold)
+                return false;
+        if (defined_italic)
+            if (italic != other.italic)
+                return false;
+        if (defined_underlined)
+            if (underlined != other.underlined)
+                return false;
+        if (defined_strikethrough)
+            if (strikethrough != other.strikethrough)
+                return false;
+        if (defined_obfuscated)
+            if (obfuscated != other.obfuscated)
+                return false;
+
+        if (extra != other.extra)
+            return false;
+        return true;
     }
 }

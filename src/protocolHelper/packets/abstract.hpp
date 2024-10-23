@@ -1,5 +1,6 @@
 
 
+#include "../../base_objects/block.hpp"
 #include "../../ClientHandleHelper.hpp"
 #include "../../base_objects/chat.hpp"
 #include "../../base_objects/chunk.hpp"

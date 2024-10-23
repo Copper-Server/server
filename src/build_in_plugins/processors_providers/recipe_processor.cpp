@@ -8,66 +8,87 @@ namespace crafted_craft {
 
         //TODO
         slot handle_furnace(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_shaped(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_shapeless(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_transmute(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_special_armordye(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_special_bannerduplicate(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_special_bookcloning(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_special_firework_rocket(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_special_firework_star(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_special_firework_star_fade(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_special_mapcloning(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_special_mapextending(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_special_repairitem(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_special_shielddecoration(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_special_shulkerboxcoloring(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_special_tippedarrow(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_special_suspiciousstew(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_crafting_decorated_pot(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_smithing_transform(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_smithing_trim(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         slot handle_stonecutting(const enbt::compound_const_ref& recipe, list_array<base_objects::slot*>& slots, uint32_t dim_x, uint32_t dim_z, const base_objects::command_context& context) {
+            return std::nullopt;
         }
 
         RecipeProcessor::RecipeProcessor() {}

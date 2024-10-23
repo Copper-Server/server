@@ -544,21 +544,21 @@ namespace crafted_craft::util {
              auto& comp = it.as_object();
              base_objects::slot_component::potion_contents potion_contents;
              //TODO continue
-             potion_contents.potion_id = (std::string)comp.at("potion").as_string();
-             if (comp.contains("effects")) {
-                 for (auto& effect : comp.at("effects").as_array()) {
-                     auto& eff = effect.as_object();
-                     base_objects::item_potion_effect potion_effect;
-                     potion_effect.potion_id = (std::string)eff.at("id").as_string();
-                     potion_effect.amplifier = eff.at("amplifier").to_number<int8_t>();
-                     potion_effect.duration = eff.at("duration").to_number<int32_t>();
-                     potion_effect.ambient = eff.at("ambient").as_bool();
-                     potion_effect.show_particles = eff.at("show_particles").as_bool();
-                     potion_effect.show_icon = eff.at("show_icon").as_bool();
-                     potion_contents.effects.push_back(potion_effect);
-                 }
-                 potion_contents.effects.commit();
-             }
+             //potion_contents.potion_id = (std::string)comp.at("potion").as_string();
+             //if (comp.contains("effects")) {
+             //    for (auto& effect : comp.at("effects").as_array()) {
+             //        auto& eff = effect.as_object();
+             //        base_objects::item_potion_effect potion_effect;
+             //        potion_effect.potion_id = (std::string)eff.at("id").as_string();
+             //        potion_effect.amplifier = eff.at("amplifier").to_number<int8_t>();
+             //        potion_effect.duration = eff.at("duration").to_number<int32_t>();
+             //        potion_effect.ambient = eff.at("ambient").as_bool();
+             //        potion_effect.show_particles = eff.at("show_particles").as_bool();
+             //        potion_effect.show_icon = eff.at("show_icon").as_bool();
+             //        potion_contents.effects.push_back(potion_effect);
+             //    }
+             //    potion_contents.effects.commit();
+             //}
          }
         },
         {"minecraft:hide_tooltip",
@@ -601,5 +601,9 @@ namespace crafted_craft::util {
         for (auto& [name, value] : item.at("components").as_object())
             slot_data.add_component(load_items_parser.at(name)(value));
         return slot_data;
+    }
+
+    boost::json::object serialize_slot(const base_objects::slot_data& item) {
+        return {};
     }
 }

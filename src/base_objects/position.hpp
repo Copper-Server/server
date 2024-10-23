@@ -9,6 +9,14 @@ union Position {
     };
 
     unsigned long long raw;
+
+    bool operator==(const Position& other) const {
+        return raw == other.raw;
+    }
+
+    bool operator!=(const Position& other) const {
+        return raw != other.raw;
+    }
 };
 
 #endif /* SRC_BASE_OBJECTS_POSITION */

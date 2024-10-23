@@ -23,7 +23,7 @@ namespace crafted_craft {
         union block;
         typedef uint16_t block_id_t;
 
-        struct static_block_data {
+        class static_block_data {
             struct block_state_hash {
                 size_t operator()(const std::unordered_map<std::string, std::string>& value) const noexcept {
                     size_t result = 0;
@@ -34,6 +34,8 @@ namespace crafted_craft {
                     return result;
                 }
             };
+        public:
+
 
             template <size_t size>
             static consteval uint64_t get_max_uint64_t_value() {
@@ -76,8 +78,8 @@ namespace crafted_craft {
             std::unordered_map<std::string, std::unordered_set<std::string>> states;
 
             boost::bimaps::bimap<
-                boost::bimaps::unordered_set_of<block_id_t>,
-                boost::bimaps::unordered_set_of<std::unordered_map<std::string, std::string>,block_state_hash>>
+                boost::bimaps::unordered_set_of<block_id_t, std::hash<block_id_t>>,
+                boost::bimaps::unordered_set_of<std::unordered_map<std::string, std::string>, block_state_hash>>
                 assigned_states;
             block_id_t default_state = 0;
             enbt::compound defintion;

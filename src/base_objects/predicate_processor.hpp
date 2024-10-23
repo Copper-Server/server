@@ -1,3 +1,5 @@
+#ifndef SRC_BASE_OBJECTS_PREDICATE_PROCESSOR
+#define SRC_BASE_OBJECTS_PREDICATE_PROCESSOR
 #include "../library/enbt.hpp"
 #include "commands.hpp"
 
@@ -42,3 +44,6 @@ namespace crafted_craft {
         };
     }
 }
+
+
+#endif /* SRC_BASE_OBJECTS_PREDICATE_PROCESSOR */

@@ -4,29 +4,14 @@
 namespace crafted_craft {
     namespace storage {
         static void extract_slot(enbt::value& data, base_objects::slot& slot) {
-            enbt::value* res = data.get_optional();
-            if (res == nullptr) {
-                slot.reset();
-                return;
-            }
-            base_objects::slot_data_storage slot_data;
-            slot_data.id = (*res)["id"];
-            slot_data.count = (*res)["count"];
-            slot_data.nbt = (*res)["nbt"];
-            slot = slot_data.unpack();
+            if (!data.contains())
+                slot = std::nullopt;
+            else
+                slot = base_objects::slot_data::from_enbt(data.as_compound());
         }
 
-        static enbt::value compact_slot(base_objects::slot& slot) {
-            if (slot) {
-                enbt::compound compound;
-
-                base_objects::slot_data_storage slot_data = slot->pack();
-                compound["id"] = slot_data.id;
-                compound["count"] = slot_data.count;
-                compound["nbt"] = slot_data.nbt;
-                return enbt::optional((enbt::value&&)std::move(compound));
-            }
-            return enbt::optional();
+        static enbt::optional compact_slot(base_objects::slot& slot) {
+            return slot ? enbt::optional(slot->to_enbt()) : enbt::optional();
         }
 
         player_data::player_data(const std::filesystem::path& path)
@@ -227,7 +212,7 @@ namespace crafted_craft {
                         hotbar[std::to_string(i)] = compact_slot(player.inventory.hotbar[i]);
                     inventory["hotbar"] = hotbar;
                 }
-                inventory["offhand"] = compact_slot(player.inventory.offhand);
+                inventory["offhand"] = player.inventory.offhand->to_enbt();
                 as_file_data["inventory"] = inventory;
             }
             {

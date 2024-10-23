@@ -148,8 +148,8 @@ namespace crafted_craft {
             static std::mt19937_64 gen(rd());
             return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() ^ gen();
         }
-        static std::unordered_set<boost::asio::ip::address> banned_clients;
-        static size_t max_packet_size;
+        static inline std::unordered_set<boost::asio::ip::address> banned_clients;
+        static inline size_t max_packet_size = 4096;
         TCPclient* next_handler = nullptr;
         TCPsession* session;
         base_objects::ptr_optional<KeepAliveSolution> keep_alive_solution;

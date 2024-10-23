@@ -47,7 +47,7 @@ namespace crafted_craft {
             return data;
         }
 
-        void pretty_print(std::ostream& os, const boost::json::value& jv, std::string* indent = nullptr) {
+        void pretty_print(std::ostream& os, const boost::json::value& jv, std::string* indent) {
             std::string indent_;
             if (!indent)
                 indent = &indent_;

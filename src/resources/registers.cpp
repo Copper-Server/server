@@ -2,7 +2,7 @@
 #include "../base_objects/entity.hpp"
 #include "../util/conversions.hpp"
 #include "../util/json_helpers.hpp"
-#include "../util/slot_reader.hpp"
+#include "../util/slot.hpp"
 #include "embed/blocks.json.hpp"
 #include "embed/items.json.hpp"
 

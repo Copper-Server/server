@@ -1,7 +1,7 @@
 #ifndef SRC_PROTOCOLHELPER_CLIENT_HANDLER_767_LOGIN
 #define SRC_PROTOCOLHELPER_CLIENT_HANDLER_767_LOGIN
 #include "../../api/players.hpp"
-#include "../../mojang_api/hash.hpp"
+#include "../../mojang/api/hash.hpp"
 #include "../../packets/767/packets.hpp"
 #include "../abstract.hpp"
 
@@ -70,7 +70,7 @@ namespace crafted_craft {
                 void resolve_join_conflict() {
 
                     if (
-                        has_conflict && Server::instance().config.protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::kick_connected
+                        has_conflict && api::configuration::get().protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::kick_connected
                     ) {
                         Server::instance().online_players.iterate_players_not_state(base_objects::SharedClientData::packets_state_t::protocol_state::initialization, [&](base_objects::SharedClientData& player) {
                             if (player.name == session->sharedData().name) {
@@ -107,7 +107,7 @@ namespace crafted_craft {
                         std::string nickname = ReadString(packet, 16);
                         auto player = online_players.get_player(nickname);
                         if (online_players.has_player(nickname)) {
-                            if (Server::instance().config.protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::prevent_join)
+                            if (api::configuration::get().protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::prevent_join)
                                 return packets::release_767::login::kick("You someone already connected with this nickname");
                             else
                                 has_conflict = true;
@@ -123,12 +123,12 @@ namespace crafted_craft {
                             return packets::release_767::login::kick(str);
                         }
                         if (
-                            !Server::instance().config.protocol.offline_mode
-                            || Server::instance().config.protocol.enable_encryption
+                            !api::configuration::get().protocol.offline_mode
+                            || api::configuration::get().protocol.enable_encryption
                         ) {
                             return encryptionRequest();
-                        } else if (Server::instance().config.protocol.compression_threshold != -1) {
-                            return setCompression(Server::instance().config.protocol.compression_threshold);
+                        } else if (api::configuration::get().protocol.compression_threshold != -1) {
+                            return setCompression(api::configuration::get().protocol.compression_threshold);
                         } else if (!plugins_query.empty()) {
                             ArrayStream empty((const uint8_t*)nullptr, 0);
                             return proceedPlugin(empty);
@@ -168,12 +168,12 @@ namespace crafted_craft {
                         session->sharedData().data = Server::instance().getSessionServer().hasJoined(
                             session->sharedData().name,
                             serverId.hexdigest(),
-                            !Server::instance().config.protocol.offline_mode
+                            !api::configuration::get().protocol.offline_mode
                         );
                         session->start_symmetric_encryption(shared_secret, shared_secret);
 
-                        if (Server::instance().config.protocol.compression_threshold != -1)
-                            return setCompression(Server::instance().config.protocol.compression_threshold);
+                        if (api::configuration::get().protocol.compression_threshold != -1)
+                            return setCompression(api::configuration::get().protocol.compression_threshold);
                         else if (plugins_query.empty())
                             return loginSuccess();
                         else {

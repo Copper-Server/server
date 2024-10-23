@@ -8,9 +8,9 @@ namespace crafted_craft {
     namespace build_in_plugins {
         template <class T>
         bool diff_min_max(const enbt::value& val, T value) {
-            auto com = val.as_compound();
-            if (!com.is_compound())
+            if (!val.is_compound())
                 return false;
+            auto com = val.as_compound();
             if (!com.contains("min") || !com.contains("max"))
                 return false;
             return value >= (T)com.at("min") && value <= (T)com.at("max");
@@ -30,7 +30,7 @@ namespace crafted_craft {
                 return false;
             auto entity_const_data = entity->const_data();
             if (predicate.contains("type"))
-                if (entity_const_data.id != predicate.at("type"))
+                if (entity_const_data.id != (std::string)predicate.at("type"))
                     return false;
 
             if (predicate.contains("distance")) {
@@ -235,7 +235,7 @@ namespace crafted_craft {
                         return false;
 
                 if (movement.contains("fall_distance"))
-                    if (!diff_min_max(movement["fall_distance"], entity->nbt.at("fall_distance")))
+                    if (!diff_min_max(movement["fall_distance"], (double)entity->nbt.at("fall_distance")))
                         return false;
             }
             if (predicate.contains("periodic_tick")) {
@@ -344,7 +344,7 @@ namespace crafted_craft {
                     if (!block.defintion.contains(key))
                         return false;
                     if (!value.is_compound()) {
-                        if (states_.at(key) != value)
+                        if (states_.at(key) != (std::string)value)
                             return false;
                     } else {
                         auto range = value.as_compound();
@@ -379,7 +379,7 @@ namespace crafted_craft {
                 return false;
             base_objects::block_id_t block_id = loot_context.at("block_state");
             auto block = base_objects::block::getStaticData(block_id);
-            if (block.name.get() != predicate.at("block"))
+            if (block.name.get() != (std::string)predicate.at("block"))
                 return false;
             if (!predicate.contains("properties"))
                 return true;
@@ -390,7 +390,7 @@ namespace crafted_craft {
                     if (!block.defintion.contains(key))
                         return false;
                     if (!value.is_compound()) {
-                        if (states_.at(key) != value)
+                        if (states_.at(key) != (std::string)value)
                             return false;
                     } else {
                         auto range = value.as_compound();
@@ -446,6 +446,7 @@ namespace crafted_craft {
 
         bool entity_scores(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
             //TODO
+            return false;
         }
 
         bool killed_by_player(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
@@ -504,6 +505,7 @@ namespace crafted_craft {
 
         bool random_chance(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
             //TODO
+            return false;
         }
 
         bool random_chance_with_enchanted_bonus(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
@@ -516,6 +518,7 @@ namespace crafted_craft {
             }
 
             //TODO
+            return false;
         }
 
         bool survives_explosion(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
@@ -531,18 +534,22 @@ namespace crafted_craft {
 
         bool table_bonus(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
             //TODO
+            return false;
         }
 
         bool time_check(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
             //TODO
+            return false;
         }
 
         bool value_check(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
             //TODO
+            return false;
         }
 
         bool weather_check(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
             //TODO
+            return false;
         }
 
         PredicateProcessor::PredicateProcessor() {}

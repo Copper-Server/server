@@ -1,12 +1,13 @@
 #include "server.hpp"
 #include "../api/configuration.hpp"
 #include "../api/console.hpp"
-#include "../api/internal/registrations.hpp"
+#include "../api/internal/command.hpp"
 #include "../api/players.hpp"
 #include "../api/world.hpp"
 #include "../log.hpp"
 #include "../plugin/main.hpp"
 #include "../plugin/registration.hpp"
+#include "../registers.hpp"
 
 namespace crafted_craft {
     class Server;

@@ -455,6 +455,12 @@ namespace crafted_craft {
         static Chat fromEnbt(const enbt::value& enbt);
         std::string to_ansi_console() const;
 
+
+        bool operator==(const Chat&) const;
+        bool operator!=(const Chat& other) const{
+            return !operator==(other);
+        }
+
     private:
         list_array<Chat> extra;
         char* text = nullptr;

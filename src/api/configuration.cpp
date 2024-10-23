@@ -5,15 +5,19 @@ namespace crafted_craft::api::configuration {
     base_objects::ServerConfiguration config;
     bool loaded = false;
 
-    base_objects::ServerConfiguration& get() {
-        if (!loaded)
-            load(true);
-        return config;
-    }
+
+    extern base_objects::event<void> updated;
 
     void load(bool fill_default_values) {
         config.load(std::filesystem::current_path(), fill_default_values);
         updated();
+    }
+
+
+    base_objects::ServerConfiguration& get() {
+        if (!loaded)
+            load(true);
+        return config;
     }
 
     void set_item(const std::string& config_item_path, const std::string& value) {
@@ -24,8 +28,6 @@ namespace crafted_craft::api::configuration {
     std::string get_item(const std::string& config_item_path) {
         if (!loaded)
             load(true);
-        config.get(config_item_path);
+        return config.get(config_item_path);
     }
-
-    extern base_objects::event<void> updated;
 }

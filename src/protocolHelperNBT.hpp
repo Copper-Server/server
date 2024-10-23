@@ -4,9 +4,10 @@
 #include "library/enbt.hpp"
 #include "library/list_array.hpp"
 
-//bridge class between ENBT and NBT formats
-class NBT {
-    list_array<uint8_t> nbt_data;
+namespace crafted_craft {
+    //bridge class between ENBT and NBT formats
+    class NBT {
+        list_array<uint8_t> nbt_data;
 
 #pragma region ENBT_TO_NBT
     template <class T>
@@ -420,6 +421,9 @@ public:
         return build(readNBT_asENBT(data, max_size, nbt_size), compress, entry_name);
     }
 
+    NBT(NBT&& move)
+        : nbt_data(std::move(nbt_data)) {}
+
     ~NBT() = default;
 
     static NBT build(const enbt::value& enbt, bool compress = true, const std::string& entry_name = "") {
@@ -469,7 +473,7 @@ public:
         result = 0;
         return RecursiveExtractor(arr, result, max_size);
     }
-};
-
+    };
+}
 
 #endif /* SRC_PROTOCOLHELPERNBT */

@@ -4,7 +4,7 @@
 #include "build_in_plugins/special/status.hpp"
 #include "library/fast_task.hpp"
 #include "log.hpp"
-#include "protocolHelper.hpp"
+#include "protocolHelper/state_handshaking.hpp"
 #include "resources/registers.hpp"
 
 using namespace crafted_craft;

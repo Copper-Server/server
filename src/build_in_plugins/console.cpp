@@ -1,6 +1,7 @@
 #include "console.hpp"
 #include "../api/command.hpp"
 #include "../api/console.hpp"
+#include "../api/internal/console.hpp"
 #include "../api/players.hpp"
 #include "../base_objects/commands.hpp"
 #include "../log.hpp"

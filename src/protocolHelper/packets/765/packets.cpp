@@ -528,6 +528,7 @@ namespace crafted_craft {
                     WriteValue<int8_t>(res.y, packet);
                     res = calc::to_yaw_pitch(entity.head_rotation);
                     WriteValue<int8_t>(res.y, packet);
+                    //TODO FIX!1
                     WriteVar<int32_t>((int32_t)entity.nbt, packet);
                     auto velocity = calc::minecraft::packets::velocity(entity.motion);
                     WriteValue<int16_t>(velocity.x, packet);

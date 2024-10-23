@@ -1,10 +1,11 @@
 #ifndef SRC_BASE_OBJECTS_SLOT
 #define SRC_BASE_OBJECTS_SLOT
-
 #include "../library/enbt.hpp"
+#include "../library/list_array.hpp"
 #include "../util/readers.hpp"
 #include "chat.hpp"
 #include "position.hpp"
+#include "shared_string.hpp"
 #include <optional>
 
 namespace crafted_craft {
@@ -44,6 +45,8 @@ namespace crafted_craft {
 
             static std::string slot_to_name(slot_filter id);
             static slot_filter name_to_slot(const std::string& id);
+
+            auto operator<=>(const item_attribute& other) const = default;
         };
 
         struct item_rule {
@@ -51,6 +54,7 @@ namespace crafted_craft {
             std::variant<list_array<int32_t>, std::string> value;
             std::optional<float> speed;
             std::optional<bool> correct_drop_for_blocks;
+            auto operator<=>(const item_rule& other) const = default;
         };
 
         struct item_potion_effect {
@@ -62,19 +66,27 @@ namespace crafted_craft {
                 bool show_particles = true;
                 bool show_icon = true;
                 effect_data* hidden_effect = nullptr; //store state of previous weaker effect when it lasts longer than this,
+
+                bool operator==(const effect_data& other) const;
+                bool operator!=(const effect_data& other) const{
+                    return !operator==(other);
+                }
             };
 
             effect_data data;
+            auto operator<=>(const item_potion_effect& other) const = default;
         };
 
         struct item_page {
             std::string text;
             std::optional<std::string> filtered;
+            auto operator<=>(const item_page& other) const = default;
         };
 
         struct item_page_signed {
             Chat text;
             std::optional<Chat> filtered;
+            auto operator<=>(const item_page_signed& other) const = default;
         };
 
         struct item_firework_explosion {
@@ -89,6 +101,7 @@ namespace crafted_craft {
             list_array<int32_t> fade_colors; //rgb
             bool trail;
             bool twinkle;
+            auto operator<=>(const item_firework_explosion& other) const = default;
         };
 
         enum class item_color : uint8_t {
@@ -119,6 +132,7 @@ namespace crafted_craft {
                 struct sound_extended {
                     std::string sound_name;
                     std::optional<float> fixed_range;
+                    auto operator<=>(const sound_extended& other) const = default;
                 };
 
                 struct apply_effects {
@@ -129,28 +143,36 @@ namespace crafted_craft {
                         bool ambient = false;
                         bool show_particles = true;
                         bool show_icon = true;
+                        auto operator<=>(const effect& other) const = default;
                     };
 
                     list_array<effect> effects;
+                    auto operator<=>(const apply_effects& other) const = default;
                 };
 
                 struct remove_effects {
                     std::variant<std::string, list_array<std::string>> effects;
+                    auto operator<=>(const remove_effects& other) const = default;
                 };
 
-                struct clear_all_effects {};
+                struct clear_all_effects {
+                    auto operator<=>(const clear_all_effects& other) const = default;
+                };
 
                 struct teleport_randomly {
                     float diameter;
+                    auto operator<=>(const teleport_randomly& other) const = default;
                 };
 
                 struct play_sound {
                     std::variant<std::string, inner::sound_extended> sound;
+                    auto operator<=>(const play_sound& other) const = default;
                 };
 
                 struct __custom {
                     std::string type;
                     enbt::value value;
+                    auto operator<=>(const __custom& other) const = default;
                 };
 
                 using application_effect = std::variant<apply_effects, remove_effects, clear_all_effects, teleport_randomly, play_sound, __custom>;
@@ -158,42 +180,56 @@ namespace crafted_craft {
 
             struct custom_data {
                 enbt::compound value;
+
+                auto operator<=>(const custom_data& other) const = default;
                 static inline std::string component_name = "custom_data";
             };
 
             struct max_stack_size {
                 uint8_t value; // 1..99
 
+                auto operator<=>(const max_stack_size& other) const = default;
+
                 static inline std::string component_name = "max_stack_size";
             };
 
             struct max_damage {
                 int32_t value;
+
+                auto operator<=>(const max_damage& other) const = default;
                 static inline std::string component_name = "max_damage";
             };
 
             struct damage {
                 int32_t value;
+
+                auto operator<=>(const damage& other) const = default;
                 static inline std::string component_name = "damage";
             };
 
             struct unbreakable {
                 bool value;
+
+                auto operator<=>(const unbreakable& other) const = default;
                 static inline std::string component_name = "unbreakable";
             };
 
             struct custom_name {
                 Chat value;
+
+                auto operator<=>(const custom_name& other) const = default;
                 static inline std::string component_name = "custom_name";
             };
 
             struct item_name {
                 Chat value;
+                auto operator<=>(const item_name& other) const = default;
                 static inline std::string component_name = "item_name";
             };
 
             struct lore {
                 list_array<Chat> value;
+                auto operator<=>(const lore& other) const = default;
                 static inline std::string component_name = "lore";
             };
 
@@ -205,30 +241,39 @@ namespace crafted_craft {
                     epic,     //pink
                 } value;
 
+                auto operator<=>(const rarity& other) const = default;
                 static inline std::string component_name = "rarity";
             };
 
             struct enchantments {
                 list_array<std::pair<int32_t, int32_t>> enchants; //type ID, level
                 bool show_in_tooltip;
+
+                auto operator<=>(const enchantments& other) const = default;
                 static inline std::string component_name = "enchantments";
             };
 
             struct can_place_on {
                 list_array<inner::block_predicate> predicates;
                 bool show_in_tooltip = true;
+
+                auto operator<=>(const can_place_on& other) const = default;
                 static inline std::string component_name = "can_place_on";
             };
 
             struct can_break {
                 list_array<inner::block_predicate> predicates;
                 bool show_in_tooltip = true;
+
+                auto operator<=>(const can_break& other) const = default;
                 static inline std::string component_name = "can_break";
             };
 
             struct attribute_modifiers {
                 list_array<item_attribute> attributes;
                 bool show_in_tooltip = true;
+
+                auto operator<=>(const attribute_modifiers& other) const = default;
                 static inline std::string component_name = "attribute_modifiers";
             };
 
@@ -236,47 +281,58 @@ namespace crafted_craft {
                 struct custom_pattern {
                     std::string asset_id;
                     std::string translation_key;
+                    auto operator<=>(const custom_pattern& other) const = default;
                 };
 
                 struct pattern {
                     std::string color;
                     std::variant<std::string, custom_pattern> pattern;
+                    auto operator<=>(const banner_patterns::pattern& other) const = default;
                 };
 
                 list_array<pattern> value;
 
+                auto operator<=>(const banner_patterns& other) const = default;
                 static inline std::string component_name = "banner_patterns";
             };
 
             struct custom_model_data {
                 int32_t value;
+
+                auto operator<=>(const custom_model_data& other) const = default;
                 static inline std::string component_name = "custom_model_data";
             };
 
             struct hide_additional_tooltip { //NEED DOCUMENTATION in wiki.vg, what means `additional`
+                auto operator<=>(const hide_additional_tooltip& other) const = default;
                 static inline std::string component_name = "hide_additional_tooltip";
             };
 
             struct hide_tooltip {
+                auto operator<=>(const hide_tooltip& other) const = default;
                 static inline std::string component_name = "hide_tooltip";
             };
 
             struct repair_cost {
                 int32_t value;
+                auto operator<=>(const repair_cost& other) const = default;
                 static inline std::string component_name = "repair_cost";
             };
 
             struct creative_slot_lock {
+                auto operator<=>(const creative_slot_lock& other) const = default;
                 static inline std::string component_name = "creative_slot_lock";
             };
 
             struct enchantment_glint_override {
                 int32_t has_glint;
+                auto operator<=>(const enchantment_glint_override& other) const = default;
                 static inline std::string component_name = "enchantment_glint_override";
             };
 
             struct intangible_projectile {
                 enbt::value value; //sent empty nbt in notchain server
+                auto operator<=>(const intangible_projectile& other) const = default;
                 static inline std::string component_name = "intangible_projectile";
             };
 
@@ -285,6 +341,7 @@ namespace crafted_craft {
                 float saturation;
                 bool can_always_eat = false;
 
+                auto operator<=>(const food& other) const = default;
                 //does noting if `consumable` component not defined
                 //float seconds_to_eat; deprecated , since 1.21.2, use consumable.consume_seconds
                 //slot_data* consuming_converts_to; deprecated , since 1.21.2, use use_remainder component
@@ -292,52 +349,70 @@ namespace crafted_craft {
                 static inline std::string component_name = "food";
             };
 
-            //deprecated
-            struct fire_resistant {
-                static inline std::string component_name = "fire_resistant";
-            };
-
             struct tool {
                 list_array<item_rule> rules;
                 float default_mining_speed;
                 int32_t damage_per_block;
+
+                auto operator<=>(const tool& other) const = default;
                 static inline std::string component_name = "tool";
             };
 
             struct stored_enchantments {
                 list_array<std::pair<int32_t, int32_t>> enchants; //type ID, level
                 bool show_in_tooltip;
+
+                auto operator<=>(const stored_enchantments& other) const = default;
                 static inline std::string component_name = "stored_enchantments";
             };
 
             struct dyed_color {
                 int32_t rgb;
                 bool show_in_tooltip;
+
+                auto operator<=>(const dyed_color& other) const = default;
                 static inline std::string component_name = "dyed_color";
             };
 
             struct map_color {
                 int32_t rgb;
+
+                auto operator<=>(const map_color& other) const = default;
                 static inline std::string component_name = "map_color";
             };
 
             struct map_id {
                 int32_t value;
+
+                auto operator<=>(const map_id& other) const = default;
                 static inline std::string component_name = "map_id";
             };
 
             struct map_decorations {
                 enbt::value value;
+
+                auto operator<=>(const map_decorations& other) const = default;
                 static inline std::string component_name = "map_decorations";
             };
 
             struct charged_projectiles {
                 list_array<slot_data*> data;
+
+                bool operator==(const charged_projectiles& other) const;
+
+                bool operator!=(const charged_projectiles& other) const {
+                    return !operator==(other);
+                }
                 static inline std::string component_name = "charged_projectiles";
             };
 
             struct bundle_contents {
                 list_array<slot_data*> items;
+
+                bool operator==(const bundle_contents& other) const;
+                bool operator!=(const bundle_contents& other) const{
+                    return !operator==(other);
+                }
                 static inline std::string component_name = "bundle_contents";
             };
 
@@ -346,16 +421,20 @@ namespace crafted_craft {
                 std::optional<int32_t> color_rgb;
                 list_array<item_potion_effect> custom_effects;
                 std::optional<std::string> custom_name; //since 1.21.2
+
+                auto operator<=>(const potion_contents& other) const = default;
                 static inline std::string component_name = "potion_contents";
             };
 
             struct suspicious_stew_effects {
                 list_array<std::pair<int32_t, int32_t>> effects; //id, duration
+                auto operator<=>(const suspicious_stew_effects& other) const = default;
                 static inline std::string component_name = "suspicious_stew_effects";
             };
 
             struct writable_book_content {
                 list_array<item_page> pages;
+                auto operator<=>(const writable_book_content& other) const = default;
                 static inline std::string component_name = "writable_book_content";
             };
 
@@ -366,6 +445,8 @@ namespace crafted_craft {
                 list_array<item_page_signed> pages;
                 int32_t generation;
                 bool resolved;
+
+                auto operator<=>(const written_book_content& other) const = default;
                 static inline std::string component_name = "written_book_content";
             };
 
@@ -376,6 +457,7 @@ namespace crafted_craft {
                     Chat description;
                     int32_t ingredient;
                     float item_model_index;
+                    auto operator<=>(const material_extended& other) const = default;
                 };
 
                 struct pattern_extended {
@@ -383,31 +465,38 @@ namespace crafted_craft {
                     Chat description;
                     int32_t template_item;
                     bool decal;
+                    auto operator<=>(const pattern_extended& other) const = default;
                 };
 
                 std::variant<int32_t, material_extended> material; //id or extended
                 std::variant<int32_t, pattern_extended> pattern;   //id or extended
                 bool show_in_tooltip = true;
+
+                auto operator<=>(const trim& other) const = default;
                 static inline std::string component_name = "trim";
             };
 
             struct debug_stick_state {
                 enbt::compound previous_state;
+                auto operator<=>(const debug_stick_state& other) const = default;
                 static inline std::string component_name = "debug_stick_state";
             };
 
             struct entity_data {
                 enbt::value value;
+                auto operator<=>(const entity_data& other) const = default;
                 static inline std::string component_name = "entity_data";
             };
 
             struct bucket_entity_data {
                 enbt::value value;
+                auto operator<=>(const bucket_entity_data& other) const = default;
                 static inline std::string component_name = "bucket_entity_data";
             };
 
             struct block_entity_data {
                 enbt::value value;
+                auto operator<=>(const block_entity_data& other) const = default;
                 static inline std::string component_name = "block_entity_data";
             };
 
@@ -416,14 +505,17 @@ namespace crafted_craft {
                     std::variant<std::string, inner::sound_extended> sound;
                     float duration;
                     float range;
+                    auto operator<=>(const type_extended& other) const = default;
                 };
 
                 std::variant<std::string, type_extended> type;
+                auto operator<=>(const instrument& other) const = default;
                 static inline std::string component_name = "instrument";
             };
 
             struct ominous_bottle_amplifier {
                 int32_t value; //0..4
+                auto operator<=>(const ominous_bottle_amplifier& other) const = default;
                 static inline std::string component_name = "ominous_bottle_amplifier";
             };
 
@@ -436,19 +528,24 @@ namespace crafted_craft {
                     Chat description;
                     float length_in_seconds;
                     int32_t comparator_output;
+                    auto operator<=>(const jukebox_extended& other) const = default;
                 };
 
                 struct jukebox_compact {
                     int32_t song_type;
+                    auto operator<=>(const jukebox_compact& other) const = default;
                 };
 
                 std::variant<std::string, jukebox_extended, jukebox_compact> song; //song name, extended, compact
                 bool show_in_tooltip;
+
+                auto operator<=>(const jukebox_playable& other) const = default;
                 static inline std::string component_name = "jukebox_playable";
             };
 
             struct recipes {
                 enbt::value value;
+                auto operator<=>(const recipes& other) const = default;
                 static inline std::string component_name = "recipes";
             };
 
@@ -456,23 +553,27 @@ namespace crafted_craft {
                 struct global_position {
                     std::string dimension;
                     Position position;
+                    auto operator<=>(const global_position& other) const = default;
                 };
 
                 //if not set then the compass will spin randomly
                 std::optional<global_position> global_pos;
-
                 bool tracked = true;
+
+                auto operator<=>(const lodestone_tracker& other) const = default;
                 static inline std::string component_name = "lodestone_tracker";
             };
 
             struct firework_explosion {
                 item_firework_explosion value;
+                auto operator<=>(const firework_explosion& other) const = default;
                 static inline std::string component_name = "firework_explosion";
             };
 
             struct fireworks {
                 list_array<item_firework_explosion> explosions;
                 int32_t duration;
+                auto operator<=>(const fireworks& other) const = default;
                 static inline std::string component_name = "fireworks";
             };
 
@@ -481,16 +582,20 @@ namespace crafted_craft {
                     std::string name; //64
                     std::string value;
                     std::optional<std::string> signature; //1024
+                    auto operator<=>(const property_t& other) const = default;
                 };
 
                 std::optional<std::string> name;
                 std::optional<enbt::raw_uuid> uid;
                 list_array<property_t> properties;
+
+                auto operator<=>(const profile& other) const = default;
                 static inline std::string component_name = "profile";
             };
 
             struct note_block_sound {
                 std::string sound;
+                auto operator<=>(const note_block_sound& other) const = default;
                 static inline std::string component_name = "note_block_sound";
             };
 
@@ -499,24 +604,30 @@ namespace crafted_craft {
                     std::string id;
                     std::string translation_key;
                     item_color color;
+                    auto operator<=>(const layer_direct& other) const = default;
                 };
 
                 struct layer {
                     int32_t pattern;
                     item_color color;
+                    auto operator<=>(const layer& other) const = default;
                 };
 
                 list_array<std::variant<layer, layer_direct>> layers;
+
+                auto operator<=>(const banner_pattern& other) const = default;
                 static inline std::string component_name = "banner_pattern";
             };
 
             struct base_color {
                 item_color color;
+                auto operator<=>(const base_color& other) const = default;
                 static inline std::string component_name = "base_color";
             };
 
             struct pot_decorations {
                 std::string decorations[4];
+                auto operator<=>(const pot_decorations& other) const = default;
                 static inline std::string component_name = "pot_decorations";
             };
 
@@ -525,55 +636,21 @@ namespace crafted_craft {
                 container() = default;
                 container(const container&);
 
-                void set(uint8_t slot, slot_data&& item) {
-                    if (slot < 256) {
-                        if (items[slot])
-                            delete items[slot];
-                        items[slot] = new slot_data(std::move(item));
-                    } else
-                        throw std::runtime_error("Slot out of range");
-                }
+                void set(uint8_t slot, slot_data&& item);
+                void set(uint8_t slot, const slot_data& item);
+                slot_data* get(uint8_t slot);
+                bool contains(uint8_t slot);
+                list_array<uint8_t> contains(const std::string& id, size_t count = 1);
+                std::optional<uint8_t> contains(const slot_data& item);
 
-                void set(uint8_t slot, const slot_data& item) {
-                    if (slot < 256) {
-                        if (items[slot])
-                            delete items[slot];
-                        items[slot] = new slot_data(item);
-                    } else
-                        throw std::runtime_error("Slot out of range");
-                }
+                void remove(uint8_t slot);
+                void clear();
 
-                std::optional<slot_data&> get(uint8_t slot) {
-                    if (slot < 256) {
-                        if (items[slot])
-                            return *items[slot];
-                        else
-                            return std::nullopt;
-                    } else
-                        throw std::runtime_error("Slot out of range");
-                }
-
-                bool contains(uint8_t slot) {
-                    if (slot < 256)
-                        return items[slot] != nullptr;
-                    else
-                        throw std::runtime_error("Slot out of range");
-                }
-
-                void remove(uint8_t slot) {
-                    if (slot < 256) {
-                        if (items[slot])
-                            delete items[slot];
-                        items[slot] = nullptr;
-                    } else
-                        throw std::runtime_error("Slot out of range");
-                }
-
-                void clear() {
+                template <class FN>
+                void for_each(FN&& fn) {
                     for (int i = 0; i < 256; i++) {
                         if (items[i])
-                            delete items[i];
-                        items[i] = nullptr;
+                            fn(*items[i], i);
                     }
                 }
 
@@ -596,6 +673,12 @@ namespace crafted_craft {
                     return *this;
                 }
 
+                bool operator==(const container& other) const;
+
+                bool operator!=(const container& other) const {
+                    return !operator==(other);
+                }
+
                 static inline std::string component_name = "container";
             };
 
@@ -603,9 +686,12 @@ namespace crafted_craft {
                 struct property_t {
                     std::string name;
                     std::string value;
+                    auto operator<=>(const property_t& other) const = default;
                 };
 
                 list_array<property_t> properties;
+
+                auto operator<=>(const block_state& other) const = default;
                 static inline std::string component_name = "block_state";
             };
 
@@ -614,26 +700,35 @@ namespace crafted_craft {
                     enbt::value entity_data;
                     int32_t ticks_in_hive;
                     int32_t min_ticks_in_hive;
+                    auto operator<=>(const bee& other) const = default;
                 };
 
                 list_array<bee> values;
+
+                auto operator<=>(const bees& other) const = default;
                 static inline std::string component_name = "bees";
             };
 
             struct lock {
                 std::string key; //1.21 in packet as NBT with string tag
+
+                auto operator<=>(const lock& other) const = default;
                 static inline std::string component_name = "lock";
             };
 
             struct container_loot {
                 std::string loot_table;
                 int64_t seed;
+
+                auto operator<=>(const container_loot& other) const = default;
                 static inline std::string component_name = "container_loot";
             };
 
             struct map_post_processing {
                 int32_t value;     //root
                 int64_t locked_id = -1; // server side
+
+                auto operator<=>(const map_post_processing& other) const = default;
                 static inline std::string component_name = "map_post_processing";
             };
 
@@ -643,21 +738,29 @@ namespace crafted_craft {
                 std::string animation;
                 float consumable_seconds;
                 bool has_consume_particles = true;
+
+                auto operator<=>(const consumable& other) const = default;
                 static inline std::string component_name = "consumable";
             };
 
             struct damage_resistant { //since 1.21.2, replaces `fire_resistant` component
                 std::string types;    //damage type tag tag
+
+                auto operator<=>(const damage_resistant& other) const = default;
                 static inline std::string component_name = "damage_resistant";
             };
 
             struct death_protection {
                 list_array<inner::application_effect> death_effects; //optional
+
+                auto operator<=>(const death_protection& other) const = default;
                 static inline std::string component_name = "death_protection";
             };
 
             struct enchantable {
                 int32_t value; //limit to enchanting cost
+
+                auto operator<=>(const enchantable& other) const = default;
                 static inline std::string component_name = "enchantable";
             };
 
@@ -665,6 +768,7 @@ namespace crafted_craft {
                 struct equip_sound_custom {
                     std::string sound_id;
                     float range;
+                    auto operator<=>(const equip_sound_custom& other) const = default;
                 };
 
                 std::string slot; //head, chest, legs, feet, body, mainhand, offhand
@@ -676,25 +780,31 @@ namespace crafted_craft {
                 bool swappable = true;
                 bool damage_on_hurt = true;
 
+                auto operator<=>(const equippable& other) const = default;
                 static inline std::string component_name = "equippable";
             };
 
             struct glider {
+                auto operator<=>(const glider& other) const = default;
                 static inline std::string component_name = "glider";
             };
 
             struct item_model {
                 std::string value;
+                auto operator<=>(const item_model& other) const = default;
                 static inline std::string component_name = "item_model";
             };
 
             struct repairable {
                 std::variant<std::string, std::vector<std::string>> items;
+                auto operator<=>(const repairable& other) const = default;
                 static inline std::string component_name = "repairable";
             };
 
             struct tooltip_style {
                 std::string value;
+
+                auto operator<=>(const tooltip_style& other) const = default;
                 static inline std::string component_name = "tooltip_style";
             };
 
@@ -702,6 +812,7 @@ namespace crafted_craft {
                 std::optional<std::string> cooldown_group;
                 float seconds;
 
+                auto operator<=>(const use_cooldown& other) const = default;
                 static inline std::string component_name = "use_cooldown";
             };
 
@@ -712,6 +823,11 @@ namespace crafted_craft {
                 //components;      proxy_value->components
                 use_remainder(slot_data&& consume);
                 ~use_remainder();
+
+                bool operator==(const use_remainder& other) const;
+                bool operator!=(const use_remainder& other) const{
+                    return !operator==(other);
+                }
                 static inline std::string component_name = "use_remainder";
             };
 
@@ -739,14 +855,12 @@ namespace crafted_craft {
                     enchantment_glint_override,
                     intangible_projectile,
                     food,
-                    fire_resistant,
                     tool,
                     stored_enchantments,
                     dyed_color,
                     map_color,
                     map_id,
                     map_decorations,
-                    map_post_processing,
                     charged_projectiles,
                     bundle_contents,
                     potion_contents,
@@ -788,13 +902,6 @@ namespace crafted_craft {
                     use_cooldown,
                     use_remainder>;
         }
-
-        struct slot_data_old {
-            std::optional<enbt::value> nbt;
-            int32_t id = 0;
-            uint8_t count = 0;
-            slot_data to_new() const;
-        };
 
         struct static_slot_data {
             std::string id;
@@ -869,7 +976,8 @@ namespace crafted_craft {
                 return components.contains(name);
             }
 
-            slot_data_old to_old() const;
+            enbt::compound to_enbt() const;
+            static slot_data from_enbt(const enbt::compound_const_ref& compound);
 
             bool operator==(const slot_data& other) const;
             bool operator!=(const slot_data& other) const;

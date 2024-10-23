@@ -529,7 +529,7 @@ namespace crafted_craft {
                 try {
                     return js_value(path + ":" + (std::string)name, obj.at(name));
                 } catch (const boost::system::system_error&) {
-                    auto text = std::format("Not found element {} at {}.", name, path);
+                    auto text = std::format("Not found element {} at {}.", (std::string)name, path);
                     throw std::runtime_error(text);
                 }
             }
@@ -561,7 +561,7 @@ namespace crafted_craft {
                 (obj[args], ...);
             }
 
-            boost::json::value& get() {
+            boost::json::object& get() {
                 return obj;
             }
 
@@ -689,7 +689,7 @@ namespace crafted_craft {
                 return {obj.end(), obj.begin(), path};
             }
 
-            boost::json::value& get() {
+            boost::json::array& get() {
                 return obj;
             }
 
