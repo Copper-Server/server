@@ -556,10 +556,9 @@ namespace crafted_craft {
 
         void PredicateProcessor::OnInitialization(const PluginRegistrationPtr& self) {
             processor.register_handler("all_of", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
-                auto arr = enbt::dynamic_array::make_ref(predicate["terms"]);
-                for (auto& value : arr) {
+                for (auto& value : predicate["terms"].as_array()) {
                     if (!processor.process_predicate(
-                            enbt::compound::make_ref(value),
+                            value.as_compound(),
                             context
                         ))
                         return false;
@@ -567,10 +566,9 @@ namespace crafted_craft {
                 return true;
             });
             processor.register_handler("any_of", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
-                auto arr = enbt::dynamic_array::make_ref(predicate["terms"]);
-                for (auto& value : arr) {
+                for (auto& value : predicate["terms"].as_array()) {
                     if (processor.process_predicate(
-                            enbt::compound::make_ref(value),
+                            value.as_compound(),
                             context
                         ))
                         return true;
@@ -585,7 +583,7 @@ namespace crafted_craft {
             });
             processor.register_handler("reference", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
                 return processor.process_predicate( //TODO
-                    enbt::compound::make_ref(context.other_data.at(predicate.at("name"))),
+                    context.other_data.at(predicate.at("name")).as_compound(),
                     context
                 );
             });

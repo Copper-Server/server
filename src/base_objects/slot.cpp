@@ -5,6 +5,681 @@
 
 namespace crafted_craft {
     namespace base_objects {
+        std::unordered_map<std::string, base_objects::slot_component::unified (*)(const enbt::value&)> load_items_parser{
+            {"minecraft:attribute_modifiers",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::attribute_modifiers attributes;
+                 if (comp.contains("show_in_tooltip"))
+                     attributes.show_in_tooltip = comp["show_in_tooltip"];
+
+                 if (comp.contains("modifiers")) {
+                     list_array<base_objects::item_attribute> modifiers;
+                     for (auto& i : comp["modifiers"].as_array()) {
+                         base_objects::item_attribute modifier;
+
+                         auto c = i.as_compound();
+                         modifier.id = base_objects::item_attribute::attribute_name_to_id((std::string)c.at("id").as_string());
+                         modifier.operation = base_objects::item_attribute::id_to_operation((std::string)c.at("operation").as_string());
+                         modifier.name = c.at("name").as_string();
+                         modifier.value = c.at("value");
+                     }
+                     modifiers.commit();
+                     attributes.attributes = std::move(modifiers);
+                 }
+                 return std::move(attributes);
+             }
+            },
+            {"minecraft:banner_patterns",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 base_objects::slot_component::banner_patterns banner_patterns;
+                 for (auto& value : it.as_array()) {
+                     auto comp = value.as_compound();
+                     base_objects::slot_component::banner_patterns::pattern pattern;
+                     pattern.color = base_objects::item_color::from_string((std::string)comp.at("color").as_string());
+                     auto& pattern_json = comp.at("pattern");
+                     if (pattern_json.is_string())
+                         pattern.pattern = (std::string)pattern_json.as_string();
+                     else {
+                         auto custom = pattern_json.as_compound();
+                         base_objects::slot_component::banner_patterns::custom_pattern c;
+                         c.asset_id = custom.at("asset_id").as_string();
+                         c.translation_key = custom.at("translation_key").as_string();
+                         pattern.pattern = std::move(c);
+                     }
+                     banner_patterns.value.push_back(pattern);
+                 }
+                 banner_patterns.value.commit();
+                 return std::move(banner_patterns);
+             }
+            },
+            {"minecraft:base_color",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto& color = it.as_string();
+                 base_objects::slot_component::base_color base_color;
+                 if (color == "white")
+                     base_color.color = base_objects::item_color::white;
+                 else if (color == "orange")
+                     base_color.color = base_objects::item_color::orange;
+                 else if (color == "magenta")
+                     base_color.color = base_objects::item_color::magenta;
+                 else if (color == "light_blue")
+                     base_color.color = base_objects::item_color::light_blue;
+                 else if (color == "yellow")
+                     base_color.color = base_objects::item_color::yellow;
+                 else if (color == "lime")
+                     base_color.color = base_objects::item_color::lime;
+                 else if (color == "pink")
+                     base_color.color = base_objects::item_color::pink;
+                 else if (color == "gray")
+                     base_color.color = base_objects::item_color::gray;
+                 else if (color == "light_gray")
+                     base_color.color = base_objects::item_color::light_gray;
+                 else if (color == "cyan")
+                     base_color.color = base_objects::item_color::cyan;
+                 else if (color == "purple")
+                     base_color.color = base_objects::item_color::purple;
+                 else if (color == "blue")
+                     base_color.color = base_objects::item_color::blue;
+                 else if (color == "brown")
+                     base_color.color = base_objects::item_color::brown;
+                 else if (color == "green")
+                     base_color.color = base_objects::item_color::green;
+                 else if (color == "red")
+                     base_color.color = base_objects::item_color::red;
+                 else if (color == "black")
+                     base_color.color = base_objects::item_color::black;
+                 else
+                     throw std::runtime_error("Unrecognized color");
+                 return std::move(base_color);
+             }
+            },
+            {"minecraft:bees",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 base_objects::slot_component::bees bees;
+                 for (auto& bee_ : it.as_array()) {
+                     auto bee = bee_.as_compound();
+                     bees.values.push_back({base_objects::slot_component::bees::bee{
+                         .entity_data = bee.at("entity_data"),
+                         .ticks_in_hive = (int32_t)bee.at("ticks_in_hive"),
+                         .min_ticks_in_hive = (int32_t)bee.at("min_ticks_in_hive"),
+                     }});
+                 }
+                 bees.values.commit();
+                 return std::move(bees);
+             }
+            },
+            {"minecraft:block_entity_data",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 base_objects::slot_component::block_entity_data res;
+                 res.value = it;
+                 return res;
+             }
+            },
+            {"minecraft:block_state",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 base_objects::slot_component::block_state block_state;
+                 for (auto& [state, value] : it.as_compound())
+                     block_state.properties.push_back({(std::string)state, (std::string)value.as_string()});
+                 block_state.properties.commit();
+                 return std::move(block_state);
+             }
+            },
+            {"minecraft:bucket_entity_data",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 base_objects::slot_component::bucket_entity_data res;
+                 res.value = it;
+                 return res;
+             }
+            },
+            {"minecraft:bundle_contents",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 base_objects::slot_component::bundle_contents bundle_contents;
+                 for (auto& item : it.as_array()) {
+                     bundle_contents.items.push_back(new base_objects::slot_data(slot_data::from_enbt(item.as_compound())));
+                 }
+                 bundle_contents.items.commit();
+                 return std::move(bundle_contents);
+             }
+            },
+            {"minecraft:can_break",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::can_break can_break;
+                 if (comp.contains("show_in_tooltip"))
+                     can_break.show_in_tooltip = comp["show_in_tooltip"];
+                 if (comp.contains("blocks")) {
+                     enbt::compound pred;
+                     pred["blocks"] = comp["blocks"];
+                     if (comp.contains("state"))
+                         pred["state"] = comp["state"];
+                     if (comp.contains("nbt"))
+                         pred["nbt"] = comp["nbt"];
+                     can_break.predicates.push_back(std::move(pred));
+                 }
+                 if (comp.contains("predicates")) {
+                     for (auto& it : comp.at("predicates").as_array()) {
+                         auto item = it.as_compound();
+                         enbt::compound pred;
+                         pred["blocks"] = item["blocks"];
+                         if (item.contains("state"))
+                             pred["state"] = item["state"];
+                         if (item.contains("nbt"))
+                             pred["nbt"] = item["nbt"];
+                         can_break.predicates.push_back(std::move(pred));
+                     }
+                 }
+                 can_break.predicates.commit();
+                 return std::move(can_break);
+             }
+            },
+            {"minecraft:can_place_on",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::can_place_on can_place_on;
+                 if (comp.contains("show_in_tooltip"))
+                     can_place_on.show_in_tooltip = comp["show_in_tooltip"];
+                 if (comp.contains("blocks")) {
+                     enbt::compound pred;
+                     pred["blocks"] = comp["blocks"];
+                     if (comp.contains("state"))
+                         pred["state"] = comp["state"];
+                     if (comp.contains("nbt"))
+                         pred["nbt"] = comp["nbt"];
+                     can_place_on.predicates.push_back(std::move(pred));
+                 }
+                 if (comp.contains("predicates")) {
+                     for (auto& it : comp.at("predicates").as_array()) {
+                         auto item = it.as_compound();
+                         enbt::compound pred;
+                         pred["blocks"] = item["blocks"];
+                         if (item.contains("state"))
+                             pred["state"] = item["state"];
+                         if (item.contains("nbt"))
+                             pred["nbt"] = item["nbt"];
+                         can_place_on.predicates.push_back(std::move(pred));
+                     }
+                 }
+                 can_place_on.predicates.commit();
+                 return std::move(can_place_on);
+             }
+            },
+            {"minecraft:charged_projectiles",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 base_objects::slot_component::charged_projectiles charged_projectiles;
+                 for (auto& item : it.as_array()) {
+                     charged_projectiles.data.push_back(new base_objects::slot_data(slot_data::from_enbt(item.as_compound())));
+                 }
+                 charged_projectiles.data.commit();
+                 return std::move(charged_projectiles);
+             }
+            },
+            {"minecraft:container",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 base_objects::slot_component::container container;
+                 for (auto& item : it.as_array()) {
+                     auto comp = item.as_compound();
+                     uint8_t slot = comp.at("slot");
+                     container.set(slot, slot_data::from_enbt(comp.at("item").as_compound()));
+                 }
+                 return std::move(container);
+             }
+            },
+            {"minecraft:container_loot",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::container_loot container_loot;
+                 container_loot.loot_table = comp.at("loot_table").as_string();
+                 container_loot.seed = comp.at("seed");
+                 return std::move(container_loot);
+             }
+            },
+            {"minecraft:custom_data",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 base_objects::slot_component::custom_data custom_data;
+                 custom_data.value = it;
+                 return std::move(custom_data);
+             }
+            },
+            {"minecraft:custom_model_data",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::custom_model_data{.value = (int32_t)it};
+             }
+            },
+            {"minecraft:custom_name",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::custom_name{
+                     .value = Chat::fromEnbt(it)
+                 };
+             }
+            },
+            {"minecraft:damage",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::damage{
+                     .value = (int32_t)it
+                 };
+             }
+            },
+            {"minecraft:debug_stick_state",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 base_objects::slot_component::debug_stick_state debug_stick_state;
+                 debug_stick_state.previous_state = it;
+                 return std::move(debug_stick_state);
+             }
+            },
+            {"minecraft:dyed_color",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::dyed_color dyed_color;
+                 if (comp.contains("show_in_tooltip"))
+                     dyed_color.show_in_tooltip = comp["show_in_tooltip"];
+                 dyed_color.rgb = comp.at("rgb");
+                 return std::move(dyed_color);
+             }
+            },
+            {"minecraft:enchantment_glint_override",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 base_objects::slot_component::enchantment_glint_override enchantment_glint_override;
+                 enchantment_glint_override.has_glint = it;
+                 return std::move(enchantment_glint_override);
+             }
+            },
+            {"minecraft:enchantments",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::enchantments enchantments;
+                 for (auto& [enchantment, level] : comp.at("levels").as_compound())
+                     enchantments.enchants.push_back({registers::enchantments.at((std::string)enchantment).id, level});
+                 enchantments.enchants.commit();
+                 if (comp.contains("show_in_tooltip"))
+                     enchantments.show_in_tooltip = comp.at("show_in_tooltip");
+                 return std::move(enchantments);
+             }
+            },
+            {"minecraft:entity_data",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 if (!comp.contains("id"))
+                     throw std::runtime_error("Entity declaration must contain at least id of entity");
+                 base_objects::slot_component::entity_data entity_data;
+                 entity_data.value = it;
+                 return std::move(entity_data);
+             }
+            },
+            {"minecraft:entity_data",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 if (!comp.contains("id"))
+                     throw std::runtime_error("Entity declaration must contain at least id of entity");
+                 base_objects::slot_component::entity_data entity_data;
+                 entity_data.value = it;
+                 return std::move(entity_data);
+             }
+            },
+            {"minecraft:firework_explosion",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 auto& shape = comp.at("shape").as_string();
+                 auto colors = comp.at("shape").as_array();
+                 auto fade_colors = comp.at("shape").as_array();
+                 auto has_trail = comp.at("has_trail");
+                 auto has_twinkle = comp.at("has_trail");
+
+                 base_objects::item_firework_explosion res;
+                 if (shape == "small_ball")
+                     res.shape = base_objects::item_firework_explosion::shape_e::small_ball;
+                 else if (shape == "large_ball")
+                     res.shape = base_objects::item_firework_explosion::shape_e::large_ball;
+                 else if (shape == "star")
+                     res.shape = base_objects::item_firework_explosion::shape_e::star;
+                 else if (shape == "creeper")
+                     res.shape = base_objects::item_firework_explosion::shape_e::creeper;
+                 else if (shape == "burst")
+                     res.shape = base_objects::item_firework_explosion::shape_e::burst;
+                 else
+                     throw std::runtime_error("Unrecognized firework shape");
+                 res.trail = has_trail;
+                 res.twinkle = has_twinkle;
+                 for (auto& it : colors)
+                     res.colors.push_back(it);
+                 res.colors.commit();
+                 for (auto& it : fade_colors)
+                     res.fade_colors.push_back(it);
+                 res.fade_colors.commit();
+
+                 return base_objects::slot_component::firework_explosion{.value = std::move(res)};
+             }
+            },
+            {"minecraft:fireworks",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::fireworks fireworks;
+                 fireworks.duration = comp.at("flight_duration");
+                 auto& firework_explosion_parser = load_items_parser.at("minecraft:firework_explosion");
+                 for (auto& it : comp.at("explosions").as_array()) {
+                     auto pre_res = std::get<base_objects::slot_component::firework_explosion>(
+                         firework_explosion_parser(it)
+                     );
+                     fireworks.explosions.push_back(std::move(pre_res.value));
+                 }
+                 fireworks.explosions.commit();
+                 return std::move(fireworks);
+             }
+            },
+            {"minecraft:food",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 if (!comp.contains("id"))
+                     throw std::runtime_error("Entity declaration must contain at least id of entity");
+                 base_objects::slot_component::food food;
+                 food.nutrition = comp.at("nutrition");
+                 food.saturation = comp.at("saturation");
+                 if (comp.contains("can_always_eat"))
+                     food.can_always_eat = comp.at("can_always_eat");
+                 return std::move(food);
+             }
+            },
+            {"minecraft:hide_additional_tooltip",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::hide_additional_tooltip{};
+             }
+            },
+            {"minecraft:hide_tooltip",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::hide_tooltip{};
+             }
+            },
+            {"minecraft:instrument",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 if (it.is_string())
+                     return base_objects::slot_component::instrument{(std::string)it.as_string()};
+                 else {
+                     auto comp = it.as_compound();
+                     base_objects::slot_component::instrument::type_extended instrument;
+                     instrument.duration = comp.at("use_duration");
+                     instrument.range = comp.at("range");
+                     if (comp.at("sound").is_string())
+                         instrument.sound = (std::string)comp.at("sound").as_string();
+                     else {
+                         auto sound = comp.at("sound").as_compound();
+                         base_objects::slot_component::inner::sound_extended sound_extended;
+                         sound_extended.sound_name = sound.at("sound_id").as_string();
+                         if (sound.contains("range"))
+                             sound_extended.fixed_range = sound.at("range");
+                         instrument.sound = sound_extended;
+                     }
+                     return base_objects::slot_component::instrument{instrument};
+                 }
+             }
+            },
+            {"minecraft:intangible_projectile",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::intangible_projectile{};
+             }
+            },
+            {"minecraft:item_name",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::item_name{.value = Chat::fromStr((std::string)it.as_string())};
+             }
+            },
+            {"minecraft:jukebox_playable",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::jukebox_playable jukebox_playable;
+                 jukebox_playable.song = (std::string)comp.at("song").as_string();
+                 if (comp.contains("show_in_tooltip"))
+                     jukebox_playable.show_in_tooltip = comp.at("show_in_tooltip");
+                 return std::move(jukebox_playable);
+             }
+            },
+            {"minecraft:lock",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::lock{.key = (std::string)it.as_string()};
+             }
+            },
+            {"minecraft:lodestone_tracker",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::lodestone_tracker lodestone_tracker;
+                 if (comp.contains("tracked"))
+                     lodestone_tracker.tracked = comp.at("tracked");
+                 if (comp.contains("target")) {
+                     auto target = comp.at("target").as_compound();
+                     auto pos = target.at("pos").as_array();
+                     int32_t x = pos[0],
+                             y = pos[1],
+                             z = pos[2];
+
+
+                     lodestone_tracker.global_pos = {
+                         .dimension = (std::string)target.at("dimension").as_string(),
+                         .position = {x, y, z}
+                     };
+                 }
+                 return std::move(lodestone_tracker);
+             }
+            },
+            {"minecraft:lore",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 base_objects::slot_component::lore lore;
+                 for (auto& line : it.as_array())
+                     lore.value.push_back(Chat::fromStr((std::string)line.as_string()));
+                 lore.value.commit();
+                 return std::move(lore);
+             }
+            },
+            {"minecraft:map_color",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::map_color{(int32_t)it};
+             }
+            },
+            {"minecraft:map_decorations",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 base_objects::slot_component::map_decorations map_decorations;
+                 map_decorations.value = it;
+                 return std::move(map_decorations);
+             }
+            },
+            {"minecraft:map_id",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::map_id{it};
+             }
+            },
+            {"minecraft:max_damage",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::max_damage{it};
+             }
+            },
+            {"minecraft:max_stack_size",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::max_stack_size{it};
+             }
+            },
+            {"minecraft:note_block_sound",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::note_block_sound{(std::string)it.as_string()};
+             }
+            },
+            {"minecraft:ominous_bottle_amplifier",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::ominous_bottle_amplifier{it};
+             }
+            },
+            {"minecraft:pot_decorations",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_array();
+                 base_objects::slot_component::pot_decorations pot_decorations;
+                 if (comp.size() >= 1)
+                     pot_decorations.decorations[0] = comp[0].as_string();
+                 else
+                     pot_decorations.decorations[0] = "minecraft:brick";
+
+                 if (comp.size() >= 2)
+                     pot_decorations.decorations[1] = comp[1].as_string();
+                 else
+                     pot_decorations.decorations[1] = "minecraft:brick";
+
+                 if (comp.size() >= 3)
+                     pot_decorations.decorations[2] = comp[2].as_string();
+                 else
+                     pot_decorations.decorations[3] = "minecraft:brick";
+
+                 if (comp.size() >= 4)
+                     pot_decorations.decorations[3] = comp[3].as_string();
+                 else
+                     pot_decorations.decorations[3] = "minecraft:brick";
+
+                 return std::move(pot_decorations);
+             }
+            },
+            {"minecraft:potion_contents",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::potion_contents potion_contents;
+                 //TODO continue
+                 //potion_contents.potion_id = (std::string)comp.at("potion").as_string();
+                 //if (comp.contains("effects")) {
+                 //    for (auto& effect : comp.at("effects").as_array()) {
+                 //        auto& eff = effect.as_compound();
+                 //        base_objects::item_potion_effect potion_effect;
+                 //        potion_effect.potion_id = (std::string)eff.at("id").as_string();
+                 //        potion_effect.amplifier = eff.at("amplifier").to_number<int8_t>();
+                 //        potion_effect.duration = eff.at("duration");
+                 //        potion_effect.ambient = eff.at("ambient");
+                 //        potion_effect.show_particles = eff.at("show_particles");
+                 //        potion_effect.show_icon = eff.at("show_icon");
+                 //        potion_contents.effects.push_back(potion_effect);
+                 //    }
+                 //    potion_contents.effects.commit();
+                 //}
+             }
+            },
+            {"minecraft:hide_tooltip",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::hide_additional_tooltip{};
+             }
+            },
+            {"minecraft:hide_tooltip",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::hide_additional_tooltip{};
+             }
+            },
+            {"minecraft:hide_tooltip",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::hide_additional_tooltip{};
+             }
+            },
+            {"minecraft:hide_tooltip",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::hide_additional_tooltip{};
+             }
+            },
+            {"minecraft:hide_tooltip",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::hide_additional_tooltip{};
+             }
+            },
+        };
+
+        base_objects::slot_component::unified slot_component::parse_component(const std::string& name, const enbt::value& item) {
+            return load_items_parser.at(name)(item);
+        }
+
+        slot_data slot_data::from_enbt(enbt::compound_const_ref compound) {
+            auto& id = compound.at("id").as_string();
+            base_objects::slot_data slot_data = base_objects::slot_data::create_item((std::string)id);
+            if (compound.contains("count"))
+                slot_data.count = compound.at("count");
+            std::unordered_map<std::string, base_objects::slot_component::unified> components;
+            for (auto& [name, value] : compound.at("components").as_compound())
+                slot_data.add_component(load_items_parser.at(name)(value));
+            return slot_data;
+        }
+
+        enbt::compound slot_data::to_enbt() const {
+            return {};
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+        std::string item_color::to_string() const {
+            switch (value) {
+            case white:
+                return "white";
+            case orange:
+                return "orange";
+            case magenta:
+                return "magenta";
+            case light_blue:
+                return "light_blue";
+            case yellow:
+                return "yellow";
+            case lime:
+                return "lime";
+            case pink:
+                return "pink";
+            case gray:
+                return "gray";
+            case light_gray:
+                return "light_gray";
+            case cyan:
+                return "cyan";
+            case purple:
+                return "purple";
+            case blue:
+                return "blue";
+            case brown:
+                return "brown";
+            case green:
+                return "green";
+            case red:
+                return "red";
+            case black:
+                return "black";
+            default:
+                return "undefined";
+            }
+        }
+
+        item_color item_color::from_string(const std::string& color) {
+            if (color == "white")
+                return white;
+            else if (color == "orange")
+                return orange;
+            else if (color == "magenta")
+                return magenta;
+            else if (color == "light_blue")
+                return light_blue;
+            else if (color == "yellow")
+                return yellow;
+            else if (color == "lime")
+                return lime;
+            else if (color == "pink")
+                return pink;
+            else if (color == "gray")
+                return gray;
+            else if (color == "light_gray")
+                return light_gray;
+            else if (color == "cyan")
+                return cyan;
+            else if (color == "purple")
+                return purple;
+            else if (color == "blue")
+                return blue;
+            else if (color == "brown")
+                return brown;
+            else if (color == "green")
+                return green;
+            else if (color == "red")
+                return red;
+            else if (color == "black")
+                return black;
+            else
+                return white;
+        }
+
+
         bool item_potion_effect::effect_data::operator==(const effect_data& other) const {
             if (ambient != other.ambient
                 | duration != other.duration
@@ -83,7 +758,7 @@ namespace crafted_craft {
                 throw std::runtime_error("Slot out of range");
         }
 
-        std::optional<uint8_t> slot_component::container::contains(const slot_data& item) {
+        std::optional<uint8_t> slot_component::container::contains(const slot_data& item) const {
             std::optional<uint8_t> res;
             for_each([&res, &item](const slot_data& check, size_t index) {
                 if (res) {
@@ -94,7 +769,7 @@ namespace crafted_craft {
             return res;
         }
 
-        list_array<uint8_t> slot_component::container::contains(const std::string& id, size_t count) {
+        list_array<uint8_t> slot_component::container::contains(const std::string& id, size_t count) const {
             list_array<uint8_t> res;
             int32_t real_id = slot_data::get_slot_data(id).internal_id;
             for_each([&res, real_id, &count](const slot_data& check, size_t index) {
@@ -464,14 +1139,6 @@ namespace crafted_craft {
             named_full_item_data[moved->id] = moved;
             full_item_data_.push_back(moved);
             moved->internal_id = full_item_data_.size() - 1;
-        }
-
-        enbt::compound slot_data::to_enbt() const {
-            return {};
-        }
-
-        slot_data slot_data::from_enbt(const enbt::compound_const_ref& compound) {
-            return {};
         }
     }
 }

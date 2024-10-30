@@ -243,12 +243,6 @@ namespace crafted_craft {
                 int8_t direction;
             };
 
-            struct trade_item {
-                int32_t id;
-                int32_t count;
-                //TODO
-            };
-
             struct trade {
                 slot input_item1;
                 slot output_item;

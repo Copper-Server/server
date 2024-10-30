@@ -273,7 +273,7 @@ namespace crafted_craft {
         if (enbt.is_string())
             return Chat((std::string)enbt);
         Chat result;
-        auto entry = enbt::compound::make_ref(enbt);
+        auto entry = enbt.as_compound();
 
         if (entry.contains("text"))
             result.SetText(entry["text"]);
@@ -308,7 +308,7 @@ namespace crafted_craft {
             result.SetInsertion(entry["insertion"]);
 
         if (entry.contains("clickEvent")) {
-            auto click_event = enbt::compound::make_ref(entry["clickEvent"]);
+            auto click_event = entry["clickEvent"].as_compound();
             const std::string& action = (const std::string&)click_event["action"];
             auto& value = click_event["value"];
             if (action == "open_url")
@@ -326,7 +326,7 @@ namespace crafted_craft {
                 result.SetClickEventCopyToClipboard(value);
         }
         if (entry.contains("hoverEvent")) {
-            auto hover_event = enbt::compound::make_ref(entry["hoverEvent"]);
+            auto hover_event = entry["hoverEvent"].as_compound();
             const std::string& action = (const std::string&)hover_event["action"];
             auto& content = hover_event["content"];
             if (action == "show_item") {
@@ -345,7 +345,7 @@ namespace crafted_craft {
 
         if (entry.contains("extra")) {
             auto& extra_arr = result.GetExtra();
-            auto extra = enbt::fixed_array::make_ref(entry["extra"]);
+            auto extra = entry["extra"].as_fixed_array();
             extra_arr.reserve(extra.size());
             for (auto& it : extra)
                 extra_arr.push_back(Chat::fromEnbt(it));

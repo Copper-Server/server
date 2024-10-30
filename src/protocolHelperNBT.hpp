@@ -447,9 +447,13 @@ public:
     }
 
     list_array<uint8_t> get_as_network() const {
-        list_array<uint8_t> ret = nbt_data;
-        ret.erase(1, 3);
-        return ret;
+        if (nbt_data.size())
+            if (nbt_data[0] == 10) {
+                list_array<uint8_t> ret = nbt_data;
+                ret.erase(1, 3);
+                return ret;
+            }
+        return nbt_data;
     }
 
     enbt::value get_as_enbt() const {

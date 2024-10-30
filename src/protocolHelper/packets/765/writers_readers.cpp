@@ -1,8 +1,8 @@
 
 #include "../../../api/command.hpp"
 #include "../../../base_objects/slot.hpp"
+#include "../../../registers.hpp"
 #include "../../../util/readers.hpp"
-
 namespace crafted_craft {
     namespace packets {
         namespace release_765 {
@@ -50,7 +50,7 @@ namespace crafted_craft {
                 struct slot_data_old {
                     std::optional<enbt::value> nbt;
                     int32_t id = 0;
-                    uint8_t count = 0;
+                    int32_t count = 0;
                     slot_data to_new() const;
                 };
 
@@ -63,39 +63,37 @@ namespace crafted_craft {
                     HideFlags hide_flags;
                     hide_flags.value = nbt->contains("HideFlags") ? (int32_t)(*nbt)["HideFlags"] : 0;
 
-                    auto view = enbt::compound::make_ref(*nbt);
+                    auto view = nbt->as_compound();
                     for (auto& [name, value] : view) {
                         if (name == "HideFlags")
                             continue;
                         else if (name == "Damage")
-                            slot.components["damage"]
-                                = slot_component::damage{(int32_t)value};
+                            slot.add_component(slot_component::damage{(int32_t)value});
                         else if (name == "Unbreakable")
-                            slot.components["unbreakable"]
-                                = slot_component::unbreakable{};
+                            slot.add_component(slot_component::unbreakable{});
                         else if (name == "CanDestroy") {
-                            auto blocks = enbt::fixed_array::make_ref(value);
+                            auto blocks = value.as_fixed_array();
                             list_array<slot_component::inner::block_predicate> res;
                             for (auto& block : blocks) {
-                                api::command::get_manager().parse_string(parsers::command::block(), block).and_then([&](parser& bl) {
-                                    auto& parsed = std::get<parsers::block>(bl);
-                                    slot_component::inner::block_predicate inner_res = enbt::compound();
-                                    inner_res["block"] = parsed.block_id;
-                                    if (parsed.states.size()) {
-                                        enbt::compound states;
-                                        for (auto& [key, value] : parsed.states)
-                                            states[key] = value;
-                                        inner_res["properties"] = states;
-                                    }
-                                    res.push_back(std::move(inner_res));
-                                });
+                                auto parsed_value = api::command::get_manager().parse_string(parsers::command::block(), block);
+                                if (!parsed_value)
+                                    continue;
+                                auto& parsed = std::get<parsers::block>(*parsed_value);
+                                slot_component::inner::block_predicate inner_res = enbt::compound();
+                                inner_res["block"] = parsed.block_id;
+                                if (parsed.states.size()) {
+                                    enbt::compound states;
+                                    for (auto& [key, value] : parsed.states)
+                                        states[key] = value;
+                                    inner_res["properties"] = states;
+                                }
+                                res.push_back(std::move(inner_res));
                             }
-                            slot.components["can_destroy"] = slot_component::can_break{std::move(res), hide_flags.can_destroy};
+                            slot.add_component(slot_component::can_break{std::move(res), hide_flags.can_destroy});
                         } else if (name == "CustomModelData")
-                            slot.components["custom_model_data"]
-                                = slot_component::custom_model_data{(int32_t)value};
+                            slot.add_component(slot_component::custom_model_data{(int32_t)value});
                         else if (name == "AttributeModifiers") {
-                            auto modifiers = enbt::fixed_array::make_ref(value);
+                            auto modifiers = value.as_fixed_array();
                             slot_component::attribute_modifiers build_modifiers;
                             for (auto& modifier : modifiers) {
                                 int32_t type_id = item_attribute::attribute_name_to_id(modifier["AttributeName"]);
@@ -116,74 +114,73 @@ namespace crafted_craft {
                             }
 
                             build_modifiers.show_in_tooltip = !hide_flags.attributes;
-                            slot.components["attribute_modifiers"] = std::move(build_modifiers);
+                            slot.add_component(std::move(build_modifiers));
                         } else if (name == "CanPlaceOn") {
-                            auto blocks = enbt::fixed_array::make_ref(value);
+                            auto blocks = value.as_fixed_array();
                             list_array<slot_component::inner::block_predicate> res;
                             for (auto& block : blocks) {
-                                api::command::get_manager().parse_string(parsers::command::block(), block).and_then([&](parser& bl) {
-                                    auto& parsed = std::get<parsers::block>(bl);
-                                    slot_component::inner::block_predicate inner_res = enbt::compound();
-                                    inner_res["block"] = parsed.block_id;
-                                    if (parsed.states.size()) {
-                                        enbt::compound states;
-                                        for (auto& [key, value] : parsed.states)
-                                            states[key] = value;
-                                        inner_res["properties"] = states;
-                                    }
-                                    res.push_back(std::move(inner_res));
-                                });
+                                auto parsed_value = api::command::get_manager().parse_string(parsers::command::block(), block);
+                                if (!parsed_value)
+                                    continue;
+                                auto& parsed = std::get<parsers::block>(*parsed_value);
+                                slot_component::inner::block_predicate inner_res = enbt::compound();
+                                inner_res["block"] = parsed.block_id;
+                                if (parsed.states.size()) {
+                                    enbt::compound states;
+                                    for (auto& [key, value] : parsed.states)
+                                        states[key] = value;
+                                    inner_res["properties"] = states;
+                                }
+                                res.push_back(std::move(inner_res));
                             }
-                            slot.components["can_place_on"] = slot_component::can_place_on{std::move(res), hide_flags.can_place_on};
-
+                            slot.add_component(slot_component::can_place_on{std::move(res), hide_flags.can_place_on});
                         } else if (name == "BlockEntityTag")
-                            slot.components["block_entity_data"]
-                                = slot_component::block_entity_data{value};
-
+                            slot.add_component(slot_component::block_entity_data{value.as_compound()});
                         else if (name == "BlockStateTag") {
-                            auto states = enbt::compound::make_ref(value);
+                            auto states = value.as_compound();
                             slot_component::block_state state;
                             for (auto& [key, value] : states)
                                 state.properties.push_back({key, (std::string)value});
-                            slot.components["block_state"] = std::move(state);
+                            slot.add_component(std::move(state));
                         } else if (name == "display") {
-                            auto display = enbt::compound::make_ref(value);
+                            auto display = value.as_compound();
                             if (display.contains("Name"))
-                                slot.components["custom_name"] = slot_component::custom_name{Chat::fromEnbt(display["Name"])};
+                                slot.add_component(slot_component::custom_name{Chat::fromEnbt(display["Name"])});
                             if (display.contains("Lore")) {
-                                auto lore = enbt::fixed_array::make_ref(display["Lore"]);
+                                auto lore = display["Lore"].as_fixed_array();
                                 list_array<Chat> lores;
                                 for (auto& line : lore)
                                     lores.push_back(Chat::fromEnbt(line));
-                                slot.components["lore"] = slot_component::lore{std::move(lores)};
+                                slot.add_component(slot_component::lore{std::move(lores)});
                             }
                             if (display.contains("Color"))
-                                slot.components["dyed_color"] = slot_component::dyed_color{(int32_t)display["Color"]};
+                                slot.add_component(slot_component::dyed_color{(int32_t)display["Color"]});
                         } else if (name == "Enchantments") {
-                            auto enchantments = enbt::fixed_array::make_ref(value);
+                            auto enchantments = value.as_fixed_array();
                             slot_component::enchantments build_enchantments;
 
                             for (auto& enchantment : enchantments) {
                                 build_enchantments.enchants.push_back(
-                                    {0, //(std::string)enchantment["id"],
-                                     (int32_t)enchantment["lvl"]}
+                                    {registers::enchantments.at((std::string)enchantment["id"]).id, (int32_t)enchantment["lvl"]}
                                 );
                             }
-                            slot.components["enchantments"] = std::move(build_enchantments);
+                            build_enchantments.show_in_tooltip = hide_flags.enchants;
+                            slot.add_component(std::move(build_enchantments));
                         } else if (name == "StoredEnchantments") {
-                            auto enchantments = enbt::fixed_array::make_ref(value);
-                            slot_component::enchantments build_enchantments;
+                            auto enchantments = value.as_fixed_array();
+                            slot_component::stored_enchantments build_enchantments;
 
                             for (auto& enchantment : enchantments) {
                                 build_enchantments.enchants.push_back(
-                                    {0, //(std::string)enchantment["id"],
-                                     (int32_t)enchantment["lvl"]}
+                                    {registers::enchantments.at((std::string)enchantment["id"]).id, (int32_t)enchantment["lvl"]}
                                 );
                             }
-                            slot.components["enchantments"] = std::move(build_enchantments);
+
+                            build_enchantments.show_in_tooltip = hide_flags.enchants;
+                            slot.add_component(std::move(build_enchantments));
                         } else if (name == "custom_potion_effects") {
-                            auto custom_potion_effects = enbt::fixed_array::make_ref(value);
-                            slot_component::potion_contents& potion_contents = view_or_default<slot_component::potion_contents>(slot.components["custom_potion_effects"]);
+                            auto custom_potion_effects = value.as_fixed_array();
+                            slot_component::potion_contents& potion_contents = slot.access_component<slot_component::potion_contents>();
                             for (auto& effect : custom_potion_effects) {
                                 potion_contents
                                     .custom_effects
@@ -200,19 +197,17 @@ namespace crafted_craft {
                                     );
                             }
                         } else if (name == "Potion") {
-                            slot_component::potion_contents& potion_contents = view_or_default<slot_component::potion_contents>(slot.components["custom_potion_effects"]);
-                            potion_contents.potion_id = 0; //(std::string)value,
+                            slot.access_component<slot_component::potion_contents>().potion_id = registers::potions.at((std::string)value).id;
                         } else if (name == "CustomPotionColor") {
-                            slot_component::potion_contents& potion_contents = view_or_default<slot_component::potion_contents>(slot.components["custom_potion_effects"]);
-                            potion_contents.color_rgb = (int32_t)value;
+                            slot.access_component<slot_component::potion_contents>().potion_id = (int32_t)value;
                         } else if (name == "Trim") {
                             //slot.components["trim"] =  slot_component::trim{
                             //    value[]
                             //}
                         } else if (name == "EntityTag") {
-                            slot.components["entity_data"] = slot_component::entity_data(value);
+                            slot.add_component(slot_component::entity_data(value.as_compound()));
                         } else if (name == "pages") {
-                            auto pages = enbt::fixed_array::make_ref(value);
+                            auto pages = value.as_fixed_array();
                             list_array<std::string> res;
                         }
                     }
@@ -236,7 +231,7 @@ namespace crafted_craft {
                             add_flags = true;
                             for (auto& predicate : std::get<slot_component::can_break>(value).predicates) {
                                 std::string block = predicate.at("block");
-                                auto properties = enbt::compound::make_ref(predicate.at("properties"));
+                                auto properties = predicate.at("properties").as_compound();
                                 if (properties.size()) {
                                     block.push_back('[');
                                     for (auto& [key, value] : properties)
@@ -269,7 +264,7 @@ namespace crafted_craft {
                             enbt::fixed_array arr;
                             for (auto& predicate : std::get<slot_component::can_place_on>(value).predicates) {
                                 std::string block = predicate.at("block");
-                                auto properties = enbt::compound::make_ref(predicate.at("properties"));
+                                auto properties = predicate.at("properties").as_compound();
                                 if (properties.size()) {
                                     block.push_back('[');
                                     for (auto& [key, value] : properties)
@@ -287,87 +282,35 @@ namespace crafted_craft {
                             for (auto& [key, value] : std::get<slot_component::block_state>(value).properties)
                                 states[key] = (std::string)value;
                             res["BlockStateTag"] = std::move(states);
-                        } else if (name == "display") {
-                            auto display = enbt::compound::make_ref(value);
-                            if (display.contains("Name"))
-                                res["custom_name"] = slot_component::custom_name{Chat::fromEnbt(display["Name"])};
-                            if (display.contains("Lore")) {
-                                auto lore = enbt::fixed_array::make_ref(display["Lore"]);
-                                list_array<Chat> lores;
-                                for (auto& line : lore)
-                                    lores.push_back(Chat::fromEnbt(line));
-                                res["lore"] = slot_component::lore{std::move(lores)};
-                            }
-                            if (display.contains("Color"))
-                                res["dyed_color"] = slot_component::dyed_color{(int32_t)display["Color"]};
-                        } else if (key == "enchantments") {
-                            auto enchantments = enbt::fixed_array::make_ref(value);
-                            slot_component::enchantments build_enchantments;
-
-                            for (auto& enchantment : enchantments) {
-                                build_enchantments.enchants.push_back(
-                                    {0, //(std::string)enchantment["id"],
-                                     (int32_t)enchantment["lvl"]}
-                                );
-                            }
-                            res["Enchantments"] = std::move(build_enchantments);
-                        } else if (name == "custom_potion_effects") {
-                            auto custom_potion_effects = enbt::fixed_array::make_ref(value);
-                            slot_component::potion_contents& potion_contents = view_or_default<slot_component::potion_contents>(res["custom_potion_effects"]);
-                            for (auto& effect : custom_potion_effects) {
-                                potion_contents
-                                    .custom_effects
-                                    .push_back(
-                                        item_potion_effect{
-                                            0, //(std::string)effect["id"],
-                                            item_potion_effect::effect_data{
-                                                (int32_t)effect["duration"],
-                                                (bool)effect["ambient"],
-                                                (bool)effect["show_particles"],
-                                                (bool)effect["show_icon"],
-                                            }
-                                        }
-                                    );
-                            }
-                        } else if (name == "Potion") {
-
-                            slot_component::potion_contents& potion_contents = view_or_default<slot_component::potion_contents>(res["custom_potion_effects"]);
-                            potion_contents.potion_id = 0; //(std::string)value,
-                        } else if (name == "CustomPotionColor") {
-                            slot_component::potion_contents& potion_contents = view_or_default<slot_component::potion_contents>(res["custom_potion_effects"]);
-                            potion_contents.color_rgb = (int32_t)value;
-                        } else if (name == "Trim") {
-                            //res["trim"] =  slot_component::trim{
-                            //    value[]
-                            //}
-                        } else if (name == "EntityTag") {
-                            res["entity_data"] = slot_component::entity_data(value);
-                        } else if (name == "pages") {
-                            auto pages = enbt::fixed_array::make_ref(value);
-                            list_array<std::string> res;
                         }
                     }
+                    if (add_flags)
+                        res["HideFlags"] = hide_flags.value;
+                    return slot_data_old{res, new_slot.id, new_slot.count};
                 }
 
-
-                void WriteSlotItem(list_array<uint8_t>& data, const base_objects::slot& slot) {
+                void WriteSlotItem(list_array<uint8_t>& data, const base_objects::slot& slot, int16_t protocol) {
                     auto converted = to_old(*slot);
-                    WriteVar<int32_t>(converted.id, data);
-                    data.push_back(converted.count);
+                    auto real_id = base_objects::slot_data::get_slot_data(converted.id).internal_item_aliases[protocol];
+                    WriteVar<int32_t>(real_id, data);
+                    if (converted.count > 255)
+                        data.push_back(255);
+                    else
+                        data.push_back(converted.count);
                     if (converted.nbt)
                         data.push_back(NBT::build(converted.nbt.value()).get_as_network());
                     else
                         data.push_back(0); //TAG_End
                 }
 
-                void WriteSlot(list_array<uint8_t>& data, const base_objects::slot& slot) {
+                void WriteSlot(list_array<uint8_t>& data, const base_objects::slot& slot, int16_t protocol) {
                     data.push_back((bool)slot);
                     if (slot) {
-                        WriteSlotItem(data, slot);
+                        WriteSlotItem(data, slot, protocol);
                     }
                 }
 
-                base_objects::slot ReadSlotItem(ArrayStream& data) {
+                base_objects::slot ReadSlotItem(ArrayStream& data, int16_t protocol) {
                     slot_data_old old_slot;
                     old_slot.id = ReadVar<int32_t>(data);
                     old_slot.count = data.read();
@@ -379,11 +322,11 @@ namespace crafted_craft {
                     return old_slot.to_new();
                 }
 
-                base_objects::slot ReadSlot(ArrayStream& data) {
+                base_objects::slot ReadSlot(ArrayStream& data, int16_t protocol) {
                     if (!data.read())
                         return std::nullopt;
                     else
-                        return ReadSlotItem(data);
+                        return ReadSlotItem(data, protocol);
                 }
             }
         }

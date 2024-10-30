@@ -129,16 +129,16 @@ namespace crafted_craft {
 
             res->id = nbt["id"];
 
-            auto motion = enbt::fixed_array::make_ref(nbt["motion"]);
+            auto motion = nbt["motion"].as_fixed_array();
             res->motion = {motion[0], motion[1], motion[2]};
 
-            auto position = enbt::fixed_array::make_ref(nbt["position"]);
+            auto position = nbt["position"].as_fixed_array();
             res->position = {position[0], position[1], position[2]};
 
-            auto rotation = enbt::fixed_array::make_ref(nbt["rotation"]);
+            auto rotation = nbt["rotation"].as_fixed_array();
             res->rotation = {rotation[0], rotation[1], rotation[2]};
 
-            auto head_rotation = enbt::fixed_array::make_ref(nbt["head_rotation"]);
+            auto head_rotation = nbt["head_rotation"].as_fixed_array();
             res->head_rotation = {head_rotation[0], head_rotation[1], head_rotation[2]};
 
             res->nbt = nbt["nbt"];

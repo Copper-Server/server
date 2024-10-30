@@ -617,63 +617,56 @@ namespace crafted_craft {
                         switch (type_id.length) {
                             using enum enbt::type_len;
                         case Tiny:
-                            if (type_id.is_signed) {
-                                auto arr = enbt::simple_array_ref_i8::make_ref(enbt);
-                                for (auto& item : arr)
-                                    result.push_back(boost::json::value((int8_t)item));
-                            } else {
-                                auto arr = enbt::simple_array_ref_ui8::make_ref(enbt);
-                                for (auto& item : arr)
-                                    result.push_back(boost::json::value((uint8_t)item));
-                            }
+                            if (type_id.is_signed)
+                                for (auto& item : enbt.as_i8_array())
+                                    result.push_back(item);
+                            else
+                                for (auto& item : enbt.as_ui8_array())
+                                    result.push_back(item);
+                            break;
                         case Short:
-                            if (type_id.is_signed) {
-                                auto arr = enbt::simple_array_ref_i16::make_ref(enbt);
-                                for (auto& item : arr)
-                                    result.push_back(boost::json::value((int16_t)item));
-                            } else {
-                                auto arr = enbt::simple_array_ref_ui16::make_ref(enbt);
-                                for (auto& item : arr)
-                                    result.push_back(boost::json::value((uint16_t)item));
-                            }
+                            if (type_id.is_signed)
+                                for (auto& item : enbt.as_i16_array())
+                                    result.push_back(item);
+                            else
+                                for (auto& item : enbt.as_ui16_array())
+                                    result.push_back(item);
+                            break;
                         case Default:
-                            if (type_id.is_signed) {
-                                auto arr = enbt::simple_array_ref_i32::make_ref(enbt);
-                                for (auto& item : arr)
-                                    result.push_back(boost::json::value((int32_t)item));
-                            } else {
-                                auto arr = enbt::simple_array_ref_ui32::make_ref(enbt);
-                                for (auto& item : arr)
-                                    result.push_back(boost::json::value((uint32_t)item));
-                            }
+                            if (type_id.is_signed)
+                                for (auto& item : enbt.as_i32_array())
+                                    result.push_back(item);
+                            else
+                                for (auto& item : enbt.as_ui32_array())
+                                    result.push_back(item);
+
+                            break;
                         case Long:
-                            if (type_id.is_signed) {
-                                auto arr = enbt::simple_array_ref_i64::make_ref(enbt);
-                                for (auto& item : arr)
-                                    result.push_back(boost::json::value((int64_t)item));
-                            } else {
-                                auto arr = enbt::simple_array_ref_ui64::make_ref(enbt);
-                                for (auto& item : arr)
-                                    result.push_back(boost::json::value((uint64_t)item));
-                            }
+                            if (type_id.is_signed)
+                                for (auto& item : enbt.as_i32_array())
+                                    result.push_back(item);
+                            else
+                                for (auto& item : enbt.as_ui32_array())
+                                    result.push_back(item);
+                            break;
                         }
                         return result;
                     }
                     case compound: {
                         boost::json::object result;
-                        for (auto&& [key, value] : enbt::compound::make_ref(enbt))
+                        for (auto&& [key, value] : enbt.as_compound())
                             result[key] = to_json(value);
                         return result;
                     }
                     case darray: {
                         boost::json::array result;
-                        for (auto& item : enbt::dynamic_array::make_ref(enbt))
+                        for (auto& item : enbt.as_dyn_array())
                             result.push_back(to_json(item));
                         return result;
                     }
                     case array: {
                         boost::json::array result;
-                        for (auto& item : enbt::fixed_array::make_ref(enbt))
+                        for (auto& item : enbt.as_fixed_array())
                             result.push_back(to_json(item));
                         return result;
                     }

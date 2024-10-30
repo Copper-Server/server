@@ -137,6 +137,19 @@ namespace crafted_craft {
                 return false;
             });
 
+            register_event(api::players::calls::on_title_clear_broadcast, [this](bool to_reset) {
+                Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&to_reset](SharedClientData& client) {
+                    client.sendPacket(packets::play::clearTitles(client, to_reset));
+                    return false;
+                });
+                return false;
+            });
+            register_event(api::players::calls::on_title_clear, [this](const api::players::personal<bool>& message) {
+                message.player->sendPacket(packets::play::clearTitles(*message.player, message.data));
+                return false;
+            });
+
+
             register_event(api::players::calls::on_subtitle_message_broadcast, [this](const Chat& message) {
                 Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
                     client.sendPacket(packets::play::setSubtitleText(client, message));

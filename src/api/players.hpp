@@ -81,6 +81,11 @@ namespace crafted_craft::api::players {
         extern base_objects::event<Chat> on_title_message_broadcast;
         extern base_objects::event<personal<Chat>> on_title_message;
 
+        //pass true to reset
+        extern base_objects::event<bool> on_title_clear_broadcast;
+        //pass true to reset
+        extern base_objects::event<personal<bool>> on_title_clear;
+
         extern base_objects::event<Chat> on_subtitle_message_broadcast;
         extern base_objects::event<personal<Chat>> on_subtitle_message;
 

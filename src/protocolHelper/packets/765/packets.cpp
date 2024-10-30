@@ -517,9 +517,10 @@ namespace crafted_craft {
                     list_array<uint8_t> packet;
                     packet.reserve(58);
                     packet.push_back(0x01);
+                    auto view = base_objects::entity_data::view(entity);
                     WriteVar<int32_t>(Server::instance().entity_ids_map.get_id(entity.id), packet);
                     WriteUUID(entity.id, packet);
-                    WriteVar<int32_t>(base_objects::entity_data::view(entity).internal_entity_aliases.at(protocol), packet);
+                    WriteVar<int32_t>(view.internal_entity_aliases.at(protocol), packet);
                     WriteValue<double>(entity.position.x, packet);
                     WriteValue<double>(entity.position.y, packet);
                     WriteValue<double>(entity.position.z, packet);
@@ -528,8 +529,12 @@ namespace crafted_craft {
                     WriteValue<int8_t>(res.y, packet);
                     res = calc::to_yaw_pitch(entity.head_rotation);
                     WriteValue<int8_t>(res.y, packet);
-                    //TODO FIX!1
-                    WriteVar<int32_t>((int32_t)entity.nbt, packet);
+                    if (view.get_object_field) {
+                        if (auto value = view.get_object_field(entity))
+                            WriteVar<int32_t>(value, packet);
+                    } else
+                        WriteVar<int32_t>(0, packet);
+
                     auto velocity = calc::minecraft::packets::velocity(entity.motion);
                     WriteValue<int16_t>(velocity.x, packet);
                     WriteValue<int16_t>(velocity.y, packet);

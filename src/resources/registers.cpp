@@ -2,7 +2,6 @@
 #include "../base_objects/entity.hpp"
 #include "../util/conversions.hpp"
 #include "../util/json_helpers.hpp"
-#include "../util/slot.hpp"
 #include "embed/blocks.json.hpp"
 #include "embed/items.json.hpp"
 
@@ -5055,7 +5054,6 @@ namespace crafted_craft {
 
         void load_file_wolfVariant(js_object&& variant_js, const std::string& id) {
             check_override(wolfVariants, id, "wolf variant");
-            js_object variant_js = js_object::get_object(res.value());
             WolfVariant variant;
             variant.wild_texture = (std::string)variant_js["wild_texture"];
             variant.tame_texture = (std::string)variant_js["tame_texture"];
@@ -5523,7 +5521,7 @@ namespace crafted_craft {
                 slot_data.id = name;
                 std::unordered_map<std::string, base_objects::slot_component::unified> components;
                 for (auto& [name, value] : decl.as_object().at("components").as_object())
-                    components[name] = parse_component(name, value);
+                    components[name] = base_objects::slot_component::parse_component(name, conversions::json::from_json(value));
                 slot_data.default_components = std::move(components);
                 base_objects::slot_data::add_slot_data(std::move(slot_data));
             }

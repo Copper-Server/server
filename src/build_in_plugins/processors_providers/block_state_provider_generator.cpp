@@ -14,7 +14,7 @@ namespace crafted_craft {
                 auto& full_states = base_objects::block::get_block((std::string)state["Name"]);
                 auto states = full_states.assigned_states.left.at(full_states.default_state);
                 if (state.contains("Properties")) {
-                    for (auto& [key, value] : enbt::compound::make_ref(state["Properties"])) {
+                    for (auto& [key, value] : state["Properties"].as_compound()) {
                         std::string as_string = value;
                         if (states.contains(key)) {
                             if (full_states.states[key].contains(as_string)) {

@@ -101,17 +101,16 @@ namespace crafted_craft {
 
             enbt::value chunk_data_file = enbt::io_helper::read_token(filter);
             file.close();
-            auto ref = enbt::compound::make_ref(chunk_data_file);
-            return load(ref);
+            return load(chunk_data_file.as_compound());
         }
 
         bool valid_sub_chunk_size(const enbt::value& chunk) {
             try {
-                auto dim_0 = enbt::fixed_array::make_ref(chunk);
+                auto dim_0 = chunk.as_fixed_array();
                 if (dim_0.size() != 16)
                     return false;
                 for (auto& x : dim_0) {
-                    auto dim_1 = enbt::fixed_array::make_ref(x);
+                    auto dim_1 = x.as_fixed_array();
                     if (dim_1.size() != 16)
                         return false;
                     for (auto& y : dim_1) {
@@ -133,11 +132,11 @@ namespace crafted_craft {
             }
 
             size_t x_ = 0;
-            for (auto& x : enbt::fixed_array::make_ref(chunk)) {
+            for (auto& x : chunk.as_fixed_array()) {
                 size_t y_ = 0;
-                for (auto& y : enbt::fixed_array::make_ref(x)) {
+                for (auto& y : x.as_fixed_array()) {
                     size_t z_ = 0;
-                    for (auto& z : enbt::simple_array_ui8::make_ref(y))
+                    for (auto& z : y.as_ui8_array())
                         data.light_map[x_][y_][z_++].raw = z;
                     ++y_;
                 }
@@ -147,11 +146,11 @@ namespace crafted_craft {
 
         void load_block_data(const enbt::value& chunk, base_objects::block (&data)[16][16][16], bool& has_tickable_blocks) {
             size_t x_ = 0;
-            for (auto& x : enbt::fixed_array::make_ref(chunk)) {
+            for (auto& x : chunk.as_fixed_array()) {
                 size_t y_ = 0;
-                for (auto& y : enbt::fixed_array::make_ref(x)) {
+                for (auto& y : x.as_fixed_array()) {
                     size_t z_ = 0;
-                    for (auto z : enbt::simple_array_ui32::make_ref(y)) {
+                    for (auto z : y.as_ui32_array()) {
                         data[x_][y_][z_].raw = z;
                         has_tickable_blocks = data[x_][y_][z_].is_tickable();
                         ++z_;
@@ -165,7 +164,7 @@ namespace crafted_craft {
         bool chunk_data::load(const enbt::compound_const_ref& chunk_data) {
             if (!chunk_data.contains("sub_chunks"))
                 return false;
-            auto sub_chunks_ref = enbt::fixed_array::make_ref(chunk_data["sub_chunks"]);
+            auto sub_chunks_ref = chunk_data["sub_chunks"].as_fixed_array();
             sub_chunks.reserve(sub_chunks_ref.size());
             for (auto& sub_chunk : sub_chunks_ref) {
                 std::shared_ptr<storage::sub_chunk_data> sub_chunk_data = std::make_shared<storage::sub_chunk_data>();
@@ -176,12 +175,12 @@ namespace crafted_craft {
                     load_block_data(blocks, sub_chunk_data->blocks, sub_chunk_data->has_tickable_blocks);
                 }
                 if (sub_chunk.contains("entities")) {
-                    for (auto& entity : enbt::fixed_array::make_ref(sub_chunk["entities"])) {
-                        sub_chunk_data->stored_entities.push_back(base_objects::entity::load_from_enbt(enbt::compound::make_ref(entity)));
+                    for (auto& entity : sub_chunk["entities"].as_fixed_array()) {
+                        sub_chunk_data->stored_entities.push_back(base_objects::entity::load_from_enbt(entity.as_compound()));
                     }
                 }
                 if (sub_chunk.contains("block_entities")) {
-                    for (auto& block_entity : enbt::fixed_array::make_ref(sub_chunk["block_entities"])) {
+                    for (auto& block_entity : sub_chunk["block_entities"].as_fixed_array()) {
                         base_objects::local_block_pos local_pos;
                         const enbt::value& nbt = block_entity["data"];
                         local_pos.x = block_entity["x"];
@@ -199,7 +198,7 @@ namespace crafted_craft {
                     sub_chunk_data->need_to_recalculate_light = true;
 
                 if (sub_chunk.contains("queried_for_tick"))
-                    for (auto& query : enbt::fixed_array::make_ref(sub_chunk["queried_for_tick"]))
+                    for (auto& query : sub_chunk["queried_for_tick"].as_fixed_array())
                         sub_chunk_data->queried_for_tick.push_back({query["x"], query["y"], query["z"]});
                 sub_chunks.push_back(std::move(*sub_chunk_data));
             }
@@ -495,7 +494,7 @@ namespace crafted_craft {
 
         template <class T>
         std::vector<T> from_fixed_array(const enbt::value& abstract) {
-            auto arr = enbt::fixed_array::make_ref(abstract);
+            auto arr = abstract.as_fixed_array();
             std::vector<T> res;
             res.reserve(arr.size());
             for (auto& item : arr)
@@ -514,7 +513,7 @@ namespace crafted_craft {
 
         template <class T, class _FN>
         std::vector<T> from_fixed_array(const enbt::value& abstract, _FN&& cast_fn) {
-            auto arr = enbt::fixed_array::make_ref(abstract);
+            auto arr = abstract.as_fixed_array();
             std::vector<T> res;
             res.reserve(arr.size());
             for (auto& item : arr)
@@ -581,7 +580,7 @@ namespace crafted_craft {
             if (!file.is_open())
                 throw std::runtime_error("Can't open world file");
             std::string res((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-            load(enbt::compound::make_ref(senbt::parse(res)));
+            load(senbt::parse(res).as_compound());
         }
 
         void world_data::save() {

@@ -2,6 +2,7 @@
 #define SRC_UTIL_READERS
 #include "../library/enbt.hpp"
 #include "../library/list_array.hpp"
+#include "../protocolHelperNBT.hpp"
 #include <bit>
 #include <cstdint>
 #include <exception>
@@ -250,6 +251,13 @@ namespace crafted_craft {
         res.reserve(len);
         for (int32_t i = 0; i < len; i++)
             res.push_back(data.read());
+        return res;
+    }
+
+    static NBT ReadNBT(ArrayStream& data) {
+        size_t readed = 0;
+        NBT res(NBT::readNBT(data.data_read(), data.size_read(), readed));
+        data.range_read(readed);
         return res;
     }
 }

@@ -315,6 +315,7 @@ namespace crafted_craft {
         };
 
         struct potion {
+            uint32_t id;
         };
 
         struct item_modifier {

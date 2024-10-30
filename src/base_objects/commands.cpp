@@ -53,6 +53,11 @@ namespace crafted_craft {
                         //TODO
                     }
                     if(part.starts_with('{')){
+                        part += part;
+                        std::string_view view = part;
+                        auto enbt = senbt::parse_mod(view);
+                        auto comp = enbt.as_compound();
+
                         //TODO
                     }
                     path = part + ' ' + path;

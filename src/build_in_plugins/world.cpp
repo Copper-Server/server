@@ -200,7 +200,7 @@ namespace crafted_craft {
                                 api::players::calls::on_system_message({context.executor, message});
                             } else {
                                 worlds_storage.create(name, [&](storage::world_data& world) {
-                                    world.load(enbt::compound::make_ref(settings));
+                                    world.load(settings.as_compound());
                                 });
                                 Chat message("World created: " + name);
                                 message.SetColor("green");

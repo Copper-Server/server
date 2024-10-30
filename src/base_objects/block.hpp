@@ -270,6 +270,11 @@ namespace crafted_craft {
                 return *named_full_block_data.at(name);
             }
 
+            static block_id_t get_block_id(const base_objects::shared_string& name, int32_t protocol) {
+                auto& st = get_block(name);
+                return st.internal_block_aliases.at(st.default_state).at(protocol);
+            }
+
         private:
             static std::unordered_map<base_objects::shared_string, std::shared_ptr<static_block_data>> named_full_block_data;
             static std::vector<std::shared_ptr<static_block_data>> full_block_data_;

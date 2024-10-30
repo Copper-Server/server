@@ -64,6 +64,7 @@ namespace crafted_craft {
             std::function<entity_ref(const enbt::compound_const_ref&)> create_callback_with_nbt;
             std::function<void(entity_ref& creating_entity, const enbt::compound_const_ref&)> create_from_enbt_callback;
             std::function<void(entity_ref& checking_entity, entity_data&, calc::VECTOR pos)> check_bounds; //if nullptr then used base_bounds, return true if entity is in bounds
+            std::function<int32_t(const entity& checking_entity)> get_object_field;                          //returns zero, if not defined
 
 
             std::unordered_map<uint32_t, uint32_t> internal_entity_aliases; //protocol id -> entity id
@@ -118,6 +119,7 @@ namespace crafted_craft {
 
 
             void tick();
+            int32_t get_object_field();
 
         private:
             friend struct entity_data;

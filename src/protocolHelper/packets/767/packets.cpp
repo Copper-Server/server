@@ -724,7 +724,6 @@ namespace crafted_craft {
                     return release_766::play::mapData(map_id, scale, locked, icons, columns, rows, x, z, data);
                 }
 
-                //TODO update
                 Response merchantOffers(int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade>& trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x2D);
@@ -732,9 +731,10 @@ namespace crafted_craft {
                     packet.push_back(trade_id);
                     WriteVar<int32_t>(trades.size(), packet);
                     for (auto& [input1, output, input2, number_of_trade_uses, max_number_of_trades, xp, spec_price, price_multiplier, demand, trade_disabled] : trades) {
-                        reader::WriteSlot(packet, input1);
+                        //TODO check
+                        reader::WriteTradeItem(packet, input1);
                         reader::WriteSlot(packet, output);
-                        reader::WriteSlot(packet, input2);
+                        reader::WriteTradeItem(packet, input2);
                         WriteValue<int32_t>(number_of_trade_uses, packet);
                         WriteValue<int32_t>(max_number_of_trades, packet);
                         WriteValue<int32_t>(xp, packet);
