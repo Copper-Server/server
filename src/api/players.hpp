@@ -95,6 +95,27 @@ namespace crafted_craft::api::players {
         extern base_objects::event<unsigned_chat> on_unsigned_message_broadcast;
         extern base_objects::event<personal<unsigned_chat>> on_unsigned_message;
     }
+
+    void login_complete_to_cfg(base_objects::client_data_holder& player);
+    size_t online_players();
+    base_objects::client_data_holder allocate_special_player(const std::function<void(SharedClientData&)>& callback);
+    base_objects::client_data_holder allocate_player();
+    size_t size();
+    size_t size(base_objects::SharedClientData::packets_state_t::protocol_state select_state);
+    bool has_player(const std::string& player);
+    bool has_player_status(const std::string& player, base_objects::SharedClientData::packets_state_t::protocol_state select_state);
+    bool has_player_not_status(const std::string& player, base_objects::SharedClientData::packets_state_t::protocol_state select_state);
+    void remove_player(const base_objects::client_data_holder& player);
+    void remove_player(const std::string& player);
+    base_objects::client_data_holder get_player(const std::string& player);
+    base_objects::client_data_holder get_player(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::string& player);
+    base_objects::client_data_holder get_player_not_state(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::string& player);
+    list_array<base_objects::client_data_holder> get_players();
+    void apply_selector(base_objects::client_data_holder& caller, const std::string& selector, const std::function<void(base_objects::SharedClientData&)>& callback, const std::function<void()>& not_found);
+    void iterate_online(const std::function<bool(base_objects::SharedClientData&)>& callback);
+    void iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::SharedClientData&)>& callback);
+    void iterate_players_not_state(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::SharedClientData&)>& callback);
+    void iterate_players(const std::function<bool(base_objects::SharedClientData&)>& callback);
 }
 
 #endif /* SRC_API_PLAYERS */

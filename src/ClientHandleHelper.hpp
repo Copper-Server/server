@@ -16,16 +16,9 @@
 #include "library/list_array.hpp"
 
 #include "base_objects/player.hpp"
-#include "mojang/api/session_server.hpp"
-
 
 #include "base_objects/response.hpp"
-#include "base_objects/server_configuaration.hpp"
 #include "base_objects/shared_client_data.hpp"
-
-#include "storage/memory/entity_ids_map.hpp"
-#include "storage/memory/online_player.hpp"
-#include "storage/permissions_manager.hpp"
 
 namespace crafted_craft {
     constexpr bool CONSTEXPR_DEBUG_DATA_TRANSPORT = true;
@@ -104,6 +97,8 @@ namespace crafted_craft {
         bool isActive();
         bool start_symmetric_encryption(const list_array<uint8_t>& encryption_key, const list_array<uint8_t>& encryption_iv);
 
+        TCPclient& handler();
+
     private:
         void send(Response&& resp);
         bool checked(boost::system::error_code ec, std::string const& msg = "error");
@@ -112,8 +107,6 @@ namespace crafted_craft {
         Response proceed_data();
         void on_request(boost::system::error_code ec, size_t read_size);
 
-
-    private:
         uint64_t& timeout;
         std::vector<uint8_t> read_data;
         list_array<uint8_t> read_data_cached;
@@ -152,8 +145,6 @@ namespace crafted_craft {
 
         auto resolveEndpoint(const std::string& ip, uint16_t port);
 
-        mojang::api::session_server session_server;
-
 
         friend class TCPsession;
         void close_session(TCPsession* session);
@@ -162,14 +153,8 @@ namespace crafted_craft {
     public:
         static Server& instance();
 
-        storage::memory::online_player_storage online_players;
-        storage::memory::entity_ids_map_storage entity_ids_map;
-        storage::permissions_manager permissions_manager;
-
         boost::asio::io_service& getService();
         bool is_local_server();
-
-        mojang::api::session_server& getSessionServer();
 
         std::string get_ip() const;
 

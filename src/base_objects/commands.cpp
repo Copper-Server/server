@@ -1,4 +1,5 @@
 #include "commands.hpp"
+#include "../api/permissions.hpp"
 #include "../library/list_array.hpp"
 #include "../protocolHelper/util.hpp"
 #include "../util/conversions.hpp"
@@ -599,16 +600,16 @@ namespace crafted_craft {
         action_provider::action_provider(std::string&& tag)
             : action_tag(std::move(tag)) {}
 
-        action_provider::action_provider(const std::string& tag, const list_array<shared_string>& requirement)
+        action_provider::action_provider(const std::string& tag, const list_array<std::string>& requirement)
             : action_tag(tag), required_permissions_tag(requirement) {}
 
-        action_provider::action_provider(std::string&& tag, const list_array<shared_string>& requirement)
+        action_provider::action_provider(std::string&& tag, const list_array<std::string>& requirement)
             : action_tag(std::move(tag)), required_permissions_tag(requirement) {}
 
-        action_provider::action_provider(const std::string& tag, list_array<shared_string>&& requirement)
+        action_provider::action_provider(const std::string& tag, list_array<std::string>&& requirement)
             : action_tag(tag), required_permissions_tag(std::move(requirement)) {}
 
-        action_provider::action_provider(std::string&& tag, list_array<shared_string>&& requirement)
+        action_provider::action_provider(std::string&& tag, list_array<std::string>&& requirement)
             : action_tag(std::move(tag)), required_permissions_tag(std::move(requirement)) {}
 
         int32_t command::get_child(list_array<command>& command_nodes, const std::string& name) {
@@ -868,7 +869,7 @@ namespace crafted_craft {
                 return (routine->redirect_routine)(command_nodes[routine->target_command], args, path, data);
             } else {
                 if (current->executable) {
-                    if (Server::instance().permissions_manager.has_rights(current->action_name, data.executor))
+                    if (api::permissions::has_rights(current->action_name, data.executor))
                         return (*current->executable)(args, data);
                     else
                         throw std::exception("Not enough permissions for this command.");
@@ -889,7 +890,7 @@ namespace crafted_craft {
             return current->childs.contains_one([&](int32_t id) {
                 auto& command = command_nodes[id];
                 if (command.executable)
-                    return Server::instance().permissions_manager.has_rights(command.action_name, data.executor);
+                    return api::permissions::has_rights(command.action_name, data.executor);
                 else
                     return has_accessible_callbacks_child(&command, command_nodes, data);
             });
@@ -903,7 +904,7 @@ namespace crafted_craft {
                     if (!has_accessible_callbacks_child(&command, command_nodes, data))
                         return;
                 if (command.executable)
-                    if (!Server::instance().permissions_manager.has_rights(command.action_name, data.executor))
+                    if (!api::permissions::has_rights(command.action_name, data.executor))
                         return;
 
                 if (command.name.starts_with(part)) {
@@ -1367,20 +1368,16 @@ namespace crafted_craft {
         void apply_action_command(command& current_command, const action_provider& action) {
             if (!action.action_tag.empty()) {
                 current_command.action_name = action.action_tag;
-                auto& permissions_manager = Server::instance()
-                                                .permissions_manager;
-                if (!permissions_manager.has_action(action.action_tag))
-                    permissions_manager.register_action(action.action_tag, action.required_permissions_tag);
+                if (!api::permissions::has_action(action.action_tag))
+                    api::permissions::register_action(action.action_tag, action.required_permissions_tag);
             }
         }
 
         void apply_action_command(command& current_command, action_provider&& action) {
             if (!action.action_tag.empty()) {
                 current_command.action_name = action.action_tag;
-                auto& permissions_manager = Server::instance()
-                                                .permissions_manager;
-                if (!permissions_manager.has_action(action.action_tag))
-                    permissions_manager.register_action(action.action_tag, std::move(action.required_permissions_tag));
+                if (!api::permissions::has_action(action.action_tag))
+                    api::permissions::register_action(action.action_tag, std::move(action.required_permissions_tag));
             }
         }
 

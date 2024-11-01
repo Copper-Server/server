@@ -1,5 +1,4 @@
 #include "ban.hpp"
-#include "../ClientHandleHelper.hpp"
 #include "../api/ban.hpp"
 #include "../api/configuration.hpp"
 #include "../api/players.hpp"

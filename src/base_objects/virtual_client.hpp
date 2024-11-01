@@ -4,15 +4,12 @@
 #include "shared_client_data.hpp"
 
 namespace crafted_craft {
-    class Server;
-
     namespace base_objects {
         struct virtual_client {
             client_data_holder client;
-            Server& assigned_server;
 
-            virtual_client(client_data_holder allocated, const std::string& name, const std::string& brand, Server& assigned_server)
-                : client(allocated), assigned_server(assigned_server) {
+            virtual_client(client_data_holder allocated, const std::string& name, const std::string& brand)
+                : client(allocated) {
 
                 client->name = name;
                 client->ip = "";
@@ -22,7 +19,7 @@ namespace crafted_craft {
                 client->player_data.local_data["virtual_client"] = name;
                 client->player_data.gamemode = -1;
                 client->player_data.op_level = 4;
-                client->player_data.world_id = shared_string("virtual_client astral space");
+                client->player_data.world_id = "virtual_client astral space";
                 client->player_data.health = 999999.0f;
                 client->player_data.on_ground = true;
 

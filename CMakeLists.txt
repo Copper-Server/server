@@ -25,11 +25,13 @@ if(MSVC)
   add_definitions(/bigobj)
   add_definitions(/utf-8)
   add_definitions(/Zc:preprocessor)
+  add_compile_options(-DPLATFORM_WINDOWS=1)
 else(MSVC)
   add_compile_options(-m64)
   add_compile_options(-g)
   set(Boost_USE_STATIC_LIBS ON)
   set(Boost_USE_STATIC_RUNTIME ON)
+  add_compile_options(-DPLATFORM_LINUX=1)
 endif(MSVC)
 set(ENABLE_BOOST_PREPROCESSOR ON)
 
@@ -54,6 +56,9 @@ FILE(GLOB SRCFILES
         src/*.cpp 
         src/*/*.cpp 
         src/*/*/*.cpp 
+
+        src/*/*/*.cc 
+        src/*/*/*/*.cc 
 )
 list(FILTER SRCFILES EXCLUDE REGEX "src/library/list_array/tests.cpp")
 

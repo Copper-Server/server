@@ -2,7 +2,6 @@
 #define SRC_BASE_OBJECTS_SELECTOR
 #include "../library/list_array.hpp"
 #include "shared_client_data.hpp"
-#include "shared_string.hpp"
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -16,7 +15,7 @@ namespace crafted_craft {
         };
 
         struct selector_string {
-            shared_string string;
+            std::string string;
             bool is_inverted;
         };
 
@@ -68,7 +67,7 @@ namespace crafted_craft {
             integer_range distance;
 
             //Scoreboard selectors
-            std::unordered_map<shared_string, integer_range> scores;
+            std::unordered_map<std::string, integer_range> scores;
             list_array<selector_string> tags;
             list_array<selector_string> team;
 
@@ -85,12 +84,12 @@ namespace crafted_craft {
 
 
             //Player data
-            std::optional<shared_string> gamemode;
+            std::optional<std::string> gamemode;
             std::optional<double> level;
-            std::unordered_map<shared_string, bool> advancements;
+            std::unordered_map<std::string, bool> advancements;
 
             //Permissions
-            std::unordered_map<shared_string, bool> has_permission;
+            std::unordered_map<std::string, bool> has_permission;
             list_array<selector_string> in_group;
 
             //Traits

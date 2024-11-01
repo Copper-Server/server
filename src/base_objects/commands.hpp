@@ -47,14 +47,14 @@ namespace crafted_craft {
 
         struct action_provider {
             std::string action_tag;
-            list_array<base_objects::shared_string> required_permissions_tag;
+            list_array<std::string> required_permissions_tag;
             action_provider(const char* tag);
             action_provider(const std::string& tag);
             action_provider(std::string&& tag);
-            action_provider(const std::string& tag, const list_array<shared_string>& requirement);
-            action_provider(std::string&& tag, const list_array<shared_string>& requirement);
-            action_provider(const std::string& tag, list_array<shared_string>&& requirement);
-            action_provider(std::string&& tag, list_array<shared_string>&& requirement);
+            action_provider(const std::string& tag, const list_array<std::string>& requirement);
+            action_provider(std::string&& tag, const list_array<std::string>& requirement);
+            action_provider(const std::string& tag, list_array<std::string>&& requirement);
+            action_provider(std::string&& tag, list_array<std::string>&& requirement);
         };
 
         struct redirect_command {

@@ -1,4 +1,6 @@
 #include "packets.hpp"
+#include "../../../api/entity_id_map.hpp"
+#include "../../../api/mojang/session_server.hpp"
 #include "../../util.hpp"
 #include "writers_readers.hpp"
 
@@ -41,7 +43,7 @@ namespace crafted_craft {
 
                 Response loginSuccess(SharedClientData& client) {
                     if (api::configuration::get().protocol.offline_mode)
-                        client.data = Server::instance().getSessionServer().hasJoined(client.name, "", false);
+                        client.data = api::mojang::get_session_server().hasJoined(client.name, "", false);
                     if (!client.data)
                         return kick("Internal error");
 
@@ -475,10 +477,10 @@ namespace crafted_craft {
                     packet.push_back(0x09);
                     WriteVar<int32_t>(tags_entries.size(), packet);
                     for (auto& [registry, tags] : tags_entries) {
-                        WriteIdentifier(packet, registry.get());
+                        WriteIdentifier(packet, registry);
                         WriteVar<int32_t>(tags.size(), packet);
                         for (auto& it : tags) {
-                            WriteIdentifier(packet, it.tag_name.get());
+                            WriteIdentifier(packet, it.tag_name);
                             WriteVar<int32_t>(it.entires.size(), packet);
                             for (auto& entry : it.entires)
                                 WriteVar<int32_t>(entry, packet);
@@ -518,7 +520,7 @@ namespace crafted_craft {
                     packet.reserve(58);
                     packet.push_back(0x01);
                     auto view = base_objects::entity_data::view(entity);
-                    WriteVar<int32_t>(Server::instance().entity_ids_map.get_id(entity.id), packet);
+                    WriteVar<int32_t>(api::entity_id_map::get_id(entity.id), packet);
                     WriteUUID(entity.id, packet);
                     WriteVar<int32_t>(view.internal_entity_aliases.at(protocol), packet);
                     WriteValue<double>(entity.position.x, packet);
@@ -546,7 +548,7 @@ namespace crafted_craft {
                     list_array<uint8_t> packet;
                     packet.reserve(27);
                     packet.push_back(0x02);
-                    WriteVar<int32_t>(Server::instance().entity_ids_map.get_id(entity.id), packet);
+                    WriteVar<int32_t>(api::entity_id_map::get_id(entity.id), packet);
                     WriteValue<double>(entity.position.x, packet);
                     WriteValue<double>(entity.position.y, packet);
                     WriteValue<double>(entity.position.z, packet);
@@ -558,7 +560,7 @@ namespace crafted_craft {
                     list_array<uint8_t> packet;
                     packet.reserve(6);
                     packet.push_back(0x03);
-                    WriteVar<int32_t>(Server::instance().entity_ids_map.get_id(entity.id), packet);
+                    WriteVar<int32_t>(api::entity_id_map::get_id(entity.id), packet);
                     packet.push_back(animation);
                     return Response::Answer({std::move(packet)});
                 }
@@ -588,7 +590,7 @@ namespace crafted_craft {
                     list_array<uint8_t> packet;
                     packet.reserve(14);
                     packet.push_back(0x06);
-                    WriteVar<int32_t>(Server::instance().entity_ids_map.get_id(entity.id), packet);
+                    WriteVar<int32_t>(api::entity_id_map::get_id(entity.id), packet);
                     WriteValue<uint64_t>(block.raw, packet);
                     packet.push_back(stage);
                     return Response::Answer({std::move(packet)});
@@ -1182,7 +1184,7 @@ namespace crafted_craft {
                     packet.push_back((bool)death_location);
                     if (death_location) {
                         WriteValue(death_location->position.raw, packet);
-                        WriteIdentifier(packet, death_location->dimension.get());
+                        WriteIdentifier(packet, death_location->dimension);
                     }
                     WriteVar<int32_t>(portal_cooldown, packet);
                     return Response::Answer({std::move(packet)});
@@ -1692,7 +1694,7 @@ namespace crafted_craft {
                     packet.push_back((bool)death_location);
                     if (death_location) {
                         WriteValue(death_location->position.raw, packet);
-                        WriteIdentifier(packet, death_location->dimension.get());
+                        WriteIdentifier(packet, death_location->dimension);
                     }
                     WriteVar<int32_t>(portal_cooldown, packet);
                     uint8_t data_kept = keep_attributes;
@@ -2352,10 +2354,10 @@ namespace crafted_craft {
                     packet.push_back(reset);
                     WriteVar<int32_t>(advancement_mapping.size(), packet);
                     for (auto& item : advancement_mapping) {
-                        WriteIdentifier(packet, item.key.get());
+                        WriteIdentifier(packet, item.key);
                         packet.push_back((bool)item.parent);
                         if (item.parent)
-                            WriteIdentifier(packet, item.parent->get());
+                            WriteIdentifier(packet, *item.parent);
                         packet.push_back((bool)item.display);
                         if (item.display) {
                             auto& display = *item.display;
@@ -2366,7 +2368,7 @@ namespace crafted_craft {
                             //automaticaly set background_texture flag(0x01) to true if it has value
                             WriteValue(display.flags & (int32_t)display.background_texture.has_value(), packet);
                             if (display.background_texture)
-                                WriteIdentifier(packet, display.background_texture->get());
+                                WriteIdentifier(packet, *display.background_texture);
                             WriteValue(display.x, packet);
                             WriteValue(display.y, packet);
                         }
@@ -2376,10 +2378,10 @@ namespace crafted_craft {
                         WriteIdentifier(packet, it);
                     WriteVar<int32_t>(progress_advancements.size(), packet);
                     for (auto& [advancement, progress] : progress_advancements) {
-                        WriteIdentifier(packet, advancement.get());
+                        WriteIdentifier(packet, advancement);
                         WriteVar<int32_t>(progress.size(), packet);
                         for (auto& [criterion, criterion_progress] : progress) {
-                            WriteIdentifier(packet, criterion.get());
+                            WriteIdentifier(packet, criterion);
                             packet.push_back(criterion_progress.achieved);
                             if (criterion_progress.achieved)
                                 WriteValue<int64_t>(criterion_progress.date, packet);
@@ -2530,10 +2532,10 @@ namespace crafted_craft {
                     packet.push_back(0x74);
                     WriteVar<int32_t>(tag_mappings.size(), packet);
                     for (auto& [registry, values] : tag_mappings) {
-                        WriteIdentifier(packet, registry.get());
+                        WriteIdentifier(packet, registry);
                         WriteVar<int32_t>(values.size(), packet);
                         for (auto& [tag, entries] : values) {
-                            WriteIdentifier(packet, tag.get());
+                            WriteIdentifier(packet, tag);
                             WriteVar<int32_t>(entries.size(), packet);
                             for (auto& entry : entries)
                                 WriteVar<int32_t>(entry, packet);

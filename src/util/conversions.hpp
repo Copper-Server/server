@@ -39,6 +39,8 @@ namespace crafted_craft {
             namespace json {
                 boost::json::value to_json(const enbt::value& enbt);
                 enbt::value from_json(const boost::json::value& json);
+                enbt::value from_json(const boost::json::object& json);
+                enbt::value from_json(const boost::json::array& json);
             }
         }
     }

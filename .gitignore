@@ -12,3 +12,4 @@ config.json
 tools/logs
 tools/*/out
 tools/*.exe
+*.cc

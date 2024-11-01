@@ -5,8 +5,8 @@
 #include "../util/readers.hpp"
 #include "chat.hpp"
 #include "position.hpp"
-#include "shared_string.hpp"
 #include <optional>
+#include <string>
 
 namespace crafted_craft {
     namespace base_objects {
@@ -272,6 +272,9 @@ namespace crafted_craft {
 
                 explicit rarity(uint8_t value)
                     : value((_internal)value) {}
+
+                std::string to_string() const;
+                static rarity from_string(const std::string&);
 
                 auto operator<=>(const rarity& other) const
                     = default;
@@ -939,7 +942,7 @@ namespace crafted_craft {
             static void reset_items();      //INTERNAL
             static void initialize_items(); //INTERNAL, used to assign internal_item_aliases ids from item_aliases
 
-            list_array<base_objects::shared_string> item_aliases;
+            list_array<std::string> item_aliases;
             std::unordered_map<uint32_t, uint32_t> internal_item_aliases; //protocol id -> block id
             static std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> internal_item_aliases_protocol;
         };
@@ -1024,9 +1027,9 @@ namespace crafted_craft {
             bool operator!=(const slot_data& other) const;
 
 
-            static slot_data create_item(const base_objects::shared_string& id);
+            static slot_data create_item(const std::string& id);
             static slot_data create_item(uint32_t id);
-            static static_slot_data& get_slot_data(const base_objects::shared_string& id);
+            static static_slot_data& get_slot_data(const std::string& id);
             static static_slot_data& get_slot_data(uint32_t id);
 
             static void add_slot_data(static_slot_data&& move);
@@ -1035,7 +1038,7 @@ namespace crafted_craft {
 
         private:
             friend class static_slot_data;
-            static std::unordered_map<base_objects::shared_string, std::shared_ptr<static_slot_data>> named_full_item_data;
+            static std::unordered_map<std::string, std::shared_ptr<static_slot_data>> named_full_item_data;
             static std::vector<std::shared_ptr<static_slot_data>> full_item_data_;
 
             template <typename T, typename = void>

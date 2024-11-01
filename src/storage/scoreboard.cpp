@@ -203,19 +203,19 @@ namespace crafted_craft {
             auto json_objectives = js_object::get_object(entry["objectives"]);
             data.inspect_each_objective([&json_objectives](const base_objects::objective& objective) {
                 boost::json::object json_objective;
-                json_objective["display_name"] = objective.get_display_name().get();
-                json_objective["criteria"] = objective.get_criteria().get();
+                json_objective["display_name"] = objective.get_display_name();
+                json_objective["criteria"] = objective.get_criteria();
                 auto json_scores = (json_objective["scores"] = boost::json::object()).get_object();
                 json_scores.reserve(objective.scores_count());
-                objective.inspect_each_score([&json_scores](const base_objects::shared_string& name, int64_t value) {
-                    json_scores[name.get()] = value;
+                objective.inspect_each_score([&json_scores](const std::string& name, int64_t value) {
+                    json_scores[name] = value;
                 });
-                json_objectives[objective.get_name().get()] = std::move(json_objective);
+                json_objectives[objective.get_name()] = std::move(json_objective);
             });
             auto json_teams = js_object::get_object(entry["teams"]);
             data.inspect_each_team([&json_teams](const base_objects::team& team) {
                 boost::json::object json_team;
-                json_team["display_name"] = team.get_display_name().get();
+                json_team["display_name"] = team.get_display_name();
                 json_team["color"] = to_string(team.get_color());
                 json_team["collision_rule"] = to_string(team.get_collision_rule());
                 json_team["death_message_visibility"] = to_string(team.get_death_message_visibility());
@@ -224,10 +224,10 @@ namespace crafted_craft {
                 json_team["see_invisible"] = team.get_see_invisible();
                 auto json_players = (json_team["players"] = boost::json::array()).get_array();
                 json_players.reserve(team.player_count());
-                team.inspect_each_player([&json_players](const base_objects::shared_string& name) {
-                    json_players.push_back((boost::json::string)name.get());
+                team.inspect_each_player([&json_players](const std::string& name) {
+                    json_players.push_back((boost::json::string)name);
                 });
-                json_teams[team.get_name().get()] = std::move(json_team);
+                json_teams[team.get_name()] = std::move(json_team);
             });
 
 

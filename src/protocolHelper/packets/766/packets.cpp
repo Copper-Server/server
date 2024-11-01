@@ -1,5 +1,6 @@
 #include "packets.hpp"
 #include "../../../api/configuration.hpp"
+#include "../../../api/mojang/session_server.hpp"
 #include "../../util.hpp"
 #include "../765/packets.hpp"
 #include "writers_readers.hpp"
@@ -64,7 +65,7 @@ namespace crafted_craft {
 
                 Response loginSuccess(SharedClientData& client) {
                     if (api::configuration::get().protocol.offline_mode)
-                        client.data = Server::instance().getSessionServer().hasJoined(client.name, "", false);
+                        client.data = api::mojang::get_session_server().hasJoined(client.name, "", false);
                     if (!client.data)
                         return kick("Internal error");
 
@@ -845,7 +846,7 @@ namespace crafted_craft {
                     packet.push_back((bool)death_location);
                     if (death_location) {
                         WriteValue(death_location->position.raw, packet);
-                        WriteIdentifier(packet, death_location->dimension.get());
+                        WriteIdentifier(packet, death_location->dimension);
                     }
                     WriteVar<int32_t>(portal_cooldown, packet);
                     packet.push_back(enforces_secure_chat);
@@ -1075,7 +1076,7 @@ namespace crafted_craft {
                     packet.push_back((bool)death_location);
                     if (death_location) {
                         WriteValue(death_location->position.raw, packet);
-                        WriteIdentifier(packet, death_location->dimension.get());
+                        WriteIdentifier(packet, death_location->dimension);
                     }
                     WriteVar<int32_t>(portal_cooldown, packet);
                     uint8_t data_kept = keep_attributes;

@@ -4,7 +4,7 @@
 #include "../../base_objects/particle_data.hpp"
 
 #include "../../base_objects/entity.hpp"
-#include "../../base_objects/shared_string.hpp"
+#include <string>
 
 #include <string>
 #include <unordered_map>
@@ -52,8 +52,8 @@ namespace crafted_craft {
                     struct any_off;
 
                     struct block_state_property {                                                                 //requires loot context
-                        base_objects::shared_string block;                                                        //id
-                        std::unordered_map<base_objects::shared_string, condition_value<std::string>> properties; //optional
+                        std::string block;                                                                        //id
+                        std::unordered_map<std::string, condition_value<std::string>> properties;                 //optional
                     };
 
                     struct damage_source_properties {
@@ -74,7 +74,7 @@ namespace crafted_craft {
                             };
 
                             struct equipment_t {
-                                std::optional<std::variant<base_objects::shared_string, std::vector<base_objects::shared_string>, std::string>> items; //ID, list of IDs or tag
+                                std::optional<std::variant<std::string, std::vector<std::string>, std::string>> items; //ID, list of IDs or tag
                                 std::optional<condition_value<int32_t>> count;
                                 std::optional<enbt::value> components;
                                 std::optional<enbt::value> predicates; //sub predicates
@@ -90,10 +90,10 @@ namespace crafted_craft {
                                 bool is_flying : 1;
                             };
 
-                            std::variant<base_objects::shared_string, std::vector<base_objects::shared_string>, std::string> type; //ID, list of IDs or tag
+                            std::variant<std::string, std::vector<std::string>, std::string> type; //ID, list of IDs or tag
                             std::optional<distance_t> distance;
-                            std::unordered_map<base_objects::shared_string, effect_t> effects;
-                            std::unordered_map<base_objects::shared_string, equipment_t> equipment; //mainhand, offhand, head, chest, legs, feet, body
+                            std::unordered_map<std::string, effect_t> effects;
+                            std::unordered_map<std::string, equipment_t> equipment; //mainhand, offhand, head, chest, legs, feet, body
                         };
                     };
 

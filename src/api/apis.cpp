@@ -1,7 +1,6 @@
 #include "../base_objects/virtual_client.hpp"
 #include "allowlist.hpp"
 #include "ban.hpp"
-#include "players.hpp"
 #include "protocol.hpp"
 #include "statistics.hpp"
 
@@ -19,36 +18,6 @@ namespace crafted_craft::api {
         base_objects::event<ban_data> on_ban_ip;
         base_objects::event<ban_data> on_pardon_ip;
     }
-
-    namespace players {
-        namespace handlers {
-            base_objects::event<base_objects::client_data_holder> on_player_join;
-            base_objects::event<base_objects::client_data_holder> on_player_leave;
-        }
-
-        namespace calls {
-            base_objects::event<teleport_request> on_teleport_request;
-            base_objects::event<player_chat> on_player_chat;
-            base_objects::event<player_personal_chat> on_player_personal_chat;
-            base_objects::event<Chat> on_system_message_broadcast;
-            base_objects::event<personal<Chat>> on_system_message;
-            base_objects::event<Chat> on_system_message_overlay_broadcast;
-            base_objects::event<personal<Chat>> on_system_message_overlay;
-            base_objects::event<personal<Chat>> on_player_kick;
-            base_objects::event<personal<Chat>> on_player_ban;
-            base_objects::event<Chat> on_action_bar_message_broadcast;
-            base_objects::event<personal<Chat>> on_action_bar_message;
-            base_objects::event<Chat> on_title_message_broadcast;
-            base_objects::event<personal<Chat>> on_title_message;
-            base_objects::event<Chat> on_subtitle_message_broadcast;
-            base_objects::event<personal<Chat>> on_subtitle_message;
-            base_objects::event<titles_times> on_title_times_broadcast;
-            base_objects::event<personal<titles_times>> on_title_times;
-            base_objects::event<unsigned_chat> on_unsigned_message_broadcast;
-            base_objects::event<personal<unsigned_chat>> on_unsigned_message;
-        }
-    }
-
     namespace protocol {
         base_objects::event<event_data<data::teleport_request_completion>> on_teleport_request_completion;
         base_objects::event<event_data<data::block_nbt_request>> on_block_nbt_request;

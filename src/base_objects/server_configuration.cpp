@@ -40,26 +40,26 @@ namespace crafted_craft {
             }
             {
                 auto world = js_object::get_object(data["world"]);
-                cfg.world.name = world["name"].or_apply(cfg.world.name.get());
-                cfg.world.seed = world["seed"].or_apply(cfg.world.seed.get());
-                cfg.world.type = world["type"].or_apply(cfg.world.type.get());
+                cfg.world.name = world["name"].or_apply(cfg.world.name);
+                cfg.world.seed = world["seed"].or_apply(cfg.world.seed);
+                cfg.world.type = world["type"].or_apply(cfg.world.type);
                 cfg.world.unload_speed = world["unload_speed"].or_apply(cfg.world.unload_speed);
                 {
                     auto generator_settings = js_object::get_object(world["generator_settings"]);
                     if (generator_settings.empty())
                         for (auto&& [key, value] : cfg.world.generator_settings)
-                            generator_settings[key.get()] = value;
+                            generator_settings[key] = value;
                     else {
                         cfg.world.generator_settings.clear();
                         for (auto&& [key, value] : generator_settings)
-                            cfg.world.generator_settings[(shared_string)(std::string_view)key] = (std::string)generator_settings[key];
+                            cfg.world.generator_settings[(std::string)key] = (std::string)generator_settings[key];
                     }
                 }
             }
             {
                 auto game_play = js_object::get_object(data["game_play"]);
-                cfg.game_play.difficulty = game_play["difficulty"].or_apply(cfg.game_play.difficulty.get());
-                cfg.game_play.gamemode = game_play["gamemode"].or_apply(cfg.game_play.gamemode.get());
+                cfg.game_play.difficulty = game_play["difficulty"].or_apply(cfg.game_play.difficulty);
+                cfg.game_play.gamemode = game_play["gamemode"].or_apply(cfg.game_play.gamemode);
                 cfg.game_play.max_chained_neighbor_updates = game_play["max_chained_neighbor_updates"].or_apply(cfg.game_play.max_chained_neighbor_updates);
                 cfg.game_play.max_tick_time = game_play["max_tick_time"].or_apply(cfg.game_play.max_tick_time);
                 cfg.game_play.view_distance = game_play["view_distance"].or_apply(cfg.game_play.view_distance);
@@ -154,7 +154,6 @@ namespace crafted_craft {
             {
                 auto server = js_object::get_object(data["server"]);
                 auto& folder = (boost::json::string&)server["storage_folder"].or_apply(cfg.server.storage_folder);
-                auto& worlds = (boost::json::string&)server["worlds_folder"].or_apply(cfg.server.worlds_folder);
 
 
                 if (folder.find_first_of(".,\\#$%^&*()`~'\":;|?!<>") != folder.npos)
@@ -164,10 +163,11 @@ namespace crafted_craft {
                     std::filesystem::create_directories(cfg.server.get_storage_path());
                 }
 
+                auto& worlds = (boost::json::string&)server["worlds_folder"].or_apply(cfg.server.worlds_folder);
                 if (worlds.find_first_of(".,\\#$%^&*()`~'\":;|?!<>") != worlds.npos)
                     log::warn("server", "server config: root.server.worlds_folder contains special symbol .,\\#$%^&*()`~'\":;|?!<>, item has been ignored");
                 else {
-                    cfg.server.storage_folder = (std::string)folder;
+                    cfg.server.worlds_folder = (std::string)worlds;
                     std::filesystem::create_directories(cfg.server.get_storage_path());
                 }
                 cfg.server.ip = (std::string)server["ip"].or_apply(cfg.server.ip);
@@ -183,7 +183,7 @@ namespace crafted_craft {
                 auto allowed_dimensions = js_array::get_array(data["allowed_dimensions"]);
                 if (allowed_dimensions.empty()) {
                     for (auto& id : cfg.allowed_dimensions)
-                        allowed_dimensions.push_back(id.get());
+                        allowed_dimensions.push_back(id);
                 } else {
                     size_t arr_siz = allowed_dimensions.size();
                     for (size_t i = 0; i < arr_siz; i++)

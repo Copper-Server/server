@@ -1,7 +1,6 @@
 
 
 #include "../../base_objects/block.hpp"
-#include "../../ClientHandleHelper.hpp"
 #include "../../base_objects/chat.hpp"
 #include "../../base_objects/chunk.hpp"
 #include "../../base_objects/entity.hpp"
@@ -9,6 +8,7 @@
 #include "../../base_objects/particle_data.hpp"
 #include "../../base_objects/position.hpp"
 #include "../../base_objects/recipe.hpp"
+#include <array>
 
 namespace crafted_craft {
     namespace packets {

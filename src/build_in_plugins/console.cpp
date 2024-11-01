@@ -8,8 +8,6 @@
 #include "../plugin/registration.hpp"
 
 namespace crafted_craft {
-    class Server;
-
     namespace build_in_plugins {
 
 
@@ -33,7 +31,7 @@ namespace crafted_craft {
         }
 
         ConsolePlugin::ConsolePlugin()
-            : console_data(Server::instance().online_players.allocate_player(), "Console", "Console", Server::instance()) {
+            : console_data(api::players::allocate_player(), "Console", "Console") {
         }
 
         void ConsolePlugin::OnLoad(const PluginRegistrationPtr& self) {

@@ -93,7 +93,7 @@ namespace crafted_craft {
             res["id"] = id;
             res["died"] = died;
             if (world)
-                res["bound_world"] = world->world_name.get();
+                res["bound_world"] = world->world_name;
             return res;
         }
 

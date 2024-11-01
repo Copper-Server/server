@@ -23,10 +23,7 @@ namespace crafted_craft {
 
     class SpecialPluginStatus {
     public:
-        const base_objects::ServerConfiguration& config;
-
-        SpecialPluginStatus(const base_objects::ServerConfiguration& config)
-            : config(config) {}
+        SpecialPluginStatus() {}
 
 
         virtual std::string StatusResponseVersionName() {

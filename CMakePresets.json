@@ -52,7 +52,7 @@
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
                 "VCPKG_TARGET_TRIPLET": "x64-windows-static",
-                "PLATFORM_WINDOWS": true
+                "CMAKE_BUILD_PARALLEL_LEVEL": "16"
             }
         },
         {
@@ -64,7 +64,8 @@
             "cacheVariables": {
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-                "VCPKG_TARGET_TRIPLET": "x64-linux"
+                "VCPKG_TARGET_TRIPLET": "x64-linux",
+                "CMAKE_BUILD_PARALLEL_LEVEL": "16"
             }
         },
         {

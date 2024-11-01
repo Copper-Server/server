@@ -1,5 +1,4 @@
 #include "world.hpp"
-#include "../ClientHandleHelper.hpp"
 #include "../api/configuration.hpp"
 #include "../api/internal/world.hpp"
 #include "../api/players.hpp"
@@ -25,7 +24,7 @@ namespace crafted_craft {
         void WorldManagementPlugin::add_world_name_suggestion(base_objects::command_browser& browser) {
             browser.set_suggestion_callback([this](const std::string& current, base_objects::command_context& context) {
                 auto suggestions = worlds_storage.get_list().convert<std::string>([this](uint64_t id) {
-                    return worlds_storage.get_name(id).get();
+                    return worlds_storage.get_name(id);
                 });
                 if (current.empty())
                     return suggestions;
@@ -61,22 +60,22 @@ namespace crafted_craft {
             });
 
             for (auto& it : api::configuration::get().allowed_dimensions) {
-                api::world::pre_load_world(it.get(), [&](storage::world_data& world) {
+                api::world::pre_load_world(it, [&](storage::world_data& world) {
                     world.world_type = api::configuration::get().world.type;
-                    world.world_seed = util::conversions::uuid::from(api::configuration::get().world.seed.get());
-                    world.light_processor_id = "default"_ss;
-                    if (world.world_name.get() == "end") {
-                        world.generator_id = "end"_ss;
-                    } else if (world.world_name.get() == "nether") {
-                        world.generator_id = "nether"_ss;
+                    world.world_seed = util::conversions::uuid::from(api::configuration::get().world.seed);
+                    world.light_processor_id = "default";
+                    if (world.world_name == "end") {
+                        world.generator_id = "end";
+                    } else if (world.world_name == "nether") {
+                        world.generator_id = "nether";
                     } else {
                         world.generator_id = api::configuration::get().world.type;
                         for (auto& [name, value] : api::configuration::get().world.generator_settings)
-                            world.world_generator_data[name.get()] = value;
+                            world.world_generator_data[name] = value;
                         world.load_points.push_back({10, 10, -10, -10});
                     }
                 });
-                log::info("World", it.get() + " loaded.");
+                log::info("World", it + " loaded.");
             }
             if (worlds_storage.base_world_id == -1 && !api::configuration::get().allowed_dimensions.empty()) {
                 log::info("World", "Base world not set, setting to first world.");
@@ -124,11 +123,11 @@ namespace crafted_craft {
             worlds_storage.locked([&](storage::worlds_data& worlds) {
                 fast_task::task::notify_cancel(world_ticking);
                 worlds.for_each_world([&](uint64_t id, storage::world_data& world) {
-                    log::info("World", "saving world " + world.world_name.get() + "...");
+                    log::info("World", "saving world " + world.world_name + "...");
                     world.save();
                     world.save_and_unload_chunks();
                     world.await_save_chunks();
-                    log::info("World", "world " + world.world_name.get() + " saved.");
+                    log::info("World", "world " + world.world_name + " saved.");
                 });
                 worlds.unload_all();
             });
@@ -140,11 +139,11 @@ namespace crafted_craft {
             worlds_storage.locked([&](storage::worlds_data& worlds) {
                 fast_task::task::notify_cancel(world_ticking);
                 worlds.for_each_world([&](uint64_t id, storage::world_data& world) {
-                    log::info("World", "saving world " + world.world_name.get() + "...");
+                    log::info("World", "saving world " + world.world_name + "...");
                     world.save();
                     world.save_chunks();
                     world.await_save_chunks();
-                    log::info("World", "world " + world.world_name.get() + " saved.");
+                    log::info("World", "world " + world.world_name + " saved.");
                 });
             });
         }
@@ -284,7 +283,7 @@ namespace crafted_craft {
                         if (worlds_storage.base_world_id == -1)
                             api::players::calls::on_system_message({context.executor, {"Base world not set."}});
                         else
-                            api::players::calls::on_system_message({context.executor, {"Base world is: " + worlds_storage.get(worlds_storage.base_world_id)->world_name.get() + " (" + std::to_string(worlds_storage.base_world_id) + ")"}});
+                            api::players::calls::on_system_message({context.executor, {"Base world is: " + worlds_storage.get(worlds_storage.base_world_id)->world_name + " (" + std::to_string(worlds_storage.base_world_id) + ")"}});
                     });
                 }
                 {
@@ -300,7 +299,7 @@ namespace crafted_craft {
                                 api::players::calls::on_system_message({context.executor, message});
                             } else {
                                 worlds_storage.get(id);
-                                Chat message("World loaded: " + worlds_storage.get_name(id).get());
+                                Chat message("World loaded: " + worlds_storage.get_name(id));
                                 message.SetColor("green");
                                 api::players::calls::on_system_message({context.executor, message});
                             }
@@ -315,7 +314,7 @@ namespace crafted_craft {
                                 api::players::calls::on_system_message({context.executor, message});
                             } else {
                                 worlds_storage.get(actual_id);
-                                Chat message("World loaded: " + worlds_storage.get_name(actual_id).get());
+                                Chat message("World loaded: " + worlds_storage.get_name(actual_id));
                                 message.SetColor("green");
                                 api::players::calls::on_system_message({context.executor, message});
                             }
@@ -336,7 +335,7 @@ namespace crafted_craft {
                                 api::players::calls::on_system_message({context.executor, message});
                             } else {
                                 worlds_storage.save(id);
-                                Chat message("World saved: " + worlds_storage.get_name(id).get());
+                                Chat message("World saved: " + worlds_storage.get_name(id));
                                 message.SetColor("green");
                                 api::players::calls::on_system_message({context.executor, message});
                             }
@@ -351,7 +350,7 @@ namespace crafted_craft {
                                 api::players::calls::on_system_message({context.executor, message});
                             } else {
                                 worlds_storage.save(actual_id);
-                                Chat message("World saved: " + worlds_storage.get_name(actual_id).get());
+                                Chat message("World saved: " + worlds_storage.get_name(actual_id));
                                 message.SetColor("green");
                                 api::players::calls::on_system_message({context.executor, message});
                             }
@@ -373,7 +372,7 @@ namespace crafted_craft {
                     list.set_callback("command.world.list", [this](const list_array<predicate>&, base_objects::command_context& context) {
                         std::string message = "Worlds: ";
                         worlds_storage.for_each_world([&message](uint64_t id, storage::world_data& world) {
-                            message += world.world_name.get() + ", ";
+                            message += world.world_name + ", ";
                         });
                         message.erase(message.size() - 2);
                         message[message.size() - 1] = '.';
@@ -393,7 +392,7 @@ namespace crafted_craft {
                                 api::players::calls::on_system_message({context.executor, message});
                             } else {
                                 worlds_storage.save_and_unload(id);
-                                Chat message("World unloaded: " + worlds_storage.get_name(id).get());
+                                Chat message("World unloaded: " + worlds_storage.get_name(id));
                                 message.SetColor("green");
                                 api::players::calls::on_system_message({context.executor, message});
                             }
@@ -408,7 +407,7 @@ namespace crafted_craft {
                                 api::players::calls::on_system_message({context.executor, message});
                             } else {
                                 worlds_storage.save_and_unload(actual_id);
-                                Chat message("World unloaded: " + worlds_storage.get_name(actual_id).get());
+                                Chat message("World unloaded: " + worlds_storage.get_name(actual_id));
                                 message.SetColor("green");
                                 api::players::calls::on_system_message({context.executor, message});
                             }
@@ -454,7 +453,7 @@ namespace crafted_craft {
                                 message.SetColor("red");
                                 api::players::calls::on_system_message({context.executor, message});
                             } else {
-                                Chat message("World name: " + worlds_storage.get_name(id).get());
+                                Chat message("World name: " + worlds_storage.get_name(id));
                                 message.SetColor("green");
                                 api::players::calls::on_system_message({context.executor, message});
                             }
@@ -578,7 +577,7 @@ namespace crafted_craft {
                           if (pos.z_relative)
                               pos.z += (int32_t)context.other_data["z"];
 
-                          api::world::get(context.executor->player_data.world_id.get(), [pos, &block](storage::world_data& world) {
+                          api::world::get(context.executor->player_data.world_id, [pos, &block](storage::world_data& world) {
                               world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::replace);
                           });
                       };
@@ -596,7 +595,7 @@ namespace crafted_craft {
                     if (pos.z_relative)
                         pos.z += (int32_t)context.other_data["z"];
 
-                    api::world::get(context.executor->player_data.world_id.get(), [pos, &block](storage::world_data& world) {
+                    api::world::get(context.executor->player_data.world_id, [pos, &block](storage::world_data& world) {
                         world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::destroy);
                     });
                 });
@@ -612,7 +611,7 @@ namespace crafted_craft {
                     if (pos.z_relative)
                         pos.z += (int32_t)context.other_data["z"];
 
-                    api::world::get(context.executor->player_data.world_id.get(), [pos, &block](storage::world_data& world) {
+                    api::world::get(context.executor->player_data.world_id, [pos, &block](storage::world_data& world) {
                         world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::keep);
                     });
                 });

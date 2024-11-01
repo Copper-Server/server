@@ -8,7 +8,6 @@ FILE(GLOB SRCFILES
     main.cpp
 )
 add_executable(binary_embed ${SRCFILES})
-
 #copy executable to current path
 add_custom_command(TARGET binary_embed POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:binary_embed> ${CMAKE_CURRENT_SOURCE_DIR}/../binary_embed.exe

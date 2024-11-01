@@ -3,16 +3,19 @@
 #include "../base_objects/commands.hpp"
 #include "../plugin/main.hpp"
 #include "../storage/list_storage.hpp"
+#include "../storage/permissions_manager.hpp"
 
 namespace crafted_craft {
     namespace build_in_plugins {
         //provides commands to manipulate permissions and implements OP list
         class PermissionsPlugin : public PluginAutoRegister<"permissions", PermissionsPlugin> {
             storage::list_storage op_list;
+            storage::permissions_manager manager;
             void update_perm(base_objects::SharedClientData& client_ref);
 
         public:
             PermissionsPlugin();
+            void OnInitialization(const PluginRegistrationPtr& self) override;
 
             void OnLoad(const PluginRegistrationPtr& self) override;
             void OnPostLoad(const PluginRegistrationPtr& self) override;

@@ -2,12 +2,12 @@
 #define SRC_API_STATISTICS
 #include "../base_objects/event.hpp"
 #include "../base_objects/shared_client_data.hpp"
-#include "../base_objects/shared_string.hpp"
+#include <string>
 
 namespace crafted_craft::api::statistics {
             struct statistic_event {
                 base_objects::client_data_holder target;
-                base_objects::shared_string trigger_source;
+                std::string trigger_source;
             };
 
             namespace minecraft {

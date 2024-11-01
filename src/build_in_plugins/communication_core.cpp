@@ -11,7 +11,7 @@ namespace crafted_craft {
 
         void CommunicationCorePlugin::OnLoad(const PluginRegistrationPtr& self) {
             register_event(api::players::calls::on_player_chat, [this](const api::players::player_chat& chat) {
-                Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&chat](SharedClientData& client) {
+                api::players::iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&chat](SharedClientData& client) {
                     client.sendPacket(
                         packets::play::playerChatMessage(
                             client,
@@ -78,7 +78,7 @@ namespace crafted_craft {
 
 
             register_event(api::players::calls::on_system_message_broadcast, [this](const Chat& message) {
-                Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
+                api::players::iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
                     client.sendPacket(packets::play::systemChatMessage(client,message));
                     return false;
                 });
@@ -90,7 +90,7 @@ namespace crafted_craft {
             });
 
             register_event(api::players::calls::on_system_message_overlay_broadcast, [this](const Chat& message) {
-                Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
+                api::players::iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
                     client.sendPacket(packets::play::systemChatMessageOverlay(client, message));
                     return false;
                 });
@@ -103,18 +103,18 @@ namespace crafted_craft {
 
             register_event(api::players::calls::on_player_kick, [this](const api::players::personal<Chat>& message) {
                 message.player->sendPacket(packets::play::kick(*message.player,message.data));
-                Server::instance().online_players.remove_player(message.player);
+                api::players::remove_player(message.player);
                 return false;
             });
 
             register_event(api::players::calls::on_player_ban, [this](const api::players::personal<Chat>& message) {
                 message.player->sendPacket(packets::play::kick(*message.player, message.data));
-                Server::instance().online_players.remove_player(message.player);
+                api::players::remove_player(message.player);
                 return false;
             });
 
             register_event(api::players::calls::on_action_bar_message_broadcast, [this](const Chat& message) {
-                Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
+                api::players::iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
                     client.sendPacket(packets::play::setActionBarText(client, message));
                     return false;
                 });
@@ -126,7 +126,7 @@ namespace crafted_craft {
             });
 
             register_event(api::players::calls::on_title_message_broadcast, [this](const Chat& message) {
-                Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
+                api::players::iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
                     client.sendPacket(packets::play::setTitleText(client, message));
                     return false;
                 });
@@ -138,7 +138,7 @@ namespace crafted_craft {
             });
 
             register_event(api::players::calls::on_title_clear_broadcast, [this](bool to_reset) {
-                Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&to_reset](SharedClientData& client) {
+                api::players::iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&to_reset](SharedClientData& client) {
                     client.sendPacket(packets::play::clearTitles(client, to_reset));
                     return false;
                 });
@@ -151,7 +151,7 @@ namespace crafted_craft {
 
 
             register_event(api::players::calls::on_subtitle_message_broadcast, [this](const Chat& message) {
-                Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
+                api::players::iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
                     client.sendPacket(packets::play::setSubtitleText(client, message));
                     return false;
                 });
@@ -163,7 +163,7 @@ namespace crafted_craft {
             });
 
             register_event(api::players::calls::on_title_times_broadcast, [this](const api::players::titles_times& times) {
-                Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&times](SharedClientData& client) {
+                api::players::iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&times](SharedClientData& client) {
                     client.sendPacket(packets::play::setTitleAnimationTimes(client, times.fade_in, times.stay, times.fade_out));
                     return false;
                 });
@@ -175,7 +175,7 @@ namespace crafted_craft {
             });
 
             register_event(api::players::calls::on_unsigned_message_broadcast, [this](const api::players::unsigned_chat& message) {
-                Server::instance().online_players.iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
+                api::players::iterate_players(SharedClientData::packets_state_t::protocol_state::play, [&message](SharedClientData& client) {
                     client.sendPacket(packets::play::disguisedChatMessage(client, message.message, message.chat_type_id, message.sender_name, message.receiver_name));
                     return false;
                 });
@@ -201,7 +201,7 @@ namespace crafted_craft {
                 .add_child("<target>", cmd_pred_string::quotable_phrase)
                 .add_child({"<message>", "msg <target> <message>", "Send private message to specified player"}, cmd_pred_string::greedy_phrase)
                 .set_callback("command.msg", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                    auto target = Server::instance().online_players.get_player(std::get<pred_string>(args[0]).value);
+                    auto target = api::players::get_player(std::get<pred_string>(args[0]).value);
                     if (!target) {
                         api::players::calls::on_system_message({context.executor, "Player not found"});
                         return;
@@ -231,7 +231,7 @@ namespace crafted_craft {
                 title.add_child({"clear", "title <target> clear", "Clear title"})
                     .set_callback("command.title.clear", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         //TODO
-                        //server.online_players.iterate_online([&context](SharedClientData& context) {
+                        //api::players::iterate_online([&context](SharedClientData& context) {
                         //    return false;
                         //});
                     });

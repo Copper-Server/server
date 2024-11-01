@@ -1,12 +1,12 @@
 #pragma once
 #include "../library/enbt.hpp"
 #include "../library/list_array.hpp"
-#include "shared_string.hpp"
 #include <cstdint>
 #include <map>
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <boost/bimap.hpp>
 #include <boost/bimap/unordered_set_of.hpp>
@@ -83,9 +83,9 @@ namespace crafted_craft {
                 assigned_states;
             block_id_t default_state = 0;
             enbt::compound defintion;
-            base_objects::shared_string name;
+            std::string name;
 
-            list_array<base_objects::shared_string> block_aliases; //string block ids(checks from first to last, if none found in `initialize_blocks()` throws) implicitly uses id first
+            list_array<std::string> block_aliases; //string block ids(checks from first to last, if none found in `initialize_blocks()` throws) implicitly uses id first
 
 
             enum class tick_opt : uint16_t {
@@ -187,7 +187,7 @@ namespace crafted_craft {
 
             static block_id_t addNewStatelessBlock(static_block_data&& new_block) {
                 if (named_full_block_data.contains(new_block.name))
-                    throw std::runtime_error("Block with " + new_block.name.get() + " name already defined.");
+                    throw std::runtime_error("Block with " + new_block.name + " name already defined.");
 
                 struct {
                     block_id_t id : 15;
@@ -202,7 +202,7 @@ namespace crafted_craft {
                 return bound_check.id;
             }
 
-            static void access_full_block_data(std::function<void(std::vector<std::shared_ptr<static_block_data>>&, std::unordered_map<base_objects::shared_string, std::shared_ptr<static_block_data>>&)> access) {
+            static void access_full_block_data(std::function<void(std::vector<std::shared_ptr<static_block_data>>&, std::unordered_map<std::string, std::shared_ptr<static_block_data>>&)> access) {
                 access(full_block_data_, named_full_block_data);
             }
 
@@ -266,17 +266,17 @@ namespace crafted_craft {
                 return getStaticData().is_block_entity;
             }
 
-            static static_block_data& get_block(const base_objects::shared_string& name) {
+            static static_block_data& get_block(const std::string& name) {
                 return *named_full_block_data.at(name);
             }
 
-            static block_id_t get_block_id(const base_objects::shared_string& name, int32_t protocol) {
+            static block_id_t get_block_id(const std::string& name, int32_t protocol) {
                 auto& st = get_block(name);
                 return st.internal_block_aliases.at(st.default_state).at(protocol);
             }
 
         private:
-            static std::unordered_map<base_objects::shared_string, std::shared_ptr<static_block_data>> named_full_block_data;
+            static std::unordered_map<std::string, std::shared_ptr<static_block_data>> named_full_block_data;
             static std::vector<std::shared_ptr<static_block_data>> full_block_data_;
         };
 

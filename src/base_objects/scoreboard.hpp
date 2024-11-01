@@ -4,8 +4,8 @@
 #include "../library/list_array.hpp"
 #include "atomic_holder.hpp"
 #include "event.hpp"
-#include "shared_string.hpp"
 #include <optional>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -20,10 +20,10 @@ namespace crafted_craft {
             };
 
             struct protected_vals_t {
-                shared_string name;
-                shared_string display_name;
-                shared_string criteria;
-                std::unordered_map<shared_string, int64_t> scores;
+                std::string name;
+                std::string display_name;
+                std::string criteria;
+                std::unordered_map<std::string, int64_t> scores;
 
 
                 size_t next_id = 0;
@@ -31,7 +31,7 @@ namespace crafted_craft {
 
                 protected_vals_t() {}
 
-                protected_vals_t(shared_string name, shared_string display_name, shared_string criteria)
+                protected_vals_t(std::string name, std::string display_name, std::string criteria)
                     : name(name), display_name(display_name), criteria(criteria) {}
 
                 protected_vals_t(protected_vals_t&& other) noexcept
@@ -41,10 +41,10 @@ namespace crafted_craft {
             fast_task::protected_value<protected_vals_t> protected_vals;
 
         public:
-            event<shared_string> on_score_change;
-            event<shared_string> on_score_remove;
+            event<std::string> on_score_change;
+            event<std::string> on_score_remove;
 
-            objective(shared_string name, shared_string display_name, shared_string criteria)
+            objective(std::string name, std::string display_name, std::string criteria)
                 : protected_vals(name, display_name, criteria) {}
 
             objective(const objective&) = delete;
@@ -58,37 +58,37 @@ namespace crafted_craft {
                 clean_up_registered_events();
             }
 
-            shared_string get_name() const {
-                return protected_vals.get([](const protected_vals_t& vals) -> shared_string {
+            std::string get_name() const {
+                return protected_vals.get([](const protected_vals_t& vals) -> std::string {
                     return vals.name;
                 });
             }
 
-            shared_string get_display_name() const {
-                return protected_vals.get([](const protected_vals_t& vals) -> shared_string {
+            std::string get_display_name() const {
+                return protected_vals.get([](const protected_vals_t& vals) -> std::string {
                     return vals.display_name;
                 });
             }
 
-            shared_string get_criteria() const {
-                return protected_vals.get([](const protected_vals_t& vals) -> shared_string {
+            std::string get_criteria() const {
+                return protected_vals.get([](const protected_vals_t& vals) -> std::string {
                     return vals.criteria;
                 });
             }
 
-            void set_display_name(shared_string display_name) {
+            void set_display_name(std::string display_name) {
                 protected_vals.set([display_name, this](protected_vals_t& vals) {
                     vals.display_name = display_name;
                 });
             }
 
-            void set_criteria(shared_string criteria) {
+            void set_criteria(std::string criteria) {
                 protected_vals.set([criteria, this](protected_vals_t& vals) {
                     vals.criteria = criteria;
                 });
             }
 
-            void set_score(shared_string player, int64_t score) {
+            void set_score(std::string player, int64_t score) {
                 protected_vals.set([player, score, this](protected_vals_t& vals) {
                     vals.scores[player] = score;
                     on_score_change(player);
@@ -117,7 +117,7 @@ namespace crafted_craft {
                 });
             }
 
-            void reset_score(shared_string player) {
+            void reset_score(std::string player) {
                 protected_vals.set([player, this](protected_vals_t& vals) {
                     auto it = vals.scores.find(player);
                     if (it == vals.scores.end())
@@ -127,7 +127,7 @@ namespace crafted_craft {
                 });
             }
 
-            std::optional<int64_t> get_score(shared_string player) const {
+            std::optional<int64_t> get_score(std::string player) const {
                 return protected_vals.get([player](const protected_vals_t& vals) -> std::optional<int64_t> {
                     auto it = vals.scores.find(player);
                     if (it == vals.scores.end())
@@ -136,7 +136,7 @@ namespace crafted_craft {
                 });
             }
 
-            void remove_score(shared_string player) {
+            void remove_score(std::string player) {
                 protected_vals.set([player, this](protected_vals_t& vals) {
                     on_score_remove(player);
                     vals.scores.erase(player);
@@ -235,29 +235,29 @@ namespace crafted_craft {
                 white
             };
 
-            team(shared_string name, shared_string display_name, shared_string prefix, shared_string suffix)
+            team(std::string name, std::string display_name, std::string prefix, std::string suffix)
                 : protected_vals(name, display_name, prefix, suffix) {}
 
-            shared_string get_name() const {
-                return protected_vals.get([](const protected_vals_t& vals) -> shared_string {
+            std::string get_name() const {
+                return protected_vals.get([](const protected_vals_t& vals) -> std::string {
                     return vals.name;
                 });
             }
 
-            shared_string get_display_name() const {
-                return protected_vals.get([](const protected_vals_t& vals) -> shared_string {
+            std::string get_display_name() const {
+                return protected_vals.get([](const protected_vals_t& vals) -> std::string {
                     return vals.display_name;
                 });
             }
 
-            shared_string get_prefix() const {
-                return protected_vals.get([](const protected_vals_t& vals) -> shared_string {
+            std::string get_prefix() const {
+                return protected_vals.get([](const protected_vals_t& vals) -> std::string {
                     return vals.prefix;
                 });
             }
 
-            shared_string get_suffix() const {
-                return protected_vals.get([](const protected_vals_t& vals) -> shared_string {
+            std::string get_suffix() const {
+                return protected_vals.get([](const protected_vals_t& vals) -> std::string {
                     return vals.suffix;
                 });
             }
@@ -298,19 +298,19 @@ namespace crafted_craft {
                 });
             }
 
-            void set_display_name(shared_string display_name) {
+            void set_display_name(std::string display_name) {
                 protected_vals.set([display_name, this](protected_vals_t& vals) {
                     vals.display_name = display_name;
                 });
             }
 
-            void set_prefix(shared_string prefix) {
+            void set_prefix(std::string prefix) {
                 protected_vals.set([prefix, this](protected_vals_t& vals) {
                     vals.prefix = prefix;
                 });
             }
 
-            void set_suffix(shared_string suffix) {
+            void set_suffix(std::string suffix) {
                 protected_vals.set([suffix, this](protected_vals_t& vals) {
                     vals.suffix = suffix;
                 });
@@ -352,19 +352,19 @@ namespace crafted_craft {
                 });
             }
 
-            void add_player(shared_string player) {
+            void add_player(std::string player) {
                 protected_vals.set([player, this](protected_vals_t& vals) {
                     vals.players.insert(player);
                 });
             }
 
-            void remove_player(shared_string player) {
+            void remove_player(std::string player) {
                 protected_vals.set([player, this](protected_vals_t& vals) {
                     vals.players.erase(player);
                 });
             }
 
-            bool has_player(shared_string player) const {
+            bool has_player(std::string player) const {
                 return protected_vals.get([player](const protected_vals_t& vals) -> bool {
                     return vals.players.find(player) != vals.players.end();
                 });
@@ -392,10 +392,10 @@ namespace crafted_craft {
 
         private:
             struct protected_vals_t {
-                shared_string name;
-                shared_string display_name;
-                shared_string prefix;
-                shared_string suffix;
+                std::string name;
+                std::string display_name;
+                std::string prefix;
+                std::string suffix;
 
                 color color = color::white;
                 collision_rule collision_rule = collision_rule::always;
@@ -403,9 +403,9 @@ namespace crafted_craft {
                 name_tag_visibility name_tag_visibility = name_tag_visibility::always;
                 bool friendly_fire = true;
                 bool see_invisible = true;
-                std::unordered_set<shared_string> players;
+                std::unordered_set<std::string> players;
 
-                protected_vals_t(shared_string name, shared_string display_name, shared_string prefix, shared_string suffix)
+                protected_vals_t(std::string name, std::string display_name, std::string prefix, std::string suffix)
                     : name(name), display_name(display_name), prefix(prefix), suffix(suffix) {}
             };
 
@@ -414,8 +414,8 @@ namespace crafted_craft {
 
         class scoreboard {
             struct protected_vals_t {
-                std::unordered_map<shared_string, atomic_holder<objective>> objectives;
-                std::unordered_map<shared_string, atomic_holder<team>> teams;
+                std::unordered_map<std::string, atomic_holder<objective>> objectives;
+                std::unordered_map<std::string, atomic_holder<team>> teams;
             };
 
             fast_task::protected_value<protected_vals_t> protected_vals;
@@ -455,7 +455,7 @@ namespace crafted_craft {
                 });
             }
 
-            void add_objective(shared_string name, shared_string display_name, shared_string criteria) {
+            void add_objective(std::string name, std::string display_name, std::string criteria) {
                 protected_vals.set([name, display_name, criteria, this](protected_vals_t& vals) {
                     auto it = vals.objectives.find(name);
                     if (it != vals.objectives.end())
@@ -464,7 +464,7 @@ namespace crafted_craft {
                 });
             }
 
-            void add_team(shared_string name, shared_string display_name, shared_string prefix, shared_string suffix) {
+            void add_team(std::string name, std::string display_name, std::string prefix, std::string suffix) {
                 protected_vals.set([name, display_name, prefix, suffix, this](protected_vals_t& vals) {
                     auto it = vals.teams.find(name);
                     if (it != vals.teams.end())
@@ -473,25 +473,25 @@ namespace crafted_craft {
                 });
             }
 
-            atomic_holder<objective> get_objective(shared_string name) const {
+            atomic_holder<objective> get_objective(std::string name) const {
                 return protected_vals.get([name](const protected_vals_t& vals) {
                     return vals.objectives.at(name);
                 });
             }
 
-            atomic_holder<team> get_team(shared_string name) const {
+            atomic_holder<team> get_team(std::string name) const {
                 return protected_vals.get([name](const protected_vals_t& vals) {
                     return vals.teams.at(name);
                 });
             }
 
-            void remove_objective(shared_string name) {
+            void remove_objective(std::string name) {
                 protected_vals.set([name, this](protected_vals_t& vals) {
                     vals.objectives.erase(name);
                 });
             }
 
-            void remove_team(shared_string name) {
+            void remove_team(std::string name) {
                 protected_vals.set([name, this](protected_vals_t& vals) {
                     vals.teams.erase(name);
                 });
@@ -516,13 +516,13 @@ namespace crafted_craft {
                 });
             }
 
-            bool has_objective(shared_string name) const {
+            bool has_objective(std::string name) const {
                 return protected_vals.get([name](const protected_vals_t& vals) -> bool {
                     return vals.objectives.find(name) != vals.objectives.end();
                 });
             }
 
-            bool has_team(shared_string name) const {
+            bool has_team(std::string name) const {
                 return protected_vals.get([name](const protected_vals_t& vals) -> bool {
                     return vals.teams.find(name) != vals.teams.end();
                 });

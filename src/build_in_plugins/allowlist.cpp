@@ -1,5 +1,4 @@
 #include "allowlist.hpp"
-#include "../ClientHandleHelper.hpp"
 #include "../api/configuration.hpp"
 #include "../api/players.hpp"
 #include "../base_objects/commands.hpp"
@@ -7,8 +6,6 @@
 #include "../plugin/main.hpp"
 
 namespace crafted_craft {
-    class Server;
-
     namespace build_in_plugins {
         AllowListPlugin::AllowListPlugin()
             : allow_list(api::configuration::get().server.get_storage_path() / "allow_list.txt") {}

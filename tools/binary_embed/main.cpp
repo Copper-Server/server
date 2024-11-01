@@ -11,7 +11,7 @@ int main(int argc, char* argv[]) {
 
     const char* _name = argv[1];
     std::filesystem::path input_file = argv[2];
-    std::filesystem::path output_file = input_file.parent_path() / "embed" / (input_file.filename().string() + ".cpp");
+    std::filesystem::path output_file = input_file.parent_path() / "embed" / (input_file.filename().string() + ".cc");
     std::filesystem::path header_file = input_file.parent_path() / "embed" / (input_file.filename().string() + ".hpp");
     auto file_size = std::filesystem::file_size(input_file);
     auto file_change_time = std::filesystem::last_write_time(input_file);
@@ -25,6 +25,7 @@ int main(int argc, char* argv[]) {
         if (file_change_time < output_file_time && file_change_time < header_file_time)
             return 0;
     }
+    std::cout << "Building resource: " << input_file << std::endl;
 
     std::ifstream in(input_file, std::ios::binary);
     if (!in) {
@@ -56,5 +57,7 @@ int main(int argc, char* argv[]) {
     header << "#include<array>\n";
     header << "#include<cstdint>\n";
     header << "extern const std::array<uint8_t,  " << file_size << "> " << _name << ";\n";
+
+    std::cout << "Resource built successfully: " << input_file << std::endl;
     return 0;
 }

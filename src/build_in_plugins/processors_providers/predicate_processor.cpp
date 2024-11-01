@@ -311,7 +311,7 @@ namespace crafted_craft {
             if (origin.contains("world"))
                 world_id = origin.at("world");
             else if (context.executor)
-                world_id = api::world::resolve_id(context.executor->player_data.world_id.get());
+                world_id = api::world::resolve_id(context.executor->player_data.world_id);
             else
                 world_id = api::world::get_default_world_id();
 
@@ -320,16 +320,16 @@ namespace crafted_craft {
             if (pred_block.is_string()) {
                 const std::string& block_or_id = pred_block.as_string();
                 if (block_or_id.starts_with('#')) {
-                    if (!registers::unfold_tag("block", block_or_id).contains(block.name.get()))
+                    if (!registers::unfold_tag("block", block_or_id).contains(block.name))
                         return false;
                 } else {
-                    if (block.name.get() != block_or_id)
+                    if (block.name != block_or_id)
                         return false;
                 }
             } else {
                 bool contains = false;
                 for (auto& it : pred_block.as_dyn_array()) {
-                    if (it == block.name.get()) {
+                    if (it == block.name) {
                         contains = true;
                         break;
                     }
@@ -379,7 +379,7 @@ namespace crafted_craft {
                 return false;
             base_objects::block_id_t block_id = loot_context.at("block_state");
             auto block = base_objects::block::getStaticData(block_id);
-            if (block.name.get() != (std::string)predicate.at("block"))
+            if (block.name != (std::string)predicate.at("block"))
                 return false;
             if (!predicate.contains("properties"))
                 return true;
@@ -470,7 +470,7 @@ namespace crafted_craft {
             if (origin.contains("world"))
                 world_id = origin.at("world");
             else if (context.executor)
-                world_id = api::world::resolve_id(context.executor->player_data.world_id.get());
+                world_id = api::world::resolve_id(context.executor->player_data.world_id);
             else
                 world_id = api::world::get_default_world_id();
 

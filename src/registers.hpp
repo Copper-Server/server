@@ -565,8 +565,8 @@ namespace crafted_craft {
         extern list_array<decltype(potions)::iterator> potions_cache;
 
         extern std::unordered_map<std::string, enchantment> enchantments;
-        extern std::unordered_map<std::string, enbt::compound> enchantment_providers;
         extern list_array<decltype(enchantments)::iterator> enchantments_cache;
+        extern std::unordered_map<std::string, enbt::compound> enchantment_providers;
 
         extern std::unordered_map<std::string, loot_table_item> loot_table;
         extern list_array<decltype(loot_table)::iterator> loot_table_cache;

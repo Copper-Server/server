@@ -10,7 +10,6 @@
 
 
 #include "api/configuration.hpp"
-#include "api/internal/permissions.hpp"
 #include "api/players.hpp"
 
 
@@ -57,14 +56,14 @@ namespace crafted_craft {
         if (_sharedData) {
             if (_sharedData->packets_state.state != SharedClientData::packets_state_t::protocol_state::initialization)
                 api::players::handlers::on_player_leave(sharedDataRef());
-            Server::instance().online_players.remove_player(sharedDataRef());
+            api::players::remove_player(sharedDataRef());
         }
         if (chandler)
             delete chandler;
     }
 
     base_objects::client_data_holder& TCPsession::sharedDataRef() {
-        return _sharedData ? _sharedData : _sharedData = Server::instance().online_players.allocate_player();
+        return _sharedData ? _sharedData : _sharedData = api::players::allocate_player();
     }
 
     SharedClientData& TCPsession::sharedData() {
@@ -190,6 +189,10 @@ namespace crafted_craft {
         }
     }
 
+    TCPclient& TCPsession::handler() {
+        return *chandler;
+    }
+
     Server* Server::global_instance = nullptr;
 
     Server& Server::instance() {
@@ -217,7 +220,7 @@ namespace crafted_craft {
 
     void Server::AsyncWork(TCPsession* session) {
         boost::system::error_code err;
-        if (first_client_holder->DoDisconnect(session->sock.remote_endpoint().address()))
+        if (session->handler().DoDisconnect(session->sock.remote_endpoint().address()))
             session->sock.close();
         else {
             std::unique_lock lock(close_mutex);
@@ -267,10 +270,6 @@ namespace crafted_craft {
         return local_server;
     }
 
-    mojang::api::session_server& Server::getSessionServer() {
-        return session_server;
-    }
-
     std::string Server::get_ip() const {
         return ip;
     }
@@ -315,12 +314,10 @@ namespace crafted_craft {
         : TCPacceptor(*io_service, resolveEndpoint(ip, port)),
           threads(threads ? threads : std::thread::hardware_concurrency()),
           ssl_key_length(ssl_key_length),
-          ip(ip),
-          permissions_manager(std::filesystem::current_path()) {
+          ip(ip) {
         if (global_instance)
             throw std::runtime_error("Server already initialized");
         global_instance = this;
-        api::permissions::init_permissions(permissions_manager);
         service = io_service;
         if (ssl_key_length) {
             server_rsa_key = RSA_generate_key(ssl_key_length, RSA_F4, nullptr, nullptr);

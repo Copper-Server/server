@@ -11,7 +11,7 @@ namespace crafted_craft {
         permissions_manager::permissions_manager(const std::filesystem::path& base_path)
             : base_path(base_path / "permissions.json") {}
 
-        bool permissions_manager::has_rights(const base_objects::shared_string& action_name, const base_objects::client_data_holder& client) {
+        bool permissions_manager::has_rights(const std::string& action_name, const base_objects::client_data_holder& client) {
             return protected_values.get([&](const protected_values_t& values) {
                 if (client->player_data.instant_granted_actions.find(action_name) != client->player_data.instant_granted_actions.npos)
                     return true;
@@ -32,7 +32,7 @@ namespace crafted_craft {
                 bool pass_any = values.check_mode == permission_check_mode::any || values.check_mode == permission_check_mode::any_or_noting;
 
 
-                item->second.for_each([&](const base_objects::shared_string& tag) {
+                item->second.for_each([&](const std::string& tag) {
                     if (is_incompatible || is_compatible)
                         return;
                     auto permission = values.permissions.find(tag);
@@ -91,25 +91,25 @@ namespace crafted_craft {
             });
         }
 
-        bool permissions_manager::has_action(const base_objects::shared_string& action_name) const {
+        bool permissions_manager::has_action(const std::string& action_name) const {
             return protected_values.get([&](const protected_values_t& values) {
                 return values.actions.contains(action_name);
             });
         }
 
-        bool permissions_manager::has_permission(const base_objects::shared_string& permission_name) const {
+        bool permissions_manager::has_permission(const std::string& permission_name) const {
             return protected_values.get([&](const protected_values_t& values) {
                 return values.permissions.contains(permission_name);
             });
         }
 
-        bool permissions_manager::has_group(const base_objects::shared_string& group_name) const {
+        bool permissions_manager::has_group(const std::string& group_name) const {
             return protected_values.get([&](const protected_values_t& values) {
                 return values.permissions.contains(group_name);
             });
         }
 
-        void permissions_manager::register_action(const base_objects::shared_string& action_name) {
+        void permissions_manager::register_action(const std::string& action_name) {
             protected_values.set([&](protected_values_t& values) {
                 auto it = values.actions.find(action_name);
                 if (it != values.actions.end())
@@ -118,7 +118,7 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::register_action(const base_objects::shared_string& action_name, const list_array<base_objects::shared_string>& required_perm) {
+        void permissions_manager::register_action(const std::string& action_name, const list_array<std::string>& required_perm) {
             protected_values.set([&](protected_values_t& values) {
                 auto it = values.actions.find(action_name);
                 if (it != values.actions.end())
@@ -127,7 +127,7 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::register_action(const base_objects::shared_string& action_name, list_array<base_objects::shared_string>&& required_perm) {
+        void permissions_manager::register_action(const std::string& action_name, list_array<std::string>&& required_perm) {
             protected_values.set([&](protected_values_t& values) {
                 auto it = values.actions.find(action_name);
                 if (it != values.actions.end())
@@ -136,7 +136,7 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::unregister_action(const base_objects::shared_string& action_name) {
+        void permissions_manager::unregister_action(const std::string& action_name) {
             protected_values.set([&](protected_values_t& values) {
                 auto it = values.actions.find(action_name);
                 if (it == values.actions.end())
@@ -145,7 +145,7 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::add_requirement(const base_objects::shared_string& action_name, const base_objects::shared_string& permission_tag) {
+        void permissions_manager::add_requirement(const std::string& action_name, const std::string& permission_tag) {
             protected_values.set([&](protected_values_t& values) {
                 auto& action = values.actions[action_name];
                 if (action.find(action_name) == action.npos) {
@@ -155,9 +155,9 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::remove_requirement(const base_objects::shared_string& action_name, const base_objects::shared_string& permission_tag) {
+        void permissions_manager::remove_requirement(const std::string& action_name, const std::string& permission_tag) {
             protected_values.set([&](protected_values_t& values) {
-                values.actions[action_name].remove_if([permission_tag](const base_objects::shared_string& tag) {
+                values.actions[action_name].remove_if([permission_tag](const std::string& tag) {
                     return tag == permission_tag;
                 });
             });
@@ -169,7 +169,7 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::remove_permission(const base_objects::shared_string& permission_tag) {
+        void permissions_manager::remove_permission(const std::string& permission_tag) {
             protected_values.set([&](protected_values_t& values) {
                 values.permissions.erase(permission_tag);
             });
@@ -181,13 +181,13 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::remove_group(const base_objects::shared_string& group_name) {
+        void permissions_manager::remove_group(const std::string& group_name) {
             protected_values.set([&](protected_values_t& values) {
                 values.permissions_group.erase(group_name);
             });
         }
 
-        void permissions_manager::add_group_value(const base_objects::shared_string& group_name, const base_objects::shared_string& permission_tag) {
+        void permissions_manager::add_group_value(const std::string& group_name, const std::string& permission_tag) {
             protected_values.set([&](protected_values_t& values) {
                 auto& ref = values.permissions_group.at(group_name).permissions_tags;
                 ref.push_back(permission_tag);
@@ -196,10 +196,10 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::remove_group_value(const base_objects::shared_string& group_name, const base_objects::shared_string& permission_tag) {
+        void permissions_manager::remove_group_value(const std::string& group_name, const std::string& permission_tag) {
             protected_values.set([&](protected_values_t& values) {
                 auto& ref = values.permissions_group.at(group_name).permissions_tags;
-                ref.remove_if([permission_tag](const base_objects::shared_string& tag) {
+                ref.remove_if([permission_tag](const std::string& tag) {
                     return tag == permission_tag;
                 });
                 if (ref.need_commit())
@@ -207,21 +207,21 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::enum_actions(const std::function<void(const base_objects::shared_string&)>& callback) const {
+        void permissions_manager::enum_actions(const std::function<void(const std::string&)>& callback) const {
             return protected_values.get([&](const protected_values_t& values) {
                 for (auto&& [action, data] : values.actions)
                     callback(action);
             });
         }
 
-        void permissions_manager::enum_actions(const std::function<void(const base_objects::shared_string&, const list_array<base_objects::shared_string>&)>& callback) const {
+        void permissions_manager::enum_actions(const std::function<void(const std::string&, const list_array<std::string>&)>& callback) const {
             return protected_values.get([&](const protected_values_t& values) {
                 for (auto&& [action, data] : values.actions)
                     callback(action, data);
             });
         }
 
-        void permissions_manager::enum_action_requirements(const base_objects::shared_string& action_name, const std::function<void(const base_objects::shared_string&)>& callback) const {
+        void permissions_manager::enum_action_requirements(const std::string& action_name, const std::function<void(const std::string&)>& callback) const {
             return protected_values.get([&](const protected_values_t& values) {
                 auto item = values.actions.find(action_name);
                 if (item == values.actions.end())
@@ -244,7 +244,7 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::enum_group_values(const base_objects::shared_string& group_name, const std::function<void(const base_objects::shared_string&)>& callback) const {
+        void permissions_manager::enum_group_values(const std::string& group_name, const std::function<void(const std::string&)>& callback) const {
             return protected_values.get([&](const protected_values_t& values) {
                 auto item = values.permissions_group.find(group_name);
                 if (item == values.permissions_group.end())
@@ -253,7 +253,7 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::view_permission(const base_objects::shared_string& perm_name, const std::function<void(const base_objects::permissions_object&)>& callback) const {
+        void permissions_manager::view_permission(const std::string& perm_name, const std::function<void(const base_objects::permissions_object&)>& callback) const {
             return protected_values.get([&](const protected_values_t& values) {
                 auto item = values.permissions.find(perm_name);
                 if (item == values.permissions.end())
@@ -262,7 +262,7 @@ namespace crafted_craft {
             });
         }
 
-        void permissions_manager::view_group(const base_objects::shared_string& group_name, const std::function<void(const base_objects::permission_group&)>& callback) const {
+        void permissions_manager::view_group(const std::string& group_name, const std::function<void(const base_objects::permission_group&)>& callback) const {
             return protected_values.get([&](const protected_values_t& values) {
                 auto item = values.permissions_group.find(group_name);
                 if (item == values.permissions_group.end())
@@ -366,13 +366,13 @@ namespace crafted_craft {
                         };
                     }
 
-                    list_array<base_objects::shared_string> declared_actions;
+                    list_array<std::string> declared_actions;
                     declared_actions.reserve(actions_obj.size());
                     for (auto&& [key, value] : actions_obj) {
-                        base_objects::shared_string shared_tag(key.data(), key.size());
+                        std::string shared_tag(key.data(), key.size());
                         auto& read = values.actions[shared_tag];
                         for (auto item : js_array::get_array(value))
-                            read.push_back((std::string_view)item);
+                            read.push_back((std::string)item);
                         read.commit();
                         declared_actions.push_back(std::move(shared_tag));
                     }
@@ -381,13 +381,13 @@ namespace crafted_craft {
                             boost::json::array arr;
                             arr.reserve(value.size());
                             for (auto& item : value)
-                                arr.push_back(boost::json::string(item.get()));
-                            actions_obj[key.get()] = std::move(arr);
+                                arr.push_back(boost::json::string(item));
+                            actions_obj[key] = std::move(arr);
                         }
                     }
                 }
                 {
-                    list_array<base_objects::shared_string> declared_permissions;
+                    list_array<std::string> declared_permissions;
                     auto permissions_obj = js_object::get_object(root["permissions"]);
                     for (auto&& [permission_tag, value] : permissions_obj) {
                         auto perm = js_object::get_object(value);
@@ -397,7 +397,7 @@ namespace crafted_craft {
                         bool reverse_mode = perm["reverse_mode"].or_apply(false);
                         bool important = perm["important"].or_apply(false);
 
-                        base_objects::shared_string shared_tag(permission_tag.data(), permission_tag.size());
+                        std::string shared_tag(permission_tag.data(), permission_tag.size());
                         values.permissions[shared_tag] = base_objects::permissions_object(
                             {permission_tag.data(), permission_tag.size()},
                             std::move(description),
@@ -410,7 +410,7 @@ namespace crafted_craft {
                     }
                     for (auto&& [permission_tag, value] : values.permissions) {
                         if (!declared_permissions.contains(permission_tag)) {
-                            permissions_obj[permission_tag.get()]
+                            permissions_obj[permission_tag]
                                 = value.description.empty()
                                       ? boost::json::object{
                                             {"instant_grant", (bool)value.instant_grant},
@@ -454,17 +454,17 @@ namespace crafted_craft {
                     }
 
 
-                    list_array<base_objects::shared_string> declared_groups;
+                    list_array<std::string> declared_groups;
                     declared_groups.reserve(group_obj.size());
                     for (auto&& [group_tag, value] : group_obj) {
                         auto group_list = js_array::get_array(value);
-                        list_array<base_objects::shared_string> perm_tags;
+                        list_array<std::string> perm_tags;
                         perm_tags.reserve(group_list.size());
                         for (auto item : group_list) {
                             auto& res = (boost::json::string&)item;
                             perm_tags.push_back({res.data(), res.size()});
                         }
-                        base_objects::shared_string shared_tag(group_tag.data(), group_tag.size());
+                        std::string shared_tag(group_tag.data(), group_tag.size());
                         values.permissions_group[shared_tag] = base_objects::permission_group(
                             shared_tag,
                             std::move(perm_tags)
@@ -476,8 +476,8 @@ namespace crafted_craft {
                             boost::json::array arr;
                             arr.reserve(value.permissions_tags.size());
                             for (auto& it : value.permissions_tags)
-                                arr.push_back(boost::json::string(it.get()));
-                            group_obj[group_tag.get()] = std::move(arr);
+                                arr.push_back(boost::json::string(it));
+                            group_obj[group_tag] = std::move(arr);
                         }
                     }
                 }

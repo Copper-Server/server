@@ -1,6 +1,5 @@
 #ifndef SRC_PROTOCOLHELPER_PACKETS_766_PACKETS
 #define SRC_PROTOCOLHELPER_PACKETS_766_PACKETS
-#include "../../../ClientHandleHelper.hpp"
 #include "../../../base_objects/block.hpp"
 #include "../../../base_objects/chat.hpp"
 #include "../../../base_objects/chunk.hpp"

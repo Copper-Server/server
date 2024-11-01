@@ -1,7 +1,9 @@
 #include "server.hpp"
+#include "../ClientHandleHelper.hpp"
 #include "../api/configuration.hpp"
 #include "../api/console.hpp"
 #include "../api/internal/command.hpp"
+#include "../api/permissions.hpp"
 #include "../api/players.hpp"
 #include "../api/world.hpp"
 #include "../log.hpp"
@@ -23,7 +25,7 @@ namespace crafted_craft {
 
         void ServerPlugin::OnLoad(const PluginRegistrationPtr& self) {
             try {
-                Server::instance().permissions_manager.sync();
+                api::permissions::make_sync();
             } catch (const std::exception& ex) {
                 log::error("Server", std::string("[permissions] Failed to load permission file because: ") + ex.what());
             }
@@ -76,7 +78,7 @@ namespace crafted_craft {
                 browser.add_child("kick")
                     .add_child("<player>", cmd_pred_string::quotable_phrase)
                     .set_callback("command.kick", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                        auto target = Server::instance().online_players.get_player(
+                        auto target = api::players::get_player(
                             SharedClientData::packets_state_t::protocol_state::play,
                             std::get<pred_string>(args[0]).value
                         );
@@ -84,7 +86,7 @@ namespace crafted_craft {
                             api::players::calls::on_system_message({context.executor, "Player not found"});
                             return;
                         }
-                        if (Server::instance().permissions_manager.has_rights("misc.operator_protection.kick", target)) {
+                        if (api::permissions::has_rights("misc.operator_protection.kick", target)) {
                             api::players::calls::on_system_message({context.executor, "You can't kick this player"});
                             return;
                         }
@@ -92,7 +94,7 @@ namespace crafted_craft {
                     })
                     .add_child({"[reason]", "kick player with reason", "/kick <player> [reason]"}, cmd_pred_string::greedy_phrase)
                     .set_callback("command.kick", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                        auto target = Server::instance().online_players.get_player(
+                        auto target = api::players::get_player(
                             SharedClientData::packets_state_t::protocol_state::play,
                             std::get<pred_string>(args[0]).value
                         );
@@ -100,7 +102,7 @@ namespace crafted_craft {
                             api::players::calls::on_system_message({context.executor, "Player not found"});
                             return;
                         }
-                        if (Server::instance().permissions_manager.has_rights("misc.operator_protection.kick", target)) {
+                        if (api::permissions::has_rights("misc.operator_protection.kick", target)) {
                             api::players::calls::on_system_message({context.executor, "You can't kick this player"});
                             return;
                         }
@@ -179,8 +181,8 @@ namespace crafted_craft {
                 client.player_data.reduced_debug_info,
                 true,
                 false,
-                0, //client.player_data.world_id.get(),
-                client.player_data.world_id.get(),
+                0, //client.player_data.world_id,
+                client.player_data.world_id,
                 0,
                 client.player_data.gamemode,
                 client.player_data.prev_gamemode,

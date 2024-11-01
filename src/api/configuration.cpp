@@ -6,7 +6,7 @@ namespace crafted_craft::api::configuration {
     bool loaded = false;
 
 
-    extern base_objects::event<void> updated;
+    base_objects::event<void> updated;
 
     void load(bool fill_default_values) {
         config.load(std::filesystem::current_path(), fill_default_values);

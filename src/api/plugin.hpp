@@ -1,6 +1,7 @@
 #ifndef SRC_API_PLUGIN
 #define SRC_API_PLUGIN
-
+#include <functional>
+#include <string>
 namespace crafted_craft::api::plugin {
     void load(const std::string& name);
     void unload(const std::string& name);

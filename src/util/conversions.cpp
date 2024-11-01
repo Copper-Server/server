@@ -720,6 +720,21 @@ namespace crafted_craft {
                         throw std::runtime_error("Unknown type");
                     }
                 }
+
+                enbt::value from_json(const boost::json::object& obj) {
+                    enbt::compound result;
+                    for (auto& [key, value] : obj)
+                        result[key] = from_json(value);
+                    return result;
+                }
+
+                enbt::value from_json(const boost::json::array& arr) {
+                    std::vector<enbt::value> result;
+                    result.reserve(arr.size());
+                    for (auto& item : arr)
+                        result.push_back(from_json(item));
+                    return enbt::dynamic_array(std::move(result));
+                }
             }
         }
     }

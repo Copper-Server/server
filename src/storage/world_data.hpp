@@ -183,9 +183,9 @@ namespace crafted_craft {
             virtual enbt::compound generate_sub_chunk(world_data& world, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z) = 0;
 
 
-            static void register_it(const base_objects::shared_string& id, base_objects::atomic_holder<chunk_generator> gen);
-            static void unregister_it(const base_objects::shared_string& id);
-            static base_objects::atomic_holder<chunk_generator> get_it(const base_objects::shared_string& id);
+            static void register_it(const std::string& id, base_objects::atomic_holder<chunk_generator> gen);
+            static void unregister_it(const std::string& id);
+            static base_objects::atomic_holder<chunk_generator> get_it(const std::string& id);
         };
 
         class chunk_light_processor {
@@ -207,9 +207,9 @@ namespace crafted_craft {
             virtual void process_sub_chunk(world_data& world, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z) = 0;
             virtual void block_changed(world_data& world, int64_t global_x, uint64_t global_y, int64_t global_z) = 0;
 
-            static void register_it(const base_objects::shared_string& id, base_objects::atomic_holder<chunk_light_processor> processor);
-            static void unregister_it(const base_objects::shared_string& id);
-            static base_objects::atomic_holder<chunk_light_processor> get_it(const base_objects::shared_string& id);
+            static void register_it(const std::string& id, base_objects::atomic_holder<chunk_light_processor> processor);
+            static void unregister_it(const std::string& id);
+            static base_objects::atomic_holder<chunk_light_processor> get_it(const std::string& id);
         };
 
         enum class block_set_mode {
@@ -230,7 +230,7 @@ namespace crafted_craft {
 
 
             friend class worlds_data;
-            base_objects::shared_string preview_world_name();
+            std::string preview_world_name();
             std::filesystem::path path;
 
             std::unordered_map<calc::XY<int64_t>, FuturePtr<base_objects::atomic_holder<chunk_data>>> on_load_process;
@@ -264,10 +264,10 @@ namespace crafted_craft {
             enbt::raw_uuid wandering_trader_id;
             float wandering_trader_spawn_chance = 0;
             int32_t wandering_trader_spawn_delay = 0;
-            base_objects::shared_string world_name;
-            base_objects::shared_string world_type;
-            base_objects::shared_string light_processor_id;
-            base_objects::shared_string generator_id;
+            std::string world_name;
+            std::string world_type;
+            std::string light_processor_id;
+            std::string generator_id;
             std::vector<std::string> enabled_datapacks;
             std::vector<std::string> enabled_plugins;
             std::vector<std::string> enabled_features;
@@ -379,8 +379,8 @@ namespace crafted_craft {
             void unregister_entity(base_objects::entity_ref& client);
 
 
-            void change_chunk_generator(const base_objects::shared_string& id);
-            void change_light_processor(const base_objects::shared_string& id);
+            void change_chunk_generator(const std::string& id);
+            void change_light_processor(const std::string& id);
 
 
             void tick(std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time);
@@ -406,19 +406,19 @@ namespace crafted_craft {
             //virtual void broadcast_entity_velocity(const base_objects::entity& entity, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_entity_animation(const base_objects::entity& entity, base_objects::entity_animation animation, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_leash_entity(const base_objects::entity& entity, const base_objects::entity& entity_leashed_to);
-            //virtual void broadcast_particle_effect(const base_objects::shared_string& particle_name, calc::VECTOR src, calc::VECTOR offset, float particle_data, int particle_amount, const base_objects::client_data_holder& exclude = nullptr);
-            //virtual void broadcast_particle_effect(const base_objects::shared_string& particle_name, calc::VECTOR src, calc::VECTOR offset, float particle_data, int particle_amount, std::array<int, 2> data, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_particle_effect(const std::string& particle_name, calc::VECTOR src, calc::VECTOR offset, float particle_data, int particle_amount, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_particle_effect(const std::string& particle_name, calc::VECTOR src, calc::VECTOR offset, float particle_data, int particle_amount, std::array<int, 2> data, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_player_list_add_player(const base_objects::player& player, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_player_list_header_footer(const Chat& header, const Chat& footer);
             //virtual void broadcast_player_list_remove_player(const base_objects::player& player, const base_objects::client_data_holder& exclude = nullptr);
-            //virtual void broadcast_player_list_update_display_name(const base_objects::player& player, const base_objects::shared_string& custom_name, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_player_list_update_display_name(const base_objects::player& player, const std::string& custom_name, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_player_list_update_game_mode(const base_objects::player& player, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_player_list_update_ping();
             //virtual void broadcast_remove_entity_effect(const base_objects::entity& entity, int effect_id, const base_objects::client_data_holder& exclude = nullptr);
-            //virtual void broadcast_scoreboard_objective(const base_objects::shared_string& name, const base_objects::shared_string& display_name, uint8_t mode);
-            //virtual void broadcast_score_update(const base_objects::shared_string& objective, const base_objects::shared_string& player_name, int64_t score, uint8_t mode);
-            //virtual void broadcast_display_objective(const base_objects::shared_string& objective, base_objects::scoreboard::display_slot display);
-            //virtual void broadcast_sound_effect(const base_objects::shared_string& sound_name, calc::VECTOR position, float volume, float pitch, const base_objects::client_data_holder& exclude = nullptr);
+            //virtual void broadcast_scoreboard_objective(const std::string& name, const std::string& display_name, uint8_t mode);
+            //virtual void broadcast_score_update(const std::string& objective, const std::string& player_name, int64_t score, uint8_t mode);
+            //virtual void broadcast_display_objective(const std::string& objective, base_objects::scoreboard::display_slot display);
+            //virtual void broadcast_sound_effect(const std::string& sound_name, calc::VECTOR position, float volume, float pitch, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_spawn_entity(base_objects::entity& entity, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_thunderbolt(calc::VECTOR block_pos, const base_objects::client_data_holder& exclude = nullptr);
             //virtual void broadcast_time_update(const base_objects::client_data_holder& exclude = nullptr);
@@ -487,10 +487,10 @@ namespace crafted_craft {
             worlds_data(base_objects::ServerConfiguration& configuration, const std::filesystem::path& base_path);
 
             bool exists(uint64_t world_id);
-            bool exists(const base_objects::shared_string& name);
+            bool exists(const std::string& name);
             const list_array<uint64_t>& get_list();
-            base_objects::shared_string get_name(uint64_t world_id);
-            uint64_t get_id(const base_objects::shared_string& name);
+            std::string get_name(uint64_t world_id);
+            uint64_t get_id(const std::string& name);
 
 
             base_objects::atomic_holder<world_data> get(uint64_t world_id);
@@ -508,8 +508,8 @@ namespace crafted_craft {
             void locked(std::function<void()> func);
             void locked(std::function<void(worlds_data& self)> func);
 
-            uint64_t create(const base_objects::shared_string& name);
-            uint64_t create(const base_objects::shared_string& name, std::function<void(world_data& world)> init);
+            uint64_t create(const std::string& name);
+            uint64_t create(const std::string& name, std::function<void(world_data& world)> init);
 
             void for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func);
             void for_each_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);

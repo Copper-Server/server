@@ -1,8 +1,7 @@
 
+#include "writers_readers.hpp"
 #include "../../../base_objects/block.hpp"
-#include "../../../base_objects/slot.hpp"
 #include "../../../registers.hpp"
-#include "../../../util/readers.hpp"
 
 namespace crafted_craft {
     namespace packets {
@@ -476,7 +475,7 @@ namespace crafted_craft {
                     void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::container& value) {
                         WriteVar<int32_t>(52, data);
                         WriteVar<int32_t>(value.count(), data);
-                        value.for_each([&data](auto& slot) {
+                        value.for_each([&data](auto& slot, size_t i) {
                             WriteSlotItem(data, slot, 767);
                         });
                     }
@@ -688,6 +687,8 @@ namespace crafted_craft {
                         case 8:
                             return slot_component::rarity{(slot_component::rarity)ReadVar<int32_t>(data)};
                             //TODO
+                        default:
+                            throw std::runtime_error("Undefined component id");
                         }
                     }
                 }

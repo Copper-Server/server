@@ -2,8 +2,8 @@
 #define SRC_BASE_OBJECTS_PACKETS
 #include "chat.hpp"
 #include "position.hpp"
-#include "shared_string.hpp"
 #include "slot.hpp"
+#include <string>
 #include <vector>
 
 namespace crafted_craft {
@@ -231,7 +231,7 @@ namespace crafted_craft {
 
 
             struct death_location_data {
-                shared_string dimension;
+                std::string dimension;
                 Position position;
             };
 
@@ -311,15 +311,15 @@ namespace crafted_craft {
                         hidden = 0x04,
                     } flags;
 
-                    std::optional<shared_string> background_texture;
+                    std::optional<std::string> background_texture;
                     float x;
                     float y;
                 };
 
-                shared_string key;
-                std::optional<shared_string> parent;
+                std::string key;
+                std::optional<std::string> parent;
                 std::optional<advancement_display> display;
-                list_array<list_array<shared_string>> requirements;
+                list_array<list_array<std::string>> requirements;
                 bool sends_telemetry_data;
             };
 
@@ -329,12 +329,12 @@ namespace crafted_craft {
                     int64_t date;
                 };
 
-                shared_string criterion;
+                std::string criterion;
                 criterion_progress progress;
             };
 
             struct advancement_progress {
-                shared_string advancement;
+                std::string advancement;
                 list_array<advancement_progress_item> criteria;
             };
 
@@ -403,11 +403,11 @@ namespace crafted_craft {
 
             struct tag_mapping {
                 struct entry {
-                    shared_string tag_name;
+                    std::string tag_name;
                     list_array<int32_t> entires;
                 };
 
-                shared_string registry;
+                std::string registry;
                 list_array<entry> tags;
             };
 

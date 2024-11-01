@@ -1,6 +1,5 @@
 #ifndef SRC_BASE_OBJECTS_SERVER_CONFIGUARATION
 #define SRC_BASE_OBJECTS_SERVER_CONFIGUARATION
-#include "shared_string.hpp"
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
@@ -17,9 +16,9 @@ namespace crafted_craft {
             } query;
 
             struct World {
-                shared_string name = "overworld";
-                shared_string seed = "0";
-                shared_string type = "default";
+                std::string name = "overworld";
+                std::string seed = "0";
+                std::string type = "default";
                 size_t unload_speed = 10; //max 1000 chunks per tick
 
                 struct {
@@ -29,12 +28,12 @@ namespace crafted_craft {
                     float yaw = 0;
                 } spawn;
 
-                std::unordered_map<shared_string, std::string> generator_settings = {};
+                std::unordered_map<std::string, std::string> generator_settings = {};
             } world;
 
             struct GamePlay {
-                shared_string difficulty = "normal";
-                shared_string gamemode = "survival";
+                std::string difficulty = "normal";
+                std::string gamemode = "survival";
                 uint64_t max_chained_neighbor_updates = 4000;
                 uint32_t max_tick_time = 70; //tick time
                 uint32_t view_distance = 10;
@@ -152,7 +151,7 @@ namespace crafted_craft {
 
             //allowed dimensions to visit to player without the `action.world.transfer.disallowed` permission
             //if empty then this setting ignored
-            std::unordered_set<shared_string> allowed_dimensions = {"overworld"};
+            std::unordered_set<std::string> allowed_dimensions = {"overworld"};
 
 
             void load(const std::filesystem::path& config_file_path, bool fill_default_values = true);

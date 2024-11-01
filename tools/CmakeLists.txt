@@ -36,23 +36,16 @@ function(build_resource name input_file)
     cmake_path(GET input_file PARENT_PATH result_path)
     cmake_path(GET input_file FILENAME result_name)
 
-    set(result_file ${result_path}/embed/${result_name}.cpp)
-    message(STATUS "Checking resource${name}...")
-    if(NOT EXISTS ${result_file})
-        message(STATUS "Building resource ${name} from ${input_file} to ${result_file}...")
-        file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed)
-        execute_process(
-            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed.exe ${name} ${input_file} 
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-            RESULT_VARIABLE result
-            OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed/${name}.log
-            ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed/${name}_error.log
-        )
-        if(result)
-            message(FATAL_ERROR "Failed to build resource ${input_file} to ${result_name} ${result_file}")
-        endif()
-
-        message(STATUS "Resource ${name} built successfully")
-        file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
+    set(result_file ${result_path}/embed/${result_name}.cpp_resource)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed)
+    execute_process(
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed.exe ${name} ${input_file} 
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE result
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed/${name}_error.log
+    )
+    if(result)
+        message(FATAL_ERROR "Failed to build resource ${input_file} to ${result_name} ${result_file}")
     endif()
+    file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
 endfunction(build_resource)

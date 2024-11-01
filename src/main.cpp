@@ -65,7 +65,7 @@ int main() {
 
         log::disable_log_level(log::level::debug);
         special_handshake = new SpecialPluginHandshake();
-        special_status = new build_in_plugins::special::Status(api::configuration::get(), server.online_players);
+        special_status = new build_in_plugins::special::Status();
 
         first_client_holder = new TCPClientHandleHandshaking();
 

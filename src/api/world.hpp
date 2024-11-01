@@ -1,7 +1,6 @@
 #ifndef SRC_API_WORLD
 #define SRC_API_WORLD
 
-#include "../ClientHandleHelper.hpp"
 #include "../storage/world_data.hpp"
 #include <functional>
 

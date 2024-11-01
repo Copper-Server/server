@@ -33,6 +33,14 @@ namespace crafted_craft {
                     throw std::runtime_error("This " + std::string(type_name) + " is already defined and does not allow override. [" + id + "]");
         }
 
+        template <class T, size_t length>
+        void check_conflicts(std::unordered_map<std::string, T>& map, const std::string& id, const char (&type_name)[length]) {
+            auto it = map.find(id);
+            if (it != map.end())
+                throw std::runtime_error("This " + std::string(type_name) + " is already defined and cannot be overriden. [" + id + "]");
+        }
+
+
         using namespace util;
         using namespace registers;
 
@@ -4527,7 +4535,7 @@ namespace crafted_craft {
                 }
                 if (effects_js.contains("ambient_sound")) {
                     auto eff = effects_js["ambient_sound"];
-                    if (eff.get().is_string())
+                    if (eff.is_string())
                         effects.ambient_sound = (std::string)eff;
                     else {
                         js_object ambient_sound_js = js_object::get_object(effects_js["ambient_sound"]);
@@ -4636,7 +4644,7 @@ namespace crafted_craft {
             decoration.translation_key = (std::string)chat_js["translation_key"];
             {
                 auto params = chat_js["parameters"];
-                if (params.get().is_array()) {
+                if (params.is_array()) {
                     auto params_ = js_array::get_array(params);
                     std::vector<std::string> parameters;
                     parameters.reserve(params_.size());
@@ -4832,7 +4840,7 @@ namespace crafted_craft {
         }
 
         void load_file_advancements(js_object&& advancement_js, const std::string& id) {
-            check_override(advancements, id, "advancements");
+            check_conflicts(advancements, id, "advancements");
             Advancement advancement;
             if (advancement_js.contains("display")) {
                 auto display_js = js_object::get_object(advancement_js["display"]);
@@ -4899,7 +4907,7 @@ namespace crafted_craft {
         }
 
         void load_file_advancements(const std::filesystem::path& file_path, const std::string& id) {
-            check_override(advancements, id, "advancement");
+            check_conflicts(advancements, id, "advancement");
             auto res = try_read_json_file(file_path);
             if (!res)
                 throw std::runtime_error("Failed to read file: " + file_path.string());
@@ -4907,7 +4915,7 @@ namespace crafted_craft {
         }
 
         void load_file_jukebox_song(js_object&& song_js, const std::string& id) {
-            check_override(jukebox_songs, id, "jukebox song");
+            check_conflicts(jukebox_songs, id, "jukebox song");
             JukeboxSong song;
             song.comparator_output = song_js["comparator_output"];
             song.length_in_seconds = song_js["length_in_seconds"];
@@ -4927,7 +4935,7 @@ namespace crafted_craft {
         }
 
         void load_file_jukebox_song(const std::filesystem::path& file_path, const std::string& id) {
-            check_override(jukebox_songs, id, "jukebox songs");
+            check_conflicts(jukebox_songs, id, "jukebox songs");
             auto res = try_read_json_file(file_path);
             if (!res)
                 throw std::runtime_error("Failed to read file: " + file_path.string());
@@ -4935,7 +4943,7 @@ namespace crafted_craft {
         }
 
         void load_file_loot_table(js_object&& loot_table_js, const std::string& id) {
-            check_override(loot_table, id, "loot table");
+            check_conflicts(loot_table, id, "loot table");
 
             loot_table_item item;
             if (loot_table_js.contains("type"))
@@ -4959,8 +4967,13 @@ namespace crafted_craft {
                 for (auto&& pool_item : pools) {
                     auto pool = js_object::get_object(pool_item);
                     loot_table_item::pool pool_;
-                    if (pool.contains("conditions"))
-                        pool_.conditions = util::conversions::json::from_json(pool["conditions"].get());
+                    if (pool.contains("conditions")) {
+                        auto res = util::conversions::json::from_json(pool["conditions"].get());
+                        auto ref = res.as_array();
+                        pool_.conditions.reserve(ref.size());
+                        for (auto& it : ref)
+                            pool_.conditions.push_back(it.as_compound());
+                    }
                     if (pool.contains("bonus_rolls"))
                         pool_.bonus_rolls = read_number_provider(pool["bonus_rolls"]);
 
@@ -5007,7 +5020,7 @@ namespace crafted_craft {
             pattern.template_item = (std::string)pattern_js["template_item"];
             {
                 auto desc = pattern_js["description"];
-                if (desc.get().is_string())
+                if (desc.is_string())
                     pattern.description = (std::string)desc;
                 else
                     pattern.description = Chat::fromEnbt(conversions::json::from_json(desc.get()));
@@ -5031,7 +5044,7 @@ namespace crafted_craft {
             material.item_model_index = material_js["item_model_index"];
             {
                 auto desc = material_js["description"];
-                if (desc.get().is_string())
+                if (desc.is_string())
                     material.description = (std::string)desc;
                 else
                     material.description = Chat::fromEnbt(conversions::json::from_json(desc.get()));
@@ -5078,12 +5091,12 @@ namespace crafted_craft {
             DimensionType type;
             if (type_js.contains("monster_spawn_light_level")) {
                 auto monster_spawn_light_level = type_js["monster_spawn_light_level"];
-                if (monster_spawn_light_level.get().is_number())
+                if (monster_spawn_light_level.is_number())
                     type.monster_spawn_light_level = monster_spawn_light_level;
                 else {
                     js_object monster_spawn_light_level_js = js_object::get_object(monster_spawn_light_level);
                     IntegerDistribution monster_spawn_light_level_;
-                    monster_spawn_light_level_.value = conversions::json::from_json(monster_spawn_light_level_js["value"].get());
+                    monster_spawn_light_level_.value = conversions::json::from_json(monster_spawn_light_level_js.at("value").get());
                     monster_spawn_light_level_.type = (std::string)monster_spawn_light_level_js["type"];
                     type.monster_spawn_light_level = std::move(monster_spawn_light_level_);
                 }
@@ -5119,7 +5132,7 @@ namespace crafted_craft {
         }
 
         void load_file_enchantment(js_object&& type_js, const std::string& id) {
-            check_override(enchantments, id, "enchantments");
+            check_conflicts(enchantments, id, "enchantments");
             enchantment type;
             type.description = Chat::fromEnbt(util::conversions::json::from_json(type_js.at("description").get()));
             type.max_level = type_js.at("max_level");
@@ -5186,7 +5199,7 @@ namespace crafted_craft {
         }
 
         void load_file_enchantment(const std::filesystem::path& file_path, const std::string& id) {
-            check_override(enchantments, id, "enchantments");
+            check_conflicts(enchantments, id, "enchantments");
             auto res = try_read_json_file(file_path);
             if (!res)
                 throw std::runtime_error("Failed to read file: " + file_path.string());
@@ -5194,12 +5207,12 @@ namespace crafted_craft {
         }
 
         void load_file_enchantment_provider(boost::json::object& type_js, const std::string& id) {
-            check_override(enchantment_providers, id, "enchantment providers");
+            check_conflicts(enchantment_providers, id, "enchantment providers");
             enchantment_providers[id] = util::conversions::json::from_json(type_js);
         }
 
         void load_file_enchantment_provider(const std::filesystem::path& file_path, const std::string& id) {
-            check_override(enchantment_providers, id, "enchantment providers");
+            check_conflicts(enchantment_providers, id, "enchantment providers");
             auto res = try_read_json_file(file_path);
             if (!res)
                 throw std::runtime_error("Failed to read file: " + file_path.string());
@@ -5315,7 +5328,7 @@ namespace crafted_craft {
             list_array<std::string> result;
             for (auto&& tag : js_array::get_array(val)) {
                 std::string the_tag;
-                if (tag.get().is_string())
+                if (tag.is_string())
                     the_tag = (std::string)tag;
                 else {
                     auto tag_ = js_object::get_object(tag);
@@ -5442,7 +5455,7 @@ namespace crafted_craft {
             base_objects::block::access_full_block_data(std::function(
                 [&](
                     std::vector<std::shared_ptr<base_objects::static_block_data>>& full_block_data_,
-                    std::unordered_map<base_objects::shared_string, std::shared_ptr<base_objects::static_block_data>>& named_full_block_data
+                    std::unordered_map<std::string, std::shared_ptr<base_objects::static_block_data>>& named_full_block_data
                 ) {
                     size_t usable = 30000;
                     full_block_data_.resize(usable);
@@ -5495,7 +5508,7 @@ namespace crafted_craft {
                         data->assigned_states = std::move(associated_states);
                         data->defintion = util::conversions::json::from_json(decl.at("definition"));
 
-                        named_full_block_data[(std::string_view)name] = std::move(data);
+                        named_full_block_data[(std::string)name] = std::move(data);
                     }
 
                     for (auto it = full_block_data_.rbegin(); it != full_block_data_.rend(); ++it) {

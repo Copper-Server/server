@@ -1,6 +1,7 @@
 #include "permissions.hpp"
 #include "../ClientHandleHelper.hpp"
 #include "../api/configuration.hpp"
+#include "../api/internal/permissions.hpp"
 #include "../api/permissions.hpp"
 #include "../api/players.hpp"
 #include "../log.hpp"
@@ -8,13 +9,14 @@
 namespace crafted_craft {
     namespace build_in_plugins {
         PermissionsPlugin::PermissionsPlugin()
-            : op_list(api::configuration::get().server.base_path / "op_list.txt") {
+            : op_list(api::configuration::get().server.base_path / "op_list.txt"),
+              manager(std::filesystem::current_path()) {
         }
 
-        void apply_group(const base_objects::shared_string& group_name, base_objects::player& pd) {
-            api::permissions::enum_group_values(group_name, [&](const base_objects::shared_string& perm_tag) {
-                if (perm_tag.get().starts_with("action.")) {
-                    pd.instant_granted_actions.push_back(perm_tag.get().substr(7));
+        void apply_group(const std::string& group_name, base_objects::player& pd) {
+            api::permissions::enum_group_values(group_name, [&](const std::string& perm_tag) {
+                if (perm_tag.starts_with("action.")) {
+                    pd.instant_granted_actions.push_back(perm_tag.substr(7));
                 } else
                     pd.permissions.push_back(perm_tag);
             });
@@ -45,6 +47,10 @@ namespace crafted_craft {
             pd.instant_granted_actions.commit();
         }
 
+        void PermissionsPlugin::OnInitialization(const PluginRegistrationPtr& self) {
+            api::permissions::init_permissions(manager);
+        }
+
         void PermissionsPlugin::OnLoad(const PluginRegistrationPtr& self) {
             if (!op_list.is_loaded())
                 log::error("permissions", "failed to load permissions");
@@ -52,7 +58,7 @@ namespace crafted_craft {
 
         void PermissionsPlugin::OnPostLoad(const PluginRegistrationPtr& self) {
             api::permissions::make_sync();
-            Server::instance().online_players.iterate_online([&](base_objects::SharedClientData& client_ref) {
+            api::players::iterate_online([&](base_objects::SharedClientData& client_ref) {
                 update_perm(client_ref);
                 return false;
             });
@@ -66,7 +72,7 @@ namespace crafted_craft {
             permissions.add_child("reload").set_callback("command.permissions.reload", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                 api::players::calls::on_system_message({context.executor, "Reloading permissions..."});
                 api::permissions::make_sync();
-                Server::instance().online_players.iterate_online([&](base_objects::SharedClientData& client_ref) {
+                api::players::iterate_online([&](base_objects::SharedClientData& client_ref) {
                     update_perm(client_ref);
                     return false;
                 });
@@ -75,7 +81,7 @@ namespace crafted_craft {
             {
                 auto list = permissions.add_child("list");
                 list.add_child("group").set_callback("command.permissions.list.group", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                    list_array<base_objects::shared_string> enumerate;
+                    list_array<std::string> enumerate;
                     bool overflow = false;
                     api::permissions::enum_groups([&](const base_objects::permission_group& group) {
                         if (enumerate.size() < 100)
@@ -87,22 +93,22 @@ namespace crafted_craft {
                     if (enumerate.empty())
                         api::players::calls::on_system_message({context.executor, "There no groups."});
                     else if (enumerate.size() == 1)
-                        api::players::calls::on_system_message({context.executor, "There only one group: " + enumerate[0].get()});
+                        api::players::calls::on_system_message({context.executor, "There only one group: " + enumerate[0]});
                     else {
                         std::string buf;
-                        buf.reserve(enumerate.sum([](const base_objects::shared_string& val) {
-                            return val.get().size() + 1;
+                        buf.reserve(enumerate.sum([](const std::string& val) {
+                            return val.size() + 1;
                         }) + 25);
                         buf += "There are " + std::to_string(enumerate.size()) + " groups\n";
                         for (auto& it : enumerate)
-                            buf += it.get() + "\n";
+                            buf += it + "\n";
                         if (overflow)
                             buf += "...\n";
                         api::players::calls::on_system_message({context.executor, std::move(buf)});
                     }
                 });
                 list.add_child("permission").set_callback("command.permissions.list.permission", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                    list_array<base_objects::shared_string> enumerate;
+                    list_array<std::string> enumerate;
                     bool overflow = false;
                     api::permissions::enum_permissions([&](const base_objects::permissions_object& group) {
                         if (enumerate.size() < 100)
@@ -114,17 +120,17 @@ namespace crafted_craft {
                     if (enumerate.empty())
                         api::players::calls::on_system_message({context.executor, "There no permissions."});
                     else if (enumerate.size() == 1)
-                        api::players::calls::on_system_message({context.executor, "There only one permission: " + enumerate[0].get()});
+                        api::players::calls::on_system_message({context.executor, "There only one permission: " + enumerate[0]});
                     else {
                         std::string buf;
-                        buf.reserve(enumerate.sum([](const base_objects::shared_string& val) {
-                            return val.get().size() + 1;
+                        buf.reserve(enumerate.sum([](const std::string& val) {
+                            return val.size() + 1;
                         }) + 30);
                         size_t calculate_reserve;
 
                         buf += "There are " + std::to_string(enumerate.size()) + " permissions\n";
                         for (auto& it : enumerate)
-                            buf += it.get() + "\n";
+                            buf += it + "\n";
                         if (overflow)
                             buf += "...\n";
                         api::players::calls::on_system_message({context.executor, std::move(buf)});
@@ -150,8 +156,8 @@ namespace crafted_craft {
                         })
                         .add_child("<values>", cmd_pred_string::greedy_phrase)
                         .set_callback("command.permissions.group.add:with_values", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                            auto permissions = list_array<char>(std::get<pred_string>(args[1]).value).split_by(' ').convert<base_objects::shared_string>([](const list_array<char>& a) {
-                                return base_objects::shared_string(a.data(), a.size());
+                            auto permissions = list_array<char>(std::get<pred_string>(args[1]).value).split_by(' ').convert<std::string>([](const list_array<char>& a) {
+                                return std::string(a.data(), a.size());
                             });
                             api::permissions::add_group({std::get<pred_string>(args[0]).value, permissions});
                         });
@@ -169,7 +175,7 @@ namespace crafted_craft {
                         op_list.add(player_name);
                         api::players::calls::on_system_message_broadcast("Player " + player_name + " is now operator.");
 
-                        auto target = Server::instance().online_players.get_player(
+                        auto target = api::players::get_player(
                             SharedClientData::packets_state_t::protocol_state::play,
                             player_name
                         );
@@ -183,7 +189,7 @@ namespace crafted_craft {
                     .set_callback("command.deop", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto& player_name = std::get<pred_string>(args[0]).value;
                         op_list.remove(player_name);
-                        auto target = Server::instance().online_players.get_player(
+                        auto target = api::players::get_player(
                             SharedClientData::packets_state_t::protocol_state::play,
                             player_name
                         );

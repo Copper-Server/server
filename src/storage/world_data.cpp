@@ -387,41 +387,41 @@ namespace crafted_craft {
             }
         }
 
-        fast_task::protected_value<std::unordered_map<base_objects::shared_string, base_objects::atomic_holder<chunk_generator>>> chunk_generators;
+        fast_task::protected_value<std::unordered_map<std::string, base_objects::atomic_holder<chunk_generator>>> chunk_generators;
 
-        void chunk_generator::register_it(const base_objects::shared_string& id, base_objects::atomic_holder<chunk_generator> gen) {
+        void chunk_generator::register_it(const std::string& id, base_objects::atomic_holder<chunk_generator> gen) {
             chunk_generators.set([&](auto& map) {
                 map[id] = std::move(gen);
             });
         }
 
-        void chunk_generator::unregister_it(const base_objects::shared_string& id) {
+        void chunk_generator::unregister_it(const std::string& id) {
             chunk_generators.set([&](auto& map) {
                 map.erase(id);
             });
         }
 
-        base_objects::atomic_holder<chunk_generator> chunk_generator::get_it(const base_objects::shared_string& id) {
+        base_objects::atomic_holder<chunk_generator> chunk_generator::get_it(const std::string& id) {
             return chunk_generators.set([&](auto& map) {
                 return map.at(id);
             });
         }
 
-        fast_task::protected_value<std::unordered_map<base_objects::shared_string, base_objects::atomic_holder<chunk_light_processor>>> light_orocessors;
+        fast_task::protected_value<std::unordered_map<std::string, base_objects::atomic_holder<chunk_light_processor>>> light_orocessors;
 
-        void chunk_light_processor::register_it(const base_objects::shared_string& id, base_objects::atomic_holder<chunk_light_processor> processor) {
+        void chunk_light_processor::register_it(const std::string& id, base_objects::atomic_holder<chunk_light_processor> processor) {
             light_orocessors.set([&](auto& map) {
                 map[id] = std::move(processor);
             });
         }
 
-        void chunk_light_processor::unregister_it(const base_objects::shared_string& id) {
+        void chunk_light_processor::unregister_it(const std::string& id) {
             light_orocessors.set([&](auto& map) {
                 map.erase(id);
             });
         }
 
-        base_objects::atomic_holder<chunk_light_processor> chunk_light_processor::get_it(const base_objects::shared_string& id) {
+        base_objects::atomic_holder<chunk_light_processor> chunk_light_processor::get_it(const std::string& id) {
             return light_orocessors.set([&](auto& map) {
                 return map.at(id);
             });
@@ -530,10 +530,10 @@ namespace crafted_craft {
             wandering_trader_id = load_from_nbt["wandering_trader_id"];
             wandering_trader_spawn_chance = load_from_nbt["wandering_trader_spawn_chance"];
             wandering_trader_spawn_delay = load_from_nbt["wandering_trader_spawn_delay"];
-            world_name = (base_objects::shared_string)(std::string)load_from_nbt["world_name"];
-            light_processor_id = (base_objects::shared_string)(std::string)load_from_nbt["light_processor_id"];
-            world_type = (base_objects::shared_string)(std::string)load_from_nbt["world_type"];
-            generator_id = (base_objects::shared_string)(std::string)load_from_nbt["generator_id"];
+            world_name = (std::string)(std::string)load_from_nbt["world_name"];
+            light_processor_id = (std::string)(std::string)load_from_nbt["light_processor_id"];
+            world_type = (std::string)(std::string)load_from_nbt["world_type"];
+            generator_id = (std::string)(std::string)load_from_nbt["generator_id"];
             enabled_datapacks = from_fixed_array<std::string>(load_from_nbt["enabled_datapacks"]);
             enabled_plugins = from_fixed_array<std::string>(load_from_nbt["enabled_plugins"]);
             enabled_features = from_fixed_array<std::string>(load_from_nbt["enabled_features"]);
@@ -598,10 +598,10 @@ namespace crafted_craft {
             world_data_file["wandering_trader_id"] = wandering_trader_id;
             world_data_file["wandering_trader_spawn_chance"] = wandering_trader_spawn_chance;
             world_data_file["wandering_trader_spawn_delay"] = wandering_trader_spawn_delay;
-            world_data_file["world_name"] = world_name.get();
-            world_data_file["world_type"] = world_type.get();
-            world_data_file["light_processor_id"] = light_processor_id.get();
-            world_data_file["generator_id"] = generator_id.get();
+            world_data_file["world_name"] = world_name;
+            world_data_file["world_type"] = world_type;
+            world_data_file["light_processor_id"] = light_processor_id;
+            world_data_file["generator_id"] = generator_id;
             world_data_file["enabled_datapacks"] = to_fixed_array(enabled_datapacks);
             world_data_file["enabled_plugins"] = to_fixed_array(enabled_plugins);
             world_data_file["enabled_features"] = to_fixed_array(enabled_features);
@@ -656,13 +656,13 @@ namespace crafted_craft {
             file.write(stringized.data(), stringized.size());
         }
 
-        base_objects::shared_string world_data::preview_world_name() {
+        std::string world_data::preview_world_name() {
             std::unique_lock lock(mutex);
             std::ifstream file(path / "world.senbt", std::ios::binary);
             if (!file.is_open())
                 throw std::runtime_error("Can't open world file");
             std::string res((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-            return (base_objects::shared_string)(std::string)senbt::parse(res)["world_name"];
+            return (std::string)(std::string)senbt::parse(res)["world_name"];
         }
 
         world_data::world_data(const std::filesystem::path& path)
@@ -1252,13 +1252,13 @@ namespace crafted_craft {
             //TODO NOTIFY CLIENTS AND ENTITIES
         }
 
-        void world_data::change_chunk_generator(const base_objects::shared_string& id) {
+        void world_data::change_chunk_generator(const std::string& id) {
             std::unique_lock lock(mutex);
             light_processor = nullptr;
             light_processor_id = id;
         }
 
-        void world_data::change_light_processor(const base_objects::shared_string& id) {
+        void world_data::change_light_processor(const std::string& id) {
             std::unique_lock lock(mutex);
             light_processor = nullptr;
             light_processor_id = id;
@@ -1428,7 +1428,7 @@ namespace crafted_craft {
             return cached_ids.contains(world_id);
         }
 
-        bool worlds_data::exists(const base_objects::shared_string& name) {
+        bool worlds_data::exists(const std::string& name) {
             return get_id(name) != -1;
         }
 
@@ -1437,7 +1437,7 @@ namespace crafted_craft {
             return get_ids();
         }
 
-        base_objects::shared_string worlds_data::get_name(uint64_t world_id) {
+        std::string worlds_data::get_name(uint64_t world_id) {
             std::unique_lock lock(mutex);
             if (auto on_load = cached_worlds.find(world_id); on_load != cached_worlds.end())
                 return on_load->second->world_name;
@@ -1449,7 +1449,7 @@ namespace crafted_craft {
                 throw std::runtime_error("World with id " + std::to_string(world_id) + " not found.");
         }
 
-        uint64_t worlds_data::get_id(const base_objects::shared_string& name) {
+        uint64_t worlds_data::get_id(const std::string& name) {
             std::unique_lock lock(mutex);
             for (auto& world : cached_worlds)
                 if (world.second->world_name == name)
@@ -1535,10 +1535,10 @@ namespace crafted_craft {
             on_world_unloaded(world_id);
         }
 
-        uint64_t worlds_data::create(const base_objects::shared_string& name) {
+        uint64_t worlds_data::create(const std::string& name) {
             std::unique_lock lock(mutex);
             if (get_id(name) != -1)
-                throw std::runtime_error("World with name " + name.get() + " already exists.");
+                throw std::runtime_error("World with name " + name + " already exists.");
             uint64_t id = 0;
             while (exists(id))
                 id++;
@@ -1550,10 +1550,10 @@ namespace crafted_craft {
             return id;
         }
 
-        uint64_t worlds_data::create(const base_objects::shared_string& name, std::function<void(world_data& world)> init) {
+        uint64_t worlds_data::create(const std::string& name, std::function<void(world_data& world)> init) {
             std::unique_lock lock(mutex);
             if (get_id(name) != -1)
-                throw std::runtime_error("World with name " + name.get() + " already exists.");
+                throw std::runtime_error("World with name " + name + " already exists.");
             uint64_t id = 0;
             while (exists(id))
                 id++;

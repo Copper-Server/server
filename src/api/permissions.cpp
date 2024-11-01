@@ -9,61 +9,61 @@ namespace crafted_craft::api::permissions {
         perm = &manager;
     }
 
-    bool has_rights(const base_objects::shared_string& action_name, const base_objects::client_data_holder& client) {
+    bool has_rights(const std::string& action_name, const base_objects::client_data_holder& client) {
         if (perm == nullptr)
             return false;
         return perm->has_rights(action_name, client);
     }
 
-    bool has_action(const base_objects::shared_string& action_name) {
+    bool has_action(const std::string& action_name) {
         if (perm == nullptr)
             return false;
         return perm->has_action(action_name);
     }
 
-    bool has_permission(const base_objects::shared_string& permission_name) {
+    bool has_permission(const std::string& permission_name) {
         if (perm == nullptr)
             return false;
         return perm->has_permission(permission_name);
     }
 
-    bool has_group(const base_objects::shared_string& group_name) {
+    bool has_group(const std::string& group_name) {
         if (perm == nullptr)
             return false;
         return perm->has_group(group_name);
     }
 
-    void register_action(const base_objects::shared_string& action_name) {
+    void register_action(const std::string& action_name) {
         if (perm == nullptr)
             return;
         perm->register_action(action_name);
     }
 
-    void register_action(const base_objects::shared_string& action_name, const list_array<base_objects::shared_string>& required_perm) {
+    void register_action(const std::string& action_name, const list_array<std::string>& required_perm) {
         if (perm == nullptr)
             return;
         perm->register_action(action_name, required_perm);
     }
 
-    void register_action(const base_objects::shared_string& action_name, list_array<base_objects::shared_string>&& required_perm) {
+    void register_action(const std::string& action_name, list_array<std::string>&& required_perm) {
         if (perm == nullptr)
             return;
         perm->register_action(action_name, std::move(required_perm));
     }
 
-    void unregister_action(const base_objects::shared_string& action_name) {
+    void unregister_action(const std::string& action_name) {
         if (perm == nullptr)
             return;
         perm->unregister_action(action_name);
     }
 
-    void add_requirement(const base_objects::shared_string& action_name, const base_objects::shared_string& permission_tag) {
+    void add_requirement(const std::string& action_name, const std::string& permission_tag) {
         if (perm == nullptr)
             return;
         perm->add_requirement(action_name, permission_tag);
     }
 
-    void remove_requirement(const base_objects::shared_string& action_name, const base_objects::shared_string& permission_tag) {
+    void remove_requirement(const std::string& action_name, const std::string& permission_tag) {
         if (perm == nullptr)
             return;
         perm->remove_requirement(action_name, permission_tag);
@@ -75,7 +75,7 @@ namespace crafted_craft::api::permissions {
         perm->add_permission(permission);
     }
 
-    void remove_permission(const base_objects::shared_string& permission_tag) {
+    void remove_permission(const std::string& permission_tag) {
         if (perm == nullptr)
             return;
         perm->remove_permission(permission_tag);
@@ -87,39 +87,39 @@ namespace crafted_craft::api::permissions {
         perm->add_group(group);
     }
 
-    void remove_group(const base_objects::shared_string& group_name) {
+    void remove_group(const std::string& group_name) {
         if (perm == nullptr)
             return;
         perm->remove_group(group_name);
     }
 
     //permission_tags can also accept direct actions name with prefix 'action:'
-    void add_group_value(const base_objects::shared_string& group_name, const base_objects::shared_string& permission_tag) {
+    void add_group_value(const std::string& group_name, const std::string& permission_tag) {
         if (perm == nullptr)
             return;
         perm->add_group_value(group_name, permission_tag);
     }
 
     //permission_tags can also accept direct actions name with prefix 'action:'
-    void remove_group_value(const base_objects::shared_string& group_name, const base_objects::shared_string& permission_tag) {
+    void remove_group_value(const std::string& group_name, const std::string& permission_tag) {
         if (perm == nullptr)
             return;
         perm->remove_group_value(group_name, permission_tag);
     }
 
-    void enum_actions(const std::function<void(const base_objects::shared_string&)>& callback) {
+    void enum_actions(const std::function<void(const std::string&)>& callback) {
         if (perm == nullptr)
             return;
         perm->enum_actions(callback);
     }
 
-    void enum_actions(const std::function<void(const base_objects::shared_string&, const list_array<base_objects::shared_string>&)>& callback) {
+    void enum_actions(const std::function<void(const std::string&, const list_array<std::string>&)>& callback) {
         if (perm == nullptr)
             return;
         perm->enum_actions(callback);
     }
 
-    void enum_action_requirements(const base_objects::shared_string& action_name, const std::function<void(const base_objects::shared_string&)>& callback) {
+    void enum_action_requirements(const std::string& action_name, const std::function<void(const std::string&)>& callback) {
         if (perm == nullptr)
             return;
         perm->enum_action_requirements(action_name, callback);
@@ -137,19 +137,19 @@ namespace crafted_craft::api::permissions {
         perm->enum_groups(callback);
     }
 
-    void enum_group_values(const base_objects::shared_string& group_name, const std::function<void(const base_objects::shared_string&)>& callback) {
+    void enum_group_values(const std::string& group_name, const std::function<void(const std::string&)>& callback) {
         if (perm == nullptr)
             return;
         perm->enum_group_values(group_name, callback);
     }
 
-    void view_permission(const base_objects::shared_string& perm_name, const std::function<void(const base_objects::permissions_object&)>& callback) {
+    void view_permission(const std::string& perm_name, const std::function<void(const base_objects::permissions_object&)>& callback) {
         if (perm == nullptr)
             return;
         perm->view_permission(perm_name, callback);
     }
 
-    void view_group(const base_objects::shared_string& group_name, const std::function<void(const base_objects::permission_group&)>& callback) {
+    void view_group(const std::string& group_name, const std::function<void(const base_objects::permission_group&)>& callback) {
         if (perm == nullptr)
             return;
         perm->view_group(group_name, callback);

@@ -5,6 +5,10 @@
 
 namespace crafted_craft {
     namespace base_objects {
+        std::unordered_map<std::string, std::shared_ptr<static_slot_data>> slot_data::named_full_item_data;
+        std::vector<std::shared_ptr<static_slot_data>> slot_data::full_item_data_;
+        std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> static_slot_data::internal_item_aliases_protocol;
+
         std::unordered_map<std::string, base_objects::slot_component::unified (*)(const enbt::value&)> load_items_parser{
             {"minecraft:attribute_modifiers",
              [](const enbt::value& it) -> base_objects::slot_component::unified {
@@ -552,11 +556,12 @@ namespace crafted_craft {
                  //    }
                  //    potion_contents.effects.commit();
                  //}
+                 return potion_contents;
              }
             },
-            {"minecraft:hide_tooltip",
+            {"minecraft:rarity",
              [](const enbt::value& it) -> base_objects::slot_component::unified {
-                 return base_objects::slot_component::hide_additional_tooltip{};
+                 return base_objects::slot_component::rarity::from_string(it.as_string());
              }
             },
             {"minecraft:hide_tooltip",
@@ -700,6 +705,15 @@ namespace crafted_craft {
         bool slot_component::bundle_contents::operator==(const bundle_contents& other) const {
             return items.equal(
                 other.items,
+                [](const slot_data* it, const slot_data* second) {
+                    return *it == *second;
+                }
+            );
+        }
+
+        bool slot_component::charged_projectiles::operator==(const charged_projectiles& other) const {
+            return data.equal(
+                other.data,
                 [](const slot_data* it, const slot_data* second) {
                     return *it == *second;
                 }
@@ -1047,6 +1061,38 @@ namespace crafted_craft {
             use_remainder::~use_remainder() {
                 delete proxy_value;
             }
+
+            bool use_remainder::operator==(const use_remainder& other) const {
+                return *proxy_value == *other.proxy_value;
+            }
+
+            std::string rarity::to_string() const {
+                switch (value) {
+                case common:
+                    return "common";
+                case uncommon:
+                    return "uncommon";
+                case rare:
+                    return "rare";
+                case epic:
+                    return "epic";
+                default:
+                    return "common";
+                }
+            }
+
+            rarity rarity::from_string(const std::string& str) {
+                if (str == "common")
+                    return common;
+                else if (str == "uncommon")
+                    return uncommon;
+                else if (str == "rare")
+                    return rare;
+                else if (str == "epic")
+                    return epic;
+                else
+                    return common;
+            }
         }
 
         bool slot_data::operator==(const slot_data& other) const {
@@ -1084,8 +1130,8 @@ namespace crafted_craft {
                     } else {
                         bool found = false;
                         for (auto& alias : item.item_aliases) {
-                            if (assignations.find(alias.get()) != assignations.end()) {
-                                item.internal_item_aliases[protocol] = assignations[alias.get()];
+                            if (assignations.find(alias) != assignations.end()) {
+                                item.internal_item_aliases[protocol] = assignations[alias];
                                 found = true;
                                 break;
                             }
@@ -1098,7 +1144,7 @@ namespace crafted_craft {
             }
         }
 
-        slot_data slot_data::create_item(const base_objects::shared_string& id) {
+        slot_data slot_data::create_item(const std::string& id) {
             try {
                 auto res = named_full_item_data.at(id);
                 return slot_data{
@@ -1107,7 +1153,7 @@ namespace crafted_craft {
                     .id = res->internal_id,
                 };
             } catch (...) {
-                throw std::runtime_error("Item not found: " + id.get());
+                throw std::runtime_error("Item not found: " + id);
             }
         }
 
@@ -1120,7 +1166,7 @@ namespace crafted_craft {
             };
         }
 
-        static_slot_data& slot_data::get_slot_data(const base_objects::shared_string& id) {
+        static_slot_data& slot_data::get_slot_data(const std::string& id) {
             return *named_full_item_data.at(id);
         }
 

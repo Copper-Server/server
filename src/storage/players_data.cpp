@@ -135,7 +135,7 @@ namespace crafted_craft {
                     death_location["x"],
                     death_location["y"],
                     death_location["z"],
-                    base_objects::shared_string((std::string&)death_location["world_id"])
+                    std::string((std::string&)death_location["world_id"])
                 };
             } else
                 player.last_death_location.reset();
@@ -245,7 +245,7 @@ namespace crafted_craft {
             {
                 enbt::fixed_array permissions(player.permission_groups.size());
                 for (size_t i = 0; i < player.permission_groups.size(); i++)
-                    permissions.set(i, player.permission_groups[i].get());
+                    permissions.set(i, player.permission_groups[i]);
                 as_file_data["permission_groups"] = permissions;
             }
             if (player.last_death_location.has_value()) {
@@ -253,7 +253,7 @@ namespace crafted_craft {
                 death_location["x"] = player.last_death_location->x;
                 death_location["y"] = player.last_death_location->y;
                 death_location["z"] = player.last_death_location->z;
-                death_location["world_id"] = player.last_death_location->world_id.get();
+                death_location["world_id"] = player.last_death_location->world_id;
                 as_file_data["death_location"] = death_location;
             }
             if (player.ride_entity_id.has_value())

@@ -1,5 +1,6 @@
 #ifndef SRC_PROTOCOLHELPER_STATE_STATUS
 #define SRC_PROTOCOLHELPER_STATE_STATUS
+#include "../api/configuration.hpp"
 #include "../plugin/special.hpp"
 #include "packets.hpp"
 
@@ -61,7 +62,7 @@ namespace crafted_craft {
         }
 
         Response WorkPacket(ArrayStream& packet) override {
-            if (!special_status->config.status.enable)
+            if (!api::configuration::get().status.enable)
                 return Response::Disconnect();
             if (packet.size_read() == 0)
                 return Response::Empty();

@@ -171,27 +171,27 @@ namespace crafted_craft {
                         value = value.substr(colon + 1);
                         auto dot = value.find('.');
                         if (dot == value.npos) {
-                            scores[score_name].min = std::stoi(std::string(value));
-                            scores[score_name].max = scores[score_name].min;
+                            scores[std::string(score_name)].min = std::stoi(std::string(value));
+                            scores[std::string(score_name)].max = scores[std::string(score_name)].min;
                         } else {
                             if (value[dot + 1] != '.')
                                 throw std::runtime_error("Expected '..' as distance");
-                            scores[score_name].min = std::stoi(std::string(value.substr(0, dot)));
-                            scores[score_name].max = std::stoi(std::string(value.substr(dot + 1)));
+                            scores[std::string(score_name)].min = std::stoi(std::string(value.substr(0, dot)));
+                            scores[std::string(score_name)].max = std::stoi(std::string(value.substr(dot + 1)));
                         }
-                        scores[score_name].is_inverted = is_inverted;
+                        scores[std::string(score_name)].is_inverted = is_inverted;
                     } else if (key == "tags") {
-                        tags.push_back({shared_string(value), is_inverted});
+                        tags.push_back({std::string(value), is_inverted});
                     } else if (key == "team") {
-                        team.push_back({shared_string(value), is_inverted});
+                        team.push_back({std::string(value), is_inverted});
                     } else if (key == "name") {
-                        name.push_back({shared_string(value), is_inverted});
+                        name.push_back({std::string(value), is_inverted});
                     } else if (key == "type") {
-                        type.push_back({shared_string(value), is_inverted});
+                        type.push_back({std::string(value), is_inverted});
                     } else if (key == "family") {
-                        family.push_back({shared_string(value), is_inverted});
+                        family.push_back({std::string(value), is_inverted});
                     } else if (key == "predicate") {
-                        predicate.push_back({shared_string(value), is_inverted});
+                        predicate.push_back({std::string(value), is_inverted});
                     } else if (key == "nbt") {
                         nbt = std::string(value);
                         nbt_inverted = is_inverted;
@@ -199,17 +199,17 @@ namespace crafted_craft {
                         abilities = std::string(value);
                         abilities_inverted = is_inverted;
                     } else if (key == "has_item") {
-                        has_item.push_back({shared_string(value), is_inverted});
+                        has_item.push_back({std::string(value), is_inverted});
                     } else if (key == "gamemode") {
-                        gamemode = shared_string(value);
+                        gamemode = value;
                     } else if (key == "level") {
                         level = std::stod(std::string(value));
                     } else if (key == "advancements") {
-                        advancements[shared_string(key)] = !is_inverted;
+                        advancements[std::string(key)] = !is_inverted;
                     } else if (key == "has_permission") {
-                        has_permission[shared_string(key)] = !is_inverted;
+                        has_permission[std::string(key)] = !is_inverted;
                     } else if (key == "in_group") {
-                        in_group.push_back({shared_string(value), is_inverted});
+                        in_group.push_back({std::string(value), is_inverted});
                     } else if (key == "limit") {
                         limit = std::stoi(std::string(value));
                         limit_inverted = is_inverted;

@@ -1,5 +1,6 @@
 #ifndef SRC_PROTOCOLHELPER_CLIENT_HANDLER_766_LOGIN
 #define SRC_PROTOCOLHELPER_CLIENT_HANDLER_766_LOGIN
+#include "../../api/mojang/session_server.hpp"
 #include "../../api/players.hpp"
 #include "../../mojang/api/hash.hpp"
 #include "../../packets/766/packets.hpp"
@@ -72,7 +73,7 @@ namespace crafted_craft {
                     if (
                         has_conflict && api::configuration::get().protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::kick_connected
                     ) {
-                        Server::instance().online_players.iterate_players_not_state(base_objects::SharedClientData::packets_state_t::protocol_state::initialization, [&](base_objects::SharedClientData& player) {
+                        api::players::iterate_players_not_state(base_objects::SharedClientData::packets_state_t::protocol_state::initialization, [&](base_objects::SharedClientData& player) {
                             if (player.name == session->sharedData().name) {
                                 constexpr const char reason[] = "Some player with same nickname joined to this server";
                                 switch (player.packets_state.state) {
@@ -95,18 +96,16 @@ namespace crafted_craft {
                     uint8_t packet_id = packet.read();
 
                     if (packet_id != excepted_packet && excepted_packet != -1) {
-                        Server::instance().online_players.remove_player(session->sharedDataRef());
+                        api::players::remove_player(session->sharedDataRef());
                         return Response::Disconnect();
                     }
 
                     switch (packet_id) {
                     case 0: { //login start
-                        auto& online_players = Server::instance().online_players;
-
                         log::debug("login", "login start");
                         std::string nickname = ReadString(packet, 16);
-                        auto player = online_players.get_player(nickname);
-                        if (online_players.has_player(nickname)) {
+                        auto player = api::players::get_player(nickname);
+                        if (api::players::has_player(nickname)) {
                             if (api::configuration::get().protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::prevent_join)
                                 return packets::release_766::login::kick("You someone already connected with this nickname");
                             else
@@ -164,7 +163,7 @@ namespace crafted_craft {
                         serverId.update(Server::instance().public_key_buffer().data(), Server::instance().public_key_buffer().size());
 
                         log::debug("login", "mojang request");
-                        session->sharedData().data = Server::instance().getSessionServer().hasJoined(
+                        session->sharedData().data = api::mojang::get_session_server().hasJoined(
                             session->sharedData().name,
                             serverId.hexdigest(),
                             !api::configuration::get().protocol.offline_mode
@@ -186,7 +185,7 @@ namespace crafted_craft {
                             return Response::Disconnect();
                         }
                         resolve_join_conflict();
-                        Server::instance().online_players.login_complete_to_cfg(session->sharedDataRef());
+                        api::players::login_complete_to_cfg(session->sharedDataRef());
                         api::players::handlers::on_player_join(session->sharedDataRef());
 
                         next_handler = abstract::createHandleConfiguration(session);
