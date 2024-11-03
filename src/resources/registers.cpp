@@ -8,6 +8,7 @@
 #include "versions/embed/765.json.hpp"
 #include "versions/embed/766.json.hpp"
 #include "versions/embed/767.json.hpp"
+#include "versions/embed/768.json.hpp"
 
 #include "../api/recipe.hpp"
 
@@ -1961,15 +1962,6 @@ namespace crafted_craft {
                         .message_id = "explosion",
                         .scaling = DamageType::ScalingType::always,
                         .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:fall",
-                    DamageType{
-                        .message_id = "fall",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .death_message_type = DamageType::DeathMessageType::fall_variants,
-                        .exhaustion = 0,
                     },
                 },
                 {
@@ -5547,6 +5539,8 @@ namespace crafted_craft {
             registers::individual_registers[766] = util::conversions::json::from_json(parsed);
             parsed = boost::json::parse(std::string_view((const char*)resources__versions_767.data(), resources__versions_767.size()));
             registers::individual_registers[767] = util::conversions::json::from_json(parsed);
+            parsed = boost::json::parse(std::string_view((const char*)resources__versions_768.data(), resources__versions_768.size()));
+            registers::individual_registers[768] = util::conversions::json::from_json(parsed);
         }
     }
 }

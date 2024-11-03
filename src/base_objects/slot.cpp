@@ -23,10 +23,12 @@ namespace crafted_craft {
                          base_objects::item_attribute modifier;
 
                          auto c = i.as_compound();
-                         modifier.id = base_objects::item_attribute::attribute_name_to_id((std::string)c.at("id").as_string());
+                         modifier.type = c.at("type").as_string();
+                         modifier.id = c.at("id").as_string();
                          modifier.operation = base_objects::item_attribute::id_to_operation((std::string)c.at("operation").as_string());
-                         modifier.name = c.at("name").as_string();
-                         modifier.value = c.at("value");
+                         modifier.amount = c.at("amount");
+                         modifier.slot = base_objects::item_attribute::name_to_slot((std::string)c.at("slot").as_string());
+                         modifiers.push_back(modifier);
                      }
                      modifiers.commit();
                      attributes.attributes = std::move(modifiers);
@@ -40,7 +42,7 @@ namespace crafted_craft {
                  for (auto& value : it.as_array()) {
                      auto comp = value.as_compound();
                      base_objects::slot_component::banner_patterns::pattern pattern;
-                     pattern.color = base_objects::item_color::from_string((std::string)comp.at("color").as_string());
+                     pattern.color = base_objects::item_color::from_string(comp.at("color").as_string());
                      auto& pattern_json = comp.at("pattern");
                      if (pattern_json.is_string())
                          pattern.pattern = (std::string)pattern_json.as_string();
@@ -241,7 +243,14 @@ namespace crafted_craft {
             {"minecraft:custom_data",
              [](const enbt::value& it) -> base_objects::slot_component::unified {
                  base_objects::slot_component::custom_data custom_data;
-                 custom_data.value = it;
+                 if (it.is_string()) {
+                     try {
+                         custom_data.value = senbt::parse(it.as_string());
+                     } catch (...) {
+                         custom_data.value = it;
+                     }
+                 } else
+                     custom_data.value = it;
                  return std::move(custom_data);
              }
             },
@@ -360,21 +369,22 @@ namespace crafted_craft {
                  base_objects::slot_component::fireworks fireworks;
                  fireworks.duration = comp.at("flight_duration");
                  auto& firework_explosion_parser = load_items_parser.at("minecraft:firework_explosion");
-                 for (auto& it : comp.at("explosions").as_array()) {
-                     auto pre_res = std::get<base_objects::slot_component::firework_explosion>(
-                         firework_explosion_parser(it)
-                     );
-                     fireworks.explosions.push_back(std::move(pre_res.value));
+                 if (comp.contains("explosions")) {
+                     auto arr = comp.at("explosions").as_array();
+                     fireworks.explosions.reserve(arr.size());
+                     for (auto& it : arr) {
+                         auto pre_res = std::get<base_objects::slot_component::firework_explosion>(
+                             firework_explosion_parser(it)
+                         );
+                         fireworks.explosions.push_back(std::move(pre_res.value));
+                     }
                  }
-                 fireworks.explosions.commit();
                  return std::move(fireworks);
              }
             },
             {"minecraft:food",
              [](const enbt::value& it) -> base_objects::slot_component::unified {
                  auto comp = it.as_compound();
-                 if (!comp.contains("id"))
-                     throw std::runtime_error("Entity declaration must contain at least id of entity");
                  base_objects::slot_component::food food;
                  food.nutrition = comp.at("nutrition");
                  food.saturation = comp.at("saturation");
@@ -559,33 +569,297 @@ namespace crafted_craft {
                  return potion_contents;
              }
             },
+            {"minecraft:profile",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::profile profile;
+                 if (comp.contains("name"))
+                     profile.name = comp["name"].as_string();
+                 if (comp.contains("id"))
+                     profile.uid = (enbt::raw_uuid)comp["id"];
+                 if (comp.contains("properties")) {
+                     auto props = comp["properties"].as_array();
+                     profile.properties.reserve(props.size());
+                     for (auto& it : props) {
+                         auto prop = it.as_compound();
+                         base_objects::slot_component::profile::property_t p;
+                         p.name = prop.at("name").as_string();
+                         p.value = prop.at("value").as_string();
+                         if (prop.contains("signature"))
+                             p.signature = prop["signature"].as_string();
+                         profile.properties.push_back(std::move(p));
+                     }
+                 }
+                 return profile;
+             }
+            },
             {"minecraft:rarity",
              [](const enbt::value& it) -> base_objects::slot_component::unified {
                  return base_objects::slot_component::rarity::from_string(it.as_string());
              }
             },
-            {"minecraft:hide_tooltip",
+            {"minecraft:recipes",
              [](const enbt::value& it) -> base_objects::slot_component::unified {
-                 return base_objects::slot_component::hide_additional_tooltip{};
+                 auto arr = it.as_array();
+                 base_objects::slot_component::recipes recipes;
+                 recipes.value.reserve(arr.size());
+                 for (auto& it : arr)
+                     recipes.value.push_back(it.as_string());
+                 return recipes;
              }
             },
-            {"minecraft:hide_tooltip",
+            {"minecraft:repairable",
              [](const enbt::value& it) -> base_objects::slot_component::unified {
-                 return base_objects::slot_component::hide_additional_tooltip{};
+                 if (it.is_array()) {
+                     auto arr = it.as_array();
+                     std::vector<std::string> res;
+                     res.reserve(arr.size());
+                     for (auto& it : arr)
+                         res.push_back(it.as_string());
+                     return base_objects::slot_component::repairable{.items = std::move(res)};
+                 } else
+                     return base_objects::slot_component::repairable{.items = it.as_string()};
              }
             },
-            {"minecraft:hide_tooltip",
+            {"minecraft:repair_cost",
              [](const enbt::value& it) -> base_objects::slot_component::unified {
-                 return base_objects::slot_component::hide_additional_tooltip{};
+                 return base_objects::slot_component::repair_cost{.value = it};
              }
             },
-            {"minecraft:hide_tooltip",
+            {"minecraft:stored_enchantments",
              [](const enbt::value& it) -> base_objects::slot_component::unified {
-                 return base_objects::slot_component::hide_additional_tooltip{};
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::stored_enchantments stored_enchantments;
+                 if (comp.contains("show_in_tooltip"))
+                     stored_enchantments.show_in_tooltip = comp["show_in_tooltip"];
+                 auto levels = comp.at("levels").as_compound();
+                 stored_enchantments.enchants.reserve(levels.size());
+                 for (auto& [name, level] : levels) {
+                     auto id = registers::enchantments.at(name).id;
+                     stored_enchantments.enchants.push_back({id, (int32_t)level});
+                 }
+                 return stored_enchantments;
+             }
+            },
+            {"minecraft:suspicious_stew_effects",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto arr = it.as_array();
+                 base_objects::slot_component::suspicious_stew_effects suspicious_stew_effects;
+                 suspicious_stew_effects.effects.reserve(arr.size());
+                 for (auto& it : arr) {
+                     auto comp = it.as_compound();
+                     auto id = registers::potions.at(comp.at("id")).id;
+                     int32_t dur = 160;
+                     if (comp.contains("duration"))
+                         dur = comp["duration"];
+                     suspicious_stew_effects.effects.push_back({id, dur});
+                 }
+                 return suspicious_stew_effects;
+             }
+            },
+            {"minecraft:tool",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::tool tool;
+                 if (comp.contains("default_mining_speed"))
+                     tool.default_mining_speed = comp["default_mining_speed"];
+                 if (comp.contains("damage_per_block"))
+                     tool.damage_per_block = comp["damage_per_block"];
+                 if (comp.contains("rules")) {
+                     auto arr = comp["rules"].as_array();
+                     tool.rules.reserve(arr.size());
+                     for (auto& it : arr) {
+                         base_objects::item_rule rule;
+                         auto rule_c = it.as_compound();
+                         auto& it = rule_c.at("blocks");
+                         if (it.is_string())
+                             rule.value = it.as_string();
+                         else {
+                             auto arr_ref = it.as_array();
+                             list_array<std::string> arr;
+                             arr.reserve(arr_ref.size());
+                             for (auto& it : arr_ref)
+                                 arr.push_back(it.as_string());
+                         }
+                         if (rule_c.contains("speed"))
+                             rule.speed = (float)rule_c["speed"];
+
+                         if (rule_c.contains("correct_for_drops"))
+                             rule.correct_for_drops = (bool)rule_c["correct_for_drops"];
+                     }
+                 }
+                 return tool;
+             }
+            },
+            {"minecraft:tooltip_style",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::tooltip_style{.value = it.as_string()};
+             }
+            },
+            {"minecraft:trim",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::trim trim; //TODO extend
+                 trim.pattern = registers::armorTrimPatterns.at(comp.at("pattern").as_string()).id;
+                 trim.material = registers::armorTrimMaterials.at(comp.at("material").as_string()).id;
+                 if (comp.contains("show_in_tooltip"))
+                     trim.show_in_tooltip = comp["show_in_tooltip"];
+                 return trim;
+             }
+            },
+            {"minecraft:unbreakable",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::unbreakable{.value = it.at("show_in_tooltip")};
+             }
+            },
+            {"minecraft:use_cooldown",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::use_cooldown use_cooldown;
+                 use_cooldown.seconds = comp.at("seconds");
+                 if (comp.contains("cooldown_group"))
+                     use_cooldown.cooldown_group = comp.at("cooldown_group").as_string();
+                 return use_cooldown;
+             }
+            },
+            {"minecraft:use_remainder",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::use_remainder(slot_data::from_enbt(it.as_compound()));
+             }
+            },
+            {"minecraft:writable_book_content",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::writable_book_content writable_book_content;
+                 if (comp.contains("pages")) {
+                     auto pages = comp.at("pages").as_array();
+                     writable_book_content.pages.reserve(pages.size());
+                     for (auto& it : pages) {
+                         if (it.is_string())
+                             writable_book_content.pages.push_back({.text = it.as_string()});
+                         else {
+                             auto com = it.as_compound();
+                             auto raw = com.at("raw").as_string();
+                             std::optional<std::string> filtered;
+                             if (com.contains("filtered"))
+                                 filtered = com["filtered"].as_string();
+                             writable_book_content.pages.push_back({raw, filtered});
+                         }
+                     }
+                 }
+                 return writable_book_content;
+             }
+            },
+            {"minecraft:written_book_content",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::written_book_content written_book_content;
+                 {
+                     auto title = comp.at("title").as_compound();
+                     written_book_content.raw_title = title.at("raw").as_string();
+                     if (title.contains("filtered"))
+                         written_book_content.filtered_title = title.at("filtered").as_string();
+                 }
+                 written_book_content.author = comp.at("author").as_string();
+                 if (comp.contains("generation"))
+                     written_book_content.generation = comp.at("generation");
+                 if (comp.contains("resolved"))
+                     written_book_content.resolved = comp.at("resolved");
+                 auto pages = comp.at("pages").as_array();
+                 written_book_content.pages.reserve(pages.size());
+                 for (auto& it : pages) {
+                     if (it.is_string())
+                         written_book_content.pages.push_back({.text = it.as_string()});
+                     else {
+                         auto com = it.as_compound();
+                         auto raw = com.at("raw").as_string();
+                         std::optional<std::string> filtered;
+                         if (com.contains("filtered"))
+                             filtered = com["filtered"].as_string();
+                         written_book_content.pages.push_back({raw, filtered});
+                     }
+                 }
+                 return written_book_content;
+             }
+            },
+            {"minecraft:creative_slot_lock",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::creative_slot_lock{};
+             }
+            },
+            {"minecraft:map_post_processing",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::map_post_processing{.value = it};
+             }
+            },
+            {"minecraft:item_model",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::item_model{.value = it.as_string()};
+             }
+            },
+            {"minecraft:glider",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::glider{};
+             }
+            },
+            {"minecraft:equippable",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::equippable equippable;
+                 equippable.slot = comp.at("slot").as_string();
+                 equippable.model = comp.at("model").as_string();
+                 equippable.camera_overlay = comp.at("camera_overlay").as_string();
+                 if (comp.contains("dispensable"))
+                     equippable.dispensable = comp.at("dispensable");
+                 if (comp.contains("swappable"))
+                     equippable.swappable = comp.at("swappable");
+                 if (comp.contains("damage_on_hurt"))
+                     equippable.damage_on_hurt = comp.at("damage_on_hurt");
+                 auto equip_sound = comp.at("equip_sound");
+                 auto allowed_entities = comp.at("allowed_entities");
+                 if (equip_sound.is_string())
+                     equippable.equip_sound = equip_sound.as_string();
+                 else {
+                     auto equip_sound_com = equip_sound.as_compound();
+                     equippable.equip_sound = base_objects::slot_component::equippable::equip_sound_custom{
+                         .sound_id = equip_sound_com.at("sound_id").as_string(),
+                         .range = equip_sound_com.at("range")
+                     };
+                 }
+                 if (allowed_entities.is_string())
+                     equippable.allowed_entities = allowed_entities.as_string();
+                 else {
+                     auto allowed_entities_arr = allowed_entities.as_array();
+                     std::vector<std::string> res;
+                     res.reserve(allowed_entities_arr.size());
+                     for (auto& it : allowed_entities_arr)
+                         res.push_back(it.as_string());
+                     equippable.allowed_entities = res;
+                 }
+                 return equippable;
+             }
+            },
+            {"minecraft:enchantable",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::enchantable{.value = it};
+             }
+            },
+            {"minecraft:death_protection",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 throw std::runtime_error("Not implemented"); //TODO
+             }
+            },
+            {"minecraft:damage_resistant",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 return base_objects::slot_component::damage_resistant{.types = it.at("types").as_string()};
+             }
+            },
+            {"minecraft:consumable",
+             [](const enbt::value& it) -> base_objects::slot_component::unified {
+                 throw std::runtime_error("Not implemented"); //TODO
              }
             },
         };
-
         base_objects::slot_component::unified slot_component::parse_component(const std::string& name, const enbt::value& item) {
             return load_items_parser.at(name)(item);
         }
@@ -979,11 +1253,11 @@ namespace crafted_craft {
         }
 
         item_attribute::operation_e item_attribute::id_to_operation(const std::string& id) {
-            if (id == "add")
+            if (id == "add" || id == "add_value")
                 return operation_e::add;
-            else if (id == "multiply_base")
+            else if (id == "multiply_base" || id == "add_multiplied_base")
                 return operation_e::multiply_base;
-            else if (id == "multiply_total")
+            else if (id == "multiply_total" || id == "add_multiplied_total ")
                 return operation_e::multiply_total;
             else
                 throw std::runtime_error("Unknown operation id");
@@ -992,11 +1266,11 @@ namespace crafted_craft {
         std::string item_attribute::id_to_operation_string(int32_t id) {
             switch (id) {
             case 0:
-                return "add";
+                return "add_value";
             case 1:
-                return "multiply_base";
+                return "add_multiplied_base";
             case 2:
-                return "multiply_total";
+                return "add_multiplied_total";
             default:
                 throw std::runtime_error("Unknown operation id");
             }

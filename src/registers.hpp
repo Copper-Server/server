@@ -62,7 +62,7 @@ namespace crafted_craft {
             std::unordered_map<std::string, std::string> override_armor_materials; //leather, chainmail, iron, gold, diamond, turtle, netherite
             std::variant<std::string, Chat> description;
             float item_model_index;
-            int32_t id;
+            uint32_t id;
             bool allow_override = false;
         };
 

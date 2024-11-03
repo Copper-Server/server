@@ -376,6 +376,10 @@ namespace crafted_craft {
             Response updateTags(SharedClientData& client, const list_array<base_objects::packets::tag_mapping>& tag_mappings);
 
             Response projectilePower(SharedClientData& client, int32_t entity_id, double power_x, double power_y, double power_z);
+
+            Response custom_report(SharedClientData& client, const list_array<std::pair<std::string, std::string>>& values);
+
+            Response server_links(SharedClientData& client, const list_array<base_objects::packets::server_link>& links);
         }
     }
 }

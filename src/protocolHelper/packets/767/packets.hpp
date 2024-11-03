@@ -9,7 +9,7 @@
 #include "../../../base_objects/position.hpp"
 #include "../../../base_objects/recipe.hpp"
 
-//packets for 1.21.*, protocol 767
+//packets for 1.21.0 - 1.21.1, protocol 767
 //changes between 766:
 // Now client requires to get packet knownPacks with pack "minecraft:core" with version "1.21" also must be send before registry_data
 //
@@ -318,6 +318,10 @@ namespace crafted_craft {
                 Response updateTags(const list_array<base_objects::packets::tag_mapping>& tag_mappings);
 
                 Response projectilePower(int32_t entity_id, double power_x, double power_y, double power_z);
+
+                Response custom_report(const list_array<std::pair<std::string, std::string>>& values);
+
+                Response server_links(const list_array<base_objects::packets::server_link>& links);
             }
         }
     }

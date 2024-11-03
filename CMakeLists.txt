@@ -16,6 +16,7 @@ build_resource("resources__items" "src/resources/items.json")
 build_resource("resources__versions_765" "src/resources/versions/765.json")
 build_resource("resources__versions_766" "src/resources/versions/766.json")
 build_resource("resources__versions_767" "src/resources/versions/767.json")
+build_resource("resources__versions_768" "src/resources/versions/768.json")
 
 
 if(MSVC)

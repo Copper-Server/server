@@ -11,10 +11,9 @@
 namespace crafted_craft {
     namespace base_objects {
         struct item_attribute {
-            int32_t id;
-            enbt::raw_uuid uid;
-            std::string name;
-            double value;
+            std::string type;
+            std::string id;
+            double amount;
             enum class operation_e {
                 add,
                 multiply_base,
@@ -51,9 +50,9 @@ namespace crafted_craft {
 
         struct item_rule {
             //represents list of blocks
-            std::variant<list_array<int32_t>, std::string> value;
+            std::variant<list_array<std::string>, std::string> value;
             std::optional<float> speed;
-            std::optional<bool> correct_drop_for_blocks;
+            std::optional<bool> correct_for_drops;
             auto operator<=>(const item_rule& other) const = default;
         };
 
@@ -228,7 +227,7 @@ namespace crafted_craft {
             };
 
             struct unbreakable {
-                bool value;
+                bool value = true;
 
                 auto operator<=>(const unbreakable& other) const = default;
                 static inline std::string component_name = "unbreakable";
@@ -283,7 +282,7 @@ namespace crafted_craft {
 
             struct enchantments {
                 list_array<std::pair<int32_t, int32_t>> enchants; //type ID, level
-                bool show_in_tooltip;
+                bool show_in_tooltip = true;
 
                 auto operator<=>(const enchantments& other) const = default;
                 static inline std::string component_name = "enchantments";
@@ -387,8 +386,8 @@ namespace crafted_craft {
 
             struct tool {
                 list_array<item_rule> rules;
-                float default_mining_speed;
-                int32_t damage_per_block;
+                float default_mining_speed = 1.0;
+                int32_t damage_per_block = 1;
 
                 auto operator<=>(const tool& other) const = default;
                 static inline std::string component_name = "tool";
@@ -396,7 +395,7 @@ namespace crafted_craft {
 
             struct stored_enchantments {
                 list_array<std::pair<int32_t, int32_t>> enchants; //type ID, level
-                bool show_in_tooltip;
+                bool show_in_tooltip = true;
 
                 auto operator<=>(const stored_enchantments& other) const = default;
                 static inline std::string component_name = "stored_enchantments";
@@ -404,7 +403,7 @@ namespace crafted_craft {
 
             struct dyed_color {
                 int32_t rgb;
-                bool show_in_tooltip;
+                bool show_in_tooltip = true;
 
                 auto operator<=>(const dyed_color& other) const = default;
                 static inline std::string component_name = "dyed_color";
@@ -479,8 +478,8 @@ namespace crafted_craft {
                 std::optional<std::string> filtered_title;
                 std::string author;
                 list_array<item_page_signed> pages;
-                int32_t generation;
-                bool resolved;
+                int32_t generation = 0;
+                bool resolved = false;
 
                 auto operator<=>(const written_book_content& other) const = default;
                 static inline std::string component_name = "written_book_content";
@@ -504,8 +503,8 @@ namespace crafted_craft {
                     auto operator<=>(const pattern_extended& other) const = default;
                 };
 
-                std::variant<int32_t, material_extended> material; //id or extended
-                std::variant<int32_t, pattern_extended> pattern;   //id or extended
+                std::variant<uint32_t, material_extended> material; //id or extended
+                std::variant<uint32_t, pattern_extended> pattern;   //id or extended
                 bool show_in_tooltip = true;
 
                 auto operator<=>(const trim& other) const = default;
@@ -573,14 +572,14 @@ namespace crafted_craft {
                 };
 
                 std::variant<std::string, jukebox_extended, jukebox_compact> song; //song name, extended, compact
-                bool show_in_tooltip;
+                bool show_in_tooltip = true;
 
                 auto operator<=>(const jukebox_playable& other) const = default;
                 static inline std::string component_name = "jukebox_playable";
             };
 
             struct recipes {
-                enbt::value value;
+                std::vector<std::string> value;
                 auto operator<=>(const recipes& other) const = default;
                 static inline std::string component_name = "recipes";
             };
@@ -648,6 +647,7 @@ namespace crafted_craft {
             };
 
             struct container {
+                //optimized to reduce memory consumption, may be extended to map{item:slot_data, slot:int32} in future to support custom containers
                 slot_data* items[256] = {nullptr};
                 container() = default;
                 container(const container&);

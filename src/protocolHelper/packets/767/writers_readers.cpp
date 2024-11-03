@@ -112,10 +112,10 @@ namespace crafted_craft {
                         WriteVar<int32_t>(12, data);
                         WriteVar<int32_t>(value.attributes.size(), data);
                         for (auto& attribute : value.attributes) {
-                            WriteVar<int32_t>(attribute.id, data);
-                            WriteUUID(attribute.uid, data);
-                            WriteString(data, attribute.name);
-                            WriteValue(attribute.value, data);
+                            WriteVar<int32_t>((int32_t)registers::individual_registers[767].at("minecraft:attribute").at("entries").at(attribute.type), data);
+                            WriteUUID(enbt::raw_uuid::from_string(attribute.id), data);
+                            WriteString(data, attribute.id);
+                            WriteValue(attribute.amount, data);
                             WriteVar<int32_t>((int32_t)attribute.operation, data);
                             WriteVar<int32_t>((int32_t)attribute.slot, data);
                         }
@@ -204,7 +204,7 @@ namespace crafted_craft {
                                     } else {
                                         WriteVar<int32_t>(1 + rul.size(), data);
                                         for (auto id : rul)
-                                            WriteVar<int32_t>(id, data);
+                                            WriteVar<int32_t>(block::get_block_id(id, 767), data);
                                     }
                                 },
                                 rule.value
@@ -212,9 +212,9 @@ namespace crafted_craft {
                             data.push_back((bool)rule.speed);
                             if (rule.speed)
                                 WriteValue(*rule.speed, data);
-                            data.push_back((bool)rule.correct_drop_for_blocks);
-                            if (rule.correct_drop_for_blocks)
-                                data.push_back((bool)rule.correct_drop_for_blocks);
+                            data.push_back((bool)rule.correct_for_drops);
+                            if (rule.correct_for_drops)
+                                data.push_back((bool)rule.correct_for_drops);
                         }
                         WriteValue(value.default_mining_speed, data);
                         WriteVar<int32_t>(value.damage_per_block, data);
@@ -328,7 +328,7 @@ namespace crafted_craft {
                         std::visit(
                             [&data](auto& it) {
                                 using T = std::decay_t<decltype(it)>;
-                                if constexpr (std ::is_same_v<int32_t, T>) {
+                                if constexpr (std ::is_same_v<uint32_t, T>) {
                                     WriteVar<int32_t>(it + 1, data);
                                 } else {
                                     WriteString(data, it.asset_name);
@@ -347,7 +347,7 @@ namespace crafted_craft {
                         std::visit(
                             [&data](auto& it) {
                                 using T = std::decay_t<decltype(it)>;
-                                if constexpr (std ::is_same_v<int32_t, T>) {
+                                if constexpr (std ::is_same_v<uint32_t, T>) {
                                     WriteVar<int32_t>(it + 1, data);
                                 } else {
                                     WriteString(data, it.asset_name);

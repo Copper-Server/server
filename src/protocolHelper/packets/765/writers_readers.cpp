@@ -96,15 +96,13 @@ namespace crafted_craft {
                             auto modifiers = value.as_fixed_array();
                             slot_component::attribute_modifiers build_modifiers;
                             for (auto& modifier : modifiers) {
-                                int32_t type_id = item_attribute::attribute_name_to_id(modifier["AttributeName"]);
-                                enbt::raw_uuid uid = modifier["UUID"];
                                 std::string name = (std::string)modifier["AttributeName"];
+                                std::string uid = modifier["UUID"].as_string();
                                 double value = (double)modifier["Amount"];
                                 auto operation = item_attribute::id_to_operation((int32_t)modifier["Operation"]);
                                 auto slot = item_attribute::name_to_slot((std::string)modifier["Slot"]);
 
                                 build_modifiers.attributes.push_back(item_attribute{
-                                    type_id,
                                     uid,
                                     name,
                                     value,
@@ -250,9 +248,9 @@ namespace crafted_craft {
                             add_flags = true;
                             for (auto& modifier : std::get<slot_component::attribute_modifiers>(value).attributes) {
                                 enbt::compound mod;
-                                mod["AttributeName"] = modifier.name;
-                                mod["UUID"] = modifier.uid;
-                                mod["Amount"] = modifier.value;
+                                mod["AttributeName"] = modifier.type;
+                                mod["UUID"] = enbt::raw_uuid::from_string(modifier.id);
+                                mod["Amount"] = modifier.amount;
                                 mod["Operation"] = item_attribute::operation_to_id(modifier.operation);
                                 mod["Slot"] = item_attribute::slot_to_name(modifier.slot);
                                 attributes.push_back(std::move(mod));

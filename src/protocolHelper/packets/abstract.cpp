@@ -303,6 +303,9 @@ namespace crafted_craft {
                 create_function_selector(play, updateTags);
 
                 create_function_selector_011(play, projectilePower);
+
+                create_function_selector_001(play, custom_report);
+                create_function_selector_001(play, server_links);
             }
         }
 
@@ -1031,6 +1034,14 @@ namespace crafted_craft {
 
             Response projectilePower(SharedClientData& client, int32_t entity_id, double power_x, double power_y, double power_z) {
                 return selectors::play::projectilePower.call(client, entity_id, power_x, power_y, power_z);
+            }
+
+            Response custom_report(SharedClientData& client, const list_array<std::pair<std::string, std::string>>& values) {
+                return selectors::play::custom_report.call(client, values);
+            }
+
+            Response server_links(SharedClientData& client, const list_array<base_objects::packets::server_link>& links) {
+                return selectors::play::server_links.call(client, links);
             }
         }
     }
