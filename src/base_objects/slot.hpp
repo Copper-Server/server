@@ -160,12 +160,8 @@ namespace crafted_craft {
                 };
 
                 struct apply_effects {
-                    struct effect : public item_potion_effect {
-                        float probability = 1;
-                        auto operator<=>(const effect& other) const = default;
-                    };
-
-                    list_array<effect> effects;
+                    list_array<item_potion_effect> effects;
+                    float probability = 1;
                     auto operator<=>(const apply_effects& other) const = default;
                 };
 
@@ -179,7 +175,7 @@ namespace crafted_craft {
                 };
 
                 struct teleport_randomly {
-                    float diameter;
+                    float diameter = 16;
                     auto operator<=>(const teleport_randomly& other) const = default;
                 };
 
@@ -452,10 +448,34 @@ namespace crafted_craft {
             };
 
             struct potion_contents {
-                std::optional<int32_t> potion_id;
-                std::optional<int32_t> color_rgb;
-                list_array<item_potion_effect> custom_effects;
-                std::optional<std::string> custom_name; //since 1.21.2
+                struct full {
+                    std::optional<int32_t> potion_id;
+                    std::optional<int32_t> color_rgb;
+                    list_array<item_potion_effect> custom_effects;
+                    std::optional<std::string> custom_name; //since 1.21.2
+                    auto operator<=>(const full& other) const = default;
+                };
+
+                std::variant<int32_t, full> value;
+
+                void set_potion_id(const std::string& id);
+                void set_potion_id(int32_t id);
+
+                void set_custom_color(int32_t rgb);
+                void clear_custom_color();
+
+                void set_custom_name(const std::string& name);
+                void clear_custom_name();
+
+                void add_custom_effect(item_potion_effect&&);
+                void add_custom_effect(const item_potion_effect&);
+                void clear_custom_effects();
+
+
+                void iterate_custom_effects(std::function<void(const item_potion_effect&)> fn) const;
+                std::optional<int32_t> get_potion_id() const;
+                std::optional<int32_t> get_custom_color() const;
+                std::optional<std::string> get_custom_name() const;
 
                 auto operator<=>(const potion_contents& other) const = default;
                 static inline std::string component_name = "potion_contents";
@@ -759,7 +779,7 @@ namespace crafted_craft {
                 list_array<inner::application_effect> on_consume_effects; //optional
                 std::variant<std::string, inner::sound_extended> sound = "entity.generic.eat";
                 std::string animation = "eat";
-                float consume_seconds;
+                float consume_seconds = 1.6;
                 bool has_consume_particles = true;
 
                 auto operator<=>(const consumable& other) const = default;
@@ -795,10 +815,10 @@ namespace crafted_craft {
                 };
 
                 std::string slot; //head, chest, legs, feet, body, mainhand, offhand
-                std::string camera_overlay;
-                std::string model;
-                std::variant<std::string, equip_sound_custom> equip_sound;
-                std::variant<std::string, std::vector<std::string>> allowed_entities; //if empty then allowed to all entities
+                std::optional<std::string> camera_overlay;
+                std::optional<std::string> model;
+                std::variant<std::string, equip_sound_custom, std::nullptr_t> equip_sound;
+                std::variant<std::string, std::vector<std::string>, std::nullptr_t> allowed_entities; //if empty then allowed to all entities
                 bool dispensable = true;
                 bool swappable = true;
                 bool damage_on_hurt = true;
@@ -852,6 +872,14 @@ namespace crafted_craft {
                     return !operator==(other);
                 }
                 static inline std::string component_name = "use_remainder";
+            };
+
+            struct use_remainder____weak {
+                size_t count;
+                std::string id;
+
+                auto operator<=>(const use_remainder____weak& other) const = default;
+                static inline std::string component_name = "use_remainder____weak";
             };
 
             using unified
@@ -922,7 +950,8 @@ namespace crafted_craft {
                     repairable,
                     tooltip_style,
                     use_cooldown,
-                    use_remainder>;
+                    use_remainder,
+                    use_remainder____weak>;
 
             unified parse_component(const std::string& name, const enbt::value& item);
         }

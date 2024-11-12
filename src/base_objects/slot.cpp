@@ -9,6 +9,66 @@ namespace crafted_craft {
         std::vector<std::shared_ptr<static_slot_data>> slot_data::full_item_data_;
         std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> static_slot_data::internal_item_aliases_protocol;
 
+        base_objects::item_potion_effect parse_item_potion_effect(enbt::compound_const_ref ref) {
+            base_objects::item_potion_effect eff;
+            eff.potion_id = registers::potions.at(ref.at("id")).id;
+            if (ref.contains("amplifier"))
+                eff.data.amplifier = ref["amplifier"];
+            if (ref.contains("duration"))
+                eff.data.duration = ref["duration"];
+            if (ref.contains("ambient"))
+                eff.data.ambient = ref["ambient"];
+            if (ref.contains("show_particles"))
+                eff.data.show_particles = ref["show_particles"];
+            if (ref.contains("show_icon"))
+                eff.data.show_icon = ref["show_icon"];
+            return eff;
+        }
+
+        base_objects::slot_component::inner::application_effect parse_application_effect(enbt::compound_const_ref ref) {
+            auto type = ref.at("type").as_string();
+            if (type == "minecraft:apply_effects") {
+                base_objects::slot_component::inner::apply_effects ap_ef;
+                for (auto& it : ref.at("effects").as_array())
+                    ap_ef.effects.push_back(parse_item_potion_effect(it.as_compound()));
+                ap_ef.effects.commit();
+                if (ref.contains("probability"))
+                    ap_ef.probability = ref["probability"];
+                return ap_ef;
+            } else if (type == "minecraft:remove_effects") {
+                base_objects::slot_component::inner::remove_effects rem_ef;
+                if (ref.at("effects").is_string())
+                    rem_ef.effects = ref.at("effects").as_string();
+                else {
+                    list_array<std::string> arr;
+                    for (auto& it : ref.at("effects").as_array())
+                        arr.push_back(it.as_string());
+                    arr.commit();
+                    rem_ef.effects = arr;
+                }
+                return rem_ef;
+            } else if (type == "minecraft:clear_all_effects")
+                return base_objects::slot_component::inner::clear_all_effects{};
+            else if (type == "minecraft:teleport_randomly") {
+                if (ref.contains("diameter"))
+                    return base_objects::slot_component::inner::teleport_randomly{ref["diameter"]};
+                else
+                    return base_objects::slot_component::inner::teleport_randomly{};
+            } else if (type == "minecraft:play_sound") {
+                if (ref.at("sound").is_string())
+                    return base_objects::slot_component::inner::play_sound{.sound = ref["sound"].as_string()};
+                else {
+                    auto c = ref.at("sound").as_compound();
+                    base_objects::slot_component::inner::sound_extended sound;
+                    sound.sound_name = c.at("sound_id").as_string();
+                    if (c.contains("range"))
+                        sound.fixed_range = c["range"];
+                    return base_objects::slot_component::inner::play_sound{.sound = sound};
+                }
+            } else
+                throw std::runtime_error("Not implemented");
+        }
+
         std::unordered_map<std::string, base_objects::slot_component::unified (*)(const enbt::value&)> load_items_parser{
             {"minecraft:attribute_modifiers",
              [](const enbt::value& it) -> base_objects::slot_component::unified {
@@ -548,24 +608,22 @@ namespace crafted_craft {
             },
             {"minecraft:potion_contents",
              [](const enbt::value& it) -> base_objects::slot_component::unified {
-                 auto comp = it.as_compound();
                  base_objects::slot_component::potion_contents potion_contents;
-                 //TODO continue
-                 //potion_contents.potion_id = (std::string)comp.at("potion").as_string();
-                 //if (comp.contains("effects")) {
-                 //    for (auto& effect : comp.at("effects").as_array()) {
-                 //        auto& eff = effect.as_compound();
-                 //        base_objects::item_potion_effect potion_effect;
-                 //        potion_effect.potion_id = (std::string)eff.at("id").as_string();
-                 //        potion_effect.amplifier = eff.at("amplifier").to_number<int8_t>();
-                 //        potion_effect.duration = eff.at("duration");
-                 //        potion_effect.ambient = eff.at("ambient");
-                 //        potion_effect.show_particles = eff.at("show_particles");
-                 //        potion_effect.show_icon = eff.at("show_icon");
-                 //        potion_contents.effects.push_back(potion_effect);
-                 //    }
-                 //    potion_contents.effects.commit();
-                 //}
+                 if (it.is_string())
+                     potion_contents.set_potion_id(it.as_string());
+                 else {
+                     auto comp = it.as_compound();
+                     if (comp.contains("potion"))
+                         potion_contents.set_potion_id(comp["potion"].as_string());
+                     if (comp.contains("custom_color"))
+                         potion_contents.set_custom_color(comp["custom_color"]);
+                     if (comp.contains("custom_name"))
+                         potion_contents.set_custom_name(comp["custom_name"]);
+                     if (comp.contains("custom_effects")) {
+                         for (auto& it : comp["custom_effects"].as_array())
+                             potion_contents.add_custom_effect(parse_item_potion_effect(it.as_compound()));
+                     }
+                 }
                  return potion_contents;
              }
             },
@@ -611,14 +669,14 @@ namespace crafted_craft {
             {"minecraft:repairable",
              [](const enbt::value& it) -> base_objects::slot_component::unified {
                  if (it.is_array()) {
-                     auto arr = it.as_array();
+                     auto arr = it.at("items").as_array();
                      std::vector<std::string> res;
                      res.reserve(arr.size());
                      for (auto& it : arr)
                          res.push_back(it.as_string());
                      return base_objects::slot_component::repairable{.items = std::move(res)};
                  } else
-                     return base_objects::slot_component::repairable{.items = it.as_string()};
+                     return base_objects::slot_component::repairable{.items = it.at("items").as_string()};
              }
             },
             {"minecraft:repair_cost",
@@ -724,7 +782,11 @@ namespace crafted_craft {
             },
             {"minecraft:use_remainder",
              [](const enbt::value& it) -> base_objects::slot_component::unified {
-                 return base_objects::slot_component::use_remainder(slot_data::from_enbt(it.as_compound()));
+                 auto comp = it.as_compound();
+                 if (!comp.contains("components")) {
+                     return base_objects::slot_component::use_remainder____weak(comp["count"], comp["id"].as_string());
+                 } else
+                     return base_objects::slot_component::use_remainder(slot_data::from_enbt(it.as_compound()));
              }
             },
             {"minecraft:writable_book_content",
@@ -807,46 +869,63 @@ namespace crafted_craft {
                  auto comp = it.as_compound();
                  base_objects::slot_component::equippable equippable;
                  equippable.slot = comp.at("slot").as_string();
-                 equippable.model = comp.at("model").as_string();
-                 equippable.camera_overlay = comp.at("camera_overlay").as_string();
+                 if (comp.contains("model"))
+                     equippable.model = comp.at("model").as_string();
+                 if (comp.contains("camera_overlay"))
+                     equippable.camera_overlay = comp.at("camera_overlay").as_string();
                  if (comp.contains("dispensable"))
                      equippable.dispensable = comp.at("dispensable");
                  if (comp.contains("swappable"))
                      equippable.swappable = comp.at("swappable");
                  if (comp.contains("damage_on_hurt"))
                      equippable.damage_on_hurt = comp.at("damage_on_hurt");
-                 auto equip_sound = comp.at("equip_sound");
-                 auto allowed_entities = comp.at("allowed_entities");
-                 if (equip_sound.is_string())
-                     equippable.equip_sound = equip_sound.as_string();
-                 else {
-                     auto equip_sound_com = equip_sound.as_compound();
-                     equippable.equip_sound = base_objects::slot_component::equippable::equip_sound_custom{
-                         .sound_id = equip_sound_com.at("sound_id").as_string(),
-                         .range = equip_sound_com.at("range")
-                     };
-                 }
-                 if (allowed_entities.is_string())
-                     equippable.allowed_entities = allowed_entities.as_string();
-                 else {
-                     auto allowed_entities_arr = allowed_entities.as_array();
-                     std::vector<std::string> res;
-                     res.reserve(allowed_entities_arr.size());
-                     for (auto& it : allowed_entities_arr)
-                         res.push_back(it.as_string());
-                     equippable.allowed_entities = res;
-                 }
+                 if (comp.contains("equip_sound")) {
+                     auto equip_sound = comp.at("equip_sound");
+                     if (equip_sound.is_string())
+                         equippable.equip_sound = equip_sound.as_string();
+                     else {
+                         auto equip_sound_com = equip_sound.as_compound();
+                         equippable.equip_sound = base_objects::slot_component::equippable::equip_sound_custom{
+                             .sound_id = equip_sound_com.at("sound_id").as_string(),
+                             .range = equip_sound_com.at("range")
+                         };
+                     }
+                 } else
+                     equippable.equip_sound = nullptr;
+                 if (comp.contains("allowed_entities")) {
+                     auto allowed_entities = comp.at("allowed_entities");
+                     if (allowed_entities.is_string())
+                         equippable.allowed_entities = allowed_entities.as_string();
+                     else {
+                         auto allowed_entities_arr = allowed_entities.as_array();
+                         std::vector<std::string> res;
+                         res.reserve(allowed_entities_arr.size());
+                         for (auto& it : allowed_entities_arr)
+                             res.push_back(it.as_string());
+                         equippable.allowed_entities = res;
+                     }
+                 } else
+                     equippable.allowed_entities = nullptr;
                  return equippable;
              }
             },
             {"minecraft:enchantable",
              [](const enbt::value& it) -> base_objects::slot_component::unified {
-                 return base_objects::slot_component::enchantable{.value = it};
+                 return base_objects::slot_component::enchantable{.value = it.at("value")};
              }
             },
             {"minecraft:death_protection",
              [](const enbt::value& it) -> base_objects::slot_component::unified {
-                 throw std::runtime_error("Not implemented"); //TODO
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::death_protection death_protection;
+                 if (comp.contains("death_effects")) {
+                     list_array<base_objects::slot_component::inner::application_effect> res;
+                     for (auto& it : comp.at("death_effects").as_array())
+                         res.push_back(parse_application_effect(it.as_compound()));
+                     res.commit();
+                     death_protection.death_effects = res;
+                 }
+                 return death_protection;
              }
             },
             {"minecraft:damage_resistant",
@@ -856,10 +935,31 @@ namespace crafted_craft {
             },
             {"minecraft:consumable",
              [](const enbt::value& it) -> base_objects::slot_component::unified {
-                 throw std::runtime_error("Not implemented"); //TODO
+                 auto comp = it.as_compound();
+                 base_objects::slot_component::consumable consumable;
+                 if (comp.contains("consume_seconds"))
+                     consumable.consume_seconds = comp["consume_seconds"];
+                 if (comp.contains("animation"))
+                     consumable.animation = comp["animation"].as_string();
+                 if (comp.contains("sound")) {
+                     if (comp["sound"].is_string())
+                         consumable.sound = comp["sound"].as_string();
+                     else {
+                         auto c = comp["sound"].as_compound();
+                     }
+                 }
+                 if (comp.contains("on_consume_effects")) {
+                     list_array<base_objects::slot_component::inner::application_effect> res;
+                     for (auto& it : comp.at("on_consume_effects").as_array())
+                         res.push_back(parse_application_effect(it.as_compound()));
+                     res.commit();
+                     consumable.on_consume_effects = res;
+                 }
+                 return consumable;
              }
             },
         };
+
         base_objects::slot_component::unified slot_component::parse_component(const std::string& name, const enbt::value& item) {
             return load_items_parser.at(name)(item);
         }
@@ -957,7 +1057,6 @@ namespace crafted_craft {
             else
                 return white;
         }
-
 
         bool item_potion_effect::effect_data::operator==(const effect_data& other) const {
             if (ambient != other.ambient
@@ -1101,7 +1200,6 @@ namespace crafted_craft {
             }
             return true;
         }
-
 
         std::string item_attribute::id_to_attribute_name(int32_t id) {
             switch (id) {
@@ -1336,6 +1434,7 @@ namespace crafted_craft {
                 delete proxy_value;
             }
 
+
             bool use_remainder::operator==(const use_remainder& other) const {
                 return *proxy_value == *other.proxy_value;
             }
@@ -1366,6 +1465,108 @@ namespace crafted_craft {
                     return epic;
                 else
                     return common;
+            }
+
+            void potion_contents::set_potion_id(const std::string& id) {
+                set_potion_id((int32_t)registers::potions.at(id).id);
+            }
+
+            void potion_contents::set_potion_id(int32_t id) {
+                if (std::holds_alternative<int32_t>(value))
+                    value = id;
+                else
+                    std::get<full>(value).potion_id = id;
+            }
+
+            void potion_contents::set_custom_color(int32_t rgb) {
+                if (std::holds_alternative<int32_t>(value))
+                    value = full{.potion_id = std::get<int32_t>(value), .color_rgb = rgb};
+                else
+                    std::get<full>(value).color_rgb = rgb;
+            }
+
+            void potion_contents::clear_custom_color() {
+                if (std::holds_alternative<int32_t>(value))
+                    return;
+                else {
+                    auto& it = std::get<full>(value);
+                    it.color_rgb.reset();
+                    if (it.custom_effects.empty() && !it.custom_name && it.potion_id)
+                        value = *it.potion_id;
+                }
+            }
+
+            void potion_contents::set_custom_name(const std::string& name) {
+                if (std::holds_alternative<int32_t>(value))
+                    value = full{.potion_id = std::get<int32_t>(value), .custom_name = name};
+                else
+                    std::get<full>(value).custom_name = name;
+            }
+
+            void potion_contents::clear_custom_name() {
+                if (std::holds_alternative<int32_t>(value))
+                    return;
+                else {
+                    auto& it = std::get<full>(value);
+                    it.custom_name.reset();
+                    if (it.custom_effects.empty() && !it.color_rgb && it.potion_id)
+                        value = *it.potion_id;
+                }
+            }
+
+            void potion_contents::add_custom_effect(item_potion_effect&& effect) {
+                if (std::holds_alternative<int32_t>(value))
+                    value = full{.potion_id = std::get<int32_t>(value), .custom_effects = {std::move(effect)}};
+                else
+                    std::get<full>(value).custom_effects.push_back(std::move(effect));
+            }
+
+            void potion_contents::add_custom_effect(const item_potion_effect& effect) {
+                if (std::holds_alternative<int32_t>(value))
+                    value = full{.potion_id = std::get<int32_t>(value), .custom_effects = {effect}};
+                else
+                    std::get<full>(value).custom_effects.push_back(effect);
+            }
+
+            void potion_contents::clear_custom_effects() {
+                if (std::holds_alternative<int32_t>(value))
+                    return;
+                else {
+                    auto& it = std::get<full>(value);
+                    it.custom_effects.clear();
+                    if (!it.custom_name && !it.color_rgb && it.potion_id)
+                        value = *it.potion_id;
+                }
+            }
+
+            void potion_contents::iterate_custom_effects(std::function<void(const item_potion_effect&)> fn) const {
+                if (std::holds_alternative<int32_t>(value))
+                    return;
+                else {
+                    auto& it = std::get<full>(value);
+                    it.custom_effects.for_each(fn);
+                }
+            }
+
+            std::optional<int32_t> potion_contents::get_potion_id() const {
+                if (std::holds_alternative<int32_t>(value))
+                    return std::get<int32_t>(value);
+                else
+                    return std::get<full>(value).potion_id;
+            }
+
+            std::optional<int32_t> potion_contents::get_custom_color() const {
+                if (std::holds_alternative<int32_t>(value))
+                    return std::nullopt;
+                else
+                    return std::get<full>(value).color_rgb;
+            }
+
+            std::optional<std::string> potion_contents::get_custom_name() const {
+                if (std::holds_alternative<int32_t>(value))
+                    return std::nullopt;
+                else
+                    return std::get<full>(value).custom_name;
             }
         }
 

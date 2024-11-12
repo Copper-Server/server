@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.23)
+cmake_minimum_required(VERSION 3.25)
 set(CMAKE_POLICY_DEFAULT_CMP0091 NEW)
 project(CraftedCart CXX)
 set(CMAKE_C_STANDARD 23)
@@ -10,13 +10,31 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
 add_subdirectory(tools)
+
 message(STATUS "Building resources")
-build_resource("resources__blocks" "src/resources/blocks.json")
-build_resource("resources__items" "src/resources/items.json")
-build_resource("resources__versions_765" "src/resources/versions/765.json")
-build_resource("resources__versions_766" "src/resources/versions/766.json")
-build_resource("resources__versions_767" "src/resources/versions/767.json")
-build_resource("resources__versions_768" "src/resources/versions/768.json")
+FILE(GLOB RESOURCE_FILES CONFIGURE_DEPENDS 
+  resources/*.* 
+  resources/*/*.* 
+  resources/*/*/*.* 
+  resources/*/*/*/*.* 
+  resources/*/*/*/*/*.*
+)
+list(FILTER RESOURCE_FILES EXCLUDE REGEX ".*/resources/include.hpp")
+build_resources("crafted_craft" "built_resources" "${RESOURCE_FILES}" RESOURCE_FILES_include RESOURCE_FILES_build )
+
+
+function(create_resources_header resources_folder resouce_headers)
+    set(resources_header "${resources_folder}/include.hpp")
+    foreach(file ${resouce_headers})
+        file(APPEND ${resources_header} "#include \"${file}\"\n")
+    endforeach()
+endfunction(create_resources_header)
+
+file(REMOVE "resources/include.hpp")
+create_resources_header("resources" "${RESOURCE_FILES_include}")
+
+
+
 
 
 if(MSVC)
@@ -48,7 +66,7 @@ find_package(utf8cpp CONFIG REQUIRED)
 add_subdirectory("src/library/fast_task")
 add_subdirectory("src/library/commandline")
 
-set(CC_src_INCLUDE_DIR "src")
+set(CC_src_INCLUDE_DIR ".")
 set(CC_INCLUDE_DIR ${CC_src_INCLUDE_DIR})
 
 FILE(GLOB SRCFILES 
@@ -57,19 +75,16 @@ FILE(GLOB SRCFILES
         src/*.cpp 
         src/*/*.cpp 
         src/*/*/*.cpp 
-
-        src/*/*/*.cc 
-        src/*/*/*/*.cc 
 )
 list(FILTER SRCFILES EXCLUDE REGEX "src/library/list_array/tests.cpp")
 
-include_directories(${Boost_INCLUDE_DIRS} ${CC_INCLUDE_DIR}${ZLIB_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${utf8cpp_INCLUDE_DIRS})
+include_directories(${Boost_INCLUDE_DIRS} ${CC_INCLUDE_DIR} ${ZLIB_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${utf8cpp_INCLUDE_DIRS})
+
 
 IF(MSVC)
   SET(CMAKE_CXX_FLAGS "/EHsc")
 ENDIF(MSVC)
-
-  add_executable(CraftedCart ${SRCFILES})
+  add_executable(CraftedCart ${SRCFILES} ${RESOURCE_FILES_build})
   set_property(TARGET CraftedCart PROPERTY
     MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
   target_link_libraries(CraftedCart

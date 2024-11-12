@@ -1,19 +1,17 @@
 #include "../registers.hpp"
+#include "../api/recipe.hpp"
 #include "../base_objects/entity.hpp"
 #include "../util/conversions.hpp"
 #include "../util/json_helpers.hpp"
-#include "embed/blocks.json.hpp"
-#include "embed/items.json.hpp"
-
-#include "versions/embed/765.json.hpp"
-#include "versions/embed/766.json.hpp"
-#include "versions/embed/767.json.hpp"
-#include "versions/embed/768.json.hpp"
-
-#include "../api/recipe.hpp"
-
+#include <resources/include.hpp>
 namespace crafted_craft {
     namespace resources {
+        template <size_t size>
+        boost::json::value json_resource(const std::array<uint8_t, size>& data) {
+            return boost::json::parse(std::string_view((const char*)data.data(), data.size()));
+        }
+
+
         template <class T, class Iterator>
         void id_assigner(std::unordered_map<std::string, T>& map, list_array<Iterator>& cache) {
             size_t i = 0;
@@ -5442,7 +5440,7 @@ namespace crafted_craft {
         }
 
         void load_blocks() {
-            auto parsed = boost::json::parse(std::string_view((const char*)resources__blocks.data(), resources__blocks.size()));
+            auto parsed = json_resource(resources::registry::blocks);
 
             base_objects::block::access_full_block_data(std::function(
                 [&](
@@ -5520,7 +5518,7 @@ namespace crafted_craft {
         }
 
         void load_items() {
-            auto parsed = boost::json::parse(std::string_view((const char*)resources__items.data(), resources__items.size()));
+            auto parsed = json_resource(resources::registry::items);
             for (auto&& [name, decl] : parsed.as_object()) {
                 base_objects::static_slot_data slot_data;
                 slot_data.id = name;
@@ -5532,15 +5530,12 @@ namespace crafted_craft {
             }
         }
 
+
         void prepare_versions() {
-            auto parsed = boost::json::parse(std::string_view((const char*)resources__versions_765.data(), resources__versions_765.size()));
-            registers::individual_registers[765] = util::conversions::json::from_json(parsed);
-            parsed = boost::json::parse(std::string_view((const char*)resources__versions_766.data(), resources__versions_766.size()));
-            registers::individual_registers[766] = util::conversions::json::from_json(parsed);
-            parsed = boost::json::parse(std::string_view((const char*)resources__versions_767.data(), resources__versions_767.size()));
-            registers::individual_registers[767] = util::conversions::json::from_json(parsed);
-            parsed = boost::json::parse(std::string_view((const char*)resources__versions_768.data(), resources__versions_768.size()));
-            registers::individual_registers[768] = util::conversions::json::from_json(parsed);
+            registers::individual_registers[765] = util::conversions::json::from_json(json_resource(resources::registry::protocol::_765));
+            registers::individual_registers[766] = util::conversions::json::from_json(json_resource(resources::registry::protocol::_766));
+            registers::individual_registers[767] = util::conversions::json::from_json(json_resource(resources::registry::protocol::_767));
+            registers::individual_registers[768] = util::conversions::json::from_json(json_resource(resources::registry::protocol::_768));
         }
     }
 }

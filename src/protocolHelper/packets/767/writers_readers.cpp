@@ -159,14 +159,18 @@ namespace crafted_craft {
                         WriteValue(value.saturation, data);
                         data.push_back(value.can_always_eat);
                         float seconds_to_eat = 3;
-                        slot_component::inner::apply_effects effects;
+                        list_array<std::pair<float, item_potion_effect>> effects;
                         if (slot.has_component<slot_component::consumable>()) {
                             auto& consumable = slot.get_component<slot_component::consumable>();
                             seconds_to_eat = consumable.consume_seconds;
                             consumable.on_consume_effects.for_each(
                                 [&](auto& vars) {
-                                    if (std::holds_alternative<slot_component::inner::apply_effects>(vars))
-                                        effects.effects.push_back(std::get<slot_component::inner::apply_effects>(vars).effects);
+                                    if (std::holds_alternative<slot_component::inner::apply_effects>(vars)) {
+                                        auto& it = std::get<slot_component::inner::apply_effects>(vars);
+                                        it.effects.for_each([&it, &effects](auto& effect) {
+                                            effects.push_back({it.probability, effect});
+                                        });
+                                    }
                                 }
                             );
                         }
@@ -178,11 +182,11 @@ namespace crafted_craft {
                         } else
                             WriteSlotItem(data, slot_data::create_item("minecraft:air"), 767);
 
-                        WriteVar<int32_t>(effects.effects.size(), data);
-                        for (auto& it : effects.effects) {
-                            WriteVar<int32_t>(it.potion_id, data);
-                            __effect_encoder(data, it.data);
-                            WriteValue(it.probability, data);
+                        WriteVar<int32_t>(effects.size(), data);
+                        for (auto& it : effects) {
+                            WriteVar<int32_t>(it.second.potion_id, data);
+                            __effect_encoder(data, it.second.data);
+                            WriteValue(it.first, data);
                         }
                     }
 
@@ -272,16 +276,24 @@ namespace crafted_craft {
 
                     void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::potion_contents& value) {
                         WriteVar<int32_t>(31, data);
-                        data.push_back((bool)value.potion_id);
-                        if (value.potion_id)
-                            WriteVar<int32_t>(*value.potion_id, data);
-                        data.push_back((bool)value.color_rgb);
-                        if (value.color_rgb)
-                            WriteVar<int32_t>(*value.color_rgb, data);
-                        WriteVar<int32_t>(value.custom_effects.size(), data);
-                        for (auto& effect : value.custom_effects) {
-                            WriteVar<int32_t>(effect.potion_id, data);
-                            __effect_encoder(data, effect.data);
+                        auto pot_id = value.get_potion_id();
+                        auto col = value.get_custom_color();
+
+                        data.push_back((bool)pot_id);
+                        if (pot_id)
+                            WriteVar<int32_t>(*pot_id, data);
+                        data.push_back((bool)col);
+                        if (col)
+                            WriteVar<int32_t>(*col, data);
+                        if (std::holds_alternative<int32_t>(value.value))
+                            data.push_back(0);
+                        else {
+                            auto& arr = std::get<slot_component::potion_contents::full>(value.value).custom_effects;
+                            WriteVar<int32_t>(arr.size(), data);
+                            for (auto& effect : arr) {
+                                WriteVar<int32_t>(effect.potion_id, data);
+                                __effect_encoder(data, effect.data);
+                            }
                         }
                     }
 
@@ -531,6 +543,8 @@ namespace crafted_craft {
                     void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::use_cooldown& value) {}
 
                     void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::use_remainder& value) {}
+
+                    void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::use_remainder____weak& value) {}
                 }
 
                 namespace slot_component_decoder {

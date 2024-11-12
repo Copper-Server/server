@@ -32,20 +32,46 @@ endif()
 
 
 
-function(build_resource name input_file)
-    cmake_path(GET input_file PARENT_PATH result_path)
+function(build_resource project_name input_file output_folder)
     cmake_path(GET input_file FILENAME result_name)
-
-    set(result_file ${result_path}/embed/${result_name}.cpp_resource)
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed)
     execute_process(
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed.exe ${name} ${input_file} 
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed.exe ${project_name} ${input_file} ${output_folder}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         RESULT_VARIABLE result
-        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed/${name}_error.log
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed/${result_name}_error.log
     )
     if(result)
-        message(FATAL_ERROR "Failed to build resource ${input_file} to ${result_name} ${result_file}")
+        message(FATAL_ERROR "Failed to build resource ${input_file}")
     endif()
     file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
 endfunction(build_resource)
+
+function(build_resources project_name output_folder FILES HEADERS_PAR SOURCES_PAR)
+    foreach(file ${FILES})
+        build_resource(${project_name} ${file} ${output_folder})
+    endforeach()
+
+    FILE(GLOB HEADERS
+        "${output_folder}/*.hpp"
+        "${output_folder}/*/*.hpp"
+        "${output_folder}/*/*/*.hpp"
+        "${output_folder}/*/*/*/*.hpp"
+        "${output_folder}/*/*/*/*/*.hpp"
+        "${output_folder}/*/*/*/*/*/*.hpp"
+    )
+    FILE(GLOB SOURCES
+        "${output_folder}/*.cpp"
+        "${output_folder}/*/*.cpp"
+        "${output_folder}/*/*/*.cpp"
+        "${output_folder}/*/*/*/*.cpp"
+        "${output_folder}/*/*/*/*/*.cpp"
+        "${output_folder}/*/*/*/*/*/*.cpp"
+    )
+
+    set(${HEADERS_PAR} ${HEADERS})
+    set(${SOURCES_PAR} ${SOURCES})
+
+
+    return(PROPAGATE ${HEADERS_PAR} ${SOURCES_PAR})
+endfunction(build_resources)

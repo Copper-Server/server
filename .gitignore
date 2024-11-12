@@ -12,4 +12,5 @@ config.json
 tools/logs
 tools/*/out
 tools/*.exe
-*.cc
+built_resources/
+resources/include.hpp

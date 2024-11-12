@@ -179,10 +179,10 @@ namespace crafted_craft {
                         } else if (name == "custom_potion_effects") {
                             auto custom_potion_effects = value.as_fixed_array();
                             slot_component::potion_contents& potion_contents = slot.access_component<slot_component::potion_contents>();
+
                             for (auto& effect : custom_potion_effects) {
                                 potion_contents
-                                    .custom_effects
-                                    .push_back(
+                                    .add_custom_effect(
                                         item_potion_effect{
                                             0, //(std::string)effect["id"],
                                             item_potion_effect::effect_data{
@@ -195,9 +195,9 @@ namespace crafted_craft {
                                     );
                             }
                         } else if (name == "Potion") {
-                            slot.access_component<slot_component::potion_contents>().potion_id = registers::potions.at((std::string)value).id;
+                            slot.access_component<slot_component::potion_contents>().set_potion_id((int32_t)registers::potions.at((std::string)value).id);
                         } else if (name == "CustomPotionColor") {
-                            slot.access_component<slot_component::potion_contents>().potion_id = (int32_t)value;
+                            slot.access_component<slot_component::potion_contents>().set_custom_color(value);
                         } else if (name == "Trim") {
                             //slot.components["trim"] =  slot_component::trim{
                             //    value[]
