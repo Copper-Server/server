@@ -1,8 +1,8 @@
 #ifndef SRC_BASE_OBJECTS_RESPONSE
 #define SRC_BASE_OBJECTS_RESPONSE
-#include "../library/list_array.hpp"
+#include <library/list_array.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
 
         struct Response {
@@ -126,7 +126,8 @@ namespace crafted_craft {
 
     } // namespace base_objects
 }
-using Response = crafted_craft::base_objects::Response;
+
+using Response = copper_server::base_objects::Response;
 
 
 #endif /* SRC_BASE_OBJECTS_RESPOSNE */

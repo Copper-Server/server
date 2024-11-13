@@ -1,14 +1,14 @@
 #ifndef SRC_STORAGE_ENBT_LIST_STORAGE
 #define SRC_STORAGE_ENBT_LIST_STORAGE
-#include "../library/enbt.hpp"
-#include "../library/fast_task.hpp"
-#include "../library/list_array.hpp"
 #include <filesystem>
+#include <library/enbt.hpp>
+#include <library/fast_task.hpp>
+#include <library/list_array.hpp>
 #include <optional>
 #include <string>
 #include <unordered_map>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace storage {
         class enbt_list_storage {
             fast_task::protected_value<std::unordered_map<std::string, enbt::value>> data;
@@ -57,6 +57,6 @@ namespace crafted_craft {
         };
     } // namespace storage
 
-} // namespace crafted_craft
+} // namespace copper_server
 
 #endif /* SRC_STORAGE_ENBT_LIST_STORAGE */

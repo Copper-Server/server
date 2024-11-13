@@ -1,8 +1,8 @@
 
-#include "../../../base_objects/slot.hpp"
-#include "../../../util/readers.hpp"
+#include <src/base_objects/slot.hpp>
+#include <src/util/readers.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace packets {
         namespace release_768 {
             namespace reader {

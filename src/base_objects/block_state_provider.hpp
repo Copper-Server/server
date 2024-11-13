@@ -1,10 +1,10 @@
 #ifndef SRC_BASE_OBJECTS_BLOCK_STATE_PROVIDER
 #define SRC_BASE_OBJECTS_BLOCK_STATE_PROVIDER
-#include "../library/enbt.hpp"
-#include "block.hpp"
 #include <functional>
+#include <library/enbt.hpp>
+#include <src/base_objects/block.hpp>
 
-namespace crafted_craft::base_objects {
+namespace copper_server::base_objects {
     struct block_state_provider_generator {
         using handler = std::function<block(const enbt::compound_const_ref& config, enbt::compound& local_state)>;
 

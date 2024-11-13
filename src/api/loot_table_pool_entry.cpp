@@ -1,6 +1,6 @@
-#include "../base_objects/loot_table_pool_entry_processor.hpp"
+#include <src/base_objects/loot_table_pool_entry_processor.hpp>
 
-namespace crafted_craft::api::loot_table_pool_entry {
+namespace copper_server::api::loot_table_pool_entry {
     base_objects::loot_table_pool_entry_processor* processor;
 
     void register_processor(base_objects::loot_table_pool_entry_processor& to_register_processor) {

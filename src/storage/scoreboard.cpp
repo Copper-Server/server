@@ -1,8 +1,8 @@
-#include "scoreboard.hpp"
-#include "../log.hpp"
-#include "../util/json_helpers.hpp"
+#include <src/log.hpp>
+#include <src/storage/scoreboard.hpp>
+#include <src/util/json_helpers.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace storage {
         scoreboard::scoreboard(const std::filesystem::path& path)
             : path(path) {}
@@ -239,4 +239,4 @@ namespace crafted_craft {
             util::pretty_print(file, entry);
         }
     } // namespace storage
-} // namespace crafted_craft
+} // namespace copper_server

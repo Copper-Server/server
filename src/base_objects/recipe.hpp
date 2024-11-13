@@ -1,11 +1,11 @@
 #ifndef SRC_BASE_OBJECTS_RECIPE
 #define SRC_BASE_OBJECTS_RECIPE
-#include "../library/list_array.hpp"
-#include "slot.hpp"
+#include <library/list_array.hpp>
+#include <src/base_objects/slot.hpp>
 #include <string>
 #include <variant>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         namespace recipes {
             enum class category_t {
@@ -239,7 +239,7 @@ namespace crafted_craft {
 
             template <>
             struct variant_data<custom> {
-                constexpr static inline const char* name = "crafted_craft:custom";
+                constexpr static inline const char* name = "copper_server:custom";
                 constexpr static inline int32_t id = -1;
             };
 

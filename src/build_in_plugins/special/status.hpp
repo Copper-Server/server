@@ -1,12 +1,13 @@
 #ifndef SRC_BUILD_IN_PLUGINS_SPECIAL_STATUS
 #define SRC_BUILD_IN_PLUGINS_SPECIAL_STATUS
-#include "../../api/configuration.hpp"
-#include "../../api/players.hpp"
-#include "../../library/fast_task.hpp"
-#include "../../plugin/special.hpp"
-#include "../../storage/memory/online_player.hpp"
-#include "../../util/conversions.hpp"
-namespace crafted_craft {
+#include <library/fast_task.hpp>
+#include <src/api/configuration.hpp>
+#include <src/api/players.hpp>
+#include <src/plugin/special.hpp>
+#include <src/storage/memory/online_player.hpp>
+#include <src/util/conversions.hpp>
+
+namespace copper_server {
     namespace build_in_plugins {
         namespace special {
             class Status : public SpecialPluginStatus {
@@ -37,7 +38,7 @@ namespace crafted_craft {
                 list_array<std::pair<std::string, enbt::raw_uuid>> OnlinePlayersSample() override {
                     list_array<std::pair<std::string, enbt::raw_uuid>> result;
                     size_t i = 0;
-                    api::players::iterate_players_not_state(crafted_craft::base_objects::SharedClientData::packets_state_t::protocol_state::initialization, [&](const crafted_craft::base_objects::SharedClientData& player) {
+                    api::players::iterate_players_not_state(copper_server::base_objects::SharedClientData::packets_state_t::protocol_state::initialization, [&](const copper_server::base_objects::SharedClientData& player) {
                         if (i < api::configuration::get().status.sample_players_count) {
                             if (!player.data)
                                 return true;

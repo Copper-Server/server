@@ -1,9 +1,9 @@
 #ifndef SRC_PROTOCOLHELPER_CLIENT_HANDLER_766_CONFIGURATION
 #define SRC_PROTOCOLHELPER_CLIENT_HANDLER_766_CONFIGURATION
-#include "../../packets/766/packets.hpp"
-#include "../abstract.hpp"
+#include <src/protocolHelper/client_handler/abstract.hpp>
+#include <src/protocolHelper/packets/766/packets.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace client_handler {
         namespace release_766 {
             class HandleConfiguration : public TCPClientHandle {

@@ -3,7 +3,7 @@
 
 #include <variant>
 
-namespace crafted_craft::base_objects {
+namespace copper_server::base_objects {
     struct float_provider_constant {
         float value;
     };

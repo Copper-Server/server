@@ -1,8 +1,8 @@
-#include "enbt_list_storage.hpp"
 #include <filesystem>
 #include <fstream>
+#include <src/storage/enbt_list_storage.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace storage {
         enbt_list_storage::enbt_list_storage(const std::filesystem::path& path)
             : path(path) {
@@ -128,4 +128,4 @@ namespace crafted_craft {
 
     } // namespace storage
 
-} // namespace crafted_craft
+} // namespace copper_server

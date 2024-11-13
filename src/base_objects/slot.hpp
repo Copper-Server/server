@@ -1,14 +1,14 @@
 #ifndef SRC_BASE_OBJECTS_SLOT
 #define SRC_BASE_OBJECTS_SLOT
-#include "../library/enbt.hpp"
-#include "../library/list_array.hpp"
-#include "../util/readers.hpp"
-#include "chat.hpp"
-#include "position.hpp"
+#include <library/enbt.hpp>
+#include <library/list_array.hpp>
 #include <optional>
+#include <src/base_objects/chat.hpp>
+#include <src/base_objects/position.hpp>
+#include <src/util/readers.hpp>
 #include <string>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         struct item_attribute {
             std::string type;
@@ -148,6 +148,12 @@ namespace crafted_craft {
         };
 
         struct slot_data;
+
+        struct weak_slot_data {
+            std::string id;
+            int32_t count;
+            auto operator<=>(const weak_slot_data& other) const = default;
+        };
 
         namespace slot_component {
             namespace inner {
@@ -860,26 +866,21 @@ namespace crafted_craft {
             };
 
             struct use_remainder {
-                slot_data* proxy_value;
+                std::variant<slot_data*, weak_slot_data> proxy_value;
                 //std::string id;  extracted by `proxy_value->get_slot_data().id`
                 //int32_t count;   proxy_value->count
                 //components;      proxy_value->components
                 use_remainder(slot_data&& consume);
+                use_remainder(weak_slot_data&& consume);
+
                 ~use_remainder();
 
                 bool operator==(const use_remainder& other) const;
                 bool operator!=(const use_remainder& other) const{
                     return !operator==(other);
                 }
+
                 static inline std::string component_name = "use_remainder";
-            };
-
-            struct use_remainder____weak {
-                size_t count;
-                std::string id;
-
-                auto operator<=>(const use_remainder____weak& other) const = default;
-                static inline std::string component_name = "use_remainder____weak";
             };
 
             using unified
@@ -950,8 +951,7 @@ namespace crafted_craft {
                     repairable,
                     tooltip_style,
                     use_cooldown,
-                    use_remainder,
-                    use_remainder____weak>;
+                    use_remainder>;
 
             unified parse_component(const std::string& name, const enbt::value& item);
         }
@@ -1056,8 +1056,8 @@ namespace crafted_craft {
             bool operator!=(const slot_data& other) const;
 
 
-            static slot_data create_item(const std::string& id);
-            static slot_data create_item(uint32_t id);
+            static slot_data create_item(const std::string& id, int32_t count = 1);
+            static slot_data create_item(uint32_t id, int32_t count = 1);
             static static_slot_data& get_slot_data(const std::string& id);
             static static_slot_data& get_slot_data(uint32_t id);
 

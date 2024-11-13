@@ -1,8 +1,8 @@
 #ifndef SRC_API_KICK
 #define SRC_API_KICK
-#include "../base_objects/event.hpp"
+#include <src/base_objects/event.hpp>
 
-namespace crafted_craft::api::kick {
+namespace copper_server::api::kick {
     struct ban_data {
         std::string who;
         std::string by;

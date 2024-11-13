@@ -3,11 +3,11 @@
 #include <shared_mutex>
 
 
-#include "../../base_objects/shared_client_data.hpp"
-#include "../../library/fast_task.hpp"
-#include "../../library/list_array.hpp"
+#include <library/fast_task.hpp>
+#include <library/list_array.hpp>
+#include <src/base_objects/shared_client_data.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace storage {
         namespace memory {
             namespace __internal__ {

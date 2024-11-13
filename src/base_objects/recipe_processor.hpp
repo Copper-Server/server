@@ -1,11 +1,11 @@
 #ifndef SRC_BASE_OBJECTS_RECIPE_PROCESSOR
 #define SRC_BASE_OBJECTS_RECIPE_PROCESSOR
-#include "../library/enbt.hpp"
-#include "commands.hpp"
-#include "slot.hpp"
 #include <functional>
+#include <library/enbt.hpp>
+#include <src/base_objects/commands.hpp>
+#include <src/base_objects/slot.hpp>
 
-namespace crafted_craft::base_objects {
+namespace copper_server::base_objects {
     struct recipe_processor {
         //returns empty slot if slots not suits recipe, do not modify `slots` argument if recipe not suits
         //`slots` is refrence to slots and handler must not deallocate them, they can't be nullptr

@@ -1,7 +1,7 @@
-#include "abstract.hpp"
-#include "765/packets.hpp"
-#include "766/packets.hpp"
-#include "767/packets.hpp"
+#include <src/protocolHelper/packets/765/packets.hpp>
+#include <src/protocolHelper/packets/766/packets.hpp>
+#include <src/protocolHelper/packets/767/packets.hpp>
+#include <src/protocolHelper/packets/abstract.hpp>
 
 template <class fn>
 class function_selector;
@@ -37,7 +37,7 @@ public:
         {767, release_767::_namespace::name},                        \
     };
 
-namespace crafted_craft {
+namespace copper_server {
     namespace packets {
         namespace selectors {
 

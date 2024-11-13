@@ -1,9 +1,9 @@
 
-#include "json_helpers.hpp"
-#include "../log.hpp"
 #include <format>
+#include <src/log.hpp>
+#include <src/util/json_helpers.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace util {
         std::optional<boost::json::object> try_read_json_file(const std::filesystem::path& file_path) {
             boost::json::object data;

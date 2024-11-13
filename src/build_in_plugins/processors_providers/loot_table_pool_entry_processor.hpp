@@ -1,8 +1,8 @@
 
-#include "../../base_objects/loot_table_pool_entry_processor.hpp"
-#include "../../plugin/main.hpp"
+#include <src/base_objects/loot_table_pool_entry_processor.hpp>
+#include <src/plugin/main.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         //provides processor and registers default handles, custom handles can be added via api
         class LootTablePoolEntryProcessor : public PluginAutoRegister<"loot_table_pool_entry_processor", LootTablePoolEntryProcessor> {

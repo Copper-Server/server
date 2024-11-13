@@ -1,5 +1,5 @@
-#include "calculations.hpp"
 #include <algorithm>
+#include <src/calculations.hpp>
 namespace calc {
 	const double pi = 3.14159265358979323846;
 	VECTOR convert(ANGLE_DEG rot) {

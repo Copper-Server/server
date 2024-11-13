@@ -1,11 +1,11 @@
 #ifndef SRC_BUILD_IN_PLUGINS_PERMISSIONS
 #define SRC_BUILD_IN_PLUGINS_PERMISSIONS
-#include "../base_objects/commands.hpp"
-#include "../plugin/main.hpp"
-#include "../storage/list_storage.hpp"
-#include "../storage/permissions_manager.hpp"
+#include <src/base_objects/commands.hpp>
+#include <src/plugin/main.hpp>
+#include <src/storage/list_storage.hpp>
+#include <src/storage/permissions_manager.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         //provides commands to manipulate permissions and implements OP list
         class PermissionsPlugin : public PluginAutoRegister<"permissions", PermissionsPlugin> {

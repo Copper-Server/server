@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <fstream>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace util {
 
 

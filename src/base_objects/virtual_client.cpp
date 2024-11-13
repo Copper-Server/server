@@ -1,7 +1,7 @@
-#include "virtual_client.hpp"
-#include "../protocolHelper/util.hpp"
+#include <src/base_objects/virtual_client.hpp>
+#include <src/protocolHelper/util.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
 
         void virtual_client::parse_packet(list_array<uint8_t>& packet) {

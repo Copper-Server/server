@@ -1,8 +1,8 @@
 #ifndef SRC_API_BAN
 #define SRC_API_BAN
-#include "../base_objects/event.hpp"
+#include <src/base_objects/event.hpp>
 
-namespace crafted_craft::api::ban {
+namespace copper_server::api::ban {
     struct ban_data {
         std::string who;
         std::string by;

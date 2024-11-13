@@ -1,12 +1,12 @@
 #ifndef SRC_BASE_OBJECTS_PLAYER
 #define SRC_BASE_OBJECTS_PLAYER
-#include "../library/enbt.hpp"
-#include "permissions.hpp"
-#include "slot.hpp"
 #include <cstdint>
+#include <library/enbt.hpp>
+#include <src/base_objects/permissions.hpp>
+#include <src/base_objects/slot.hpp>
 #include <string>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         class player {
         public:
@@ -114,7 +114,7 @@ namespace crafted_craft {
         };
     } // namespace base_objects
 
-} // namespace crafted_craft
+} // namespace copper_server
 
 
 #endif /* SRC_BASE_OBJECTS_PLAYER */

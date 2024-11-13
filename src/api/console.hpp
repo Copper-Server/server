@@ -2,7 +2,7 @@
 #define SRC_API_CONSOLE
 #include <string>
 
-namespace crafted_craft::api::console {
+namespace copper_server::api::console {
     void execute_as_console(const std::string& command);
     bool console_enabled();
 }

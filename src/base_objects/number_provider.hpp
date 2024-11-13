@@ -1,10 +1,10 @@
 #ifndef SRC_BASE_OBJECTS_NUMBER_PROVIDER
 #define SRC_BASE_OBJECTS_NUMBER_PROVIDER
 
-#include "../library/enbt.hpp"
+#include <library/enbt.hpp>
 #include <variant>
 
-namespace crafted_craft::base_objects {
+namespace copper_server::base_objects {
     struct number_provider_constant;
     struct number_provider_uniform;
     struct number_provider_clamped_normal;

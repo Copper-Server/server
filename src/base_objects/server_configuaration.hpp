@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         struct ServerConfiguration {
             struct Query {
@@ -117,7 +117,7 @@ namespace crafted_craft {
             } mojang;
 
             struct Status {
-                std::string server_name = "CraftedCraft";
+                std::string server_name = "Copper Server";
                 std::string description = "The C++ Minecraft server!";
 
                 //can be empty

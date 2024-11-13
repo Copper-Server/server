@@ -1,8 +1,8 @@
 #ifndef SRC_API_PREDICATE
 #define SRC_API_PREDICATE
-#include "../base_objects/predicate_processor.hpp"
+#include <src/base_objects/predicate_processor.hpp>
 
-namespace crafted_craft::api::predicate {
+namespace copper_server::api::predicate {
     bool process_predicate(const enbt::compound_ref& predicate, const base_objects::command_context& context);
     void register_handler(const std::string& name, base_objects::predicate_processor::handler handler);
     void unregister_handler(const std::string& name);

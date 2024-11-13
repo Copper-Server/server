@@ -1,12 +1,12 @@
-#include "world.hpp"
-#include "../api/configuration.hpp"
-#include "../api/internal/world.hpp"
-#include "../api/players.hpp"
-#include "../api/world.hpp"
-#include "../log.hpp"
-#include "../util/conversions.hpp"
+#include <src/api/configuration.hpp>
+#include <src/api/internal/world.hpp>
+#include <src/api/players.hpp>
+#include <src/api/world.hpp>
+#include <src/build_in_plugins/world.hpp>
+#include <src/log.hpp>
+#include <src/util/conversions.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         void WorldManagementPlugin::add_world_id_suggestion(base_objects::command_browser& browser) {
             browser.set_suggestion_callback([this](const std::string& current, base_objects::command_context& context) {

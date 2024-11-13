@@ -1,10 +1,10 @@
 #ifndef SRC_BUILD_IN_PLUGINS_ALLOWLIST
 #define SRC_BUILD_IN_PLUGINS_ALLOWLIST
-#include "../api/allowlist.hpp"
-#include "../plugin/main.hpp"
-#include "../storage/list_storage.hpp"
+#include <src/api/allowlist.hpp>
+#include <src/plugin/main.hpp>
+#include <src/storage/list_storage.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         //provides and manages allow list system
         class AllowListPlugin : public PluginAutoRegister<"allow_list", AllowListPlugin> {

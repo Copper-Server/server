@@ -1,8 +1,8 @@
 #ifndef SRC_BUILD_IN_PLUGINS_MINECRAFT
 #define SRC_BUILD_IN_PLUGINS_MINECRAFT
-#include "../plugin/main.hpp"
+#include <src/plugin/main.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         //handles notchain plugin chanels
         class MinecraftPlugin : public PluginAutoRegister<"minecraft", MinecraftPlugin> {

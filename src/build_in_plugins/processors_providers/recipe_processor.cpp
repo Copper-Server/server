@@ -1,8 +1,8 @@
 
-#include "recipe_processor.hpp"
-#include "../../api/internal/recipe.hpp"
+#include <src/api/internal/recipe.hpp>
+#include <src/build_in_plugins/processors_providers/recipe_processor.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         using namespace base_objects;
 

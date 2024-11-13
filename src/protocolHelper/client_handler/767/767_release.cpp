@@ -1,11 +1,11 @@
 
 
-#include "../../../api/protocol.hpp"
-#include "../../packets/767/writers_readers.hpp"
-#include "../../util.hpp"
-#include "../abstract.hpp"
+#include <src/api/protocol.hpp>
+#include <src/protocolHelper/client_handler/abstract.hpp>
+#include <src/protocolHelper/packets/767/writers_readers.hpp>
+#include <src/protocolHelper/util.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace client_handler {
         namespace play_767_release {
             void teleport_confirm(TCPsession* session, ArrayStream& packet) {
@@ -570,4 +570,4 @@ namespace crafted_craft {
             }
         }
     }
-} // namespace crafted_craft
+} // namespace copper_server

@@ -1,11 +1,21 @@
 #ifndef SRC_RESOURCES_REGISTERS
 #define SRC_RESOURCES_REGISTERS
+#include <boost/json/value.hpp>
 #include <filesystem>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace resources {
-        void initialize_registers();
         void initialize_entities();
+
+        void initialize();
+        void prepare_built_in_pack();
+
+        //processes whole pack data,
+        //tags always processed first, correctly handles replace flag and eats circular dependencies without problem, ignores unregistered tags
+        //! Thread unsafe, should be called from wrapped api instead
+        void process_pack(const std::filesystem::path& folder_path_to_data);
+        void process_pack(const std::filesystem::path& folder_path_to_data_without_namespace, const std::string& namespace_);
+        void process_pack(boost::json::object& memory, const std::string& namespace_);
 
         //Accepts types:
         // advancement,
@@ -19,8 +29,8 @@ namespace crafted_craft {
         // loot_table,
         // painting_variant,
         // recipe,
-        // tag,/[the tag type] // like from file data/<namespace>/tags/<function>/<name>.json // the `function` is the tag type
-        // tags,/[the tag type]
+        // tag/[the tag type], // like from file data/<namespace>/tags/<function>/<name>.json // the `function` is the tag type
+        // tags/[the tag type],
         // trim_pattern,
         // trim_material,
         // wolf_variant,

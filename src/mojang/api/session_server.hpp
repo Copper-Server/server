@@ -1,7 +1,7 @@
 #ifndef SRC_MOJANG_API_SESSION_SERVER
 #define SRC_MOJANG_API_SESSION_SERVER
-#include "../../library/enbt.hpp"
 #include <chrono>
+#include <library/enbt.hpp>
 #include <random>
 #include <string>
 

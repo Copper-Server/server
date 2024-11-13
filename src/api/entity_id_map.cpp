@@ -1,6 +1,6 @@
-#include "../storage/memory/entity_ids_map.hpp"
+#include <src/storage/memory/entity_ids_map.hpp>
 
-namespace crafted_craft::api::entity_id_map {
+namespace copper_server::api::entity_id_map {
     storage::memory::entity_ids_map_storage mem;
 
     std::pair<int32_t, enbt::raw_uuid> allocate_id() {

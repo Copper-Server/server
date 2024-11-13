@@ -1,13 +1,13 @@
 #ifndef SRC_STORAGE_PERMISSIONS_MANAGER
 #define SRC_STORAGE_PERMISSIONS_MANAGER
-#include "../base_objects/permissions.hpp"
-#include "../base_objects/shared_client_data.hpp"
-#include "../library/fast_task.hpp"
 #include <filesystem>
+#include <library/fast_task.hpp>
+#include <src/base_objects/permissions.hpp>
+#include <src/base_objects/shared_client_data.hpp>
 #include <string>
 #include <unordered_map>
 
-namespace crafted_craft {
+namespace copper_server {
 
     namespace storage {
         class permissions_manager {

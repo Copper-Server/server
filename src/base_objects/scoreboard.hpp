@@ -1,15 +1,15 @@
 #ifndef SRC_BASE_OBJECTS_SCOREBOARD
 #define SRC_BASE_OBJECTS_SCOREBOARD
-#include "../library/fast_task.hpp"
-#include "../library/list_array.hpp"
-#include "atomic_holder.hpp"
-#include "event.hpp"
+#include <library/fast_task.hpp>
+#include <library/list_array.hpp>
 #include <optional>
+#include <src/base_objects/atomic_holder.hpp>
+#include <src/base_objects/event.hpp>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         class objective {
             struct event_auto_cleanup_t {

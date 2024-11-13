@@ -1,13 +1,13 @@
-#include "console.hpp"
-#include "../api/command.hpp"
-#include "../api/console.hpp"
-#include "../api/internal/console.hpp"
-#include "../api/players.hpp"
-#include "../base_objects/commands.hpp"
-#include "../log.hpp"
-#include "../plugin/registration.hpp"
+#include <src/api/command.hpp>
+#include <src/api/console.hpp>
+#include <src/api/internal/console.hpp>
+#include <src/api/players.hpp>
+#include <src/base_objects/commands.hpp>
+#include <src/build_in_plugins/console.hpp>
+#include <src/log.hpp>
+#include <src/plugin/registration.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
 
 

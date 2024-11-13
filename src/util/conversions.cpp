@@ -1,15 +1,15 @@
 
-#include "../library/enbt.hpp"
 #include <boost/json.hpp>
 #include <cstddef>
 #include <cstdint>
+#include <library/enbt.hpp>
 #include <stdexcept>
 #include <string>
 #include <utf8.h>
 #include <utility>
 #include <vector>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace util {
         namespace conversions {
 

@@ -1,13 +1,13 @@
 #ifndef SRC_STORAGE_PLAYERS_DATA
 #define SRC_STORAGE_PLAYERS_DATA
-#include "../base_objects/player.hpp"
-#include "../base_objects/slot.hpp"
-#include "../library/enbt.hpp"
 #include <filesystem>
 #include <fstream>
+#include <library/enbt.hpp>
+#include <src/base_objects/player.hpp>
+#include <src/base_objects/slot.hpp>
 #include <string>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace storage {
         class player_data {
             std::filesystem::path path;
@@ -30,7 +30,7 @@ namespace crafted_craft {
         };
 
     } // namespace storage
-} // namespace crafted_craft
+} // namespace copper_server
 
 
 #endif /* SRC_STORAGE_PLAYERS_DATA */

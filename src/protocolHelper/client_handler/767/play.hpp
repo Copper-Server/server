@@ -1,11 +1,11 @@
 #ifndef SRC_PROTOCOLHELPER_CLIENT_HANDLER_767_PLAY
 #define SRC_PROTOCOLHELPER_CLIENT_HANDLER_767_PLAY
-#include "../../api/protocol.hpp"
-#include "../../packets/767/packets.hpp"
-#include "../abstract.hpp"
-#include "767_release.hpp"
+#include <src/api/protocol.hpp>
+#include <src/protocolHelper/client_handler/767/767_release.hpp>
+#include <src/protocolHelper/client_handler/abstract.hpp>
+#include <src/protocolHelper/packets/767/packets.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace client_handler {
         namespace release_767 {
             class HandlePlay : public TCPClientHandle {

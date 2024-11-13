@@ -1,18 +1,17 @@
 #ifndef SRC_PLUGIN_REGISTRATION
 #define SRC_PLUGIN_REGISTRATION
-#include "../base_objects/commands.hpp"
-#include "../base_objects/event.hpp"
-#include "../base_objects/response.hpp"
-#include "../base_objects/server_configuaration.hpp"
-#include "../base_objects/shared_client_data.hpp"
-#include "../library/list_array.hpp"
+#include <library/list_array.hpp>
 #include <memory>
+#include <src/base_objects/commands.hpp>
+#include <src/base_objects/event.hpp>
+#include <src/base_objects/response.hpp>
+#include <src/base_objects/server_configuaration.hpp>
+#include <src/base_objects/shared_client_data.hpp>
 #include <string>
 #include <variant>
 #include <vector>
 
-
-namespace crafted_craft {
+namespace copper_server {
     class PluginRegistration {
         struct event_auto_cleanup_t {
             base_objects::base_event* event_obj;

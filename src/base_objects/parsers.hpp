@@ -1,11 +1,11 @@
 #ifndef SRC_BASE_OBJECTS_PARSERS
 #define SRC_BASE_OBJECTS_PARSERS
-#include "../library/enbt.hpp"
 #include <cstdint>
+#include <library/enbt.hpp>
 #include <string>
 #include <unordered_map>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         namespace parsers {
             namespace command {

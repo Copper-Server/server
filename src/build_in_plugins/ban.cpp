@@ -1,14 +1,14 @@
-#include "ban.hpp"
-#include "../api/ban.hpp"
-#include "../api/configuration.hpp"
-#include "../api/players.hpp"
-#include "../base_objects/commands.hpp"
-#include "../log.hpp"
-#include "../plugin/main.hpp"
-#include "../plugin/registration.hpp"
-#include "../storage/enbt_list_storage.hpp"
+#include <src/api/ban.hpp>
+#include <src/api/configuration.hpp>
+#include <src/api/players.hpp>
+#include <src/base_objects/commands.hpp>
+#include <src/build_in_plugins/ban.hpp>
+#include <src/log.hpp>
+#include <src/plugin/main.hpp>
+#include <src/plugin/registration.hpp>
+#include <src/storage/enbt_list_storage.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         BanPlugin::BanPlugin()
             : banned_players(api::configuration::get().server.get_storage_path() / +"banned_players.c_enbt"),

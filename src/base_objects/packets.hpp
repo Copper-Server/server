@@ -1,12 +1,12 @@
 #ifndef SRC_BASE_OBJECTS_PACKETS
 #define SRC_BASE_OBJECTS_PACKETS
-#include "chat.hpp"
-#include "position.hpp"
-#include "slot.hpp"
+#include <src/base_objects/chat.hpp>
+#include <src/base_objects/position.hpp>
+#include <src/base_objects/slot.hpp>
 #include <string>
 #include <vector>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         namespace packets {
             struct command_suggestion {

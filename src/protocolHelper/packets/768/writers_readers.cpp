@@ -1,9 +1,9 @@
 
-#include "writers_readers.hpp"
-#include "../../../base_objects/block.hpp"
-#include "../../../registers.hpp"
+#include <src/base_objects/block.hpp>
+#include <src/protocolHelper/packets/768/writers_readers.hpp>
+#include <src/registers.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace packets {
         namespace release_768 {
             namespace reader {
@@ -491,8 +491,6 @@ namespace crafted_craft {
                     void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::use_cooldown& value) {}
 
                     void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::use_remainder& value) {}
-
-                    void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::use_remainder____weak& value) {}
                 }
 
                 namespace slot_component_decoder {

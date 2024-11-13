@@ -1,10 +1,10 @@
 #ifndef SRC_API_WORLD
 #define SRC_API_WORLD
 
-#include "../storage/world_data.hpp"
 #include <functional>
+#include <src/storage/world_data.hpp>
 
-namespace crafted_craft::api::world {
+namespace copper_server::api::world {
     void unload(uint64_t world_id);
     void save(uint64_t world_id);
     void save_all();

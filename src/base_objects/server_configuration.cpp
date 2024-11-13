@@ -1,13 +1,12 @@
-#include "../library/enbt.hpp"
-#include "../library/list_array.hpp"
-#include "../log.hpp"
-#include "../util/json_helpers.hpp"
-#include "server_configuaration.hpp"
 #include <filesystem>
 #include <fstream>
+#include <library/enbt.hpp>
+#include <library/list_array.hpp>
+#include <src/base_objects/server_configuaration.hpp>
+#include <src/log.hpp>
+#include <src/util/json_helpers.hpp>
 
-
-namespace crafted_craft {
+namespace copper_server {
     using namespace util;
 
     namespace base_objects {

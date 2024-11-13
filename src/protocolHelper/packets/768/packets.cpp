@@ -1,9 +1,9 @@
-#include "packets.hpp"
-#include "../../util.hpp"
-#include "../766/packets.hpp"
-#include "writers_readers.hpp"
+#include <src/protocolHelper/packets/766/packets.hpp>
+#include <src/protocolHelper/packets/768/packets.hpp>
+#include <src/protocolHelper/packets/768/writers_readers.hpp>
+#include <src/protocolHelper/util.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace packets {
         namespace release_768 {
             namespace login {
@@ -116,7 +116,7 @@ namespace crafted_craft {
                                 registers::armorTrimPatterns,
                                 [](registers::ArmorTrimPattern& it) {
                                     enbt::compound element;
-                                    element["assert_id"] = it.assert_id;
+                                    element["asset_id"] = it.asset_id;
                                     element["template_item"] = it.template_item;
                                     if (std::holds_alternative<std::string>(it.description))
                                         element["description"] = std::get<std::string>(it.description);
@@ -202,10 +202,10 @@ namespace crafted_craft {
                                     if (it.chat) {
                                         enbt::compound chat;
                                         chat["translation_key"] = it.chat->translation_key;
-                                        {
-                                            it.chat->style.GetExtra().clear();
-                                            it.chat->style.SetText("");
-                                            enbt::value style = it.chat->style.ToENBT();
+                                        if (it.chat->style) {
+                                            it.chat->style->GetExtra().clear();
+                                            it.chat->style->SetText("");
+                                            enbt::value style = it.chat->style->ToENBT();
                                             style.remove("text");
                                             chat["style"] = std::move(style);
                                         }
@@ -219,13 +219,6 @@ namespace crafted_craft {
                                     if (it.narration) {
                                         enbt::compound narration;
                                         narration["translation_key"] = it.narration->translation_key;
-                                        {
-                                            it.narration->style.GetExtra().clear();
-                                            it.narration->style.SetText("");
-                                            enbt::value style = it.chat->style.ToENBT();
-                                            style.remove("text");
-                                            narration["style"] = std::move(style);
-                                        }
                                         if (std::holds_alternative<std::string>(it.narration->parameters))
                                             narration["parameters"] = std::get<std::string>(it.narration->parameters);
                                         else

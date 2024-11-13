@@ -1,16 +1,16 @@
 #ifndef SRC_API_PLAYERS
 #define SRC_API_PLAYERS
-#include "../base_objects/chat.hpp"
-#include "../base_objects/event.hpp"
-#include "../base_objects/position.hpp"
-#include "../base_objects/shared_client_data.hpp"
-#include "../base_objects/sync_event.hpp"
-#include "../library/list_array.hpp"
 #include <array>
+#include <library/list_array.hpp>
 #include <optional>
+#include <src/base_objects/chat.hpp>
+#include <src/base_objects/event.hpp>
+#include <src/base_objects/position.hpp>
+#include <src/base_objects/shared_client_data.hpp>
+#include <src/base_objects/sync_event.hpp>
 #include <string>
 
-namespace crafted_craft::api::players {
+namespace copper_server::api::players {
     namespace handlers {
         extern base_objects::event<base_objects::client_data_holder> on_player_join;
         extern base_objects::event<base_objects::client_data_holder> on_player_leave;

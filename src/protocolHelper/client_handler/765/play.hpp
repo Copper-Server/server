@@ -1,11 +1,11 @@
-#ifndef SRC_PROTOCOLHELPER_CLIENT_PLAY_HANDLER_765_PLAY
-#define SRC_PROTOCOLHELPER_CLIENT_PLAY_HANDLER_765_PLAY
-#include "../../api/protocol.hpp"
-#include "../../packets/765/packets.hpp"
-#include "../abstract.hpp"
-#include "765_release.hpp"
+#ifndef SRC_PROTOCOLHELPER_CLIENT_HANDLER_765_PLAY
+#define SRC_PROTOCOLHELPER_CLIENT_HANDLER_765_PLAY
+#include <src/api/protocol.hpp>
+#include <src/protocolHelper/client_handler/765/765_release.hpp>
+#include <src/protocolHelper/client_handler/abstract.hpp>
+#include <src/protocolHelper/packets/765/packets.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace client_handler {
         namespace release_765 {
             class HandlePlay : public TCPClientHandle {
@@ -310,4 +310,4 @@ namespace crafted_craft {
     }
 }
 
-#endif /* SRC_PROTOCOLHELPER_CLIENT_PLAY_HANDLER_765_PLAY */
+#endif /* SRC_PROTOCOLHELPER_CLIENT_HANDLER_765_PLAY */

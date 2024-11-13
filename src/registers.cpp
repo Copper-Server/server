@@ -1,7 +1,7 @@
 
-#include "registers.hpp"
+#include <src/registers.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace registers {
         std::unordered_map<std::string, ArmorTrimMaterial> armorTrimMaterials;
         std::unordered_map<std::string, ArmorTrimPattern> armorTrimPatterns;

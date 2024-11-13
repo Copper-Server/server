@@ -1,9 +1,10 @@
 
-#include "../../../api/command.hpp"
-#include "../../../base_objects/slot.hpp"
-#include "../../../registers.hpp"
-#include "../../../util/readers.hpp"
-namespace crafted_craft {
+#include <src/api/command.hpp>
+#include <src/base_objects/slot.hpp>
+#include <src/registers.hpp>
+#include <src/util/readers.hpp>
+
+namespace copper_server {
     namespace packets {
         namespace release_765 {
             namespace reader {

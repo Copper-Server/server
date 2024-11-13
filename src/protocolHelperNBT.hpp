@@ -1,10 +1,10 @@
 #ifndef SRC_PROTOCOLHELPERNBT
 #define SRC_PROTOCOLHELPERNBT
 
-#include "library/enbt.hpp"
-#include "library/list_array.hpp"
+#include <library/enbt.hpp>
+#include <library/list_array.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     //bridge class between ENBT and NBT formats
     class NBT {
         list_array<uint8_t> nbt_data;

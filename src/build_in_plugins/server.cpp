@@ -1,17 +1,17 @@
-#include "server.hpp"
-#include "../ClientHandleHelper.hpp"
-#include "../api/configuration.hpp"
-#include "../api/console.hpp"
-#include "../api/internal/command.hpp"
-#include "../api/permissions.hpp"
-#include "../api/players.hpp"
-#include "../api/world.hpp"
-#include "../log.hpp"
-#include "../plugin/main.hpp"
-#include "../plugin/registration.hpp"
-#include "../registers.hpp"
+#include <src/ClientHandleHelper.hpp>
+#include <src/api/configuration.hpp>
+#include <src/api/console.hpp>
+#include <src/api/internal/command.hpp>
+#include <src/api/permissions.hpp>
+#include <src/api/players.hpp>
+#include <src/api/world.hpp>
+#include <src/build_in_plugins/server.hpp>
+#include <src/log.hpp>
+#include <src/plugin/main.hpp>
+#include <src/plugin/registration.hpp>
+#include <src/registers.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     class Server;
 
     namespace build_in_plugins {

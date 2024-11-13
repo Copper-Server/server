@@ -1,20 +1,5 @@
 #ifndef SRC_STORAGE_WORLD_DATA
 #define SRC_STORAGE_WORLD_DATA
-#include "../base_objects/atomic_holder.hpp"
-#include "../base_objects/block.hpp"
-#include "../base_objects/bounds.hpp"
-#include "../base_objects/entity.hpp"
-#include "../base_objects/entity_animation.hpp"
-#include "../base_objects/event.hpp"
-#include "../base_objects/ptr_optional.hpp"
-#include "../base_objects/server_configuaration.hpp"
-#include "../base_objects/shared_client_data.hpp"
-#include "../base_objects/slot.hpp"
-#include "../base_objects/weather.hpp"
-#include "../calculations.hpp"
-#include "../library/enbt.hpp"
-#include "../library/list_array.hpp"
-#include "../util/task_management.hpp"
 #include <atomic>
 #include <bitset>
 #include <filesystem>
@@ -22,7 +7,23 @@
 #include <string>
 #include <vector>
 
-namespace crafted_craft {
+#include <library/enbt.hpp>
+#include <library/list_array.hpp>
+#include <src/base_objects/atomic_holder.hpp>
+#include <src/base_objects/block.hpp>
+#include <src/base_objects/bounds.hpp>
+#include <src/base_objects/entity.hpp>
+#include <src/base_objects/entity_animation.hpp>
+#include <src/base_objects/event.hpp>
+#include <src/base_objects/ptr_optional.hpp>
+#include <src/base_objects/server_configuaration.hpp>
+#include <src/base_objects/shared_client_data.hpp>
+#include <src/base_objects/slot.hpp>
+#include <src/base_objects/weather.hpp>
+#include <src/calculations.hpp>
+#include <src/util/task_management.hpp>
+
+namespace copper_server {
     namespace storage {
 
         struct on_tick_state {
@@ -524,7 +525,7 @@ namespace crafted_craft {
             void apply_tick(std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time, std::chrono::nanoseconds elapsed);
         };
     } // namespace storage
-} // namespace crafted_craft
+} // namespace copper_server
 
 
 #endif /* SRC_STORAGE_WORLD_DATA */

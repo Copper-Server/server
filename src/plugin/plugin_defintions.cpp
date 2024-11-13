@@ -1,7 +1,7 @@
-#include "main.hpp"
-#include "special.hpp"
+#include <src/plugin/main.hpp>
+#include <src/plugin/special.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     PluginManagement pluginManagement;
     SpecialPluginHandshake* special_handshake;
     SpecialPluginStatus* special_status;

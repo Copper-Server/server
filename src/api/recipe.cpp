@@ -1,6 +1,6 @@
-#include "../base_objects/recipe_processor.hpp"
+#include <src/base_objects/recipe_processor.hpp>
 
-namespace crafted_craft::api::recipe {
+namespace copper_server::api::recipe {
     base_objects::recipe_processor* processor = nullptr;
 
     void register_processor(base_objects::recipe_processor& to_register_processor) {

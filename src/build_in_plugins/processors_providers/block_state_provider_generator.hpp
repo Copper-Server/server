@@ -1,10 +1,10 @@
 #ifndef SRC_BUILD_IN_PLUGINS_PROCESSORS_PROVIDERS_BLOCK_STATE_PROVIDER_GENERATOR
 #define SRC_BUILD_IN_PLUGINS_PROCESSORS_PROVIDERS_BLOCK_STATE_PROVIDER_GENERATOR
 
-#include "../../base_objects/block_state_provider.hpp"
-#include "../../plugin/main.hpp"
+#include <src/base_objects/block_state_provider.hpp>
+#include <src/plugin/main.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         //provides generator and registers default handles, custom handles can be added via api
         class BlockStateProviderGenerator : public PluginAutoRegister<"block_state_provider_generator", BlockStateProviderGenerator> {

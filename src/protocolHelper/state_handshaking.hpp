@@ -1,11 +1,11 @@
 #ifndef SRC_PROTOCOLHELPER_STATE_HANDSHAKING
 #define SRC_PROTOCOLHELPER_STATE_HANDSHAKING
-#include "../plugin/special.hpp"
-#include "client_handler/abstract.hpp"
-#include "packets.hpp"
-#include "state_status.hpp"
+#include <src/plugin/special.hpp>
+#include <src/protocolHelper/client_handler/abstract.hpp>
+#include <src/protocolHelper/packets.hpp>
+#include <src/protocolHelper/state_status.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
 
     class TCPClientHandleHandshaking : public TCPClientHandle {
     protected:

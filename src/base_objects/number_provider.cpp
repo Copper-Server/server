@@ -1,8 +1,8 @@
 
-#include "number_provider.hpp"
 #include <random>
+#include <src/base_objects/number_provider.hpp>
 
-namespace crafted_craft::base_objects {
+namespace copper_server::base_objects {
 
     number_provider::number_provider()
         : provider(new number_provider_constant(0)) {}

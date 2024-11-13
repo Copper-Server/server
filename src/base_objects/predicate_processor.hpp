@@ -1,9 +1,9 @@
 #ifndef SRC_BASE_OBJECTS_PREDICATE_PROCESSOR
 #define SRC_BASE_OBJECTS_PREDICATE_PROCESSOR
-#include "../library/enbt.hpp"
-#include "commands.hpp"
+#include <library/enbt.hpp>
+#include <src/base_objects/commands.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         struct predicate_processor {
             using handler = std::function<bool(const enbt::compound_const_ref&, const command_context&)>;

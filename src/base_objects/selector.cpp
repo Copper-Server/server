@@ -1,7 +1,7 @@
-#include "selector.hpp"
-#include "entity.hpp"
+#include <src/base_objects/entity.hpp>
+#include <src/base_objects/selector.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
 
         size_t next_select(std::string_view view) {
@@ -265,4 +265,4 @@ namespace crafted_craft {
     } // namespace base_objects
 
 
-} // namespace crafted_craft
+} // namespace copper_server

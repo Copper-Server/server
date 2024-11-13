@@ -1,8 +1,8 @@
 #ifndef SRC_PROTOCOLHELPER_CLIENT_PLAY_HANDLER_ABSTRACT
 #define SRC_PROTOCOLHELPER_CLIENT_PLAY_HANDLER_ABSTRACT
-#include "../util.hpp"
+#include <src/protocolHelper/util.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace client_handler {
         namespace abstract {
             TCPclient* createHandleLogin(TCPsession*);

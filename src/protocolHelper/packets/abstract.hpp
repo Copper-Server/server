@@ -1,16 +1,16 @@
 
 
-#include "../../base_objects/block.hpp"
-#include "../../base_objects/chat.hpp"
-#include "../../base_objects/chunk.hpp"
-#include "../../base_objects/entity.hpp"
-#include "../../base_objects/packets.hpp"
-#include "../../base_objects/particle_data.hpp"
-#include "../../base_objects/position.hpp"
-#include "../../base_objects/recipe.hpp"
 #include <array>
+#include <src/base_objects/block.hpp>
+#include <src/base_objects/chat.hpp>
+#include <src/base_objects/chunk.hpp>
+#include <src/base_objects/entity.hpp>
+#include <src/base_objects/packets.hpp>
+#include <src/base_objects/particle_data.hpp>
+#include <src/base_objects/position.hpp>
+#include <src/base_objects/recipe.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace packets {
         namespace login {
             Response login(SharedClientData& client, int32_t plugin_message_id, const std::string& chanel, const list_array<uint8_t>& data);

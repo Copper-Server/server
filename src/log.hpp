@@ -1,9 +1,9 @@
 #ifndef SRC_LOG
 #define SRC_LOG
-#include "base_objects/event.hpp"
+#include <src/base_objects/event.hpp>
 #include <string>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace log {
         enum class level {
             info,

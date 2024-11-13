@@ -1,13 +1,13 @@
 #ifndef SRC_API_PROTOCOL
 #define SRC_API_PROTOCOL
-#include "../base_objects/event.hpp"
-#include "../base_objects/position.hpp"
-#include "../base_objects/slot.hpp"
-#include "../library/enbt.hpp"
-#include "../library/list_array.hpp"
-#include "../protocolHelper/util.hpp"
+#include <library/enbt.hpp>
+#include <library/list_array.hpp>
+#include <src/base_objects/event.hpp>
+#include <src/base_objects/position.hpp>
+#include <src/base_objects/slot.hpp>
+#include <src/protocolHelper/util.hpp>
 
-namespace crafted_craft::api::protocol {
+namespace copper_server::api::protocol {
     namespace data {
         struct teleport_request_completion {
             int32_t teleport_id;

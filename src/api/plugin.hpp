@@ -2,7 +2,8 @@
 #define SRC_API_PLUGIN
 #include <functional>
 #include <string>
-namespace crafted_craft::api::plugin {
+
+namespace copper_server::api::plugin {
     void load(const std::string& name);
     void unload(const std::string& name);
     void reload(const std::string& name);

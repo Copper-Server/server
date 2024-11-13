@@ -4,7 +4,7 @@
 #include <random>
 #include <unordered_map>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
 
         struct sync_event_register_id {

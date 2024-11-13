@@ -2,7 +2,7 @@
 #define SRC_BASE_OBJECTS_BOUNDS
 #include <cstdint>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         struct cubic_bounds_chunk {
             int64_t x1;

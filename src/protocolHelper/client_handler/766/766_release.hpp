@@ -1,8 +1,8 @@
 #ifndef SRC_PROTOCOLHELPER_CLIENT_HANDLER_766_766_RELEASE
 #define SRC_PROTOCOLHELPER_CLIENT_HANDLER_766_766_RELEASE
-#include "../util.hpp"
+#include <src/protocolHelper/util.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace client_handler {
         namespace play_766_release {
             void teleport_confirm(TCPsession* session, ArrayStream& packet);
@@ -120,7 +120,7 @@ namespace crafted_craft {
 
         }
     }
-} // namespace crafted_craft
+} // namespace copper_server
 
 
 #endif /* SRC_PROTOCOLHELPER_CLIENT_HANDLER_766_766_RELEASE */

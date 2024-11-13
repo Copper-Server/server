@@ -1,19 +1,19 @@
 #ifndef SRC_PROTOCOLHELPER_PACKETS_767_PACKETS
 #define SRC_PROTOCOLHELPER_PACKETS_767_PACKETS
-#include "../../../base_objects/block.hpp"
-#include "../../../base_objects/chat.hpp"
-#include "../../../base_objects/chunk.hpp"
-#include "../../../base_objects/entity.hpp"
-#include "../../../base_objects/packets.hpp"
-#include "../../../base_objects/particle_data.hpp"
-#include "../../../base_objects/position.hpp"
-#include "../../../base_objects/recipe.hpp"
+#include <src/base_objects/block.hpp>
+#include <src/base_objects/chat.hpp>
+#include <src/base_objects/chunk.hpp>
+#include <src/base_objects/entity.hpp>
+#include <src/base_objects/packets.hpp>
+#include <src/base_objects/particle_data.hpp>
+#include <src/base_objects/position.hpp>
+#include <src/base_objects/recipe.hpp>
 
 //packets for 1.21.0 - 1.21.1, protocol 767
 //changes between 766:
 // Now client requires to get packet knownPacks with pack "minecraft:core" with version "1.21" also must be send before registry_data
 //
-namespace crafted_craft {
+namespace copper_server {
     namespace packets {
         namespace release_767 {
 

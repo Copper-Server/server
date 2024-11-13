@@ -1,9 +1,10 @@
 
-#include "chat.hpp"
-#include "../util/conversions.hpp"
-#include "../util/json_helpers.hpp"
+#include <src/base_objects/chat.hpp>
+#include <src/util/conversions.hpp>
+#include <src/util/json_helpers.hpp>
 #include <utf8.h>
-namespace crafted_craft {
+
+namespace copper_server {
     Chat Chat::parseToChat(const std::string& string) {
         list_array<Chat> result;
 

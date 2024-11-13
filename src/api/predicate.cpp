@@ -1,6 +1,6 @@
-#include "../base_objects/predicate_processor.hpp"
+#include <src/base_objects/predicate_processor.hpp>
 
-namespace crafted_craft::api::predicate {
+namespace copper_server::api::predicate {
     base_objects::predicate_processor* processor = nullptr;
 
     void register_processor(base_objects::predicate_processor& to_register_processor) {

@@ -1,6 +1,6 @@
-#include "../765/writers_readers.hpp"
+#include <src/protocolHelper/packets/765/writers_readers.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace packets {
         namespace release_766 {
             namespace reader {

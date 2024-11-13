@@ -1,8 +1,8 @@
 #ifndef SRC_BUILD_IN_PLUGINS_COMMUNICATION_CORE
 #define SRC_BUILD_IN_PLUGINS_COMMUNICATION_CORE
-#include "../plugin/main.hpp"
+#include <src/plugin/main.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         //provides and manages chat system
         class CommunicationCorePlugin : public PluginAutoRegister<"communication_core", CommunicationCorePlugin> {
@@ -13,7 +13,7 @@ namespace crafted_craft {
         };
     } // namespace build_in_plugins
 
-} // namespace crafted_craft
+} // namespace copper_server
 
 
 #endif /* SRC_BUILD_IN_PLUGINS_COMMUNICATION_CORE */

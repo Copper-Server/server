@@ -1,14 +1,14 @@
 #ifndef SRC_UTIL_READERS
 #define SRC_UTIL_READERS
-#include "../library/enbt.hpp"
-#include "../library/list_array.hpp"
-#include "../protocolHelperNBT.hpp"
 #include <bit>
 #include <cstdint>
 #include <exception>
+#include <library/enbt.hpp>
+#include <library/list_array.hpp>
+#include <src/protocolHelperNBT.hpp>
 #include <string>
 
-namespace crafted_craft {
+namespace copper_server {
     struct ArrayStream {
         uint8_t* arrau;
         size_t mi;

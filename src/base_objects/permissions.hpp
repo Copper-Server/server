@@ -1,9 +1,9 @@
 #ifndef SRC_BASE_OBJECTS_PERMISSIONS
 #define SRC_BASE_OBJECTS_PERMISSIONS
-#include "../library/list_array.hpp"
+#include <library/list_array.hpp>
 #include <string>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         struct permissions_object {
             std::string permission_tag;
@@ -47,8 +47,8 @@ namespace crafted_craft {
 
 namespace std {
     template <>
-    struct hash<crafted_craft::base_objects::permissions_object> {
-        size_t operator()(const crafted_craft::base_objects::permissions_object& obj) const {
+    struct hash<copper_server::base_objects::permissions_object> {
+        size_t operator()(const copper_server::base_objects::permissions_object& obj) const {
             return hash<std::string>()(obj.permission_tag);
         }
     };

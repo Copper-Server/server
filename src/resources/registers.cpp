@@ -1,17 +1,12 @@
-#include "../registers.hpp"
-#include "../api/recipe.hpp"
-#include "../base_objects/entity.hpp"
-#include "../util/conversions.hpp"
-#include "../util/json_helpers.hpp"
 #include <resources/include.hpp>
-namespace crafted_craft {
+#include <src/api/recipe.hpp>
+#include <src/base_objects/entity.hpp>
+#include <src/registers.hpp>
+#include <src/util/conversions.hpp>
+#include <src/util/json_helpers.hpp>
+
+namespace copper_server {
     namespace resources {
-        template <size_t size>
-        boost::json::value json_resource(const std::array<uint8_t, size>& data) {
-            return boost::json::parse(std::string_view((const char*)data.data(), data.size()));
-        }
-
-
         template <class T, class Iterator>
         void id_assigner(std::unordered_map<std::string, T>& map, list_array<Iterator>& cache) {
             size_t i = 0;
@@ -38,7 +33,6 @@ namespace crafted_craft {
             if (it != map.end())
                 throw std::runtime_error("This " + std::string(type_name) + " is already defined and cannot be overriden. [" + id + "]");
         }
-
 
         using namespace util;
         using namespace registers;
@@ -82,2827 +76,6 @@ namespace crafted_craft {
                 for (auto& it2 : it.second)
                     for (auto& it3 : it2.second)
                         it3.second.commit();
-        }
-
-        void initialize_registers() {
-            using namespace registers;
-            biomes = {
-                {
-                    "minecraft:badlands",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 2.0,
-                        .downfall = 0,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7254527,
-                            .foliage_color = 10387789,
-                            .grass_color = 9470285,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.badlands",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:bamboo_jungle",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.95,
-                        .downfall = 0.9,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7842047,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.bamboo_jungle",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:basalt_deltas",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 2.00,
-                        .downfall = 0,
-                        .effects = {
-                            .fog_color = 6840176,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7254527,
-                            .particle = Biome::Particle{
-                                .options = {
-                                    .type = "minecraft:white_ash",
-                                },
-                                .probability = 0.118093334,
-                            },
-                            .ambient_sound = Biome::AmbientSound{
-                                .sound = "minecraft:ambient.basalt_deltas.loop",
-                            },
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.basalt_deltas.mood",
-                            },
-                            .additions_sound = Biome::AdditionsSound{
-                                .sound = "minecraft:ambient.basalt_deltas.additions",
-                                .tick_chance = 0.0111,
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.nether.basalt_deltas",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:beach",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.8,
-                        .downfall = 0.4,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7907327,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:birch_forest",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.6,
-                        .downfall = 0.6,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8037887,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.forest",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:cherry_grove",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.5,
-                        .downfall = 0.8,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 6141935,
-                            .water_fog_color = 6141935,
-                            .sky_color = 8103167,
-                            .foliage_color = 11983713,
-                            .grass_color = 11983713,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.cherry_grove",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:cold_ocean",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.5,
-                        .downfall = 0.5,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4020182,
-                            .water_fog_color = 6141935,
-                            .sky_color = 8103167,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:crimson_forest",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 2.00,
-                        .downfall = 0,
-                        .effects = {
-                            .fog_color = 3343107,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7254527,
-                            .particle = Biome::Particle{
-                                .options = {
-                                    .type = "minecraft:crimson_spore",
-                                },
-                                .probability = 0.025,
-                            },
-                            .ambient_sound = Biome::AmbientSound{
-                                .sound = "minecraft:ambient.crimson_forest.loop",
-                            },
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.crimson_forest.mood",
-                            },
-                            .additions_sound = Biome::AdditionsSound{
-                                .sound = "minecraft:ambient.crimson_forest.additions",
-                                .tick_chance = 0.0111,
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.nether.crimson_forest",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:dark_forest",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.7,
-                        .downfall = 0.8,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7972607,
-                            .grass_color_modifier = "dark_forest",
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.forest",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:deep_cold_ocean",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.5,
-                        .downfall = 0.5,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4020182,
-                            .water_fog_color = 329011,
-                            .sky_color = 8103167,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:deep_dark",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.8,
-                        .downfall = 0.4,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7907327,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.deep_dark",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:deep_frozen_ocean",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.5,
-                        .downfall = 0.5,
-                        .temperature_modifier = "frozen",
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 3750089,
-                            .water_fog_color = 329011,
-                            .sky_color = 8103167,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:deep_lukewarm_ocean",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.5,
-                        .downfall = 0.5,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4566514,
-                            .water_fog_color = 267827,
-                            .sky_color = 8103167,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:deep_ocean",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.5,
-                        .downfall = 0.5,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8103167,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:desert",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 2,
-                        .downfall = 0,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7254527,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.desert",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:dripstone_caves",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.8,
-                        .downfall = 0.4,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7907327,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.dripstone_caves",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:end_barrens",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 0.5,
-                        .downfall = 0.5,
-                        .effects = {
-                            .fog_color = 10518688,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 0,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:end_highlands",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 0.5,
-                        .downfall = 0.5,
-                        .effects = {
-                            .fog_color = 10518688,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 0,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:end_midlands",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 0.5,
-                        .downfall = 0.5,
-                        .effects = {
-                            .fog_color = 10518688,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 0,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:eroded_badlands",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 2,
-                        .downfall = 0,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7254527,
-                            .foliage_color = 10387789,
-                            .grass_color = 9470285,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.badlands",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:flower_forest",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.7,
-                        .downfall = 0.8,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7972607,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.flower_forest",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:flower_forest",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.7,
-                        .downfall = 0.8,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7972607,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.flower_forest",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:forest",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.7,
-                        .downfall = 0.8,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7972607,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.forest",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:frozen_ocean",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.0,
-                        .downfall = 0.5,
-                        .temperature_modifier = "frozen",
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 3750089,
-                            .water_fog_color = 329011,
-                            .sky_color = 8364543,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:frozen_peaks",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = -0.7,
-                        .downfall = 0.9,
-                        .temperature_modifier = "frozen",
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8756735,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.frozen_peaks",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:frozen_river",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.0,
-                        .downfall = 0.5,
-                        .temperature_modifier = "frozen",
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 3750089,
-                            .water_fog_color = 329011,
-                            .sky_color = 8364543,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:grove",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = -0.2,
-                        .downfall = 0.8,
-                        .temperature_modifier = "frozen",
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8495359,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.grove",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:ice_spikes",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.0,
-                        .downfall = 0.5,
-                        .temperature_modifier = "frozen",
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8364543,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:jagged_peaks",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = -0.7,
-                        .downfall = 0.9,
-                        .temperature_modifier = "frozen",
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8756735,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.jagged_peaks",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:jungle",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.95,
-                        .downfall = 0.9,
-                        .temperature_modifier = "frozen",
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7842047,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.jungle",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:lukewarm_ocean",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.5,
-                        .downfall = 0.5,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4566514,
-                            .water_fog_color = 267827,
-                            .sky_color = 8103167,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:mangrove_swamp",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.8,
-                        .downfall = 0.9,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 3832426,
-                            .water_fog_color = 5077600,
-                            .sky_color = 7907327,
-                            .foliage_color = 9285927,
-                            .grass_color = 9285927,
-                            .grass_color_modifier = "swamp",
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.swamp",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:meadow",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.5,
-                        .downfall = 0.8,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 937679,
-                            .water_fog_color = 329011,
-                            .sky_color = 8103167,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.meadow",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:mushroom_fields",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.9,
-                        .downfall = 1.0,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 415920,
-                            .water_fog_color = 329011,
-                            .sky_color = 7842047,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:nether_wastes",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 2.0,
-                        .downfall = 0.0,
-                        .effects = {
-                            .fog_color = 3344392,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7254527,
-                            .ambient_sound = Biome::AmbientSound{
-                                .sound = "minecraft:ambient.nether_wastes.loop",
-                                .range = 8.0,
-                            },
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.nether_wastes.mood",
-                            },
-                            .additions_sound = Biome::AdditionsSound{
-                                .sound = "minecraft:ambient.nether_wastes.additions",
-                                .tick_chance = 0.0111,
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.nether.nether_wastes",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:ocean",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.5,
-                        .downfall = 0.5,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8103167,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:old_growth_birch_forest",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.6,
-                        .downfall = 0.6,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8037887,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.forest",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:old_growth_pine_taiga",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.3,
-                        .downfall = 0.8,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8168447,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.old_growth_taiga",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:old_growth_spruce_taiga",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.25,
-                        .downfall = 0.8,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8233983,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.old_growth_taiga",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:plains",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.8,
-                        .downfall = 0.4,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7907327,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:river",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.5,
-                        .downfall = 0.5,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8103167,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:savanna",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 2.0,
-                        .downfall = 0.0,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7254527,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:savanna_plateau",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 2.0,
-                        .downfall = 0.0,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7254527,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:small_end_islands",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 0.5,
-                        .downfall = 0.5,
-                        .effects = {
-                            .fog_color = 10518688,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 0,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:snowy_beach",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.05,
-                        .downfall = 0.3,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4020182,
-                            .water_fog_color = 329011,
-                            .sky_color = 8364543,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:snowy_mountains",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = -0.5,
-                        .downfall = 0.3,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8364543,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.snowy_mountains",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:snowy_taiga",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = -0.5,
-                        .downfall = 0.4,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4020182,
-                            .water_fog_color = 329011,
-                            .sky_color = 8625919,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:snowy_tundra",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.0,
-                        .downfall = 0.5,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4020182,
-                            .water_fog_color = 329011,
-                            .sky_color = 8364543,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:soul_sand_valley",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 2.0,
-                        .downfall = 0.0,
-                        .effects = {
-                            .fog_color = 1787717,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7254527,
-                            .particle = Biome::Particle{
-                                .options = {
-                                    .type = "minecraft:ash",
-                                },
-                                .probability = 0.00625,
-                            },
-                            .ambient_sound = Biome::AmbientSound{
-                                .sound = "minecraft:ambient.soul_sand_valley.loop",
-                            },
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.soul_sand_valley.mood",
-                            },
-                            .additions_sound = Biome::AdditionsSound{
-                                .sound = "minecraft:ambient.soul_sand_valley.additions",
-                                .tick_chance = 0.0111,
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.nether.soul_sand_valley",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:sparse_jungle",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.95,
-                        .downfall = 0.8,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7842047,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.sparse_jungle",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:stony_peaks",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 1.0,
-                        .downfall = 0.3,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7776511,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.stony_peaks",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:stony_shore",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.2,
-                        .downfall = 0.3,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8233727,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:sunflower_plains",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.8,
-                        .downfall = 0.4,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7907327,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:swamp",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.8,
-                        .downfall = 0.9,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 6388580,
-                            .water_fog_color = 2302743,
-                            .sky_color = 7907327,
-                            .foliage_color = 6975545,
-                            .grass_color = 6975545,
-                            .grass_color_modifier = "swamp",
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.swamp",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:taiga",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.25,
-                        .downfall = 0.8,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8233983,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:the_end",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 0.5,
-                        .downfall = 0.5,
-                        .effects = {
-                            .fog_color = 10518688,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 0,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:the_void",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 0.5,
-                        .downfall = 0.5,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8103167,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:warm_ocean",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.5,
-                        .downfall = 0.5,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4445678,
-                            .water_fog_color = 270131,
-                            .sky_color = 8103167,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:warped_forest",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 2.0,
-                        .downfall = 0.0,
-                        .effects = {
-                            .fog_color = 1705242,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7254527,
-                            .particle = Biome::Particle{
-                                .options = {
-                                    .type = "minecraft:warped_spore",
-                                },
-                                .probability = 0.01428,
-                            },
-                            .ambient_sound = "minecraft:ambient.warped_forest.loop",
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.warped_forest.mood",
-                            },
-                            .additions_sound = Biome::AdditionsSound{
-                                .sound = "minecraft:ambient.warped_forest.additions",
-                                .tick_chance = 0.0111,
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.nether.warped_forest",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:windswept_forest",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.2,
-                        .downfall = 0.3,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8233727,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:windswept_gravelly_hills",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.2,
-                        .downfall = 0.3,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8233727,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:windswept_hills",
-                    Biome{
-                        .has_precipitation = true,
-                        .temperature = 0.2,
-                        .downfall = 0.3,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 8233727,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:windswept_savanna",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 2.0,
-                        .downfall = 0.0,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7254527,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                        },
-                    },
-                },
-                {
-                    "minecraft:wooded_badlands",
-                    Biome{
-                        .has_precipitation = false,
-                        .temperature = 2.0,
-                        .downfall = 0.0,
-                        .effects = {
-                            .fog_color = 12638463,
-                            .water_color = 4159204,
-                            .water_fog_color = 329011,
-                            .sky_color = 7254527,
-                            .foliage_color = 10387789,
-                            .grass_color = 9470285,
-                            .mood_sound = Biome::MoodSound{
-                                .sound = "minecraft:ambient.cave",
-                            },
-                            .music = Biome::Music{
-                                .sound = "minecraft:music.overworld.badlands",
-                            },
-                        },
-                    },
-                },
-            };
-            chatTypes = {
-                {
-                    "minecraft:chat",
-                    ChatType{
-                        .chat = ChatType::Decoration{
-                            .translation_key = "chat.type.text",
-                            .parameters = std::vector<std::string>{"sender", "content"},
-                        },
-                        .narration = ChatType::Decoration{
-                            .translation_key = "chat.type.text.narrate",
-                            .parameters = std::vector<std::string>{"sender", "content"},
-                        },
-                    },
-                },
-                {
-                    "minecraft:emote_command",
-                    ChatType{
-                        .chat = ChatType::Decoration{
-                            .translation_key = "chat.type.emote",
-                            .parameters = std::vector<std::string>{"sender", "content"},
-                        },
-                        .narration = ChatType::Decoration{
-                            .translation_key = "chat.type.emote",
-                            .parameters = std::vector<std::string>{"sender", "content"},
-                        },
-                    },
-                },
-                {
-                    "minecraft:msg_command_incoming",
-                    ChatType{
-                        .chat = ChatType::Decoration{
-                            .translation_key = "commands.message.display.incoming",
-                            .style = Chat().SetColor("gray").SetItalic(true),
-                            .parameters = std::vector<std::string>{"sender", "content"},
-                        },
-                        .narration = ChatType::Decoration{
-                            .translation_key = "chat.type.text.narrate",
-                            .parameters = std::vector<std::string>{"sender", "content"},
-                        },
-                    },
-                },
-                {
-                    "minecraft:msg_command_outgoing",
-                    ChatType{
-                        .chat = ChatType::Decoration{
-                            .translation_key = "commands.message.display.outgoing",
-                            .style = Chat().SetColor("gray").SetItalic(true),
-                            .parameters = std::vector<std::string>{"target", "content"},
-                        },
-                        .narration = ChatType::Decoration{
-                            .translation_key = "chat.type.text.narrate",
-                            .parameters = std::vector<std::string>{"sender", "content"},
-                        },
-                    },
-                },
-                {
-                    "minecraft:say_command",
-                    ChatType{
-                        .chat = ChatType::Decoration{
-                            .translation_key = "chat.type.announcement",
-                            .parameters = std::vector<std::string>{"sender", "content"},
-                        },
-                        .narration = ChatType::Decoration{
-                            .translation_key = "chat.type.text.narrate",
-                            .parameters = std::vector<std::string>{"sender", "content"},
-                        },
-                    },
-                },
-                {
-                    "minecraft:team_msg_command_incoming",
-                    ChatType{
-                        .chat = ChatType::Decoration{
-                            .translation_key = "chat.type.team.text",
-                            .parameters = std::vector<std::string>{"target", "sender", "content"},
-                        },
-                        .narration = ChatType::Decoration{
-                            .translation_key = "chat.type.text.narrate",
-                            .parameters = std::vector<std::string>{"sender", "content"},
-                        },
-                    },
-                },
-                {
-                    "minecraft:team_msg_command_outgoing",
-                    ChatType{
-                        .chat = ChatType::Decoration{
-                            .translation_key = "chat.type.team.sent",
-                            .parameters = std::vector<std::string>{"target", "sender", "content"},
-                        },
-                        .narration = ChatType::Decoration{
-                            .translation_key = "chat.type.text.narrate",
-                            .parameters = std::vector<std::string>{"sender", "content"},
-                        },
-                    },
-                },
-            };
-            armorTrimPatterns = {
-                {
-                    "minecraft:coast",
-                    {
-                        .assert_id = "minecraft:coast",
-                        .template_item = "minecraft:coast_armor_trim_smithing_template",
-                        .description = Chat().SetTranslation("trim_pattern.minecraft.coast"),
-                        .decal = 0,
-                    },
-                },
-                {
-                    "minecraft:dune",
-                    {
-                        .assert_id = "minecraft:dune",
-                        .template_item = "minecraft:dune_armor_trim_smithing_template",
-                        .description = Chat().SetTranslation("trim_pattern.minecraft.dune"),
-                        .decal = 0,
-                    },
-                },
-                {
-                    "minecraft:eye",
-                    {
-                        .assert_id = "minecraft:eye",
-                        .template_item = "minecraft:eye_armor_trim_smithing_template",
-                        .description = Chat().SetTranslation("trim_pattern.minecraft.eye"),
-                        .decal = 0,
-                    },
-                },
-                {
-                    "minecraft:host",
-                    {
-                        .assert_id = "minecraft:host",
-                        .template_item = "minecraft:host_armor_trim_smithing_template",
-                        .description = Chat().SetTranslation("trim_pattern.minecraft.host"),
-                        .decal = 0,
-                    },
-                },
-                {
-                    "minecraft:raiser",
-                    {
-                        .assert_id = "minecraft:raiser",
-                        .template_item = "minecraft:raiser_armor_trim_smithing_template",
-                        .description = Chat().SetTranslation("trim_pattern.minecraft.raiser"),
-                        .decal = 0,
-                    },
-                },
-                {
-                    "minecraft:rib",
-                    {
-                        .assert_id = "minecraft:rib",
-                        .template_item = "minecraft:rib_armor_trim_smithing_template",
-                        .description = Chat().SetTranslation("trim_pattern.minecraft.rib"),
-                        .decal = 0,
-                    },
-                },
-                {
-                    "minecraft:sentry",
-                    {
-                        .assert_id = "minecraft:sentry",
-                        .template_item = "minecraft:sentry_armor_trim_smithing_template",
-                        .description = Chat().SetTranslation("trim_pattern.minecraft.sentry"),
-                        .decal = 0,
-                    },
-                },
-                {
-                    "minecraft:shaper",
-                    {
-                        .assert_id = "minecraft:shaper",
-                        .template_item = "minecraft:shaper_armor_trim_smithing_template",
-                        .description = Chat().SetTranslation("trim_pattern.minecraft.shaper"),
-                        .decal = 0,
-                    },
-                },
-                {
-                    "minecraft:silence",
-                    {
-                        .assert_id = "minecraft:silence",
-                        .template_item = "minecraft:silence_armor_trim_smithing_template",
-                        .description = Chat().SetTranslation("trim_pattern.minecraft.silence"),
-                        .decal = 0,
-                    },
-                },
-                {
-                    "minecraft:snout",
-                    {
-                        .assert_id = "minecraft:snout",
-                        .template_item = "minecraft:snout_armor_trim_smithing_template",
-                        .description = Chat().SetTranslation("trim_pattern.minecraft.snout"),
-                        .decal = 0,
-                    },
-                },
-                {
-                    "minecraft:spire",
-                    {
-                        .assert_id = "minecraft:spire",
-                        .template_item = "minecraft:spire_armor_trim_smithing_template",
-                        .description = Chat().SetTranslation("trim_pattern.minecraft.spire"),
-                        .decal = 0,
-                    },
-                },
-                {
-                    "minecraft:tide",
-                    {
-                        .assert_id = "minecraft:tide",
-                        .template_item = "minecraft:tide_armor_trim_smithing_template",
-                        .description = Chat().SetTranslation("trim_pattern.minecraft.tide"),
-                        .decal = 0,
-                    },
-                },
-                {
-                    "minecraft:vex",
-                    {
-                        .assert_id = "minecraft:vex",
-                        .template_item = "minecraft:vex_armor_trim_smithing_template",
-                        .description = Chat().SetTranslation("trim_pattern.minecraft.vex"),
-                        .decal = 0,
-                    },
-                },
-                {
-                    "minecraft:ward",
-                    {
-                        .assert_id = "minecraft:ward",
-                        .template_item = "minecraft:ward_armor_trim_smithing_template",
-                        .description = Chat().SetTranslation("trim_pattern.minecraft.ward"),
-                        .decal = 0,
-                    },
-                },
-                {
-                    "minecraft:wayfinder",
-                    {
-                        .assert_id = "minecraft:wayfinder",
-                        .template_item = "minecraft:wayfinder_armor_trim_smithing_template",
-                        .description = Chat().SetTranslation("trim_pattern.minecraft.wayfinder"),
-                        .decal = 0,
-                    },
-                },
-                {
-                    "minecraft:wild",
-                    {
-                        .assert_id = "minecraft:wild",
-                        .template_item = "minecraft:wild_armor_trim_smithing_template",
-                        .description = Chat().SetTranslation("trim_pattern.minecraft.wild"),
-                        .decal = 0,
-                    },
-                },
-            };
-            armorTrimMaterials = {
-                {
-                    "minecraft:amethyst",
-                    {
-                        .asset_name = "amethyst",
-                        .ingredient = "minecraft:amethyst_shard",
-                        .description = Chat().SetColor("#9A5CC6").SetTranslation("trim_material.minecraft.amethyst"),
-                        .item_model_index = 1.0,
-                    },
-                },
-                {
-                    "minecraft:copper",
-                    {
-
-                        .asset_name = "copper",
-                        .ingredient = "minecraft:copper_ingot",
-                        .description = Chat().SetColor("#B4684D").SetTranslation("trim_material.minecraft.copper"),
-                        .item_model_index = 0.5,
-                    },
-                },
-                {
-                    "minecraft:diamond",
-                    {
-
-                        .asset_name = "diamond",
-                        .ingredient = "minecraft:diamond",
-                        .override_armor_materials = {{"minecraft:diamond", "diamond_darker"}},
-                        .description = Chat().SetColor("#6EECD2").SetTranslation("trim_material.minecraft.diamond"),
-                        .item_model_index = 0.8,
-                    },
-                },
-                std::pair<const std::string, ArmorTrimMaterial>{
-                    "minecraft:emerald",
-                    {
-
-                        .asset_name = "emerald",
-                        .ingredient = "minecraft:emerald",
-                        .description = Chat().SetColor("#11A036").SetTranslation("trim_material.minecraft.emerald"),
-                        .item_model_index = 0.7,
-                    }
-                },
-                {
-                    "minecraft:gold",
-                    {
-
-                        .asset_name = "gold",
-                        .ingredient = "minecraft:gold_ingot",
-                        .override_armor_materials = {{"minecraft:gold", "gold_darker"}},
-                        .description = Chat().SetColor("#DEB12D").SetTranslation("trim_material.minecraft.gold"),
-                        .item_model_index = 0.6,
-                    },
-                },
-                {
-                    "minecraft:iron",
-                    {
-
-                        .asset_name = "iron",
-                        .ingredient = "minecraft:iron_ingot",
-                        .override_armor_materials = {{"minecraft:iron", "iron_darker"}},
-                        .description = Chat().SetColor("#ECECEC").SetTranslation("trim_material.minecraft.iron"),
-                        .item_model_index = 0.2,
-                    },
-                },
-                {
-                    "minecraft:lapis",
-                    {
-
-                        .asset_name = "lapis",
-                        .ingredient = "minecraft:lapis_lazuli",
-                        .description = Chat().SetColor("#416E97").SetTranslation("trim_material.minecraft.lapis"),
-                        .item_model_index = 0.9,
-                    },
-                },
-                {
-                    "minecraft:netherite",
-                    {
-
-                        .asset_name = "netherite",
-                        .ingredient = "minecraft:netherite_ingot",
-                        .override_armor_materials = {{"minecraft:netherite", "netherite_darker"}},
-                        .description = Chat().SetColor("#625859").SetTranslation("trim_material.minecraft.netherite"),
-                        .item_model_index = 0.3,
-                    },
-                },
-                {
-                    "minecraft:quartz",
-                    {
-
-                        .asset_name = "quartz",
-                        .ingredient = "minecraft:quartz",
-                        .description = Chat().SetColor("#E3D4C4").SetTranslation("trim_material.minecraft.quartz"),
-                        .item_model_index = 0.3,
-                    },
-                },
-                {
-                    "minecraft:redstone",
-                    {
-
-                        .asset_name = "redstone",
-                        .ingredient = "minecraft:redstone",
-                        .description = Chat().SetColor("#971607").SetTranslation("trim_material.minecraft.redstone"),
-                        .item_model_index = 0.4,
-                    },
-                },
-            };
-            wolfVariants = {
-                {
-                    "minecraft:ashen",
-                    {
-                        .wild_texture = "minecraft:entity/wolf/wolf_ashen",
-                        .tame_texture = "minecraft:entity/wolf/wolf_ashen_tame",
-                        .angry_texture = "minecraft:entity/wolf/wolf_ashen_angry",
-                        .biomes = {"minecraft:snowy_taiga"},
-                    },
-                },
-                {
-                    "minecraft:black",
-                    {
-                        .wild_texture = "minecraft:entity/wolf/wolf_black",
-                        .tame_texture = "minecraft:entity/wolf/wolf_black_tame",
-                        .angry_texture = "minecraft:entity/wolf/wolf_black_angry",
-                        .biomes = {"minecraft:old_growth_pine_taiga"},
-                    },
-                },
-                {
-                    "minecraft:chestnut",
-                    {
-                        .wild_texture = "minecraft:entity/wolf/wolf_chestnut",
-                        .tame_texture = "minecraft:entity/wolf/wolf_chestnut_tame",
-                        .angry_texture = "minecraft:entity/wolf/wolf_chestnut_angry",
-                        .biomes = {"minecraft:old_growth_spruce_taiga"},
-                    },
-                },
-                {
-                    "minecraft:pale",
-                    {
-                        .wild_texture = "minecraft:entity/wolf/wolf",
-                        .tame_texture = "minecraft:entity/wolf/wolf_tame",
-                        .angry_texture = "minecraft:entity/wolf/wolf_angry",
-                        .biomes = {"minecraft:taiga"},
-                    },
-                },
-                {
-                    "minecraft:rusty",
-                    {
-                        .wild_texture = "minecraft:entity/wolf/wolf_rusty",
-                        .tame_texture = "minecraft:entity/wolf/wolf_rusty_tame",
-                        .angry_texture = "minecraft:entity/wolf/wolf_rusty_angry",
-                        .biomes = {"minecraft:is_jungle"},
-                    },
-                },
-                {
-                    "minecraft:snowy",
-                    {
-                        .wild_texture = "minecraft:entity/wolf/wolf_snowy",
-                        .tame_texture = "minecraft:entity/wolf/wolf_snowy_tame",
-                        .angry_texture = "minecraft:entity/wolf/wolf_snowy_angry",
-                        .biomes = {"minecraft:grove"},
-                    },
-                },
-                {
-                    "minecraft:spotted",
-                    {
-                        .wild_texture = "minecraft:entity/wolf/wolf_spotted",
-                        .tame_texture = "minecraft:entity/wolf/wolf_spotted_tame",
-                        .angry_texture = "minecraft:entity/wolf/wolf_spotted_angry",
-                        .biomes = {"minecraft:is_savanna"},
-                    },
-                },
-                {
-                    "minecraft:striped",
-                    {
-                        .wild_texture = "minecraft:entity/wolf/wolf_striped",
-                        .tame_texture = "minecraft:entity/wolf/wolf_striped_tame",
-                        .angry_texture = "minecraft:entity/wolf/wolf_striped_angry",
-                        .biomes = {"minecraft:is_badlands"},
-                    },
-                },
-                {
-                    "minecraft:woods",
-                    {
-                        .wild_texture = "minecraft:entity/wolf/wolf_woods",
-                        .tame_texture = "minecraft:entity/wolf/wolf_woods_tame",
-                        .angry_texture = "minecraft:entity/wolf/wolf_woods_angry",
-                        .biomes = {"minecraft:forest"},
-                    },
-                },
-            };
-            dimensionTypes = {
-                {
-                    "minecraft:overworld",
-                    {
-                        .monster_spawn_light_level = IntegerDistribution{
-                            .type = "minecraft:uniform",
-                            .value = enbt::compound{
-                                {"min_inclusive", 0},
-                                {"max_inclusive", 7},
-                            },
-                        },
-                        .infiniburn = "#minecraft:infiniburn_overworld",
-                        .effects = "minecraft:overworld",
-                        .coordinate_scale = 1,
-                        .ambient_light = 0,
-                        .min_y = -64,
-                        .height = 384,
-                        .logical_height = 384,
-                        .monster_spawn_block_light_limit = 0,
-                        .has_skylight = true,
-                        .has_ceiling = false,
-                        .ultrawarm = false,
-                        .natural = true,
-                        .piglin_safe = false,
-                        .has_raids = true,
-                        .respawn_anchor_works = false,
-                        .bed_works = true,
-                    },
-                },
-                {
-                    "minecraft:overworld_caves",
-                    {
-                        .monster_spawn_light_level = IntegerDistribution{
-                            .type = "minecraft:uniform",
-                            .value = enbt::compound{
-                                {"min_inclusive", 0},
-                                {"max_inclusive", 7},
-                            },
-                        },
-                        .infiniburn = "#minecraft:infiniburn_overworld",
-                        .effects = "minecraft:overworld",
-                        .coordinate_scale = 1,
-                        .ambient_light = 0,
-                        .min_y = -64,
-                        .height = 384,
-                        .logical_height = 384,
-                        .monster_spawn_block_light_limit = 0,
-                        .has_skylight = true,
-                        .has_ceiling = false,
-                        .ultrawarm = false,
-                        .natural = true,
-                        .piglin_safe = false,
-                        .has_raids = true,
-                        .respawn_anchor_works = false,
-                        .bed_works = true,
-                    },
-                },
-                {
-                    "minecraft:the_end",
-                    {
-                        .monster_spawn_light_level = IntegerDistribution{
-                            .type = "minecraft:uniform",
-                            .value = enbt::compound{
-                                {"min_inclusive", 0},
-                                {"max_inclusive", 7},
-                            },
-                        },
-                        .fixed_time = 6000,
-                        .infiniburn = "#minecraft:infiniburn_end",
-                        .effects = "minecraft:the_end",
-                        .coordinate_scale = 1,
-                        .ambient_light = 0,
-                        .min_y = 0,
-                        .height = 256,
-                        .logical_height = 256,
-                        .monster_spawn_block_light_limit = 0,
-                        .has_skylight = false,
-                        .has_ceiling = false,
-                        .ultrawarm = false,
-                        .natural = false,
-                        .piglin_safe = false,
-                        .has_raids = true,
-                        .respawn_anchor_works = false,
-                        .bed_works = false,
-                    },
-                },
-                {
-                    "minecraft:the_nether",
-                    {
-                        .monster_spawn_light_level = IntegerDistribution{
-                            .type = "minecraft:uniform",
-                            .value = enbt::compound{
-                                {"min_inclusive", 0},
-                                {"max_inclusive", 7},
-                            },
-                        },
-                        .fixed_time = 18000,
-                        .infiniburn = "#minecraft:infiniburn_nether",
-                        .effects = "minecraft:the_nether",
-                        .coordinate_scale = 8,
-                        .ambient_light = 0.1,
-                        .min_y = 0,
-                        .height = 256,
-                        .logical_height = 128,
-                        .monster_spawn_block_light_limit = 7,
-                        .has_skylight = false,
-                        .has_ceiling = true,
-                        .ultrawarm = true,
-                        .natural = false,
-                        .piglin_safe = true,
-                        .has_raids = false,
-                        .respawn_anchor_works = true,
-                        .bed_works = false,
-                    },
-                },
-            };
-            damageTypes = {
-                {
-                    "minecraft:arrow",
-                    DamageType{
-                        .message_id = "arrow",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:bad_respawn_point",
-                    DamageType{
-                        .message_id = "badRespawnPoint",
-                        .scaling = DamageType::ScalingType::always,
-                        .death_message_type = DamageType::DeathMessageType::intentional_game_design,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:cactus",
-                    DamageType{
-                        .message_id = "cactus",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:cramming",
-                    DamageType{
-                        .message_id = "cramming",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.0,
-                    },
-                },
-                {
-                    "minecraft:dragon_breath",
-                    DamageType{
-                        .message_id = "dragonBreath",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.0,
-                    },
-                },
-                {
-                    "minecraft:drown",
-                    DamageType{
-                        .message_id = "drown",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .effects = DamageType::EffectsType::drowning,
-                        .exhaustion = 0.0,
-                    },
-                },
-                {
-                    "minecraft:dry_out",
-                    DamageType{
-                        .message_id = "dryout",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:explosion",
-                    DamageType{
-                        .message_id = "explosion",
-                        .scaling = DamageType::ScalingType::always,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:fall",
-                    DamageType{
-                        .message_id = "fall",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .death_message_type = DamageType::DeathMessageType::fall_variants,
-                        .exhaustion = 0,
-                    },
-                },
-                {
-                    "minecraft:falling_anvil",
-                    DamageType{
-                        .message_id = "anvil",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:falling_block",
-                    DamageType{
-                        .message_id = "fallingBlock",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:falling_stalactite",
-                    DamageType{
-                        .message_id = "fallingStalactite",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:fireball",
-                    DamageType{
-                        .message_id = "fireball",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .effects = DamageType::EffectsType::burning,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:fireworks",
-                    DamageType{
-                        .message_id = "fireworks",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:fly_into_wall",
-                    DamageType{
-                        .message_id = "flyIntoWall",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.0,
-                    },
-                },
-                {
-                    "minecraft:freeze",
-                    DamageType{
-                        .message_id = "freeze",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .effects = DamageType::EffectsType::freezing,
-                        .exhaustion = 0.0,
-                    },
-                },
-                {
-                    "minecraft:generic",
-                    DamageType{
-                        .message_id = "generic",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.0,
-                    },
-                },
-                {
-                    "minecraft:generic_kill",
-                    DamageType{
-                        .message_id = "genericKill",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.0,
-                    },
-                },
-                {
-                    "minecraft:hot_floor",
-                    DamageType{
-                        .message_id = "hotFloor",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:in_fire",
-                    DamageType{
-                        .message_id = "inFire",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .effects = DamageType::EffectsType::burning,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:in_wall",
-                    DamageType{
-                        .message_id = "inWall",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.0,
-                    },
-                },
-                {
-                    "minecraft:indirect_magic",
-                    DamageType{
-                        .message_id = "indirectMagic",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.0,
-                    },
-                },
-                {
-                    "minecraft:lava",
-                    DamageType{
-                        .message_id = "lava",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .effects = DamageType::EffectsType::burning,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:lightning_bolt",
-                    DamageType{
-                        .message_id = "lightningBolt",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:magic",
-                    DamageType{
-                        .message_id = "magic",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.0,
-                    },
-                },
-                {
-                    "minecraft:mob_attack",
-                    DamageType{
-                        .message_id = "mob",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:mob_attack_no_aggro",
-                    DamageType{
-                        .message_id = "mob",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:mob_projectile",
-                    DamageType{
-                        .message_id = "mob",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:on_fire",
-                    DamageType{
-                        .message_id = "onFire",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .effects = DamageType::EffectsType::burning,
-                        .exhaustion = 0,
-                    },
-                },
-                {
-                    "minecraft:out_of_world",
-                    DamageType{
-                        .message_id = "outOfWorld",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0,
-                    },
-                },
-                {
-                    "minecraft:outside_border",
-                    DamageType{
-                        .message_id = "outsideBorder",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0,
-                    },
-                },
-                {
-                    "minecraft:player_attack",
-                    DamageType{
-                        .message_id = "player",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:player_explosion",
-                    DamageType{
-                        .message_id = "explosion.player",
-                        .scaling = DamageType::ScalingType::always,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:sonic_boom",
-                    DamageType{
-                        .message_id = "sonic_boom",
-                        .scaling = DamageType::ScalingType::always,
-                        .exhaustion = 0,
-                    },
-                },
-                {
-                    "minecraft:spit",
-                    DamageType{
-                        .message_id = "mob",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0,
-                    },
-                },
-                {
-                    "minecraft:stalagmite",
-                    DamageType{
-                        .message_id = "stalagmite",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0,
-                    },
-                },
-                {
-                    "minecraft:starve",
-                    DamageType{
-                        .message_id = "starve",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0,
-                    },
-                },
-                {
-                    "minecraft:sting",
-                    DamageType{
-                        .message_id = "sting",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:sweet_berry_bush",
-                    DamageType{
-                        .message_id = "sweetBerryBush",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .effects = DamageType::EffectsType::poking,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:thorns",
-                    DamageType{
-                        .message_id = "thorns",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .effects = DamageType::EffectsType::thorns,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:thrown",
-                    DamageType{
-                        .message_id = "thrown",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:trident",
-                    DamageType{
-                        .message_id = "trident",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:unattributed_fireball",
-                    DamageType{
-                        .message_id = "onFire",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .effects = DamageType::EffectsType::burning,
-                        .exhaustion = 0.1,
-                    },
-                },
-                {
-                    "minecraft:wither",
-                    DamageType{
-                        .message_id = "wither",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.0,
-                    },
-                },
-                {
-                    "minecraft:wither_skull",
-                    DamageType{
-                        .message_id = "witherSkull",
-                        .scaling = DamageType::ScalingType::when_caused_by_living_non_player,
-                        .exhaustion = 0.1,
-                    },
-                },
-            };
-            bannerPatterns = {
-                {
-                    "minecraft:base",
-                    BannerPattern{
-                        .asset_id = "minecraft:base",
-                        .translation_key = "block.minecraft.banner.base",
-                    },
-                },
-                {
-                    "minecraft:border",
-                    BannerPattern{
-                        .asset_id = "minecraft:border",
-                        .translation_key = "block.minecraft.banner.border",
-                    },
-                },
-                {
-                    "minecraft:bricks",
-                    BannerPattern{
-                        .asset_id = "minecraft:bricks",
-                        .translation_key = "block.minecraft.banner.bricks",
-                    },
-                },
-                {
-                    "minecraft:circle",
-                    BannerPattern{
-                        .asset_id = "minecraft:circle",
-                        .translation_key = "block.minecraft.banner.circle",
-                    },
-                },
-                {
-                    "minecraft:creeper",
-                    BannerPattern{
-                        .asset_id = "minecraft:creeper",
-                        .translation_key = "block.minecraft.banner.creeper",
-                    },
-                },
-                {
-                    "minecraft:cross",
-                    BannerPattern{
-                        .asset_id = "minecraft:cross",
-                        .translation_key = "block.minecraft.banner.cross",
-                    },
-                },
-                {
-                    "minecraft:curly_border",
-                    BannerPattern{
-                        .asset_id = "minecraft:curly_border",
-                        .translation_key = "block.minecraft.banner.curly_border",
-                    },
-                },
-                {
-                    "minecraft:diagonal_left",
-                    BannerPattern{
-                        .asset_id = "minecraft:diagonal_left",
-                        .translation_key = "block.minecraft.banner.diagonal_left",
-                    },
-                },
-                {
-                    "minecraft:diagonal_right",
-                    BannerPattern{
-                        .asset_id = "minecraft:diagonal_right",
-                        .translation_key = "block.minecraft.banner.diagonal_right",
-                    },
-                },
-                {
-                    "minecraft:diagonal_up_left",
-                    BannerPattern{
-                        .asset_id = "minecraft:diagonal_up_left",
-                        .translation_key = "block.minecraft.banner.diagonal_up_left",
-                    },
-                },
-                {
-                    "minecraft:diagonal_up_right",
-                    BannerPattern{
-                        .asset_id = "minecraft:diagonal_up_right",
-                        .translation_key = "block.minecraft.banner.diagonal_up_right",
-                    },
-                },
-                {
-                    "minecraft:flower",
-                    BannerPattern{
-                        .asset_id = "minecraft:flower",
-                        .translation_key = "block.minecraft.banner.flower",
-                    },
-                },
-                {
-                    "minecraft:globe",
-                    BannerPattern{
-                        .asset_id = "minecraft:globe",
-                        .translation_key = "block.minecraft.banner.globe",
-                    },
-                },
-                {
-                    "minecraft:gradient",
-                    BannerPattern{
-                        .asset_id = "minecraft:gradient",
-                        .translation_key = "block.minecraft.banner.gradient",
-                    },
-                },
-                {
-                    "minecraft:gradient_up",
-                    BannerPattern{
-                        .asset_id = "minecraft:gradient_up",
-                        .translation_key = "block.minecraft.banner.gradient_up",
-                    },
-                },
-                {
-                    "minecraft:half_horizontal",
-                    BannerPattern{
-                        .asset_id = "minecraft:half_horizontal",
-                        .translation_key = "block.minecraft.banner.half_horizontal",
-                    },
-                },
-                {
-                    "minecraft:half_horizontal_bottom",
-                    BannerPattern{
-                        .asset_id = "minecraft:half_horizontal_bottom",
-                        .translation_key = "block.minecraft.banner.half_horizontal_bottom",
-                    },
-                },
-                {
-                    "minecraft:half_vertical",
-                    BannerPattern{
-                        .asset_id = "minecraft:half_vertical",
-                        .translation_key = "block.minecraft.banner.half_vertical",
-                    },
-                },
-                {
-                    "minecraft:half_vertical_right",
-                    BannerPattern{
-                        .asset_id = "minecraft:half_vertical_right",
-                        .translation_key = "block.minecraft.banner.half_vertical_right",
-                    },
-                },
-                {
-                    "minecraft:mojang",
-                    BannerPattern{
-                        .asset_id = "minecraft:mojang",
-                        .translation_key = "block.minecraft.banner.mojang",
-                    },
-                },
-                {
-                    "minecraft:piglin",
-                    BannerPattern{
-                        .asset_id = "minecraft:piglin",
-                        .translation_key = "block.minecraft.banner.piglin",
-                    },
-                },
-                {
-                    "minecraft:rhombus",
-                    BannerPattern{
-                        .asset_id = "minecraft:rhombus",
-                        .translation_key = "block.minecraft.banner.rhombus",
-                    },
-                },
-                {
-                    "minecraft:skull",
-                    BannerPattern{
-                        .asset_id = "minecraft:skull",
-                        .translation_key = "block.minecraft.banner.skull",
-                    },
-                },
-                {
-                    "minecraft:small_stripes",
-                    BannerPattern{
-                        .asset_id = "minecraft:small_stripes",
-                        .translation_key = "block.minecraft.banner.small_stripes",
-                    },
-                },
-                {
-                    "minecraft:square_bottom_left",
-                    BannerPattern{
-                        .asset_id = "minecraft:square_bottom_left",
-                        .translation_key = "block.minecraft.banner.square_bottom_left",
-                    },
-                },
-                {
-                    "minecraft:square_bottom_right",
-                    BannerPattern{
-                        .asset_id = "minecraft:square_bottom_right",
-                        .translation_key = "block.minecraft.banner.square_bottom_right",
-                    },
-                },
-                {
-                    "minecraft:square_top_left",
-                    BannerPattern{
-                        .asset_id = "minecraft:square_top_left",
-                        .translation_key = "block.minecraft.banner.square_top_left",
-                    },
-                },
-                {
-                    "minecraft:square_top_right",
-                    BannerPattern{
-                        .asset_id = "minecraft:square_top_right",
-                        .translation_key = "block.minecraft.banner.square_top_right",
-                    },
-                },
-                {
-                    "minecraft:straight_cross",
-                    BannerPattern{
-                        .asset_id = "minecraft:straight_cross",
-                        .translation_key = "block.minecraft.banner.straight_cross",
-                    },
-                },
-                {
-                    "minecraft:stripe_bottom",
-                    BannerPattern{
-                        .asset_id = "minecraft:stripe_bottom",
-                        .translation_key = "block.minecraft.banner.stripe_bottom",
-                    },
-                },
-                {
-                    "minecraft:stripe_center",
-                    BannerPattern{
-                        .asset_id = "minecraft:stripe_center",
-                        .translation_key = "block.minecraft.banner.stripe_center",
-                    },
-                },
-                {
-                    "minecraft:stripe_downleft",
-                    BannerPattern{
-                        .asset_id = "minecraft:stripe_downleft",
-                        .translation_key = "block.minecraft.banner.stripe_downleft",
-                    },
-                },
-                {
-                    "minecraft:stripe_downright",
-                    BannerPattern{
-                        .asset_id = "minecraft:stripe_downright",
-                        .translation_key = "block.minecraft.banner.stripe_downright",
-                    },
-                },
-                {
-                    "minecraft:stripe_left",
-                    BannerPattern{
-                        .asset_id = "minecraft:stripe_left",
-                        .translation_key = "block.minecraft.banner.stripe_left",
-                    },
-                },
-                {
-                    "minecraft:stripe_middle",
-                    BannerPattern{
-                        .asset_id = "minecraft:stripe_middle",
-                        .translation_key = "block.minecraft.banner.stripe_middle",
-                    },
-                },
-                {
-                    "minecraft:stripe_right",
-                    BannerPattern{
-                        .asset_id = "minecraft:stripe_right",
-                        .translation_key = "block.minecraft.banner.stripe_right",
-                    },
-                },
-                {
-                    "minecraft:stripe_top",
-                    BannerPattern{
-                        .asset_id = "minecraft:stripe_top",
-                        .translation_key = "block.minecraft.banner.stripe_top",
-                    },
-                },
-                {
-                    "minecraft:triangle_bottom",
-                    BannerPattern{
-                        .asset_id = "minecraft:triangle_bottom",
-                        .translation_key = "block.minecraft.banner.triangle_bottom",
-                    },
-                },
-                {
-                    "minecraft:triangle_top",
-                    BannerPattern{
-                        .asset_id = "minecraft:triangle_top",
-                        .translation_key = "block.minecraft.banner.triangle_top",
-                    },
-                },
-                {
-                    "minecraft:triangles_bottom",
-                    BannerPattern{
-                        .asset_id = "minecraft:triangles_bottom",
-                        .translation_key = "block.minecraft.banner.triangles_bottom",
-                    },
-                },
-                {
-                    "minecraft:triangles_top",
-                    BannerPattern{
-                        .asset_id = "minecraft:triangles_top",
-                        .translation_key = "block.minecraft.banner.triangles_top",
-                    },
-                },
-            };
-            paintingVariants = {
-                {
-                    "minecraft:alban",
-                    PaintingVariant{
-                        .asset_id = "minecraft:alban",
-                        .height = 1,
-                        .width = 1,
-                    },
-                },
-                {
-                    "minecraft:aztec",
-                    PaintingVariant{
-                        .asset_id = "minecraft:aztec",
-                        .height = 1,
-                        .width = 1,
-                    },
-                },
-                {
-                    "minecraft:aztec2",
-                    PaintingVariant{
-                        .asset_id = "minecraft:aztec2",
-                        .height = 1,
-                        .width = 1,
-                    },
-                },
-                {
-                    "minecraft:backyard",
-                    PaintingVariant{
-                        .asset_id = "minecraft:backyard",
-                        .height = 4,
-                        .width = 3,
-                    },
-                },
-                {
-                    "minecraft:baroque",
-                    PaintingVariant{
-                        .asset_id = "minecraft:baroque",
-                        .height = 2,
-                        .width = 2,
-                    },
-                },
-                {
-                    "minecraft:bomb",
-                    PaintingVariant{
-                        .asset_id = "minecraft:bomb",
-                        .height = 1,
-                        .width = 1,
-                    },
-                },
-                {
-                    "minecraft:bouquet",
-                    PaintingVariant{
-                        .asset_id = "minecraft:bouquet",
-                        .height = 3,
-                        .width = 3,
-                    },
-                },
-                {
-                    "minecraft:burning_skull",
-                    PaintingVariant{
-                        .asset_id = "minecraft:burning_skull",
-                        .height = 4,
-                        .width = 4,
-                    },
-                },
-                {
-                    "minecraft:bust",
-                    PaintingVariant{
-                        .asset_id = "minecraft:bust",
-                        .height = 2,
-                        .width = 2,
-                    },
-                },
-                {
-                    "minecraft:cavebird",
-                    PaintingVariant{
-                        .asset_id = "minecraft:cavebird",
-                        .height = 3,
-                        .width = 3,
-                    },
-                },
-                {
-                    "minecraft:changing",
-                    PaintingVariant{
-                        .asset_id = "minecraft:changing",
-                        .height = 2,
-                        .width = 4,
-                    },
-                },
-                {
-                    "minecraft:cotan",
-                    PaintingVariant{
-                        .asset_id = "minecraft:cotan",
-                        .height = 3,
-                        .width = 3,
-                    },
-                },
-                {
-                    "minecraft:courbet",
-                    PaintingVariant{
-                        .asset_id = "minecraft:courbet",
-                        .height = 1,
-                        .width = 2,
-                    },
-                },
-                {
-                    "minecraft:creebet",
-                    PaintingVariant{
-                        .asset_id = "minecraft:creebet",
-                        .height = 1,
-                        .width = 2,
-                    },
-                },
-                {
-                    "minecraft:donkey_kong",
-                    PaintingVariant{
-                        .asset_id = "minecraft:donkey_kong",
-                        .height = 3,
-                        .width = 4,
-                    },
-                },
-                {
-                    "minecraft:earth",
-                    PaintingVariant{
-                        .asset_id = "minecraft:earth",
-                        .height = 2,
-                        .width = 2,
-                    },
-                },
-                {
-                    "minecraft:endboss",
-                    PaintingVariant{
-                        .asset_id = "minecraft:endboss",
-                        .height = 3,
-                        .width = 3,
-                    },
-                },
-                {
-                    "minecraft:fern",
-                    PaintingVariant{
-                        .asset_id = "minecraft:fern",
-                        .height = 3,
-                        .width = 3,
-                    },
-                },
-                {
-                    "minecraft:fighters",
-                    PaintingVariant{
-                        .asset_id = "minecraft:fighters",
-                        .height = 2,
-                        .width = 4,
-                    },
-                },
-                {
-                    "minecraft:finding",
-                    PaintingVariant{
-                        .asset_id = "minecraft:finding",
-                        .height = 2,
-                        .width = 4,
-                    },
-                },
-                {
-                    "minecraft:fire",
-                    PaintingVariant{
-                        .asset_id = "minecraft:fire",
-                        .height = 2,
-                        .width = 2,
-                    },
-                },
-                {
-                    "minecraft:graham",
-                    PaintingVariant{
-                        .asset_id = "minecraft:graham",
-                        .height = 2,
-                        .width = 1,
-                    },
-                },
-                {
-                    "minecraft:humble",
-                    PaintingVariant{
-                        .asset_id = "minecraft:humble",
-                        .height = 2,
-                        .width = 2,
-                    },
-                },
-                {
-                    "minecraft:kebab",
-                    PaintingVariant{
-                        .asset_id = "minecraft:kebab",
-                        .height = 1,
-                        .width = 1,
-                    },
-                },
-                {
-                    "minecraft:lowmist",
-                    PaintingVariant{
-                        .asset_id = "minecraft:lowmist",
-                        .height = 2,
-                        .width = 4,
-                    },
-                },
-                {
-                    "minecraft:match",
-                    PaintingVariant{
-                        .asset_id = "minecraft:match",
-                        .height = 2,
-                        .width = 2,
-                    },
-                },
-                {
-                    "minecraft:meditative",
-                    PaintingVariant{
-                        .asset_id = "minecraft:meditative",
-                        .height = 1,
-                        .width = 1,
-                    },
-                },
-                {
-                    "minecraft:orb",
-                    PaintingVariant{
-                        .asset_id = "minecraft:orb",
-                        .height = 4,
-                        .width = 4,
-                    },
-                },
-                {
-                    "minecraft:owlemons",
-                    PaintingVariant{
-                        .asset_id = "minecraft:owlemons",
-                        .height = 3,
-                        .width = 3,
-                    },
-                },
-                {
-                    "minecraft:passage",
-                    PaintingVariant{
-                        .asset_id = "minecraft:passage",
-                        .height = 2,
-                        .width = 4,
-                    },
-                },
-                {
-                    "minecraft:pigscene",
-                    PaintingVariant{
-                        .asset_id = "minecraft:pigscene",
-                        .height = 4,
-                        .width = 4,
-                    },
-                },
-                {
-                    "minecraft:plant",
-                    PaintingVariant{
-                        .asset_id = "minecraft:plant",
-                        .height = 1,
-                        .width = 1,
-                    },
-                },
-                {
-                    "minecraft:pointer",
-                    PaintingVariant{
-                        .asset_id = "minecraft:pointer",
-                        .height = 4,
-                        .width = 4,
-                    },
-                },
-                {
-                    "minecraft:pond",
-                    PaintingVariant{
-                        .asset_id = "minecraft:pond",
-                        .height = 4,
-                        .width = 3,
-                    },
-                },
-                {
-                    "minecraft:pool",
-                    PaintingVariant{
-                        .asset_id = "minecraft:pool",
-                        .height = 1,
-                        .width = 2,
-                    },
-                },
-                {
-                    "minecraft:prairie_ride",
-                    PaintingVariant{
-                        .asset_id = "minecraft:prairie_ride",
-                        .height = 2,
-                        .width = 1,
-                    },
-                },
-                {
-                    "minecraft:sea",
-                    PaintingVariant{
-                        .asset_id = "minecraft:sea",
-                        .height = 1,
-                        .width = 2,
-                    },
-                },
-                {
-                    "minecraft:skeleton",
-                    PaintingVariant{
-                        .asset_id = "minecraft:skeleton",
-                        .height = 3,
-                        .width = 4,
-                    },
-                },
-                {
-                    "minecraft:skull_and_roses",
-                    PaintingVariant{
-                        .asset_id = "minecraft:skull_and_roses",
-                        .height = 2,
-                        .width = 2,
-                    },
-                },
-                {
-                    "minecraft:stage",
-                    PaintingVariant{
-                        .asset_id = "minecraft:stage",
-                        .height = 2,
-                        .width = 2,
-                    },
-                },
-                {
-                    "minecraft:sunflowers",
-                    PaintingVariant{
-                        .asset_id = "minecraft:sunflowers",
-                        .height = 3,
-                        .width = 3,
-                    },
-                },
-                {
-                    "minecraft:sunset",
-                    PaintingVariant{
-                        .asset_id = "minecraft:sunset",
-                        .height = 1,
-                        .width = 2,
-                    },
-                },
-                {
-                    "minecraft:wither",
-                    PaintingVariant{
-                        .asset_id = "minecraft:wither",
-                        .height = 2,
-                        .width = 2,
-                    },
-                },
-            };
         }
 
         void initialize_entities() {
@@ -4519,8 +1692,9 @@ namespace crafted_craft {
                     js_object particle_js = js_object::get_object(effects_js["particle"]);
                     Biome::Particle particle;
                     particle.probability = particle_js["probability"];
-                    particle.options.type = (std::string)particle_js["type"];
-                    particle.options.options = conversions::json::from_json(particle_js["options"].get());
+                    auto options = js_object::get_object(particle_js["options"]);
+                    particle.options.type = (std::string)options["type"];
+                    particle.options.options = conversions::json::from_json(options.get());
                     effects.particle = std::move(particle);
                 }
                 if (effects_js.contains("ambient_sound")) {
@@ -4630,7 +1804,8 @@ namespace crafted_craft {
         ChatType::Decoration to_decoration(js_value&& json) {
             ChatType::Decoration decoration;
             js_object chat_js = js_object::get_object(json);
-            decoration.style = Chat::fromEnbt(conversions::json::from_json(chat_js["style"].get()));
+            if (chat_js.contains("style"))
+                decoration.style = Chat::fromEnbt(conversions::json::from_json(chat_js["style"].get()));
             decoration.translation_key = (std::string)chat_js["translation_key"];
             {
                 auto params = chat_js["parameters"];
@@ -5005,7 +2180,7 @@ namespace crafted_craft {
         void load_file_armorTrimPattern(js_object&& pattern_js, const std::string& id) {
             check_override(armorTrimPatterns, id, "armor trim pattern");
             ArmorTrimPattern pattern;
-            pattern.assert_id = (std::string)pattern_js["assert_id"];
+            pattern.asset_id = (std::string)pattern_js["asset_id"];
             pattern.decal = pattern_js["decal"];
             pattern.template_item = (std::string)pattern_js["template_item"];
             {
@@ -5029,7 +2204,7 @@ namespace crafted_craft {
         void load_file_armorTrimMaterial(js_object&& material_js, const std::string& id) {
             check_override(armorTrimMaterials, id, "armor trim material");
             ArmorTrimMaterial material;
-            material.asset_name = (std::string)material_js["texture"];
+            material.asset_name = (std::string)material_js["asset_name"];
             material.ingredient = (std::string)material_js["ingredient"];
             material.item_model_index = material_js["item_model_index"];
             {
@@ -5058,13 +2233,17 @@ namespace crafted_craft {
         void load_file_wolfVariant(js_object&& variant_js, const std::string& id) {
             check_override(wolfVariants, id, "wolf variant");
             WolfVariant variant;
-            variant.wild_texture = (std::string)variant_js["wild_texture"];
-            variant.tame_texture = (std::string)variant_js["tame_texture"];
-            variant.angry_texture = (std::string)variant_js["angry_texture"];
-            auto biomes = js_array::get_array(variant_js["biomes"]);
-            variant.biomes.reserve(biomes.size());
-            for (auto&& biome : biomes)
-                variant.biomes.push_back(biome);
+            variant.wild_texture = (std::string)variant_js.at("wild_texture");
+            variant.tame_texture = (std::string)variant_js.at("tame_texture");
+            variant.angry_texture = (std::string)variant_js.at("angry_texture");
+            auto _biomes = variant_js.at("biomes");
+            if (_biomes.is_array()) {
+                auto biomes = js_array::get_array(variant_js.at("biomes"));
+                variant.biomes.reserve(biomes.size());
+                for (auto&& biome : biomes)
+                    variant.biomes.push_back(biome);
+            } else
+                variant.biomes.push_back((std::string)_biomes);
             wolfVariants[id] = std::move(variant);
         }
 
@@ -5084,10 +2263,11 @@ namespace crafted_craft {
                 if (monster_spawn_light_level.is_number())
                     type.monster_spawn_light_level = monster_spawn_light_level;
                 else {
+
                     js_object monster_spawn_light_level_js = js_object::get_object(monster_spawn_light_level);
                     IntegerDistribution monster_spawn_light_level_;
-                    monster_spawn_light_level_.value = conversions::json::from_json(monster_spawn_light_level_js.at("value").get());
-                    monster_spawn_light_level_.type = (std::string)monster_spawn_light_level_js["type"];
+                    monster_spawn_light_level_.value = conversions::json::from_json(monster_spawn_light_level_js.get());
+                    monster_spawn_light_level_.type = (std::string)monster_spawn_light_level_js.at("type");
                     type.monster_spawn_light_level = std::move(monster_spawn_light_level_);
                 }
             }
@@ -5132,15 +2312,17 @@ namespace crafted_craft {
             type.slots.reserve(slots.size());
             for (auto&& slot : slots)
                 type.slots.push_back(slot);
-            if (type_js.at("exclusive_set").is_string())
-                type.exclusive_set = type_js.at("exclusive_set");
-            else {
-                auto exclusive_set_js = js_array::get_array(type_js.at("exclusive_set"));
-                std::vector<std::string> exclusive_set;
-                exclusive_set.reserve(exclusive_set_js.size());
-                for (auto&& set : exclusive_set_js)
-                    exclusive_set.push_back(set);
-                type.exclusive_set = std::move(exclusive_set);
+            if (type_js.contains("exclusive_set")) {
+                if (type_js.at("exclusive_set").is_string())
+                    type.exclusive_set = type_js.at("exclusive_set");
+                else {
+                    auto exclusive_set_js = js_array::get_array(type_js.at("exclusive_set"));
+                    std::vector<std::string> exclusive_set;
+                    exclusive_set.reserve(exclusive_set_js.size());
+                    for (auto&& set : exclusive_set_js)
+                        exclusive_set.push_back(set);
+                    type.exclusive_set = std::move(exclusive_set);
+                }
             }
             if (type_js.at("supported_items").is_string())
                 type.supported_items = type_js.at("supported_items");
@@ -5172,18 +2354,11 @@ namespace crafted_craft {
             type.max_cost.base = max_cost.at("base");
             type.max_cost.per_level_above_first = max_cost.at("per_level_above_first");
 
-            auto effects = js_object::get_object(type_js.at("effects"));
-            type.effects.reserve(effects.size());
-            for (auto&& [component_id, effect] : effects) {
-                auto list_of = js_array::get_array(effect);
-                std::vector<enbt::compound> effects;
-                effects.reserve(list_of.size());
-                for (auto&& effect : list_of) {
-                    enbt::compound comp;
-                    comp = util::conversions::json::from_json(effect.get());
-                    effects.push_back(comp);
-                }
-                type.effects[component_id] = std::move(effects);
+            if (type_js.contains("effects")) {
+                auto effects = js_object::get_object(type_js.at("effects"));
+                type.effects.reserve(effects.size());
+                for (auto&& [component_id, effect] : effects)
+                    type.effects[component_id] = util::conversions::json::from_json(effect.get());
             }
             enchantments[id] = std::move(type);
         }
@@ -5314,7 +2489,7 @@ namespace crafted_craft {
             load_file_recipe(js_object::get_object(res.value()), id);
         }
 
-        void apply_tags(js_value val, const std::string& type, const std::string& namespace_, const std::string& path_) {
+        void apply_tags(js_value val, const std::string& type, const std::string& namespace_, const std::string& path_, bool replace) {
             list_array<std::string> result;
             for (auto&& tag : js_array::get_array(val)) {
                 std::string the_tag;
@@ -5338,11 +2513,11 @@ namespace crafted_craft {
                 bool replace = tags_["replace"];
                 if (replace)
                     tags[type][namespace_][path_].clear();
-                apply_tags(tags_["values"], type, namespace_, path_);
+                apply_tags(tags_["values"], type, namespace_, path_, replace);
             } else if (tags_.contains("values"))
-                apply_tags(tags_["values"], type, namespace_, path_);
+                apply_tags(tags_["values"], type, namespace_, path_, false);
             else if (tags_.contains("root"))
-                apply_tags(tags_["root"], type, namespace_, path_);
+                apply_tags(tags_["root"], type, namespace_, path_, false);
             else
                 tags_.parsing_error("Invalid tag file format");
         }
@@ -5440,7 +2615,7 @@ namespace crafted_craft {
         }
 
         void load_blocks() {
-            auto parsed = json_resource(resources::registry::blocks);
+            auto parsed = boost::json::parse(resources::registry::blocks);
 
             base_objects::block::access_full_block_data(std::function(
                 [&](
@@ -5518,7 +2693,7 @@ namespace crafted_craft {
         }
 
         void load_items() {
-            auto parsed = json_resource(resources::registry::items);
+            auto parsed = boost::json::parse(resources::registry::items);
             for (auto&& [name, decl] : parsed.as_object()) {
                 base_objects::static_slot_data slot_data;
                 slot_data.id = name;
@@ -5530,12 +2705,190 @@ namespace crafted_craft {
             }
         }
 
-
         void prepare_versions() {
-            registers::individual_registers[765] = util::conversions::json::from_json(json_resource(resources::registry::protocol::_765));
-            registers::individual_registers[766] = util::conversions::json::from_json(json_resource(resources::registry::protocol::_766));
-            registers::individual_registers[767] = util::conversions::json::from_json(json_resource(resources::registry::protocol::_767));
-            registers::individual_registers[768] = util::conversions::json::from_json(json_resource(resources::registry::protocol::_768));
+            registers::individual_registers[765] = util::conversions::json::from_json(boost::json::parse(resources::registry::protocol::_765));
+            registers::individual_registers[766] = util::conversions::json::from_json(boost::json::parse(resources::registry::protocol::_766));
+            registers::individual_registers[767] = util::conversions::json::from_json(boost::json::parse(resources::registry::protocol::_767));
+            registers::individual_registers[768] = util::conversions::json::from_json(boost::json::parse(resources::registry::protocol::_768));
+        }
+
+        using tags_obj = std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>>>;
+
+        void __prepare_tags(tags_obj& tmp_obj, boost::json::object& parsed, const std::string& type, const std::string& namespace_, const std::string& tag) {
+            for (auto&& [name, decl] : parsed) {
+                auto& obj = decl.as_object();
+                if (name.ends_with(".json")) {
+                    if (obj.contains("values") || obj.contains("root")) {
+                        auto& values = obj.contains("values") ? obj.at("values") : obj.at("root");
+                        if (values.is_array()) {
+                            bool replace = obj.contains("replace") ? obj.at("replace").as_bool() : false;
+                            auto& items = tmp_obj[type][namespace_][tag + ":" + (std::string)name.substr(0, name.size() - 5)];
+                            if (replace)
+                                items.clear();
+                            for (auto&& value : values.get_array())
+                                items.push_back((std::string)value.as_string());
+                            continue;
+                        }
+                    }
+                } else
+                    __prepare_tags(tmp_obj, obj, type, namespace_, tag + ":" + (std::string)name);
+            }
+        }
+
+        void prepare_tags(boost::json::object& parsed, const std::string& namespace_) {
+            tags_obj tmp_obj = registers::tags;
+            for (auto&& [type, decl] : parsed)
+                __prepare_tags(tmp_obj, decl.get_object(), type, namespace_, "");
+
+            registers::tags = tmp_obj;
+            for (auto&& [type, decl] : tmp_obj) {
+                for (auto&& [namespace_, decl] : decl) {
+                    for (auto&& [tag, decl] : decl) {
+                        list_array<std::string> resolved_items;
+                        for (auto& item : decl) {
+                            if (item.starts_with("#")) {
+                                resolved_items.push_back(unfold_tag(type, item).where([](const std::string& tag) {
+                                    return !tag.starts_with("#");
+                                }));
+                            }
+                        }
+                        decl = std::move(resolved_items.commit());
+                    }
+                }
+            }
+
+            registers::tags = std::move(tmp_obj);
+        }
+
+        void process_item_(boost::json::object& decl, const std::string& namespace_, void (*fn)(js_object&&, const std::string&)) {
+            for (auto& [id, value] : decl) {
+                if (id.ends_with(".json")) {
+                    std::string _id = namespace_ + std::string(id.substr(0, id.size() - 5));
+                    fn(js_object::get_object(value), _id);
+                } else
+                    process_item_(value.as_object(), namespace_ + std::string(id), fn);
+            }
+        }
+
+        void process_item_(boost::json::object& decl, const std::string& namespace_, void (*fn)(boost::json::object&, const std::string&)) {
+            for (auto& [id, value] : decl) {
+                if (id.ends_with(".json")) {
+                    std::string _id = namespace_ + std::string(id.substr(0, id.size() - 5));
+                    fn(value.as_object(), _id);
+                } else
+                    process_item_(value.as_object(), namespace_ + std::string(id), fn);
+            }
+        }
+
+        void process_item(js_value& decl, const std::string& namespace_, void (*fn)(js_object&&, const std::string&)) {
+            process_item_(decl.get().as_object(), namespace_ + ":", fn);
+        }
+
+        void process_item(js_value& decl, const std::string& namespace_, void (*fn)(boost::json::object&, const std::string&)) {
+            process_item_(decl.get().as_object(), namespace_ + ":", fn);
+        }
+
+        void process_pack(boost::json::object& parsed, const std::string& namespace_, bool allowed_pack_nest) {
+            auto data = js_object::get_object(parsed);
+            if (data.contains("tags"))
+                prepare_tags(data["tags"].get().as_object(), namespace_);
+            for (auto&& [name, decl] : data) {
+                if (name == "banner_pattern")
+                    process_item(decl, namespace_, load_file_bannerPattern);
+                else if (name == "painting_variant")
+                    process_item(decl, namespace_, load_file_paintingVariant);
+                else if (name == "damage_type")
+                    process_item(decl, namespace_, load_file_damageType);
+                else if (name == "dimension_type")
+                    process_item(decl, namespace_, load_file_dimensionType);
+                else if (name == "wolf_variant")
+                    process_item(decl, namespace_, load_file_wolfVariant);
+                else if (name == "trim_material")
+                    process_item(decl, namespace_, load_file_armorTrimMaterial);
+                else if (name == "trim_pattern")
+                    process_item(decl, namespace_, load_file_armorTrimPattern);
+                else if (name == "enchantment")
+                    process_item(decl, namespace_, load_file_enchantment);
+                else if (name == "enchantment_provider")
+                    process_item(decl, namespace_, load_file_enchantment_provider);
+                else if (name == "chat_type")
+                    process_item(decl, namespace_, load_file_chatType);
+                else if (name == "worldgen") {
+                    for (auto&& [name, decl] : js_object::get_object(decl)) {
+                        if (name == "biome")
+                            process_item(decl, namespace_, load_file_biomes);
+                    }
+                }
+            }
+        }
+
+        void process_pack(boost::json::object& parsed, const std::string& namespace_) {
+            process_pack(parsed, namespace_, false);
+        }
+
+        void ___recursive_merge_json(boost::json::object& out, const std::filesystem::directory_entry& file);
+
+        void ___recursive_merge_json__file(boost::json::object& out, const std::filesystem::directory_entry& file) {
+            auto it = try_read_json_file(file.path());
+            if (!it)
+                throw std::runtime_error("Failed to read file: " + file.path().string());
+            out[file.path().filename().string()] = std::move(*it);
+        }
+
+        void ___recursive_merge_json__directory(boost::json::object& out, const std::filesystem::directory_entry& file) {
+            for (const auto& f : std::filesystem::directory_iterator(file.path())) {
+                auto& inner = (out[f.path().filename().string()] = boost::json::object()).get_object();
+                ___recursive_merge_json(inner, f);
+            }
+        }
+
+        void ___recursive_merge_json(boost::json::object& out, const std::filesystem::directory_entry& file) {
+            if (file.is_directory())
+                ___recursive_merge_json__directory(out, file);
+            else
+                ___recursive_merge_json__file(out, file);
+        }
+
+        void process_pack(const std::filesystem::path& folder_path_to_data_without_namespace, const std::string& namespace_) {
+            boost::json::value value = boost::json::object();
+            auto& obj = value.get_object();
+            for (auto& entry : std::filesystem::directory_iterator(folder_path_to_data_without_namespace)) {
+                auto& inner = (obj[entry.path().filename().string()] = boost::json::object()).get_object();
+                ___recursive_merge_json(inner, entry);
+            }
+            process_pack(obj, namespace_);
+        }
+
+        void process_pack(const std::filesystem::path& folder_path_to_data) {
+            for (auto& entry : std::filesystem::directory_iterator(folder_path_to_data)) {
+                if (entry.is_directory()) {
+                    auto& path = entry.path();
+                    std::string namespace_ = path.stem().string();
+                    process_pack(path, namespace_);
+                }
+            }
+        }
+
+        void prepare_built_in_pack() {
+            auto parsed = boost::json::parse(resources::data);
+            process_pack(parsed.as_object(), "minecraft");
+        }
+
+        void __initialization__versions_inital() { //skips items assignation
+        }
+
+        void __initialization__versions_post() {
+        }
+
+        void initialize() {
+            initialize_entities();
+            load_blocks();
+            prepare_built_in_pack();
+            prepare_versions();
+            __initialization__versions_inital();
+            load_items();
+            __initialization__versions_post();
+            load_registers_complete();
         }
     }
 }

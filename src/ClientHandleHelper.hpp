@@ -12,15 +12,12 @@
 #include <utf8.h>
 #include <string>
 
+#include <library/list_array.hpp>
+#include <src/base_objects/player.hpp>
+#include <src/base_objects/response.hpp>
+#include <src/base_objects/shared_client_data.hpp>
 
-#include "library/list_array.hpp"
-
-#include "base_objects/player.hpp"
-
-#include "base_objects/response.hpp"
-#include "base_objects/shared_client_data.hpp"
-
-namespace crafted_craft {
+namespace copper_server {
     constexpr bool CONSTEXPR_DEBUG_DATA_TRANSPORT = true;
     struct TCPsession;
     class Server;

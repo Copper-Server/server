@@ -1,11 +1,11 @@
 #ifndef SRC_BASE_OBJECTS_EVENT
 #define SRC_BASE_OBJECTS_EVENT
-#include "../library/fast_task.hpp"
 #include <functional>
+#include <library/fast_task.hpp>
 #include <random>
 #include <unordered_map>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
 
         struct event_register_id {

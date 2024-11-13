@@ -1,7 +1,7 @@
-#include "list_storage.hpp"
 #include <fstream>
+#include <src/storage/list_storage.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace storage {
         list_storage::list_storage(const std::filesystem::path& path) {
             if (!std::filesystem::exists(path)) {
@@ -85,4 +85,4 @@ namespace crafted_craft {
         }
     } // namespace storage
 
-} // namespace crafted_craft
+} // namespace copper_server

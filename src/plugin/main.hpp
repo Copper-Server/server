@@ -1,9 +1,9 @@
 #ifndef SRC_PLUGIN_MAIN
 #define SRC_PLUGIN_MAIN
-#include "../library/fast_task.hpp"
-#include "registration.hpp"
+#include <library/fast_task.hpp>
+#include <src/plugin/registration.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
 
     namespace __internal__ {
         template <std::size_t N>

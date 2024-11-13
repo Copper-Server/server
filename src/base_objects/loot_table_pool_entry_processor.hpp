@@ -1,10 +1,10 @@
 #ifndef SRC_BASE_OBJECTS_LOOT_TABLE_POOL_ENTRY_PROCESSOR
 #define SRC_BASE_OBJECTS_LOOT_TABLE_POOL_ENTRY_PROCESSOR
-#include "../library/enbt.hpp"
-#include "commands.hpp"
-#include "slot.hpp"
+#include <library/enbt.hpp>
+#include <src/base_objects/commands.hpp>
+#include <src/base_objects/slot.hpp>
 
-namespace crafted_craft::base_objects {
+namespace copper_server::base_objects {
     struct loot_table_pool_entry_processor {
         using handler = std::function<std::optional<slot>(const enbt::compound_const_ref&, const command_context&)>;
 

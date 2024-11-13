@@ -1,12 +1,12 @@
 #ifndef SRC_BASE_OBJECTS_CHAT
 #define SRC_BASE_OBJECTS_CHAT
-#include "../library/list_array.hpp"
-#include "../protocolHelperNBT.hpp"
+#include <library/list_array.hpp>
 #include <optional>
+#include <src/protocolHelperNBT.hpp>
 #include <string>
 #include <vector>
 
-namespace crafted_craft {
+namespace copper_server {
     struct Chat {
         struct clickEventS {
             char* open_url;

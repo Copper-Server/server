@@ -1,11 +1,11 @@
 #ifndef SRC_STORAGE_LIST_STORAGE
 #define SRC_STORAGE_LIST_STORAGE
-#include "../library/fast_task.hpp"
 #include <filesystem>
+#include <library/fast_task.hpp>
 #include <string>
 #include <unordered_set>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace storage {
         class list_storage {
             fast_task::protected_value<std::unordered_set<std::string>> data;
@@ -52,6 +52,6 @@ namespace crafted_craft {
         };
     } // namespace storage
 
-} // namespace crafted_craft
+} // namespace copper_server
 
 #endif /* SRC_STORAGE_LIST_STORAGE */

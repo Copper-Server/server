@@ -1,9 +1,9 @@
 #ifndef SRC_PLUGIN_SPECIAL
 #define SRC_PLUGIN_SPECIAL
-#include "../base_objects/server_configuaration.hpp"
-#include "../protocolHelper/util.hpp"
+#include <src/base_objects/server_configuaration.hpp>
+#include <src/protocolHelper/util.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     class SpecialPluginHandshake {
     public:
         //allows to handle custom packets from the client, like send a packet from server to server or another use case.
@@ -27,7 +27,7 @@ namespace crafted_craft {
 
 
         virtual std::string StatusResponseVersionName() {
-            return "CraftedCraft";
+            return "Copper Server";
         }
 
         virtual bool ShowConnectionStatus() {
@@ -48,7 +48,7 @@ namespace crafted_craft {
         }
 
         virtual Chat Description() {
-            return "A CraftedCraft server";
+            return "A server running in Copper Server";
         }
 
         virtual bool ConnectionAvailable(int32_t protocol_version) {

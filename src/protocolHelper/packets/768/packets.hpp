@@ -1,13 +1,13 @@
 #ifndef SRC_PROTOCOLHELPER_PACKETS_768_PACKETS
 #define SRC_PROTOCOLHELPER_PACKETS_768_PACKETS
-#include "../../../base_objects/block.hpp"
-#include "../../../base_objects/chat.hpp"
-#include "../../../base_objects/chunk.hpp"
-#include "../../../base_objects/entity.hpp"
-#include "../../../base_objects/packets.hpp"
-#include "../../../base_objects/particle_data.hpp"
-#include "../../../base_objects/position.hpp"
-#include "../../../base_objects/recipe.hpp"
+#include <src/base_objects/block.hpp>
+#include <src/base_objects/chat.hpp>
+#include <src/base_objects/chunk.hpp>
+#include <src/base_objects/entity.hpp>
+#include <src/base_objects/packets.hpp>
+#include <src/base_objects/particle_data.hpp>
+#include <src/base_objects/position.hpp>
+#include <src/base_objects/recipe.hpp>
 
 //packets for 1.21.3+, protocol 768
 //changes between 767:
@@ -19,7 +19,7 @@
 // .*RecipeBook internally reworked and processed as different packets
 //Changed encoding
 
-namespace crafted_craft {
+namespace copper_server {
     namespace packets {
         namespace release_768 {
 

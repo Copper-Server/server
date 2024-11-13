@@ -1,11 +1,11 @@
-#include "allowlist.hpp"
-#include "../api/configuration.hpp"
-#include "../api/players.hpp"
-#include "../base_objects/commands.hpp"
-#include "../log.hpp"
-#include "../plugin/main.hpp"
+#include <src/api/configuration.hpp>
+#include <src/api/players.hpp>
+#include <src/base_objects/commands.hpp>
+#include <src/build_in_plugins/allowlist.hpp>
+#include <src/log.hpp>
+#include <src/plugin/main.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         AllowListPlugin::AllowListPlugin()
             : allow_list(api::configuration::get().server.get_storage_path() / "allow_list.txt") {}

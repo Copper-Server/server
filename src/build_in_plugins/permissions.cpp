@@ -1,12 +1,12 @@
-#include "permissions.hpp"
-#include "../ClientHandleHelper.hpp"
-#include "../api/configuration.hpp"
-#include "../api/internal/permissions.hpp"
-#include "../api/permissions.hpp"
-#include "../api/players.hpp"
-#include "../log.hpp"
+#include <src/ClientHandleHelper.hpp>
+#include <src/api/configuration.hpp>
+#include <src/api/internal/permissions.hpp>
+#include <src/api/permissions.hpp>
+#include <src/api/players.hpp>
+#include <src/build_in_plugins/permissions.hpp>
+#include <src/log.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         PermissionsPlugin::PermissionsPlugin()
             : op_list(api::configuration::get().server.base_path / "op_list.txt"),

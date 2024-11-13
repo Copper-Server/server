@@ -1,10 +1,10 @@
 #ifndef SRC_PROTOCOLHELPER_STATE_STATUS
 #define SRC_PROTOCOLHELPER_STATE_STATUS
-#include "../api/configuration.hpp"
-#include "../plugin/special.hpp"
-#include "packets.hpp"
+#include <src/api/configuration.hpp>
+#include <src/plugin/special.hpp>
+#include <src/protocolHelper/packets.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     class TCPClientHandleStatus : public TCPClientHandle {
     protected:
         //response status

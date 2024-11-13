@@ -1,7 +1,7 @@
-#include "players_data.hpp"
 #include <filesystem>
+#include <src/storage/players_data.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace storage {
         static void extract_slot(const enbt::value& data, base_objects::slot& slot) {
             if (!data.contains())
@@ -286,4 +286,4 @@ namespace crafted_craft {
     } // namespace storage
 
 
-} // namespace crafted_craft
+} // namespace copper_server

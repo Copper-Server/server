@@ -1,7 +1,7 @@
-#include "players.hpp"
-#include "../storage/memory/online_player.hpp"
+#include <src/api/players.hpp>
+#include <src/storage/memory/online_player.hpp>
 
-namespace crafted_craft::api::players {
+namespace copper_server::api::players {
     namespace handlers {
         base_objects::event<base_objects::client_data_holder> on_player_join;
         base_objects::event<base_objects::client_data_holder> on_player_leave;

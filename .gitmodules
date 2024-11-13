@@ -14,3 +14,15 @@
 [submodule "src/library/commandline"]
 	path = src/library/commandline
 	url = https://github.com/Melnytskyi/commandline.git
+[submodule "library/list_array"]
+	path = library/list_array
+	url = https://github.com/Melnytskyi/list_array.git
+[submodule "library/enbt"]
+	path = library/enbt
+	url = https://github.com/Melnytskyi/enbt.git
+[submodule "library/fast_task"]
+	path = library/fast_task
+	url = https://github.com/Melnytskyi/fast_task.git
+[submodule "library/commandline"]
+	path = library/commandline
+	url = https://github.com/Melnytskyi/commandline.git

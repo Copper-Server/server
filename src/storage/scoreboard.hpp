@@ -1,9 +1,9 @@
 #ifndef SRC_STORAGE_SCOREBOARD
 #define SRC_STORAGE_SCOREBOARD
-#include "../base_objects/scoreboard.hpp"
 #include <filesystem>
+#include <src/base_objects/scoreboard.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace storage {
         class scoreboard {
             std::filesystem::path path;

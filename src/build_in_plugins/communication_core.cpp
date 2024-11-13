@@ -1,11 +1,11 @@
-#include "communication_core.hpp"
-#include "../ClientHandleHelper.hpp"
-#include "../api/players.hpp"
-#include "../library/list_array.hpp"
-#include "../protocolHelper/packets.hpp"
-#include "../storage/memory/online_player.hpp"
+#include <library/list_array.hpp>
+#include <src/ClientHandleHelper.hpp>
+#include <src/api/players.hpp>
+#include <src/build_in_plugins/communication_core.hpp>
+#include <src/protocolHelper/packets.hpp>
+#include <src/storage/memory/online_player.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         CommunicationCorePlugin::CommunicationCorePlugin() {}
 
@@ -239,4 +239,4 @@ namespace crafted_craft {
         }
     } // namespace build_in_plugins
 
-} // namespace crafted_craft
+} // namespace copper_server

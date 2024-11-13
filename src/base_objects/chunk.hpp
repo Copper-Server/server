@@ -1,12 +1,12 @@
 #ifndef SRC_BASE_OBJECTS_CHUNK
 #define SRC_BASE_OBJECTS_CHUNK
-#include "../library/enbt.hpp"
-#include "../library/list_array.hpp"
 #include <cstdint>
+#include <library/enbt.hpp>
+#include <library/list_array.hpp>
 #include <variant>
 #include <vector>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         namespace chunk {
             struct pallete_data {

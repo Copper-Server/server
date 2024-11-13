@@ -1,8 +1,8 @@
 #ifndef SRC_API_INTERNAL_PERMISSIONS
 #define SRC_API_INTERNAL_PERMISSIONS
-#include "../../storage/permissions_manager.hpp"
+#include <src/storage/permissions_manager.hpp>
 
-namespace crafted_craft::api::permissions {
+namespace copper_server::api::permissions {
     void init_permissions(storage::permissions_manager& manager);
 }
 

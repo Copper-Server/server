@@ -1,6 +1,6 @@
 #ifndef SRC_MOJANG_API_HASH
 #define SRC_MOJANG_API_HASH
-#include "../../library/list_array.hpp"
+#include <library/list_array.hpp>
 #include <openssl/sha.h>
 #include <string>
 #include <vector>

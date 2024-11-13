@@ -3,14 +3,12 @@
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/thread/shared_lock_guard.hpp>
 
-#include "ClientHandleHelper.hpp"
-#include "base_objects/chat.hpp"
-#include "library/enbt.hpp"
-#include "log.hpp"
-
-
-#include "api/configuration.hpp"
-#include "api/players.hpp"
+#include <library/enbt.hpp>
+#include <src/ClientHandleHelper.hpp>
+#include <src/api/configuration.hpp>
+#include <src/api/players.hpp>
+#include <src/base_objects/chat.hpp>
+#include <src/log.hpp>
 
 
 #define OPENSSL_CHECK(OPERATION, console_output) \
@@ -22,7 +20,7 @@
         log::fatal("OpenSSL", console_output); \
     }
 
-namespace crafted_craft {
+namespace copper_server {
     TCPclient* first_client_holder;
     std::atomic_uint64_t TCPsession::id_gen;
     bool TCPsession::do_log_connection_errors = true;

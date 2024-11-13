@@ -1,9 +1,9 @@
 #ifndef SRC_BASE_OBJECTS_VIRTUAL_CLIENT
 #define SRC_BASE_OBJECTS_VIRTUAL_CLIENT
-#include "../protocolHelper/packets.hpp"
-#include "shared_client_data.hpp"
+#include <src/base_objects/shared_client_data.hpp>
+#include <src/protocolHelper/packets.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         struct virtual_client {
             client_data_holder client;

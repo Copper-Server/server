@@ -1,8 +1,8 @@
-#include "../base_objects/permissions.hpp"
-#include "../base_objects/shared_client_data.hpp"
-#include "../storage/permissions_manager.hpp"
+#include <src/base_objects/permissions.hpp>
+#include <src/base_objects/shared_client_data.hpp>
+#include <src/storage/permissions_manager.hpp>
 
-namespace crafted_craft::api::permissions {
+namespace copper_server::api::permissions {
     storage::permissions_manager* perm = nullptr;
 
     void init_permissions(storage::permissions_manager& manager) {

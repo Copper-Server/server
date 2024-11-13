@@ -1,9 +1,9 @@
 #pragma once
-#include "../registers.hpp"
-#include "slot.hpp"
+#include <src/base_objects/slot.hpp>
+#include <src/registers.hpp>
 #include <unordered_map>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
 
 

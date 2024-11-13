@@ -1,10 +1,10 @@
-#include "entity.hpp"
-#include "../api/world.hpp"
-#include "../calculations.hpp"
-#include "../library/fast_task.hpp"
-#include "../storage/world_data.hpp"
+#include <library/fast_task.hpp>
+#include <src/api/world.hpp>
+#include <src/base_objects/entity.hpp>
+#include <src/calculations.hpp>
+#include <src/storage/world_data.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         struct entities_storage {
             std::unordered_map<uint16_t, entity_data> _registry;

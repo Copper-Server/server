@@ -8,16 +8,16 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "../library/enbt.hpp"
-#include "../library/fast_task.hpp"
-#include "../library/list_array.hpp"
-#include "../mojang/api/session_server.hpp"
-#include "atomic_holder.hpp"
-#include "chat.hpp"
-#include "player.hpp"
-#include "response.hpp"
+#include <library/enbt.hpp>
+#include <library/fast_task.hpp>
+#include <library/list_array.hpp>
+#include <src/base_objects/atomic_holder.hpp>
+#include <src/base_objects/chat.hpp>
+#include <src/base_objects/player.hpp>
+#include <src/base_objects/response.hpp>
+#include <src/mojang/api/session_server.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         struct SharedClientData {
             std::string name;
@@ -59,7 +59,7 @@ namespace crafted_craft {
             bool enable_filtering : 1 = false;
             bool allow_server_listings : 1 = true;
             bool enable_chat_colors : 1 = true;
-            crafted_craft::base_objects::player player_data;
+            copper_server::base_objects::player player_data;
 
             struct ResourcePackData {
                 bool required : 1 = false;
@@ -139,5 +139,5 @@ namespace crafted_craft {
 
 }
 
-using SharedClientData = crafted_craft::base_objects::SharedClientData;
+using SharedClientData = copper_server::base_objects::SharedClientData;
 #endif /* SRC_BASE_OBJECTS_SHARED_CLIENT_DATA */

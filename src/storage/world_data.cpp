@@ -1,9 +1,9 @@
-#include "world_data.hpp"
-#include "../log.hpp"
 #include <boost/iostreams/filter/zstd.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
+#include <src/log.hpp>
+#include <src/storage/world_data.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace storage {
 
         template <class T>
@@ -1669,4 +1669,4 @@ namespace crafted_craft {
 #pragma endregion
     } // namespace storage
 
-} // namespace crafted_craft
+} // namespace copper_server

@@ -1,10 +1,10 @@
 #ifndef SRC_BUILD_IN_PLUGINS_WORLD
 #define SRC_BUILD_IN_PLUGINS_WORLD
-#include "../library/fast_task.hpp"
-#include "../plugin/main.hpp"
-#include "../storage/world_data.hpp"
+#include <library/fast_task.hpp>
+#include <src/plugin/main.hpp>
+#include <src/storage/world_data.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         class WorldManagementPlugin : public PluginAutoRegister<"world_manager", WorldManagementPlugin> {
             storage::worlds_data worlds_storage;

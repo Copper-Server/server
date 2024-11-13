@@ -1,7 +1,7 @@
-#include "default_proc.hpp"
-#include "../../storage/world_data.hpp"
+#include <src/build_in_plugins/light_processors/default_proc.hpp>
+#include <src/storage/world_data.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         namespace light_processors {
 

@@ -1,8 +1,8 @@
 #ifndef SRC_API_INTERNAL_REGISTRATIONS
 #define SRC_API_INTERNAL_REGISTRATIONS
-#include "../../base_objects/commands.hpp"
+#include <src/base_objects/commands.hpp>
 
-namespace crafted_craft::api::command {
+namespace copper_server::api::command {
     void register_manager(base_objects::command_manager&);
     void unregister_manager();
 }

@@ -1,7 +1,7 @@
 #pragma once
-#include "../library/enbt.hpp"
-#include "../library/list_array.hpp"
 #include <cstdint>
+#include <library/enbt.hpp>
+#include <library/list_array.hpp>
 #include <map>
 #include <mutex>
 #include <string>
@@ -13,7 +13,7 @@
 #pragma pack(push)
 #pragma pack(1)
 
-namespace crafted_craft {
+namespace copper_server {
     namespace storage {
         class world_data;
         struct sub_chunk_data;

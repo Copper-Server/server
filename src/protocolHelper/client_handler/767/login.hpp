@@ -1,12 +1,12 @@
 #ifndef SRC_PROTOCOLHELPER_CLIENT_HANDLER_767_LOGIN
 #define SRC_PROTOCOLHELPER_CLIENT_HANDLER_767_LOGIN
-#include "../../api/mojang/session_server.hpp"
-#include "../../api/players.hpp"
-#include "../../mojang/api/hash.hpp"
-#include "../../packets/767/packets.hpp"
-#include "../abstract.hpp"
+#include <src/api/mojang/session_server.hpp>
+#include <src/api/players.hpp>
+#include <src/mojang/api/hash.hpp>
+#include <src/protocolHelper/client_handler/abstract.hpp>
+#include <src/protocolHelper/packets/767/packets.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace client_handler {
         namespace release_767 {
             class HandleLogin : public TCPClientHandle {

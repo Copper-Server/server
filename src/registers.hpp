@@ -1,20 +1,20 @@
 #ifndef SRC_REGISTERS
 #define SRC_REGISTERS
-#include "base_objects/block.hpp"
-#include "base_objects/chat.hpp"
-#include "base_objects/entity.hpp"
-#include "base_objects/float_provider.hpp"
-#include "base_objects/number_provider.hpp"
-#include "base_objects/particle_data.hpp"
-#include "base_objects/position.hpp"
-#include "base_objects/slot.hpp"
-#include "library/enbt.hpp"
+#include <library/enbt.hpp>
+#include <src/base_objects/block.hpp>
+#include <src/base_objects/chat.hpp>
+#include <src/base_objects/entity.hpp>
+#include <src/base_objects/float_provider.hpp>
+#include <src/base_objects/number_provider.hpp>
+#include <src/base_objects/particle_data.hpp>
+#include <src/base_objects/position.hpp>
+#include <src/base_objects/slot.hpp>
 #include <string>
 #include <unordered_map>
 #include <variant>
 #include <vector>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace registers {
 #pragma region CLIENT/SERVER
         struct IntegerDistribution {
@@ -67,7 +67,7 @@ namespace crafted_craft {
         };
 
         struct ArmorTrimPattern {
-            std::string assert_id;
+            std::string asset_id;
             std::string template_item;
             std::variant<std::string, Chat> description;
             bool decal;
@@ -169,7 +169,7 @@ namespace crafted_craft {
         struct ChatType {
             struct Decoration {
                 std::string translation_key;
-                Chat style;                                                     //main text and extra chat will be ignored
+                std::optional<Chat> style;                                      //main text and extra chat will be ignored
                 std::variant<std::string, std::vector<std::string>> parameters; // sender, target, content
             };
 
@@ -291,11 +291,11 @@ namespace crafted_craft {
 
         struct enchantment {
             Chat description;
-            std::variant<std::string, std::vector<std::string>> exclusive_set;
+            std::variant<std::string, std::vector<std::string>, std::nullptr_t> exclusive_set;
             std::variant<std::string, std::vector<std::string>> supported_items;
             std::variant<std::string, std::vector<std::string>> primary_items;
             std::vector<std::string> slots;
-            std::unordered_map<std::string, std::vector<enbt::compound>> effects;
+            std::unordered_map<std::string, enbt::value> effects; //TODO create api for custom effects
 
             struct {
                 int32_t base;
@@ -315,7 +315,10 @@ namespace crafted_craft {
         };
 
         struct potion {
+            std::string name;
             uint32_t id;
+
+            std::unordered_map<int32_t, int32_t> protocol;
         };
 
         struct item_modifier {

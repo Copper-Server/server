@@ -1,19 +1,19 @@
 #ifndef SRC_BASE_OBJECTS_COMMANDS
 #define SRC_BASE_OBJECTS_COMMANDS
-#include "../library/enbt.hpp"
-#include "../library/list_array.hpp"
-#include "chat.hpp"
-#include "packets.hpp"
-#include "parsers.hpp"
-#include "permissions.hpp"
-#include "shared_client_data.hpp"
 #include <functional>
+#include <library/enbt.hpp>
+#include <library/list_array.hpp>
 #include <optional>
+#include <src/base_objects/chat.hpp>
+#include <src/base_objects/packets.hpp>
+#include <src/base_objects/parsers.hpp>
+#include <src/base_objects/permissions.hpp>
+#include <src/base_objects/shared_client_data.hpp>
 #include <string>
 #include <unordered_map>
 #include <variant>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         struct command_exception {
             std::exception_ptr exception;
@@ -285,7 +285,7 @@ namespace crafted_craft {
 
     } // namespace base_objects
 
-} // namespace crafted_craft
+} // namespace copper_server
 
 
 #endif /* SRC_BASE_OBJECTS_COMMANDS */

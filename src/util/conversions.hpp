@@ -1,13 +1,13 @@
 #ifndef SRC_UTIL_CONVERSIONS
 #define SRC_UTIL_CONVERSIONS
-#include "../library/enbt.hpp"
 #include <boost/json.hpp>
 #include <cstddef>
 #include <cstdint>
+#include <library/enbt.hpp>
 #include <string>
 #include <vector>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace util {
         namespace conversions {
             namespace base64 {

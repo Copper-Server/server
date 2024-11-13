@@ -1,7 +1,7 @@
-#include "block.hpp"
-#include "../storage/world_data.hpp"
+#include <src/base_objects/block.hpp>
+#include <src/storage/world_data.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         std::vector<std::shared_ptr<static_block_data>> block::full_block_data_;
         std::unordered_map<std::string, std::shared_ptr<static_block_data>> block::named_full_block_data;

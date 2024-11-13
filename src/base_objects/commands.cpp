@@ -1,11 +1,11 @@
-#include "commands.hpp"
-#include "../api/permissions.hpp"
-#include "../library/list_array.hpp"
-#include "../protocolHelper/util.hpp"
-#include "../util/conversions.hpp"
-#include "packets.hpp"
+#include <library/list_array.hpp>
+#include <src/api/permissions.hpp>
+#include <src/base_objects/commands.hpp>
+#include <src/base_objects/packets.hpp>
+#include <src/protocolHelper/util.hpp>
+#include <src/util/conversions.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         void command_context::apply_executor_data() {
             other_data["x"] = executor->player_data.position.x;
@@ -1488,4 +1488,4 @@ namespace crafted_craft {
 
     }
 
-} // namespace crafted_craft
+} // namespace copper_server

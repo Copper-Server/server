@@ -1,12 +1,12 @@
 #ifndef SRC_BUILD_IN_PLUGINS_CONSOLE
 #define SRC_BUILD_IN_PLUGINS_CONSOLE
 
-#include "../base_objects/commands.hpp"
-#include "../base_objects/virtual_client.hpp"
-#include "../plugin/main.hpp"
-#include "../storage/players_data.hpp"
+#include <src/base_objects/commands.hpp>
+#include <src/base_objects/virtual_client.hpp>
+#include <src/plugin/main.hpp>
+#include <src/storage/players_data.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         //provides access to admin console
         class ConsolePlugin : public PluginAutoRegister<"console_interface", ConsolePlugin> {

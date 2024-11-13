@@ -1,16 +1,16 @@
 #ifndef SRC_BASE_OBJECTS_ENTITY
 #define SRC_BASE_OBJECTS_ENTITY
-#include "../calculations.hpp"
-#include "../library/enbt.hpp"
-#include "atomic_holder.hpp"
-#include "bounds.hpp"
-#include "shared_client_data.hpp"
-#include "sync_event.hpp"
 #include <filesystem>
 #include <fstream>
+#include <library/enbt.hpp>
+#include <src/base_objects/atomic_holder.hpp>
+#include <src/base_objects/bounds.hpp>
+#include <src/base_objects/shared_client_data.hpp>
+#include <src/base_objects/sync_event.hpp>
+#include <src/calculations.hpp>
 #include <stdint.h>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         class entity_data;
         struct entity;

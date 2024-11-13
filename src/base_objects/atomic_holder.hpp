@@ -3,7 +3,7 @@
 #include <atomic>
 #include <stdexcept>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
 
         template <typename T>
@@ -140,7 +140,7 @@ namespace crafted_craft {
     } // namespace base_objects
 
 
-} // namespace crafted_craft
+} // namespace copper_server
 
 
 #endif /* SRC_BASE_OBJECTS_ATOMIC_HOLDER */

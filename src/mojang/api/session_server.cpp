@@ -1,7 +1,7 @@
-#include "session_server.hpp"
-#include "../../util/conversions.hpp"
-#include "http.hpp"
 #include <boost/json.hpp>
+#include <src/mojang/api/http.hpp>
+#include <src/mojang/api/session_server.hpp>
+#include <src/util/conversions.hpp>
 
 namespace mojang {
     namespace api {
@@ -22,8 +22,8 @@ namespace mojang {
                 auto value = boost::json::parse(response).as_object();
                 player_data data;
 
-                data.uuid = crafted_craft::util::conversions::uuid::from(value["id"].as_string());
-                data.uuid_str = crafted_craft::util::conversions::uuid::to(data.uuid);
+                data.uuid = copper_server::util::conversions::uuid::from(value["id"].as_string());
+                data.uuid_str = copper_server::util::conversions::uuid::to(data.uuid);
                 data.online_data = true;
                 if (value.contains("properties")) {
                     std::vector<player_data::property> properties;
@@ -43,7 +43,7 @@ namespace mojang {
                 return cache[username] = std::make_shared<player_data>(std::move(data));
             } else {
                 auto uuid = generateOfflineUUID();
-                return (cache[username] = std::make_shared<player_data>(crafted_craft::util::conversions::uuid::to(uuid), uuid, std::chrono::system_clock::now(), false));
+                return (cache[username] = std::make_shared<player_data>(copper_server::util::conversions::uuid::to(uuid), uuid, std::chrono::system_clock::now(), false));
             }
         }
     }

@@ -1,8 +1,8 @@
 #ifndef SRC_API_ENTITY_ID_MAP
 #define SRC_API_ENTITY_ID_MAP
-#include "../library/enbt.hpp"
+#include <library/enbt.hpp>
 
-namespace crafted_craft::api::entity_id_map {
+namespace copper_server::api::entity_id_map {
     std::pair<int32_t, enbt::raw_uuid> allocate_id();
     int32_t allocate_id(const enbt::raw_uuid& uuid);
     void remove_id(int32_t id);

@@ -1,12 +1,12 @@
-#include "permissions_manager.hpp"
-#include "../base_objects/shared_client_data.hpp"
-#include "../log.hpp"
-#include "../util/json_helpers.hpp"
 #include <boost/json.hpp>
 #include <format>
 #include <fstream>
+#include <src/base_objects/shared_client_data.hpp>
+#include <src/log.hpp>
+#include <src/storage/permissions_manager.hpp>
+#include <src/util/json_helpers.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace storage {
         permissions_manager::permissions_manager(const std::filesystem::path& base_path)
             : base_path(base_path / "permissions.json") {}

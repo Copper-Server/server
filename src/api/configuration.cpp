@@ -1,7 +1,7 @@
-#include "../base_objects/event.hpp"
-#include "../base_objects/server_configuaration.hpp"
+#include <src/base_objects/event.hpp>
+#include <src/base_objects/server_configuaration.hpp>
 
-namespace crafted_craft::api::configuration {
+namespace copper_server::api::configuration {
     base_objects::ServerConfiguration config;
     bool loaded = false;
 

@@ -1,13 +1,13 @@
-#include "plugin/main.hpp"
-#include "ClientHandleHelper.hpp"
-#include "api/configuration.hpp"
-#include "build_in_plugins/special/status.hpp"
-#include "library/fast_task.hpp"
-#include "log.hpp"
-#include "protocolHelper/state_handshaking.hpp"
-#include "resources/registers.hpp"
+#include <library/fast_task.hpp>
+#include <src/ClientHandleHelper.hpp>
+#include <src/api/configuration.hpp>
+#include <src/build_in_plugins/special/status.hpp>
+#include <src/log.hpp>
+#include <src/plugin/main.hpp>
+#include <src/protocolHelper/state_handshaking.hpp>
+#include <src/resources/registers.hpp>
 
-using namespace crafted_craft;
+using namespace copper_server;
 
 
 int main() {
@@ -35,12 +35,8 @@ int main() {
         pluginManagement.autoRegister();
         pluginManagement.callInitialization();
 
+        resources::initialize();
 
-        resources::initialize_registers();
-        resources::prepare_versions();
-        resources::load_items();
-        resources::load_blocks();
-        resources::initialize_entities();
         size_t executors = api::configuration::get().server.working_threads;
         fast_task::task::create_executor(executors ? executors : std::thread::hardware_concurrency());
         fast_task::task::task::enable_task_naming = false;

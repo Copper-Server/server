@@ -1,8 +1,8 @@
 #ifndef SRC_PROTOCOLHELPER_CLIENT_HANDLER_767_CONFIGURATION
 #define SRC_PROTOCOLHELPER_CLIENT_HANDLER_767_CONFIGURATION
-#include "../../packets/767/packets.hpp"
+#include <src/protocolHelper/packets/767/packets.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace client_handler {
         namespace release_767 {
             class HandleConfiguration : public TCPClientHandle {

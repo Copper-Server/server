@@ -1,9 +1,9 @@
 #ifndef SRC_BUILD_IN_PLUGINS_BAN
 #define SRC_BUILD_IN_PLUGINS_BAN
-#include "../plugin/main.hpp"
-#include "../storage/enbt_list_storage.hpp"
+#include <src/plugin/main.hpp>
+#include <src/storage/enbt_list_storage.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         //provides and manages ban system
         class BanPlugin : public PluginAutoRegister<"ban", BanPlugin> {

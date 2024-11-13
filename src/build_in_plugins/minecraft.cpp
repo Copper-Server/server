@@ -1,10 +1,10 @@
 
-#include "minecraft.hpp"
-#include "../log.hpp"
-#include "../plugin/main.hpp"
-#include "../protocolHelper/util.hpp"
+#include <src/build_in_plugins/minecraft.hpp>
+#include <src/log.hpp>
+#include <src/plugin/main.hpp>
+#include <src/protocolHelper/util.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
 
         void MinecraftPlugin::OnLoad(const PluginRegistrationPtr& self) {
@@ -18,7 +18,7 @@ namespace crafted_craft {
 
         MinecraftPlugin::plugin_response MinecraftPlugin::OnConfiguration(base_objects::client_data_holder& client) {
             list_array<uint8_t> response;
-            WriteString(response, "CraftedCraft");
+            WriteString(response, "CopperServer ");
             return PluginResponse(response, "minecraft:brand");
         }
 

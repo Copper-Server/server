@@ -1,10 +1,10 @@
-#include "../base_objects/virtual_client.hpp"
-#include "allowlist.hpp"
-#include "ban.hpp"
-#include "protocol.hpp"
-#include "statistics.hpp"
+#include <src/api/allowlist.hpp>
+#include <src/api/ban.hpp>
+#include <src/api/protocol.hpp>
+#include <src/api/statistics.hpp>
+#include <src/base_objects/virtual_client.hpp>
 
-namespace crafted_craft::api {
+namespace copper_server::api {
     namespace allowlist {
         base_objects::event<allowlist_mode> on_mode_change;
         base_objects::event<std::string> on_kick;
@@ -113,19 +113,19 @@ namespace crafted_craft::api {
             if (!console_data)
                 console_data = &client;
             else
-                throw std::runtime_error("Consoles virtual client already registered");
+                throw std::runtime_error("Console's virtual client already registered");
         }
 
         void unregister_virtual_client() {
             if (console_data)
                 console_data = nullptr;
             else
-                throw std::runtime_error("Consoles virtual client not yet registered");
+                throw std::runtime_error("Console's virtual client not yet registered");
         }
 
         void execute_as_console(const std::string& command) {
             if (!console_data)
-                throw std::runtime_error("Virtual client for console not yet registered");
+                throw std::runtime_error("Console's virtual client not yet registered");
 
             base_objects::command_context context(console_data->client);
             api::command::get_manager().execute_command(command, context);

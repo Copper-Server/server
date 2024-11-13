@@ -1,7 +1,7 @@
-#include "../storage/world_data.hpp"
 #include <functional>
+#include <src/storage/world_data.hpp>
 
-namespace crafted_craft::api::world {
+namespace copper_server::api::world {
     storage::worlds_data* worlds_data = nullptr;
 
     void register_worlds_data(storage::worlds_data& worlds) {

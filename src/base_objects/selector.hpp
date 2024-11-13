@@ -1,12 +1,12 @@
 #ifndef SRC_BASE_OBJECTS_SELECTOR
 #define SRC_BASE_OBJECTS_SELECTOR
-#include "../library/list_array.hpp"
-#include "shared_client_data.hpp"
+#include <library/list_array.hpp>
 #include <optional>
+#include <src/base_objects/shared_client_data.hpp>
 #include <string>
 #include <unordered_map>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         struct integer_range {
             std::optional<int> min;
@@ -148,7 +148,7 @@ namespace crafted_craft {
     } // namespace base_objects
 
 
-} // namespace crafted_craft
+} // namespace copper_server
 
 
 #endif /* SRC_BASE_OBJECTS_SELECTOR */

@@ -1,8 +1,8 @@
-#include "block_state_provider_generator.hpp"
-#include "../../api/internal/block_state_provider.hpp"
-#include "../../base_objects/block.hpp"
+#include <src/api/internal/block_state_provider.hpp>
+#include <src/base_objects/block.hpp>
+#include <src/build_in_plugins/processors_providers/block_state_provider_generator.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
 
         BlockStateProviderGenerator::BlockStateProviderGenerator() {

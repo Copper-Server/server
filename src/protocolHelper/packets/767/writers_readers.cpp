@@ -1,9 +1,9 @@
 
-#include "writers_readers.hpp"
-#include "../../../base_objects/block.hpp"
-#include "../../../registers.hpp"
+#include <src/base_objects/block.hpp>
+#include <src/protocolHelper/packets/767/writers_readers.hpp>
+#include <src/registers.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace packets {
         namespace release_767 {
             namespace reader {
@@ -178,7 +178,16 @@ namespace crafted_craft {
 
                         if (slot.has_component<slot_component::use_remainder>()) {
                             auto& use_remainder = slot.get_component<slot_component::use_remainder>();
-                            WriteSlotItem(data, *use_remainder.proxy_value, 767);
+                            std::visit(
+                                [&](auto& value) {
+                                    using T = std::decay_t<decltype(value)>;
+                                    if constexpr (std::is_same_v<T, weak_slot_data>)
+                                        WriteSlotItem(data, slot_data::create_item(value.id, value.count), 767);
+                                    else
+                                        WriteSlotItem(data, *value, 767);
+                                },
+                                use_remainder.proxy_value
+                            );
                         } else
                             WriteSlotItem(data, slot_data::create_item("minecraft:air"), 767);
 
@@ -543,8 +552,6 @@ namespace crafted_craft {
                     void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::use_cooldown& value) {}
 
                     void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::use_remainder& value) {}
-
-                    void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::use_remainder____weak& value) {}
                 }
 
                 namespace slot_component_decoder {

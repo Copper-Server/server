@@ -1,9 +1,9 @@
 #ifndef SRC_PROTOCOLHELPER_PACKETS_765_WRITERS_READERS
 #define SRC_PROTOCOLHELPER_PACKETS_765_WRITERS_READERS
-#include "../../../base_objects/slot.hpp"
-#include "../../../util/readers.hpp"
+#include <src/base_objects/slot.hpp>
+#include <src/util/readers.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace packets {
         namespace release_765 {
             namespace reader {

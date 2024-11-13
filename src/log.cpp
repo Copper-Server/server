@@ -1,13 +1,13 @@
-#include "log.hpp"
-#include "base_objects/event.hpp"
-#include "library/fast_task.hpp"
-#include "library/list_array.hpp"
-#include "util/task_management.hpp"
 #include <commandline.h>
 #include <iostream>
+#include <library/fast_task.hpp>
+#include <library/list_array.hpp>
 #include <mutex>
+#include <src/base_objects/event.hpp>
+#include <src/log.hpp>
+#include <src/util/task_management.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace log {
         namespace commands {
             base_objects::event<std::string> on_command;

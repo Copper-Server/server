@@ -1,10 +1,10 @@
-#include "predicate_processor.hpp"
-#include "../../api/internal/predicate.hpp"
-#include "../../api/predicate.hpp"
-#include "../../api/world.hpp"
-#include "../../registers.hpp"
+#include <src/api/internal/predicate.hpp>
+#include <src/api/predicate.hpp>
+#include <src/api/world.hpp>
+#include <src/build_in_plugins/processors_providers/predicate_processor.hpp>
+#include <src/registers.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace build_in_plugins {
         template <class T>
         bool diff_min_max(const enbt::value& val, T value) {
@@ -589,7 +589,7 @@ namespace crafted_craft {
             });
 
 
-            processor.register_handler("crafted_craft:__adventure_block_", _server_helper__adventure_block_);
+            processor.register_handler("copper_server:__adventure_block_", _server_helper__adventure_block_);
             processor.register_handler("block_state_property", block_state_property);
             processor.register_handler("damage_source_properties", damage_source_properties);
             processor.register_handler("enchantment_active_check", enchantment_active_check);

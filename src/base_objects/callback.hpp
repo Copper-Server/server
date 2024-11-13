@@ -1,10 +1,10 @@
 #ifndef SRC_BASE_OBJECTS_CALLBACK
 #define SRC_BASE_OBJECTS_CALLBACK
-#include "../library/list_array.hpp"
 #include <functional>
+#include <library/list_array.hpp>
 #include <unordered_map>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
 
         struct callback_register_id {

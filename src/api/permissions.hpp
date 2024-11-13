@@ -1,10 +1,10 @@
 #ifndef SRC_API_PERMISSIONS
 #define SRC_API_PERMISSIONS
-#include "../base_objects/event.hpp"
-#include "../base_objects/shared_client_data.hpp"
-#include "../storage/permissions_manager.hpp"
+#include <src/base_objects/event.hpp>
+#include <src/base_objects/shared_client_data.hpp>
+#include <src/storage/permissions_manager.hpp>
 
-namespace crafted_craft::api::permissions {
+namespace copper_server::api::permissions {
     template <class T>
     struct event_data {
         T data;

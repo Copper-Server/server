@@ -1,9 +1,8 @@
-#include "slot.hpp"
-#include "../registers.hpp"
+#include <src/api/command.hpp>
+#include <src/base_objects/slot.hpp>
+#include <src/registers.hpp>
 
-#include "../api/command.hpp"
-
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         std::unordered_map<std::string, std::shared_ptr<static_slot_data>> slot_data::named_full_item_data;
         std::vector<std::shared_ptr<static_slot_data>> slot_data::full_item_data_;
@@ -784,7 +783,7 @@ namespace crafted_craft {
              [](const enbt::value& it) -> base_objects::slot_component::unified {
                  auto comp = it.as_compound();
                  if (!comp.contains("components")) {
-                     return base_objects::slot_component::use_remainder____weak(comp["count"], comp["id"].as_string());
+                     return base_objects::slot_component::use_remainder(weak_slot_data(comp["id"].as_string(), comp["count"]));
                  } else
                      return base_objects::slot_component::use_remainder(slot_data::from_enbt(it.as_compound()));
              }
@@ -966,7 +965,7 @@ namespace crafted_craft {
 
         slot_data slot_data::from_enbt(enbt::compound_const_ref compound) {
             auto& id = compound.at("id").as_string();
-            base_objects::slot_data slot_data = base_objects::slot_data::create_item((std::string)id);
+            base_objects::slot_data slot_data = base_objects::slot_data::create_item(id);
             if (compound.contains("count"))
                 slot_data.count = compound.at("count");
             std::unordered_map<std::string, base_objects::slot_component::unified> components;
@@ -1430,13 +1429,33 @@ namespace crafted_craft {
             use_remainder::use_remainder(slot_data&& consume)
                 : proxy_value(new slot_data(std::move(consume))) {}
 
+            use_remainder::use_remainder(weak_slot_data&& consume)
+                : proxy_value(std::move(consume)) {}
+
             use_remainder::~use_remainder() {
-                delete proxy_value;
+                std::visit([](auto&& value) {
+                    if constexpr (std::is_same_v<slot_data, std::decay_t<decltype(value)>>)
+                        delete value;
+                },
+                           proxy_value);
             }
 
 
             bool use_remainder::operator==(const use_remainder& other) const {
-                return *proxy_value == *other.proxy_value;
+                return std::visit([](auto&& value, auto&& other_value) {
+                    using ValueT = std::decay_t<decltype(value)>;
+                    using OtherValueT = std::decay_t<decltype(other_value)>;
+                    if constexpr (std::is_same_v<ValueT, OtherValueT>) {
+                        if constexpr (std::is_same_v<slot_data, ValueT>) {
+                            return *value == *other_value;
+
+                        } else
+                            return value == other_value;
+                    } else
+                        return false;
+                },
+                                  proxy_value,
+                                  other.proxy_value);
             }
 
             std::string rarity::to_string() const {
@@ -1619,12 +1638,12 @@ namespace crafted_craft {
             }
         }
 
-        slot_data slot_data::create_item(const std::string& id) {
+        slot_data slot_data::create_item(const std::string& id, int32_t count) {
             try {
                 auto res = named_full_item_data.at(id);
                 return slot_data{
                     .components = res->default_components,
-                    .count = 1,
+                    .count = count,
                     .id = res->internal_id,
                 };
             } catch (...) {
@@ -1632,11 +1651,11 @@ namespace crafted_craft {
             }
         }
 
-        slot_data slot_data::create_item(uint32_t id) {
+        slot_data slot_data::create_item(uint32_t id, int32_t count) {
             auto res = full_item_data_.at(id);
             return slot_data{
                 .components = res->default_components,
-                .count = 1,
+                .count = count,
                 .id = res->internal_id,
             };
         }

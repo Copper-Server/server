@@ -1,6 +1,6 @@
-#include "../base_objects/block_state_provider.hpp"
+#include <src/base_objects/block_state_provider.hpp>
 
-namespace crafted_craft::api::block_state_provider {
+namespace copper_server::api::block_state_provider {
     base_objects::block_state_provider_generator* generator = nullptr;
 
     void register_generator(base_objects::block_state_provider_generator& processor) {

@@ -1,12 +1,12 @@
 #ifndef SRC_BASE_OBJECTS_PARTICLE_DATA
 #define SRC_BASE_OBJECTS_PARTICLE_DATA
-#include "position.hpp"
-#include "slot.hpp"
+#include <src/base_objects/position.hpp>
+#include <src/base_objects/slot.hpp>
 #include <string>
 #include <variant>
 #include <vector>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace base_objects {
         struct particle_data {
             using values = std::variant<int, float, std::string, slot, Position>;
@@ -104,7 +104,7 @@ namespace crafted_craft {
     } // namespace base_objects
 
 
-} // namespace crafted_craft
+} // namespace copper_server
 
 
 #endif /* SRC_BASE_OBJECTS_PARTICLE_DATA */

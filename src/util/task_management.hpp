@@ -1,7 +1,7 @@
 #ifndef SRC_UTIL_TASK_MANAGEMENT
 #define SRC_UTIL_TASK_MANAGEMENT
-#include "../library/fast_task.hpp"
-#include "../library/list_array.hpp"
+#include <library/fast_task.hpp>
+#include <library/list_array.hpp>
 
 struct Task {
     static void start(const std::function<void()>& fn) {

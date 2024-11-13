@@ -1,20 +1,20 @@
 #ifndef SRC_PROTOCOLHELPER_UTIL
 #define SRC_PROTOCOLHELPER_UTIL
-#include "../ClientHandleHelper.hpp"
-#include "../api/configuration.hpp"
-#include "../base_objects/packets.hpp"
-#include "../base_objects/ptr_optional.hpp"
-#include "../base_objects/response.hpp"
-#include "../library/enbt.hpp"
-#include "../log.hpp"
-#include "../plugin/main.hpp"
-#include "../registers.hpp"
-#include "../util/readers.hpp"
 #include <exception>
+#include <library/enbt.hpp>
+#include <src/ClientHandleHelper.hpp>
+#include <src/api/configuration.hpp>
+#include <src/base_objects/packets.hpp>
+#include <src/base_objects/ptr_optional.hpp>
+#include <src/base_objects/response.hpp>
+#include <src/log.hpp>
+#include <src/plugin/main.hpp>
+#include <src/registers.hpp>
+#include <src/util/readers.hpp>
 #include <string>
 #include <zlib.h>
 
-namespace crafted_craft {
+namespace copper_server {
     class KeepAliveSolution {
         std::function<Response()> callback;
         boost::asio::deadline_timer timeout_timer;

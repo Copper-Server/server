@@ -1,12 +1,12 @@
 #ifndef SRC_STORAGE_MEMORY_ENTITY_IDS_MAP
 #define SRC_STORAGE_MEMORY_ENTITY_IDS_MAP
-#include "../../library/enbt.hpp"
-#include "../../library/fast_task.hpp"
 #include <boost/bimap.hpp>
+#include <library/enbt.hpp>
+#include <library/fast_task.hpp>
 #include <random>
 #include <shared_mutex>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace storage {
         namespace memory {
             class entity_ids_map_storage {

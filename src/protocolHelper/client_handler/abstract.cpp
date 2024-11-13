@@ -1,16 +1,16 @@
-#include "765/configuration.hpp"
-#include "765/login.hpp"
-#include "765/play.hpp"
+#include <src/protocolHelper/client_handler/765/configuration.hpp>
+#include <src/protocolHelper/client_handler/765/login.hpp>
+#include <src/protocolHelper/client_handler/765/play.hpp>
 
-#include "766/configuration.hpp"
-#include "766/login.hpp"
-#include "766/play.hpp"
+#include <src/protocolHelper/client_handler/766/configuration.hpp>
+#include <src/protocolHelper/client_handler/766/login.hpp>
+#include <src/protocolHelper/client_handler/766/play.hpp>
 
-#include "767/configuration.hpp"
-#include "767/login.hpp"
-#include "767/play.hpp"
+#include <src/protocolHelper/client_handler/767/configuration.hpp>
+#include <src/protocolHelper/client_handler/767/login.hpp>
+#include <src/protocolHelper/client_handler/767/play.hpp>
 
-namespace crafted_craft {
+namespace copper_server {
     namespace client_handler {
         namespace abstract {
             TCPclient* createHandleLogin(TCPsession* client) {
