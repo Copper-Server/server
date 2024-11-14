@@ -10,7 +10,7 @@ namespace copper_server {
 
         base_objects::item_potion_effect parse_item_potion_effect(enbt::compound_const_ref ref) {
             base_objects::item_potion_effect eff;
-            eff.potion_id = registers::potions.at(ref.at("id")).id;
+            eff.potion_id = registers::effects.at(ref.at("id")).id;
             if (ref.contains("amplifier"))
                 eff.data.amplifier = ref["amplifier"];
             if (ref.contains("duration"))
@@ -705,7 +705,7 @@ namespace copper_server {
                  suspicious_stew_effects.effects.reserve(arr.size());
                  for (auto& it : arr) {
                      auto comp = it.as_compound();
-                     auto id = registers::potions.at(comp.at("id")).id;
+                     auto id = registers::effects.at(comp.at("id")).id;
                      int32_t dur = 160;
                      if (comp.contains("duration"))
                          dur = comp["duration"];
@@ -1066,6 +1066,7 @@ namespace copper_server {
                 return false;
 
             if (hidden_effect) {
+
                 if (this == &other)
                     return true;
                 if (!(*hidden_effect == *other.hidden_effect))
@@ -1679,6 +1680,11 @@ namespace copper_server {
             named_full_item_data[moved->id] = moved;
             full_item_data_.push_back(moved);
             moved->internal_id = full_item_data_.size() - 1;
+        }
+
+        void slot_data::enumerate_slot_data(const std::function<void(static_slot_data&)>& fn) {
+            for (auto& block : full_item_data_)
+                fn(*block);
         }
     }
 }

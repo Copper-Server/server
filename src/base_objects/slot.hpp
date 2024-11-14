@@ -1065,6 +1065,8 @@ namespace copper_server {
 
             static_slot_data& get_slot_data();
 
+            static void enumerate_slot_data(const std::function<void(static_slot_data&)>& fn);
+
         private:
             friend class static_slot_data;
             static std::unordered_map<std::string, std::shared_ptr<static_slot_data>> named_full_item_data;

@@ -31,8 +31,13 @@ namespace copper_server {
         std::unordered_map<uint32_t, enbt::compound> individual_registers;
 
 
+        std::unordered_map<int32_t, std::unordered_map<int32_t, uint32_t>> potion::protocol_aliases;
         std::unordered_map<std::string, potion> potions;
         list_array<decltype(potions)::iterator> potions_cache;
+
+        std::unordered_map<int32_t, std::unordered_map<int32_t, uint32_t>> effect::protocol_aliases;
+        std::unordered_map<std::string, effect> effects;
+        list_array<decltype(effects)::iterator> effects_cache;
 
         std::unordered_map<std::string, enchantment> enchantments;
         list_array<decltype(enchantments)::iterator> enchantments_cache;

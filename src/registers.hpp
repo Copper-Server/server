@@ -314,11 +314,21 @@ namespace copper_server {
             uint32_t id;
         };
 
-        struct potion {
+        struct effect {
             std::string name;
             uint32_t id;
 
-            std::unordered_map<int32_t, int32_t> protocol;
+            std::unordered_map<int32_t, int32_t> protocol;                                              //protocol -> protocol effect id
+            static std::unordered_map<int32_t, std::unordered_map<int32_t, uint32_t>> protocol_aliases; //protocol -> protocol effect id -> internal id
+        };
+
+        struct potion {
+            std::string name;
+            uint32_t id;
+            std::vector<uint32_t> effects;
+
+            std::unordered_map<int32_t, int32_t> protocol;                                              //protocol -> protocol effect id
+            static std::unordered_map<int32_t, std::unordered_map<int32_t, uint32_t>> protocol_aliases; //protocol -> protocol effect id -> internal id
         };
 
         struct item_modifier {
@@ -566,6 +576,10 @@ namespace copper_server {
 
         extern std::unordered_map<std::string, potion> potions;
         extern list_array<decltype(potions)::iterator> potions_cache;
+
+
+        extern std::unordered_map<std::string, effect> effects;
+        extern list_array<decltype(effects)::iterator> effects_cache;
 
         extern std::unordered_map<std::string, enchantment> enchantments;
         extern list_array<decltype(enchantments)::iterator> enchantments_cache;

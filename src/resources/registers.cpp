@@ -2875,9 +2875,120 @@ namespace copper_server {
         }
 
         void __initialization__versions_inital() { //skips items assignation
+            auto& latest_version = registers::individual_registers.at(768);
+            {
+                auto current_effect = latest_version.at("minecraft:mob_effect").at("entries").as_compound();
+                for (auto& [name, decl] : current_effect)
+                    registers::effects[name] = effect{name, (uint32_t)decl.at("protocol_id")};
+                {
+                    registers::effects_cache.resize(registers::effects.size());
+                    auto it = registers::effects.begin();
+                    auto end = registers::effects.end();
+                    while (it != end) {
+                        registers::effects_cache.at(it->second.id) = it;
+                        ++it;
+                    }
+                }
+            }
+            {
+                auto current_potion = latest_version.at("minecraft:potion").at("entries").as_compound();
+                for (auto& [name, decl] : current_potion)
+                    registers::potions[name] = potion{name, (uint32_t)decl.at("protocol_id")};
+                {
+                    registers::potions_cache.resize(registers::potions.size());
+                    auto it = registers::potions.begin();
+                    auto end = registers::potions.end();
+                    while (it != end) {
+                        registers::potions_cache.at(it->second.id) = it;
+                        ++it;
+                    }
+                }
+            }
+
+            for (auto& [proto_id, decl] : registers::individual_registers) {
+                for (auto& [name, decl] : decl.at("minecraft:mob_effect").at("entries").as_compound()) {
+                    auto it = registers::effects.find(name);
+                    if (it != registers::effects.end()) {
+                        it->second.protocol[proto_id] = (uint32_t)decl.at("protocol_id");
+                        effect::protocol_aliases[proto_id][it->second.id] = it->second.id;
+                    }
+                }
+                for (auto& [name, decl] : decl.at("minecraft:potion").at("entries").as_compound()) {
+                    auto it = registers::potions.find(name);
+                    if (it != registers::potions.end()) {
+                        it->second.protocol[proto_id] = (uint32_t)decl.at("protocol_id");
+                        potion::protocol_aliases[proto_id][it->second.id] = it->second.id;
+                    }
+                }
+                {
+                    auto current_registry_blocks = decl.at("minecraft:block").at("entries").as_compound();
+                    auto& proto_data = base_objects::static_block_data::internal_block_aliases_protocol[proto_id];
+                    for (auto& [name, decl] : current_registry_blocks)
+                        proto_data[name] = (uint32_t)decl.at("protocol_id");
+                }
+            }
+            //set aliases
+            base_objects::block::access_full_block_data(
+                [&](auto& arr, auto& ignore) {
+                    for (auto& block : arr) {
+                        auto& name = block->name;
+                        auto& block_aliases = block->block_aliases;
+                        if (name.starts_with("minecraft:pale_oak_"))
+                            block_aliases.push_back("minecraft:birch_" + name.substr(19));
+                        else if (name.starts_with("minecraft:stripped_pale_oak_"))
+                            block_aliases.push_back("minecraft:stripped_birch_" + name.substr(28));
+                        else if (name == "minecraft:potted_pale_oak_sapling")
+                            block_aliases.push_back("minecraft:potted_birch_sapling");
+                        else if (name == "minecraft:pale_hanging_moss")
+                            block_aliases.push_back("minecraft:weeping_vines");
+                        else if (name == "minecraft:pale_moss_block")
+                            block_aliases.push_back("minecraft:moss_block");
+                        else if (name == "minecraft:pale_moss_carpet")
+                            block_aliases.push_back("minecraft:moss_carpet");
+                        else if (name == "minecraft:creaking_heart")
+                            block_aliases.push_back("minecraft:white_wool");
+                        else if (name == "minecraft:vault")
+                            block_aliases.push_back("minecraft:barrel");
+                        else if (name == "minecraft:heavy_core")
+                            block_aliases.push_back("minecraft:player_head");
+                    }
+                }
+            );
+            base_objects::static_block_data::initialize_blocks();
         }
 
         void __initialization__versions_post() {
+            for (auto& [proto_id, decl] : registers::individual_registers)
+                for (auto& [name, decl] : decl.at("minecraft:item").at("entries").as_compound())
+                    base_objects::static_slot_data::internal_item_aliases_protocol[proto_id][name] = (uint32_t)decl.at("protocol_id");
+            //set aliases
+            base_objects::slot_data::enumerate_slot_data(
+                [&](auto& item) {
+                    auto& name = item.id;
+                    auto& item_aliases = item.item_aliases;
+                    if (name.starts_with("minecraft:pale_oak_"))
+                        item_aliases.push_back("minecraft:birch_" + name.substr(19));
+                    else if (name.starts_with("minecraft:stripped_pale_oak_"))
+                        item_aliases.push_back("minecraft:stripped_birch_" + name.substr(28));
+                    else if (name == "minecraft:pale_hanging_moss")
+                        item_aliases.push_back("minecraft:weeping_vines");
+                    else if (name == "minecraft:pale_moss_block")
+                        item_aliases.push_back("minecraft:moss_block");
+                    else if (name == "minecraft:pale_moss_carpet")
+                        item_aliases.push_back("minecraft:moss_carpet");
+                    else if (name == "minecraft:creaking_heart")
+                        item_aliases.push_back("minecraft:white_wool");
+                    else if (name == "minecraft:vault")
+                        item_aliases.push_back("minecraft:spawner");
+                    else if (name == "minecraft:ominous_bottle")
+                        item_aliases.push_back("minecraft:experience_bottle");
+                    else if (name == "minecraft:ominous_trial_key")
+                        item_aliases.push_back("minecraft:trial_key");
+                    else if (name == "minecraft:heavy_core")
+                        item_aliases.push_back("minecraft:player_head");
+                }
+            );
+            base_objects::static_block_data::initialize_blocks();
         }
 
         void initialize() {
