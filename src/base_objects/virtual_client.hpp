@@ -8,31 +8,7 @@ namespace copper_server {
         struct virtual_client {
             client_data_holder client;
 
-            virtual_client(client_data_holder allocated, const std::string& name, const std::string& brand)
-                : client(allocated) {
-
-                client->name = name;
-                client->ip = "";
-                client->client_brand = brand;
-                client->locale = "en_US";
-
-                client->player_data.local_data["virtual_client"] = name;
-                client->player_data.gamemode = -1;
-                client->player_data.op_level = 4;
-                client->player_data.world_id = "virtual_client astral space";
-                client->player_data.health = 999999.0f;
-                client->player_data.on_ground = true;
-
-                client->packets_state.protocol_version = 767;
-                client->packets_state.state = SharedClientData::packets_state_t::protocol_state::play;
-                client->special_callback = [this](SharedClientData& self) {
-                    self.getPendingPackets().for_each([&](auto packet) {
-                        packet.data.for_each([&](Response::Item& it) {
-                            parse_packet(it.data);
-                        });
-                    });
-                };
-            }
+            virtual_client(client_data_holder allocated, const std::string& name, const std::string& brand);
 
             void parse_packet(list_array<uint8_t>&);
 

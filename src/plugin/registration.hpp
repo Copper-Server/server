@@ -60,7 +60,6 @@ namespace copper_server {
         using plugin_response = std::variant<Response, PluginResponse, bool>;
 
 #pragma region Server
-
         //first initialisation
         virtual void OnRegister(const std::shared_ptr<PluginRegistration>&) {}
 

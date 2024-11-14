@@ -1,6 +1,7 @@
 #include <boost/json.hpp>
 #include <format>
 #include <fstream>
+#include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/log.hpp>
 #include <src/storage/permissions_manager.hpp>

@@ -13,12 +13,13 @@
 #include <library/list_array.hpp>
 #include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/chat.hpp>
-#include <src/base_objects/player.hpp>
 #include <src/base_objects/response.hpp>
 #include <src/mojang/api/session_server.hpp>
 
 namespace copper_server {
     namespace base_objects {
+        class player;
+
         struct SharedClientData {
             std::string name;
             std::string ip;
@@ -59,7 +60,7 @@ namespace copper_server {
             bool enable_filtering : 1 = false;
             bool allow_server_listings : 1 = true;
             bool enable_chat_colors : 1 = true;
-            copper_server::base_objects::player player_data;
+            player& player_data;
 
             struct ResourcePackData {
                 bool required : 1 = false;
@@ -111,8 +112,8 @@ namespace copper_server {
                 return pending_packets.take();
             }
 
-            SharedClientData(void* assigned_data = nullptr, std::function<void(SharedClientData& self)> special_callback = nullptr)
-                : assigned_data(assigned_data), special_callback(special_callback) {}
+            SharedClientData(void* assigned_data = nullptr, std::function<void(SharedClientData& self)> special_callback = nullptr);
+            ~SharedClientData();
 
             void* getAssignedData() {
                 return assigned_data;
@@ -125,6 +126,7 @@ namespace copper_server {
             bool isSpecial() {
                 return (bool)special_callback;
             }
+
 
         private:
             friend class virtual_client;

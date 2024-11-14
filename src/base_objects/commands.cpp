@@ -2,6 +2,7 @@
 #include <src/api/permissions.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/packets.hpp>
+#include <src/base_objects/player.hpp>
 #include <src/protocolHelper/util.hpp>
 #include <src/util/conversions.hpp>
 

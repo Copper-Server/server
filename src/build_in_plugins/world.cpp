@@ -2,12 +2,27 @@
 #include <src/api/internal/world.hpp>
 #include <src/api/players.hpp>
 #include <src/api/world.hpp>
+#include <src/base_objects/player.hpp>
 #include <src/build_in_plugins/world.hpp>
 #include <src/log.hpp>
 #include <src/util/conversions.hpp>
 
 namespace copper_server {
     namespace build_in_plugins {
+        void world_tps_profiling(storage::world_data& world) {
+            log::info("World", "Profiling TPS for world " + world.world_name + ": " + std::to_string(world.profiling.tps_for_world));
+        }
+
+        void world_slow_chunk_notify_profiling(storage::world_data& world, int64_t chunk_x, int64_t chunk_z, std::chrono::milliseconds tick_time) {
+            std::string message = "Got slow chunk tick for world " + world.world_name + " chunk " + std::to_string(chunk_x) + " " + std::to_string(chunk_z) + " in " + std::to_string(tick_time.count()) + "ms";
+            log::warn("World", message);
+        }
+
+        void slow_world_notify_profiling(storage::world_data& world, std::chrono::milliseconds tick_time) {
+            std::string message = "Can't keep up with world " + world.world_name + " in " + std::to_string(tick_time.count()) + "ms";
+            log::warn("World", message);
+        }
+
         void WorldManagementPlugin::add_world_id_suggestion(base_objects::command_browser& browser) {
             browser.set_suggestion_callback([this](const std::string& current, base_objects::command_context& context) {
                 auto suggestions = worlds_storage.get_list().convert<std::string>([](uint64_t id) {
@@ -48,9 +63,8 @@ namespace copper_server {
                 log::debug("World", "world id " + std::to_string(id) + " loaded.");
                 api::world::get(id, [&](storage::world_data& world) {
                     world.profiling.enable_world_profiling = true;
-                    world.profiling.got_tps_update = [](storage::world_data& world) {
-                        log::info("World tps", std::to_string(world.profiling.tps_for_world));
-                    };
+                    world.profiling.slow_chunk_tick_callback = world_slow_chunk_notify_profiling;
+                    world.profiling.slow_world_tick_callback = slow_world_notify_profiling;
                 });
                 return false;
             });
@@ -149,6 +163,8 @@ namespace copper_server {
         }
 
         using predicate = base_objects::parser;
+        using pred_double = base_objects::parsers::_double;
+        using cmd_pred_double = base_objects::parsers::command::_double;
         using pred_long = base_objects::parsers::_long;
         using cmd_pred_long = base_objects::parsers::command::_long;
         using pred_string = base_objects::parsers::string;
@@ -441,6 +457,7 @@ namespace copper_server {
                                 api::players::calls::on_system_message({context.executor, message});
                             }
                         });
+                    add_world_name_suggestion(world_name);
                 }
                 {
                     auto get_name = worlds.add_child("get_name");
@@ -483,19 +500,21 @@ namespace copper_server {
                         if (pos.z_relative)
                             pos.z += (int32_t)context.other_data["z"];
 
-                        std::visit([&world, &pos, &block](auto&& arg) {
-                            using T = std::decay_t<decltype(arg)>;
-                            if constexpr (std::is_same_v<T, pred_long>) {
-                                api::world::get(std::get<pred_long>(world).value, [pos, &block](storage::world_data& world) {
-                                    world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::replace);
-                                });
-                            } else {
-                                api::world::get(std::get<pred_string>(world).value, [pos, &block](storage::world_data& world) {
-                                    world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::replace);
-                                });
-                            }
-                        },
-                                   world);
+                        std::visit(
+                            [&world, &pos, &block](auto&& arg) {
+                                using T = std::decay_t<decltype(arg)>;
+                                if constexpr (std::is_same_v<T, pred_long>) {
+                                    api::world::get(std::get<pred_long>(world).value, [pos, &block](storage::world_data& world) {
+                                        world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::replace);
+                                    });
+                                } else {
+                                    api::world::get(std::get<pred_string>(world).value, [pos, &block](storage::world_data& world) {
+                                        world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::replace);
+                                    });
+                                }
+                            },
+                            world
+                        );
                     };
 
                     replace.set_callback("command.world.setblock", command);
@@ -513,19 +532,21 @@ namespace copper_server {
                         if (pos.z_relative)
                             pos.z += (int32_t)context.other_data["z"];
 
-                        std::visit([&world, &pos, &block](auto&& arg) {
-                            using T = std::decay_t<decltype(arg)>;
-                            if constexpr (std::is_same_v<T, pred_long>) {
-                                api::world::get(std::get<pred_long>(world).value, [pos, &block](storage::world_data& world) {
-                                    world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::destroy);
-                                });
-                            } else {
-                                api::world::get(std::get<pred_string>(world).value, [pos, &block](storage::world_data& world) {
-                                    world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::destroy);
-                                });
-                            }
-                        },
-                                   world);
+                        std::visit(
+                            [&world, &pos, &block](auto&& arg) {
+                                using T = std::decay_t<decltype(arg)>;
+                                if constexpr (std::is_same_v<T, pred_long>) {
+                                    api::world::get(std::get<pred_long>(world).value, [pos, &block](storage::world_data& world) {
+                                        world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::destroy);
+                                    });
+                                } else {
+                                    api::world::get(std::get<pred_string>(world).value, [pos, &block](storage::world_data& world) {
+                                        world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::destroy);
+                                    });
+                                }
+                            },
+                            world
+                        );
                     });
 
                     keep.set_callback("command.world.setblock", [&](const list_array<predicate>& args, base_objects::command_context& context) {
@@ -554,6 +575,419 @@ namespace copper_server {
                         },
                                    world);
                     });
+
+
+                    add_world_id_suggestion(world);
+                    add_world_name_suggestion(world_name);
+                }
+                {
+                    auto profile = worlds.add_child("profile");
+                    auto world_id_ = profile.add_child("world_id", cmd_pred_long());
+                    auto world_name_ = profile.add_child("world_name", cmd_pred_string());
+
+                    add_world_id_suggestion(world_id_);
+                    add_world_name_suggestion(world_name_);
+                    {
+                        auto world_id = world_id_.add_child("enable");
+                        auto world_name = world_name_.add_child("enable");
+                        world_id
+                            .add_child("tps")
+                            .set_callback("command.world.profile.enable.tps", [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_long>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    if (world.profiling.enable_world_profiling && world.profiling.got_tps_update) {
+                                        Chat message("Profiling already enabled for world: " + world.world_name);
+                                        message.SetColor("red");
+                                        api::players::calls::on_system_message({context.executor, message});
+                                    }
+                                    world.profiling.enable_world_profiling = true;
+                                    world.profiling.got_tps_update = world_tps_profiling;
+                                    Chat message("Profiling enabled for world: " + world.world_name);
+                                    message.SetColor("green");
+                                    api::players::calls::on_system_message({context.executor, message});
+                                });
+                            });
+
+                        world_name
+                            .add_child("tps")
+                            .set_callback("command.world.profile.enable.tps", [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_string>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    if (world.profiling.enable_world_profiling && world.profiling.got_tps_update) {
+                                        Chat message("TPS profiling already enabled for world: " + world.world_name);
+                                        message.SetColor("red");
+                                        api::players::calls::on_system_message({context.executor, message});
+                                    }
+                                    world.profiling.enable_world_profiling = true;
+                                    world.profiling.got_tps_update = world_tps_profiling;
+                                    Chat message("TPS profiling enabled for world: " + world.world_name);
+                                    message.SetColor("green");
+                                    api::players::calls::on_system_message({context.executor, message});
+                                });
+                            });
+
+                        world_id
+                            .add_child("slow_chunk")
+                            .set_callback("command.world.profile.enable.slow_chunk", [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_long>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    if (world.profiling.enable_world_profiling && world.profiling.slow_chunk_tick_callback) {
+                                        Chat message("Chunk profiling already enabled for world: " + world.world_name);
+                                        message.SetColor("red");
+                                        api::players::calls::on_system_message({context.executor, message});
+                                    }
+                                    world.profiling.enable_world_profiling = true;
+                                    world.profiling.slow_chunk_tick_callback = world_slow_chunk_notify_profiling;
+                                    Chat message("Chunk profiling enabled for world: " + world.world_name);
+                                    message.SetColor("green");
+                                    api::players::calls::on_system_message({context.executor, message});
+                                });
+                            });
+
+                        world_name
+                            .add_child("slow_chunk")
+                            .set_callback("command.world.profile.enable.slow_chunk", [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_string>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    if (world.profiling.enable_world_profiling && world.profiling.slow_chunk_tick_callback) {
+                                        Chat message("Chunk profiling already enabled for world: " + world.world_name);
+                                        message.SetColor("red");
+                                        api::players::calls::on_system_message({context.executor, message});
+                                    }
+                                    world.profiling.enable_world_profiling = true;
+                                    world.profiling.slow_chunk_tick_callback = world_slow_chunk_notify_profiling;
+                                    Chat message("Chunk profiling enabled for world: " + world.world_name);
+                                    message.SetColor("green");
+                                    api::players::calls::on_system_message({context.executor, message});
+                                });
+                            });
+
+                        world_id
+                            .add_child("slow_world")
+                            .set_callback("command.world.profile.enable.slow_world", [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_long>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    if (world.profiling.enable_world_profiling && world.profiling.slow_world_tick_callback) {
+                                        Chat message("World profiling already enabled for world: " + world.world_name);
+                                        message.SetColor("red");
+                                        api::players::calls::on_system_message({context.executor, message});
+                                    }
+                                    world.profiling.enable_world_profiling = true;
+                                    world.profiling.slow_world_tick_callback = slow_world_notify_profiling;
+                                    Chat message("World profiling enabled for world: " + world.world_name);
+                                    message.SetColor("green");
+                                    api::players::calls::on_system_message({context.executor, message});
+                                });
+                            });
+
+                        world_name
+                            .add_child("slow_world")
+                            .set_callback("command.world.profile.enable.slow_world", [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_string>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    if (world.profiling.enable_world_profiling && world.profiling.slow_world_tick_callback) {
+                                        Chat message("World profiling already enabled for world: " + world.world_name);
+                                        message.SetColor("red");
+                                        api::players::calls::on_system_message({context.executor, message});
+                                    }
+                                    world.profiling.enable_world_profiling = true;
+                                    world.profiling.slow_world_tick_callback = slow_world_notify_profiling;
+                                    Chat message("World profiling enabled for world: " + world.world_name);
+                                    message.SetColor("green");
+                                    api::players::calls::on_system_message({context.executor, message});
+                                });
+                            });
+                    }
+                    {
+                        auto world_id = world_id_.add_child("disable");
+                        auto world_name = world_name_.add_child("disable");
+
+
+                        world_id
+                            .set_callback("command.world.profile.disable", [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_long>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    if (world.profiling.enable_world_profiling) {
+                                        world.profiling.enable_world_profiling = false;
+                                        world.profiling.slow_chunk_tick_callback = nullptr;
+                                        world.profiling.slow_world_tick_callback = nullptr;
+                                        world.profiling.got_tps_update = nullptr;
+
+                                        Chat message("Profiling disabled for world: " + world.world_name);
+                                        message.SetColor("green");
+                                        api::players::calls::on_system_message({context.executor, message});
+                                    } else {
+                                        Chat message("TPS profiling already disabled for world: " + world.world_name);
+                                        message.SetColor("red");
+                                        api::players::calls::on_system_message({context.executor, message});
+                                    }
+                                });
+                            });
+
+                        world_name
+                            .set_callback("command.world.profile.disable", [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_string>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    if (world.profiling.enable_world_profiling) {
+                                        world.profiling.enable_world_profiling = false;
+                                        world.profiling.slow_chunk_tick_callback = nullptr;
+                                        world.profiling.slow_world_tick_callback = nullptr;
+                                        world.profiling.got_tps_update = nullptr;
+
+                                        Chat message("Profiling disabled for world: " + world.world_name);
+                                        message.SetColor("green");
+                                        api::players::calls::on_system_message({context.executor, message});
+                                    } else {
+                                        Chat message("TPS profiling already disabled for world: " + world.world_name);
+                                        message.SetColor("red");
+                                        api::players::calls::on_system_message({context.executor, message});
+                                    }
+                                });
+                            });
+
+
+                        world_id
+                            .add_child("tps")
+                            .set_callback("command.world.profile.disable.tps", [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_long>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    if (world.profiling.enable_world_profiling) {
+                                        if (*world.profiling.got_tps_update.target<void (*)(storage::world_data&)>() == world_tps_profiling) {
+                                            world.profiling.got_tps_update = nullptr;
+                                            if (!world.profiling.slow_chunk_tick_callback && !world.profiling.slow_world_tick_callback)
+                                                world.profiling.enable_world_profiling = false;
+
+                                            Chat message("TPS profiling disabled for world: " + world.world_name);
+                                            message.SetColor("green");
+                                            api::players::calls::on_system_message({context.executor, message});
+                                        } else {
+                                            Chat message("TPS profiling enabled by another plugin for world: " + world.world_name);
+                                            message.SetColor("red");
+                                            api::players::calls::on_system_message({context.executor, message});
+                                        }
+                                    } else {
+                                        Chat message("TPS profiling already disabled for world: " + world.world_name);
+                                        message.SetColor("red");
+                                        api::players::calls::on_system_message({context.executor, message});
+                                    }
+                                });
+                            });
+
+                        world_name
+                            .add_child("tps")
+                            .set_callback("command.world.profile.disable.tps", [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_string>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    if (world.profiling.enable_world_profiling) {
+                                        if (*world.profiling.got_tps_update.target<void (*)(storage::world_data&)>() == world_tps_profiling) {
+                                            world.profiling.got_tps_update = nullptr;
+                                            if (!world.profiling.slow_chunk_tick_callback && !world.profiling.slow_world_tick_callback)
+                                                world.profiling.enable_world_profiling = false;
+                                            Chat message("TPS profiling disabled for world: " + world.world_name);
+                                            message.SetColor("green");
+                                            api::players::calls::on_system_message({context.executor, message});
+                                        } else {
+                                            Chat message("TPS profiling enabled by another plugin for world: " + world.world_name);
+                                            message.SetColor("red");
+                                            api::players::calls::on_system_message({context.executor, message});
+                                        }
+                                    } else {
+                                        Chat message("TPS profiling already disabled for world: " + world.world_name);
+                                        message.SetColor("red");
+                                        api::players::calls::on_system_message({context.executor, message});
+                                    }
+                                });
+                            });
+
+                        world_id
+                            .add_child("slow_chunk")
+                            .set_callback("command.world.profile.disable.slow_chunk", [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_long>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    if (world.profiling.enable_world_profiling) {
+                                        if (*world.profiling.slow_chunk_tick_callback.target<void (*)(storage::world_data&, int64_t, int64_t, std::chrono::milliseconds)>() == world_slow_chunk_notify_profiling) {
+                                            world.profiling.slow_chunk_tick_callback = nullptr;
+                                            Chat message("Slow chunk profiling enabled for world: " + world.world_name);
+                                            message.SetColor("green");
+                                            api::players::calls::on_system_message({context.executor, message});
+                                        } else {
+                                            Chat message("Slow chunk profiling enabled by another plugin for world: " + world.world_name);
+                                            message.SetColor("red");
+                                            api::players::calls::on_system_message({context.executor, message});
+                                        }
+                                    } else {
+                                        Chat message("Slow chunk profiling already disabled for world: " + world.world_name);
+                                        message.SetColor("red");
+                                        api::players::calls::on_system_message({context.executor, message});
+                                    }
+                                });
+                            });
+
+                        world_name
+                            .add_child("slow_chunk")
+                            .set_callback("command.world.profile.disable.slow_chunk", [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_string>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    if (world.profiling.enable_world_profiling) {
+                                        if (*world.profiling.slow_chunk_tick_callback.target<void (*)(storage::world_data&, int64_t, int64_t, std::chrono::milliseconds)>() == world_slow_chunk_notify_profiling) {
+                                            world.profiling.slow_chunk_tick_callback = nullptr;
+                                            Chat message("Slow chunk profiling enabled for world: " + world.world_name);
+                                            message.SetColor("green");
+                                            api::players::calls::on_system_message({context.executor, message});
+                                        } else {
+                                            Chat message("Slow chunk profiling enabled by another plugin for world: " + world.world_name);
+                                            message.SetColor("red");
+                                            api::players::calls::on_system_message({context.executor, message});
+                                        }
+                                    } else {
+                                        Chat message("Slow chunk profiling already disabled for world: " + world.world_name);
+                                        message.SetColor("red");
+                                        api::players::calls::on_system_message({context.executor, message});
+                                    }
+                                });
+                            });
+
+                        world_id
+                            .add_child("slow_world")
+                            .set_callback("command.world.profile.disable.slow_world", [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_long>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    if (world.profiling.enable_world_profiling) {
+                                        if (*world.profiling.slow_world_tick_callback.target<void (*)(storage::world_data&, std::chrono::milliseconds)>() == slow_world_notify_profiling) {
+                                            world.profiling.slow_world_tick_callback = nullptr;
+                                            Chat message("Slow chunk profiling enabled for world: " + world.world_name);
+                                            message.SetColor("green");
+                                            api::players::calls::on_system_message({context.executor, message});
+                                        } else {
+                                            Chat message("Slow chunk profiling enabled by another plugin for world: " + world.world_name);
+                                            message.SetColor("red");
+                                            api::players::calls::on_system_message({context.executor, message});
+                                        }
+                                    } else {
+                                        Chat message("Slow chunk profiling already disabled for world: " + world.world_name);
+                                        message.SetColor("red");
+                                        api::players::calls::on_system_message({context.executor, message});
+                                    }
+                                });
+                            });
+
+                        world_name
+                            .add_child("slow_world")
+                            .set_callback("command.world.profile.disable.slow_world", [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_string>(args[0]);
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    if (world.profiling.enable_world_profiling) {
+                                        if (*world.profiling.slow_world_tick_callback.target<void (*)(storage::world_data&, std::chrono::milliseconds)>() == slow_world_notify_profiling) {
+                                            world.profiling.slow_world_tick_callback = nullptr;
+                                            Chat message("Slow chunk profiling enabled for world: " + world.world_name);
+                                            message.SetColor("green");
+                                            api::players::calls::on_system_message({context.executor, message});
+                                        } else {
+                                            Chat message("Slow chunk profiling enabled by another plugin for world: " + world.world_name);
+                                            message.SetColor("red");
+                                            api::players::calls::on_system_message({context.executor, message});
+                                        }
+                                    } else {
+                                        Chat message("Slow chunk profiling already disabled for world: " + world.world_name);
+                                        message.SetColor("red");
+                                        api::players::calls::on_system_message({context.executor, message});
+                                    }
+                                });
+                            });
+                    }
+                    {
+                        auto config_id = world_id_.add_child("config");
+                        auto config_name = world_name_.add_child("config");
+
+                        config_id
+                            .add_child("slow_world_threshold")
+                            .set_callback("command.world.profile.config.slow_world_threshold.get", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_long>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    api::players::calls::on_system_message({context.executor, "Slow world threshold: " + std::to_string(world.profiling.slow_world_tick_callback_threshold)});
+                                });
+                            })
+                            .add_child("value", cmd_pred_double())
+                            .set_callback("command.world.profile.config.slow_world_threshold.set", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_long>(args[0]);
+                                auto& value = std::get<pred_double>(args[1]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    world.profiling.slow_world_tick_callback_threshold = value.value;
+                                });
+                            });
+
+                        config_name
+                            .add_child("slow_world_threshold")
+                            .set_callback("command.world.profile.config.slow_world_threshold.get", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_string>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    api::players::calls::on_system_message({context.executor, "Slow world threshold: " + std::to_string(world.profiling.slow_world_tick_callback_threshold)});
+                                });
+                            })
+                            .add_child("value", cmd_pred_double())
+                            .set_callback("command.world.profile.config.slow_world_tick_threshold.set", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_name = std::get<pred_string>(args[0]);
+                                auto& value = std::get<pred_double>(args[1]);
+
+                                api::world::get(world_name.value, [&](storage::world_data& world) {
+                                    world.profiling.slow_world_tick_callback_threshold = value.value;
+                                });
+                            });
+
+                        config_id
+                            .add_child("slow_chunk_threshold")
+                            .set_callback("command.world.profile.config.slow_world_threshold.get", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_long>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    api::players::calls::on_system_message({context.executor, "Slow chunk threshold: " + std::to_string(world.profiling.slow_chunk_tick_callback_threshold)});
+                                });
+                            })
+                            .add_child("value", cmd_pred_double())
+                            .set_callback("command.world.profile.config.slow_chunk_threshold.set", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_long>(args[0]);
+                                auto& value = std::get<pred_double>(args[1]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    world.profiling.slow_chunk_tick_callback_threshold = value.value;
+                                });
+                            });
+
+                        config_name
+                            .add_child("slow_chunk_threshold")
+                            .set_callback("command.world.profile.config.slow_world_threshold.get", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_id = std::get<pred_string>(args[0]);
+
+                                api::world::get(world_id.value, [&](storage::world_data& world) {
+                                    api::players::calls::on_system_message({context.executor, "Slow chunk threshold: " + std::to_string(world.profiling.slow_chunk_tick_callback_threshold)});
+                                });
+                            })
+                            .add_child("value", cmd_pred_double())
+                            .set_callback("command.world.profile.config.slow_chunk_threshold.set", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                                auto& world_name = std::get<pred_string>(args[0]);
+                                auto& value = std::get<pred_double>(args[1]);
+
+                                api::world::get(world_name.value, [&](storage::world_data& world) {
+                                    world.profiling.slow_chunk_tick_callback_threshold = value.value;
+                                });
+                            });
+                    }
                 }
             }
             {

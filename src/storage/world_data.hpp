@@ -261,8 +261,8 @@ namespace copper_server {
             enbt::compound world_light_processor_data;
             enbt::compound world_records;
 
-            enbt::raw_uuid world_seed;
-            enbt::raw_uuid wandering_trader_id;
+            enbt::raw_uuid world_seed = enbt::raw_uuid::generate_v4();
+            enbt::raw_uuid wandering_trader_id = enbt::raw_uuid::as_null();
             float wandering_trader_spawn_chance = 0;
             int32_t wandering_trader_spawn_delay = 0;
             std::string world_name;

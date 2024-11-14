@@ -1,6 +1,7 @@
 
 
 #include <src/api/protocol.hpp>
+#include <src/base_objects/player.hpp>
 #include <src/protocolHelper/client_handler/abstract.hpp>
 #include <src/protocolHelper/packets/766/writers_readers.hpp>
 #include <src/protocolHelper/util.hpp>

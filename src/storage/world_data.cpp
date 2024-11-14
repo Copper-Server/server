@@ -1,5 +1,6 @@
 #include <boost/iostreams/filter/zstd.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
+#include <src/base_objects/player.hpp>
 #include <src/log.hpp>
 #include <src/storage/world_data.hpp>
 

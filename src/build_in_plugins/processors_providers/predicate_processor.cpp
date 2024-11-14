@@ -1,6 +1,7 @@
 #include <src/api/internal/predicate.hpp>
 #include <src/api/predicate.hpp>
 #include <src/api/world.hpp>
+#include <src/base_objects/player.hpp>
 #include <src/build_in_plugins/processors_providers/predicate_processor.hpp>
 #include <src/registers.hpp>
 

@@ -5,6 +5,7 @@
 #include <src/api/permissions.hpp>
 #include <src/api/players.hpp>
 #include <src/api/world.hpp>
+#include <src/base_objects/player.hpp>
 #include <src/build_in_plugins/server.hpp>
 #include <src/log.hpp>
 #include <src/plugin/main.hpp>

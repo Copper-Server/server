@@ -13,7 +13,6 @@
 #include <string>
 
 #include <library/list_array.hpp>
-#include <src/base_objects/player.hpp>
 #include <src/base_objects/response.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 

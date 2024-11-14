@@ -121,7 +121,10 @@ namespace copper_server {
                 console::cmd->enable_history();
                 console::cmd->set_prompt(">");
                 console::cmd->on_command = [](Commandline& cmd) {
-                    on_command.async_notify(cmd.get_command());
+                    auto command = cmd.get_command();
+                    if (command.ends_with('\r'))
+                        command = command.substr(0, command.size() - 1);
+                    on_command.async_notify(command);
                 };
             }
 
