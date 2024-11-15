@@ -310,6 +310,10 @@ namespace copper_server {
 
             world_data(const std::filesystem::path& path);
 
+            std::filesystem::path get_path() const {
+                return path;
+            }
+
             bool exists(int64_t chunk_x, int64_t chunk_z);
             //returns std::nullopt if chunk already queried for async load
             std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z);
@@ -451,6 +455,7 @@ namespace copper_server {
 
                 bool enable_world_profiling = false; //calls profiling callbacks
 
+                std::function<void(world_data& world, int64_t chunk_x, int64_t chunk_z, std::chrono::milliseconds tick_time)> chunk_speedometer_callback = nullptr;
                 std::function<void(world_data& world, int64_t chunk_x, int64_t chunk_z, std::chrono::milliseconds tick_time)> slow_chunk_tick_callback = nullptr;
                 std::function<void(world_data& world, std::chrono::milliseconds tick_time)> slow_world_tick_callback = nullptr;
                 std::function<void(world_data& world)> got_tps_update = nullptr;

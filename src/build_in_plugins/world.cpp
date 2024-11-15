@@ -6,9 +6,86 @@
 #include <src/build_in_plugins/world.hpp>
 #include <src/log.hpp>
 #include <src/util/conversions.hpp>
-
+#include <src/util/task_management.hpp>
 namespace copper_server {
     namespace build_in_plugins {
+        struct chunk_speed_data {
+            int64_t x;
+            int64_t z;
+            std::chrono::milliseconds tick_time;
+        };
+
+        void end_chunk_speed_report_collecting(
+            const std::filesystem::path& path,
+            const std::string& world_name,
+            list_array<list_array<chunk_speed_data>> collected_data,
+            base_objects::client_data_holder executor
+        ) {
+            try {
+                enbt::fixed_array enbt_collected_data;
+                enbt_collected_data.reserve(collected_data.size());
+                for (const auto& tick : collected_data) {
+                    enbt::fixed_array enbt_tick;
+                    enbt_tick.reserve(tick.size());
+                    for (const auto& chunk : tick)
+                        enbt_tick.push_back(enbt::fixed_array{chunk.x, chunk.z, chunk.tick_time.count()});
+                    enbt_collected_data.push_back(std::move(enbt_tick));
+                }
+                auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+                std::tm* timeinfo = std::localtime(&current_time);
+                auto report_path = path
+                                   / "reports"
+                                   / "chunk_tick_speed"
+                                   / (std::to_string(timeinfo->tm_year + 1900)
+                                      + "_" + std::to_string(timeinfo->tm_mon + 1)
+                                      + "_" + std::to_string(timeinfo->tm_mday)
+                                      + "_" + std::to_string(timeinfo->tm_hour)
+                                      + "_" + std::to_string(timeinfo->tm_min)
+                                      + "_" + std::to_string(timeinfo->tm_sec)
+                                      + ".senbt");
+                std::filesystem::create_directories(report_path.parent_path());
+                std::ofstream report_file(report_path, std::ios::out | std::ios::binary);
+                if (!report_file.is_open()) {
+                    Chat message("Failed to save chunk tick speed report for world: " + world_name + " to: " + report_path.string());
+                    message.SetColor("red");
+                    api::players::calls::on_system_message({executor, message});
+                }
+                report_file << senbt::serialize(enbt_collected_data);
+                report_file.close();
+                //enbt::io_helper::write_token(report_file, enbt_collected_data);
+
+                Chat message("Chunk tick speed report for world: " + world_name + " saved to: " + report_path.string());
+                message.SetColor("green");
+                api::players::calls::on_system_message({executor, message});
+            }
+
+            catch (const std::exception& e) {
+                log::error("World", "Failed to save chunk speed report: " + std::string(e.what()));
+            }
+        }
+
+        void start_chunk_speed_report_collecting(storage::world_data& world, const base_objects::command_context& context) {
+            world.profiling.chunk_speedometer_callback
+                = [start_time = std::chrono::high_resolution_clock::now(),
+                   collected_data = list_array<list_array<chunk_speed_data>>(),
+                   current_tick = list_array<chunk_speed_data>(),
+                   executor = context.executor](storage::world_data& world, int64_t chunk_x, int64_t chunk_z, std::chrono::milliseconds tick_time) mutable {
+                      if (chunk_x == INT64_MAX && chunk_z == INT64_MAX && tick_time.count() == 0) {
+                          collected_data.push_back(std::move(current_tick));
+                          if (start_time + std::chrono::milliseconds(10000) < std::chrono::high_resolution_clock::now()) {
+                              Chat message("Saving chunk tick speed report for world: " + world.world_name);
+                              message.SetColor("green");
+                              api::players::calls::on_system_message({executor, message});
+                              Task::start([path = world.get_path(), world_name = world.world_name, collected_data = std::move(collected_data), executor]() mutable {
+                                  end_chunk_speed_report_collecting(path, world_name, std::move(collected_data), executor);
+                              });
+                              world.profiling.chunk_speedometer_callback = nullptr;
+                          }
+                      } else
+                          current_tick.emplace_back(chunk_speed_data(chunk_x, chunk_z, tick_time));
+                  };
+        }
+
         void world_tps_profiling(storage::world_data& world) {
             log::info("World", "Profiling TPS for world " + world.world_name + ": " + std::to_string(world.profiling.tps_for_world));
         }
@@ -115,15 +192,21 @@ namespace copper_server {
                     while (true) {
                         fast_task::task::check_cancellation();
                         auto current_time = std::chrono::high_resolution_clock::now();
-                        auto elapsed = current_time - last_tick;
-                        worlds_storage.apply_tick(gen, current_time, elapsed);
-                        tick_next_awoke = std::chrono::high_resolution_clock::now();
-                        auto to_tick = tick_next_awoke - current_time;
+                        try {
+                            auto elapsed = current_time - last_tick;
+                            worlds_storage.apply_tick(gen, current_time, elapsed);
+                            tick_next_awoke = std::chrono::high_resolution_clock::now();
+                            auto to_tick = tick_next_awoke - current_time;
 
-                        if (to_tick < tick_time + sleep_time) {
-                            tick_next_awoke += tick_time - to_tick - sleep_time;
-                            fast_task::task::sleep_until(std::chrono::high_resolution_clock::now() + (tick_time - to_tick - sleep_time));
-                            sleep_time = std::chrono::high_resolution_clock::now() - tick_next_awoke;
+                            if (to_tick < tick_time + sleep_time) {
+                                tick_next_awoke += tick_time - to_tick - sleep_time;
+                                fast_task::task::sleep_until(std::chrono::high_resolution_clock::now() + (tick_time - to_tick - sleep_time));
+                                sleep_time = std::chrono::high_resolution_clock::now() - tick_next_awoke;
+                            }
+                        } catch (const std::exception& e) {
+                            log::error("World", "Error ticking world: " + std::string(e.what()));
+                        } catch (...) {
+                            log::error("World", "Error ticking world. Undefined exception.");
                         }
                         last_tick = current_time;
                     }
@@ -588,6 +671,36 @@ namespace copper_server {
                     add_world_id_suggestion(world_id_);
                     add_world_name_suggestion(world_name_);
                     {
+                        auto world_id = world_id_.add_child("report");
+                        auto world_name = world_name_.add_child("report");
+
+                        {
+                            auto chunk_tick_speed = world_id.add_child("chunk_tick_speed");
+                            chunk_tick_speed.set_callback("command.world.profile.report.chunk_tick_speed", [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                                std::visit([&](auto&& arg) {
+                                    using T = std::decay_t<decltype(arg)>;
+                                    if constexpr (std::is_same_v<T, pred_long> || std::is_same_v<T, pred_string>) {
+
+                                        api::world::get(arg.value, [&](storage::world_data& world) {
+                                            if (world.profiling.chunk_speedometer_callback) {
+                                                Chat message("Failed to report chunks tick speed, chunk speed profiling already enabled for world: " + world.world_name);
+                                                message.SetColor("red");
+                                                api::players::calls::on_system_message({context.executor, message});
+                                            } else {
+                                                start_chunk_speed_report_collecting(world, context);
+                                                Chat message("Collecting chunks tick speed report for world: " + world.world_name);
+                                                message.SetColor("green");
+                                                api::players::calls::on_system_message({context.executor, message});
+                                            }
+                                        });
+                                    }
+                                },
+                                           args[0]);
+                            });
+                        }
+                    }
+
+                    {
                         auto world_id = world_id_.add_child("enable");
                         auto world_name = world_name_.add_child("enable");
                         world_id
@@ -719,6 +832,7 @@ namespace copper_server {
                                         world.profiling.slow_chunk_tick_callback = nullptr;
                                         world.profiling.slow_world_tick_callback = nullptr;
                                         world.profiling.got_tps_update = nullptr;
+                                        world.profiling.chunk_speedometer_callback = false;
 
                                         Chat message("Profiling disabled for world: " + world.world_name);
                                         message.SetColor("green");

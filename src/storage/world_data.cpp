@@ -1327,7 +1327,11 @@ namespace copper_server {
                         if (profiling.slow_chunk_tick_callback)
                             profiling.slow_chunk_tick_callback(*this, chunk->chunk_x, chunk->chunk_z, current_tick_speed);
                     tick_local_time = actual_time;
+                    if (profiling.chunk_speedometer_callback)
+                        profiling.chunk_speedometer_callback(*this, chunk->chunk_x, chunk->chunk_z, current_tick_speed);
                 });
+                if (profiling.chunk_speedometer_callback)
+                    profiling.chunk_speedometer_callback(*this, INT64_MAX, INT64_MAX, std::chrono::milliseconds(0));
                 ++profiling.got_ticks;
                 auto current_tick_speed = tick_local_time - current_time;
                 if (tick_local_time - profiling.last_tick >= std::chrono::seconds(1)) {
