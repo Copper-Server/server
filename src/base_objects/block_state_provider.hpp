@@ -1,7 +1,7 @@
 #ifndef SRC_BASE_OBJECTS_BLOCK_STATE_PROVIDER
 #define SRC_BASE_OBJECTS_BLOCK_STATE_PROVIDER
 #include <functional>
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <src/base_objects/block.hpp>
 
 namespace copper_server::base_objects {

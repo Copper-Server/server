@@ -8,6 +8,7 @@
 #include <src/base_objects/particle_data.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/recipe.hpp>
+#include <src/base_objects/response.hpp>
 
 //packets for 1.20.5..., protocol 766
 //changes between 765:
@@ -263,6 +264,13 @@
 
 
 namespace copper_server {
+    namespace base_objects {
+        struct SharedClientData;
+    }
+
+    using SharedClientData = base_objects::SharedClientData;
+
+
     namespace packets {
         namespace release_766 {
             namespace login {

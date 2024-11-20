@@ -1,7 +1,7 @@
 #ifndef SRC_BASE_OBJECTS_NUMBER_PROVIDER
 #define SRC_BASE_OBJECTS_NUMBER_PROVIDER
 
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <variant>
 
 namespace copper_server::base_objects {

@@ -53,6 +53,14 @@ struct Future {
         return result;
     }
 
+    T take() {
+        fast_task::mutex_unify um(task_mt);
+        std::unique_lock lock(um);
+        while (!_is_ready)
+            task_cv.wait(lock);
+        return std::move(result);
+    }
+
     void when_ready(const std::function<void(T)>& fn) {
         fast_task::mutex_unify um(task_mt);
         std::unique_lock lock(um);
@@ -253,6 +261,34 @@ namespace future {
             new_future->task_cv.notify_all();
         });
         return new_future;
+    }
+
+    template <class Ret>
+    FuturePtr<list_array<Ret>> accumulate(const list_array<FuturePtr<Ret>>& futures) {
+        if (futures.empty())
+            return Future<list_array<Ret>>::make_ready({});
+        return Future<list_array<Ret>>::start([fut = futures] {
+            list_array<Ret> res;
+            res.resize(fut.size());
+            fut.for_each([&](size_t pos, auto& it) {
+                res[pos] = it.take();
+            });
+            return res;
+        });
+    }
+
+    template <class Ret>
+    FuturePtr<list_array<Ret>> accumulate(list_array<FuturePtr<Ret>>&& futures) {
+        if (futures.empty())
+            return Future<list_array<Ret>>::make_ready({});
+        return Future<list_array<Ret>>::start([fut = std::move(futures)] {
+            list_array<Ret> res;
+            res.resize(fut.size());
+            fut.for_each([&](size_t pos, auto& it) {
+                res[pos] = it.take();
+            });
+            return res;
+        });
     }
 
     static FuturePtr<void> combineAll(const list_array<FuturePtr<void>>& futures) {

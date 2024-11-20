@@ -1,6 +1,6 @@
 #ifndef SRC_API_PROTOCOL
 #define SRC_API_PROTOCOL
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <src/base_objects/event.hpp>
 #include <src/base_objects/position.hpp>

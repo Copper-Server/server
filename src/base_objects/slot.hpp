@@ -1,6 +1,6 @@
 #ifndef SRC_BASE_OBJECTS_SLOT
 #define SRC_BASE_OBJECTS_SLOT
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <optional>
 #include <src/base_objects/chat.hpp>

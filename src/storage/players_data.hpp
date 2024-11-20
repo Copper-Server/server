@@ -2,7 +2,7 @@
 #define SRC_STORAGE_PLAYERS_DATA
 #include <filesystem>
 #include <fstream>
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/slot.hpp>
 #include <string>

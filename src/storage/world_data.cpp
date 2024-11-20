@@ -1,5 +1,7 @@
 #include <boost/iostreams/filter/zstd.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
+#include <library/enbt/io.hpp>
+#include <library/enbt/senbt.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/log.hpp>
 #include <src/storage/world_data.hpp>
@@ -88,6 +90,74 @@ namespace copper_server {
                         func(x, y, z, blocks[x][y][z]);
         }
 
+        void faster__load_light_data(enbt::io_helper::value_read_stream& chunk, light_data& data, bool& need_to_recalculate_light) {
+            size_t x_ = 0;
+            chunk.iterate(
+                [](std::uint64_t len) {
+                    if (len != 16)
+                        throw std::runtime_error("Invalid light data");
+                },
+                [&](enbt::io_helper::value_read_stream& self) {
+                    size_t y_ = 0;
+                    self.iterate(
+                        [](std::uint64_t len) {
+                            if (len != 16)
+                                throw std::runtime_error("Invalid light data");
+                        },
+                        [&](enbt::io_helper::value_read_stream& self) {
+                            size_t z_ = 0;
+                            self.iterate(
+                                [](std::uint64_t len) {
+                                    if (len != 16)
+                                        throw std::runtime_error("Invalid light data");
+                                },
+                                [&](enbt::io_helper::value_read_stream& self) {
+                                    data.light_map[x_][y_][z_++].raw = self.read();
+                                }
+                            );
+                            ++y_;
+                        }
+                    );
+                    ++x_;
+                }
+            );
+        }
+
+        void faster__load_block_data(enbt::io_helper::value_read_stream& chunk, base_objects::block (&data)[16][16][16], bool& has_tickable_blocks) {
+            size_t x_ = 0;
+            chunk.iterate(
+                [](std::uint64_t len) {
+                    if (len != 16)
+                        throw std::runtime_error("Invalid block data");
+                },
+                [&](enbt::io_helper::value_read_stream& self) {
+                    size_t y_ = 0;
+                    self.iterate(
+                        [](std::uint64_t len) {
+                            if (len != 16)
+                                throw std::runtime_error("Invalid block data");
+                        },
+                        [&](enbt::io_helper::value_read_stream& self) {
+                            size_t z_ = 0;
+                            self.iterate(
+                                [](std::uint64_t len) {
+                                    if (len != 16)
+                                        throw std::runtime_error("Invalid block data");
+                                },
+                                [&](enbt::io_helper::value_read_stream& self) {
+                                    data[x_][y_][z_].raw = self.read();
+                                    has_tickable_blocks = data[x_][y_][z_].is_tickable();
+                                    ++z_;
+                                }
+                            );
+                            ++y_;
+                        }
+                    );
+                    ++x_;
+                }
+            );
+        }
+
         bool chunk_data::load(const std::filesystem::path& chunk_z) {
             if (!std::filesystem::exists(chunk_z))
                 return false;
@@ -100,9 +170,136 @@ namespace copper_server {
             filter.push(boost::iostreams::zstd_decompressor());
             filter.push(file);
 
-            enbt::value chunk_data_file = enbt::io_helper::read_token(filter);
-            file.close();
-            return load(chunk_data_file.as_compound());
+            enbt::io_helper::value_read_stream stream(filter);
+            stream.iterate([&](std::string_view name, enbt::io_helper::value_read_stream& self) {
+                if (name == "sub_chunks") {
+                    self.iterate(
+                        [&](enbt::io_helper::value_read_stream& self) {
+                            std::shared_ptr<storage::sub_chunk_data> sub_chunk_data = std::make_shared<storage::sub_chunk_data>();
+                            bool need_recalculate_light_block_light = true;
+                            bool need_recalculate_light_sky_light = true;
+                            self.iterate([&](std::string_view name, enbt::io_helper::value_read_stream& self) {
+                                if (name == "blocks") {
+                                    faster__load_block_data(self, sub_chunk_data->blocks, sub_chunk_data->has_tickable_blocks);
+                                } else if (name == "block_light") {
+                                    faster__load_light_data(self, sub_chunk_data->block_light, sub_chunk_data->need_to_recalculate_light);
+                                    need_recalculate_light_block_light = false;
+                                } else if (name == "sky_light") {
+                                    faster__load_light_data(self, sub_chunk_data->sky_light, sub_chunk_data->need_to_recalculate_light);
+                                    need_recalculate_light_sky_light = false;
+                                } else if (name == "entities") {
+                                    self.iterate(
+                                        [&](std::uint64_t len) {
+                                            sub_chunk_data->stored_entities.reserve(len);
+                                        },
+                                        [&](enbt::io_helper::value_read_stream& self) {
+                                            sub_chunk_data->stored_entities.push_back(base_objects::entity::load_from_enbt(self.read().as_compound()));
+                                        }
+                                    );
+                                } else if (name == "block_entities") {
+                                    self.iterate(
+                                        [&](std::uint64_t len) {
+                                            sub_chunk_data->block_entities.reserve(len);
+                                        },
+                                        [&](enbt::io_helper::value_read_stream& self) {
+                                            base_objects::local_block_pos local_pos;
+                                            struct {
+                                                bool x_set = false;
+                                                bool y_set = false;
+                                                bool z_set = false;
+                                                bool id_set = false;
+                                            } is_set;
+                                            self.iterate([&](std::string_view name, enbt::io_helper::value_read_stream& self) {
+                                                if (name == "x") {
+                                                    local_pos.x = self.read();
+                                                    is_set.x_set = true;
+                                                } else if (name == "y") {
+                                                    local_pos.y = self.read();
+                                                    is_set.y_set = true;
+                                                } else if (name == "z") {
+                                                    local_pos.z = self.read();
+                                                    is_set.z_set = true;
+                                                } else if (name == "id") {
+                                                    sub_chunk_data->blocks[local_pos.x][local_pos.y][local_pos.z] = base_objects::block{
+                                                        (base_objects::block_id_t)self.read()
+                                                    };
+                                                    is_set.id_set = true;
+                                                }
+                                            });
+                                            if (!is_set.x_set || !is_set.y_set || !is_set.z_set || !is_set.id_set)
+                                                throw std::runtime_error("Invalid block entity data");
+                                            sub_chunk_data->block_entities[local_pos.z | (local_pos.y << 4) | (local_pos.x << 8)] = self.read();
+                                        }
+                                    );
+                                } else if (name == "biomes") {
+                                    uint8_t x = 0;
+                                    self.iterate(
+                                        [&](std::uint64_t len) {
+                                            if (len != 4)
+                                                throw std::runtime_error("Invalid biomes data");
+                                        },
+                                        [&](std::string_view name, enbt::io_helper::value_read_stream& self) {
+                                            uint8_t y = 0;
+                                            self.iterate(
+                                                [&](std::uint64_t len) {
+                                                    if (len != 4)
+                                                        throw std::runtime_error("Invalid biomes data");
+                                                },
+                                                [&](std::string_view name, enbt::io_helper::value_read_stream& self) {
+                                                    uint8_t z = 0;
+                                                    self.iterate(
+                                                        [&](std::uint64_t len) {
+                                                            if (len != 4)
+                                                                throw std::runtime_error("Invalid biomes data");
+                                                        },
+                                                        [&](std::string_view name, enbt::io_helper::value_read_stream& self) {
+                                                            sub_chunk_data->biomes[x][y][z] = self.read();
+                                                        }
+                                                    );
+                                                    ++y;
+                                                }
+                                            );
+                                            ++x;
+                                        }
+                                    );
+                                } else if (name == "queried_for_tick") {
+                                    self.iterate(
+                                        [&](std::uint64_t len) {
+                                            sub_chunk_data->queried_for_tick.reserve(len);
+                                        },
+                                        [&](enbt::io_helper::value_read_stream& self) {
+                                            struct {
+                                                bool x_set = false;
+                                                bool y_set = false;
+                                                bool z_set = false;
+                                            } is_set;
+                                            base_objects::local_block_pos local_pos;
+                                            self.iterate([&](std::string_view name, enbt::io_helper::value_read_stream& self) {
+                                                if (name == "x") {
+                                                    local_pos.x = self.read();
+                                                    is_set.x_set = true;
+                                                } else if (name == "y") {
+                                                    local_pos.y = self.read();
+                                                    is_set.y_set = true;
+                                                } else if (name == "z") {
+                                                    local_pos.z = self.read();
+                                                    is_set.z_set = true;
+                                                }
+                                            });
+                                            if (!is_set.x_set || !is_set.y_set || !is_set.z_set)
+                                                throw std::runtime_error("Invalid queried_for_tick data");
+                                            sub_chunk_data->queried_for_tick.push_back(local_pos);
+                                        }
+                                    );
+                                }
+                            });
+                            sub_chunk_data->need_to_recalculate_light = need_recalculate_light_block_light || need_recalculate_light_sky_light;
+                            sub_chunks.push_back(std::move(*sub_chunk_data));
+                        }
+                    );
+                }
+            });
+            return true;
         }
 
         bool valid_sub_chunk_size(const enbt::value& chunk) {
@@ -840,6 +1037,30 @@ namespace copper_server {
             get_light_processor()->process_chunk(*this, chunk_x, chunk_z);
         }
 
+        void world_data::save_and_unload_chunk_at(int64_t global_x, int64_t global_z) {
+            save_and_unload_chunk(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z));
+        }
+
+        void world_data::unload_chunk_at(int64_t global_x, int64_t global_z) {
+            unload_chunk(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z));
+        }
+
+        void world_data::save_chunk_at(int64_t global_x, int64_t global_z) {
+            save_chunk(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z));
+        }
+
+        void world_data::erase_chunk_at(int64_t global_x, int64_t global_z) {
+            erase_chunk(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z));
+        }
+
+        void world_data::regenerate_chunk_at(int64_t global_x, int64_t global_z) {
+            regenerate_chunk(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z));
+        }
+
+        void world_data::reset_light_data_at(int64_t global_x, uint64_t global_z) {
+            reset_light_data(convert_chunk_global_pos(global_x), global_z);
+        }
+
         void world_data::for_each_chunk(std::function<void(chunk_data& chunk)> func) {
             std::unique_lock lock(mutex);
             for (auto& [x, x_axis] : chunks)
@@ -884,6 +1105,26 @@ namespace copper_server {
             if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
                 if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
                     func(*chunk->second);
+        }
+
+        void world_data::for_each_chunk(base_objects::cubic_bounds_block bounds, std::function<void(chunk_data& chunk)> func) {
+            for_each_chunk((base_objects::cubic_bounds_chunk)bounds, func);
+        }
+
+        void world_data::for_each_chunk(base_objects::spherical_bounds_block bounds, std::function<void(chunk_data& chunk)> func) {
+            for_each_chunk((base_objects::spherical_bounds_chunk)bounds, func);
+        }
+
+        void world_data::for_each_sub_chunk_at(int64_t global_x, int64_t global_z, std::function<void(sub_chunk_data& chunk)> func) {
+            for_each_sub_chunk(convert_chunk_global_pos(global_z), convert_chunk_global_pos(global_z), func);
+        }
+
+        void world_data::get_sub_chunk_at(int64_t global_x, uint64_t global_y, int64_t global_z, std::function<void(sub_chunk_data& chunk)> func) {
+            get_sub_chunk(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_y), convert_chunk_global_pos(global_z), func);
+        }
+
+        void world_data::get_chunk_at(int64_t global_x, int64_t global_z, std::function<void(chunk_data& chunk)> func) {
+            get_chunk(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z), func);
         }
 
         void world_data::for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func) {
@@ -954,6 +1195,39 @@ namespace copper_server {
             std::unique_lock lock(mutex);
             get_chunk(chunk_x, chunk_z, [&](auto& chunk) { chunk.for_each_block_entity(sub_chunk_y, func); });
         }
+
+        void world_data::for_each_entity(base_objects::cubic_bounds_block bounds, std::function<void(base_objects::entity_ref& entity)> func) {
+            for_each_entity((base_objects::cubic_bounds_chunk)bounds, func);
+        }
+
+        void world_data::for_each_entity(base_objects::spherical_bounds_block bounds, std::function<void(base_objects::entity_ref& entity)> func) {
+            for_each_entity((base_objects::spherical_bounds_chunk)bounds, func);
+        }
+
+        void world_data::for_each_block_entity(base_objects::cubic_bounds_block bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+            for_each_block_entity((base_objects::cubic_bounds_chunk)bounds, func);
+        }
+
+        void world_data::for_each_block_entity(base_objects::spherical_bounds_block bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+            for_each_block_entity((base_objects::spherical_bounds_chunk)bounds, func);
+        }
+
+        void world_data::for_each_entity_at(int64_t global_x, int64_t global_z, std::function<void(const base_objects::entity_ref& entity)> func) {
+            for_each_entity(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z), func);
+        }
+
+        void world_data::for_each_entity_at(int64_t global_x, int64_t global_z, uint64_t global_y, std::function<void(const base_objects::entity_ref& entity)> func) {
+            for_each_entity(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z), convert_chunk_global_pos(global_y), func);
+        }
+
+        void world_data::for_each_block_entity_at(int64_t global_x, int64_t global_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+            for_each_block_entity(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z), func);
+        }
+
+        void world_data::for_each_block_entity_at(int64_t global_x, int64_t global_z, uint64_t global_y, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+            for_each_block_entity(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z), convert_chunk_global_pos(global_y), func);
+        }
+
 
         void world_data::query_for_tick(int64_t global_x, uint64_t global_y, int64_t global_z) {
             std::unique_lock lock(mutex);
@@ -1227,6 +1501,18 @@ namespace copper_server {
             }
         }
 
+        void world_data::get_height_maps(int64_t chunk_x, int64_t chunk_z, std::function<void(storage::height_maps& height_maps)> func) {
+            get_chunk(chunk_x, chunk_z, [&](chunk_data& chunk) {
+                func(chunk.height_maps);
+            });
+        }
+
+        void world_data::get_height_maps_at(int64_t global_x, int64_t global_z, std::function<void(storage::height_maps& height_maps)> func) {
+            get_chunk_at(global_x, global_z, [&](chunk_data& chunk) {
+                func(chunk.height_maps);
+            });
+        }
+
         uint64_t world_data::register_client(const base_objects::client_data_holder& client) {
             std::unique_lock lock(mutex);
             uint64_t id = local_client_id_generator++;
@@ -1287,7 +1573,7 @@ namespace copper_server {
 
 
             for (auto& [id, client] : clients) {
-                auto& pos = client->player_data.position;
+                auto& pos = client->player_data.assigned_entity->position;
                 auto distance = client->simulation_distance;
                 base_objects::cubic_bounds_chunk_radius(
                     pos.x / 16,

@@ -1,7 +1,7 @@
 #ifndef SRC_BASE_OBJECTS_RECIPE_PROCESSOR
 #define SRC_BASE_OBJECTS_RECIPE_PROCESSOR
 #include <functional>
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/slot.hpp>
 

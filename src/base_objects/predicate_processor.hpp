@@ -1,6 +1,6 @@
 #ifndef SRC_BASE_OBJECTS_PREDICATE_PROCESSOR
 #define SRC_BASE_OBJECTS_PREDICATE_PROCESSOR
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <src/base_objects/commands.hpp>
 
 namespace copper_server {

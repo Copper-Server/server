@@ -1,3 +1,4 @@
+#include <library/enbt/senbt.hpp>
 #include <src/api/command.hpp>
 #include <src/base_objects/slot.hpp>
 #include <src/registers.hpp>

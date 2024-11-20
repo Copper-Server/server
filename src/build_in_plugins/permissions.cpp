@@ -204,7 +204,7 @@ namespace copper_server {
 
         PermissionsPlugin::plugin_response PermissionsPlugin::OnPlay_initialize(base_objects::client_data_holder& client_ref) {
             update_perm(*client_ref);
-            return false;
+            return std::nullopt;
         }
     }
 }

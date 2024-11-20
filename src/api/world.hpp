@@ -34,6 +34,9 @@ namespace copper_server::api::world {
         std::function<void(storage::world_data& world)> callback
     );
 
+    //gets client world, checks if world exists, returns pair of id and name, if world does not exists then returns default world and sets default position for player in new world
+    std::pair<uint64_t, std::string> prepare_world(base_objects::client_data_holder& client_ref);
+
     base_objects::event<uint64_t>& on_world_loaded();
     base_objects::event<uint64_t>& on_world_unloaded();
     base_objects::event<double>& on_tps_changed();

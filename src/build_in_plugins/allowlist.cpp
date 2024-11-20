@@ -105,7 +105,7 @@ namespace copper_server {
             default:
                 break;
             }
-            return false;
+            return std::nullopt;
         }
     }
 }

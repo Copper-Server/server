@@ -219,7 +219,7 @@ namespace copper_server {
 
             Response lookAt(SharedClientData& client, bool from_feet_or_eyes, calc::VECTOR target, std::optional<std::pair<int32_t, bool>> entity_id);
 
-            Response synchronizePlayerPosition(SharedClientData& client, calc::VECTOR pos, float yaw, float pitch, uint8_t flags, int32_t teleport_id);
+            Response synchronizePlayerPosition(SharedClientData& client, calc::VECTOR pos, float yaw, float pitch, uint8_t flags);
 
             Response initRecipeBook(SharedClientData& client, bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> displayed_recipe_ids, list_array<std::string> had_access_to_recipe_ids);
 

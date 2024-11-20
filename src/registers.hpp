@@ -1,6 +1,6 @@
 #ifndef SRC_REGISTERS
 #define SRC_REGISTERS
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/chat.hpp>
 #include <src/base_objects/entity.hpp>

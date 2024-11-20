@@ -22,7 +22,7 @@
                 "moduleLoad": false
             },
             "console":"externalTerminal",
-            "visualizerFile": "${workspaceFolder}/src/library/list_array/new_list_array.natvis"
+            "visualizerFile": "${workspaceFolder}/library/list_array/list_array.natvis"
         },
         {
             "name": "Debug-Linux",

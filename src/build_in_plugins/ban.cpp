@@ -227,7 +227,7 @@ namespace copper_server {
                 api::players::calls::on_player_kick({client, {"You are banned from this server\nReason: " + banned->convert_to_str()}});
             if (auto banned = banned_ips.get(client->ip); banned)
                 api::players::calls::on_player_kick({client, {"You are banned from this server\nReason: " + banned->convert_to_str()}});
-            return false;
+            return std::nullopt;
         }
     }
 }

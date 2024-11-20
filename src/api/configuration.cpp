@@ -10,6 +10,7 @@ namespace copper_server::api::configuration {
 
     void load(bool fill_default_values) {
         config.load(std::filesystem::current_path(), fill_default_values);
+        loaded = true;
         updated();
     }
 

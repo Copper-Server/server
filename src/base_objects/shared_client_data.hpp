@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <library/fast_task.hpp>
 #include <library/list_array.hpp>
 #include <src/base_objects/atomic_holder.hpp>
@@ -70,7 +70,8 @@ namespace copper_server {
                 std::unordered_set<enbt::raw_uuid> active_resource_packs;
                 std::unordered_map<enbt::raw_uuid, ResourcePackData> pending_resource_packs;
                 std::list<int32_t> pending_teleport_ids;
-                int32_t entity_id_generator;
+                int32_t teleport_id_sequence = 0;
+                int32_t windows_id = 0;
                 int32_t current_block_sequence_id = 0;
                 int32_t container_state_id = 0;
                 int32_t keep_alive_ping_ms = 0;

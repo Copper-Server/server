@@ -3,7 +3,7 @@
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/thread/shared_lock_guard.hpp>
 
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <src/ClientHandleHelper.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/players.hpp>
@@ -125,9 +125,23 @@ namespace copper_server {
 
             std::shared_ptr<std::vector<uint8_t>> send_data = std::make_shared<std::vector<uint8_t>>(response_data.begin(), response_data.end());
             if (resp.do_disconnect_after_send) {
-                boost::asio::async_write(sock, boost::asio::buffer(*send_data), [this, send_data](boost::system::error_code, size_t completed) {disconnect();return completed; });
+                sock.async_send(
+                    boost::asio::buffer(*send_data),
+                    [this, send_data](boost::system::error_code ec, size_t completed) {
+                        checked(ec, "response_disconnect");
+                        disconnect();
+                        return completed;
+                    }
+                );
             } else
-                boost::asio::async_write(sock, boost::asio::buffer(*send_data), [this, send_data](boost::system::error_code ec, size_t completed) { if (checked(ec, "response")) req_loop();  return completed; });
+                sock.async_send(
+                    boost::asio::buffer(*send_data),
+                    [this, send_data](boost::system::error_code ec, size_t completed) {
+                        if (checked(ec, "response"))
+                            req_loop();
+                        return completed;
+                    }
+                );
         } else
             req_loop();
     }
@@ -144,6 +158,7 @@ namespace copper_server {
     }
 
     void TCPsession::req_loop() {
+
         sock.async_read_some(boost::asio::buffer(read_data), [this](boost::system::error_code ec, size_t size) {
             if (checked(ec, "req_loop"))
                 on_request(ec, size);
@@ -235,6 +250,9 @@ namespace copper_server {
         TCPacceptor.async_accept(session->sock, [this, session](const boost::system::error_code& error) {
             if (error == boost::asio::error::operation_aborted || disabled)
                 return;
+
+            boost::asio::ip::tcp::no_delay option(true);
+            session->sock.set_option(option);
             Worker();
             AsyncWork(session);
         });

@@ -1,11 +1,12 @@
 #ifndef SRC_BASE_OBJECTS_ENTITY
 #define SRC_BASE_OBJECTS_ENTITY
+#include <chrono>
 #include <filesystem>
 #include <fstream>
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/bounds.hpp>
-#include <src/base_objects/shared_client_data.hpp>
+#include <src/base_objects/slot.hpp>
 #include <src/base_objects/sync_event.hpp>
 #include <src/calculations.hpp>
 #include <stdint.h>
@@ -41,8 +42,9 @@ namespace copper_server {
                 solid_for_vehicles,
                 none
             } bounds_mode;
-            bool living_entity;
             float acceleration; // block\tick
+            uint16_t entity_id;
+            bool living_entity;
             enbt::compound data;
             //"data"{
             //  "slot":{
@@ -73,6 +75,7 @@ namespace copper_server {
             //entity can be added without reload, but it can be removed only by `reset_entities`
             //multi threaded
             static const entity_data& get_entity(uint16_t id);
+            static const entity_data& get_entity(const std::string& id);
             static uint16_t register_entity(entity_data);
             static const entity_data& view(const entity& entity);
             //USED ONLY DURING FULL SERVER RELOAD!  DO NOT ALLOW CALL FROM THE USER CODE
@@ -84,15 +87,67 @@ namespace copper_server {
         };
 
         struct entity {
+            struct effect {
+                uint32_t id;
+                uint8_t amplifier : 8 = 1;
+                bool ambient : 1 = false;
+                bool particles : 1 = true;
+                std::chrono::time_point<std::chrono::steady_clock> active_till_end;
+            };
+
             enbt::raw_uuid id;
             enbt::compound nbt;
             enbt::compound server_data;
+            std::unordered_map<uint32_t, slot_data> inventory;
+            std::unordered_map<std::string, std::unordered_map<uint32_t, slot_data>> custom_inventory;
+            std::optional<enbt::raw_uuid> ride_entity_id;
+
+            std::unordered_map<uint32_t, list_array<effect>> hidden_effects; //effects with lower amplifier than active effect but longer duration
+            list_array<effect> active_effects;
+
             calc::VECTOR position;
             calc::VECTOR motion;
             calc::VECTOR rotation;
             calc::VECTOR head_rotation;
-            client_data_holder assigned_player = nullptr; //if not nullptr, player controls this entity. Entity can be player_entity or any other like in bedrock edition. No need for subscription to changes_event, everything handled automaticaly
+
             storage::world_data* world = nullptr;
+
+            //nbt {
+            //  float health = 20;
+            //  uint8_t food = 20;
+            //  float saturation = 5;
+            //  float breath = 10;
+            //  float experience = 0;
+            //  int32_t fall_distance = 0;
+            //  uint8_t selected_item = 0; //hotbar, 0..8
+            //
+            //  bool is_sleeping = false;
+            //  bool on_ground = false;
+            //  bool is_sprinting = false;
+            //  bool is_sneaking = false;
+            //
+            //  calculated_values { //does not trigger `changes_event` event, calculated every tick
+            //      float absorption_health;
+            //      float max_health;
+            //      float acceleration; //falling speed
+            //      float block_reach;
+            //      float attack_reach;
+            //      float jump_height;
+            //      float falling_damage;
+            //      float walking_speed;
+            //      float mining_attack_speed;
+            //      float damage;
+            //      float protection;
+            //      float fire_protection;
+            //      float hunger_consumption;
+            //      float luck_level;
+            //      float swimming_speed;
+            //
+            //      bool calculate_fall_damage;
+            //      bool calculate_drowning;
+            //      bool calculate_effect_infested;
+            //  }
+            //}
 
 
             sync_event<entity&> changes_event;
@@ -102,11 +157,87 @@ namespace copper_server {
             const entity_data& const_data();
 
             entity_ref copy() const;
-            enbt::value copy_to_enbt() const;
+            enbt::compound copy_to_enbt() const;
+
+            void teleport(calc::VECTOR pos, float yaw, float pitch, bool on_ground);
+            void teleport(int32_t x, int32_t y, int32_t z, float yaw, float pitch, bool on_ground);
+
+
+            void set_ride_entity(enbt::raw_uuid entity);
+            void remove_ride_entity();
+
+            void add_effect(uint32_t id, std::chrono::seconds duration, uint8_t amplifier = 1, bool ambient = false, bool show_particles = true);
+            void remove_effect(uint32_t id);
+            void remove_all_effects();
+
+            bool is_sleeping() const;
+            bool is_on_ground() const;
+            bool is_sneaking() const;
+            bool is_sprinting() const;
+
+            void set_sleeping(bool sleeping);
+            void set_on_ground(bool on_ground);
+            void set_sneaking(bool sneaking);
+            void set_sprinting(bool sprinting);
+
+            float get_health() const;
+            void set_health(float health);
+            void add_health(float health);
+            void damage(float health);
+            void reduce_health(float health);
+
+            uint8_t get_food() const;
+            void set_food(uint8_t food);
+            void add_food(uint8_t food);
+            void reduce_food(uint8_t food);
+
+            float get_saturation() const;
+            void set_saturation(float saturation);
+            void add_saturation(float saturation);
+            void reduce_saturation(float saturation);
+
+            float get_breath() const;
+            void set_breath(float breath);
+            void add_breath(float breath);
+            void reduce_breath(float breath);
+
+            float get_experience() const;
+            void set_experience(float experience);
+            void add_experience(float experience);
+            void reduce_experience(float experience);
+
+            int32_t get_fall_distance() const;
+            void set_fall_distance(int32_t fall_distance);
+            void add_fall_distance(int32_t fall_distance);
+            void reduce_fall_distance(int32_t fall_distance);
+
+            uint8_t get_selected_item() const;
+            void set_selected_item(uint8_t selected_item);
+
+
+            void set_position(calc::VECTOR pos);
+            void move(float side, float forward, bool jump = false, bool sneaking = false);
+            void look(float yaw, float pitch);
+            void look_at(float x, float y, float z);
+            void look_at(calc::VECTOR pos);
+
+            calc::VECTOR get_motion() const;
+            void set_motion(calc::VECTOR mot);
+            void add_motion(calc::VECTOR mot);
+
+            calc::VECTOR get_rotation() const;
+            void set_rotation(calc::VECTOR mot);
+            void add_rotation(calc::VECTOR mot);
+
+            calc::VECTOR get_head_rotation() const;
+            void set_head_rotation(calc::VECTOR rot);
+            void add_head_rotation(calc::VECTOR rot);
 
 
             static entity_ref create(uint16_t id);
             static entity_ref create(uint16_t id, const enbt::compound_const_ref& nbt);
+            static entity_ref create(const std::string& id);
+            static entity_ref create(const std::string& id, const enbt::compound_const_ref& nbt);
             static entity_ref load_from_enbt(const enbt::compound_const_ref& file_nbt);
 
             entity() {}
@@ -119,12 +250,12 @@ namespace copper_server {
 
 
             void tick();
-            int32_t get_object_field();
+            std::optional<int32_t> get_object_field();
 
         private:
             friend struct entity_data;
             uint16_t entity_id;
-            bool died;
+            bool died : 1 = false;
         };
     }
 }

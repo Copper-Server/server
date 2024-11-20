@@ -3,7 +3,7 @@
 #include <boost/json.hpp>
 #include <cstddef>
 #include <cstdint>
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <string>
 #include <vector>
 

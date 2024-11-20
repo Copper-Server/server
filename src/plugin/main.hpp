@@ -1,7 +1,7 @@
 #ifndef SRC_PLUGIN_MAIN
 #define SRC_PLUGIN_MAIN
-#include <library/fast_task.hpp>
 #include <src/plugin/registration.hpp>
+#include <src/util/task_management.hpp>
 
 namespace copper_server {
 
@@ -49,6 +49,8 @@ namespace copper_server {
                 if (
                     &T::OnPlay_initialize != &PluginRegistration::OnPlay_initialize
                     || &T::OnPlay_uninitialized != &PluginRegistration::OnPlay_uninitialized
+                    || &T::PlayerJoined != &PluginRegistration::PlayerJoined
+                    || &T::PlayerLeave != &PluginRegistration::PlayerLeave
                 )
                     register_play(tmp_);
                 return tmp_;
@@ -157,42 +159,114 @@ namespace copper_server {
 
         template <class FN>
         void inspect_plugin_registration(registration_on on, FN&& fn) const {
+            list_array<PluginRegistrationPtr> on_init;
             protected_values.get([&](const protected_values_t& vals) {
                 switch (on) {
                 case registration_on::login:
                     break;
                 case registration_on::configuration:
-                    vals.registration.configuration.on_init.for_each(fn);
+                    on_init = vals.registration.configuration.on_init;
                     break;
                 case registration_on::play:
-                    vals.registration.play.on_init.for_each(fn);
+                    on_init = vals.registration.play.on_init;
                     break;
                 default:
                     break;
                 }
             });
+            on_init.for_each(fn);
         }
 
         template <class FN>
-        void inspect_plugin_bind(registration_on on, FN&& fn) const {
+        auto inspect_plugin_registration_future_accumulate(registration_on on, FN&& fn) const {
+            list_array<PluginRegistrationPtr> on_init;
             protected_values.get([&](const protected_values_t& vals) {
                 switch (on) {
                 case registration_on::login:
-                    for (auto& it : vals.registration.login.plugins)
-                        fn(it);
                     break;
                 case registration_on::configuration:
-                    for (auto& it : vals.registration.configuration.plugins)
-                        fn(it);
+                    on_init = vals.registration.configuration.on_init;
                     break;
                 case registration_on::play:
-                    for (auto& it : vals.registration.play.plugins)
-                        fn(it);
+                    on_init = vals.registration.play.on_init;
                     break;
                 default:
                     break;
                 }
             });
+            using ret_t = std::invoke_result_t<FN, PluginRegistrationPtr>;
+            using fut = Future<ret_t>;
+            return future::accumulate<ret_t>(
+                on_init.convert<std::shared_ptr<fut>>(
+                    [&](auto& it) {
+                        return fut::start([fn = fn, it]() {
+                            return fn(it);
+                        });
+                    }
+                )
+            );
+        }
+
+        template <class FN>
+        auto inspect_plugin_registration_async_accumulate(registration_on on, FN&& fn) const {
+            return inspect_plugin_registration_future_accumulate(on, std::forward<FN>(fn)).take();
+        }
+
+
+        template <class FN>
+        void inspect_plugin_bind(registration_on on, FN&& fn) const {
+            std::unordered_map<std::string, PluginRegistrationPtr> plugins;
+            protected_values.get([&](const protected_values_t& vals) {
+                switch (on) {
+                case registration_on::login:
+                    plugins = vals.registration.login.plugins;
+                    break;
+                case registration_on::configuration:
+                    plugins = vals.registration.configuration.plugins;
+                    break;
+                case registration_on::play:
+                    plugins = vals.registration.play.plugins;
+                    break;
+                default:
+                    break;
+                }
+            });
+            for (auto& it : plugins)
+                fn(it);
+        }
+
+        template <class FN>
+        auto inspect_plugin_bind_future_accumulate(registration_on on, FN&& fn) const {
+            std::unordered_map<std::string, PluginRegistrationPtr> plugins;
+            protected_values.get([&](const protected_values_t& vals) {
+                switch (on) {
+                case registration_on::login:
+                    plugins = vals.registration.login.plugins;
+                    break;
+                case registration_on::configuration:
+                    plugins = vals.registration.configuration.plugins;
+                    break;
+                case registration_on::play:
+                    plugins = vals.registration.play.plugins;
+                    break;
+                default:
+                    break;
+                }
+            });
+            using ret_t = std::invoke_result_t<FN, std::pair<std::string, PluginRegistrationPtr>>;
+            using fut = Future<ret_t>;
+            list_array<std::shared_ptr<fut>> futs;
+            for (auto& it : plugins) {
+                futs.push_back(fut::start([fn = fn, it]() {
+                    return fn(it);
+                }));
+            }
+            return future::accumulate<ret_t>(futs);
+        }
+
+        template <class FN>
+        auto inspect_plugin_bind_async_accumulate(registration_on on, FN&& fn) const {
+            return inspect_plugin_bind_future_accumulate(on, std::forward<FN>(fn)).take();
         }
 
         PluginRegistrationPtr get_bind_plugin(registration_on on, const std::string& channel) const {

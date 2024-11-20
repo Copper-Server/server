@@ -52,14 +52,8 @@ namespace copper_server {
                         response += std::move(packet);
                     response.reserve(load_next_packets.size());
                     for (auto& it : load_next_packets) {
-                        if (std::holds_alternative<PluginRegistration::PluginResponse>(it)) {
-                            auto& plugin = std::get<PluginRegistration::PluginResponse>(it);
-                            response += packets::release_765::play::customPayload(plugin.plugin_chanel, plugin.data);
-                        } else if (std::holds_alternative<Response>(it)) {
-                            Response& resp = std::get<Response>(it);
-                            check_response(resp);
-                            response += resp;
-                        }
+                        if (it)
+                            response += *it;
                     }
                     response += keep_alive_solution->send_keep_alive();
                     return response;

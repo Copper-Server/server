@@ -1,7 +1,7 @@
 #ifndef SRC_BASE_OBJECTS_COMMANDS
 #define SRC_BASE_OBJECTS_COMMANDS
 #include <functional>
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <optional>
 #include <src/base_objects/chat.hpp>

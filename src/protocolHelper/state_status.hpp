@@ -70,6 +70,7 @@ namespace copper_server {
                 list_array<uint8_t> response;
                 response.push_back(0);
                 std::string tmp = buildResponse();
+                log::debug("status", tmp);
                 WriteVar<int32_t>(tmp.size(), response);
                 response.push_back((uint8_t*)tmp.data(), tmp.size());
                 return Response::Answer({std::move(response)});

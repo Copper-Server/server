@@ -1,4 +1,5 @@
 #include <functional>
+#include <src/base_objects/player.hpp>
 #include <src/storage/world_data.hpp>
 
 namespace copper_server::api::world {
@@ -86,6 +87,46 @@ namespace copper_server::api::world {
         std::function<void(storage::world_data& world)> callback
     ) {
         return get_worlds().create(name, callback);
+    }
+
+    //gets client world, checks if world exists, returns pair of id and name, if world does not exists then returns default world and sets default position for player in new world
+    std::pair<uint64_t, std::string> prepare_world(base_objects::client_data_holder& client_ref) {
+        auto id = get_worlds().get_id(client_ref->player_data.world_id);
+        bool set_new_data = false;
+        if (id == -1) {
+            id = get_worlds().base_world_id;
+            set_new_data = true;
+        }
+        auto world = get_worlds().get(id);
+
+        if (set_new_data) {
+            base_objects::cubic_bounds_block_radius rs{world->spawn_data.x, 0, world->spawn_data.z, world->spawn_data.radius};
+            auto [x, y, z] = rs.random_point();
+            int64_t pos_y = 0;
+            world->get_height_maps_at(x, z, [&](storage::height_maps& height_maps) {
+                auto mt = height_maps.motion_blocking[x % 16][z % 16];
+                auto oc_flor = height_maps.ocean_floor[x % 16][z % 16];
+                auto oc = height_maps.surface[x % 16][z % 16];
+                pos_y = std::max(mt, std::max(oc_flor, oc));
+            });
+
+            client_ref->player_data.world_id = id;
+
+            client_ref->player_data.assigned_entity->position.x = world->spawn_data.x;
+            client_ref->player_data.assigned_entity->position.y = pos_y;
+            client_ref->player_data.assigned_entity->position.z = world->spawn_data.z;
+            client_ref->player_data.assigned_entity->rotation = {0, 0, 0};
+        }
+
+
+        return {id, get_worlds().get(id)->world_name};
+    }
+
+    std::pair<uint64_t, std::string> prepare_world(const std::string& name) {
+        auto id = get_worlds().get_id(name);
+        if (id == -1)
+            id = get_worlds().base_world_id;
+        return {id, get_worlds().get(id)->world_name};
     }
 
     base_objects::event<uint64_t>& on_world_loaded() {

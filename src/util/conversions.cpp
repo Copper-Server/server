@@ -2,7 +2,7 @@
 #include <boost/json.hpp>
 #include <cstddef>
 #include <cstdint>
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <stdexcept>
 #include <string>
 #include <utf8.h>

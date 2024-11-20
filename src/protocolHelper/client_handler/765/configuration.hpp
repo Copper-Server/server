@@ -30,11 +30,8 @@ namespace copper_server {
                         queriedPackets.pop_front();
                     }
                     for (auto& it : load_next_packets) {
-                        if (std::holds_alternative<PluginRegistration::PluginResponse>(it)) {
-                            auto& plugin = std::get<PluginRegistration::PluginResponse>(it);
-                            response += packets::release_765::configuration::configuration(plugin.plugin_chanel, plugin.data);
-                        } else if (std::holds_alternative<Response>(it))
-                            response += std::get<Response>(it);
+                        if (it)
+                            response += *it;
                     }
                     response += keep_alive_solution->send_keep_alive();
                     return response;
@@ -78,14 +75,8 @@ namespace copper_server {
                         auto it = pluginManagement.get_bind_plugin(PluginManagement::registration_on::configuration, channel);
                         if (it != nullptr) {
                             auto result = it->OnConfigurationHandle(it, channel, packet.read_left().to_vector(), session->sharedDataRef());
-                            if (std::holds_alternative<PluginRegistration::PluginResponse>(result)) {
-                                auto& plugin = std::get<PluginRegistration::PluginResponse>(result);
-                                log::debug("configuration", "Plugin message");
-                                return packets::release_765::configuration::configuration(plugin.plugin_chanel, plugin.data);
-                            } else if (std::holds_alternative<Response>(result)) {
-                                log::debug("configuration", "Plugin native packet");
-                                return std::get<Response>(result);
-                            }
+                            if (result)
+                                return *result;
                         }
                         break;
                     }
@@ -177,8 +168,10 @@ namespace copper_server {
                     return new HandleConfiguration(sock);
                 }
 
-                void queryPacket(PluginRegistration::PluginResponse&& packet) {
-                    queriedPackets.push_back(std::move(packet));
+                void queryPacket(const PluginRegistration::PluginResponse& packet) {
+                    queriedPackets.push_back(
+                        packets::release_765::configuration::configuration(packet.plugin_chanel, packet.data)
+                    );
                 }
             };
         }

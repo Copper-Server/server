@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <map>
 #include <mutex>

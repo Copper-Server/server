@@ -1,6 +1,6 @@
 #include <filesystem>
 #include <fstream>
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <src/base_objects/server_configuaration.hpp>
 #include <src/log.hpp>

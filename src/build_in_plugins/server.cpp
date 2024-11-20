@@ -1,6 +1,7 @@
 #include <src/ClientHandleHelper.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/console.hpp>
+#include <src/api/entity_id_map.hpp>
 #include <src/api/internal/command.hpp>
 #include <src/api/permissions.hpp>
 #include <src/api/players.hpp>
@@ -163,7 +164,8 @@ namespace copper_server {
                 data.load();
                 client.player_data = data.player;
             }
-            Response response;
+            Response response = Response::Empty();
+
             auto last_death_location = client.player_data.last_death_location ? std::optional(base_objects::packets::death_location_data(
                                                                                     client.player_data.last_death_location->world_id,
                                                                                     {(int32_t)client.player_data.last_death_location->x, (int32_t)client.player_data.last_death_location->y, (int32_t)client.player_data.last_death_location->z}
@@ -171,53 +173,62 @@ namespace copper_server {
                                                                               : std::nullopt;
 
 
-            response += packets::play::joinGame(
-                client,
-                0,
-                client.player_data.hardcore_hearts,
-                registers::dimensionTypes_cache.convert<std::string>([](auto& a) { return a->first; }),
-                100,
-                2,
-                2,
-                client.player_data.reduced_debug_info,
-                true,
-                false,
-                0, //client.player_data.world_id,
-                client.player_data.world_id,
-                0,
-                client.player_data.gamemode,
-                client.player_data.prev_gamemode,
-                false,
-                false,
-                last_death_location,
-                0,
-                false
-            );
-            response += packets::play::playerAbilities(
-                client,
-                client.player_data.abilities.flags.mask,
-                client.player_data.abilities.flying_speed,
-                client.player_data.abilities.field_of_view_modifier
-            );
-            client.packets_state.pending_teleport_ids.push_back(0);
-            response += packets::play::synchronizePlayerPosition(
-                client,
-                calc::VECTOR(client.player_data.position.x, client.player_data.position.y, client.player_data.position.z),
-                client.player_data.position.yaw,
-                client.player_data.position.pitch,
-                0x1F,
-                0
-            );
+            auto [world_id, world_name] = api::world::prepare_world(client_ref);
+
+            auto player_entity = base_objects::entity::create("minecraft:player");
+            auto player_entity_id = api::entity_id_map::allocate_id(client.data->uuid);
+            player_entity->id = client.data->uuid;
+
+
+            response
+                += packets::play::joinGame(
+                    client,
+                    player_entity_id,
+                    client.player_data.hardcore_hearts,
+                    registers::dimensionTypes_cache.convert<std::string>([](auto& a) { return a->first; }),
+                    100,
+                    client.view_distance,
+                    client.simulation_distance,
+                    client.player_data.reduced_debug_info,
+                    true,
+                    false,
+                    world_id,
+                    world_name,
+                    0,
+                    client.player_data.gamemode,
+                    client.player_data.prev_gamemode,
+                    false,
+                    false,
+                    last_death_location,
+                    0,                                                      //ignore portal cooldown, did it used by client?
+                    api::configuration::get().mojang.enforce_secure_profile //TODO, huh? not sure
+                );
+
+            pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::play, [&](auto&& plugin) {
+                auto res = plugin->PlayerJoined(client_ref);
+                if (res)
+                    response += *res;
+            });
+
+            response += packets::play::playerAbilities(client, client.player_data.abilities.flags.mask, client.player_data.abilities.flying_speed, client.player_data.abilities.field_of_view_modifier);
+
+
             return response;
         }
 
-        ServerPlugin::plugin_response ServerPlugin::OnPlay_uninitialized(base_objects::client_data_holder& client) {
+        ServerPlugin::plugin_response ServerPlugin::OnPlay_uninitialized(base_objects::client_data_holder& client_ref) {
+            Response response = Response::Empty();
+            pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::play, [&](auto&& plugin) {
+                auto res = plugin->PlayerJoined(client_ref);
+                if (res)
+                    response += *res;
+            });
             {
-                auto data = players_data.get_player_data(client->data->uuid_str);
-                data.player = client->player_data;
+                auto data = players_data.get_player_data(client_ref->data->uuid_str);
+                data.player = client_ref->player_data;
                 data.save();
             }
-            return false;
+            return response;
         }
     }
 }

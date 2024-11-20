@@ -1,7 +1,7 @@
 #ifndef SRC_STORAGE_ENBT_LIST_STORAGE
 #define SRC_STORAGE_ENBT_LIST_STORAGE
 #include <filesystem>
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <library/fast_task.hpp>
 #include <library/list_array.hpp>
 #include <optional>

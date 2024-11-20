@@ -1,12 +1,18 @@
+#include <library/enbt/senbt.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/entity_id_map.hpp>
 #include <src/api/internal/world.hpp>
 #include <src/api/players.hpp>
+#include <src/api/protocol.hpp>
 #include <src/api/world.hpp>
+#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/build_in_plugins/world.hpp>
 #include <src/log.hpp>
+#include <src/protocolHelper/packets.hpp>
 #include <src/util/conversions.hpp>
 #include <src/util/task_management.hpp>
+
 namespace copper_server {
     namespace build_in_plugins {
         struct chunk_speed_data {
@@ -279,6 +285,54 @@ namespace copper_server {
                 return block;
             else
                 return base_objects::block_entity(block, block_data.data_tags);
+        }
+
+        WorldManagementPlugin::plugin_response WorldManagementPlugin::PlayerJoined(base_objects::client_data_holder& client_ref) {
+            auto& client = *client_ref;
+            Response response;
+
+            auto last_death_location = client.player_data.last_death_location ? std::optional(base_objects::packets::death_location_data(
+                                                                                    client.player_data.last_death_location->world_id,
+                                                                                    {(int32_t)client.player_data.last_death_location->x, (int32_t)client.player_data.last_death_location->y, (int32_t)client.player_data.last_death_location->z}
+                                                                                ))
+                                                                              : std::nullopt;
+
+
+            auto [world_id, world_name] = api::world::prepare_world(client_ref);
+
+            auto player_entity = base_objects::entity::create("minecraft:player");
+            auto player_entity_id = api::entity_id_map::allocate_id(client.data->uuid);
+            player_entity->id = client.data->uuid;
+
+
+            response
+                += packets::play::joinGame(
+                    client,
+                    player_entity_id,
+                    client.player_data.hardcore_hearts,
+                    registers::dimensionTypes_cache.convert<std::string>([](auto& a) { return a->first; }),
+                    100,
+                    client.view_distance,
+                    client.simulation_distance,
+                    client.player_data.reduced_debug_info,
+                    true,
+                    false,
+                    world_id,
+                    world_name,
+                    0,
+                    client.player_data.gamemode,
+                    client.player_data.prev_gamemode,
+                    false,
+                    false,
+                    last_death_location,
+                    0,                                                      //ignore portal cooldown, did it used by client?
+                    api::configuration::get().mojang.enforce_secure_profile //TODO, huh? not sure
+                );
+
+            response += packets::play::changeDifficulty(client, 1, true);
+            response += packets::play::setHeldItem(client, client.player_data.assigned_entity->get_selected_item());
+
+            return response;
         }
 
         void WorldManagementPlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {
@@ -832,7 +886,7 @@ namespace copper_server {
                                         world.profiling.slow_chunk_tick_callback = nullptr;
                                         world.profiling.slow_world_tick_callback = nullptr;
                                         world.profiling.got_tps_update = nullptr;
-                                        world.profiling.chunk_speedometer_callback = false;
+                                        world.profiling.chunk_speedometer_callback = nullptr;
 
                                         Chat message("Profiling disabled for world: " + world.world_name);
                                         message.SetColor("green");

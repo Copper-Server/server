@@ -1,3 +1,4 @@
+#include <library/enbt/senbt.hpp>
 #include <library/list_array.hpp>
 #include <src/api/permissions.hpp>
 #include <src/base_objects/commands.hpp>
@@ -9,15 +10,22 @@
 namespace copper_server {
     namespace base_objects {
         void command_context::apply_executor_data() {
-            other_data["x"] = executor->player_data.position.x;
-            other_data["y"] = executor->player_data.position.y;
-            other_data["z"] = executor->player_data.position.z;
-            other_data["yaw"] = executor->player_data.position.yaw;
-            other_data["pitch"] = executor->player_data.position.pitch;
+            if (!executor->player_data.assigned_entity)
+                return;
+            auto pos = executor->player_data.assigned_entity->position;
+            auto rot = calc::to_yaw_pitch_256(executor->player_data.assigned_entity->rotation);
+            auto mot = executor->player_data.assigned_entity->motion;
 
-            other_data["motion_x"] = executor->player_data.motion.x;
-            other_data["motion_y"] = executor->player_data.motion.y;
-            other_data["motion_y"] = executor->player_data.motion.y;
+            other_data["x"] = pos.x;
+            other_data["y"] = pos.y;
+            other_data["z"] = pos.z;
+
+            other_data["yaw"] = rot.x;
+            other_data["pitch"] = rot.y;
+
+            other_data["motion_x"] = mot.x;
+            other_data["motion_y"] = mot.y;
+            other_data["motion_y"] = mot.y;
         }
 
         void next_token(std::string& part, std::string& path) {

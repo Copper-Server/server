@@ -1,7 +1,7 @@
 #ifndef SRC_BASE_OBJECTS_PARSERS
 #define SRC_BASE_OBJECTS_PARSERS
 #include <cstdint>
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <string>
 #include <unordered_map>
 

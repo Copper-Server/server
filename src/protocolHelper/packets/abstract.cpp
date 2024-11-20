@@ -1,24 +1,27 @@
+#include <src/base_objects/shared_client_data.hpp>
 #include <src/protocolHelper/packets/765/packets.hpp>
 #include <src/protocolHelper/packets/766/packets.hpp>
 #include <src/protocolHelper/packets/767/packets.hpp>
 #include <src/protocolHelper/packets/abstract.hpp>
 
-template <class fn>
-class function_selector;
+namespace copper_server {
 
-template <class Return, class... Arguments>
-class function_selector<Return(Arguments...)> {
-    using fn = Return (*)(Arguments...);
-    std::unordered_map<uint32_t, fn> functions;
+    template <class fn>
+    class function_selector;
 
-public:
-    function_selector(std::initializer_list<std::pair<const uint32_t, fn>> list)
-        : functions(list) {}
+    template <class Return, class... Arguments>
+    class function_selector<Return(Arguments...)> {
+        using fn = Return (*)(Arguments...);
+        std::unordered_map<uint32_t, fn> functions;
 
-    Response call(SharedClientData& cl, Arguments... args) {
-        return functions.at(cl.packets_state.protocol_version)(std::forward<Arguments>(args)...);
-    }
-};
+    public:
+        function_selector(std::initializer_list<std::pair<const uint32_t, fn>> list)
+            : functions(list) {}
+
+        Response call(SharedClientData& cl, Arguments... args) {
+            return functions.at(cl.packets_state.protocol_version)(std::forward<Arguments>(args)...);
+        }
+    };
 
 #define create_function_selector(_namespace, name)                   \
     function_selector<decltype(release_767::_namespace::name)> name{ \
@@ -37,7 +40,6 @@ public:
         {767, release_767::_namespace::name},                        \
     };
 
-namespace copper_server {
     namespace packets {
         namespace selectors {
 
@@ -720,8 +722,10 @@ namespace copper_server {
                 return selectors::play::lookAt.call(client, from_feet_or_eyes, target, entity_id);
             }
 
-            Response synchronizePlayerPosition(SharedClientData& client, calc::VECTOR pos, float yaw, float pitch, uint8_t flags, int32_t teleport_id) {
-                return selectors::play::synchronizePlayerPosition.call(client, pos, yaw, pitch, flags, teleport_id);
+            Response synchronizePlayerPosition(SharedClientData& client, calc::VECTOR pos, float yaw, float pitch, uint8_t flags) {
+                auto id = client.packets_state.teleport_id_sequence++;
+                client.packets_state.pending_teleport_ids.push_back(id);
+                return selectors::play::synchronizePlayerPosition.call(client, pos, yaw, pitch, flags, id);
             }
 
             Response initRecipeBook(SharedClientData& client, bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> displayed_recipe_ids, list_array<std::string> had_access_to_recipe_ids) {

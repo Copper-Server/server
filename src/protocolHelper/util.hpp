@@ -1,7 +1,7 @@
 #ifndef SRC_PROTOCOLHELPER_UTIL
 #define SRC_PROTOCOLHELPER_UTIL
 #include <exception>
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <src/ClientHandleHelper.hpp>
 #include <src/api/configuration.hpp>
 #include <src/base_objects/packets.hpp>

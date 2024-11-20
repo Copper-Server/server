@@ -8,12 +8,20 @@
 #include <src/base_objects/particle_data.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/recipe.hpp>
+#include <src/base_objects/response.hpp>
 
 //packets for 1.21.0 - 1.21.1, protocol 767
 //changes between 766:
 // Now client requires to get packet knownPacks with pack "minecraft:core" with version "1.21" also must be send before registry_data
 //
 namespace copper_server {
+    namespace base_objects {
+        struct SharedClientData;
+    }
+
+    using SharedClientData = base_objects::SharedClientData;
+
+
     namespace packets {
         namespace release_767 {
 

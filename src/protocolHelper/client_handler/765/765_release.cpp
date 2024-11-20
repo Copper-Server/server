@@ -189,10 +189,8 @@ namespace copper_server {
                 auto plugin = pluginManagement.get_bind_plugin(PluginManagement::registration_on::play, msg.channel);
                 if (plugin) {
                     auto response = plugin->OnPlayHandle(plugin, msg.channel, msg.data, session->sharedDataRef());
-                    if (std::holds_alternative<Response>(response))
-                        return std::get<Response>(response);
-                    else
-                        queriedPackets.push_back(std::get<PluginRegistration::PluginResponse>(response));
+                    if (response)
+                        return *response;
                 } else
                     log::debug_error("play", "Unknown chanel: " + msg.channel);
                 return Response::Empty();

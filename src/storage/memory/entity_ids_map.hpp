@@ -1,7 +1,7 @@
 #ifndef SRC_STORAGE_MEMORY_ENTITY_IDS_MAP
 #define SRC_STORAGE_MEMORY_ENTITY_IDS_MAP
 #include <boost/bimap.hpp>
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <library/fast_task.hpp>
 #include <random>
 #include <shared_mutex>

@@ -22,6 +22,7 @@ namespace copper_server {
             void OnUnload(const PluginRegistrationPtr& self) override;
             void OnFaultUnload(const PluginRegistrationPtr& self) override;
 
+            plugin_response PlayerJoined(base_objects::client_data_holder& client) override;
 
             void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override;
         };

@@ -1,9 +1,22 @@
 #ifndef SRC_BASE_OBJECTS_BOUNDS
 #define SRC_BASE_OBJECTS_BOUNDS
 #include <cstdint>
+#include <random>
+
 
 namespace copper_server {
     namespace base_objects {
+        namespace __impl {
+            template <class T>
+            T convert_chunk_global_pos(T pos) {
+                if (pos == 0)
+                    return 0;
+                if (pos < 0)
+                    return (pos + 1) / 16 - 1;
+                return pos / 16;
+            }
+        }
+
         struct cubic_bounds_chunk {
             int64_t x1;
             int64_t z1;
@@ -66,6 +79,15 @@ namespace copper_server {
             size_t count() const {
                 return (x2 - x1 + 1) * (z2 - z1 + 1);
             }
+
+            std::pair<int64_t, int64_t> random_point() const {
+                std::mt19937_64 gen(std::random_device{}());
+                std::uniform_int_distribution<int64_t> disX(x1, x2);
+                std::uniform_int_distribution<int64_t> disZ(z1, z2);
+                return std::make_pair(disX(gen), disZ(gen));
+            }
+
+            auto operator<=>(const cubic_bounds_chunk& other) const = default;
         };
 
         struct cubic_bounds_chunk_radius {
@@ -110,6 +132,15 @@ namespace copper_server {
             size_t count() {
                 return (radius * 2 + 1) * (radius * 2 + 1);
             }
+
+            std::pair<int64_t, int64_t> random_point() const {
+                std::mt19937_64 gen(std::random_device{}());
+                std::uniform_int_distribution<int64_t> dis_x(center_x - radius, center_x + radius);
+                std::uniform_int_distribution<int64_t> dis_z(center_z - radius, center_z + radius);
+                return std::make_pair(dis_x(gen), dis_z(gen));
+            }
+
+            auto operator<=>(const cubic_bounds_chunk_radius& other) const = default;
         };
 
         struct cubic_bounds_block {
@@ -149,6 +180,72 @@ namespace copper_server {
             size_t count() const {
                 return (x2 - x1 + 1) * (y2 - y1 + 1) * (z2 - z1 + 1);
             }
+
+            std::tuple<int64_t, int64_t, int64_t> random_point() const {
+                std::mt19937_64 gen(std::random_device{}());
+                std::uniform_int_distribution<int64_t> dis_x(x1, x2);
+                std::uniform_int_distribution<int64_t> dis_y(y1, y2);
+                std::uniform_int_distribution<int64_t> dis_z(z1, z2);
+                return std::make_tuple(dis_x(gen), dis_y(gen), dis_z(gen));
+            }
+
+            auto operator<=>(const cubic_bounds_block& other) const
+                = default;
+
+            explicit operator cubic_bounds_chunk() {
+                return {
+                    __impl::convert_chunk_global_pos(x1),
+                    __impl::convert_chunk_global_pos(z1),
+                    __impl::convert_chunk_global_pos(x2),
+                    __impl::convert_chunk_global_pos(z2)
+                };
+            }
+        };
+
+        struct cubic_bounds_block_radius {
+            int64_t x;
+            int64_t y;
+            int64_t z;
+            int64_t radius;
+
+            template <class _FN>
+            void enum_points(_FN fn) const {
+                for (int64_t i = x - radius; i <= x + radius; i++)
+                    for (int64_t j = y - radius; j <= y + radius; j++)
+                        for (int64_t k = z - radius; k <= z + radius; k++)
+                            fn(i, j, k);
+            }
+
+            bool in_bounds(int64_t x, int64_t y, int64_t z) const {
+                return ((x - this->x) * (x - this->x) + (y - this->y) * (y - this->y) + (z - this->z) * (z - this->z)) <= radius * radius;
+            }
+
+            bool out_of_bounds(int64_t x, int64_t y, int64_t z) const {
+                return !in_bounds(x, y, z);
+            }
+
+            size_t count() const {
+                return (radius * 2 + 1) * (radius * 2 + 1) * (radius * 2 + 1);
+            }
+
+            std::tuple<int64_t, int64_t, int64_t> random_point() const {
+                std::mt19937_64 gen(std::random_device{}());
+                std::uniform_int_distribution<int64_t> dis_x(x - radius, x + radius);
+                std::uniform_int_distribution<int64_t> dis_y(y - radius, y + radius);
+                std::uniform_int_distribution<int64_t> dis_z(z - radius, z + radius);
+
+                return {dis_x(gen), dis_y(gen), dis_z(gen)};
+            }
+
+            auto operator<=>(const cubic_bounds_block_radius& other) const = default;
+
+            explicit operator cubic_bounds_chunk_radius() {
+                return {
+                    __impl::convert_chunk_global_pos(x),
+                    __impl::convert_chunk_global_pos(z),
+                    __impl::convert_chunk_global_pos(radius),
+                };
+            }
         };
 
         struct spherical_bounds_chunk {
@@ -183,6 +280,14 @@ namespace copper_server {
             size_t count() const {
                 return (radius * 2 + 1) * (radius * 2 + 1);
             }
+
+            std::tuple<double, double> random_point() const {
+                std::mt19937 gen(std::random_device{}());
+                std::normal_distribution<> dis(0, radius);
+                return {x + dis(gen), z + dis(gen)};
+            }
+
+            auto operator<=>(const spherical_bounds_chunk& other) const = default;
         };
 
         struct spherical_bounds_block {
@@ -221,10 +326,29 @@ namespace copper_server {
             size_t count() const {
                 return (radius * 2 + 1) * (radius * 2 + 1) * (radius * 2 + 1);
             }
+
+            std::tuple<double, double, double> random_point() const {
+                std::mt19937 gen(std::random_device{}());
+                std::normal_distribution<> dis(0, radius);
+                return std::make_tuple(x + dis(gen), y + dis(gen), z + dis(gen));
+            }
+
+            auto operator<=>(const spherical_bounds_block& other) const = default;
+
+            explicit operator spherical_bounds_chunk() {
+                return {
+                    __impl::convert_chunk_global_pos(x),
+                    __impl::convert_chunk_global_pos(z),
+                    __impl::convert_chunk_global_pos(radius),
+                };
+            }
         };
+
         struct bounding {
             double xz;
             double y;
+
+            auto operator<=>(const bounding& other) const = default;
         };
     }
 }

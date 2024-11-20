@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <fstream>
+#include <library/enbt/io.hpp>
 #include <src/storage/enbt_list_storage.hpp>
 
 namespace copper_server {

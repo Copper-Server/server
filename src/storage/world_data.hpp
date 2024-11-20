@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/block.hpp>
@@ -275,6 +275,12 @@ namespace copper_server {
             std::vector<base_objects::cubic_bounds_chunk> load_points;
             std::vector<base_objects::spherical_bounds_chunk> load_points_sphere;
 
+            struct {
+                int64_t x = 0;
+                int64_t z = 0;
+                int64_t radius = 0;
+            } spawn_data;
+
             double border_center_x = 0;
             double border_center_z = 0;
             double border_size = 0;
@@ -288,6 +294,7 @@ namespace copper_server {
             int64_t time = 0;
             size_t max_random_tick_for_chunk = 100;
             uint64_t ticks_per_second = 20;
+
             std::chrono::milliseconds chunk_lifetime = std::chrono::seconds(1);
             std::chrono::milliseconds world_lifetime = std::chrono::seconds(50);
 
@@ -297,6 +304,7 @@ namespace copper_server {
 
             int32_t internal_version = 0;
             uint16_t chunk_y_count = 20; // == (320 / 16), do not change this config
+            int16_t world_y_offset = 0;
             int8_t difficulty = 0;
             uint8_t default_gamemode = 0;
             bool difficulty_locked : 1 = false;
@@ -331,12 +339,27 @@ namespace copper_server {
             void regenerate_chunk(int64_t chunk_x, int64_t chunk_z);
             void reset_light_data(int64_t chunk_x, uint64_t chunk_z);
 
+
+            void save_and_unload_chunk_at(int64_t global_x, int64_t global_z);
+            void unload_chunk_at(int64_t global_x, int64_t global_z);
+            void save_chunk_at(int64_t global_x, int64_t global_z);
+            void erase_chunk_at(int64_t global_x, int64_t global_z);
+            void regenerate_chunk_at(int64_t global_x, int64_t global_z);
+            void reset_light_data_at(int64_t global_x, uint64_t global_z);
+
             void for_each_chunk(std::function<void(chunk_data& chunk)> func);
             void for_each_chunk(base_objects::cubic_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func);
             void for_each_chunk(base_objects::spherical_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func);
             void for_each_sub_chunk(int64_t chunk_x, int64_t chunk_z, std::function<void(sub_chunk_data& chunk)> func);
             void get_sub_chunk(int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, std::function<void(sub_chunk_data& chunk)> func);
             void get_chunk(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> func);
+
+
+            void for_each_chunk(base_objects::cubic_bounds_block bounds, std::function<void(chunk_data& chunk)> func);
+            void for_each_chunk(base_objects::spherical_bounds_block bounds, std::function<void(chunk_data& chunk)> func);
+            void for_each_sub_chunk_at(int64_t global_x, int64_t global_z, std::function<void(sub_chunk_data& chunk)> func);
+            void get_sub_chunk_at(int64_t global_x, uint64_t global_y, int64_t global_z, std::function<void(sub_chunk_data& chunk)> func);
+            void get_chunk_at(int64_t global_y, int64_t global_z, std::function<void(chunk_data& chunk)> func);
 
 
             void for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func);
@@ -348,6 +371,16 @@ namespace copper_server {
             void for_each_block_entity(base_objects::spherical_bounds_chunk bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
             void for_each_block_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
             void for_each_block_entity(int64_t chunk_x, int64_t chunk_z, uint64_t sub_chunk_y, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
+
+
+            void for_each_entity(base_objects::cubic_bounds_block bounds, std::function<void(base_objects::entity_ref& entity)> func);
+            void for_each_entity(base_objects::spherical_bounds_block bounds, std::function<void(base_objects::entity_ref& entity)> func);
+            void for_each_block_entity(base_objects::cubic_bounds_block bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
+            void for_each_block_entity(base_objects::spherical_bounds_block bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
+            void for_each_entity_at(int64_t global_x, int64_t global_z, std::function<void(const base_objects::entity_ref& entity)> func);
+            void for_each_entity_at(int64_t global_x, int64_t global_z, uint64_t global_y, std::function<void(const base_objects::entity_ref& entity)> func);
+            void for_each_block_entity_at(int64_t global_x, int64_t global_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
+            void for_each_block_entity_at(int64_t global_x, int64_t global_z, uint64_t global_y, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
 
 
             void query_for_tick(int64_t global_x, uint64_t global_y, int64_t global_z);
@@ -377,6 +410,8 @@ namespace copper_server {
             void set_biome_range(base_objects::spherical_bounds_block bounds, const list_array<uint32_t>& blocks, block_set_mode mode = block_set_mode::replace);
             void set_biome_range(base_objects::spherical_bounds_block bounds, list_array<uint32_t>&& blocks, block_set_mode mode = block_set_mode::replace);
 
+            void get_height_maps(int64_t chunk_x, int64_t chunk_z, std::function<void(storage::height_maps& height_maps)> func);
+            void get_height_maps_at(int64_t chunk_x, int64_t chunk_z, std::function<void(storage::height_maps& height_maps)> func);
 
             uint64_t register_client(const base_objects::client_data_holder& client);
             void unregister_client(uint64_t);

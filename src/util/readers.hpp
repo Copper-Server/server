@@ -3,12 +3,48 @@
 #include <bit>
 #include <cstdint>
 #include <exception>
-#include <library/enbt.hpp>
+#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <src/protocolHelperNBT.hpp>
 #include <string>
 
 namespace copper_server {
+    namespace util {
+        template <class T>
+        static T fromVar(uint8_t* ch, size_t& len) {
+            constexpr int max_offset = (sizeof(T) / 5 * 5 + ((sizeof(T) % 5) > 0)) * 8;
+            T decodedInt = 0;
+            T bitOffset = 0;
+            char currentByte = 0;
+            size_t i = 0;
+            do {
+                if (i >= len)
+                    throw std::overflow_error("VarInt is too big");
+                if (bitOffset == max_offset)
+                    throw std::overflow_error("VarInt is too big");
+                currentByte = ch[i++];
+                decodedInt |= (currentByte & 0b01111111) << bitOffset;
+                bitOffset += 7;
+            } while ((currentByte & 0b10000000) != 0);
+            len = i;
+            return decodedInt;
+        }
+
+        template <class T>
+        static size_t toVar(uint8_t* buf, size_t buf_len, T val) {
+            size_t i = 0;
+            do {
+                if (i >= buf_len)
+                    throw std::overflow_error("VarInt is too big");
+                buf[i] = (uint8_t)(val & 0b01111111);
+                val >>= 7;
+                if (val != 0)
+                    buf[i] |= 0b10000000;
+                i++;
+            } while (val != 0);
+            return i;
+        }
+    }
     struct ArrayStream {
         uint8_t* arrau;
         size_t mi;
@@ -108,7 +144,7 @@ namespace copper_server {
     template <class Res>
     static Res ReadVar(ArrayStream& data) {
         size_t len = sizeof(Res);
-        Res res = enbt::value::fromVar<Res>(data.arrau + data.r, len);
+        Res res = util::fromVar<Res>(data.arrau + data.r, len);
         data.r += len;
         enbt::endian_helpers::convert_endian(std::endian::little, res);
         return res;
@@ -122,7 +158,7 @@ namespace copper_server {
 
         constexpr size_t buf_len = sizeof(ResultT) + (sizeof(ResultT) / 7) + 1;
         uint8_t buf[buf_len];
-        size_t len = enbt::value::toVar(buf, buf_len, enbt::endian_helpers::convert_endian<ResultT>(std::endian::little, (ResultT)val));
+        size_t len = util::toVar(buf, buf_len, enbt::endian_helpers::convert_endian<ResultT>(std::endian::little, (ResultT)val));
         for (size_t i = 0; i < len; i++)
             data.push_back(buf[i]);
     }
@@ -135,7 +171,7 @@ namespace copper_server {
 
         constexpr size_t buf_len = sizeof(T) + (sizeof(T) / 7) + 1;
         uint8_t buf[buf_len];
-        size_t len = enbt::value::toVar(buf, buf_len, enbt::endian_helpers::convert_endian<ResultT>(std::endian::little, (ResultT)val));
+        size_t len = util::toVar(buf, buf_len, enbt::endian_helpers::convert_endian<ResultT>(std::endian::little, (ResultT)val));
         for (size_t i = 0; i < len; i++)
             data.write(buf[i]);
     }

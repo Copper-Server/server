@@ -10,10 +10,7 @@ namespace copper_server {
     class TCPClientHandleHandshaking : public TCPClientHandle {
     protected:
         virtual bool AllowProtocolVersion(int proto_version) {
-            if (767 == proto_version)
-                return true;
-            else
-                return true;
+            return registers::individual_registers.contains(proto_version);
         }
 
         virtual bool AllowServerAddressAndPort(std::string& str, uint16_t port) {

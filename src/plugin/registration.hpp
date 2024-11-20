@@ -57,7 +57,9 @@ namespace copper_server {
             std::string plugin_chanel;
         };
 
-        using plugin_response = std::variant<Response, PluginResponse, bool>;
+        using plugin_response_login = std::variant<Response, PluginResponse, bool>;
+
+        using plugin_response = std::optional<Response>;
 
 #pragma region Server
         //first initialisation
@@ -93,7 +95,8 @@ namespace copper_server {
 
 #pragma region OnLogin
 
-        virtual plugin_response OnLoginHandle(const std::shared_ptr<PluginRegistration>& self, const std::string& chanel, const list_array<uint8_t>& data, bool successful, base_objects::client_data_holder& client) {
+        //custom plugin handling
+        virtual plugin_response_login OnLoginHandle(const std::shared_ptr<PluginRegistration>& self, const std::string& chanel, const list_array<uint8_t>& data, bool successful, base_objects::client_data_holder& client) {
             return false;
         }
 
@@ -102,36 +105,51 @@ namespace copper_server {
 #pragma region OnConfiguration
 
         virtual plugin_response OnConfiguration(base_objects::client_data_holder&) {
-            return false;
+            return std::nullopt;
         }
 
+        //custom plugin handling
         virtual plugin_response OnConfigurationHandle(const std::shared_ptr<PluginRegistration>& self, const std::string& chanel, const list_array<uint8_t>& data, base_objects::client_data_holder&) {
-            return false;
+            return std::nullopt;
         }
 
         virtual plugin_response OnConfiguration_PlayerSettingsChanged(base_objects::client_data_holder&) {
-            return false;
+            return std::nullopt;
         }
 
         virtual plugin_response OnConfiguration_gotKnownPacks(base_objects::client_data_holder&, const list_array<base_objects::packets::known_pack>& known_packs) {
-            return false;
+            return std::nullopt;
         }
 
 #pragma endregion
 
 #pragma region OnPlay
 
+        //custom plugin handling
         virtual plugin_response OnPlayHandle(const std::shared_ptr<PluginRegistration>& self, const std::string& chanel, const list_array<uint8_t>& data, base_objects::client_data_holder&) {
-            return false;
+            return std::nullopt;
         }
 
         virtual plugin_response OnPlay_initialize(base_objects::client_data_holder& client) {
-            return false;
+            return std::nullopt;
         }
 
         virtual plugin_response OnPlay_uninitialized(base_objects::client_data_holder& client) {
-            return false;
+            return std::nullopt;
         }
+
+        //player must be initialized for this call
+        virtual plugin_response PlayerJoined(base_objects::client_data_holder& client) {
+            return std::nullopt;
+        }
+
+        //player must be initialized for this call and uninitialized after
+        virtual plugin_response PlayerLeave(base_objects::client_data_holder& client) {
+            return std::nullopt;
+        }
+
+        //TODO add more events
+
 
 #pragma endregion
     };
