@@ -1,9 +1,7 @@
 #ifndef SRC_BUILD_IN_PLUGINS_SERVER
 #define SRC_BUILD_IN_PLUGINS_SERVER
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/virtual_client.hpp>
 #include <src/plugin/main.hpp>
-#include <src/storage/permissions_manager.hpp>
 #include <src/storage/players_data.hpp>
 
 namespace copper_server {

@@ -11,8 +11,10 @@ namespace copper_server {
     namespace build_in_plugins {
         namespace special {
             class Status : public SpecialPluginStatus {
-                fast_task::task_mutex cached_icon_mutex;
+                fast_task::task_mutex cached_mutex;
                 std::string cached_icon;
+                list_array<std::pair<std::string, enbt::raw_uuid>> sample_cache;
+                size_t sample_cache_check_size = -1;
                 const uint8_t* icon_data = nullptr;
 
             public:
@@ -27,7 +29,7 @@ namespace copper_server {
                 }
 
                 size_t MaxPlayers() override {
-                    return api::configuration::get().protocol.max_players;
+                    return api::configuration::get().server.max_players;
                 }
 
                 size_t OnlinePlayers() override {
@@ -36,18 +38,29 @@ namespace copper_server {
 
                 //string also can be Chat json object!
                 list_array<std::pair<std::string, enbt::raw_uuid>> OnlinePlayersSample() override {
+                    std::lock_guard lock(cached_mutex);
+                    if (sample_cache_check_size == api::players::size())
+                        return sample_cache;
+
                     list_array<std::pair<std::string, enbt::raw_uuid>> result;
                     size_t i = 0;
                     api::players::iterate_players_not_state(copper_server::base_objects::SharedClientData::packets_state_t::protocol_state::initialization, [&](const copper_server::base_objects::SharedClientData& player) {
                         if (i < api::configuration::get().status.sample_players_count) {
                             if (!player.data)
                                 return true;
-                            result.push_back({player.name, player.data->uuid});
+                            if (player.allow_server_listings)
+                                result.push_back({player.name, player.data->uuid});
+                            else
+                                result.push_back({"Anonymous Player", enbt::raw_uuid::as_null()});
                             return true;
                         } else
                             return false;
                     });
-                    return result;
+                    return sample_cache = result;
+                }
+
+                std::optional<bool> PreventsChatReports() override {
+                    return api::configuration::get().server.prevent_chat_reports;
                 }
 
                 Chat Description() override {
@@ -55,20 +68,13 @@ namespace copper_server {
                 }
 
                 bool ConnectionAvailable(int32_t protocol_version) override {
-                    switch (protocol_version) {
-                    case 765:
-                    case 766:
-                    case 767:
-                        return true;
-                    default:
-                        return false;
-                    }
+                    return api::configuration::get().protocol.allowed_versions_processed.contains(protocol_version);
                 }
 
                 //return empty string if no icon, icon must be 64x64 and png format in base64
                 std::string ServerIcon() override {
                     auto& icon = api::configuration::get().status.favicon;
-                    std::lock_guard lock(cached_icon_mutex);
+                    std::lock_guard lock(cached_mutex);
                     if (cached_icon.size() > 0)
                         if (icon_data == icon.data())
                             return cached_icon;

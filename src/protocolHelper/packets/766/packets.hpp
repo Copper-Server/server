@@ -556,6 +556,9 @@ namespace copper_server {
                 Response transfer(const std::string& host, int32_t port);
 
                 Response updateAdvancements(bool reset, const list_array<base_objects::packets::advancements_maping>& advancement_mapping, const list_array<std::string>& remove_advancements, const list_array<base_objects::packets::advancement_progress>& progress_advancements);
+
+                Response updateAttributes__(int32_t entity_id, const list_array<base_objects::packets::attributes>& properties, uint32_t protocol_version = 766);
+
                 Response updateAttributes(int32_t entity_id, const list_array<base_objects::packets::attributes>& properties);
 
                 Response entityEffect(int32_t entity_id, int32_t effect_id, int32_t amplifier, int32_t duration, int8_t flags);

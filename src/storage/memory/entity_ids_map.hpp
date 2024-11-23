@@ -17,27 +17,12 @@ namespace copper_server {
             public:
                 //generates random UUID allocates, guarantees uniqueness
                 [[nodiscard]] std::pair<int32_t, enbt::raw_uuid> allocate_id() {
-                    static std::random_device rd;
-                    static std::mt19937 gen(rd());
-                    static std::uniform_int_distribution<uint16_t> dis;
-                    enbt::raw_uuid uuid;
+                    enbt::raw_uuid uuid = enbt::raw_uuid::generate_v4();
                     std::unique_lock lock(mutex);
                     if (ids.size() == INT32_MAX)
                         throw std::runtime_error("Too many registered UUID's, can't allocate more");
-                    do {
-                        for (int i = 0; i < 16; i++) {
-                            union {
-                                uint16_t data;
-                                uint8_t bytes[2];
-                            } u;
-
-                            u.data = dis(gen);
-                            uuid.data[i] = u.bytes[0] ^ u.bytes[1];
-                        }
-                        uuid.data[6] = (uuid.data[6] & 0x0F) | 0x40; //version 4
-                        uuid.data[8] = (uuid.data[8] & 0x3F) | 0x80; //variant rfc4122
-                    } while (ids.right.find(uuid) != ids.right.end());
-
+                    while (ids.right.find(uuid) != ids.right.end())
+                        uuid = enbt::raw_uuid::generate_v4();
                     while (ids.left.find(id_allocator) != ids.left.end())
                         id_allocator++;
                     ids.left.insert({id_allocator, uuid});

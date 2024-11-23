@@ -65,6 +65,8 @@ namespace copper_server {
                 next_handler = new TCPClientHandleStatus(session);
                 return Response::Empty();
             case 2: //login
+                if (!api::configuration::get().protocol.allowed_versions_processed.contains(protocol_version))
+                    return Response::Disconnect();
                 log::debug("Handshaking", "Switch to login");
                 next_handler = client_handler::abstract::createHandleLogin(session);
                 return Response::Empty();

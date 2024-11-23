@@ -122,7 +122,7 @@ namespace copper_server {
                             return packets::release_767::login::kick(str);
                         }
                         if (
-                            !api::configuration::get().protocol.offline_mode
+                            !api::configuration::get().server.offline_mode
                             || api::configuration::get().protocol.enable_encryption
                         ) {
                             return encryptionRequest();
@@ -167,7 +167,7 @@ namespace copper_server {
                         session->sharedData().data = api::mojang::get_session_server().hasJoined(
                             session->sharedData().name,
                             serverId.hexdigest(),
-                            !api::configuration::get().protocol.offline_mode
+                            !api::configuration::get().server.offline_mode
                         );
                         session->start_symmetric_encryption(shared_secret, shared_secret);
 

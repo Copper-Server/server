@@ -2,14 +2,15 @@
 #include <fstream>
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
+#include <src/base_objects/packets.hpp>
 #include <src/base_objects/server_configuaration.hpp>
 #include <src/log.hpp>
 #include <src/util/json_helpers.hpp>
 
 namespace copper_server {
     using namespace util;
-
     namespace base_objects {
+
 
         std::string to_string(ServerConfiguration::Protocol::connection_conflict_t conflict_type) {
             switch (conflict_type) {
@@ -77,11 +78,28 @@ namespace copper_server {
             {
                 auto protocol = js_object::get_object(data["protocol"]);
                 cfg.protocol.compression_threshold = protocol["compression_threshold"].or_apply(cfg.protocol.compression_threshold);
-                cfg.protocol.max_players = protocol["max_players"].or_apply(cfg.protocol.max_players);
                 cfg.protocol.rate_limit = protocol["rate_limit"].or_apply(cfg.protocol.rate_limit);
                 cfg.protocol.prevent_proxy_connections = protocol["prevent_proxy_connections"].or_apply(cfg.protocol.prevent_proxy_connections);
-                cfg.protocol.offline_mode = protocol["offline_mode"].or_apply(cfg.protocol.offline_mode);
                 cfg.protocol.enable_encryption = protocol["enable_encryption"].or_apply(cfg.protocol.enable_encryption);
+                if (protocol.contains("allowed_versions")) {
+                    auto allowed_versions = js_array::get_array(protocol["allowed_versions"]);
+                    cfg.protocol.allowed_versions.clear();
+                    cfg.protocol.allowed_versions.reserve(allowed_versions.size());
+                    cfg.protocol.allowed_versions_processed.clear();
+                    cfg.protocol.allowed_versions_processed.reserve(allowed_versions.size());
+                    for (auto&& it : allowed_versions) {
+                        std::string version = it;
+                        cfg.protocol.allowed_versions.push_back(version);
+                        cfg.protocol.allowed_versions_processed.push_back(packets::java_name_to_protocol(version));
+                    }
+                    cfg.protocol.allowed_versions_processed.unify();
+                    if (cfg.protocol.allowed_versions.empty())
+                        cfg.protocol.allowed_versions_processed = {765, 766, 767, 768};
+                } else {
+                    auto allowed_versions = js_array::get_array(protocol["allowed_versions"] = boost::json::array());
+                    for (const auto& it : cfg.protocol.allowed_versions)
+                        allowed_versions.push_back(it);
+                }
                 set_from_string(cfg.protocol.connection_conflict, protocol["connection_conflict"].or_apply(to_string(cfg.protocol.connection_conflict)));
             }
             {
@@ -171,6 +189,8 @@ namespace copper_server {
                 }
                 cfg.server.ip = (std::string)server["ip"].or_apply(cfg.server.ip);
                 cfg.server.port = server["port"].or_apply(cfg.server.port);
+                cfg.server.offline_mode = server["offline_mode"].or_apply(cfg.server.offline_mode);
+                cfg.server.max_players = server["max_players"].or_apply(cfg.server.max_players);
                 if (server.contains("accepting_threads"))
                     cfg.server.accepting_threads = server["accepting_threads"];
                 if (server.contains("working_threads"))

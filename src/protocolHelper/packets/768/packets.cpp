@@ -1132,7 +1132,7 @@ namespace copper_server {
                 }
 
                 Response updateAttributes(int32_t entity_id, const list_array<base_objects::packets::attributes>& properties) {
-                    return release_766::play::updateAttributes(entity_id, properties);
+                    return release_766::play::updateAttributes__(entity_id, properties, 768);
                 }
 
                 Response entityEffect(int32_t entity_id, int32_t effect_id, int32_t amplifier, int32_t duration, int8_t flags) {

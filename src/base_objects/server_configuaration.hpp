@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <library/list_array.hpp>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -19,7 +20,7 @@ namespace copper_server {
                 std::string name = "overworld";
                 std::string seed = "0";
                 std::string type = "default";
-                size_t unload_speed = 10; //max 1000 chunks per tick
+                size_t unload_speed = 10; //max 10 chunks per tick and per world
 
                 struct {
                     int64_t x = 0;
@@ -52,17 +53,18 @@ namespace copper_server {
 
             struct Protocol {
                 int32_t compression_threshold = -1;
-                uint32_t max_players = 0; //0 for unlimited
                 uint32_t rate_limit = 0;
+                list_array<std::string> allowed_versions; //if not empty, then all supported by internal implementation, can be defined by version name or number
 
                 bool prevent_proxy_connections = false; //	If the ISP/AS sent from the server is different from the one from Mojang Studios' authentication server, the player is kicked.
-                bool offline_mode = false;
                 bool enable_encryption = true;
 
                 enum class connection_conflict_t {
                     kick_connected,
                     prevent_join
                 } connection_conflict = connection_conflict_t::kick_connected;
+
+                /*[[computed_from(allowed_versions)]] [runtime]*/ list_array<int32_t> allowed_versions_processed;
             } protocol;
 
             //in this struct everything can be disabled by setting to zero
@@ -111,9 +113,7 @@ namespace copper_server {
             } anti_cheat;
 
             struct Mojang {
-                bool enforce_secure_profile = true;
-
-
+                bool enforce_secure_profile = true; //enables signature signing for chat messages using mojangs service
             } mojang;
 
             struct Status {
@@ -135,6 +135,10 @@ namespace copper_server {
                 std::string worlds_folder = "storage/worlds";
                 std::string ip = "localhost";
                 uint16_t port = 25565;
+                uint32_t max_players = 0; //0 for unlimited
+                bool offline_mode = false;
+                bool prevent_chat_reports = false; //if true then chat reports will be prevented despite `mojang.enforce_secure_profile` setting
+
                 size_t accepting_threads = 0; //0 == auto, optional
                 size_t working_threads = 0;   //0 == auto, optional
                 size_t ssl_key_length = 1024; //1024, 2048, 4096, optional

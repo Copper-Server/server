@@ -25,6 +25,11 @@ namespace copper_server {
 
         //SERVER
         std::unordered_map<std::string, Advancement> advancements;
+
+        std::unordered_map<int32_t, std::unordered_map<int32_t, uint32_t>> item_attribute::protocol_aliases;
+        std::unordered_map<std::string, item_attribute> attributes;
+        list_array<decltype(attributes)::iterator> attributes_cache;
+
         std::unordered_map<std::string, JukeboxSong> jukebox_songs;
 
 

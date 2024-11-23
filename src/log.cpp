@@ -25,8 +25,8 @@ namespace copper_server {
             };
             std::tuple<uint8_t, uint8_t, uint8_t> log_levels_colors[(int)level::__max] = {
                 {128, 128, 128}, //info
-                {128, 0, 0},     //warn
-                {128, 128, 0},   //error
+                {128, 128, 0},   //warn
+                {128, 0, 0},     //error
                 {128, 0, 0},     //fatal
                 {170, 128, 0},   //debug_error
                 {0, 128, 0},     //debug
@@ -46,11 +46,11 @@ namespace copper_server {
                 return "\033[38;2;" + std::to_string(r) + ";" + std::to_string(g) + ";" + std::to_string(b) + "m" + message + "\033[0m";
             }
 
-            void print(log::level level, const std::string& source, const std::string& message) {
+            void print(log::level level, std::string_view source, std::string_view message) {
                 if (!log_levels_switch[(int)level] || !cmd)
                     return;
                 auto [r, g, b] = log_levels_colors[(int)level];
-                auto line = "[" + log_levels_names[(int)level] + "] [" + source + "] ";
+                auto line = "[" + log_levels_names[(int)level] + "] [" + std::string(source) + "] ";
                 std::string alignment(line.size() + 1, ' ');
                 alignment[0] = '\n';
                 auto aligned_message = list_array<char>(message)
@@ -62,34 +62,34 @@ namespace copper_server {
                     cmd->write(color(r, g, b, line + aligned_message));
             }
 
-            void direct_print(const std::string& message) {
+            void direct_print(std::string_view message) {
                 fast_task::read_lock lock(console_mutex);
                 if (cmd)
-                    cmd->write(message);
+                    cmd->write(std::string(message));
             }
         } // namespace console
 
-        void info(const std::string& source, const std::string& message) {
+        void info(std::string_view source, std::string_view message) {
             console::print(level::info, source, message);
         }
 
-        void error(const std::string& source, const std::string& message) {
+        void error(std::string_view source, std::string_view message) {
             console::print(level::error, source, message);
         }
 
-        void warn(const std::string& source, const std::string& message) {
+        void warn(std::string_view source, std::string_view message) {
             console::print(level::warn, source, message);
         }
 
-        void debug(const std::string& source, const std::string& message) {
+        void debug(std::string_view source, std::string_view message) {
             console::print(level::debug, source, message);
         }
 
-        void debug_error(const std::string& source, const std::string& message) {
+        void debug_error(std::string_view source, std::string_view message) {
             console::print(level::debug_error, source, message);
         }
 
-        void fatal(const std::string& source, const std::string& message) {
+        void fatal(std::string_view source, std::string_view message) {
             console::print(level::fatal, source, message);
         }
 

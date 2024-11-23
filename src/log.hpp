@@ -15,17 +15,17 @@ namespace copper_server {
 
             __max
         };
-        void info(const std::string& source, const std::string& message);
+        void info(std::string_view source, std::string_view message);
 
-        void error(const std::string& source, const std::string& message);
+        void error(std::string_view source, std::string_view message);
 
-        void warn(const std::string& source, const std::string& message);
+        void warn(std::string_view source, std::string_view message);
 
-        void debug(const std::string& source, const std::string& message);
+        void debug(std::string_view source, std::string_view message);
 
-        void debug_error(const std::string& source, const std::string& message);
+        void debug_error(std::string_view source, std::string_view message);
 
-        void fatal(const std::string& source, const std::string& message);
+        void fatal(std::string_view source, std::string_view message);
 
         void clear();
 

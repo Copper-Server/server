@@ -355,7 +355,7 @@ namespace copper_server {
             }
         }
         if (local_server)
-            api::configuration::get().protocol.offline_mode = true;
+            api::configuration::get().server.offline_mode = true;
     }
 
     Server::~Server() {

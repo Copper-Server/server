@@ -43,7 +43,7 @@ namespace copper_server {
                     --data.id_adder;
                     throw std::runtime_error("Too many entities.");
                 }
-                data._name_to_id[entity.name] = id;
+                data._name_to_id[entity.id] = id;
                 data._registry[id] = std::move(entity);
                 return id;
             });

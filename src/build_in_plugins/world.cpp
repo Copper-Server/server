@@ -196,9 +196,9 @@ namespace copper_server {
 
                     auto sleep_time = std::chrono::high_resolution_clock::now() - tick_next_awoke;
                     while (true) {
-                        fast_task::task::check_cancellation();
-                        auto current_time = std::chrono::high_resolution_clock::now();
                         try {
+                            fast_task::task::check_cancellation();
+                            auto current_time = std::chrono::high_resolution_clock::now();
                             auto elapsed = current_time - last_tick;
                             worlds_storage.apply_tick(gen, current_time, elapsed);
                             tick_next_awoke = std::chrono::high_resolution_clock::now();
@@ -209,12 +209,15 @@ namespace copper_server {
                                 fast_task::task::sleep_until(std::chrono::high_resolution_clock::now() + (tick_time - to_tick - sleep_time));
                                 sleep_time = std::chrono::high_resolution_clock::now() - tick_next_awoke;
                             }
+                            last_tick = current_time;
                         } catch (const std::exception& e) {
                             log::error("World", "Error ticking world: " + std::string(e.what()));
+                        } catch (const fast_task::task_cancellation&) {
+                            log::debug("World", "ticking task canceled.");
+                            throw; //DO not remove, handled by lib!
                         } catch (...) {
                             log::error("World", "Error ticking world. Undefined exception.");
                         }
-                        last_tick = current_time;
                     }
                 }
             });

@@ -24,8 +24,10 @@ namespace copper_server {
                 file.close();
                 if (std::filesystem::exists(path))
                     throw std::runtime_error("Failed to open file: " + path.string());
-                else
+                else {
+                    player.assigned_entity = base_objects::entity::create("minecraft:player");
                     save();
+                }
                 return;
             }
             enbt::io_helper::value_read_stream stream(file);
@@ -89,9 +91,15 @@ namespace copper_server {
                 } else if (name == "local_data")
                     player.local_data = stream.read();
                 else if (name == "assigned_entity") {
-                    player.assigned_entity = base_objects::entity::load_from_enbt(stream.read().as_compound());
+                    auto entity = stream.read();
+                    auto entity_comp = entity.as_compound();
+                    entity_comp.erase("bound_world");
+                    player.assigned_entity = base_objects::entity::load_from_enbt(entity_comp);
                 }
             });
+
+            if (!player.assigned_entity)
+                player.assigned_entity = base_objects::entity::create("minecraft:player");
             file.close();
         }
 
@@ -143,7 +151,8 @@ namespace copper_server {
             }
 
             as_file_data["local_data"] = player.local_data;
-            as_file_data["assigned_entity"] = player.assigned_entity->copy_to_enbt();
+            if (player.assigned_entity)
+                as_file_data["assigned_entity"] = player.assigned_entity->copy_to_enbt();
 
             std::ofstream file(path, std::ios::binary);
             if (!file.is_open()) {

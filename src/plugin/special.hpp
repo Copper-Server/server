@@ -1,5 +1,6 @@
 #ifndef SRC_PLUGIN_SPECIAL
 #define SRC_PLUGIN_SPECIAL
+#include <optional>
 #include <src/base_objects/server_configuaration.hpp>
 #include <src/protocolHelper/util.hpp>
 
@@ -40,6 +41,14 @@ namespace copper_server {
 
         virtual size_t OnlinePlayers() {
             return 0;
+        }
+
+        virtual std::optional<bool> PreventsChatReports() {
+            return std::nullopt;
+        }
+
+        virtual std::string CustomJson() {
+            return "";
         }
 
         //string also can be Chat json object!

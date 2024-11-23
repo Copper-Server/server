@@ -1,4 +1,5 @@
 #include <resources/include.hpp>
+#include <src/api/configuration.hpp>
 #include <src/api/recipe.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/registers.hpp>
@@ -2694,7 +2695,37 @@ namespace copper_server {
 
         void load_items() {
             auto parsed = boost::json::parse(resources::registry::items);
+            list_array<std::string> filter;
+
+            if (api::configuration::get().protocol.allowed_versions_processed.contains_one([](auto pvn) { return pvn < 766; })) {
+                filter.push_back("minecraft:armadillo_scute");
+                filter.push_back("minecraft:armadillo_spawn_egg");
+                filter.push_back("minecraft:wolf_armor");
+                filter.push_back("minecraft:flow_armor_trim_smithing_template");
+                filter.push_back("minecraft:flow_banner_pattern");
+                filter.push_back("minecraft:flow_pottery_sherd");
+                filter.push_back("minecraft:bolt_armor_trim_smithing_template");
+                filter.push_back("minecraft:bordure_indented_banner_pattern");
+                filter.push_back("minecraft:breeze_rod");
+                filter.push_back("minecraft:mace");
+                filter.push_back("minecraft:wind_charge");
+                filter.push_back("minecraft:creaking_heart");
+                filter.push_back("minecraft:creaking_spawn_egg");
+                filter.push_back("minecraft:field_masoned_banner_pattern");
+                filter.push_back("minecraft:guster_banner_pattern");
+                filter.push_back("minecraft:guster_pottery_sherd");
+                filter.push_back("minecraft:music_disc_creator");
+                filter.push_back("minecraft:music_disc_creator_music_box");
+                filter.push_back("minecraft:music_disc_precipice");
+                filter.push_back("minecraft:ominous_bottle");
+                filter.push_back("minecraft:ominous_trial_key");
+                filter.push_back("minecraft:scrape_pottery_sherd");
+            }
+            filter.commit();
+
             for (auto&& [name, decl] : parsed.as_object()) {
+                if (filter.contains(name))
+                    continue;
                 base_objects::static_slot_data slot_data;
                 slot_data.id = name;
                 std::unordered_map<std::string, base_objects::slot_component::unified> components;
@@ -2706,10 +2737,16 @@ namespace copper_server {
         }
 
         void prepare_versions() {
-            registers::individual_registers[765] = util::conversions::json::from_json(boost::json::parse(resources::registry::protocol::_765));
-            registers::individual_registers[766] = util::conversions::json::from_json(boost::json::parse(resources::registry::protocol::_766));
-            registers::individual_registers[767] = util::conversions::json::from_json(boost::json::parse(resources::registry::protocol::_767));
-            registers::individual_registers[768] = util::conversions::json::from_json(boost::json::parse(resources::registry::protocol::_768));
+            std::unordered_map<uint32_t, std::string_view> internal_item_aliases_protocol = {
+                {765, resources::registry::protocol::_765},
+                {766, resources::registry::protocol::_766},
+                {767, resources::registry::protocol::_767},
+                {768, resources::registry::protocol::_768},
+            };
+            api::configuration::get().protocol.allowed_versions_processed.for_each([&](uint32_t version) {
+                auto res = util::conversions::json::from_json(boost::json::parse(internal_item_aliases_protocol.at(version)));
+                registers::individual_registers[version] = std::move(res);
+            });
         }
 
         using tags_obj = std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>>>;
@@ -2904,6 +2941,20 @@ namespace copper_server {
                     }
                 }
             }
+            {
+                auto attribute = latest_version.at("minecraft:attribute").at("entries").as_compound();
+                for (auto& [name, decl] : attribute)
+                    registers::attributes[name] = item_attribute{name, (uint32_t)decl.at("protocol_id")};
+                {
+                    registers::attributes_cache.resize(registers::attributes.size());
+                    auto it = registers::attributes.begin();
+                    auto end = registers::attributes.end();
+                    while (it != end) {
+                        registers::attributes_cache.at(it->second.id) = it;
+                        ++it;
+                    }
+                }
+            }
 
             for (auto& [proto_id, decl] : registers::individual_registers) {
                 for (auto& [name, decl] : decl.at("minecraft:mob_effect").at("entries").as_compound()) {
@@ -2918,6 +2969,13 @@ namespace copper_server {
                     if (it != registers::potions.end()) {
                         it->second.protocol[proto_id] = (uint32_t)decl.at("protocol_id");
                         potion::protocol_aliases[proto_id][it->second.id] = it->second.id;
+                    }
+                }
+                for (auto& [name, decl] : decl.at("minecraft:attribute").at("entries").as_compound()) {
+                    auto it = registers::attributes.find(name);
+                    if (it != registers::attributes.end()) {
+                        it->second.protocol[proto_id] = (uint32_t)decl.at("protocol_id");
+                        item_attribute::protocol_aliases[proto_id][it->second.id] = it->second.id;
                     }
                 }
                 {
@@ -2986,9 +3044,22 @@ namespace copper_server {
                         item_aliases.push_back("minecraft:trial_key");
                     else if (name == "minecraft:heavy_core")
                         item_aliases.push_back("minecraft:player_head");
+                    else if (name.ends_with("_bundle")) {
+                        if (name.starts_with("minecraft:")) {
+                            item_aliases.push_back("minecraft:bundle");
+                        }
+                    } else if (name == "minecraft:bogged_spawn_egg")
+                        item_aliases.push_back("minecraft:stray_spawn_egg");
+                    else if (name == "minecraft:turtle_scute")
+                        item_aliases.push_back("minecraft:scute");
                 }
             );
-            base_objects::static_block_data::initialize_blocks();
+
+            if (api::configuration::get().protocol.allowed_versions_processed.contains_one([](auto pvn) { return pvn < 766; })) {
+                registers::armorTrimPatterns.erase("minecraft:flow");
+                registers::armorTrimPatterns.erase("minecraft:bolt");
+            }
+            base_objects::static_slot_data::initialize_items();
         }
 
         void initialize() {

@@ -542,7 +542,13 @@ namespace copper_server {
             };
         }
 
+        struct item_attribute {
+            std::string name;
+            uint32_t id;
 
+            std::unordered_map<int32_t, int32_t> protocol;                                              //protocol -> protocol effect id, can be undefined
+            static std::unordered_map<int32_t, std::unordered_map<int32_t, uint32_t>> protocol_aliases; //protocol -> protocol effect id -> internal id, can be undefined
+        };
 #pragma endregion
         //CLIENT/SERVER
         extern std::unordered_map<std::string, ArmorTrimMaterial> armorTrimMaterials;
@@ -568,6 +574,11 @@ namespace copper_server {
 
         //SERVER
         extern std::unordered_map<std::string, Advancement> advancements;
+
+
+        extern std::unordered_map<std::string, item_attribute> attributes;
+        extern list_array<decltype(attributes)::iterator> attributes_cache;
+
         extern std::unordered_map<std::string, JukeboxSong> jukebox_songs;
 
 

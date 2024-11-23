@@ -64,7 +64,7 @@ namespace copper_server {
                 }
 
                 Response loginSuccess(SharedClientData& client) {
-                    if (api::configuration::get().protocol.offline_mode)
+                    if (api::configuration::get().server.offline_mode)
                         client.data = api::mojang::get_session_server().hasJoined(client.name, "", false);
                     if (!client.data)
                         return kick("Internal error");
@@ -99,7 +99,7 @@ namespace copper_server {
                     response.push_back(verify_token[1]);
                     response.push_back(verify_token[2]);
                     response.push_back(verify_token[3]);
-                    response.push_back(!api::configuration::get().protocol.offline_mode);
+                    response.push_back(!api::configuration::get().server.offline_mode);
                     return Response::Answer({std::move(response)});
                 }
 
@@ -1471,13 +1471,17 @@ namespace copper_server {
                     return res;
                 }
 
-                Response updateAttributes(int32_t entity_id, const list_array<base_objects::packets::attributes>& properties) {
+                Response updateAttributes__(int32_t entity_id, const list_array<base_objects::packets::attributes>& properties, uint32_t protocol_version) {
                     list_array<uint8_t> packet;
                     packet.push_back(0x75);
                     WriteVar<int32_t>(entity_id, packet);
                     WriteVar<int32_t>(properties.size(), packet);
                     for (auto& [key, value, modifiers] : properties) {
-                        WriteVar<int32_t>(key, packet);
+                        auto& reg = registers::attributes.at(key);
+                        auto id = reg.protocol.find(protocol_version);
+                        if (id == reg.protocol.end())
+                            continue;
+                        WriteVar<int32_t>(id->second, packet);
                         WriteValue<double>(value, packet);
                         WriteVar<int32_t>(modifiers.size(), packet);
                         for (auto& [uuid, amount, operation] : modifiers) {
@@ -1487,6 +1491,10 @@ namespace copper_server {
                         }
                     }
                     return Response::Answer({std::move(packet)});
+                }
+
+                Response updateAttributes(int32_t entity_id, const list_array<base_objects::packets::attributes>& properties) {
+                    return updateAttributes__(entity_id, properties);
                 }
 
                 Response entityEffect(int32_t entity_id, int32_t effect_id, int32_t amplifier, int32_t duration, int8_t flags) {

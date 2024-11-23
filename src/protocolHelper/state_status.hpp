@@ -35,7 +35,12 @@ namespace copper_server {
                               + std::to_string(protocol_version) + "},";
 
             if (special_status->ShowConnectionStatus()) {
-                res += "\"players\":{\"max\":" + std::to_string(special_status->MaxPlayers()) + ",\"online\":" + std::to_string(special_status->OnlinePlayers());
+                auto max_count = special_status->MaxPlayers();
+                auto online = special_status->OnlinePlayers();
+                if (max_count == 0)
+                    max_count = online + 1;
+
+                res += "\"players\":{\"max\":" + std::to_string(max_count) + ",\"online\":" + std::to_string(online);
 
                 auto players = special_status->OnlinePlayersSample();
                 if (!players.empty()) {
@@ -53,11 +58,24 @@ namespace copper_server {
 
             res += "\"description\":" + special_status->Description().ToStr();
 
+
             std::string base64_fav = special_status->ServerIcon();
-            if (base64_fav == "")
-                res += "\n}";
-            else
-                res += ",\"favicon\": \"data:image/png;base64," + base64_fav + "\"\n}";
+            if (base64_fav != "")
+                res += ",\"favicon\": \"data:image/png;base64," + base64_fav + "\"";
+
+
+            auto preventsChatReports = special_status->PreventsChatReports();
+
+            if (preventsChatReports.has_value())
+                res += ",\"preventChatReports\":" + std::string(*preventsChatReports ? "true" : "false");
+
+            res += ",\"enforcesSecureChat\":" + std::string(api::configuration::get().mojang.enforce_secure_profile ? "true" : "false");
+
+            auto custom_json = special_status->CustomJson();
+            if (!custom_json.empty())
+                res += ", " + custom_json;
+
+            res += "}";
             return res;
         }
 

@@ -42,7 +42,7 @@ namespace copper_server {
                 }
 
                 Response loginSuccess(SharedClientData& client) {
-                    if (api::configuration::get().protocol.offline_mode)
+                    if (api::configuration::get().server.offline_mode)
                         client.data = api::mojang::get_session_server().hasJoined(client.name, "", false);
                     if (!client.data)
                         return kick("Internal error");
@@ -2389,7 +2389,7 @@ namespace copper_server {
                     WriteVar<int32_t>(entity_id, packet);
                     WriteVar<int32_t>(properties.size(), packet);
                     for (auto& [key, value, modifiers] : properties) {
-                        WriteString(packet, base_objects::packets::attributes::key_to_string(key), 32767);
+                        WriteString(packet, key, 32767);
                         WriteValue<double>(value, packet);
                         WriteVar<int32_t>(modifiers.size(), packet);
                         for (auto& [uuid, amount, operation] : modifiers) {
