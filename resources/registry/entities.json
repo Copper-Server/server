@@ -1,0 +1,1178 @@
+{
+    "minecraft:allay": {
+        "name": "Allay",
+        "translation_resource_key": "entity.minecraft.allay",
+        "kind_name": "entity",
+        "base_health": 20,
+        "base_bounds": {
+            "xz": 0.35,
+            "y": 0.6
+        },
+        "inventory": {
+            "size": 2,
+            "main_hand": 0,
+            "off_hand": 1,
+            "hand": [
+                0,
+                1
+            ]
+        }
+    },
+    "minecraft:area_effect_cloud": {
+        "name": "Area Effect Cloud",
+        "translation_resource_key": "entity.minecraft.area_effect_cloud",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 2,
+            "y": 0.5
+        }
+    },
+    "minecraft:armadillo": {
+        "name": "Armadillo",
+        "translation_resource_key": "entity.minecraft.armadillo",
+        "kind_name": "entity",
+        "base_health": 6
+    },
+    "minecraft:armor_stand": {
+        "name": "Armor Stand",
+        "translation_resource_key": "entity.minecraft.armor_stand",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.5,
+            "y": 1.975
+        },
+        "inventory": {
+            "size": 6,
+            "main_hand": 0,
+            "off_hand": 1,
+            "hand": [
+                0,
+                1
+            ],
+            "head": 2,
+            "chest": 3,
+            "legs": 4,
+            "feet": 5,
+            "body": [
+                2,
+                3,
+                4,
+                5
+            ]
+        }
+    },
+    "minecraft:arrow": {
+        "name": "Arrow",
+        "translation_resource_key": "entity.minecraft.arrow",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.5,
+            "y": 0.5
+        }
+    },
+    "minecraft:axolotl": {
+        "name": "Axolotl",
+        "translation_resource_key": "entity.minecraft.axolotl",
+        "kind_name": "entity"
+    },
+    "minecraft:bat": {
+        "name": "Bat",
+        "translation_resource_key": "entity.minecraft.bat",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.5,
+            "y": 0.9
+        },
+        "base_health": 6
+    },
+    "minecraft:bee": {
+        "name": "Bee",
+        "translation_resource_key": "entity.minecraft.bee",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.7,
+            "y": 0.6
+        },
+        "base_health": 6
+    },
+    "minecraft:blaze": {
+        "name": "Blaze",
+        "translation_resource_key": "entity.minecraft.blaze",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.7,
+            "y": 0.6
+        },
+        "base_health": 6
+    },
+    "minecraft:block_display": {
+        "name": "Block display",
+        "translation_resource_key": "entity.minecraft.block_display",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1,
+            "y": 1
+        }
+    },
+    "minecraft:boat": {
+        "name": "Boat",
+        "translation_resource_key": "entity.minecraft.boat",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.375,
+            "y": 0.5625
+        }
+    },
+    "minecraft:bogged": {
+        "name": "Bogged",
+        "translation_resource_key": "entity.minecraft.bogged",
+        "kind_name": "entity",
+        "base_health": 16
+    },
+    "minecraft:breeze": {
+        "name": "Breeze",
+        "translation_resource_key": "entity.minecraft.breeze",
+        "kind_name": "entity"
+    },
+    "minecraft:breeze_wind_charge": {
+        "name": "Breeze Wind Charge",
+        "translation_resource_key": "entity.minecraft.breeze_wind_charge",
+        "kind_name": "entity"
+    },
+    "minecraft:camel": {
+        "name": "Camel",
+        "translation_resource_key": "entity.minecraft.camel",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.7,
+            "y": 2.375
+        }
+    },
+    "minecraft:cat": {
+        "name": "Cat",
+        "translation_resource_key": "entity.minecraft.cat",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 0.7
+        }
+    },
+    "minecraft:cave_spider": {
+        "name": "Cave Spider",
+        "translation_resource_key": "entity.minecraft.cave_spider",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.7,
+            "y": 0.5
+        }
+    },
+    "minecraft:chest_boat": {
+        "name": "Chest Boat",
+        "translation_resource_key": "entity.minecraft.chest_boat",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.7,
+            "y": 0.5
+        }
+    },
+    "minecraft:chest_minecart": {
+        "name": "Chest Minecart",
+        "translation_resource_key": "entity.minecraft.chest_minecart",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.98,
+            "y": 0.7
+        }
+    },
+    "minecraft:chicken": {
+        "name": "Chicken",
+        "translation_resource_key": "entity.minecraft.chicken",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.4,
+            "y": 0.7
+        }
+    },
+    "minecraft:cod": {
+        "name": "Cod",
+        "translation_resource_key": "entity.minecraft.cod",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.5,
+            "y": 0.3
+        }
+    },
+    "minecraft:command_block_minecart": {
+        "name": "Command Block Minecart",
+        "translation_resource_key": "entity.minecraft.command_block_minecart",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.98,
+            "y": 0.7
+        }
+    },
+    "minecraft:cow": {
+        "name": "Cow",
+        "translation_resource_key": "entity.minecraft.cow",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.9,
+            "y": 1.4
+        }
+    },
+    "minecraft:creeper": {
+        "name": "Creeper",
+        "translation_resource_key": "entity.minecraft.creeper",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.7
+        }
+    },
+    "minecraft:dolphin": {
+        "name": "Dolphin",
+        "translation_resource_key": "entity.minecraft.dolphin",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.9,
+            "y": 0.6
+        }
+    },
+    "minecraft:donkey": {
+        "name": "Donkey",
+        "translation_resource_key": "entity.minecraft.donkey",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.3964844,
+            "y": 1.5
+        }
+    },
+    "minecraft:dragon_fireball": {
+        "name": "Dragon Fireball",
+        "translation_resource_key": "entity.minecraft.dragon_fireball",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.0,
+            "y": 1.0
+        }
+    },
+    "minecraft:drowned": {
+        "name": "Drowned",
+        "translation_resource_key": "entity.minecraft.drowned",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.95
+        }
+    },
+    "minecraft:egg": {
+        "name": "Egg",
+        "translation_resource_key": "entity.minecraft.egg",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.25,
+            "y": 0.25
+        }
+    },
+    "minecraft:elder_guardian": {
+        "name": "Elder Guardian",
+        "translation_resource_key": "entity.minecraft.elder_guardian",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.9975,
+            "y": 1.9975
+        }
+    },
+    "minecraft:end_crystal": {
+        "name": "End Crystal",
+        "translation_resource_key": "entity.minecraft.end_crystal",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 2.0,
+            "y": 2.0
+        }
+    },
+    "minecraft:ender_dragon": {
+        "name": "Ender Dragon",
+        "translation_resource_key": "entity.minecraft.ender_dragon",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 16.0,
+            "y": 8.0
+        }
+    },
+    "minecraft:ender_pearl": {
+        "name": "Ender Pearl",
+        "translation_resource_key": "entity.minecraft.ender_pearl",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.25,
+            "y": 0.25
+        }
+    },
+    "minecraft:enderman": {
+        "name": "Enderman",
+        "translation_resource_key": "entity.minecraft.enderman",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 2.9
+        }
+    },
+    "minecraft:endermite": {
+        "name": "Endermite",
+        "translation_resource_key": "entity.minecraft.endermite",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.4,
+            "y": 0.3
+        }
+    },
+    "minecraft:evoker": {
+        "name": "Evoker",
+        "translation_resource_key": "entity.minecraft.evoker",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.95
+        }
+    },
+    "minecraft:evoker_fangs": {
+        "name": "Evoker Fangs",
+        "translation_resource_key": "entity.minecraft.evoker_fangs",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.5,
+            "y": 0.8
+        }
+    },
+    "minecraft:experience_bottle": {
+        "name": "Experience Bottle",
+        "translation_resource_key": "entity.minecraft.experience_bottle",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.25,
+            "y": 0.25
+        }
+    },
+    "minecraft:experience_orb": {
+        "name": "Experience Orb",
+        "translation_resource_key": "entity.minecraft.experience_orb",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.5,
+            "y": 0.5
+        }
+    },
+    "minecraft:eye_of_ender": {
+        "name": "Eye Of Ender",
+        "translation_resource_key": "entity.minecraft.eye_of_ender",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.25,
+            "y": 0.25
+        }
+    },
+    "minecraft:falling_block": {
+        "name": "Falling Block",
+        "translation_resource_key": "entity.minecraft.falling_block",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.98,
+            "y": 0.98
+        }
+    },
+    "minecraft:firework_rocket": {
+        "name": "Firework Rocket",
+        "translation_resource_key": "entity.minecraft.firework_rocket",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.25,
+            "y": 0.25
+        }
+    },
+    "minecraft:fox": {
+        "name": "Fox",
+        "translation_resource_key": "entity.minecraft.fox",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 0.7
+        }
+    },
+    "minecraft:frog": {
+        "name": "Frog",
+        "translation_resource_key": "entity.minecraft.frog",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.5,
+            "y": 0.5
+        }
+    },
+    "minecraft:furnace_minecart": {
+        "name": "Furnace Minecart",
+        "translation_resource_key": "entity.minecraft.furnace_minecart",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.98,
+            "y": 0.7
+        }
+    },
+    "minecraft:ghast": {
+        "name": "Ghast",
+        "translation_resource_key": "entity.minecraft.ghast",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 4.0,
+            "y": 4.0
+        }
+    },
+    "minecraft:giant": {
+        "name": "Giant",
+        "translation_resource_key": "entity.minecraft.giant",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 3.6,
+            "y": 12.0
+        }
+    },
+    "minecraft:glow_item_frame": {
+        "name": "Glow Item Frame",
+        "translation_resource_key": "entity.minecraft.glow_item_frame",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.75,
+            "y": 0.75
+        }
+    },
+    "minecraft:glow_squid": {
+        "name": "Glow Squid",
+        "translation_resource_key": "entity.minecraft.glow_squid",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.8,
+            "y": 0.8
+        }
+    },
+    "minecraft:goat": {
+        "name": "Goat",
+        "translation_resource_key": "entity.minecraft.goat",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.3,
+            "y": 0.9
+        }
+    },
+    "minecraft:guardian": {
+        "name": "Guardian",
+        "translation_resource_key": "entity.minecraft.guardian",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.85,
+            "y": 0.85
+        }
+    },
+    "minecraft:hoglin": {
+        "name": "Hoglin",
+        "translation_resource_key": "entity.minecraft.hoglin",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.3964844,
+            "y": 1.4
+        }
+    },
+    "minecraft:hopper_minecart": {
+        "name": "Hopper Minecart",
+        "translation_resource_key": "entity.minecraft.hopper_minecart",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.98,
+            "y": 0.7
+        }
+    },
+    "minecraft:horse": {
+        "name": "Horse",
+        "translation_resource_key": "entity.minecraft.horse",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.3964844,
+            "y": 1.6
+        }
+    },
+    "minecraft:husk": {
+        "name": "Husk",
+        "translation_resource_key": "entity.minecraft.husk",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.95
+        }
+    },
+    "minecraft:illusioner": {
+        "name": "Illusioner",
+        "translation_resource_key": "entity.minecraft.illusioner",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.95
+        }
+    },
+    "minecraft:interaction": {
+        "name": "Interaction",
+        "translation_resource_key": "entity.minecraft.interaction",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.0,
+            "y": 0.0
+        }
+    },
+    "minecraft:iron_golem": {
+        "name": "Iron Golem",
+        "translation_resource_key": "entity.minecraft.iron_golem",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.4,
+            "y": 2.7
+        }
+    },
+    "minecraft:item": {
+        "name": "Item",
+        "translation_resource_key": "entity.minecraft.item",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.25,
+            "y": 0.25
+        }
+    },
+    "minecraft:item_display": {
+        "name": "Item Display",
+        "translation_resource_key": "entity.minecraft.item_display",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.0,
+            "y": 0.0
+        }
+    },
+    "minecraft:item_frame": {
+        "name": "Item Frame",
+        "translation_resource_key": "entity.minecraft.item_frame",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.75,
+            "y": 0.75
+        }
+    },
+    "minecraft:fireball": {
+        "name": "Fireball",
+        "translation_resource_key": "entity.minecraft.fireball",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.0,
+            "y": 1.0
+        }
+    },
+    "minecraft:leash_knot": {
+        "name": "Leash Knot",
+        "translation_resource_key": "entity.minecraft.leash_knot",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.375,
+            "y": 0.5
+        }
+    },
+    "minecraft:lightning_bolt": {
+        "name": "Lightning Bolt",
+        "translation_resource_key": "entity.minecraft.lightning_bolt",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.0,
+            "y": 0.0
+        }
+    },
+    "minecraft:llama": {
+        "name": "Llama",
+        "translation_resource_key": "entity.minecraft.llama",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.9,
+            "y": 1.87
+        }
+    },
+    "minecraft:llama_spit": {
+        "name": "Llama Spit",
+        "translation_resource_key": "entity.minecraft.llama_spit",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.25,
+            "y": 0.25
+        }
+    },
+    "minecraft:magma_cube": {
+        "name": "Magma Cube",
+        "translation_resource_key": "entity.minecraft.magma_cube",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.5202,
+            "y": 0.5202
+        }
+    },
+    "minecraft:marker": {
+        "name": "Marker",
+        "translation_resource_key": "entity.minecraft.marker",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.0,
+            "y": 0.0
+        }
+    },
+    "minecraft:minecart": {
+        "name": "Minecart",
+        "translation_resource_key": "entity.minecraft.minecart",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.98,
+            "y": 0.7
+        }
+    },
+    "minecraft:mooshroom": {
+        "name": "Mooshroom",
+        "translation_resource_key": "entity.minecraft.mooshroom",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.9,
+            "y": 1.4
+        }
+    },
+    "minecraft:mule": {
+        "name": "Mule",
+        "translation_resource_key": "entity.minecraft.mule",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.3964844,
+            "y": 1.6
+        }
+    },
+    "minecraft:ocelot": {
+        "name": "Ocelot",
+        "translation_resource_key": "entity.minecraft.ocelot",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 0.7
+        }
+    },
+    "minecraft:ominous_item_spawner": {
+        "name": "Ominous Item Spawner",
+        "translation_resource_key": "entity.minecraft.ominous_item_spawner",
+        "kind_name": "entity"
+    },
+    "minecraft:painting": {
+        "name": "Painting",
+        "translation_resource_key": "entity.minecraft.painting",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1,
+            "y": 1
+        }
+    },
+    "minecraft:panda": {
+        "name": "Panda",
+        "translation_resource_key": "entity.minecraft.panda",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.3,
+            "y": 1.25
+        }
+    },
+    "minecraft:parrot": {
+        "name": "Parrot",
+        "translation_resource_key": "entity.minecraft.parrot",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.5,
+            "y": 0.9
+        }
+    },
+    "minecraft:phantom": {
+        "name": "Phantom",
+        "translation_resource_key": "entity.minecraft.phantom",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.9,
+            "y": 0.5
+        }
+    },
+    "minecraft:pig": {
+        "name": "Pig",
+        "translation_resource_key": "entity.minecraft.pig",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.9,
+            "y": 0.9
+        }
+    },
+    "minecraft:piglin": {
+        "name": "Piglin",
+        "translation_resource_key": "entity.minecraft.piglin",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.95
+        }
+    },
+    "minecraft:piglin_brute": {
+        "name": "Piglin Brute",
+        "translation_resource_key": "entity.minecraft.piglin_brute",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.95
+        }
+    },
+    "minecraft:pillager": {
+        "name": "Pillager",
+        "translation_resource_key": "entity.minecraft.pillager",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.95
+        }
+    },
+    "minecraft:polar_bear": {
+        "name": "Polar Bear",
+        "translation_resource_key": "entity.minecraft.polar_bear",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.4,
+            "y": 1.4
+        }
+    },
+    "minecraft:potion": {
+        "name": "Potion",
+        "translation_resource_key": "entity.minecraft.potion",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.25,
+            "y": 0.25
+        }
+    },
+    "minecraft:pufferfish": {
+        "name": "Pufferfish",
+        "translation_resource_key": "entity.minecraft.pufferfish",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.7,
+            "y": 0.7
+        }
+    },
+    "minecraft:rabbit": {
+        "name": "Rabbit",
+        "translation_resource_key": "entity.minecraft.rabbit",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.4,
+            "y": 0.5
+        }
+    },
+    "minecraft:ravager": {
+        "name": "Ravager",
+        "translation_resource_key": "entity.minecraft.ravager",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.95,
+            "y": 2.2
+        }
+    },
+    "minecraft:salmon": {
+        "name": "Salmon",
+        "translation_resource_key": "entity.minecraft.salmon",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.7,
+            "y": 0.4
+        }
+    },
+    "minecraft:sheep": {
+        "name": "Sheep",
+        "translation_resource_key": "entity.minecraft.sheep",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.9,
+            "y": 1.3
+        }
+    },
+    "minecraft:shulker": {
+        "name": "Shulker",
+        "translation_resource_key": "entity.minecraft.shulker",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.0,
+            "y": 1.0
+        }
+    },
+    "minecraft:shulker_bullet": {
+        "name": "Shulker Bullet",
+        "translation_resource_key": "entity.minecraft.shulker_bullet",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.3125,
+            "y": 0.3125
+        }
+    },
+    "minecraft:silverfish": {
+        "name": "Silverfish",
+        "translation_resource_key": "entity.minecraft.silverfish",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.4,
+            "y": 0.3
+        }
+    },
+    "minecraft:skeleton": {
+        "name": "Skeleton",
+        "translation_resource_key": "entity.minecraft.skeleton",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.99
+        }
+    },
+    "minecraft:skeleton_horse": {
+        "name": "Skeleton Horse",
+        "translation_resource_key": "entity.minecraft.skeleton_horse",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.3964844,
+            "y": 1.6
+        }
+    },
+    "minecraft:slime": {
+        "name": "Slime",
+        "translation_resource_key": "entity.minecraft.slime",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.5202,
+            "y": 0.5202
+        }
+    },
+    "minecraft:small_fireball": {
+        "name": "Small Fireball",
+        "translation_resource_key": "entity.minecraft.small_fireball",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.3125,
+            "y": 0.3125
+        }
+    },
+    "minecraft:sniffer": {
+        "name": "Sniffer",
+        "translation_resource_key": "entity.minecraft.sniffer",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.9,
+            "y": 1.75
+        }
+    },
+    "minecraft:snow_golem": {
+        "name": "Snow Golem",
+        "translation_resource_key": "entity.minecraft.snow_golem",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.7,
+            "y": 1.9
+        }
+    },
+    "minecraft:snowball": {
+        "name": "Snowball",
+        "translation_resource_key": "entity.minecraft.snowball",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.25,
+            "y": 0.25
+        }
+    },
+    "minecraft:spawner_minecart": {
+        "name": "Spawner Minecart",
+        "translation_resource_key": "entity.minecraft.spawner_minecart",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.98,
+            "y": 0.7
+        }
+    },
+    "minecraft:spectral_arrow": {
+        "name": "Spectral Arrow",
+        "translation_resource_key": "entity.minecraft.spectral_arrow",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.5,
+            "y": 0.5
+        }
+    },
+    "minecraft:spider": {
+        "name": "Spider",
+        "translation_resource_key": "entity.minecraft.spider",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.4,
+            "y": 0.9
+        }
+    },
+    "minecraft:squid": {
+        "name": "Squid",
+        "translation_resource_key": "entity.minecraft.squid",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.8,
+            "y": 0.8
+        }
+    },
+    "minecraft:stray": {
+        "name": "Stray",
+        "translation_resource_key": "entity.minecraft.stray",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.99
+        }
+    },
+    "minecraft:strider": {
+        "name": "Strider",
+        "translation_resource_key": "entity.minecraft.strider",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.9,
+            "y": 1.7
+        }
+    },
+    "minecraft:tadpole": {
+        "name": "Tadpole",
+        "translation_resource_key": "entity.minecraft.tadpole",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.4,
+            "y": 0.3
+        }
+    },
+    "minecraft:text_display": {
+        "name": "Text Display",
+        "translation_resource_key": "entity.minecraft.text_display",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.0,
+            "y": 0.0
+        }
+    },
+    "minecraft:tnt": {
+        "name": "Tnt",
+        "translation_resource_key": "entity.minecraft.tnt",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.98,
+            "y": 0.98
+        }
+    },
+    "minecraft:tnt_minecart": {
+        "name": "Tnt Minecart",
+        "translation_resource_key": "entity.minecraft.tnt_minecart",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.98,
+            "y": 0.7
+        }
+    },
+    "minecraft:trader_llama": {
+        "name": "Trader Llama",
+        "translation_resource_key": "entity.minecraft.trader_llama",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.9,
+            "y": 1.87
+        }
+    },
+    "minecraft:trident": {
+        "name": "Trident",
+        "translation_resource_key": "entity.minecraft.trident",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.5,
+            "y": 0.5
+        }
+    },
+    "minecraft:tropical_fish": {
+        "name": "Tropical Fish",
+        "translation_resource_key": "entity.minecraft.tropical_fish",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.5,
+            "y": 0.4
+        }
+    },
+    "minecraft:turtle": {
+        "name": "Turtle",
+        "translation_resource_key": "entity.minecraft.turtle",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.2,
+            "y": 0.4
+        }
+    },
+    "minecraft:vex": {
+        "name": "Vex",
+        "translation_resource_key": "entity.minecraft.vex",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.4,
+            "y": 0.8
+        }
+    },
+    "minecraft:villager": {
+        "name": "Villager",
+        "translation_resource_key": "entity.minecraft.villager",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.95
+        }
+    },
+    "minecraft:vindicator": {
+        "name": "Vindicator",
+        "translation_resource_key": "entity.minecraft.vindicator",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.95
+        }
+    },
+    "minecraft:wandering_trader": {
+        "name": "Wandering Trader",
+        "translation_resource_key": "entity.minecraft.wandering_trader",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.95
+        }
+    },
+    "minecraft:warden": {
+        "name": "Warden",
+        "translation_resource_key": "entity.minecraft.warden",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.9,
+            "y": 2.9
+        }
+    },
+    "minecraft:wind_charge": {
+        "name": "Wind Charge",
+        "translation_resource_key": "entity.minecraft.wind_charge",
+        "kind_name": "entity"
+    },
+    "minecraft:witch": {
+        "name": "Witch",
+        "translation_resource_key": "entity.minecraft.witch",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.95
+        }
+    },
+    "minecraft:wither": {
+        "name": "Wither",
+        "translation_resource_key": "entity.minecraft.wither",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.9,
+            "y": 3.5
+        }
+    },
+    "minecraft:wither_skeleton": {
+        "name": "Wither Skeleton",
+        "translation_resource_key": "entity.minecraft.wither_skeleton",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.7,
+            "y": 2.4
+        }
+    },
+    "minecraft:wither_skull": {
+        "name": "Wither Skull",
+        "translation_resource_key": "entity.minecraft.wither_skull",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.3125,
+            "y": 0.3125
+        }
+    },
+    "minecraft:wolf": {
+        "name": "Wolf",
+        "translation_resource_key": "entity.minecraft.wolf",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 0.85
+        }
+    },
+    "minecraft:zoglin": {
+        "name": "Zoglin",
+        "translation_resource_key": "entity.minecraft.zoglin",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.3964844,
+            "y": 1.4
+        }
+    },
+    "minecraft:zombie": {
+        "name": "Zombie",
+        "translation_resource_key": "entity.minecraft.zombie",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.95
+        }
+    },
+    "minecraft:zombie_horse": {
+        "name": "Zombie Horse",
+        "translation_resource_key": "entity.minecraft.zombie_horse",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 1.3964844,
+            "y": 1.6
+        }
+    },
+    "minecraft:zombie_villager": {
+        "name": "Zombie Villager",
+        "translation_resource_key": "entity.minecraft.zombie_villager",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.95
+        }
+    },
+    "minecraft:zombified_piglin": {
+        "name": "Zombified Piglin",
+        "translation_resource_key": "entity.minecraft.zombified_piglin",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.95
+        }
+    },
+    "minecraft:player": {
+        "name": "Player",
+        "translation_resource_key": "entity.minecraft.player",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.6,
+            "y": 1.8
+        }
+    },
+    "minecraft:fishing_bobber": {
+        "name": "Fishing Bobber",
+        "translation_resource_key": "entity.minecraft.fishing_bobber",
+        "kind_name": "entity",
+        "base_bounds": {
+            "xz": 0.25,
+            "y": 0.25
+        }
+    }
+}

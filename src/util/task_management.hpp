@@ -15,6 +15,7 @@ struct Future {
     fast_task::task_condition_variable task_cv;
     T result;
     bool _is_ready = false;
+    std::exception_ptr ex_ptr;
 
 
     static std::shared_ptr<Future> start(const std::function<T()>& fn) {
@@ -22,7 +23,12 @@ struct Future {
         fast_task::task::start(std::make_shared<fast_task::task>([fn, future]() {
             try {
                 future->result = fn();
+            } catch (const fast_task::task_cancellation&) {
+                future->_is_ready = true;
+                future->task_cv.notify_all();
+                throw;
             } catch (...) {
+                future->ex_ptr = std::current_exception();
             }
             std::lock_guard guard(future->task_mt);
             future->_is_ready = true;
@@ -50,6 +56,8 @@ struct Future {
         std::unique_lock lock(um);
         while (!_is_ready)
             task_cv.wait(lock);
+        if (ex_ptr)
+            std::rethrow_exception(ex_ptr);
         return result;
     }
 
@@ -58,6 +66,8 @@ struct Future {
         std::unique_lock lock(um);
         while (!_is_ready)
             task_cv.wait(lock);
+        if (ex_ptr)
+            std::rethrow_exception(ex_ptr);
         return std::move(result);
     }
 
@@ -86,9 +96,10 @@ struct Future {
     void wait() {
         fast_task::mutex_unify um(task_mt);
         std::unique_lock lock(um);
-        while (!_is_ready) {
+        while (!_is_ready)
             task_cv.wait(lock);
-        }
+        if (ex_ptr)
+            std::rethrow_exception(ex_ptr);
     }
 
     bool wait_for(std::chrono::milliseconds ms) {
@@ -101,7 +112,33 @@ struct Future {
         while (!_is_ready)
             if (!task_cv.wait_until(lock, time))
                 return false;
+        if (ex_ptr)
+            std::rethrow_exception(ex_ptr);
         return true;
+    }
+
+    void wait_no_except() {
+        fast_task::mutex_unify um(task_mt);
+        std::unique_lock lock(um);
+        while (!_is_ready)
+            task_cv.wait(lock);
+    }
+
+    bool wait_for_no_except(std::chrono::milliseconds ms) {
+        return wait_until_no_except(std::chrono::high_resolution_clock::now() + ms);
+    }
+
+    bool wait_until_no_except(std::chrono::time_point<std::chrono::high_resolution_clock> time) {
+        fast_task::mutex_unify um(task_mt);
+        std::unique_lock lock(um);
+        while (!_is_ready)
+            if (!task_cv.wait_until(lock, time))
+                return false;
+        return true;
+    }
+
+    bool has_exception() const {
+        return (bool)ex_ptr;
     }
 };
 
@@ -110,13 +147,19 @@ struct Future<void> {
     fast_task::task_mutex task_mt;
     fast_task::task_condition_variable task_cv;
     bool _is_ready = false;
+    std::exception_ptr ex_ptr;
 
     static std::shared_ptr<Future> start(const std::function<void()>& fn) {
         std::shared_ptr<Future> future = std::make_shared<Future>();
         fast_task::task::start(std::make_shared<fast_task::task>([fn, future]() {
             try {
                 fn();
+            } catch (const fast_task::task_cancellation&) {
+                future->_is_ready = true;
+                future->task_cv.notify_all();
+                throw;
             } catch (...) {
+                future->ex_ptr = std::current_exception();
             }
             std::lock_guard guard(future->task_mt);
             future->_is_ready = true;
@@ -134,9 +177,14 @@ struct Future<void> {
     void get() {
         fast_task::mutex_unify um(task_mt);
         std::unique_lock lock(um);
-        while (!_is_ready) {
+        while (!_is_ready)
             task_cv.wait(lock);
-        }
+        if (ex_ptr)
+            std::rethrow_exception(ex_ptr);
+    }
+
+    void take() {
+        get();
     }
 
     void when_ready(const std::function<void()>& fn) {
@@ -161,6 +209,8 @@ struct Future<void> {
         std::unique_lock lock(um);
         while (!_is_ready)
             task_cv.wait(lock);
+        if (ex_ptr)
+            std::rethrow_exception(ex_ptr);
     }
 
     bool wait_for(std::chrono::milliseconds ms) {
@@ -173,26 +223,181 @@ struct Future<void> {
         while (!_is_ready)
             if (!task_cv.wait_until(lock, time))
                 return false;
+        if (ex_ptr)
+            std::rethrow_exception(ex_ptr);
         return true;
+    }
+
+    void wait_no_except() {
+        fast_task::mutex_unify um(task_mt);
+        std::unique_lock lock(um);
+        while (!_is_ready)
+            task_cv.wait(lock);
+    }
+
+    bool wait_for_no_except(std::chrono::milliseconds ms) {
+        return wait_until_no_except(std::chrono::high_resolution_clock::now() + ms);
+    }
+
+    bool wait_until_no_except(std::chrono::time_point<std::chrono::high_resolution_clock> time) {
+        fast_task::mutex_unify um(task_mt);
+        std::unique_lock lock(um);
+        while (!_is_ready)
+            if (!task_cv.wait_until(lock, time))
+                return false;
+        return true;
+    }
+
+    bool has_exception() const {
+        return (bool)ex_ptr;
+    }
+};
+
+template <class T>
+struct CancelableFuture : public Future<T> {
+    std::shared_ptr<fast_task::task> task;
+
+    static std::shared_ptr<CancelableFuture> start(const std::function<T()>& fn) {
+        std::shared_ptr<CancelableFuture> future = std::make_shared<CancelableFuture>();
+        future->task = std::make_shared<fast_task::task>([fn, future]() {
+            try {
+                future->result = fn();
+            } catch (const fast_task::task_cancellation&) {
+                future->_is_ready = true;
+                future->task_cv.notify_all();
+                throw;
+            } catch (...) {
+                future->ex_ptr = std::current_exception();
+            }
+            std::lock_guard guard(future->task_mt);
+            future->_is_ready = true;
+            future->task_cv.notify_all();
+        });
+        fast_task::task::start(future->task);
+        return future;
+    }
+
+    static std::shared_ptr<CancelableFuture> make_ready(const T& value) {
+        std::shared_ptr<CancelableFuture> future = std::make_shared<CancelableFuture>();
+        future->result = value;
+        future->_is_ready = true;
+        return future;
+    }
+
+    static std::shared_ptr<CancelableFuture> make_ready(T&& value) {
+        std::shared_ptr<CancelableFuture> future = std::make_shared<CancelableFuture>();
+        future->result = std::move(value);
+        future->_is_ready = true;
+        return future;
+    }
+
+    T get() {
+        fast_task::mutex_unify um(Future<T>::task_mt);
+        std::unique_lock lock(um);
+        while (!Future<T>::_is_ready)
+            Future<T>::task_cv.wait(lock);
+        if (Future<T>::ex_ptr)
+            std::rethrow_exception(Future<T>::ex_ptr);
+        if (task)
+            if (task->make_cancel)
+                throw std::runtime_error("Task has been canceled. Can not receive result.");
+        return Future<T>::result;
+    }
+
+    T take() {
+        fast_task::mutex_unify um(Future<T>::task_mt);
+        std::unique_lock lock(um);
+        while (!Future<T>::_is_ready)
+            Future<T>::task_cv.wait(lock);
+        if (Future<T>::ex_ptr)
+            std::rethrow_exception(Future<T>::ex_ptr);
+        if (task)
+            if (task->make_cancel)
+                throw std::runtime_error("Task has been canceled. Can not receive result.");
+        return std::move(Future<T>::result);
+    }
+
+    void cancel() {
+        fast_task::task::notify_cancel(task);
+    }
+};
+
+template <>
+struct CancelableFuture<void> : public Future<void> {
+    std::shared_ptr<fast_task::task> task;
+
+    static std::shared_ptr<CancelableFuture> start(const std::function<void()>& fn) {
+        std::shared_ptr<CancelableFuture> future = std::make_shared<CancelableFuture>();
+        future->task = std::make_shared<fast_task::task>([fn, future]() {
+            try {
+                fn();
+            } catch (const fast_task::task_cancellation&) {
+                future->_is_ready = true;
+                future->task_cv.notify_all();
+                throw;
+            } catch (...) {
+                future->ex_ptr = std::current_exception();
+            }
+            std::lock_guard guard(future->task_mt);
+            future->_is_ready = true;
+            future->task_cv.notify_all();
+        });
+        fast_task::task::start(future->task);
+        return future;
+    }
+
+    static std::shared_ptr<CancelableFuture> make_ready() {
+        std::shared_ptr<CancelableFuture> future = std::make_shared<CancelableFuture>();
+        future->_is_ready = true;
+        return future;
+    }
+
+    void get() {
+        fast_task::mutex_unify um(Future<void>::task_mt);
+        std::unique_lock lock(um);
+        while (!Future<void>::_is_ready)
+            Future<void>::task_cv.wait(lock);
+        if (Future<void>::ex_ptr)
+            std::rethrow_exception(Future<void>::ex_ptr);
+        if (task)
+            if (task->make_cancel)
+                throw std::runtime_error("Task has been canceled. Can not receive result.");
+    }
+
+    void take() {
+        get();
+    }
+
+    void cancel() {
+        fast_task::task::notify_cancel(task);
     }
 };
 
 template <class T>
 using FuturePtr = std::shared_ptr<Future<T>>;
 
+template <class T>
+using CancelableFuturePtr = std::shared_ptr<CancelableFuture<T>>;
+
 namespace future {
     template <class T>
     FuturePtr<void> forEach(T& container, const std::function<void(const typename T::value_type&)>& fn) {
         if (container.empty())
             return Future<void>::make_ready();
-        std::vector<FuturePtr<void>> futures;
+        std::vector<CancelableFuturePtr<void>> futures;
         futures.reserve(container.size());
         for (auto& item : container)
-            futures.push_back(Future<void>::start([item, fn]() { fn(item); }));
+            futures.push_back(CancelableFuture<void>::start([item, fn]() { fn(item); }));
 
         return Future<void>::start([fut = std::move(futures)] {
-            for (auto& future : fut)
-                future->wait();
+            try {
+                for (auto& future : fut)
+                    future->wait();
+            } catch (...) {
+                for (auto& future : fut)
+                    future->cancel();
+                throw;
+            }
         });
     }
 
@@ -200,16 +405,22 @@ namespace future {
     FuturePtr<void> forEachMove(T& container, const std::function<void(typename T::value_type&&)>& fn) {
         if (container.empty())
             return Future<void>::make_ready();
-        std::vector<FuturePtr<void>> futures;
+        std::vector<CancelableFuturePtr<void>> futures;
         futures.reserve(container.size());
         for (auto&& item : container)
-            futures.push_back(Future<void>::start([it = std::move(item), fn]() mutable {
+            futures.push_back(CancelableFuture<void>::start([it = std::move(item), fn]() mutable {
                 fn(std::move(it));
             }));
 
         return Future<void>::start([fut = std::move(futures)] {
-            for (auto& future : fut)
-                future->wait();
+            try {
+                for (auto& future : fut)
+                    future->wait();
+            } catch (...) {
+                for (auto& future : fut)
+                    future->cancel();
+                throw;
+            }
         });
     }
 

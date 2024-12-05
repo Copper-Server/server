@@ -186,6 +186,7 @@ namespace copper_server {
                 message.player->sendPacket(packets::play::disguisedChatMessage(*message.player, message.data.message, message.data.chat_type_id, message.data.sender_name, message.data.receiver_name));
                 return false;
             });
+            log::info("Communication Core", "chat handlers registered.");
         }
 
         void CommunicationCorePlugin::OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) {

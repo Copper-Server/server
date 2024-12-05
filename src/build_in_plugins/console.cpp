@@ -99,6 +99,7 @@ namespace copper_server {
             };
 
             console_data.client->player_data.permission_groups = {"console", "operator"};
+            log::info("Console", "console registered.");
         }
 
         void ConsolePlugin::OnUnload(const PluginRegistrationPtr& self) {

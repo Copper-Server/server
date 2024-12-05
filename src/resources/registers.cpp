@@ -2,12 +2,15 @@
 #include <src/api/configuration.hpp>
 #include <src/api/recipe.hpp>
 #include <src/base_objects/entity.hpp>
+#include <src/log.hpp>
 #include <src/registers.hpp>
 #include <src/util/conversions.hpp>
 #include <src/util/json_helpers.hpp>
 
 namespace copper_server {
     namespace resources {
+        std::unordered_map<uint32_t, boost::json::object> internal_compatibility_versions;
+
         template <class T, class Iterator>
         void id_assigner(std::unordered_map<std::string, T>& map, list_array<Iterator>& cache) {
             size_t i = 0;
@@ -17,6 +20,48 @@ namespace copper_server {
             for (; it != end; ++it) {
                 it->second.id = i++;
                 cache.push_back(it);
+            }
+        }
+
+        namespace processor {
+            std::string process_replace(std::string_view matched, std::string_view replace) {
+                auto insert = replace.find('$');
+                if (insert != std::string::npos) {
+                    auto replace_left = replace.substr(0, insert);
+                    auto replace_right = replace.substr(insert + 1);
+                    return std::string(replace_left) + std::string(matched) + std::string(replace_right);
+                } else
+                    return std::string(replace);
+            }
+
+            std::optional<std::string> process_match(std::string_view str, std::string_view match, std::string_view replace) {
+                if (match.ends_with('*')) {
+                    if (str.starts_with(match.substr(0, match.size() - 1)))
+                        return process_replace(str.substr(match.size() - 1), replace);
+                    else
+                        return std::nullopt;
+                } else if (match.starts_with('*')) {
+                    if (str.ends_with(match.substr(1)))
+                        return process_replace(str.substr(0, str.size() - match.size()), replace);
+                    else
+                        return std::nullopt;
+                } else {
+                    auto split = match.find('*');
+                    if (split == std::string::npos) {
+                        if (str == match)
+                            return std::string(replace);
+                        else
+                            return std::nullopt;
+                    } else {
+                        std::string_view left = match.substr(0, split);
+                        std::string_view right = match.substr(split + 1);
+
+                        if (str.starts_with(left) && str.ends_with(right))
+                            return process_replace(str.substr(left.size(), str.size() - left.size() - right.size()), replace);
+                        else
+                            return std::nullopt;
+                    }
+                }
             }
         }
 
@@ -80,1590 +125,68 @@ namespace copper_server {
         }
 
         void initialize_entities() {
-            using namespace base_objects;
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:allay",
-                    .name = "Allay",
-                    .translation_resource_key = "entity.minecraft.allay",
-                    .kind_name = "entity",
-                    .base_bounds = {0.35, 0.6},
-                    .base_health = 20,
+            auto parsed = boost::json::parse(resources::registry::entities);
+            for (auto& [id, obj_] : parsed.as_object()) {
+                auto& obj = obj_.as_object();
+                base_objects::entity_data data;
+                data.id = id;
+                data.name = obj.at("name").as_string();
+                data.translation_resource_key = obj.at("translation_resource_key").as_string();
+                data.kind_name = obj.at("kind_name").as_string();
+                if (obj.contains("base_bounds")) {
+                    auto& val = obj.at("base_bounds");
+                    base_objects::bounding bounds;
+                    if (val.is_object()) {
+                        bounds.xz = val.at("xz").to_number<double>();
+                        bounds.y = val.at("y").to_number<double>();
+                    } else {
+                        bounds.xz = val.at(0).to_number<double>();
+                        bounds.y = val.at(1).to_number<double>();
+                    }
+                    data.base_bounds = bounds;
+                } else {
+                    log::warn("Resource loader", "Entity " + (std::string)id + " has no base bounds declared. Using {0, 0}.");
+                    data.base_bounds = {0, 0};
                 }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:area_effect_cloud",
-                    .name = "Area Effect Cloud",
-                    .translation_resource_key = "entity.minecraft.area_effect_cloud",
-                    .kind_name = "entity",
-                    .base_bounds = {2.0, 0.5}, // Assuming radius is handled elsewhere
-                    .base_health = NAN,
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:armadillo",
-                    .name = "Armadillo",
-                    .translation_resource_key = "entity.minecraft.armadillo",
-                    .kind_name = "animal",
-                    .base_bounds = {2.0, 0.5}, // Assuming radius is handled elsewhere
-                    .base_health = 6,
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:armor_stand",
-                    .name = "Armor Stand",
-                    .translation_resource_key = "entity.minecraft.armor_stand",
-                    .kind_name = "entity",
-                    .base_bounds = {0.5, 1.975}, // Assuming normal size
-                    .base_health = NAN,
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:arrow",
-                    .name = "Arrow",
-                    .translation_resource_key = "entity.minecraft.arrow",
-                    .kind_name = "entity",
-                    .base_bounds = {0.5, 0.5},
-                    .base_health = NAN,
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:axolotl",
-                    .name = "Axolotl",
-                    .translation_resource_key = "entity.minecraft.axolotl",
-                    .kind_name = "entity",
-                    .base_bounds = {0.75, 0.42}, //TODO unknown
-                    .base_health = 14,
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:bat",
-                    .name = "Bat",
-                    .translation_resource_key = "entity.minecraft.bat",
-                    .kind_name = "entity",
-                    .base_bounds = {0.5, 0.9},
-                    .base_health = 6,
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:bee",
-                    .name = "Bee",
-                    .translation_resource_key = "entity.minecraft.bee",
-                    .kind_name = "entity",
-                    .base_bounds = {0.7, 0.6},
-                    .base_health = 6,
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:blaze",
-                    .name = "Blaze",
-                    .translation_resource_key = "entity.minecraft.blaze",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.8},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:block_display",
-                    .name = "Block Display",
-                    .translation_resource_key = "entity.minecraft.block_display",
-                    .kind_name = "entity",
-                    .base_bounds = {0.0, 0.0},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:boat",
-                    .name = "Boat",
-                    .translation_resource_key = "entity.minecraft.boat",
-                    .kind_name = "entity",
-                    .base_bounds = {1.375, 0.5625},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:bogged",
-                    .name = "Bogged",
-                    .translation_resource_key = "entity.minecraft.bogged",
-                    .kind_name = "entity",
-                    .base_bounds = {1.375, 0.5625}, //TODO unknown
-                    .base_health = 16,
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:breeze",
-                    .name = "Breeze",
-                    .translation_resource_key = "entity.minecraft.breeze",
-                    .kind_name = "entity",
-                    .base_bounds = {1.375, 0.5625}, //TODO unknown
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:breeze_wind_charge",
-                    .name = "Breeze Wind Charge",
-                    .translation_resource_key = "entity.minecraft.breeze_wind_charge",
-                    .kind_name = "entity",
-                    .base_bounds = {1.375, 0.5625}, //TODO unknown
-                }
-            );
 
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:camel",
-                    .name = "Camel",
-                    .translation_resource_key = "entity.minecraft.camel",
-                    .kind_name = "entity",
-                    .base_bounds = {1.7, 2.375},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:cat",
-                    .name = "Cat",
-                    .translation_resource_key = "entity.minecraft.cat",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 0.7},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:cave_spider",
-                    .name = "Cave Spider",
-                    .translation_resource_key = "entity.minecraft.cave_spider",
-                    .kind_name = "entity",
-                    .base_bounds = {0.7, 0.5},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:chest_boat",
-                    .name = "Chest Boat",
-                    .translation_resource_key = "entity.minecraft.chest_boat",
-                    .kind_name = "entity",
-                    .base_bounds = {1.375, 0.5625},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:chest_minecart",
-                    .name = "Chest Minecart",
-                    .translation_resource_key = "entity.minecraft.chest_minecart",
-                    .kind_name = "entity",
-                    .base_bounds = {0.98, 0.7},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:chicken",
-                    .name = "Chicken",
-                    .translation_resource_key = "entity.minecraft.chicken",
-                    .kind_name = "entity",
-                    .base_bounds = {0.4, 0.7},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:cod",
-                    .name = "Cod",
-                    .translation_resource_key = "entity.minecraft.cod",
-                    .kind_name = "entity",
-                    .base_bounds = {0.5, 0.3},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:command_block_minecart",
-                    .name = "Command Block Minecart",
-                    .translation_resource_key = "entity.minecraft.command_block_minecart",
-                    .kind_name = "entity",
-                    .base_bounds = {0.98, 0.7},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:cow",
-                    .name = "Cow",
-                    .translation_resource_key = "entity.minecraft.cow",
-                    .kind_name = "entity",
-                    .base_bounds = {0.9, 1.4},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:creeper",
-                    .name = "Creeper",
-                    .translation_resource_key = "entity.minecraft.creeper",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.7},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:dolphin",
-                    .name = "Dolphin",
-                    .translation_resource_key = "entity.minecraft.dolphin",
-                    .kind_name = "entity",
-                    .base_bounds = {0.9, 0.6},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:donkey",
-                    .name = "Donkey",
-                    .translation_resource_key = "entity.minecraft.donkey",
-                    .kind_name = "entity",
-                    .base_bounds = {1.3964844, 1.5},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:dragon_fireball",
-                    .name = "Dragon Fireball",
-                    .translation_resource_key = "entity.minecraft.dragon_fireball",
-                    .kind_name = "entity",
-                    .base_bounds = {1.0, 1.0},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:drowned",
-                    .name = "Drowned",
-                    .translation_resource_key = "entity.minecraft.drowned",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.95},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:egg",
-                    .name = "Egg",
-                    .translation_resource_key = "entity.minecraft.egg",
-                    .kind_name = "entity",
-                    .base_bounds = {0.25, 0.25},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:elder_guardian",
-                    .name = "Elder Guardian",
-                    .translation_resource_key = "entity.minecraft.elder_guardian",
-                    .kind_name = "entity",
-                    .base_bounds = {1.9975, 1.9975}, // Assuming guardian size is handled elsewhere
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:end_crystal",
-                    .name = "End Crystal",
-                    .translation_resource_key = "entity.minecraft.end_crystal",
-                    .kind_name = "entity",
-                    .base_bounds = {2.0, 2.0},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:ender_dragon",
-                    .name = "Ender Dragon",
-                    .translation_resource_key = "entity.minecraft.ender_dragon",
-                    .kind_name = "entity",
-                    .base_bounds = {16.0, 8.0},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:ender_pearl",
-                    .name = "Ender Pearl",
-                    .translation_resource_key = "entity.minecraft.ender_pearl",
-                    .kind_name = "entity",
-                    .base_bounds = {0.25, 0.25},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:enderman",
-                    .name = "Enderman",
-                    .translation_resource_key = "entity.minecraft.enderman",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 2.9},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:endermite",
-                    .name = "Endermite",
-                    .translation_resource_key = "entity.minecraft.endermite",
-                    .kind_name = "entity",
-                    .base_bounds = {0.4, 0.3},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:evoker",
-                    .name = "Evoker",
-                    .translation_resource_key = "entity.minecraft.evoker",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.95},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:evoker_fangs",
-                    .name = "Evoker Fangs",
-                    .translation_resource_key = "entity.minecraft.evoker_fangs",
-                    .kind_name = "entity",
-                    .base_bounds = {0.5, 0.8},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:experience_bottle",
-                    .name = "Experience Bottle",
-                    .translation_resource_key = "entity.minecraft.experience_bottle",
-                    .kind_name = "entity",
-                    .base_bounds = {0.25, 0.25},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:experience_orb",
-                    .name = "Experience Orb",
-                    .translation_resource_key = "entity.minecraft.experience_orb",
-                    .kind_name = "entity",
-                    .base_bounds = {0.5, 0.5},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:eye_of_ender",
-                    .name = "Eye Of Ender",
-                    .translation_resource_key = "entity.minecraft.eye_of_ender",
-                    .kind_name = "entity",
-                    .base_bounds = {0.25, 0.25},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:falling_block",
-                    .name = "Falling Block",
-                    .translation_resource_key = "entity.minecraft.falling_block",
-                    .kind_name = "entity",
-                    .base_bounds = {0.98, 0.98},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:firework_rocket",
-                    .name = "Firework Rocket",
-                    .translation_resource_key = "entity.minecraft.firework_rocket",
-                    .kind_name = "entity",
-                    .base_bounds = {0.25, 0.25},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:fox",
-                    .name = "Fox",
-                    .translation_resource_key = "entity.minecraft.fox",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 0.7},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:frog",
-                    .name = "Frog",
-                    .translation_resource_key = "entity.minecraft.frog",
-                    .kind_name = "entity",
-                    .base_bounds = {0.5, 0.5},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:furnace_minecart",
-                    .name = "Furnace Minecart",
-                    .translation_resource_key = "entity.minecraft.furnace_minecart",
-                    .kind_name = "entity",
-                    .base_bounds = {0.98, 0.7},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:ghast",
-                    .name = "Ghast",
-                    .translation_resource_key = "entity.minecraft.ghast",
-                    .kind_name = "entity",
-                    .base_bounds = {4.0, 4.0},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:giant",
-                    .name = "Giant",
-                    .translation_resource_key = "entity.minecraft.giant",
-                    .kind_name = "entity",
-                    .base_bounds = {3.6, 12.0},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:glow_item_frame",
-                    .name = "Glow Item Frame",
-                    .translation_resource_key = "entity.minecraft.glow_item_frame",
-                    .kind_name = "entity",
-                    .base_bounds = {0.75, 0.75}, // Assuming normal size
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:glow_squid",
-                    .name = "Glow Squid",
-                    .translation_resource_key = "entity.minecraft.glow_squid",
-                    .kind_name = "entity",
-                    .base_bounds = {0.8, 0.8},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:goat",
-                    .name = "Goat",
-                    .translation_resource_key = "entity.minecraft.goat",
-                    .kind_name = "entity",
-                    .base_bounds = {1.3, 0.9},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:guardian",
-                    .name = "Guardian",
-                    .translation_resource_key = "entity.minecraft.guardian",
-                    .kind_name = "entity",
-                    .base_bounds = {0.85, 0.85},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:hoglin",
-                    .name = "Hoglin",
-                    .translation_resource_key = "entity.minecraft.hoglin",
-                    .kind_name = "entity",
-                    .base_bounds = {1.3964844, 1.4},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:hopper_minecart",
-                    .name = "Hopper Minecart",
-                    .translation_resource_key = "entity.minecraft.hopper_minecart",
-                    .kind_name = "entity",
-                    .base_bounds = {0.98, 0.7},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:horse",
-                    .name = "Horse",
-                    .translation_resource_key = "entity.minecraft.horse",
-                    .kind_name = "entity",
-                    .base_bounds = {1.3964844, 1.6},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:husk",
-                    .name = "Husk",
-                    .translation_resource_key = "entity.minecraft.husk",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.95},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:illusioner",
-                    .name = "Illusioner",
-                    .translation_resource_key = "entity.minecraft.illusioner",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.95},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:interaction",
-                    .name = "Interaction",
-                    .translation_resource_key = "entity.minecraft.interaction",
-                    .kind_name = "entity",
-                    .base_bounds = {0.0, 0.0},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:iron_golem",
-                    .name = "Iron Golem",
-                    .translation_resource_key = "entity.minecraft.iron_golem",
-                    .kind_name = "entity",
-                    .base_bounds = {1.4, 2.7},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:item",
-                    .name = "Item",
-                    .translation_resource_key = "entity.minecraft.item",
-                    .kind_name = "entity",
-                    .base_bounds = {0.25, 0.25},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:item_display",
-                    .name = "Item Display",
-                    .translation_resource_key = "entity.minecraft.item_display",
-                    .kind_name = "entity",
-                    .base_bounds = {0.0, 0.0},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:item_frame",
-                    .name = "Item Frame",
-                    .translation_resource_key = "entity.minecraft.item_frame",
-                    .kind_name = "entity",
-                    .base_bounds = {0.75, 0.75}, // Assuming normal size
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:fireball",
-                    .name = "Fireball",
-                    .translation_resource_key = "entity.minecraft.fireball",
-                    .kind_name = "entity",
-                    .base_bounds = {1.0, 1.0},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:leash_knot",
-                    .name = "Leash Knot",
-                    .translation_resource_key = "entity.minecraft.leash_knot",
-                    .kind_name = "entity",
-                    .base_bounds = {0.375, 0.5},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:lightning_bolt",
-                    .name = "Lightning Bolt",
-                    .translation_resource_key = "entity.minecraft.lightning_bolt",
-                    .kind_name = "entity",
-                    .base_bounds = {0.0, 0.0},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:llama",
-                    .name = "Llama",
-                    .translation_resource_key = "entity.minecraft.llama",
-                    .kind_name = "entity",
-                    .base_bounds = {0.9, 1.87},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:llama_spit",
-                    .name = "Llama Spit",
-                    .translation_resource_key = "entity.minecraft.llama_spit",
-                    .kind_name = "entity",
-                    .base_bounds = {0.25, 0.25},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:magma_cube",
-                    .name = "Magma Cube",
-                    .translation_resource_key = "entity.minecraft.magma_cube",
-                    .kind_name = "entity",
-                    .base_bounds = {0.5202, 0.5202},
-                    .check_bounds = {nullptr} //TODO
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:marker",
-                    .name = "Marker",
-                    .translation_resource_key = "entity.minecraft.marker",
-                    .kind_name = "entity",
-                    .base_bounds = {0.0, 0.0},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:minecart",
-                    .name = "Minecart",
-                    .translation_resource_key = "entity.minecraft.minecart",
-                    .kind_name = "entity",
-                    .base_bounds = {0.98, 0.7},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:mooshroom",
-                    .name = "Mooshroom",
-                    .translation_resource_key = "entity.minecraft.mooshroom",
-                    .kind_name = "entity",
-                    .base_bounds = {0.9, 1.4},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:mule",
-                    .name = "Mule",
-                    .translation_resource_key = "entity.minecraft.mule",
-                    .kind_name = "entity",
-                    .base_bounds = {1.3964844, 1.6},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:ocelot",
-                    .name = "Ocelot",
-                    .translation_resource_key = "entity.minecraft.ocelot",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 0.7},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:ominous_item_spawner",
-                    .name = "Ominous Item Spawner",
-                    .translation_resource_key = "entity.minecraft.ominous_item_spawner",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 0.7}, //TODO
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:painting",
-                    .name = "Painting",
-                    .translation_resource_key = "entity.minecraft.painting",
-                    .kind_name = "entity",
-                    .base_bounds = {1, 1},
-                    .check_bounds = {nullptr} //TODO
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:panda",
-                    .name = "Panda",
-                    .translation_resource_key = "entity.minecraft.panda",
-                    .kind_name = "entity",
-                    .base_bounds = {1.3, 1.25},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:parrot",
-                    .name = "Parrot",
-                    .translation_resource_key = "entity.minecraft.parrot",
-                    .kind_name = "entity",
-                    .base_bounds = {0.5, 0.9},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:phantom",
-                    .name = "Phantom",
-                    .translation_resource_key = "entity.minecraft.phantom",
-                    .kind_name = "entity",
-                    .base_bounds = {0.9, 0.5},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:pig",
-                    .name = "Pig",
-                    .translation_resource_key = "entity.minecraft.pig",
-                    .kind_name = "entity",
-                    .base_bounds = {0.9, 0.9},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:piglin",
-                    .name = "Piglin",
-                    .translation_resource_key = "entity.minecraft.piglin",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.95},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:piglin_brute",
-                    .name = "Piglin Brute",
-                    .translation_resource_key = "entity.minecraft.piglin_brute",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.95},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:pillager",
-                    .name = "Pillager",
-                    .translation_resource_key = "entity.minecraft.pillager",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.95},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:polar_bear",
-                    .name = "Polar Bear",
-                    .translation_resource_key = "entity.minecraft.polar_bear",
-                    .kind_name = "entity",
-                    .base_bounds = {1.4, 1.4},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:potion",
-                    .name = "Potion",
-                    .translation_resource_key = "entity.minecraft.potion",
-                    .kind_name = "entity",
-                    .base_bounds = {0.25, 0.25},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:pufferfish",
-                    .name = "Pufferfish",
-                    .translation_resource_key = "entity.minecraft.pufferfish",
-                    .kind_name = "entity",
-                    .base_bounds = {0.7, 0.7},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:rabbit",
-                    .name = "Rabbit",
-                    .translation_resource_key = "entity.minecraft.rabbit",
-                    .kind_name = "entity",
-                    .base_bounds = {0.4, 0.5},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:ravager",
-                    .name = "Ravager",
-                    .translation_resource_key = "entity.minecraft.ravager",
-                    .kind_name = "entity",
-                    .base_bounds = {1.95, 2.2},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:salmon",
-                    .name = "Salmon",
-                    .translation_resource_key = "entity.minecraft.salmon",
-                    .kind_name = "entity",
-                    .base_bounds = {0.7, 0.4},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:sheep",
-                    .name = "Sheep",
-                    .translation_resource_key = "entity.minecraft.sheep",
-                    .kind_name = "entity",
-                    .base_bounds = {0.9, 1.3},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:shulker",
-                    .name = "Shulker",
-                    .translation_resource_key = "entity.minecraft.shulker",
-                    .kind_name = "entity",
-                    .base_bounds = {1.0, 1.0 - 2.0},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:shulker_bullet",
-                    .name = "Shulker Bullet",
-                    .translation_resource_key = "entity.minecraft.shulker_bullet",
-                    .kind_name = "entity",
-                    .base_bounds = {0.3125, 0.3125},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:silverfish",
-                    .name = "Silverfish",
-                    .translation_resource_key = "entity.minecraft.silverfish",
-                    .kind_name = "entity",
-                    .base_bounds = {0.4, 0.3},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:skeleton",
-                    .name = "Skeleton",
-                    .translation_resource_key = "entity.minecraft.skeleton",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.99},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:skeleton_horse",
-                    .name = "Skeleton Horse",
-                    .translation_resource_key = "entity.minecraft.skeleton_horse",
-                    .kind_name = "entity",
-                    .base_bounds = {1.3964844, 1.6},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:slime",
-                    .name = "Slime",
-                    .translation_resource_key = "entity.minecraft.slime",
-                    .kind_name = "entity",
-                    .base_bounds = {0.5202, 0.5202},
-                    .check_bounds = {nullptr} //TODO
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:small_fireball",
-                    .name = "Small Fireball",
-                    .translation_resource_key = "entity.minecraft.small_fireball",
-                    .kind_name = "entity",
-                    .base_bounds = {0.3125, 0.3125},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:sniffer",
-                    .name = "Sniffer",
-                    .translation_resource_key = "entity.minecraft.sniffer",
-                    .kind_name = "entity",
-                    .base_bounds = {1.9, 1.75},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:snow_golem",
-                    .name = "Snow Golem",
-                    .translation_resource_key = "entity.minecraft.snow_golem",
-                    .kind_name = "entity",
-                    .base_bounds = {0.7, 1.9},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:snowball",
-                    .name = "Snowball",
-                    .translation_resource_key = "entity.minecraft.snowball",
-                    .kind_name = "entity",
-                    .base_bounds = {0.25, 0.25},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:spawner_minecart",
-                    .name = "Spawner Minecart",
-                    .translation_resource_key = "entity.minecraft.spawner_minecart",
-                    .kind_name = "entity",
-                    .base_bounds = {0.98, 0.7},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:spectral_arrow",
-                    .name = "Spectral Arrow",
-                    .translation_resource_key = "entity.minecraft.spectral_arrow",
-                    .kind_name = "entity",
-                    .base_bounds = {0.5, 0.5},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:spider",
-                    .name = "Spider",
-                    .translation_resource_key = "entity.minecraft.spider",
-                    .kind_name = "entity",
-                    .base_bounds = {1.4, 0.9},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:squid",
-                    .name = "Squid",
-                    .translation_resource_key = "entity.minecraft.squid",
-                    .kind_name = "entity",
-                    .base_bounds = {0.8, 0.8},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:stray",
-                    .name = "Stray",
-                    .translation_resource_key = "entity.minecraft.stray",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.99},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:strider",
-                    .name = "Strider",
-                    .translation_resource_key = "entity.minecraft.strider",
-                    .kind_name = "entity",
-                    .base_bounds = {0.9, 1.7},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:tadpole",
-                    .name = "Tadpole",
-                    .translation_resource_key = "entity.minecraft.tadpole",
-                    .kind_name = "entity",
-                    .base_bounds = {0.4, 0.3},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:text_display",
-                    .name = "Text Display",
-                    .translation_resource_key = "entity.minecraft.text_display",
-                    .kind_name = "entity",
-                    .base_bounds = {0.0, 0.0},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:tnt",
-                    .name = "Tnt",
-                    .translation_resource_key = "entity.minecraft.tnt",
-                    .kind_name = "entity",
-                    .base_bounds = {0.98, 0.98},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:tnt_minecart",
-                    .name = "Tnt Minecart",
-                    .translation_resource_key = "entity.minecraft.tnt_minecart",
-                    .kind_name = "entity",
-                    .base_bounds = {0.98, 0.7},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:trader_llama",
-                    .name = "Trader Llama",
-                    .translation_resource_key = "entity.minecraft.trader_llama",
-                    .kind_name = "entity",
-                    .base_bounds = {0.9, 1.87},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:trident",
-                    .name = "Trident",
-                    .translation_resource_key = "entity.minecraft.trident",
-                    .kind_name = "entity",
-                    .base_bounds = {0.5, 0.5},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:tropical_fish",
-                    .name = "Tropical Fish",
-                    .translation_resource_key = "entity.minecraft.tropical_fish",
-                    .kind_name = "entity",
-                    .base_bounds = {0.5, 0.4},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:turtle",
-                    .name = "Turtle",
-                    .translation_resource_key = "entity.minecraft.turtle",
-                    .kind_name = "entity",
-                    .base_bounds = {1.2, 0.4},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:vex",
-                    .name = "Vex",
-                    .translation_resource_key = "entity.minecraft.vex",
-                    .kind_name = "entity",
-                    .base_bounds = {0.4, 0.8},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:villager",
-                    .name = "Villager",
-                    .translation_resource_key = "entity.minecraft.villager",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.95},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:vindicator",
-                    .name = "Vindicator",
-                    .translation_resource_key = "entity.minecraft.vindicator",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.95},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:wandering_trader",
-                    .name = "Wandering Trader",
-                    .translation_resource_key = "entity.minecraft.wandering_trader",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.95},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:warden",
-                    .name = "Warden",
-                    .translation_resource_key = "entity.minecraft.warden",
-                    .kind_name = "entity",
-                    .base_bounds = {0.9, 2.9},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:wind_charge",
-                    .name = "Wind Charge",
-                    .translation_resource_key = "entity.minecraft.wind_charge",
-                    .kind_name = "entity",
-                    .base_bounds = {0.9, 2.9}, //TODO
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:witch",
-                    .name = "Witch",
-                    .translation_resource_key = "entity.minecraft.witch",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.95},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:wither",
-                    .name = "Wither",
-                    .translation_resource_key = "entity.minecraft.wither",
-                    .kind_name = "entity",
-                    .base_bounds = {0.9, 3.5},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:wither_skeleton",
-                    .name = "Wither Skeleton",
-                    .translation_resource_key = "entity.minecraft.wither_skeleton",
-                    .kind_name = "entity",
-                    .base_bounds = {0.7, 2.4},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:wither_skull",
-                    .name = "Wither Skull",
-                    .translation_resource_key = "entity.minecraft.wither_skull",
-                    .kind_name = "entity",
-                    .base_bounds = {0.3125, 0.3125},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:wolf",
-                    .name = "Wolf",
-                    .translation_resource_key = "entity.minecraft.wolf",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 0.85},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:zoglin",
-                    .name = "Zoglin",
-                    .translation_resource_key = "entity.minecraft.zoglin",
-                    .kind_name = "entity",
-                    .base_bounds = {1.3964844, 1.4},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:zombie",
-                    .name = "Zombie",
-                    .translation_resource_key = "entity.minecraft.zombie",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.95},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:zombie_horse",
-                    .name = "Zombie Horse",
-                    .translation_resource_key = "entity.minecraft.zombie_horse",
-                    .kind_name = "entity",
-                    .base_bounds = {1.3964844, 1.6},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:zombie_villager",
-                    .name = "Zombie Villager",
-                    .translation_resource_key = "entity.minecraft.zombie_villager",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.95},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:zombified_piglin",
-                    .name = "Zombified Piglin",
-                    .translation_resource_key = "entity.minecraft.zombified_piglin",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.95},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:player",
-                    .name = "Player",
-                    .translation_resource_key = "entity.minecraft.player",
-                    .kind_name = "entity",
-                    .base_bounds = {0.6, 1.8},
-                }
-            );
-            entity_data::register_entity(
-                entity_data{
-                    .id = "minecraft:fishing_bobber",
-                    .name = "Fishing Bobber",
-                    .translation_resource_key = "entity.minecraft.fishing_bobber",
-                    .kind_name = "entity",
-                    .base_bounds = {0.25, 0.25},
-                }
-            );
+                if (obj.contains("bounds_mode")) {
+                    static const std::unordered_map<std::string, base_objects::entity_data::bounds_mode_t> mode_map{
+                        {"solid", base_objects::entity_data::bounds_mode_t::solid},
+                        {"solid_except_self_type", base_objects::entity_data::bounds_mode_t::solid_except_self_type},
+                        {"solid_for_vehicles", base_objects::entity_data::bounds_mode_t::solid_for_vehicles},
+                        {"weak", base_objects::entity_data::bounds_mode_t::weak},
+                        {"none", base_objects::entity_data::bounds_mode_t::none},
+                    };
+                    data.bounds_mode = mode_map.at((std::string)obj.at("bounds_mode").as_string());
+                }
+
+                if (obj.contains("acceleration"))
+                    data.acceleration = obj.at("acceleration").to_number<float>();
+                else
+                    data.acceleration = 5.6f;
+
+                if (obj.contains("inventory"))
+                    data.data["slot"] = util::conversions::json::from_json(obj.at("inventory"));
+
+                if (obj.contains("custom_data"))
+                    data.data["custom_data"].merge(util::conversions::json::from_json(obj.at("custom_data")));
+                if (obj.contains("base_health")) {
+                    auto& base_health = obj.at("base_health");
+                    if (base_health.is_number())
+                        data.base_health = obj.at("base_health").to_number<float>();
+                    else if (base_health == "infinity")
+                        data.base_health = NAN;
+                } else
+                    data.base_health = NAN;
+
+                if (obj.contains("is_living_entity"))
+                    data.living_entity = obj.at("is_living_entity").as_bool();
+                else
+                    data.living_entity = false;
 
 
-            entity_data::internal_entity_aliases_protocol[765] = {
-                {"minecraft:allay", 0},
-                {"minecraft:area_effect_cloud", 1},
-                {"minecraft:armor_stand", 2},
-                {"minecraft:arrow", 3},
-                {"minecraft:axolotl", 4},
-                {"minecraft:bat", 5},
-                {"minecraft:bee", 6},
-                {"minecraft:blaze", 7},
-                {"minecraft:block_display", 8},
-                {"minecraft:boat", 9},
-                {"minecraft:breeze", 10},
-                {"minecraft:camel", 11},
-                {"minecraft:cat", 12},
-                {"minecraft:cave_spider", 13},
-                {"minecraft:chest_boat", 14},
-                {"minecraft:chest_minecart", 15},
-                {"minecraft:chicken", 16},
-                {"minecraft:cod", 17},
-                {"minecraft:command_block_minecart", 18},
-                {"minecraft:cow", 19},
-                {"minecraft:creeper", 20},
-                {"minecraft:dolphin", 21},
-                {"minecraft:donkey", 22},
-                {"minecraft:dragon_fireball", 23},
-                {"minecraft:drowned", 24},
-                {"minecraft:egg", 25},
-                {"minecraft:elder_guardian", 26},
-                {"minecraft:end_crystal", 27},
-                {"minecraft:ender_dragon", 28},
-                {"minecraft:ender_pearl", 29},
-                {"minecraft:enderman", 30},
-                {"minecraft:endermite", 31},
-                {"minecraft:evoker", 32},
-                {"minecraft:evoker_fangs", 33},
-                {"minecraft:experience_bottle", 34},
-                {"minecraft:experience_orb", 35},
-                {"minecraft:eye_of_ender", 36},
-                {"minecraft:falling_block", 37},
-                {"minecraft:fireball", 58},
-                {"minecraft:firework_rocket", 38},
-                {"minecraft:fox", 39},
-                {"minecraft:frog", 40},
-                {"minecraft:furnace_minecart", 41},
-                {"minecraft:ghast", 42},
-                {"minecraft:giant", 43},
-                {"minecraft:glow_item_frame", 44},
-                {"minecraft:glow_squid", 45},
-                {"minecraft:goat", 46},
-                {"minecraft:guardian", 47},
-                {"minecraft:hoglin", 48},
-                {"minecraft:hopper_minecart", 49},
-                {"minecraft:horse", 50},
-                {"minecraft:husk", 51},
-                {"minecraft:illusioner", 52},
-                {"minecraft:interaction", 53},
-                {"minecraft:iron_golem", 54},
-                {"minecraft:item", 55},
-                {"minecraft:item_display", 56},
-                {"minecraft:item_frame", 57},
-                {"minecraft:leash_knot", 59},
-                {"minecraft:lightning_bolt", 60},
-                {"minecraft:llama", 61},
-                {"minecraft:llama_spit", 62},
-                {"minecraft:magma_cube", 63},
-                {"minecraft:marker", 64},
-                {"minecraft:minecart", 65},
-                {"minecraft:mooshroom", 66},
-                {"minecraft:mule", 67},
-                {"minecraft:ocelot", 68},
-                {"minecraft:painting", 69},
-                {"minecraft:panda", 70},
-                {"minecraft:parrot", 71},
-                {"minecraft:phantom", 72},
-                {"minecraft:pig", 73},
-                {"minecraft:piglin", 74},
-                {"minecraft:piglin_brute", 75},
-                {"minecraft:pillager", 76},
-                {"minecraft:polar_bear", 77},
-                {"minecraft:potion", 78},
-                {"minecraft:pufferfish", 79},
-                {"minecraft:rabbit", 80},
-                {"minecraft:ravager", 81},
-                {"minecraft:salmon", 82},
-                {"minecraft:sheep", 83},
-                {"minecraft:shulker", 84},
-                {"minecraft:shulker_bullet", 85},
-                {"minecraft:silverfish", 86},
-                {"minecraft:skeleton", 87},
-                {"minecraft:skeleton_horse", 88},
-                {"minecraft:slime", 89},
-                {"minecraft:small_fireball", 90},
-                {"minecraft:sniffer", 91},
-                {"minecraft:snow_golem", 92},
-                {"minecraft:snowball", 93},
-                {"minecraft:spawner_minecart", 94},
-                {"minecraft:spectral_arrow", 95},
-                {"minecraft:spider", 96},
-                {"minecraft:squid", 97},
-                {"minecraft:stray", 98},
-                {"minecraft:strider", 99},
-                {"minecraft:tadpole", 100},
-                {"minecraft:text_display", 101},
-                {"minecraft:tnt", 102},
-                {"minecraft:tnt_minecart", 103},
-                {"minecraft:trader_llama", 104},
-                {"minecraft:trident", 105},
-                {"minecraft:tropical_fish", 106},
-                {"minecraft:turtle", 107},
-                {"minecraft:vex", 108},
-                {"minecraft:villager", 109},
-                {"minecraft:vindicator", 110},
-                {"minecraft:wandering_trader", 111},
-                {"minecraft:warden", 112},
-                {"minecraft:wind_charge", 113},
-                {"minecraft:witch", 114},
-                {"minecraft:wither", 115},
-                {"minecraft:wither_skeleton", 116},
-                {"minecraft:wither_skull", 117},
-                {"minecraft:wolf", 118},
-                {"minecraft:zoglin", 119},
-                {"minecraft:zombie", 120},
-                {"minecraft:zombie_horse", 121},
-                {"minecraft:zombie_villager", 122},
-                {"minecraft:zombified_piglin", 123},
-                {"minecraft:player", 124},
-                {"minecraft:fishing_bobber", 125},
-                {"minecraft:armadillo", 39},            //ALIAS FOX
-                {"minecraft:bogged", 98},               //ALIAS STRAY
-                {"minecraft:breeze_wind_charge", 113},  //ALIAS wind_charge
-                {"minecraft:ominous_item_spawner", 55}, //ALIAS ITEM
-            };
-            entity_data::internal_entity_aliases_protocol[766] = {
-                {"minecraft:allay", 0},
-                {"minecraft:area_effect_cloud", 1},
-                {"minecraft:armadillo", 2},
-                {"minecraft:armor_stand", 3},
-                {"minecraft:arrow", 4},
-                {"minecraft:axolotl", 5},
-                {"minecraft:bat", 6},
-                {"minecraft:bee", 7},
-                {"minecraft:blaze", 8},
-                {"minecraft:block_display", 9},
-                {"minecraft:boat", 10},
-                {"minecraft:bogged", 11},
-                {"minecraft:breeze", 12},
-                {"minecraft:breeze_wind_charge", 13},
-                {"minecraft:camel", 14},
-                {"minecraft:cat", 15},
-                {"minecraft:cave_spider", 16},
-                {"minecraft:chest_boat", 17},
-                {"minecraft:chest_minecart", 18},
-                {"minecraft:chicken", 19},
-                {"minecraft:cod", 20},
-                {"minecraft:command_block_minecart", 21},
-                {"minecraft:cow", 22},
-                {"minecraft:creeper", 23},
-                {"minecraft:dolphin", 24},
-                {"minecraft:donkey", 25},
-                {"minecraft:dragon_fireball", 26},
-                {"minecraft:drowned", 27},
-                {"minecraft:egg", 28},
-                {"minecraft:elder_guardian", 29},
-                {"minecraft:end_crystal", 30},
-                {"minecraft:ender_dragon", 31},
-                {"minecraft:ender_pearl", 32},
-                {"minecraft:enderman", 33},
-                {"minecraft:endermite", 34},
-                {"minecraft:evoker", 35},
-                {"minecraft:evoker_fangs", 36},
-                {"minecraft:experience_bottle", 37},
-                {"minecraft:experience_orb", 38},
-                {"minecraft:eye_of_ender", 39},
-                {"minecraft:falling_block", 40},
-                {"minecraft:fireball", 62},
-                {"minecraft:firework_rocket", 41},
-                {"minecraft:fishing_bobber", 129},
-                {"minecraft:fox", 42},
-                {"minecraft:frog", 43},
-                {"minecraft:furnace_minecart", 44},
-                {"minecraft:ghast", 45},
-                {"minecraft:giant", 46},
-                {"minecraft:glow_item_frame", 47},
-                {"minecraft:glow_squid", 48},
-                {"minecraft:goat", 49},
-                {"minecraft:guardian", 50},
-                {"minecraft:hoglin", 51},
-                {"minecraft:hopper_minecart", 52},
-                {"minecraft:horse", 53},
-                {"minecraft:husk", 54},
-                {"minecraft:illusioner", 55},
-                {"minecraft:interaction", 56},
-                {"minecraft:iron_golem", 57},
-                {"minecraft:item", 58},
-                {"minecraft:item_display", 59},
-                {"minecraft:item_frame", 60},
-                {"minecraft:leash_knot", 63},
-                {"minecraft:lightning_bolt", 64},
-                {"minecraft:llama", 65},
-                {"minecraft:llama_spit", 66},
-                {"minecraft:magma_cube", 67},
-                {"minecraft:marker", 68},
-                {"minecraft:minecart", 69},
-                {"minecraft:mooshroom", 70},
-                {"minecraft:mule", 71},
-                {"minecraft:ocelot", 72},
-                {"minecraft:ominous_item_spawner", 61},
-                {"minecraft:painting", 73},
-                {"minecraft:panda", 74},
-                {"minecraft:parrot", 75},
-                {"minecraft:phantom", 76},
-                {"minecraft:pig", 77},
-                {"minecraft:piglin", 78},
-                {"minecraft:piglin_brute", 79},
-                {"minecraft:pillager", 80},
-                {"minecraft:player", 128},
-                {"minecraft:polar_bear", 81},
-                {"minecraft:potion", 82},
-                {"minecraft:pufferfish", 83},
-                {"minecraft:rabbit", 84},
-                {"minecraft:ravager", 85},
-                {"minecraft:salmon", 86},
-                {"minecraft:sheep", 87},
-                {"minecraft:shulker", 88},
-                {"minecraft:shulker_bullet", 89},
-                {"minecraft:silverfish", 90},
-                {"minecraft:skeleton", 91},
-                {"minecraft:skeleton_horse", 92},
-                {"minecraft:slime", 93},
-                {"minecraft:small_fireball", 94},
-                {"minecraft:sniffer", 95},
-                {"minecraft:snow_golem", 96},
-                {"minecraft:snowball", 97},
-                {"minecraft:spawner_minecart", 98},
-                {"minecraft:spectral_arrow", 99},
-                {"minecraft:spider", 100},
-                {"minecraft:squid", 101},
-                {"minecraft:stray", 102},
-                {"minecraft:strider", 103},
-                {"minecraft:tadpole", 104},
-                {"minecraft:text_display", 105},
-                {"minecraft:tnt", 106},
-                {"minecraft:tnt_minecart", 107},
-                {"minecraft:trader_llama", 108},
-                {"minecraft:trident", 109},
-                {"minecraft:tropical_fish", 110},
-                {"minecraft:turtle", 111},
-                {"minecraft:vex", 112},
-                {"minecraft:villager", 113},
-                {"minecraft:vindicator", 114},
-                {"minecraft:wandering_trader", 115},
-                {"minecraft:warden", 116},
-                {"minecraft:wind_charge", 117},
-                {"minecraft:witch", 118},
-                {"minecraft:wither", 119},
-                {"minecraft:wither_skeleton", 120},
-                {"minecraft:wither_skull", 121},
-                {"minecraft:wolf", 122},
-                {"minecraft:zoglin", 123},
-                {"minecraft:zombie", 124},
-                {"minecraft:zombie_horse", 125},
-                {"minecraft:zombie_villager", 126},
-                {"minecraft:zombified_piglin", 127},
-            };
-            entity_data::internal_entity_aliases_protocol[767] = {
-                {"minecraft:allay", 0},
-                {"minecraft:area_effect_cloud", 1},
-                {"minecraft:armadillo", 2},
-                {"minecraft:armor_stand", 3},
-                {"minecraft:arrow", 4},
-                {"minecraft:axolotl", 5},
-                {"minecraft:bat", 6},
-                {"minecraft:bee", 7},
-                {"minecraft:blaze", 8},
-                {"minecraft:block_display", 9},
-                {"minecraft:boat", 10},
-                {"minecraft:bogged", 11},
-                {"minecraft:breeze", 12},
-                {"minecraft:breeze_wind_charge", 13},
-                {"minecraft:camel", 14},
-                {"minecraft:cat", 15},
-                {"minecraft:cave_spider", 16},
-                {"minecraft:chest_boat", 17},
-                {"minecraft:chest_minecart", 18},
-                {"minecraft:chicken", 19},
-                {"minecraft:cod", 20},
-                {"minecraft:command_block_minecart", 21},
-                {"minecraft:cow", 22},
-                {"minecraft:creeper", 23},
-                {"minecraft:dolphin", 24},
-                {"minecraft:donkey", 25},
-                {"minecraft:dragon_fireball", 26},
-                {"minecraft:drowned", 27},
-                {"minecraft:egg", 28},
-                {"minecraft:elder_guardian", 29},
-                {"minecraft:end_crystal", 30},
-                {"minecraft:ender_dragon", 31},
-                {"minecraft:ender_pearl", 32},
-                {"minecraft:enderman", 33},
-                {"minecraft:endermite", 34},
-                {"minecraft:evoker", 35},
-                {"minecraft:evoker_fangs", 36},
-                {"minecraft:experience_bottle", 37},
-                {"minecraft:experience_orb", 38},
-                {"minecraft:eye_of_ender", 39},
-                {"minecraft:falling_block", 40},
-                {"minecraft:fireball", 62},
-                {"minecraft:firework_rocket", 41},
-                {"minecraft:fishing_bobber", 129},
-                {"minecraft:fox", 42},
-                {"minecraft:frog", 43},
-                {"minecraft:furnace_minecart", 44},
-                {"minecraft:ghast", 45},
-                {"minecraft:giant", 46},
-                {"minecraft:glow_item_frame", 47},
-                {"minecraft:glow_squid", 48},
-                {"minecraft:goat", 49},
-                {"minecraft:guardian", 50},
-                {"minecraft:hoglin", 51},
-                {"minecraft:hopper_minecart", 52},
-                {"minecraft:horse", 53},
-                {"minecraft:husk", 54},
-                {"minecraft:illusioner", 55},
-                {"minecraft:interaction", 56},
-                {"minecraft:iron_golem", 57},
-                {"minecraft:item", 58},
-                {"minecraft:item_display", 59},
-                {"minecraft:item_frame", 60},
-                {"minecraft:leash_knot", 63},
-                {"minecraft:lightning_bolt", 64},
-                {"minecraft:llama", 65},
-                {"minecraft:llama_spit", 66},
-                {"minecraft:magma_cube", 67},
-                {"minecraft:marker", 68},
-                {"minecraft:minecart", 69},
-                {"minecraft:mooshroom", 70},
-                {"minecraft:mule", 71},
-                {"minecraft:ocelot", 72},
-                {"minecraft:ominous_item_spawner", 61},
-                {"minecraft:painting", 73},
-                {"minecraft:panda", 74},
-                {"minecraft:parrot", 75},
-                {"minecraft:phantom", 76},
-                {"minecraft:pig", 77},
-                {"minecraft:piglin", 78},
-                {"minecraft:piglin_brute", 79},
-                {"minecraft:pillager", 80},
-                {"minecraft:player", 128},
-                {"minecraft:polar_bear", 81},
-                {"minecraft:potion", 82},
-                {"minecraft:pufferfish", 83},
-                {"minecraft:rabbit", 84},
-                {"minecraft:ravager", 85},
-                {"minecraft:salmon", 86},
-                {"minecraft:sheep", 87},
-                {"minecraft:shulker", 88},
-                {"minecraft:shulker_bullet", 89},
-                {"minecraft:silverfish", 90},
-                {"minecraft:skeleton", 91},
-                {"minecraft:skeleton_horse", 92},
-                {"minecraft:slime", 93},
-                {"minecraft:small_fireball", 94},
-                {"minecraft:sniffer", 95},
-                {"minecraft:snow_golem", 96},
-                {"minecraft:snowball", 97},
-                {"minecraft:spawner_minecart", 98},
-                {"minecraft:spectral_arrow", 99},
-                {"minecraft:spider", 100},
-                {"minecraft:squid", 101},
-                {"minecraft:stray", 102},
-                {"minecraft:strider", 103},
-                {"minecraft:tadpole", 104},
-                {"minecraft:text_display", 105},
-                {"minecraft:tnt", 106},
-                {"minecraft:tnt_minecart", 107},
-                {"minecraft:trader_llama", 108},
-                {"minecraft:trident", 109},
-                {"minecraft:tropical_fish", 110},
-                {"minecraft:turtle", 111},
-                {"minecraft:vex", 112},
-                {"minecraft:villager", 113},
-                {"minecraft:vindicator", 114},
-                {"minecraft:wandering_trader", 115},
-                {"minecraft:warden", 116},
-                {"minecraft:wind_charge", 117},
-                {"minecraft:witch", 118},
-                {"minecraft:wither", 119},
-                {"minecraft:wither_skeleton", 120},
-                {"minecraft:wither_skull", 121},
-                {"minecraft:wolf", 122},
-                {"minecraft:zoglin", 123},
-                {"minecraft:zombie", 124},
-                {"minecraft:zombie_horse", 125},
-                {"minecraft:zombie_villager", 126},
-                {"minecraft:zombified_piglin", 127}
-            };
-
-            entity_data::initialize_entities();
+                base_objects::entity_data::register_entity(std::move(data));
+            }
         }
 
         void load_file_biomes(js_object&& bio_js, const std::string& id) {
@@ -2531,6 +1054,76 @@ namespace copper_server {
         }
 
         void load_register_file(std::string_view memory, const std::string& namespace_, const std::string& path_, const std::string& type) {
+            if (path_.empty())
+                throw std::runtime_error("Path is empty");
+            std::string id = (namespace_.empty() ? default_namespace : namespace_) + ":" + path_;
+            if (type == "advancement") {
+                load_file_advancements(memory, id);
+            } else if (type == "banner_pattern")
+                load_file_bannerPattern(memory, id);
+            else if (type == "chat_type")
+                load_file_chatType(memory, id);
+            else if (type == "damage_type")
+                load_file_damageType(memory, id);
+            else if (type == "dimension_type")
+                load_file_dimensionType(memory, id);
+            else if (type == "enchantment")
+                load_file_enchantment(memory, id);
+            else if (type == "enchantment_provider")
+                load_file_enchantment_provider(memory, id);
+            else if (type == "jukebox_song")
+                load_file_jukebox_song(memory, id);
+            else if (type == "loot_table")
+                load_file_loot_table(memory, id);
+            else if (type == "painting_variant")
+                load_file_paintingVariant(memory, id);
+            else if (type == "recipe")
+                load_file_recipe(memory, id);
+            else if (type == "trim_pattern")
+                load_file_armorTrimPattern(memory, id);
+            else if (type == "trim_material")
+                load_file_armorTrimMaterial(memory, id);
+            else if (type == "wolf_variant")
+                load_file_wolfVariant(memory, id);
+            else if (type == "worldgen/biome")
+                load_file_biomes(memory, id);
+            else if (type == "worldgen/configured_carver")
+                ; //load_file_biomes(memory, id);
+            else if (type == "worldgen/configured_feature")
+                ; //load_file_biomes(memory, id);
+            else if (type == "worldgen/density_function")
+                ; //load_file_biomes(memory, id);
+            else if (type == "worldgen/flat_level_generator_preset")
+                ; //load_file_biomes(memory, id);
+            else if (type == "worldgen/multi_noise_biome_source_parameter_list")
+                ; //load_file_biomes(memory, id);
+            else if (type == "worldgen/noise")
+                ; //load_file_biomes(memory, id);
+            else if (type == "worldgen/noise_settings")
+                ; //load_file_biomes(memory, id);
+            else if (type == "worldgen/placed_feature")
+                ; //load_file_biomes(memory, id);
+            else if (type == "worldgen/processor_list")
+                ; //load_file_biomes(memory, id);
+            else if (type == "worldgen/structure")
+                ; //load_file_biomes(memory, id);
+            else if (type == "worldgen/structure_set")
+                ; //load_file_biomes(memory, id);
+            else if (type == "worldgen/template_pool")
+                ; //load_file_biomes(memory, id);
+            else if (type == "worldgen/world_preset")
+                ; //load_file_biomes(memory, id);
+            else if (type.starts_with("tag")) {
+                std::string tag_type;
+                if (type.starts_with("tags/"))
+                    tag_type = type.substr(5);
+                else if (type.starts_with("tag/"))
+                    tag_type = type.substr(4);
+                else
+                    throw std::runtime_error("Unknown type: " + type);
+                load_file_tags(memory, tag_type, namespace_, path_);
+            } else
+                throw std::runtime_error("Unknown type: " + type);
         }
 
         void load_register_file(const std::filesystem::path& file_path, const std::string& namespace_, const std::string& path_, const std::string& type) {
@@ -2695,33 +1288,11 @@ namespace copper_server {
 
         void load_items() {
             auto parsed = boost::json::parse(resources::registry::items);
-            list_array<std::string> filter;
-
-            if (api::configuration::get().protocol.allowed_versions_processed.contains_one([](auto pvn) { return pvn < 766; })) {
-                filter.push_back("minecraft:armadillo_scute");
-                filter.push_back("minecraft:armadillo_spawn_egg");
-                filter.push_back("minecraft:wolf_armor");
-                filter.push_back("minecraft:flow_armor_trim_smithing_template");
-                filter.push_back("minecraft:flow_banner_pattern");
-                filter.push_back("minecraft:flow_pottery_sherd");
-                filter.push_back("minecraft:bolt_armor_trim_smithing_template");
-                filter.push_back("minecraft:bordure_indented_banner_pattern");
-                filter.push_back("minecraft:breeze_rod");
-                filter.push_back("minecraft:mace");
-                filter.push_back("minecraft:wind_charge");
-                filter.push_back("minecraft:creaking_heart");
-                filter.push_back("minecraft:creaking_spawn_egg");
-                filter.push_back("minecraft:field_masoned_banner_pattern");
-                filter.push_back("minecraft:guster_banner_pattern");
-                filter.push_back("minecraft:guster_pottery_sherd");
-                filter.push_back("minecraft:music_disc_creator");
-                filter.push_back("minecraft:music_disc_creator_music_box");
-                filter.push_back("minecraft:music_disc_precipice");
-                filter.push_back("minecraft:ominous_bottle");
-                filter.push_back("minecraft:ominous_trial_key");
-                filter.push_back("minecraft:scrape_pottery_sherd");
-            }
-            filter.commit();
+            std::unordered_set<std::string> filter;
+            auto& to_filter = internal_compatibility_versions.at(api::configuration::get().protocol.allowed_versions_processed.min()).at("disabled_items").as_array();
+            filter.reserve(to_filter.size());
+            for (auto&& item : to_filter)
+                filter.insert((std::string)item.as_string());
 
             for (auto&& [name, decl] : parsed.as_object()) {
                 if (filter.contains(name))
@@ -2737,14 +1308,14 @@ namespace copper_server {
         }
 
         void prepare_versions() {
-            std::unordered_map<uint32_t, std::string_view> internal_item_aliases_protocol = {
+            std::unordered_map<uint32_t, std::string_view> internal_protocol_aliases = {
                 {765, resources::registry::protocol::_765},
                 {766, resources::registry::protocol::_766},
                 {767, resources::registry::protocol::_767},
                 {768, resources::registry::protocol::_768},
             };
             api::configuration::get().protocol.allowed_versions_processed.for_each([&](uint32_t version) {
-                auto res = util::conversions::json::from_json(boost::json::parse(internal_item_aliases_protocol.at(version)));
+                auto res = util::conversions::json::from_json(boost::json::parse(internal_protocol_aliases.at(version)));
                 registers::individual_registers[version] = std::move(res);
             });
         }
@@ -2984,35 +1555,46 @@ namespace copper_server {
                     for (auto& [name, decl] : current_registry_blocks)
                         proto_data[name] = (uint32_t)decl.at("protocol_id");
                 }
+                if (proto_id != 768) { //TODO update entities for 768
+                    auto& proto_data = base_objects::entity_data::internal_entity_aliases_protocol[proto_id];
+                    for (auto& [name, decl] : decl.at("minecraft:entity_type").at("entries").as_compound())
+                        proto_data[name] = (uint32_t)decl.at("protocol_id");
+                }
             }
             //set aliases
-            base_objects::block::access_full_block_data(
-                [&](auto& arr, auto& ignore) {
-                    for (auto& block : arr) {
-                        auto& name = block->name;
-                        auto& block_aliases = block->block_aliases;
-                        if (name.starts_with("minecraft:pale_oak_"))
-                            block_aliases.push_back("minecraft:birch_" + name.substr(19));
-                        else if (name.starts_with("minecraft:stripped_pale_oak_"))
-                            block_aliases.push_back("minecraft:stripped_birch_" + name.substr(28));
-                        else if (name == "minecraft:potted_pale_oak_sapling")
-                            block_aliases.push_back("minecraft:potted_birch_sapling");
-                        else if (name == "minecraft:pale_hanging_moss")
-                            block_aliases.push_back("minecraft:weeping_vines");
-                        else if (name == "minecraft:pale_moss_block")
-                            block_aliases.push_back("minecraft:moss_block");
-                        else if (name == "minecraft:pale_moss_carpet")
-                            block_aliases.push_back("minecraft:moss_carpet");
-                        else if (name == "minecraft:creaking_heart")
-                            block_aliases.push_back("minecraft:white_wool");
-                        else if (name == "minecraft:vault")
-                            block_aliases.push_back("minecraft:barrel");
-                        else if (name == "minecraft:heavy_core")
-                            block_aliases.push_back("minecraft:player_head");
-                    }
+
+            for (auto& [proto_id, decl] : internal_compatibility_versions) {
+                auto it = base_objects::entity_data::internal_entity_aliases_protocol.find(proto_id);
+                if (it == base_objects::entity_data::internal_entity_aliases_protocol.end())
+                    continue;
+                auto& proto_data = it->second;
+                for (auto& [name, id] : decl.at("protocol_entity_aliases").as_object())
+                    proto_data[name] = proto_data.at(std::string(id.as_string()));
+            }
+
+            {
+                std::unordered_map<std::string, std::string> filter;
+                {
+                    auto tmp = boost::json::parse(resources::registry::compatibility::block_aliases).as_object();
+                    filter.reserve(tmp.size());
+                    for (auto& [match, replace] : tmp)
+                        filter[match] = std::string(replace.as_string());
                 }
-            );
+
+                base_objects::block::access_full_block_data(
+                    [&](auto& arr, auto& ignore) {
+                        for (auto& block : arr) {
+                            for (auto& [match, replace] : filter) {
+                                auto res = processor::process_match(block->name, match, replace);
+                                if (res)
+                                    block->block_aliases.push_back(std::move(*res));
+                            }
+                        }
+                    }
+                );
+            }
             base_objects::static_block_data::initialize_blocks();
+            base_objects::entity_data::initialize_entities();
         }
 
         void __initialization__versions_post() {
@@ -3020,49 +1602,43 @@ namespace copper_server {
                 for (auto& [name, decl] : decl.at("minecraft:item").at("entries").as_compound())
                     base_objects::static_slot_data::internal_item_aliases_protocol[proto_id][name] = (uint32_t)decl.at("protocol_id");
             //set aliases
-            base_objects::slot_data::enumerate_slot_data(
-                [&](auto& item) {
-                    auto& name = item.id;
-                    auto& item_aliases = item.item_aliases;
-                    if (name.starts_with("minecraft:pale_oak_"))
-                        item_aliases.push_back("minecraft:birch_" + name.substr(19));
-                    else if (name.starts_with("minecraft:stripped_pale_oak_"))
-                        item_aliases.push_back("minecraft:stripped_birch_" + name.substr(28));
-                    else if (name == "minecraft:pale_hanging_moss")
-                        item_aliases.push_back("minecraft:weeping_vines");
-                    else if (name == "minecraft:pale_moss_block")
-                        item_aliases.push_back("minecraft:moss_block");
-                    else if (name == "minecraft:pale_moss_carpet")
-                        item_aliases.push_back("minecraft:moss_carpet");
-                    else if (name == "minecraft:creaking_heart")
-                        item_aliases.push_back("minecraft:white_wool");
-                    else if (name == "minecraft:vault")
-                        item_aliases.push_back("minecraft:spawner");
-                    else if (name == "minecraft:ominous_bottle")
-                        item_aliases.push_back("minecraft:experience_bottle");
-                    else if (name == "minecraft:ominous_trial_key")
-                        item_aliases.push_back("minecraft:trial_key");
-                    else if (name == "minecraft:heavy_core")
-                        item_aliases.push_back("minecraft:player_head");
-                    else if (name.ends_with("_bundle")) {
-                        if (name.starts_with("minecraft:")) {
-                            item_aliases.push_back("minecraft:bundle");
-                        }
-                    } else if (name == "minecraft:bogged_spawn_egg")
-                        item_aliases.push_back("minecraft:stray_spawn_egg");
-                    else if (name == "minecraft:turtle_scute")
-                        item_aliases.push_back("minecraft:scute");
-                }
-            );
 
-            if (api::configuration::get().protocol.allowed_versions_processed.contains_one([](auto pvn) { return pvn < 766; })) {
-                registers::armorTrimPatterns.erase("minecraft:flow");
-                registers::armorTrimPatterns.erase("minecraft:bolt");
+            {
+                std::unordered_map<std::string, std::string> filter;
+                {
+                    auto tmp = boost::json::parse(resources::registry::compatibility::item_aliases).as_object();
+                    filter.reserve(tmp.size());
+                    for (auto& [match, replace] : tmp)
+                        filter[match] = std::string(replace.as_string());
+                }
+
+                base_objects::slot_data::enumerate_slot_data(
+                    [&](auto& item) {
+                        auto& name = item.id;
+                        auto& item_aliases = item.item_aliases;
+
+                        for (auto& [match, replace] : filter) {
+                            auto res = processor::process_match(name, match, replace);
+                            if (res)
+                                item_aliases.push_back(std::move(*res));
+                        }
+                    }
+                );
             }
+
+            for (auto&& item : internal_compatibility_versions.at(api::configuration::get().protocol.allowed_versions_processed.min()).at("disabled_armor_trim_patterns").as_array())
+                registers::armorTrimPatterns.erase((std::string)item.as_string());
+
             base_objects::static_slot_data::initialize_items();
         }
 
         void initialize() {
+            internal_compatibility_versions = {
+                {765, boost::json::parse(resources::registry::compatibility::versions::_765).as_object()},
+                {766, boost::json::parse(resources::registry::compatibility::versions::_766).as_object()},
+                {767, boost::json::parse(resources::registry::compatibility::versions::_767).as_object()},
+                {768, boost::json::parse(resources::registry::compatibility::versions::_768).as_object()},
+            };
             initialize_entities();
             load_blocks();
             prepare_built_in_pack();
@@ -3071,6 +1647,7 @@ namespace copper_server {
             load_items();
             __initialization__versions_post();
             load_registers_complete();
+            internal_compatibility_versions.clear();
         }
     }
 }

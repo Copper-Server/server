@@ -1,0 +1,36 @@
+{
+    "disabled_items": [
+        "minecraft:armadillo_scute",
+        "minecraft:armadillo_spawn_egg",
+        "minecraft:wolf_armor",
+        "minecraft:flow_armor_trim_smithing_template",
+        "minecraft:flow_banner_pattern",
+        "minecraft:flow_pottery_sherd",
+        "minecraft:bolt_armor_trim_smithing_template",
+        "minecraft:bordure_indented_banner_pattern",
+        "minecraft:breeze_rod",
+        "minecraft:mace",
+        "minecraft:wind_charge",
+        "minecraft:creaking_heart",
+        "minecraft:creaking_spawn_egg",
+        "minecraft:field_masoned_banner_pattern",
+        "minecraft:guster_banner_pattern",
+        "minecraft:guster_pottery_sherd",
+        "minecraft:music_disc_creator",
+        "minecraft:music_disc_creator_music_box",
+        "minecraft:music_disc_precipice",
+        "minecraft:ominous_bottle",
+        "minecraft:ominous_trial_key",
+        "minecraft:scrape_pottery_sherd"
+    ],
+    "disabled_armor_trim_patterns": [
+        "minecraft:flow",
+        "minecraft:bolt"
+    ],
+    "protocol_entity_aliases": {
+        "minecraft:armadillo": "minecraft:fox",
+        "minecraft:bogged": "minecraft:stray",
+        "minecraft:breeze_wind_charge": "minecraft:wind_charge",
+        "minecraft:ominous_item_spawner": "minecraft:item"
+    }
+}

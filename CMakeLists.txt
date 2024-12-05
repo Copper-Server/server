@@ -23,7 +23,7 @@ FILE(GLOB RESOURCE_FILES CONFIGURE_DEPENDS
 list(FILTER RESOURCE_FILES EXCLUDE REGEX ".*/resources/include.hpp")
 list(FILTER RESOURCE_FILES EXCLUDE REGEX ".*/data/.*")
 build_resource_merge_json("copper_server" "${CMAKE_CURRENT_SOURCE_DIR}/resources/data" "out/built_resources")
-build_resources("copper_server" "out/built_resources" "${RESOURCE_FILES}" RESOURCE_FILES_include RESOURCE_FILES_build)
+build_resources_json("copper_server" "out/built_resources" "${RESOURCE_FILES}" RESOURCE_FILES_include RESOURCE_FILES_build)
 create_resources_header("resources" "${RESOURCE_FILES_include}")
 
 

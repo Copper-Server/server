@@ -33,6 +33,7 @@ namespace copper_server {
                 log::error("Server", std::string("[permissions] Failed to load permission file because: ") + ex.what());
             }
 
+            log::info("Server", "loading...");
             api::command::register_manager(manager);
             manager.reload_commands();
             log::info("Server", "server handler loaded.");

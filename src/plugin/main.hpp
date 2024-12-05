@@ -385,14 +385,18 @@ namespace copper_server {
                     plugins = vals.plugins;
                 }
             );
-            for (auto& [name, plugin] : plugins) {
-                plugin->OnLoad(plugin);
-            }
-            for (auto& [name, plugin] : plugins)
-                plugin->OnPostLoad(plugin);
 
-            for (auto& [name, plugin] : plugins)
-                plugin->OnLoadComplete(plugin);
+            future::forEach(plugins, [](auto& plugin) {
+                plugin.second->OnLoad(plugin.second);
+            })->wait();
+
+            future::forEach(plugins, [](auto& plugin) {
+                plugin.second->OnPostLoad(plugin.second);
+            })->wait();
+
+            future::forEach(plugins, [](auto& plugin) {
+                plugin.second->OnLoadComplete(plugin.second);
+            })->wait();
         }
 
         void callUnload() {

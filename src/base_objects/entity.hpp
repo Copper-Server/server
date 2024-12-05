@@ -40,14 +40,17 @@ namespace copper_server {
                 solid,
                 solid_except_self_type,
                 solid_for_vehicles,
-                none
-            } bounds_mode;
+                weak,
+                none,
+            } bounds_mode
+                = bounds_mode_t::weak;
             float acceleration; // block\tick
             uint16_t entity_id;
             bool living_entity;
             enbt::compound data;
             //"data"{
             //  "slot":{
+            //      "size": array_size,
             //      "main_hand": id,
             //      "off_hand": id,
             //      "hand": [id, id, ...]
@@ -56,6 +59,9 @@ namespace copper_server {
             //      "legs": id,
             //      "feet": id,
             //      "body": [id, id, id, id, ...]
+            //  },
+            //  "custom_data":{
+            //      ...
             //  }
             //}
 

@@ -51,7 +51,7 @@ resource_location resource_location_extractor(const char* parent_namespace, cons
     return location;
 }
 
-int direct_resource(const resource_location& location, const std::filesystem::path& input_file) {
+int direct_resource(const resource_location& location, const std::filesystem::path& input_file, bool skip_empty = false) {
 
     std::filesystem::path output_file = location.output_path.parent_path() / (location.output_path.filename().string() + ".cpp");
     std::filesystem::path header_file = location.output_path.parent_path() / (location.output_path.filename().string() + ".hpp");
@@ -93,8 +93,16 @@ int direct_resource(const resource_location& location, const std::filesystem::pa
     out << location.namespace_open
         << "const char __" << location.name << "[] = {";
     unsigned char c;
-    while (in.get(reinterpret_cast<char&>(c)))
-        out << "0x" << std::hex << static_cast<int>(c) << ", ";
+    if (skip_empty) {
+        while (in.get(reinterpret_cast<char&>(c))) {
+            if (c == ' ' || c == '\r' || c == '\n' || c == '\t')
+                continue;
+            out << "0x" << std::hex << static_cast<int>(c) << ", ";
+        }
+
+    } else
+        while (in.get(reinterpret_cast<char&>(c)))
+            out << "0x" << std::hex << static_cast<int>(c) << ", ";
     out << "};\n";
 
     out << "const std::string_view " << location.name << "(__" << location.name << ", sizeof(__" << location.name << "));\n";
@@ -121,8 +129,11 @@ int ___recursive_merge_json__file(std::ofstream& out, const std::filesystem::dir
         return 1;
     }
     unsigned char c;
-    while (in.get(reinterpret_cast<char&>(c)))
+    while (in.get(reinterpret_cast<char&>(c))) {
+        if (c == ' ' || c == '\r' || c == '\n' || c == '\t')
+            continue;
         out << c;
+    }
     return 0;
 }
 
@@ -305,7 +316,7 @@ int merge_json_resource(const resource_location& location, const std::filesystem
 
 int main(int argc, char* argv[]) {
     if (argc != 5) {
-        std::cerr << "Usage: " << argv[0] << " <direct/merge_json> <project namespace> <input resource> <base_output_path>\n";
+        std::cerr << "Usage: " << argv[0] << " <direct/json/merge_json> <project namespace> <input resource> <base_output_path>\n";
         return 1;
     }
 
@@ -314,6 +325,8 @@ int main(int argc, char* argv[]) {
 
     if (strcmp(argv[1], "direct") == 0)
         return direct_resource(location, input_file);
+    else if (strcmp(argv[1], "json") == 0)
+        return direct_resource(location, input_file, true);
     else if (strcmp(argv[1], "merge_json") == 0)
         return merge_json_resource(location, input_file);
     else {
