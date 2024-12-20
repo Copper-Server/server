@@ -169,7 +169,6 @@ namespace copper_server {
                         world.generator_id = api::configuration::get().world.type;
                         for (auto& [name, value] : api::configuration::get().world.generator_settings)
                             world.world_generator_data[name] = value;
-                        world.load_points.push_back({10, 10, -10, -10});
                     }
                 });
                 log::info("World", it + " loaded.");
@@ -231,7 +230,7 @@ namespace copper_server {
                 worlds.for_each_world([&](uint64_t id, storage::world_data& world) {
                     log::info("World", "saving world " + world.world_name + "...");
                     world.save();
-                    world.save_and_unload_chunks();
+                    world.save_chunks(true);
                     world.await_save_chunks();
                     log::info("World", "world " + world.world_name + " saved.");
                 });
@@ -247,7 +246,7 @@ namespace copper_server {
                 worlds.for_each_world([&](uint64_t id, storage::world_data& world) {
                     log::info("World", "saving world " + world.world_name + "...");
                     world.save();
-                    world.save_chunks();
+                    world.save_chunks(false);
                     world.await_save_chunks();
                     log::info("World", "world " + world.world_name + " saved.");
                 });

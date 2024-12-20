@@ -293,6 +293,12 @@ namespace copper_server {
             uint8_t z : 4;
         };
 
+        struct chunk_block_pos {
+            uint8_t x : 4;
+            uint32_t y : 21;
+            uint8_t z : 4;
+        };
+
         union compressed_block_state {
             struct {
                 uint64_t blockStateId : 52;

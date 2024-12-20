@@ -143,6 +143,79 @@ namespace copper_server {
             auto operator<=>(const cubic_bounds_chunk_radius& other) const = default;
         };
 
+        struct cubic_bounds_chunk_radius_out {
+            int64_t center_x;
+            int64_t center_z;
+            int64_t radius_begin;
+            int64_t radius_end;
+
+            template <class _FN>
+            void enum_points(_FN fn) const {
+                int64_t max_x = center_x + radius_end;
+                int64_t max_z = center_z + radius_end;
+                for (int64_t i = center_x - radius_begin; i <= max_x; i++)
+                    for (int64_t j = center_z - radius_begin; j <= max_z; j++)
+                        fn(i, j);
+            }
+
+            template <class _FN>
+            void enum_points_from_center(_FN fn) const {
+                if (radius_begin == 0)
+                    fn(center_x, center_z);
+                for (int64_t layer = radius_begin ? radius_begin : 1; layer <= radius_end; ++layer) {
+                    for (int64_t i = -layer + 1; i < layer; ++i) {
+                        fn(center_x + i, center_z - layer);
+                        fn(center_x - layer, center_z + i);
+                        fn(center_x + i, center_z + layer);
+                        fn(center_x + layer, center_z + i);
+                    }
+                    fn(center_x - layer, center_z - layer);
+                    fn(center_x + layer, center_z - layer);
+                    fn(center_x - layer, center_z + layer);
+                    fn(center_x + layer, center_z + layer);
+                }
+            }
+
+            template <class _FN>
+            void enum_points_from_center_w_layer(_FN fn) const {
+                if (radius_begin == 0)
+                    fn(center_x, center_z, 0);
+                for (int64_t layer = radius_begin ? radius_begin : 1; layer <= radius_end; ++layer) {
+                    for (int64_t i = -layer + 1; i < layer; ++i) {
+                        fn(center_x + i, center_z - layer, layer);
+                        fn(center_x - layer, center_z + i, layer);
+                        fn(center_x + i, center_z + layer, layer);
+                        fn(center_x + layer, center_z + i, layer);
+                    }
+                    fn(center_x - layer, center_z - layer, layer);
+                    fn(center_x + layer, center_z - layer, layer);
+                    fn(center_x - layer, center_z + layer, layer);
+                    fn(center_x + layer, center_z + layer, layer);
+                }
+            }
+
+            bool in_bounds(int64_t x, int64_t z) const {
+                return x >= (center_x - radius_begin) && x <= (center_x + radius_end) && z >= (center_z - radius_begin) && z <= (center_z + radius_end);
+            }
+
+            bool out_of_bounds(int64_t x, int64_t z) const {
+                return !in_bounds(x, z);
+            }
+
+            size_t count() {
+                return (radius_end - radius_begin + 1) * (radius_end - radius_begin + 1);
+            }
+
+            std::pair<int64_t, int64_t> random_point() const {
+                std::mt19937_64 gen(std::random_device{}());
+                std::uniform_int_distribution<int64_t> dis_x(center_x - radius_begin, center_x + radius_end);
+                std::uniform_int_distribution<int64_t> dis_z(center_z - radius_begin, center_z + radius_end);
+                return std::make_pair(dis_x(gen), dis_z(gen));
+            }
+
+            auto operator<=>(const cubic_bounds_chunk_radius_out& other) const = default;
+        };
+
         struct cubic_bounds_block {
             int64_t x1;
             int64_t y1;

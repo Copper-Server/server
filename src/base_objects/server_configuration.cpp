@@ -44,6 +44,7 @@ namespace copper_server {
                 cfg.world.seed = world["seed"].or_apply(cfg.world.seed);
                 cfg.world.type = world["type"].or_apply(cfg.world.type);
                 cfg.world.unload_speed = world["unload_speed"].or_apply(cfg.world.unload_speed);
+                cfg.world.auto_save = world["auto_save"].or_apply(cfg.world.auto_save);
                 {
                     auto generator_settings = js_object::get_object(world["generator_settings"]);
                     if (generator_settings.empty())
@@ -54,6 +55,16 @@ namespace copper_server {
                         for (auto&& [key, value] : generator_settings)
                             cfg.world.generator_settings[(std::string)key] = (std::string)generator_settings[key];
                     }
+                }
+                {
+                    std::string saving_mode = world["saving_mode"].or_apply("zstd");
+                    static std::unordered_set<std::string> allowed_modes = {
+                        "zstd",
+                        "raw"
+                    };
+                    if (!allowed_modes.contains(saving_mode))
+                        saving_mode = "zstd";
+                    cfg.world.saving_mode;
                 }
             }
             {

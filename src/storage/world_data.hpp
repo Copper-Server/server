@@ -51,6 +51,15 @@ namespace copper_server {
             void on_block_tick(base_objects::block_id_t id, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z);
         };
 
+        struct loading_point_ticket {
+            std::variant<uint16_t, std::function<bool(world_data&, size_t, loading_point_ticket&)>> expiration;
+            base_objects::cubic_bounds_chunk_radius point;
+            std::string name;
+            int8_t level;
+
+            //sets the whole cubic point to specified level and propagates to neighbors by default
+        };
+
         class world_data;
         class worlds_data;
         struct sub_chunk_data;
@@ -77,7 +86,6 @@ namespace copper_server {
             uint32_t biomes[4][4][4];
             std::unordered_map<uint16_t, enbt::value> block_entities; //0xXYZ => block_entity
             list_array<base_objects::entity_ref> stored_entities;
-            list_array<base_objects::local_block_pos> queried_for_tick;
 
 
             light_data sky_light;
@@ -118,16 +126,20 @@ namespace copper_server {
 
         class chunk_data {
             friend world_data;
-            bool load(const std::filesystem::path& chunk_z);
-            bool load(const enbt::compound_const_ref& chunk_data);
-            bool save(const std::filesystem::path& chunk_z);
+            bool load(const std::filesystem::path& chunk_z, uint64_t tick_counter);
+            bool load(const enbt::compound_const_ref& chunk_data, uint64_t tick_counter);
+            bool save(const std::filesystem::path& chunk_z, uint64_t tick_counter);
 
         public:
             height_maps height_maps;
             std::vector<sub_chunk_data> sub_chunks;
-            std::chrono::high_resolution_clock::time_point last_usage;
+
+            //instead of using negative values for priority, schedule ticks in reverse order
+            // -1 == 1, -2 == 2, etc... means higher value == lower priority
+            list_array<list_array<std::pair<uint64_t, base_objects::chunk_block_pos>>> queried_for_tick;
+            list_array<std::pair<uint64_t, base_objects::chunk_block_pos>> queried_for_liquid_tick;
             const int64_t chunk_x, chunk_z;
-            bool marked_for_tick = false;
+            uint8_t load_level = 44;
 
             chunk_data(int64_t chunk_x, int64_t chunk_z);
 
@@ -140,10 +152,12 @@ namespace copper_server {
             void for_each_sub_chunk(std::function<void(sub_chunk_data& sub_chunk)> func);
             void get_sub_chunk(uint64_t sub_chunk_y, std::function<void(sub_chunk_data& sub_chunk)> func);
 
-            void query_for_tick(uint8_t local_x, uint64_t global_y, uint8_t local_z);
+            //priority accepts only negative values
+            void query_for_tick(uint8_t local_x, uint64_t global_y, uint8_t local_z, uint64_t on_tick, int8_t priority = 0);
+            void query_for_liquid_tick(uint8_t local_x, uint64_t global_y, uint8_t local_z, uint64_t on_tick);
 
 
-            void tick(world_data& world, size_t max_random_tick_for_chunk, std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time);
+            void tick(world_data& world, size_t random_tick_speed, std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time);
         };
 
         class chunk_generator {
@@ -219,6 +233,7 @@ namespace copper_server {
             keep,
         };
 
+
         class world_data {
 
             using chunk_row = std::unordered_map<uint64_t, base_objects::atomic_holder<chunk_data>>;
@@ -238,7 +253,7 @@ namespace copper_server {
             std::unordered_map<calc::XY<int64_t>, FuturePtr<bool>> on_save_process;
             std::unordered_map<uint64_t, base_objects::client_data_holder> clients;
             uint64_t local_client_id_generator = 0;
-
+            size_t world_spawn_ticket_id;
 
             std::chrono::high_resolution_clock::time_point last_usage;
             void make_save(int64_t chunk_x, int64_t chunk_z, bool also_unload);
@@ -271,9 +286,7 @@ namespace copper_server {
             std::string generator_id;
             std::vector<std::string> enabled_datapacks;
             std::vector<std::string> enabled_plugins;
-            std::vector<std::string> enabled_features;
-            std::vector<base_objects::cubic_bounds_chunk> load_points;
-            std::vector<base_objects::spherical_bounds_chunk> load_points_sphere;
+            std::unordered_map<size_t, loading_point_ticket> loading_tickets;
 
             struct {
                 int64_t x = 0;
@@ -292,7 +305,7 @@ namespace copper_server {
             double border_warning_time = 15;
             int64_t day_time = 0;
             int64_t time = 0;
-            size_t max_random_tick_for_chunk = 100;
+            size_t random_tick_speed = 3;
             uint64_t ticks_per_second = 20;
 
             std::chrono::milliseconds chunk_lifetime = std::chrono::seconds(1);
@@ -322,6 +335,10 @@ namespace copper_server {
                 return path;
             }
 
+            void update_spawn_data(int64_t x, int64_t z, int64_t radius);
+            size_t add_loading_ticket(loading_point_ticket&& ticket);
+            void remove_loading_ticket(size_t id);
+
             bool exists(int64_t chunk_x, int64_t chunk_z);
             //returns std::nullopt if chunk already queried for async load
             std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z);
@@ -329,9 +346,8 @@ namespace copper_server {
             bool request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback);
             void request_chunk_data(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback, std::function<void()> fault);
 
-            void save_chunks();
+            void save_chunks(bool unload = false);
             void await_save_chunks();
-            void save_and_unload_chunks();
             void save_and_unload_chunk(int64_t chunk_x, int64_t chunk_z);
             void unload_chunk(int64_t chunk_x, int64_t chunk_z);
             void save_chunk(int64_t chunk_x, int64_t chunk_z);
@@ -383,7 +399,10 @@ namespace copper_server {
             void for_each_block_entity_at(int64_t global_x, int64_t global_z, uint64_t global_y, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
 
 
-            void query_for_tick(int64_t global_x, uint64_t global_y, int64_t global_z);
+            //priority accepts only negative values, doesn't work for unloaded chunks
+            void query_for_tick(int64_t global_x, uint64_t global_y, int64_t global_z, uint64_t duration, int8_t priority = 0);
+            void query_for_liquid_tick(int64_t global_x, uint64_t global_y, int64_t global_z, uint64_t duration);
+
             void set_block(const base_objects::full_block_data& block, int64_t global_x, uint64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
             void set_block(base_objects::full_block_data&& block, int64_t global_x, uint64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
             void remove_block(int64_t global_x, uint64_t global_y, int64_t global_z);
@@ -498,6 +517,7 @@ namespace copper_server {
 
             //tick sync
             std::chrono::nanoseconds accumulated_time{0};
+            uint64_t tick_counter = 0;
         };
 
         class worlds_data {

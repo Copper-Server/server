@@ -20,7 +20,10 @@ namespace copper_server {
                 std::string name = "overworld";
                 std::string seed = "0";
                 std::string type = "default";
+                std::string saving_mode = "zstd"; //allowed modes is 'zstd' and 'raw'
+
                 size_t unload_speed = 10; //max 10 chunks per tick and per world
+                size_t auto_save = 6000;
 
                 struct {
                     int64_t x = 0;
