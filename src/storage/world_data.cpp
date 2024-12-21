@@ -16,12 +16,24 @@ namespace enbt::io_helper {
         static std::uint32_t write_cast(const base_objects::block& value) {
             return value.raw;
         }
+
+        static base_objects::block read_cast(std::uint32_t value) {
+            base_objects::block bl;
+            bl.raw = value;
+            return bl;
+        }
     };
 
     template <>
     struct serialization_simple_cast<storage::light_data::light_item> {
         static std::uint8_t write_cast(const storage::light_data::light_item& value) {
             return value.raw;
+        }
+
+        static storage::light_data::light_item read_cast(std::uint8_t value) {
+            storage::light_data::light_item lit;
+            lit.raw = value;
+            return lit;
         }
     };
 
@@ -1706,6 +1718,7 @@ namespace copper_server {
                 if (experied)
                     experied_tickets.push_back(id);
                 else if (ticket.level < 44) {
+                    to_tick_chunks.reserve(ticket.point.count());
                     ticket.point.enum_points_from_center([&](int64_t x, int64_t z) {
                         auto res = request_chunk_data(x, z);
                         if (res->is_ready()) {
@@ -1717,10 +1730,11 @@ namespace copper_server {
                     uint8_t propagation = 44 - ticket.level;
                     if (propagation) {
                         base_objects::cubic_bounds_chunk_radius_out bounds(ticket.point.center_x, ticket.point.center_z, ticket.point.radius, ticket.point.radius + propagation);
+                        to_tick_chunks.reserve(bounds.count());
                         bounds.enum_points_from_center_w_layer([&](int64_t x, int64_t z, int64_t layer) {
                             auto res = request_chunk_data(x, z);
                             if (res->is_ready()) {
-                                res->get()->load_level = std::min<uint8_t>(res->get()->load_level, propagation - layer);
+                                res->get()->load_level = std::min<uint8_t>(res->get()->load_level, propagation + layer);
                                 if (res->get()->load_level < 33)
                                     to_tick_chunks.push_back(res->get());
                             }

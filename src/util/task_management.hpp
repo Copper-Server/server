@@ -24,6 +24,7 @@ struct Future {
             try {
                 future->result = fn();
             } catch (const fast_task::task_cancellation&) {
+                std::lock_guard guard(future->task_mt);
                 future->_is_ready = true;
                 future->task_cv.notify_all();
                 throw;
@@ -155,6 +156,7 @@ struct Future<void> {
             try {
                 fn();
             } catch (const fast_task::task_cancellation&) {
+                std::lock_guard guard(future->task_mt);
                 future->_is_ready = true;
                 future->task_cv.notify_all();
                 throw;
@@ -263,6 +265,7 @@ struct CancelableFuture : public Future<T> {
             try {
                 future->result = fn();
             } catch (const fast_task::task_cancellation&) {
+                std::lock_guard guard(future->task_mt);
                 future->_is_ready = true;
                 future->task_cv.notify_all();
                 throw;
@@ -332,6 +335,7 @@ struct CancelableFuture<void> : public Future<void> {
             try {
                 fn();
             } catch (const fast_task::task_cancellation&) {
+                std::lock_guard guard(future->task_mt);
                 future->_is_ready = true;
                 future->task_cv.notify_all();
                 throw;

@@ -10,7 +10,7 @@
 namespace copper_server {
     namespace resources {
         std::unordered_map<uint32_t, boost::json::object> internal_compatibility_versions;
-
+        int32_t latest_protocol_version = -1;
         template <class T, class Iterator>
         void id_assigner(std::unordered_map<std::string, T>& map, list_array<Iterator>& cache) {
             size_t i = 0;
@@ -1314,10 +1314,13 @@ namespace copper_server {
                 {767, resources::registry::protocol::_767},
                 {768, resources::registry::protocol::_768},
             };
-            api::configuration::get().protocol.allowed_versions_processed.for_each([&](uint32_t version) {
-                auto res = util::conversions::json::from_json(boost::json::parse(internal_protocol_aliases.at(version)));
-                registers::individual_registers[version] = std::move(res);
-            });
+            latest_protocol_version
+                = api::configuration::get().protocol.allowed_versions_processed.for_each(
+                                                                                   [&](uint32_t version) {
+                                                                                       auto res = util::conversions::json::from_json(boost::json::parse(internal_protocol_aliases.at(version)));
+                                                                                       registers::individual_registers[version] = std::move(res);
+                                                                                   }
+                ).max();
         }
 
         using tags_obj = std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>>>;
@@ -1483,7 +1486,7 @@ namespace copper_server {
         }
 
         void __initialization__versions_inital() { //skips items assignation
-            auto& latest_version = registers::individual_registers.at(768);
+            auto& latest_version = registers::individual_registers.at(latest_protocol_version);
             {
                 auto current_effect = latest_version.at("minecraft:mob_effect").at("entries").as_compound();
                 for (auto& [name, decl] : current_effect)
