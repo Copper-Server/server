@@ -17,7 +17,6 @@ struct Future {
     bool _is_ready = false;
     std::exception_ptr ex_ptr;
 
-
     static std::shared_ptr<Future> start(const std::function<T()>& fn) {
         std::shared_ptr<Future> future = std::make_shared<Future>();
         fast_task::task::start(std::make_shared<fast_task::task>([fn, future]() {
@@ -89,7 +88,7 @@ struct Future {
         }
     }
 
-    bool is_ready()  {
+    bool is_ready() {
         std::unique_lock lock(task_mt);
         return _is_ready;
     }
@@ -99,6 +98,18 @@ struct Future {
         std::unique_lock lock(um);
         while (!_is_ready)
             task_cv.wait(lock);
+        if (ex_ptr)
+            std::rethrow_exception(ex_ptr);
+    }
+
+    template <class T>
+    void wait_with(std::unique_lock<T>& lock) {
+        fast_task::mutex_unify um(task_mt);
+        std::unique_lock l(um);
+        lock.unlock();
+        while (!_is_ready)
+            task_cv.wait(l);
+        lock.lock();
         if (ex_ptr)
             std::rethrow_exception(ex_ptr);
     }
@@ -211,6 +222,16 @@ struct Future<void> {
         std::unique_lock lock(um);
         while (!_is_ready)
             task_cv.wait(lock);
+        if (ex_ptr)
+            std::rethrow_exception(ex_ptr);
+    }
+
+    template <class T>
+    void wait_with(std::unique_lock<T>& lock) {
+        fast_task::mutex_unify um(task_mt);
+        std::unique_lock l(um);
+        while (!_is_ready)
+            task_cv.wait(l);
         if (ex_ptr)
             std::rethrow_exception(ex_ptr);
     }
@@ -429,21 +450,14 @@ namespace future {
     }
 
     template <class Ret, class Accept>
-    FuturePtr<Ret> chain(const FuturePtr<Accept>& future, const std::function<Ret()>& fn) {
+    FuturePtr<Ret> chain(const FuturePtr<Accept>& future, const std::function<Ret(Accept)>& fn) {
         FuturePtr<Ret> new_future = std::make_shared<Future<Ret>>();
-        future->when_ready([future, fn, new_future]() mutable {
+        future->when_ready([fn, new_future](Accept a) mutable {
             try {
-                if constexpr (std::is_same_v<Accept, void>)
-                    if constexpr (std::is_same_v<Ret, void>)
-                        fn();
-                    else
-                        new_future->result = fn();
-                else {
-                    if constexpr (std::is_same_v<Ret, void>)
-                        fn(future->get());
-                    else
-                        new_future->result = fn(future->get());
-                }
+                if constexpr (std::is_same_v<Ret, void>)
+                    fn(std::move(a));
+                else
+                    new_future->result = fn(std::move(a));
             } catch (...) {
             };
             std::lock_guard guard(new_future->task_mt);
@@ -453,22 +467,15 @@ namespace future {
         return new_future;
     }
 
-    template <class Ret, class Accept>
-    FuturePtr<Ret> chain(FuturePtr<Accept>&& future, const std::function<Ret()>& fn) {
+    template <class Ret>
+    FuturePtr<Ret> chain(const FuturePtr<void>& future, const std::function<Ret()>& fn) {
         FuturePtr<Ret> new_future = std::make_shared<Future<Ret>>();
-        future->when_ready([future = std::move(future), fn, new_future]() mutable {
+        future->when_ready([fn, new_future]() mutable {
             try {
-                if constexpr (std::is_same_v<Accept, void>)
-                    if constexpr (std::is_same_v<Ret, void>)
-                        fn();
-                    else
-                        new_future->result = fn();
-                else {
-                    if constexpr (std::is_same_v<Ret, void>)
-                        fn(future->get());
-                    else
-                        new_future->result = fn(future->get());
-                }
+                if constexpr (std::is_same_v<Ret, void>)
+                    fn();
+                else
+                    new_future->result = fn();
             } catch (...) {
             };
             std::lock_guard guard(new_future->task_mt);

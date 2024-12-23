@@ -170,8 +170,8 @@ namespace copper_server {
                         for (auto& [name, value] : api::configuration::get().world.generator_settings)
                             world.world_generator_data[name] = value;
                     }
+                    log::info("World", it + " initialized.");
                 });
-                log::info("World", it + " loaded.");
             }
             if (worlds_storage.base_world_id == -1 && !api::configuration::get().allowed_dimensions.empty()) {
                 log::info("World", "Base world not set, setting to first world.");
@@ -1158,6 +1158,31 @@ namespace copper_server {
                                 });
                             });
                     }
+                }
+                {
+                    auto chunks_loaded = worlds.add_child("chunks_loaded");
+                    chunks_loaded.set_callback("command.chunks_loaded", [this](const list_array<predicate>&, base_objects::command_context& context) {
+                        Chat message("Chunks loaded: " + std::to_string(api::world::loaded_chunks_count()));
+                        message.SetColor("green");
+                        api::players::calls::on_system_message({context.executor, message});
+                    });
+                    auto world_id = chunks_loaded.add_child("world_id", cmd_pred_long());
+                    world_id.set_callback("command.chunks_loaded", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                        auto world_id = std::get<pred_long>(args[0]).value;
+                        Chat message("Chunks loaded: " + std::to_string(api::world::loaded_chunks_count(world_id)));
+                        message.SetColor("green");
+                        api::players::calls::on_system_message({context.executor, message});
+                    });
+
+                    auto world_name = chunks_loaded.add_child("world_name", cmd_pred_string());
+                    world_name.set_callback("command.chunks_loaded", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                        auto& world_name = std::get<pred_string>(args[0]).value;
+                        Chat message("Chunks loaded: " + std::to_string(api::world::loaded_chunks_count(world_name)));
+                        message.SetColor("green");
+                        api::players::calls::on_system_message({context.executor, message});
+                    });
+                    add_world_id_suggestion(world_id);
+                    add_world_name_suggestion(world_name);
                 }
             }
             {

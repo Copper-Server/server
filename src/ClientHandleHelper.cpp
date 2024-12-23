@@ -1,10 +1,13 @@
-
+#if defined(_MSC_VER)
+    #include <SDKDDKVer.h>
+#endif
 #include <bit>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/thread/shared_lock_guard.hpp>
 
 #include <library/enbt/enbt.hpp>
 #include <src/ClientHandleHelper.hpp>
+#include <src/api/asio.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/chat.hpp>
@@ -246,7 +249,7 @@ namespace copper_server {
 
     void Server::Worker() {
         make_clean_up();
-        TCPsession* session = new TCPsession(boost::asio::ip::tcp::socket(make_strand(threads)), first_client_holder, all_connections_timeout);
+        TCPsession* session = new TCPsession(boost::asio::ip::tcp::socket(make_strand(api::asio::get_threads())), first_client_holder, all_connections_timeout);
         TCPacceptor.async_accept(session->sock, [this, session](const boost::system::error_code& error) {
             if (error == boost::asio::error::operation_aborted || disabled)
                 return;
@@ -259,8 +262,7 @@ namespace copper_server {
     }
 
     auto Server::resolveEndpoint(const std::string& ip, uint16_t port) {
-        boost::asio::io_service io_service;
-        boost::asio::ip::tcp::resolver resolver(io_service);
+        boost::asio::ip::tcp::resolver resolver(api::asio::get_service());
         boost::asio::ip::tcp::resolver::query query(ip, std::to_string(port));
         auto list = resolver.resolve(query);
         auto endpoint = list.begin()->endpoint();
@@ -276,10 +278,6 @@ namespace copper_server {
 
 
         return endpoint;
-    }
-
-    boost::asio::io_service& Server::getService() {
-        return *service;
     }
 
     bool Server::is_local_server() {
@@ -326,15 +324,13 @@ namespace copper_server {
         return ssl_key_length;
     }
 
-    Server::Server(boost::asio::io_service* io_service, const std::string& ip, uint16_t port, size_t threads, size_t ssl_key_length)
-        : TCPacceptor(*io_service, resolveEndpoint(ip, port)),
-          threads(threads ? threads : std::thread::hardware_concurrency()),
+    Server::Server(const std::string& ip, uint16_t port, size_t ssl_key_length)
+        : TCPacceptor(api::asio::get_service(), resolveEndpoint(ip, port)),
           ssl_key_length(ssl_key_length),
           ip(ip) {
         if (global_instance)
             throw std::runtime_error("Server already initialized");
         global_instance = this;
-        service = io_service;
         if (ssl_key_length) {
             server_rsa_key = RSA_generate_key(ssl_key_length, RSA_F4, nullptr, nullptr);
             NOT_NULL(server_rsa_key, "Failed to generate RSA key");
@@ -369,7 +365,7 @@ namespace copper_server {
         if (disabled) {
             Worker();
             disabled = false;
-            service->run();
+            api::asio::get_service().run();
         } else
             throw std::exception("tcp server already run");
     }
@@ -382,7 +378,7 @@ namespace copper_server {
             for (auto it : sessions)
                 it->disconnect();
             disabled = true;
-            service->stop();
+            api::asio::get_service().stop();
         } else
             throw std::exception("tcp server already stoped");
     }

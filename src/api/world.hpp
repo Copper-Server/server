@@ -9,6 +9,10 @@ namespace copper_server::api::world {
     void save(uint64_t world_id);
     void save_all();
 
+    size_t loaded_chunks_count();
+    size_t loaded_chunks_count(uint64_t world_id);
+    size_t loaded_chunks_count(const std::string& name);
+
     void iterate(std::function<void(uint64_t id, storage::world_data& world)> callback);
     void get(uint64_t world_id, std::function<void(storage::world_data& world)> callback);
     void get(const std::string& name, std::function<void(storage::world_data& world)> callback);

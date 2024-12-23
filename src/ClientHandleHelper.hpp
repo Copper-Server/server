@@ -117,9 +117,7 @@ namespace copper_server {
     };
 
     class Server {
-        boost::asio::io_service* service;
         boost::asio::ip::tcp::acceptor TCPacceptor;
-        boost::asio::thread_pool threads;
 
         std::recursive_mutex close_mutex;
         std::list<TCPsession*> queried_close;
@@ -148,8 +146,6 @@ namespace copper_server {
 
     public:
         static Server& instance();
-
-        boost::asio::io_service& getService();
         bool is_local_server();
 
         std::string get_ip() const;
@@ -170,7 +166,7 @@ namespace copper_server {
         //30 sec
         uint64_t all_connections_timeout = 30000;
 
-        Server(boost::asio::io_service* io_service, const std::string& ip, uint16_t port, size_t threads = 0, size_t ssl_key_length = 1024);
+        Server(const std::string& ip, uint16_t port, size_t ssl_key_length = 1024);
 
         ~Server();
 

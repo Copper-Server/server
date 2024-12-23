@@ -338,11 +338,14 @@ namespace copper_server {
             void update_spawn_data(int64_t x, int64_t z, int64_t radius);
             size_t add_loading_ticket(loading_point_ticket&& ticket);
             void remove_loading_ticket(size_t id);
+            size_t loaded_chunks_count();
 
             bool exists(int64_t chunk_x, int64_t chunk_z);
             //returns std::nullopt if chunk already queried for async load
             std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z);
             FuturePtr<base_objects::atomic_holder<chunk_data>> request_chunk_data(int64_t chunk_x, int64_t chunk_z);
+            std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak_gen(int64_t chunk_x, int64_t chunk_z); //if chunk does not exists then it will be generated, if chunk exists or not loaded then std::nullopt
+            void request_chunk_gen(int64_t chunk_x, int64_t chunk_z);                                                             //generates chunk if it does not exists
             bool request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback);
             void request_chunk_data(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback, std::function<void()> fault);
 
@@ -547,6 +550,8 @@ namespace copper_server {
 
             worlds_data(base_objects::ServerConfiguration& configuration, const std::filesystem::path& base_path);
 
+            size_t loaded_chunks_count();
+            size_t loaded_chunks_count(uint64_t world_id);
             bool exists(uint64_t world_id);
             bool exists(const std::string& name);
             const list_array<uint64_t>& get_list();

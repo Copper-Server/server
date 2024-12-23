@@ -789,6 +789,7 @@ namespace copper_server {
                     light_processor->process_sub_chunk(*this, chunk_x, y, chunk_z);
                 ++y;
             });
+            chunk->load_level = 34;
             return chunk;
         }
 
@@ -1004,12 +1005,21 @@ namespace copper_server {
             loading_tickets.erase(id);
         }
 
+        size_t world_data::loaded_chunks_count() {
+            std::unique_lock lock(mutex);
+            size_t count = 0;
+            for (auto& x_axis : chunks)
+                count += x_axis.second.size();
+            return count;
+        }
+
         bool world_data::exists(int64_t chunk_x, int64_t chunk_z) {
             std::unique_lock lock(mutex);
             if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
                 if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
                     return true;
-            return std::filesystem::exists(path / std::to_string(chunk_x) / (std::to_string(chunk_z) + ".dat"));
+            lock.unlock();
+            return std::filesystem::exists(path / "chunks" / std::to_string(chunk_x) / (std::to_string(chunk_z) + ".dat"));
         }
 
         std::optional<base_objects::atomic_holder<chunk_data>> world_data::request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z) {
@@ -1021,10 +1031,7 @@ namespace copper_server {
             if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end())
                 return chunks[chunk_x][chunk_z] = load_chunk_sync(chunk_x, chunk_z);
             else {
-                auto res = process->second;
-                lock.unlock();
-                res->wait();
-                lock.lock();
+                process->second->wait_with(lock);
                 return request_chunk_data_sync(chunk_x, chunk_z);
             }
         }
@@ -1050,7 +1057,50 @@ namespace copper_server {
                 return process->second;
         }
 
-        bool world_data::request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback) {
+        std::optional<base_objects::atomic_holder<chunk_data>> world_data::request_chunk_data_weak_gen(int64_t chunk_x, int64_t chunk_z) {
+            std::unique_lock lock(mutex);
+            if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
+                if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
+                    return std::make_optional(y_axis->second);
+
+
+            if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end()) {
+                if (!exists(chunk_x, chunk_z))
+                    on_load_process[{chunk_x, chunk_z}] = Future<base_objects::atomic_holder<chunk_data>>::start(
+                        [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
+                            auto chunk = load_chunk_sync(chunk_x, chunk_z);
+                            if (!chunk)
+                                return nullptr;
+                            std::unique_lock lock(mutex);
+                            on_load_process.erase({chunk_x, chunk_z});
+                            return chunks[chunk_x][chunk_z] = chunk;
+                        }
+                    );
+            }
+            return std::nullopt;
+        }
+
+        void world_data::request_chunk_gen(int64_t chunk_x, int64_t chunk_z) {
+            std::unique_lock lock(mutex);
+            if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
+                if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
+                    return;
+            if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end())
+                if (!exists(chunk_x, chunk_z))
+                    on_load_process[{chunk_x, chunk_z}] = Future<base_objects::atomic_holder<chunk_data>>::start(
+                        [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
+                            auto chunk = load_chunk_sync(chunk_x, chunk_z);
+                            if (!chunk)
+                                return nullptr;
+                            std::unique_lock lock(mutex);
+                            on_load_process.erase({chunk_x, chunk_z});
+                            return chunks[chunk_x][chunk_z] = chunk;
+                        }
+                    );
+        }
+
+        bool
+        world_data::request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback) {
             std::unique_lock lock(mutex);
             if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
                 if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end()) {
@@ -1066,10 +1116,7 @@ namespace copper_server {
                     return false;
                 return true;
             } else {
-                auto res = process->second;
-                lock.unlock();
-                res->wait();
-                lock.lock();
+                process->second->wait_with(lock);
                 return request_chunk_data_sync(chunk_x, chunk_z, callback);
             }
         }
@@ -1097,7 +1144,7 @@ namespace copper_server {
                     }
                 );
             else
-                return process->second->when_ready([this, chunk_x, chunk_z, callback, fault](base_objects::atomic_holder<chunk_data> chunk) {
+                process->second->when_ready([this, chunk_x, chunk_z, callback, fault](base_objects::atomic_holder<chunk_data> chunk) {
                     if (!request_chunk_data_sync(chunk_x, chunk_z, callback))
                         fault();
                 });
@@ -1693,7 +1740,7 @@ namespace copper_server {
 
             last_usage = current_time;
             list_array<base_objects::atomic_holder<chunk_data>> to_tick_chunks;
-            list_array<size_t> experied_tickets;
+            list_array<size_t> expired_tickets;
 
             for (auto& [x, x_axis] : chunks) {
                 for (auto& [z, z_axis] : x_axis) {
@@ -1702,21 +1749,21 @@ namespace copper_server {
                 }
             }
             for (auto& [id, ticket] : loading_tickets) {
-                bool experied = false;
+                bool expired = false;
                 std::visit(
                     [&](auto& expr) {
                         if constexpr (std::is_same_v<std::decay_t<decltype(expr)>, uint16_t>) {
                             if (expr)
                                 --expr;
                             else
-                                experied = true;
+                                expired = true;
                         } else if (!expr(*this, id, ticket))
-                            experied = true;
+                            expired = true;
                     },
                     ticket.expiration
                 );
-                if (experied)
-                    experied_tickets.push_back(id);
+                if (expired)
+                    expired_tickets.push_back(id);
                 else if (ticket.level < 44) {
                     to_tick_chunks.reserve(ticket.point.count());
                     ticket.point.enum_points_from_center([&](int64_t x, int64_t z) {
@@ -1732,20 +1779,27 @@ namespace copper_server {
                         base_objects::cubic_bounds_chunk_radius_out bounds(ticket.point.center_x, ticket.point.center_z, ticket.point.radius, ticket.point.radius + propagation);
                         to_tick_chunks.reserve(bounds.count());
                         bounds.enum_points_from_center_w_layer([&](int64_t x, int64_t z, int64_t layer) {
-                            auto res = request_chunk_data(x, z);
-                            if (res->is_ready()) {
-                                res->get()->load_level = std::min<uint8_t>(res->get()->load_level, propagation + layer);
-                                if (res->get()->load_level < 33)
-                                    to_tick_chunks.push_back(res->get());
-                            }
+                            auto set_load_level = propagation + layer;
+                            if (set_load_level <= 33) {
+                                auto res = request_chunk_data(x, z);
+                                if (res->is_ready()) {
+                                    res->get()->load_level = std::min<uint8_t>(res->get()->load_level, set_load_level);
+                                    if (res->get()->load_level < 32)
+                                        to_tick_chunks.push_back(res->get());
+                                }
+                            } else if (set_load_level <= 44)
+                                request_chunk_gen(x, z);
                         });
                     }
                 }
             }
+            expired_tickets.for_each([&](size_t id) {
+                loading_tickets.erase(id);
+            });
+            lock.unlock();
             to_tick_chunks.unify([](const base_objects::atomic_holder<chunk_data>& a, const base_objects::atomic_holder<chunk_data>& b) {
                 return a->chunk_x == b->chunk_x && a->chunk_z == b->chunk_z;
             });
-            lock.unlock();
             tick_counter++;
             if (!profiling.enable_world_profiling) {
                 to_tick_chunks.for_each([&](auto&& chunk) {
@@ -1859,6 +1913,21 @@ namespace copper_server {
             }
             result.commit();
             return cached_ids = result;
+        }
+
+        size_t worlds_data::loaded_chunks_count() {
+            std::unique_lock lock(mutex);
+            size_t res = 0;
+            for (auto& world : cached_worlds)
+                res += world.second->loaded_chunks_count();
+            return res;
+        }
+
+        size_t worlds_data::loaded_chunks_count(uint64_t world_id) {
+            std::unique_lock lock(mutex);
+            if (auto on_load = cached_worlds.find(world_id); on_load != cached_worlds.end())
+                return on_load->second->loaded_chunks_count();
+            return 0;
         }
 
         bool worlds_data::exists(uint64_t world_id) {

@@ -42,6 +42,18 @@ namespace copper_server::api::world {
         get_worlds().save_all();
     }
 
+    size_t loaded_chunks_count() {
+        return get_worlds().loaded_chunks_count();
+    }
+
+    size_t loaded_chunks_count(uint64_t world_id) {
+        return get_worlds().loaded_chunks_count(world_id);
+    }
+
+    size_t loaded_chunks_count(const std::string& name) {
+        return get_worlds().loaded_chunks_count(get_worlds().get_id(name));
+    }
+
     void iterate(std::function<void(uint64_t world, storage::world_data& data)> callback) {
         get_worlds().for_each_world(callback);
     }

@@ -1,5 +1,6 @@
 #include <library/fast_task.hpp>
 #include <src/ClientHandleHelper.hpp>
+#include <src/api/asio.hpp>
 #include <src/api/configuration.hpp>
 #include <src/build_in_plugins/special/status.hpp>
 #include <src/log.hpp>
@@ -50,12 +51,10 @@ int main() {
         return 1;
     }
     try {
-        boost::asio::io_service service;
+        api::asio::init(api::configuration::get().server.accepting_threads);
         Server server(
-            &service,
             api::configuration::get().server.ip,
             api::configuration::get().server.port,
-            api::configuration::get().server.accepting_threads,
             api::configuration::get().server.ssl_key_length
         );
 

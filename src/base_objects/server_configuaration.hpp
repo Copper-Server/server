@@ -148,11 +148,12 @@ namespace copper_server {
 
 
                 std::filesystem::path get_storage_path() const {
-                    return base_path / storage_folder;
+                    return (base_path / storage_folder).lexically_normal();
                 }
 
                 std::filesystem::path get_worlds_path() const {
-                    return base_path / worlds_folder;
+
+                    return (base_path / worlds_folder).lexically_normal();
                 }
             } server;
 
