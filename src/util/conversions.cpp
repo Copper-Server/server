@@ -652,18 +652,21 @@ namespace copper_server::util::conversions {
             }
             case compound: {
                 boost::json::object result;
+                result.reserve(enbt.size());
                 for (auto&& [key, value] : enbt.as_compound())
                     result[key] = to_json(value);
                 return result;
             }
             case darray: {
                 boost::json::array result;
+                result.reserve(enbt.size());
                 for (auto& item : enbt.as_dyn_array())
                     result.push_back(to_json(item));
                 return result;
             }
             case array: {
                 boost::json::array result;
+                result.reserve(enbt.size());
                 for (auto& item : enbt.as_fixed_array())
                     result.push_back(to_json(item));
                 return result;
@@ -710,6 +713,7 @@ namespace copper_server::util::conversions {
             case boost::json::kind::object: {
                 auto obj = json.as_object();
                 enbt::compound result;
+                result.reserve(obj.size());
                 for (auto& [key, value] : obj)
                     result[key] = from_json(value);
                 return result;
@@ -721,6 +725,7 @@ namespace copper_server::util::conversions {
 
         enbt::value from_json(const boost::json::object& obj) {
             enbt::compound result;
+            result.reserve(obj.size());
             for (auto& [key, value] : obj)
                 result[key] = from_json(value);
             return result;

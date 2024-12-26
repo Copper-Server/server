@@ -759,7 +759,8 @@ namespace copper_server::storage {
             on_save_process[{chunk_x, chunk_z}] = Future<bool>::start(
                 [this, chunk, chunk_x, chunk_z, also_unload] {
                     try {
-                        chunk->save(path / "chunks" / std::to_string(chunk_x) / (std::to_string(chunk_z) + ".dat"), tick_counter);
+                        if (chunk)
+                            chunk->save(path / "chunks" / std::to_string(chunk_x) / (std::to_string(chunk_z) + ".dat"), tick_counter);
                     } catch (...) {
                         return false;
                     }
@@ -1008,7 +1009,8 @@ namespace copper_server::storage {
         std::unique_lock lock(mutex);
         size_t count = 0;
         for (auto& x_axis : chunks)
-            count += x_axis.second.size();
+            for (auto& z_axis : x_axis.second)
+                count += (bool)z_axis.second;
         return count;
     }
 
@@ -1018,14 +1020,19 @@ namespace copper_server::storage {
             if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
                 return true;
         lock.unlock();
-        return std::filesystem::exists(path / "chunks" / std::to_string(chunk_x) / (std::to_string(chunk_z) + ".dat"));
+        bool res = std::filesystem::exists(path / "chunks" / std::to_string(chunk_x) / (std::to_string(chunk_z) + ".dat"));
+        lock.lock();
+        if (res)
+            chunks[chunk_x][chunk_z] = nullptr;
+        return res;
     }
 
     std::optional<base_objects::atomic_holder<chunk_data>> world_data::request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
-                return y_axis->second;
+                if (y_axis->second)
+                    return y_axis->second;
 
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end())
             return chunks[chunk_x][chunk_z] = load_chunk_sync(chunk_x, chunk_z);
@@ -1039,7 +1046,8 @@ namespace copper_server::storage {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
-                return make_ready_future(y_axis->second);
+                if (y_axis->second)
+                    return make_ready_future(y_axis->second);
 
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end())
             return on_load_process[{chunk_x, chunk_z}] = Future<base_objects::atomic_holder<chunk_data>>::start(
@@ -1060,7 +1068,8 @@ namespace copper_server::storage {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
-                return std::make_optional(y_axis->second);
+                if (y_axis->second)
+                    return std::make_optional(y_axis->second);
 
 
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end()) {
@@ -1102,10 +1111,11 @@ namespace copper_server::storage {
     world_data::request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
-            if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end()) {
-                callback(*y_axis->second);
-                return true;
-            }
+            if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
+                if (y_axis->second) {
+                    callback(*y_axis->second);
+                    return true;
+                }
 
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end()) {
             auto res = load_chunk_sync(chunk_x, chunk_z);
@@ -1123,10 +1133,11 @@ namespace copper_server::storage {
     void world_data::request_chunk_data(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback, std::function<void()> fault) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
-            if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end()) {
-                callback(*y_axis->second);
-                return;
-            }
+            if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
+                if (y_axis->second) {
+                    callback(*y_axis->second);
+                    return;
+                }
 
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end())
             on_load_process[{chunk_x, chunk_z}] = Future<base_objects::atomic_holder<chunk_data>>::start(
@@ -1240,7 +1251,8 @@ namespace copper_server::storage {
         std::unique_lock lock(mutex);
         for (auto& [x, x_axis] : chunks)
             for (auto& [z, chunk] : x_axis)
-                func(*chunk);
+                if(chunk)
+                    func(*chunk);
     }
 
     void world_data::for_each_chunk(base_objects::cubic_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func) {
@@ -1249,7 +1261,8 @@ namespace copper_server::storage {
             for (int64_t z = bounds.z1; z <= bounds.z2; z++)
                 if (auto x_axis = chunks.find(x); x_axis != chunks.end())
                     if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
-                        func(*chunk->second);
+                        if (chunk->second)
+                            func(*chunk->second);
     }
 
     void world_data::for_each_chunk(base_objects::spherical_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func) {
@@ -1257,7 +1270,8 @@ namespace copper_server::storage {
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
                 if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
-                    func(*chunk->second);
+                    if (chunk->second)
+                        func(*chunk->second);
         });
     }
 
@@ -1265,21 +1279,24 @@ namespace copper_server::storage {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
-                chunk->second->for_each_sub_chunk(func);
+                if (chunk->second)
+                    chunk->second->for_each_sub_chunk(func);
     }
 
     void world_data::get_sub_chunk(int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, std::function<void(sub_chunk_data& chunk)> func) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
-                chunk->second->get_sub_chunk(sub_chunk_y, func);
+                if (chunk->second)
+                    chunk->second->get_sub_chunk(sub_chunk_y, func);
     }
 
     void world_data::get_chunk(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> func) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
-                func(*chunk->second);
+                if (chunk->second)
+                    func(*chunk->second);
     }
 
     void world_data::for_each_chunk(base_objects::cubic_bounds_block bounds, std::function<void(chunk_data& chunk)> func) {
@@ -1306,7 +1323,8 @@ namespace copper_server::storage {
         std::unique_lock lock(mutex);
         for (auto& [x, x_axis] : chunks)
             for (auto& [z, chunk] : x_axis)
-                chunk->for_each_entity(func);
+                if (chunk)
+                    chunk->for_each_entity(func);
     }
 
     void world_data::for_each_entity(base_objects::cubic_bounds_chunk bounds, std::function<void(base_objects::entity_ref& entity)> func) {
@@ -1314,7 +1332,8 @@ namespace copper_server::storage {
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
                 if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
-                    chunk->second->for_each_entity(func);
+                    if (chunk->second)
+                        chunk->second->for_each_entity(func);
         });
     }
 
@@ -1323,23 +1342,25 @@ namespace copper_server::storage {
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
                 if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
-                    chunk->second->for_each_entity(func);
+                    if (chunk->second)
+                        chunk->second->for_each_entity(func);
         });
     }
 
     void world_data::for_each_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
-            if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end()) {
-                chunk->second->for_each_entity(func);
-            }
+            if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end()) 
+                if (chunk->second)
+                    chunk->second->for_each_entity(func);
     }
 
     void world_data::for_each_entity(int64_t chunk_x, int64_t chunk_z, uint64_t sub_chunk_y, std::function<void(const base_objects::entity_ref& entity)> func) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
-                chunk->second->for_each_entity(sub_chunk_y, func);
+                if (chunk->second)
+                    chunk->second->for_each_entity(sub_chunk_y, func);
     }
 
     void world_data::for_each_block_entity(base_objects::cubic_bounds_chunk bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
@@ -1347,7 +1368,8 @@ namespace copper_server::storage {
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
                 if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
-                    chunk->second->for_each_block_entity(func);
+                    if (chunk->second)
+                        chunk->second->for_each_block_entity(func);
         }
         );
     }
@@ -1357,7 +1379,8 @@ namespace copper_server::storage {
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
                 if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
-                    chunk->second->for_each_block_entity(func);
+                    if (chunk->second)
+                        chunk->second->for_each_block_entity(func);
         });
     }
 
@@ -1409,7 +1432,8 @@ namespace copper_server::storage {
         auto chunk_z = global_z >> 4;
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
-                chunk->second->query_for_tick(global_x & 15, global_y, global_z & 15, duration + tick_counter, priority);
+                if (chunk->second)
+                    chunk->second->query_for_tick(global_x & 15, global_y, global_z & 15, duration + tick_counter, priority);
     }
 
     void world_data::query_for_liquid_tick(int64_t global_x, uint64_t global_y, int64_t global_z, uint64_t duration) {
@@ -1418,7 +1442,8 @@ namespace copper_server::storage {
         auto chunk_z = global_z >> 4;
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
-                chunk->second->query_for_liquid_tick(global_x & 15, global_y, global_z & 15, duration + tick_counter);
+                if (chunk->second)
+                    chunk->second->query_for_liquid_tick(global_x & 15, global_y, global_z & 15, duration + tick_counter);
     }
 
     void world_data::set_block(const base_objects::full_block_data& block, int64_t global_x, uint64_t global_y, int64_t global_z, block_set_mode mode) {
@@ -1743,8 +1768,9 @@ namespace copper_server::storage {
 
         for (auto& [x, x_axis] : chunks) {
             for (auto& [z, z_axis] : x_axis) {
-                if (z_axis->load_level <= 44)
-                    z_axis->load_level++;
+                if(z_axis)
+                    if (z_axis->load_level <= 44)
+                        z_axis->load_level++;
             }
         }
         for (auto& [id, ticket] : loading_tickets) {
@@ -1856,12 +1882,13 @@ namespace copper_server::storage {
                 auto begin = x_axis.begin();
                 auto end = x_axis.end();
                 while (begin != end && unload_limit) {
-                    if (begin->second->load_level > 44) {
-                        make_save(x, begin->first, begin, true);
-                        --unload_limit;
-                        chunk_unloaded = true;
-                        break;
-                    }
+                    if (begin->second)
+                        if (begin->second->load_level > 44) {
+                            make_save(x, begin->first, begin, true);
+                            --unload_limit;
+                            chunk_unloaded = true;
+                            break;
+                        }
                     ++begin;
                 }
                 if (!unload_limit)
