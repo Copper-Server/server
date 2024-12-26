@@ -8,14 +8,14 @@ namespace copper_server {
     class SpecialPluginHandshake {
     public:
         //allows to handle custom packets from the client, like send a packet from server to server or another use case.
-        //if TCPClientHandle nullptr then connection will be closed,
+        //if tcp_client_handle nullptr then connection will be closed,
         //if list_array<uint8_t> empty then client will be disconnected
-        virtual std::pair<TCPClientHandle*, list_array<uint8_t>> InvalidPacket(uint8_t packet_id, ArrayStream& data) {
+        virtual std::pair<tcp_client_handle*, list_array<uint8_t>> InvalidPacket(uint8_t packet_id, ArrayStream& data) {
             return {nullptr, {}};
         }
 
         //allows to set custom handler for this protocol, packet will be again parsed by this new handler
-        virtual TCPClientHandle* UnsupportedProtocolVersion(int protocol_version) {
+        virtual tcp_client_handle* UnsupportedProtocolVersion(int protocol_version) {
             return nullptr;
         }
 

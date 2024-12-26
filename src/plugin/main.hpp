@@ -4,7 +4,6 @@
 #include <src/util/task_management.hpp>
 
 namespace copper_server {
-
     namespace __internal__ {
         template <std::size_t N>
         struct CTS {

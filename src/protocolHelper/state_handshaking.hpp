@@ -1,113 +1,22 @@
 #ifndef SRC_PROTOCOLHELPER_STATE_HANDSHAKING
 #define SRC_PROTOCOLHELPER_STATE_HANDSHAKING
-#include <src/plugin/special.hpp>
-#include <src/protocolHelper/client_handler/abstract.hpp>
-#include <src/protocolHelper/packets.hpp>
-#include <src/protocolHelper/state_status.hpp>
+#include <src/protocolHelper/util.hpp>
 
 namespace copper_server {
-
-    class TCPClientHandleHandshaking : public TCPClientHandle {
+    class tcp_client_handle_handshaking : public tcp_client_handle {
     protected:
-        virtual bool AllowProtocolVersion(int proto_version) {
-            return registers::individual_registers.contains(proto_version);
-        }
-
-        virtual bool AllowServerAddressAndPort(std::string& str, uint16_t port) {
-            return true;
-        }
-
-        //return empty chat string if everything normal
-        virtual std::string AllowPlayersName(std::string& nick) {
-            // return Chat("Server closed!").ToStr();
-            // return "{\"text\":\"Server closed!\"}";
-            return "";
-        }
-
-        template <class T>
-        T readValue(ArrayStream& data) {
-            uint8_t tmp[sizeof(T)];
-            for (size_t i = 0; i < sizeof(T); i++)
-                tmp[i] = data.read();
-            return enbt::endian_helpers::convert_endian(std::endian::big, *(T*)tmp);
-        }
-
-        Response WorkPacket(ArrayStream& data) override {
-            log::debug("Handshaking", "Handshaking...");
-            uint8_t tmp = data.peek();
-            if (tmp != '\0') {
-                if (special_handshake) {
-                    auto [handler, response] = special_handshake->InvalidPacket(tmp, data);
-                    if (handler) {
-                        next_handler = handler;
-                        return Response::Answer({std::move(response)});
-                    } else if (!response.empty())
-                        return Response::Disconnect({std::move(response)});
-                }
-                return Response::Disconnect();
-            }
-            data.read(); //skip protocol version
-
-            int32_t protocol_version = ReadVar<int32_t>(data);
-            session->protocol_version = protocol_version;
-
-            if (!AllowProtocolVersion(protocol_version))
-                return Response::Disconnect();
-
-
-            std::string server_address = ReadString(data, 255);
-            if (!AllowServerAddressAndPort(server_address, readValue<uint16_t>(data)))
-                return Response::Disconnect();
-
-            switch (ReadVar<int32_t>(data)) {
-            case 1: //status
-                log::debug("Handshaking", "Switch to status");
-                next_handler = new TCPClientHandleStatus(session);
-                return Response::Empty();
-            case 2: //login
-                if (!api::configuration::get().protocol.allowed_versions_processed.contains(protocol_version))
-                    return Response::Disconnect();
-                log::debug("Handshaking", "Switch to login");
-                next_handler = client_handler::abstract::createHandleLogin(session);
-                return Response::Empty();
-            case 3: //transfer
-                return Response::Disconnect();
-            default:
-                return Response::Disconnect();
-            }
-        }
-
-        Response TooLargePacket() override {
-            return Response::Disconnect();
-        }
-
-        Response Exception(const std::exception& ex) override {
-            return Response::Disconnect();
-        }
-
-        Response UnexpectedException() override {
-            return Response::Disconnect();
-        }
+        virtual bool AllowProtocolVersion(int proto_version);
+        virtual bool AllowServerAddressAndPort(std::string& str, uint16_t port);
+        base_objects::network::response work_packet(ArrayStream& data) override;
+        base_objects::network::response too_large_packet() override;
+        base_objects::network::response exception(const std::exception& ex) override;
+        base_objects::network::response unexpected_exception() override;
 
     public:
-        TCPClientHandleHandshaking(TCPsession* sock)
-            : TCPClientHandle(sock) {}
-
-        TCPClientHandleHandshaking()
-            : TCPClientHandle(nullptr) {}
-
-        TCPclient* DefineOurself(TCPsession* sock) override {
-            return new TCPClientHandleHandshaking(sock);
-        }
-
-        TCPclient* RedefineHandler() override {
-            return next_handler;
-        }
-
-        bool DoDisconnect(boost::asio::ip::address ip) override {
-            return false;
-        }
+        tcp_client_handle_handshaking(base_objects::network::tcp_session* sock);
+        tcp_client_handle_handshaking();
+        base_objects::network::tcp_client* define_ourself(base_objects::network::tcp_session* sock) override;
+        base_objects::network::tcp_client* redefine_handler() override;
     };
 }
-
 #endif /* SRC_PROTOCOLHELPER_STATE_HANDSHAKING */

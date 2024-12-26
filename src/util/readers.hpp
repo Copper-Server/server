@@ -297,5 +297,4 @@ namespace copper_server {
         return res;
     }
 }
-
 #endif /* SRC_UTIL_READERS */

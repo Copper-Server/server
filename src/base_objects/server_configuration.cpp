@@ -7,20 +7,19 @@
 #include <src/log.hpp>
 #include <src/util/json_helpers.hpp>
 
-namespace copper_server {
+namespace copper_server::base_objects {
     using namespace util;
-    namespace base_objects {
 
 
-        std::string to_string(ServerConfiguration::Protocol::connection_conflict_t conflict_type) {
-            switch (conflict_type) {
-                using t = ServerConfiguration::Protocol::connection_conflict_t;
-            case t::kick_connected:
-                return "kick_connected";
-            case t::prevent_join:
-                return "prevent_join";
-            }
-            throw std::runtime_error("Stack corruption or incomplete to_string code");
+    std::string to_string(ServerConfiguration::Protocol::connection_conflict_t conflict_type) {
+        switch (conflict_type) {
+            using t = ServerConfiguration::Protocol::connection_conflict_t;
+        case t::kick_connected:
+            return "kick_connected";
+        case t::prevent_join:
+            return "prevent_join";
+        }
+        throw std::runtime_error("Stack corruption or incomplete to_string code");
         }
 
         void set_from_string(ServerConfiguration::Protocol::connection_conflict_t& conflict_type, const std::string& val) {
@@ -208,6 +207,11 @@ namespace copper_server {
                     cfg.server.working_threads = server["working_threads"];
                 if (server.contains("ssl_key_length"))
                     cfg.server.ssl_key_length = server["ssl_key_length"];
+
+
+                cfg.server.timeout_seconds = server["timeout_seconds"].or_apply(cfg.server.timeout_seconds);
+                cfg.server.max_accept_buffer = server["max_accept_buffer"].or_apply(cfg.server.max_accept_buffer);
+                cfg.server.all_connections_timeout = server["all_connections_timeout"].or_apply(cfg.server.all_connections_timeout);
             }
             {
                 auto allowed_dimensions = js_array::get_array(data["allowed_dimensions"]);
@@ -372,5 +376,4 @@ namespace copper_server {
             merge_configs(*this, config);
             return util::pretty_print(get_value_by_path_(config_data, config_item_path));
         }
-    }
 }

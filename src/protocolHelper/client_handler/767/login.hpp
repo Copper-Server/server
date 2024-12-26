@@ -1,255 +1,35 @@
 #ifndef SRC_PROTOCOLHELPER_CLIENT_HANDLER_767_LOGIN
 #define SRC_PROTOCOLHELPER_CLIENT_HANDLER_767_LOGIN
-#include <src/api/mojang/session_server.hpp>
-#include <src/api/players.hpp>
-#include <src/mojang/api/hash.hpp>
-#include <src/protocolHelper/client_handler/abstract.hpp>
-#include <src/protocolHelper/packets/767/packets.hpp>
+#include <src/plugin/registration.hpp>
+#include <src/protocolHelper/util.hpp>
 
-namespace copper_server {
-    namespace client_handler {
-        namespace release_767 {
-            class HandleLogin : public TCPClientHandle {
-            protected:
-                virtual Chat* AllowPlayersName(std::string nick) {
-                    return nullptr;
-                    Chat chat = Chat("Server closed");
-                    chat.SetColor("red");
-                    return new Chat(std::move(chat));
-                }
+namespace copper_server::client_handler::release_767 {
+    class handle_login : public tcp_client_handle {
+    protected:
+        base_objects::network::response encryptionRequest();
+        base_objects::network::response loginSuccess();
+        base_objects::network::response setCompression(int32_t threshold);
+        base_objects::network::response proceedPlugin(ArrayStream& data, bool successful = true);
+        void resolve_join_conflict();
+        base_objects::network::response work_packet(ArrayStream& packet) override;
+        base_objects::network::response too_large_packet() override;
+        base_objects::network::response exception(const std::exception& ex) override;
+        base_objects::network::response unexpected_exception() override;
 
-                Response encryptionRequest() {
-                    excepted_packet = 1;
-                    auto generate_ui8 = []() -> uint8_t {
-                        static std::random_device rd;
-                        static std::mt19937_64 gen;
-                        static std::uniform_int_distribution<uint16_t> dis;
-                        uint16_t ui16 = dis(gen);
-                        return (uint8_t)((ui16 & 0xFF ^ (ui16 >> 8)) & 0xFF);
-                    };
-                    verify_token[0] = generate_ui8();
-                    verify_token[1] = generate_ui8();
-                    verify_token[2] = generate_ui8();
-                    verify_token[3] = generate_ui8();
+        std::list<std::pair<std::string, PluginRegistrationPtr>> plugins_query;
+        uint8_t verify_token[4];
+        int plugin_message_id = 0;
+        bool is_authed = false;
+        uint8_t excepted_packet = 0;
+        bool has_conflict = false;
 
-                    return packets::release_767::login::encryptionRequest("", verify_token);
-                }
+    public:
+        handle_login(base_objects::network::tcp_session* sock);
 
-                Response loginSuccess() {
-                    auto tmp = packets::release_767::login::loginSuccess(session->sharedData());
-                    log::debug("login", "request login completion");
-                    excepted_packet = 3;
-                    return tmp;
-                }
+        handle_login();
 
-                Response setCompression(int32_t threshold) {
-                    Response response = packets::release_767::login::setCompression(threshold);
-                    log::debug("login", "set compression");
-                    if (plugins_query.empty())
-                        response += loginSuccess();
-                    return response;
-                }
-
-                Response proceedPlugin(ArrayStream& data, bool successful = true) {
-                    log::debug("login", "handle plugin request");
-                    excepted_packet = -1;
-                    while (!plugins_query.empty()) {
-                        auto&& it = plugins_query.front();
-                        auto response = it.second->OnLoginHandle(it.second, it.first, data.to_vector(), successful, session->sharedDataRef());
-                        if (std::holds_alternative<PluginRegistration::PluginResponse>(response)) {
-                            auto& plugin = std::get<PluginRegistration::PluginResponse>(response);
-                            plugin_message_id++;
-                            return packets::release_767::login::login(plugin_message_id, plugin.plugin_chanel, plugin.data);
-                        } else if (std::holds_alternative<Response>(response))
-                            return std::move(std::get<Response>(response));
-                        else
-                            plugins_query.pop_front();
-                    }
-                    return loginSuccess();
-                }
-
-                void resolve_join_conflict() {
-
-                    if (
-                        has_conflict && api::configuration::get().protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::kick_connected
-                    ) {
-                        api::players::iterate_players_not_state(base_objects::SharedClientData::packets_state_t::protocol_state::initialization, [&](base_objects::SharedClientData& player) {
-                            if (player.name == session->sharedData().name) {
-                                constexpr const char reason[] = "Some player with same nickname joined to this server";
-                                switch (player.packets_state.state) {
-                                    using ps = base_objects::SharedClientData::packets_state_t::protocol_state;
-                                case ps::play:
-                                    player.sendPacket(packets::release_767::play::kick(reason));
-                                    break;
-                                case ps::configuration:
-                                    player.sendPacket(packets::release_767::configuration::kick(reason));
-                                default:
-                                    break;
-                                }
-                            }
-                            return true;
-                        });
-                    }
-                }
-
-                Response WorkPacket(ArrayStream& packet) override {
-                    uint8_t packet_id = packet.read();
-
-                    if (packet_id != excepted_packet && excepted_packet != -1) {
-                        api::players::remove_player(session->sharedDataRef());
-                        return Response::Disconnect();
-                    }
-
-                    switch (packet_id) {
-                    case 0: { //login start
-                        log::debug("login", "login start");
-                        std::string nickname = ReadString(packet, 16);
-                        auto player = api::players::get_player(nickname);
-                        if (api::players::has_player(nickname)) {
-                            if (api::configuration::get().protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::prevent_join)
-                                return packets::release_767::login::kick("You someone already connected with this nickname");
-                            else
-                                has_conflict = true;
-                        }
-
-                        session->sharedData().name = nickname;
-                        session->sharedData().packets_state.protocol_version = session->protocol_version;
-                        Chat* kick_reason_chat = AllowPlayersName(nickname);
-                        if (kick_reason_chat) {
-                            Chat str = *kick_reason_chat;
-                            delete kick_reason_chat;
-                            log::debug("login", "kick...");
-                            return packets::release_767::login::kick(str);
-                        }
-                        if (
-                            !api::configuration::get().server.offline_mode
-                            || api::configuration::get().protocol.enable_encryption
-                        ) {
-                            return encryptionRequest();
-                        } else if (api::configuration::get().protocol.compression_threshold != -1) {
-                            return setCompression(api::configuration::get().protocol.compression_threshold);
-                        } else if (!plugins_query.empty()) {
-                            ArrayStream empty((const uint8_t*)nullptr, 0);
-                            return proceedPlugin(empty);
-                        } else {
-                            return loginSuccess();
-                        }
-                        break;
-                    }
-                    case 1: { //encryption response
-                        log::debug("login", "encryption response");
-                        int32_t shared_secret_size = ReadVar<int32_t>(packet);
-                        list_array<uint8_t> shared_secret = packet.range_read(shared_secret_size).to_vector();
-                        int32_t verify_token_size = ReadVar<int32_t>(packet);
-                        list_array<uint8_t> verify_token = packet.range_read(verify_token_size).to_vector();
-
-                        if (!Server::instance().decrypt_data(verify_token)) {
-                            log::error("login", "invalid verify token");
-                            return packets::release_767::login::kick("Invalid verify token");
-                        }
-
-                        if (memcmp(verify_token.data(), this->verify_token, 4)) {
-                            log::error("login", "invalid verify token");
-                            return packets::release_767::login::kick("Invalid verify token");
-                        }
-
-
-                        if (!Server::instance().decrypt_data(shared_secret)) {
-                            log::error("login", "encryption error");
-                            return packets::release_767::login::kick("Encryption error");
-                        }
-
-                        mojang::api::hash serverId;
-                        serverId.update(shared_secret);
-                        serverId.update(Server::instance().public_key_buffer().data(), Server::instance().public_key_buffer().size());
-
-                        log::debug("login", "mojang request");
-                        session->sharedData().data = api::mojang::get_session_server().hasJoined(
-                            session->sharedData().name,
-                            serverId.hexdigest(),
-                            !api::configuration::get().server.offline_mode
-                        );
-                        session->start_symmetric_encryption(shared_secret, shared_secret);
-
-                        if (api::configuration::get().protocol.compression_threshold != -1)
-                            return setCompression(api::configuration::get().protocol.compression_threshold);
-                        else if (plugins_query.empty())
-                            return loginSuccess();
-                        else {
-                            ArrayStream empty((const uint8_t*)nullptr, 0);
-                            return proceedPlugin(empty);
-                        }
-                    }
-                    case 2: { //login plugin response
-                        log::debug("login", "login plugin response");
-                        int32_t message_id = ReadVar<int32_t>(packet);
-                        bool successful = packet.read();
-                        if (message_id != plugin_message_id)
-                            log::debug("login", "invalid plugin message id");
-                        return proceedPlugin(packet, successful);
-                    }
-                    case 3: //Login Acknowledged
-                        if (excepted_packet == -1) {
-                            log::debug("login", "[protocol error] unexpected packet while plugin handle");
-                            return Response::Disconnect();
-                        }
-                        resolve_join_conflict();
-                        api::players::login_complete_to_cfg(session->sharedDataRef());
-                        api::players::handlers::on_player_join(session->sharedDataRef());
-
-                        next_handler = abstract::createHandleConfiguration(session);
-                        log::debug("login", "login ack");
-                        return Response::Empty();
-                    case 4: { //from 767 Cookie response
-                        api::protocol::data::cookie_response data;
-                        data.key = ReadIdentifier(packet);
-                        if (packet.read())
-                            data.payload = ReadArray<uint8_t>(packet);
-                        api::protocol::on_cookie_response.async_notify({data, *session, session->sharedDataRef()});
-                        break;
-                    }
-                    default:
-                        log::debug("login", "invalid packet");
-                    }
-                    return Response::Disconnect();
-                }
-
-                Response TooLargePacket() override {
-                    return packets::release_767::login::kick("Packet too large");
-                }
-
-                Response Exception(const std::exception& ex) override {
-                    return packets::release_767::login::kick("Caught exception: " + std::string(ex.what()));
-                }
-
-                Response UnexpectedException() override {
-                    return packets::release_767::login::kick("Caught unexpected exception");
-                }
-
-                std::list<std::pair<std::string, PluginRegistrationPtr>> plugins_query;
-                uint8_t verify_token[4];
-                int plugin_message_id = 0;
-                bool is_authed = false;
-                uint8_t excepted_packet = 0;
-                bool has_conflict = false;
-
-            public:
-                HandleLogin(TCPsession* sock)
-                    : TCPClientHandle(sock) {
-                    pluginManagement.inspect_plugin_bind(PluginManagement::registration_on::login, [&](const std::pair<std::string, PluginRegistrationPtr>& it) {
-                        plugins_query.push_back(it);
-                    });
-                }
-
-                HandleLogin()
-                    : TCPClientHandle(nullptr) {}
-
-                TCPclient* DefineOurself(TCPsession* sock) override {
-                    return new HandleLogin(sock);
-                }
-            };
-        }
-    }
+        base_objects::network::tcp_client* define_ourself(base_objects::network::tcp_session* sock) override;
+    };
 }
 
 #endif /* SRC_PROTOCOLHELPER_CLIENT_HANDLER_767_LOGIN */

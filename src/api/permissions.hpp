@@ -1,6 +1,6 @@
 #ifndef SRC_API_PERMISSIONS
 #define SRC_API_PERMISSIONS
-#include <src/base_objects/event.hpp>
+#include <src/base_objects/events/event.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/storage/permissions_manager.hpp>
 

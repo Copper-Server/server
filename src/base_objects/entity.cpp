@@ -1,8 +1,8 @@
 #include <library/fast_task.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/entity.hpp>
-#include <src/calculations.hpp>
 #include <src/storage/world_data.hpp>
+#include <src/util/calculations.hpp>
 
 namespace copper_server {
     namespace base_objects {
@@ -178,7 +178,7 @@ namespace copper_server {
             return res;
         }
 
-        void entity::teleport(calc::VECTOR pos, float yaw, float pitch, bool on_ground) {
+        void entity::teleport(util::VECTOR pos, float yaw, float pitch, bool on_ground) {
             //TODO
         }
 
@@ -350,7 +350,7 @@ namespace copper_server {
             //TODO
         }
 
-        void entity::set_position(calc::VECTOR pos) {
+        void entity::set_position(util::VECTOR pos) {
             //TODO
         }
 
@@ -366,43 +366,43 @@ namespace copper_server {
             //TODO
         }
 
-        void entity::look_at(calc::VECTOR pos) {
+        void entity::look_at(util::VECTOR pos) {
             //TODO
         }
 
-        calc::VECTOR entity::get_motion() const {
+        util::VECTOR entity::get_motion() const {
             return {0, 0, 0}; //TODO
         }
 
-        void entity::set_motion(calc::VECTOR mot) {
+        void entity::set_motion(util::VECTOR mot) {
             //TODO
         }
 
-        void entity::add_motion(calc::VECTOR mot) {
+        void entity::add_motion(util::VECTOR mot) {
             //TODO
         }
 
-        calc::VECTOR entity::get_rotation() const {
+        util::VECTOR entity::get_rotation() const {
             return {0, 0, 0}; //TODO
         }
 
-        void entity::set_rotation(calc::VECTOR mot) {
+        void entity::set_rotation(util::VECTOR mot) {
             //TODO
         }
 
-        void entity::add_rotation(calc::VECTOR mot) {
+        void entity::add_rotation(util::VECTOR mot) {
             //TODO
         }
 
-        calc::VECTOR entity::get_head_rotation() const {
+        util::VECTOR entity::get_head_rotation() const {
             return {0, 0, 0}; //TODO
         }
 
-        void entity::set_head_rotation(calc::VECTOR rot) {
+        void entity::set_head_rotation(util::VECTOR rot) {
             //TODO
         }
 
-        void entity::add_head_rotation(calc::VECTOR rot) {
+        void entity::add_head_rotation(util::VECTOR rot) {
             //TODO
         }
 

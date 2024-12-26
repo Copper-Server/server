@@ -1,5 +1,8 @@
 #ifndef SRC_API_ASIO
 #define SRC_API_ASIO
+#if defined(_MSC_VER)
+    #include <SDKDDKVer.h>
+#endif
 #include <boost/asio.hpp>
 
 namespace copper_server::api::asio {

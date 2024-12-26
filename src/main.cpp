@@ -1,7 +1,8 @@
 #include <library/fast_task.hpp>
-#include <src/ClientHandleHelper.hpp>
 #include <src/api/asio.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/network.hpp>
+#include <src/base_objects/network/tcp_server.hpp>
 #include <src/build_in_plugins/special/status.hpp>
 #include <src/log.hpp>
 #include <src/plugin/main.hpp>
@@ -31,6 +32,12 @@ int main() {
         log::commands::deinit();
     });
     try {
+        size_t executors = api::configuration::get().server.working_threads;
+        fast_task::task::create_executor(executors ? executors : std::thread::hardware_concurrency());
+        fast_task::task::task::enable_task_naming = false;
+        api::asio::init(api::configuration::get().server.accepting_threads);
+
+
         log::commands::init();
         log::info("Initializer thread", "Initializing server...");
         pluginManagement.autoRegister();
@@ -38,9 +45,6 @@ int main() {
 
         resources::initialize();
 
-        size_t executors = api::configuration::get().server.working_threads;
-        fast_task::task::create_executor(executors ? executors : std::thread::hardware_concurrency());
-        fast_task::task::task::enable_task_naming = false;
     } catch (const std::exception& e) {
         log::fatal("Initializer thread", "An error occurred while initializing the server, shutting down...");
         log::fatal("Initializer thread", e.what());
@@ -51,8 +55,7 @@ int main() {
         return 1;
     }
     try {
-        api::asio::init(api::configuration::get().server.accepting_threads);
-        Server server(
+        base_objects::network::tcp_server server(
             api::configuration::get().server.ip,
             api::configuration::get().server.port,
             api::configuration::get().server.ssl_key_length
@@ -61,8 +64,7 @@ int main() {
         log::disable_log_level(log::level::debug);
         special_handshake = new SpecialPluginHandshake();
         special_status = new build_in_plugins::special::Status();
-
-        first_client_holder = new TCPClientHandleHandshaking();
+        api::network::register_tcp_handler(new tcp_client_handle_handshaking());
 
         log::info("Initializer thread", "Loading plugins");
         try {

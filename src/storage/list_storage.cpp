@@ -1,88 +1,94 @@
 #include <fstream>
 #include <src/storage/list_storage.hpp>
 
-namespace copper_server {
-    namespace storage {
-        list_storage::list_storage(const std::filesystem::path& path) {
-            if (!std::filesystem::exists(path)) {
-                std::filesystem::create_directories(path.parent_path());
-                std::ofstream file;
-                file.open(path, std::ios::out);
-                file.close();
-                _is_loaded = true;
-                return;
-            }
-            std::ifstream file;
-            file.open(path, std::ios::in);
-            if (!file.is_open())
-                return;
-            data.set([&](auto& value) {
-                for (std::string line; std::getline(file, line);)
-                    value.insert(line);
-            });
+namespace copper_server::storage {
+    list_storage::list_storage(const std::filesystem::path& path) {
+        if (!std::filesystem::exists(path)) {
+            std::filesystem::create_directories(path.parent_path());
+            std::ofstream file;
+            file.open(path, std::ios::out);
             file.close();
             _is_loaded = true;
+            return;
         }
+        std::ifstream file;
+        file.open(path, std::ios::in);
+        if (!file.is_open())
+            return;
+        data.set([&](auto& value) {
+            for (std::string line; std::getline(file, line);)
+                value.push_back(line);
+        });
+        file.close();
+        _is_loaded = true;
+    }
 
-        void list_storage::add(const std::string& set_value) {
-            bool save = false;
-            data.set([&](auto& value) {
-                if (!value.contains(set_value)) {
-                    value.insert(set_value);
-                    save = true;
-                }
-            });
-            if (save) {
-                std::ofstream file;
-                file.open(path, std::ios::out | std::ios::app);
-                file << set_value << std::endl;
-                file.flush();
-                file.close();
+    void list_storage::add(const std::string& set_value) {
+        bool save = false;
+        data.set([&](auto& value) {
+            if (!value.contains(set_value)) {
+                value.push_back(set_value);
+                save = true;
             }
+        });
+        if (save) {
+            std::ofstream file;
+            file.open(path, std::ios::out | std::ios::app);
+            file << set_value << std::endl;
+            file.flush();
+            file.close();
         }
+    }
 
-        bool list_storage::contains(const std::string& check_value) {
-            return data.get([&](auto& value) {
-                return value.contains(check_value);
+    bool list_storage::contains(const std::string& check_value) {
+        return data.get([&](auto& value) {
+            return value.contains(check_value);
+        });
+    }
+
+    void list_storage::remove(const std::string& rem_value) {
+        bool save = false;
+        data.set([&](auto& value) {
+            save = value.remove(rem_value);
+        });
+
+        if (save) {
+            std::ofstream file;
+            file.open(path, std::ios::out | std::ios::trunc);
+            data.get([&](auto& value) {
+                for (const auto& line : value)
+                    file << line << '\n';
             });
+            file.flush();
+            file.close();
         }
+    }
 
-        void list_storage::remove(const std::string& rem_value) {
-            bool save = false;
-            data.set([&](auto& value) {
-                auto it = value.find(rem_value);
-                if (it != value.end()) {
-                    value.erase(it);
-                    save = true;
+    list_array<std::string> list_storage::entrys(size_t max_items, bool& max_reached) {
+        return data.get([&](auto& value) {
+            if (value.size() <= max_items)
+                return value;
+            list_array<std::string> entrys;
+            entrys.reserve(max_items);
+            size_t i = 0;
+            for (const auto& entry : value) {
+                if (i++ == max_items) {
+                    max_reached = 0;
+                    break;
                 }
-            });
-
-            if (save) {
-                std::ofstream file;
-                file.open(path, std::ios::out | std::ios::trunc);
-                data.get([&](auto& value) {
-                    for (const auto& line : value)
-                        file << line << std::endl;
-                });
-                file.flush();
-                file.close();
+                entrys.push_back(entry);
             }
-        }
+            return entrys;
+        });
+    }
 
-        std::list<std::string> list_storage::entrys(size_t max_items, bool& max_reached) {
-            return data.get([&](auto& value) {
-                std::list<std::string> entrys;
-                size_t i = 0;
-                for (const auto& entry : value) {
-                    if (i++ == max_items) {
-                        max_reached = 0;
-                        break;
-                    }
-                    entrys.push_back(entry);
-                }
-                return entrys;
-            });
-        }
-    } // namespace storage
-
-} // namespace copper_server
+    void list_storage::clear() {
+        data.set([&](auto& value) {
+            value.clear();
+        });
+        std::ofstream file;
+        file.open(path, std::ios::out | std::ios::trunc);
+        file.flush();
+        file.close();
+    }
+}

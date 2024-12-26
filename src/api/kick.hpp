@@ -1,6 +1,6 @@
 #ifndef SRC_API_KICK
 #define SRC_API_KICK
-#include <src/base_objects/event.hpp>
+#include <src/base_objects/events/event.hpp>
 
 namespace copper_server::api::kick {
     struct ban_data {
@@ -9,7 +9,7 @@ namespace copper_server::api::kick {
         std::string reason;
     };
 
-    extern base_objects::event<ban_data> on_kick;
+    extern base_objects::events::event<ban_data> on_kick;
 }
 
 #endif /* SRC_API_KICK */

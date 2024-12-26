@@ -6,26 +6,22 @@
 #include <library/enbt/enbt.hpp>
 #include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/bounds.hpp>
+#include <src/base_objects/events/sync_event.hpp>
 #include <src/base_objects/slot.hpp>
-#include <src/base_objects/sync_event.hpp>
-#include <src/calculations.hpp>
+#include <src/util/calculations.hpp>
 #include <stdint.h>
 
 namespace copper_server {
-    namespace base_objects {
-        class entity_data;
-        struct entity;
-        using entity_ref = atomic_holder<entity>;
-
-
-        union block;
-    }
-
     namespace storage {
         class world_data;
     }
 
     namespace base_objects {
+        struct entity;
+        using entity_ref = atomic_holder<entity>;
+
+
+        union block;
 
 
         struct entity_data {
@@ -71,7 +67,7 @@ namespace copper_server {
             std::function<entity_ref()> create_callback;
             std::function<entity_ref(const enbt::compound_const_ref&)> create_callback_with_nbt;
             std::function<void(entity_ref& creating_entity, const enbt::compound_const_ref&)> create_from_enbt_callback;
-            std::function<void(entity_ref& checking_entity, entity_data&, calc::VECTOR pos)> check_bounds; //if nullptr then used base_bounds, return true if entity is in bounds
+            std::function<void(entity_ref& checking_entity, entity_data&, util::VECTOR pos)> check_bounds;   //if nullptr then used base_bounds, return true if entity is in bounds
             std::function<int32_t(const entity& checking_entity)> get_object_field;                          //returns zero, if not defined
 
 
@@ -111,10 +107,10 @@ namespace copper_server {
             std::unordered_map<uint32_t, list_array<effect>> hidden_effects; //effects with lower amplifier than active effect but longer duration
             list_array<effect> active_effects;
 
-            calc::VECTOR position;
-            calc::VECTOR motion;
-            calc::VECTOR rotation;
-            calc::VECTOR head_rotation;
+            util::VECTOR position;
+            util::VECTOR motion;
+            util::VECTOR rotation;
+            util::VECTOR head_rotation;
 
             storage::world_data* world = nullptr;
 
@@ -156,7 +152,7 @@ namespace copper_server {
             //}
 
 
-            sync_event<entity&> changes_event;
+            events::sync_event<entity&> changes_event;
             bool kill();
             void force_kill();
             bool is_died();
@@ -165,7 +161,7 @@ namespace copper_server {
             entity_ref copy() const;
             enbt::compound copy_to_enbt() const;
 
-            void teleport(calc::VECTOR pos, float yaw, float pitch, bool on_ground);
+            void teleport(util::VECTOR pos, float yaw, float pitch, bool on_ground);
             void teleport(int32_t x, int32_t y, int32_t z, float yaw, float pitch, bool on_ground);
 
 
@@ -221,23 +217,23 @@ namespace copper_server {
             void set_selected_item(uint8_t selected_item);
 
 
-            void set_position(calc::VECTOR pos);
+            void set_position(util::VECTOR pos);
             void move(float side, float forward, bool jump = false, bool sneaking = false);
             void look(float yaw, float pitch);
             void look_at(float x, float y, float z);
-            void look_at(calc::VECTOR pos);
+            void look_at(util::VECTOR pos);
 
-            calc::VECTOR get_motion() const;
-            void set_motion(calc::VECTOR mot);
-            void add_motion(calc::VECTOR mot);
+            util::VECTOR get_motion() const;
+            void set_motion(util::VECTOR mot);
+            void add_motion(util::VECTOR mot);
 
-            calc::VECTOR get_rotation() const;
-            void set_rotation(calc::VECTOR mot);
-            void add_rotation(calc::VECTOR mot);
+            util::VECTOR get_rotation() const;
+            void set_rotation(util::VECTOR mot);
+            void add_rotation(util::VECTOR mot);
 
-            calc::VECTOR get_head_rotation() const;
-            void set_head_rotation(calc::VECTOR rot);
-            void add_head_rotation(calc::VECTOR rot);
+            util::VECTOR get_head_rotation() const;
+            void set_head_rotation(util::VECTOR rot);
+            void add_head_rotation(util::VECTOR rot);
 
 
             static entity_ref create(uint16_t id);

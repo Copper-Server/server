@@ -3,7 +3,7 @@
 
 namespace copper_server::base_objects {
 
-    SharedClientData::SharedClientData(void* assigned_data, std::function<void(SharedClientData& self)> special_callback)
+    SharedClientData::SharedClientData(void* assigned_data, std::function<void(base_objects::SharedClientData& self)> special_callback)
         : assigned_data(assigned_data), special_callback(special_callback), player_data(reinterpret_cast<player&>(*new player())) {}
 
     SharedClientData::~SharedClientData() {

@@ -13,40 +13,40 @@
 namespace copper_server {
     namespace client_handler {
         namespace abstract {
-            TCPclient* createHandleLogin(TCPsession* client) {
+            base_objects::network::tcp_client* createhandle_login(base_objects::network::tcp_session* client) {
                 switch (client->protocol_version) {
                 case 765:
-                    return new release_765::HandleLogin(client);
+                    return new release_765::handle_login(client);
                 case 766:
-                    return new release_766::HandleLogin(client);
+                    return new release_766::handle_login(client);
                 case 767:
-                    return new release_767::HandleLogin(client);
+                    return new release_767::handle_login(client);
                 default:
                     throw std::runtime_error("Unknown protocol version");
                 }
             }
 
-            TCPclient* createHandleConfiguration(TCPsession* client) {
+            base_objects::network::tcp_client* createhandle_configuration(base_objects::network::tcp_session* client) {
                 switch (client->protocol_version) {
                 case 765:
-                    return new release_765::HandleConfiguration(client);
+                    return new release_765::handle_configuration(client);
                 case 766:
-                    return new release_766::HandleConfiguration(client);
+                    return new release_766::handle_configuration(client);
                 case 767:
-                    return new release_767::HandleConfiguration(client);
+                    return new release_767::handle_configuration(client);
                 default:
                     throw std::runtime_error("Unknown protocol version");
                 }
             }
 
-            TCPclient* createHandlePlay(TCPsession* client) {
+            base_objects::network::tcp_client* createhandle_play(base_objects::network::tcp_session* client) {
                 switch (client->protocol_version) {
                 case 765:
-                    return new release_765::HandlePlay(client);
+                    return new release_765::handle_play(client);
                 case 766:
-                    return new release_766::HandlePlay(client);
+                    return new release_766::handle_play(client);
                 case 767:
-                    return new release_767::HandlePlay(client);
+                    return new release_767::handle_play(client);
                 default:
                     throw std::runtime_error("Unknown protocol version");
                 }

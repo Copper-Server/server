@@ -3,14 +3,12 @@
 #include <src/api/world.hpp>
 #include <src/build_in_plugins/processors_providers/loot_table_pool_entry_processor.hpp>
 
-namespace copper_server {
-    namespace build_in_plugins {
+namespace copper_server::build_in_plugins::processors_providers {
 
-        LootTablePoolEntryProcessor::LootTablePoolEntryProcessor() {}
+    LootTablePoolEntryProcessor::LootTablePoolEntryProcessor() {}
 
-        void LootTablePoolEntryProcessor::OnInitialization(const PluginRegistrationPtr& self) {
+    void LootTablePoolEntryProcessor::OnInitialization(const PluginRegistrationPtr& self) {
 
-            api::loot_table_pool_entry::register_processor(processor);
-        }
+        api::loot_table_pool_entry::register_processor(processor);
     }
 }

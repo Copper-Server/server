@@ -1,122 +1,21 @@
 #ifndef SRC_PROTOCOLHELPER_STATE_STATUS
 #define SRC_PROTOCOLHELPER_STATE_STATUS
-#include <src/api/configuration.hpp>
-#include <src/plugin/special.hpp>
-#include <src/protocolHelper/packets.hpp>
+#include <src/protocolHelper/util.hpp>
 
 namespace copper_server {
-    class TCPClientHandleStatus : public TCPClientHandle {
+    class tcp_client_handle_status : public tcp_client_handle {
     protected:
         //response status
-        virtual std::string buildResponse() {
-            if (!special_status) {
-                return "{"
-                       "\"version\": {"
-                       "\"name\": \"Undefined handler\","
-                       "\"protocol\": 0"
-                       "},"
-                       "\"players\": {"
-                       "\"max\": 0,"
-                       "\"online\": 0"
-                       "},"
-                       "\"description\": {\"text\":\"Please set status handler!\",\"color\":\"red\"}"
-                       "}";
-            }
-            int32_t protocol_version = special_status->ConnectionAvailable(session->protocol_version)
-                                           ? session->protocol_version
-                                           : 0;
-            std::string version_name = special_status->StatusResponseVersionName();
-
-            std::string res = "{"
-                              "\"version\": {"
-                              "\"name\": \""
-                              + version_name + "\","
-                                               "\"protocol\": "
-                              + std::to_string(protocol_version) + "},";
-
-            if (special_status->ShowConnectionStatus()) {
-                auto max_count = special_status->MaxPlayers();
-                auto online = special_status->OnlinePlayers();
-                if (max_count == 0)
-                    max_count = online + 1;
-
-                res += "\"players\":{\"max\":" + std::to_string(max_count) + ",\"online\":" + std::to_string(online);
-
-                auto players = special_status->OnlinePlayersSample();
-                if (!players.empty()) {
-                    res += ",\"sample\":[";
-                    for (auto& it : players) {
-                        res += "{\"name\":\"" + it.first + "\",\"id\":\"" + UUID2String(it.second) + "\"},";
-                    }
-                    res.pop_back();
-                    res += "]";
-                }
-
-                res += "},";
-            }
-
-
-            res += "\"description\":" + special_status->Description().ToStr();
-
-
-            std::string base64_fav = special_status->ServerIcon();
-            if (base64_fav != "")
-                res += ",\"favicon\": \"data:image/png;base64," + base64_fav + "\"";
-
-
-            auto preventsChatReports = special_status->PreventsChatReports();
-
-            if (preventsChatReports.has_value())
-                res += ",\"preventChatReports\":" + std::string(*preventsChatReports ? "true" : "false");
-
-            res += ",\"enforcesSecureChat\":" + std::string(api::configuration::get().mojang.enforce_secure_profile ? "true" : "false");
-
-            auto custom_json = special_status->CustomJson();
-            if (!custom_json.empty())
-                res += ", " + custom_json;
-
-            res += "}";
-            return res;
-        }
-
-        Response WorkPacket(ArrayStream& packet) override {
-            if (!api::configuration::get().status.enable)
-                return Response::Disconnect();
-            if (packet.size_read() == 0)
-                return Response::Empty();
-            else if (packet.size_read() == 1) {
-                list_array<uint8_t> response;
-                response.push_back(0);
-                std::string tmp = buildResponse();
-                log::debug("status", tmp);
-                WriteVar<int32_t>(tmp.size(), response);
-                response.push_back((uint8_t*)tmp.data(), tmp.size());
-                return Response::Answer({std::move(response)});
-            } else
-                return Response::Disconnect({packet.to_vector()});
-        }
-
-        Response TooLargePacket() override {
-            return Response::Disconnect();
-        }
-
-        Response Exception(const std::exception& ex) override {
-            return Response::Disconnect();
-        }
-
-        Response UnexpectedException() override {
-            return Response::Disconnect();
-        }
+        virtual std::string build_response();
+        base_objects::network::response work_packet(ArrayStream& packet) override;
+        base_objects::network::response too_large_packet() override;
+        base_objects::network::response exception(const std::exception& ex) override;
+        base_objects::network::response unexpected_exception() override;
 
     public:
-        TCPClientHandleStatus(TCPsession* session)
-            : TCPClientHandle(session) {
-        }
+        tcp_client_handle_status(base_objects::network::tcp_session* session);
 
-        TCPclient* DefineOurself(TCPsession* sock) override {
-            return new TCPClientHandleStatus(sock);
-        }
+        base_objects::network::tcp_client* define_ourself(base_objects::network::tcp_session* sock) override;
     };
 }
-
 #endif /* SRC_PROTOCOLHELPER_STATE_STATUS */

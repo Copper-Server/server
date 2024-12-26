@@ -1,4 +1,4 @@
-#include <src/base_objects/event.hpp>
+#include <src/base_objects/events/event.hpp>
 #include <src/base_objects/server_configuaration.hpp>
 
 namespace copper_server::api::configuration {
@@ -6,7 +6,7 @@ namespace copper_server::api::configuration {
     bool loaded = false;
 
 
-    base_objects::event<void> updated;
+    base_objects::events::event<void> updated;
 
     void load(bool fill_default_values) {
         config.load(std::filesystem::current_path(), fill_default_values);

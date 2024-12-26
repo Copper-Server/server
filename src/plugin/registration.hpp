@@ -3,8 +3,8 @@
 #include <library/list_array.hpp>
 #include <memory>
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/event.hpp>
-#include <src/base_objects/response.hpp>
+#include <src/base_objects/events/event.hpp>
+#include <src/base_objects/network/response.hpp>
 #include <src/base_objects/server_configuaration.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <string>
@@ -14,9 +14,9 @@
 namespace copper_server {
     class PluginRegistration {
         struct event_auto_cleanup_t {
-            base_objects::base_event* event_obj;
-            base_objects::event_register_id id;
-            base_objects::event_priority priority;
+            base_objects::events::base_event* event_obj;
+            base_objects::events::event_register_id id;
+            base_objects::events::priority priority;
             bool async_mode;
         };
 
@@ -27,17 +27,17 @@ namespace copper_server {
         virtual void deinitializer(const std::shared_ptr<PluginRegistration>&) {};
 
         template <class T>
-        void register_event(base_objects::event<T>& event_ref, base_objects::event<T>::function&& fn) {
-            cleanup_list.push_back({&event_ref, event_ref.join(base_objects::event_priority::avg, false, fn), base_objects::event_priority::avg, false});
+        void register_event(base_objects::events::event<T>& event_ref, base_objects::events::event<T>::function&& fn) {
+            cleanup_list.push_back({&event_ref, event_ref.join(base_objects::events::priority::avg, false, fn), base_objects::events::priority::avg, false});
         }
 
         template <class T>
-        void register_event(base_objects::event<T>& event_ref, base_objects::event_priority priority, base_objects::event<T>::function&& fn) {
+        void register_event(base_objects::events::event<T>& event_ref, base_objects::events::priority priority, base_objects::events::event<T>::function&& fn) {
             cleanup_list.push_back({&event_ref, event_ref.join(priority, false, fn), priority, false});
         }
 
         template <class T>
-        void register_event(base_objects::event<T>& event_ref, base_objects::event_priority priority, bool async_mode, base_objects::event<T>::function&& fn) {
+        void register_event(base_objects::events::event<T>& event_ref, base_objects::events::priority priority, bool async_mode, base_objects::events::event<T>::function&& fn) {
             cleanup_list.push_back({&event_ref, event_ref.join(priority, async_mode, fn), priority, async_mode});
         }
 
@@ -57,10 +57,9 @@ namespace copper_server {
             std::string plugin_chanel;
         };
 
-        using plugin_response_login = std::variant<Response, PluginResponse, bool>;
+        using plugin_response_login = std::variant<base_objects::network::response, PluginResponse, bool>;
 
-        using plugin_response = std::optional<Response>;
-
+        using plugin_response = base_objects::network::plugin_response;
 #pragma region Server
         //first initialisation
         virtual void OnRegister(const std::shared_ptr<PluginRegistration>&) {}

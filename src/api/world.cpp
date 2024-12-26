@@ -141,15 +141,15 @@ namespace copper_server::api::world {
         return {id, get_worlds().get(id)->world_name};
     }
 
-    base_objects::event<uint64_t>& on_world_loaded() {
+    base_objects::events::event<uint64_t>& on_world_loaded() {
         return get_worlds().on_world_loaded;
     }
 
-    base_objects::event<uint64_t>& on_world_unloaded() {
+    base_objects::events::event<uint64_t>& on_world_unloaded() {
         return get_worlds().on_world_unloaded;
     }
 
-    base_objects::event<double>& on_tps_changed() {
+    base_objects::events::event<double>& on_tps_changed() {
         return get_worlds().on_tps_changed;
     }
 }

@@ -2,7 +2,7 @@
 #define SRC_API_PROTOCOL
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
-#include <src/base_objects/event.hpp>
+#include <src/base_objects/events/event.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/slot.hpp>
 #include <src/protocolHelper/util.hpp>
@@ -16,7 +16,7 @@ namespace copper_server::api::protocol {
 
         struct block_nbt_request {
             int32_t transaction_id;
-            Position position;
+            base_objects::position position;
         };
 
         using chat_command = std::string;
@@ -137,7 +137,7 @@ namespace copper_server::api::protocol {
         };
 
         struct jigsaw_generate {
-            Position location;
+            base_objects::position location;
             int32_t levels;
             bool keep_jigsaws;
         };
@@ -189,7 +189,7 @@ namespace copper_server::api::protocol {
 
         struct player_action {
             int32_t status;
-            Position location;
+            base_objects::position location;
             int8_t face;
             int32_t sequence_id;
         };
@@ -244,7 +244,7 @@ namespace copper_server::api::protocol {
         };
 
         struct program_command_block {
-            Position location;
+            base_objects::position location;
             std::string command;
             int32_t mode;
             int8_t flags;
@@ -262,7 +262,7 @@ namespace copper_server::api::protocol {
         };
 
         struct program_jigsaw_block {
-            Position location;
+            base_objects::position location;
             std::string name;
             std::string target;
             std::string pool;
@@ -273,7 +273,7 @@ namespace copper_server::api::protocol {
         };
 
         struct program_structure_block {
-            Position location;
+            base_objects::position location;
             int32_t action;
             int32_t mode;
             std::string name;
@@ -292,7 +292,7 @@ namespace copper_server::api::protocol {
         };
 
         struct update_sign {
-            Position location;
+            base_objects::position location;
             bool is_front_text;
             std::string line1;
             std::string line2;
@@ -310,7 +310,7 @@ namespace copper_server::api::protocol {
 
         struct use_item_on {
             int32_t hand;
-            Position location;
+            base_objects::position location;
             int32_t face;
             float cursor_x;
             float cursor_y;
@@ -359,70 +359,70 @@ namespace copper_server::api::protocol {
     template <class T>
     struct event_data {
         T data;
-        TCPsession& client;
+        base_objects::network::tcp_session& client;
         base_objects::client_data_holder client_data;
     };
 
-    extern base_objects::event<event_data<data::teleport_request_completion>> on_teleport_request_completion;
-    extern base_objects::event<event_data<data::block_nbt_request>> on_block_nbt_request;
-    extern base_objects::event<event_data<uint8_t>> on_change_difficulty;
-    extern base_objects::event<event_data<int32_t>> on_acknowledge_message;
-    extern base_objects::event<event_data<data::chat_command>> on_chat_command;
-    extern base_objects::event<event_data<data::signed_chat_command>> on_signed_chat_command;
-    extern base_objects::event<event_data<data::chat_message_unsigned>> on_chat_message_unsigned;
-    extern base_objects::event<event_data<data::chat_message_signed>> on_chat_message_signed;
-    extern base_objects::event<event_data<data::player_session>> on_player_session;
-    extern base_objects::event<event_data<float>> on_chunk_batch_received;
-    extern base_objects::event<event_data<int32_t>> on_client_status;
-    extern base_objects::event<event_data<data::client_information>> on_client_information;
-    extern base_objects::event<event_data<data::command_suggestion>> on_command_suggestion;
-    extern base_objects::event<event_data<data::click_container_button>> on_click_container_button;
-    extern base_objects::event<event_data<data::click_container>> on_click_container;
-    extern base_objects::event<event_data<uint8_t>> on_close_container;
-    extern base_objects::event<event_data<data::change_container_slot_state>> on_change_container_slot_state;
-    extern base_objects::event<event_data<data::cookie_response>> on_cookie_response;
-    extern base_objects::event<event_data<data::plugin_message>> on_plugin_message;
-    extern base_objects::event<event_data<data::debug_sample_subscription>> on_debug_sample_subscription;
-    extern base_objects::event<event_data<data::edit_book>> on_edit_book;
-    extern base_objects::event<event_data<data::query_entity_tag>> on_query_entity_tag;
-    extern base_objects::event<event_data<data::interact_attack>> on_interact_attack;
-    extern base_objects::event<event_data<data::interact_at>> on_interact_at;
-    extern base_objects::event<event_data<data::interact>> on_interact;
-    extern base_objects::event<event_data<data::jigsaw_generate>> on_jigsaw_generate;
-    extern base_objects::event<event_data<int64_t>> on_keep_alive;
-    extern base_objects::event<event_data<bool>> on_lock_difficulty;
-    extern base_objects::event<event_data<data::set_player_position>> on_set_player_position;
-    extern base_objects::event<event_data<data::set_player_position_and_rotation>> on_set_player_position_and_rotation;
-    extern base_objects::event<event_data<data::set_player_rotation>> on_set_player_rotation;
-    extern base_objects::event<event_data<bool>> on_set_player_on_ground;
-    extern base_objects::event<event_data<data::move_vehicle>> on_move_vehicle;
-    extern base_objects::event<event_data<data::paddle_boat>> on_paddle_boat;
-    extern base_objects::event<event_data<data::pick_item>> on_pick_item;
-    extern base_objects::event<event_data<int64_t>> on_ping_request;
-    extern base_objects::event<event_data<data::place_recipe>> on_place_recipe;
-    extern base_objects::event<event_data<int8_t>> on_player_abilities;
-    extern base_objects::event<event_data<data::player_action>> on_player_action;
-    extern base_objects::event<event_data<data::player_command>> on_player_command;
-    extern base_objects::event<event_data<data::player_input>> on_player_input;
-    extern base_objects::event<event_data<data::pong>> on_pong;
-    extern base_objects::event<event_data<data::change_recipe_book_settings>> on_change_recipe_book_settings;
-    extern base_objects::event<event_data<std::string>> on_set_seen_recipe;
-    extern base_objects::event<event_data<std::string>> on_rename_item;
-    extern base_objects::event<event_data<data::resource_pack_response>> on_resource_pack_response;
-    extern base_objects::event<event_data<data::seen_advancements>> on_seen_advancements;
-    extern base_objects::event<event_data<int32_t>> on_select_trade;
-    extern base_objects::event<event_data<data::set_beacon_effect>> on_set_beacon_effect;
-    extern base_objects::event<event_data<int16_t>> on_set_held_item;
-    extern base_objects::event<event_data<data::program_command_block>> on_program_command_block;
-    extern base_objects::event<event_data<data::program_command_cart>> on_program_command_cart;
-    extern base_objects::event<event_data<data::set_creative_slot>> on_set_creative_slot;
-    extern base_objects::event<event_data<data::program_jigsaw_block>> on_program_jigsaw_block;
-    extern base_objects::event<event_data<data::program_structure_block>> on_program_structure_block;
-    extern base_objects::event<event_data<data::update_sign>> on_update_sign;
-    extern base_objects::event<event_data<data::swing_arm>> on_swing_arm;
-    extern base_objects::event<event_data<data::spectator_teleport>> on_spectator_teleport;
-    extern base_objects::event<event_data<data::use_item_on>> on_use_item_on;
-    extern base_objects::event<event_data<data::use_item>> on_use_item;
+    extern base_objects::events::event<event_data<data::teleport_request_completion>> on_teleport_request_completion;
+    extern base_objects::events::event<event_data<data::block_nbt_request>> on_block_nbt_request;
+    extern base_objects::events::event<event_data<uint8_t>> on_change_difficulty;
+    extern base_objects::events::event<event_data<int32_t>> on_acknowledge_message;
+    extern base_objects::events::event<event_data<data::chat_command>> on_chat_command;
+    extern base_objects::events::event<event_data<data::signed_chat_command>> on_signed_chat_command;
+    extern base_objects::events::event<event_data<data::chat_message_unsigned>> on_chat_message_unsigned;
+    extern base_objects::events::event<event_data<data::chat_message_signed>> on_chat_message_signed;
+    extern base_objects::events::event<event_data<data::player_session>> on_player_session;
+    extern base_objects::events::event<event_data<float>> on_chunk_batch_received;
+    extern base_objects::events::event<event_data<int32_t>> on_client_status;
+    extern base_objects::events::event<event_data<data::client_information>> on_client_information;
+    extern base_objects::events::event<event_data<data::command_suggestion>> on_command_suggestion;
+    extern base_objects::events::event<event_data<data::click_container_button>> on_click_container_button;
+    extern base_objects::events::event<event_data<data::click_container>> on_click_container;
+    extern base_objects::events::event<event_data<uint8_t>> on_close_container;
+    extern base_objects::events::event<event_data<data::change_container_slot_state>> on_change_container_slot_state;
+    extern base_objects::events::event<event_data<data::cookie_response>> on_cookie_response;
+    extern base_objects::events::event<event_data<data::plugin_message>> on_plugin_message;
+    extern base_objects::events::event<event_data<data::debug_sample_subscription>> on_debug_sample_subscription;
+    extern base_objects::events::event<event_data<data::edit_book>> on_edit_book;
+    extern base_objects::events::event<event_data<data::query_entity_tag>> on_query_entity_tag;
+    extern base_objects::events::event<event_data<data::interact_attack>> on_interact_attack;
+    extern base_objects::events::event<event_data<data::interact_at>> on_interact_at;
+    extern base_objects::events::event<event_data<data::interact>> on_interact;
+    extern base_objects::events::event<event_data<data::jigsaw_generate>> on_jigsaw_generate;
+    extern base_objects::events::event<event_data<int64_t>> on_keep_alive;
+    extern base_objects::events::event<event_data<bool>> on_lock_difficulty;
+    extern base_objects::events::event<event_data<data::set_player_position>> on_set_player_position;
+    extern base_objects::events::event<event_data<data::set_player_position_and_rotation>> on_set_player_position_and_rotation;
+    extern base_objects::events::event<event_data<data::set_player_rotation>> on_set_player_rotation;
+    extern base_objects::events::event<event_data<bool>> on_set_player_on_ground;
+    extern base_objects::events::event<event_data<data::move_vehicle>> on_move_vehicle;
+    extern base_objects::events::event<event_data<data::paddle_boat>> on_paddle_boat;
+    extern base_objects::events::event<event_data<data::pick_item>> on_pick_item;
+    extern base_objects::events::event<event_data<int64_t>> on_ping_request;
+    extern base_objects::events::event<event_data<data::place_recipe>> on_place_recipe;
+    extern base_objects::events::event<event_data<int8_t>> on_player_abilities;
+    extern base_objects::events::event<event_data<data::player_action>> on_player_action;
+    extern base_objects::events::event<event_data<data::player_command>> on_player_command;
+    extern base_objects::events::event<event_data<data::player_input>> on_player_input;
+    extern base_objects::events::event<event_data<data::pong>> on_pong;
+    extern base_objects::events::event<event_data<data::change_recipe_book_settings>> on_change_recipe_book_settings;
+    extern base_objects::events::event<event_data<std::string>> on_set_seen_recipe;
+    extern base_objects::events::event<event_data<std::string>> on_rename_item;
+    extern base_objects::events::event<event_data<data::resource_pack_response>> on_resource_pack_response;
+    extern base_objects::events::event<event_data<data::seen_advancements>> on_seen_advancements;
+    extern base_objects::events::event<event_data<int32_t>> on_select_trade;
+    extern base_objects::events::event<event_data<data::set_beacon_effect>> on_set_beacon_effect;
+    extern base_objects::events::event<event_data<int16_t>> on_set_held_item;
+    extern base_objects::events::event<event_data<data::program_command_block>> on_program_command_block;
+    extern base_objects::events::event<event_data<data::program_command_cart>> on_program_command_cart;
+    extern base_objects::events::event<event_data<data::set_creative_slot>> on_set_creative_slot;
+    extern base_objects::events::event<event_data<data::program_jigsaw_block>> on_program_jigsaw_block;
+    extern base_objects::events::event<event_data<data::program_structure_block>> on_program_structure_block;
+    extern base_objects::events::event<event_data<data::update_sign>> on_update_sign;
+    extern base_objects::events::event<event_data<data::swing_arm>> on_swing_arm;
+    extern base_objects::events::event<event_data<data::spectator_teleport>> on_spectator_teleport;
+    extern base_objects::events::event<event_data<data::use_item_on>> on_use_item_on;
+    extern base_objects::events::event<event_data<data::use_item>> on_use_item;
 }
 
 

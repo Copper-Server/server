@@ -2,17 +2,12 @@
 #define SRC_BUILD_IN_PLUGINS_LIGHT_PROCESSORS_DEFAULT_PROC
 #include <src/plugin/main.hpp>
 
-namespace copper_server {
-    namespace build_in_plugins {
-        namespace light_processors {
-            class DefaultProc : public PluginAutoRegister<"default_light_processor", DefaultProc> {
-            public:
-                DefaultProc() {}
+namespace copper_server::build_in_plugins::light_processors {
+    class DefaultProc : public PluginAutoRegister<"default_light_processor", DefaultProc> {
+    public:
+        DefaultProc() {}
 
-                void OnRegister(const PluginRegistrationPtr& self) override;
-            };
-        }
-    }
+        void OnRegister(const PluginRegistrationPtr& self) override;
+    };
 }
-
 #endif /* SRC_BUILD_IN_PLUGINS_LIGHT_PROCESSORS_DEFAULT_PROC */
