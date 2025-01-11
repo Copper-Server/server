@@ -71,7 +71,7 @@ namespace copper_server::client_handler::release_765 {
             std::string channel = ReadString(packet, 32767);
             auto it = pluginManagement.get_bind_plugin(PluginManagement::registration_on::configuration, channel);
             if (it != nullptr) {
-                auto result = it->OnConfigurationHandle(it, channel, packet.read_left().to_vector(), session->sharedDataRef());
+                auto result = it->OnConfigurationHandle(it, channel, packet.read_left(32767).to_vector(), session->sharedDataRef());
                 if (result)
                     return *result;
             }

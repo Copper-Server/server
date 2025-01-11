@@ -198,13 +198,7 @@ namespace copper_server::util {
 
         operator int64_t() const {
             try {
-                if (obj.is_uint64())
-                    if (obj.as_uint64() <= INT64_MAX)
-                        return obj.as_uint64();
-                    else
-                        throw std::runtime_error(std::format("Excepted signed integer at {}.", path));
-                else
-                    return obj.as_int64();
+                return obj.to_number<int64_t>();
             } catch (const boost::system::system_error& err) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::int64), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
@@ -213,13 +207,7 @@ namespace copper_server::util {
 
         operator uint64_t() const {
             try {
-                if (obj.is_int64())
-                    if (obj.as_int64() >= 0)
-                        return obj.as_int64();
-                    else
-                        throw std::runtime_error(std::format("Excepted unsigned integer at {}.", path));
-                else
-                    return obj.as_uint64();
+                return obj.to_number<uint64_t>();
             } catch (const boost::system::system_error& err) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::uint64), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
@@ -288,7 +276,7 @@ namespace copper_server::util {
 
         operator float() const {
             try {
-                return obj.as_double();
+                return obj.to_number<float>();
             } catch (const boost::system::system_error& err) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::double_), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
@@ -297,7 +285,7 @@ namespace copper_server::util {
 
         operator double() const {
             try {
-                return obj.as_double();
+                return obj.to_number<float>();
             } catch (const boost::system::system_error& err) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::double_), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);

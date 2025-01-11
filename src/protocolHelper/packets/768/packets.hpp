@@ -13,10 +13,12 @@
 //packets for 1.21.3+, protocol 768
 //changes between 767:
 //New packets:
-// syncEntityPosition
+// teleportEntityVelocity
+// teleportEntityEX
 // synchronizePlayerRotation
-// setHeadSlot
 // setPlayerInventory
+// moveMinecartAlongTrack
+// setCursorItem
 // .*RecipeBook internally reworked and processed as different packets
 //Changed encoding
 
@@ -145,8 +147,8 @@ namespace copper_server {
 
             base_objects::network::response entityEvent(int32_t entity_id, uint8_t entity_status);
 
-            //TODO check args, new packet 32
-            base_objects::network::response syncEntityPosition(int32_t entity_id, base_objects::position);
+            //new packet
+            base_objects::network::response teleportEntityEX(int32_t entity_id, util::VECTOR pos, util::VECTOR velocity, float yaw, float pitch, bool on_ground, base_objects::packets::teleport_flags flags);
 
             base_objects::network::response explosion(
                 util::VECTOR pos,
@@ -205,6 +207,8 @@ namespace copper_server {
             base_objects::network::response merchantOffers(int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade>& trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock);
             base_objects::network::response updateEntityPosition(int32_t entity_id, util::XYZ<float> pos, bool on_ground);
             base_objects::network::response updateEntityPositionAndRotation(int32_t entity_id, util::XYZ<float> pos, util::VECTOR rot, bool on_ground);
+
+            base_objects::network::response moveMinecartAlongTrack(int32_t entity_id, list_array<base_objects::packets::minecart_state>& states);
             base_objects::network::response updateEntityRotation(int32_t entity_id, util::VECTOR rot, bool on_ground);
             base_objects::network::response moveVehicle(util::VECTOR pos, util::VECTOR rot);
             base_objects::network::response openBook(int32_t hand);
@@ -214,7 +218,7 @@ namespace copper_server {
             base_objects::network::response pingResponse(int32_t id);
             base_objects::network::response placeGhostRecipe(int32_t windows_id, const std::string& recipe_id);
             base_objects::network::response playerAbilities(uint8_t flags, float flying_speed, float field_of_view);
-            base_objects::network::response playerChatMessage(enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, const std::optional<enbt::value>& __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name);
+            base_objects::network::response playerChatMessage(enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, const std::optional<enbt::value>& unsigned_content, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name);
             //UNUSED by Notchian client
             base_objects::network::response endCombat(int32_t duration);
             //UNUSED by Notchian client
@@ -230,13 +234,21 @@ namespace copper_server {
             base_objects::network::response lookAt(bool from_feet_or_eyes, util::VECTOR target, std::optional<std::pair<int32_t, bool>> entity_id);
             base_objects::network::response synchronizePlayerPosition(util::VECTOR pos, float yaw, float pitch, uint8_t flags, int32_t teleport_id);
             //TODO new packet 67
-            base_objects::network::response synchronizePlayerRotation(float yaw, float pitch, uint8_t flags, int32_t teleport_id);
-            //TODO internally spliced from general packet
+            base_objects::network::response synchronizePlayerRotation(float yaw, float pitch);
+
             base_objects::network::response initRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, const list_array<std::string>& displayed_recipe_ids, const list_array<std::string>& had_access_to_recipe_ids);
-            //TODO internally spliced from general packet
             base_objects::network::response addRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, const list_array<std::string>& recipe_ids);
-            //TODO internally spliced from general packet
             base_objects::network::response removeRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, const list_array<std::string>& recipe_ids);
+            base_objects::network::response updateRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active);
+
+            //same as addRecipeBook, but uses native protocol, ids managed manually, no backward compatibility
+            base_objects::network::response RecipeBookAdd(const list_array<base_objects::recipe>& recipes);
+            //same as removeRecipeBook, but uses native protocol, ids managed manually, no backward compatibility
+            base_objects::network::response RecipeBookRemove(const list_array<uint32_t>& recipe_ids);
+            //same as updateRecipeBook, no backward compatibility
+            base_objects::network::response RecipeBookSettings(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active);
+
+
             base_objects::network::response removeEntities(const list_array<int32_t>& entity_ids);
             base_objects::network::response removeEntityEffect(int32_t entity_id, int32_t effect_id);
             base_objects::network::response resetScore(const std::string& entity_name, const std::optional<std::string>& objective_name);
@@ -257,12 +269,13 @@ namespace copper_server {
             base_objects::network::response setBorderWarningDelay(int32_t warning_delay);
             base_objects::network::response setBorderWarningDistance(int32_t warning_distance);
             base_objects::network::response setCamera(int32_t entity_id);
-            base_objects::network::response setHeldItem(uint8_t slot);
+            base_objects::network::response setHeldSlot(int32_t slot);
             base_objects::network::response setCenterChunk(int32_t x, int32_t z);
             base_objects::network::response setRenderDistance(int32_t render_distance);
-            base_objects::network::response setDefaultSpawnPosition(base_objects::position pos, float angle);
+            base_objects::network::response setCursorItem(const base_objects::slot& item);
             base_objects::network::response displayObjective(int32_t position, const std::string& objective_name);
             base_objects::network::response setEntityMetadata(int32_t entity_id, const list_array<uint8_t>& metadata);
+            base_objects::network::response setDefaultSpawnPosition(base_objects::position pos, float angle);
             base_objects::network::response linkEntities(int32_t attached_entity_id, int32_t holder_entity_id);
             base_objects::network::response setEntityVelocity(int32_t entity_id, util::VECTOR velocity);
 
@@ -271,9 +284,6 @@ namespace copper_server {
             base_objects::network::response setExperience(float experience_bar, int32_t level, int32_t total_experience);
 
             base_objects::network::response setHealth(float health, int32_t food, float saturation);
-
-            //TODO new packet
-            //network::response setHeadSlot(...);
 
             base_objects::network::response updateObjectivesCreate(const std::string& objective_name, const Chat& display_name, int32_t render_type);
             base_objects::network::response updateObjectivesCreateStyled(const std::string& objective_name, const Chat& display_name, int32_t render_type, const enbt::value& style);
@@ -286,7 +296,7 @@ namespace copper_server {
             base_objects::network::response setPassengers(int32_t vehicle_entity_id, const list_array<int32_t>& passengers);
 
             //TODO new packet
-            //network::response setPlayerInventory(...);
+            base_objects::network::response setPlayerInventory(int32_t slot, const base_objects::slot& item);
 
             base_objects::network::response updateTeamCreate(const std::string& team_name, const Chat& display_name, bool allow_fire_co_teamer, bool see_invisible_co_teamer, const std::string& name_tag_visibility, const std::string& collision_rule, int32_t team_color, const Chat& prefix, const Chat& suffix, const list_array<std::string>& entities);
             base_objects::network::response updateTeamRemove(const std::string& team_name);
@@ -327,6 +337,7 @@ namespace copper_server {
             base_objects::network::response tagQueryResponse(int32_t transaction_id, const enbt::value& nbt);
             base_objects::network::response pickupItem(int32_t collected_entity_id, int32_t collector_entity_id, int32_t pickup_item_count);
             base_objects::network::response teleportEntity(int32_t entity_id, util::VECTOR pos, float yaw, float pitch, bool on_ground);
+            base_objects::network::response teleportEntityVelocity(int32_t entity_id, util::VECTOR pos, util::VECTOR velocity, float yaw, float pitch, bool on_ground);
             base_objects::network::response setTickingState(float tick_rate, bool is_frozen);
             base_objects::network::response stepTick(int32_t step_count);
 

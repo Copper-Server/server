@@ -16,7 +16,7 @@ namespace copper_server::base_objects {
         std::function<void(int32_t message_id)> deleteMessage;
 
         std::function<void(const Chat& message, int32_t chat_type, const Chat& sender, std::optional<Chat> target_name)> disguisedChatMessage;
-        std::function<void(enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<enbt::value> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name)> playerChatMessage;
+        std::function<void(enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<enbt::value> unsigned_content, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name)> playerChatMessage;
 
         std::function<void(const Chat& message)> systemChatMessage;
         std::function<void(const Chat& message)> systemChatMessageOverlay;

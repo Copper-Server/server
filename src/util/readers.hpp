@@ -105,8 +105,11 @@ namespace copper_server {
             return tmp;
         }
 
-        ArrayStream read_left() {
+        ArrayStream read_left(size_t max_size = SIZE_MAX) {
             size_t left = mi - r;
+            if (left > max_size)
+                throw std::out_of_range("array len out of range");
+
             ArrayStream tmp(arrau + r, left);
             r = mi;
             return tmp;
@@ -207,7 +210,7 @@ namespace copper_server {
         return enbt::endian_helpers::convert_endian(std::endian::big, *(T*)tmp);
     }
 
-    static std::string ReadString(ArrayStream& data, int32_t max_string_len) {
+    static std::string ReadString(ArrayStream& data, int32_t max_string_len = INT32_MAX) {
         std::string res = "";
         int32_t actual_len = ReadVar<int32_t>(data);
         if (actual_len > max_string_len)
@@ -255,9 +258,11 @@ namespace copper_server {
     }
 
     template <class T>
-    static list_array<T> ReadArray(ArrayStream& data) {
+    static list_array<T> ReadArray(ArrayStream& data, int32_t max_len = INT32_MAX) {
         int32_t len = ReadVar<int32_t>(data);
         if (len < 0)
+            throw std::out_of_range("array len out of range");
+        if (len < max_len)
             throw std::out_of_range("array len out of range");
         list_array<T> res;
         res.reserve(len);
@@ -279,9 +284,11 @@ namespace copper_server {
         return std::string(buf, 36);
     }
 
-    static list_array<uint8_t> ReadListArray(ArrayStream& data) {
+    static list_array<uint8_t> ReadListArray(ArrayStream& data, int32_t max_len = INT32_MAX) {
         int32_t len = ReadVar<int32_t>(data);
         if (len < 0)
+            throw std::out_of_range("list array len out of range");
+        if (len < max_len)
             throw std::out_of_range("list array len out of range");
         list_array<uint8_t> res;
         res.reserve(len);

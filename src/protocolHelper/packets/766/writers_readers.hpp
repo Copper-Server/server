@@ -1,6 +1,7 @@
 #ifndef SRC_PROTOCOLHELPER_WRITERS_READERS_767_RELEASE
 #define SRC_PROTOCOLHELPER_WRITERS_READERS_767_RELEASE
 #include <src/base_objects/slot.hpp>
+#include <src/base_objects/slot_display.hpp>
 #include <src/util/readers.hpp>
 
 namespace copper_server::packets::release_766::reader {

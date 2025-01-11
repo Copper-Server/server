@@ -93,7 +93,7 @@ namespace copper_server::packets::release_767 {
                         [](registers::ArmorTrimMaterial& it) {
                             enbt::compound element;
                             element["asset_name"] = it.asset_name;
-                            element["ingredient"] = it.ingredient;
+                            element["ingredient"] = it.ingredient.to_protocol_name(767);
                             element["item_model_index"] = it.item_model_index;
                             {
                                 enbt::compound override_armor_materials;
@@ -116,7 +116,7 @@ namespace copper_server::packets::release_767 {
                         [](registers::ArmorTrimPattern& it) {
                             enbt::compound element;
                             element["asset_id"] = it.asset_id;
-                            element["template_item"] = it.template_item;
+                            element["template_item"] = it.template_item.to_protocol_name(767);
                             if (std::holds_alternative<std::string>(it.description))
                                 element["description"] = std::get<std::string>(it.description);
                             else
@@ -178,12 +178,13 @@ namespace copper_server::packets::release_767 {
                                     additions_sound["tick_chance"] = it.effects.additions_sound->tick_chance;
                                     effects["additions_sound"] = std::move(additions_sound);
                                 }
-                                if (it.effects.music) {
+                                if (it.effects.music.size()) {
+                                    auto& music_it = *it.effects.music.begin();
                                     enbt::compound music;
-                                    music["sound"] = it.effects.music->sound;
-                                    music["min_delay"] = it.effects.music->min_delay;
-                                    music["max_delay"] = it.effects.music->max_delay;
-                                    music["replace_current_music"] = it.effects.music->replace_current_music;
+                                    music["sound"] = music_it.sound;
+                                    music["min_delay"] = music_it.min_delay;
+                                    music["max_delay"] = music_it.max_delay;
+                                    music["replace_current_music"] = music_it.replace_current_music;
                                     effects["music"] = std::move(music);
                                 }
                                 element["effects"] = std::move(effects);
@@ -786,8 +787,8 @@ namespace copper_server::packets::release_767 {
             return release_766::play::playerAbilities(flags, flying_speed, field_of_view);
         }
 
-        base_objects::network::response playerChatMessage(enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, const std::optional<enbt::value>& __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
-            return release_766::play::playerChatMessage(sender, index, signature, message, timestamp, salt, prev_messages, __UNDEFINED__FIELD__, filter_type, filtered_symbols_bitfield, chat_type, sender_name, target_name);
+        base_objects::network::response playerChatMessage(enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, const std::optional<enbt::value>& unsigned_content, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
+            return release_766::play::playerChatMessage(sender, index, signature, message, timestamp, salt, prev_messages, unsigned_content, filter_type, filtered_symbols_bitfield, chat_type, sender_name, target_name);
         }
 
         base_objects::network::response endCombat(int32_t duration) {
@@ -848,6 +849,10 @@ namespace copper_server::packets::release_767 {
 
         base_objects::network::response removeRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, const list_array<std::string>& recipe_ids) {
             return release_766::play::removeRecipeBook(crafting_recipe_book_open, crafting_recipe_book_filter_active, smelting_recipe_book_open, smelting_recipe_book_filter_active, blast_furnace_recipe_book_open, blast_furnace_recipe_book_filter_active, smoker_recipe_book_open, smoker_recipe_book_filter_active, recipe_ids);
+        }
+
+        base_objects::network::response updateRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active) {
+            return addRecipeBook(crafting_recipe_book_open, crafting_recipe_book_filter_active, smelting_recipe_book_open, smelting_recipe_book_filter_active, blast_furnace_recipe_book_open, blast_furnace_recipe_book_filter_active, smoker_recipe_book_open, smoker_recipe_book_filter_active, {});
         }
 
         base_objects::network::response removeEntities(const list_array<int32_t>& entity_ids) {
@@ -922,8 +927,8 @@ namespace copper_server::packets::release_767 {
             return release_766::play::setCamera(entity_id);
         }
 
-        base_objects::network::response setHeldItem(uint8_t slot) {
-            return release_766::play::setHeldItem(slot);
+        base_objects::network::response setHeldSlot(int32_t slot) {
+            return release_766::play::setHeldSlot(slot);
         }
 
         base_objects::network::response setCenterChunk(int32_t x, int32_t z) {
@@ -1138,8 +1143,123 @@ namespace copper_server::packets::release_767 {
             return release_766::play::entityEffect(entity_id, effect_id, amplifier, duration, flags);
         }
 
+        list_array<list_array<uint8_t>> unfold_recipes(list_array<uint8_t>& header, list_array<base_objects::slot_display>&& recipes, const list_array<uint8_t>& footer = {}) {
+            list_array<list_array<list_array<uint8_t>>> tmp
+                = recipes
+                      .convert_fn([](auto& recipe) {
+                          return recipe.to_slots();
+                      })
+                      .convert_fn([](auto& slots) {
+                          return slots.convert_fn([](auto& slot) {
+                              list_array<uint8_t> res;
+                              reader::WriteSlotItem(res, slot);
+                              return res;
+                          });
+                      });
+
+            list_array<list_array<uint8_t>> results;
+            results.resize(tmp.count([](auto& arr) {
+                return arr.size();
+            }));
+            if (header.size())
+                results.push_back_for(header);
+
+            results.transform_with(tmp, [](list_array<uint8_t>& it, const list_array<uint8_t>& ss) {
+                it += ss;
+            });
+            if (footer.size())
+                results.push_back_for(footer);
+            return results;
+        }
+
         base_objects::network::response updateRecipes(const std::vector<base_objects::recipe>& recipes) {
-            return release_766::play::updateRecipes(recipes);
+            list_array<uint8_t> packet;
+            size_t recipe_count = 0;
+            for (auto& recipe : recipes) {
+                std::visit(
+                    [&](auto&& item) {
+                        using type = std::decay_t<decltype(item)>;
+                        list_array<uint8_t> header;
+                        WriteIdentifier(header, recipe.full_id);
+                        WriteVar<int32_t>(registers::view_reg_pro_id("minecraft:recipe_serializer", base_objects::recipes::variant_data<type>::name, 767), header);
+                        if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::crafting_shaped>) {
+                            WriteString(header, recipe.group, 32767);
+                            WriteVar<int32_t>((int32_t)item.category, header);
+                            WriteVar<int32_t>(item.width, header);
+                            WriteVar<int32_t>(item.height, header);
+                            auto results = unfold_recipes(header, to_list_array(item.ingredients).push_back(item.result), {item.show_notification});
+                            recipe_count += results.size();
+                            packet += results.take().concat();
+                        } else if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::crafting_shapeless>) {
+                            WriteString(header, recipe.group, 32767);
+                            WriteVar<int32_t>((int32_t)item.category, header);
+                            WriteVar<int32_t>(item.ingredients.size(), header);
+                            auto results = unfold_recipes(header, to_list_array(item.ingredients).push_back(item.result));
+                            recipe_count += results.size();
+                            packet += results.take().concat();
+                        } else if constexpr (
+                            std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_armordye>
+                            | std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_bookcloning>
+                            | std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_mapcloning>
+                            | std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_mapextending>
+                            | std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_firework_rocket>
+                            | std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_firework_star>
+                            | std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_firework_star_fade>
+                            | std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_tippedarrow>
+                            | std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_bannerduplicate>
+                            | std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_shielddecoration>
+                            | std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_shulkerboxcoloring>
+                            | std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_suspiciousstew>
+                            | std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_repairitem>
+                            | std::is_same_v<type, base_objects::recipes::minecraft::crafting_decorated_pot>
+                        ) {
+                            WriteVar<int32_t>((int32_t)item.category, header);
+                            packet += header.take();
+                            recipe_count += 1;
+                        } else if constexpr (
+                            std::is_same_v<type, base_objects::recipes::minecraft::smelting>
+                            | std::is_same_v<type, base_objects::recipes::minecraft::blasting>
+                            | std::is_same_v<type, base_objects::recipes::minecraft::smoking>
+                            | std::is_same_v<type, base_objects::recipes::minecraft::campfire_cooking>
+                        ) {
+                            WriteString(header, recipe.group, 32767);
+                            WriteVar<int32_t>((int32_t)item.category, header);
+                            list_array<uint8_t> footer;
+                            WriteValue<float>(item.experience, footer);
+                            WriteVar<int32_t>(item.cooking_time, footer);
+                            auto results = unfold_recipes(header, {item.ingredient, item.result}, footer);
+                            recipe_count += results.size();
+                            packet += results.take().concat();
+                        } else if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::stonecutting>) {
+                            WriteString(header, recipe.group, 32767);
+                            auto results = unfold_recipes(header, {item.ingredient, item.result});
+                            recipe_count += results.size();
+                            packet += results.take().concat();
+                        } else if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::smithing_transform>) {
+                            auto results = unfold_recipes(header, {item._template, item.base, item.addition, item.result});
+                            recipe_count += results.size();
+                            packet += results.take().concat();
+                        } else if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::smithing_trim>) {
+                            auto results = unfold_recipes(header, {item._template, item.base, item.addition});
+                            recipe_count += results.size();
+                            packet += results.take().concat();
+                        } else if constexpr (std::is_same_v<type, base_objects::recipes::custom>) {
+                            header.push_back(item.data);
+                            packet.push_back(header.take());
+                            recipe_count += 1;
+                        } else
+                            throw std::runtime_error("invalid recipe type");
+                    },
+                    recipe.data
+                );
+            }
+            list_array<uint8_t> header;
+
+            header.push_back(0x77);
+            WriteVar<int32_t>(recipe_count, header);
+            packet.push_front(header.take());
+
+            return base_objects::network::response::answer({std::move(packet)});
         }
 
         base_objects::network::response updateTags(const list_array<base_objects::packets::tag_mapping>& tag_mappings) {

@@ -380,6 +380,29 @@ namespace copper_server::base_objects::packets {
         std::string url;
     };
 
+    union teleport_flags {
+        struct {
+            bool x_relative : 1;
+            bool y_relative : 1;
+            bool z_relative : 1;
+            bool yaw_relative : 1;
+            bool pitch_relative : 1;
+            bool velocity_x_relative : 1;
+            bool velocity_y_relative : 1;
+            bool velocity_z_relative : 1;
+            bool rotate_by_yaw_pitch : 1;
+        };
+
+        int32_t raw = 0;
+    };
+
+    struct minecart_state {
+        double x, y, z;
+        double velocity_x, velocity_y, velocity_z;
+        float yaw, pitch;
+        float weight;
+    };
+
     int32_t java_name_to_protocol(const std::string& name_or_number);
 }
 #endif /* SRC_BASE_OBJECTS_PACKETS */

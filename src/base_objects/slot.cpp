@@ -885,8 +885,8 @@ namespace copper_server::base_objects {
                  else {
                      auto equip_sound_com = equip_sound.as_compound();
                      equippable.equip_sound = base_objects::slot_component::equippable::equip_sound_custom{
-                         .sound_id = equip_sound_com.at("sound_id").as_string(),
-                         .range = equip_sound_com.at("range")
+                         .sound_name = equip_sound_com.at("sound_id").as_string(),
+                         .fixed_range = equip_sound_com.at("range")
                      };
                  }
              } else
@@ -1567,6 +1567,17 @@ namespace copper_server::base_objects {
             }
         }
 
+        void potion_contents::iterate_custom_effects(std::function<void(size_t)> size_fn, std::function<void(const item_potion_effect&)> fn) const {
+            if (std::holds_alternative<int32_t>(value)) {
+                size_fn(0);
+                return;
+            } else {
+                auto& it = std::get<full>(value);
+                size_fn(it.custom_effects.size());
+                it.custom_effects.for_each(fn);
+            }
+        }
+
         std::optional<int32_t> potion_contents::get_potion_id() const {
             if (std::holds_alternative<int32_t>(value))
                 return std::get<int32_t>(value);
@@ -1620,12 +1631,12 @@ namespace copper_server::base_objects {
             item.internal_item_aliases.clear();
             for (auto& [protocol, assignations] : internal_item_aliases_protocol) {
                 if (assignations.find(item.id) != assignations.end()) {
-                    item.internal_item_aliases[protocol] = assignations[item.id];
+                    item.internal_item_aliases[protocol] = {assignations[item.id], item.id};
                 } else {
                     bool found = false;
                     for (auto& alias : item.item_aliases) {
                         if (assignations.find(alias) != assignations.end()) {
-                            item.internal_item_aliases[protocol] = assignations[alias];
+                            item.internal_item_aliases[protocol] = {assignations[alias], alias};
                             found = true;
                             break;
                         }
@@ -1636,6 +1647,30 @@ namespace copper_server::base_objects {
             }
             ++id;
         }
+    }
+
+    item_id_t::item_id_t(const std::string& id)
+        : id(slot_data::get_slot_data(id).internal_id) {}
+
+    item_id_t::item_id_t(uint32_t id)
+        : id(id) {}
+
+    item_id_t::item_id_t(const item_id_t& id)
+        : id(id.id) {}
+
+    item_id_t::item_id_t()
+        : id(0) {}
+
+    int32_t item_id_t::to_protocol(uint32_t protocol_num) const {
+        return slot_data::get_slot_data(id).internal_item_aliases.at(protocol_num).local_id;
+    }
+
+    const std::string& item_id_t::to_protocol_name(uint32_t protocol_num) const {
+        return slot_data::get_slot_data(id).internal_item_aliases.at(protocol_num).local_named_id;
+    }
+
+    static_slot_data& item_id_t::get_data() const {
+        return slot_data::get_slot_data(id);
     }
 
     slot_data slot_data::create_item(const std::string& id, int32_t count) {

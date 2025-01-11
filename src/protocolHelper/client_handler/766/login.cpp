@@ -48,7 +48,7 @@ namespace copper_server::client_handler::release_766 {
         excepted_packet = -1;
         while (plugins_query.size()) {
             auto&& it = plugins_query.front();
-            auto response = it.second->OnLoginHandle(it.second, it.first, data.to_vector(), successful, session->sharedDataRef());
+            auto response = it.second->OnLoginHandle(it.second, it.first, data.read_left(32767).to_vector(), successful, session->sharedDataRef());
             if (std::holds_alternative<PluginRegistration::PluginResponse>(response)) {
                 auto& plugin = std::get<PluginRegistration::PluginResponse>(response);
                 plugin_message_id++;
@@ -181,7 +181,7 @@ namespace copper_server::client_handler::release_766 {
             api::protocol::data::cookie_response data;
             data.key = ReadIdentifier(packet);
             if (packet.read())
-                data.payload = ReadArray<uint8_t>(packet);
+                data.payload = ReadArray<uint8_t>(packet, 5120);
             api::protocol::on_cookie_response.async_notify({data, *session, session->sharedDataRef()});
             break;
         }

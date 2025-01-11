@@ -15,7 +15,6 @@ namespace copper_server {
         fast_task::protected_value<entities_storage> data_for_entities;
         std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> entity_data::internal_entity_aliases_protocol;
 
-
         const entity_data& entity_data::get_entity(uint16_t id) {
             return data_for_entities.get([&](auto& data) -> const entity_data& {
                 auto it = data._registry.find(id);
@@ -408,19 +407,43 @@ namespace copper_server {
 
 
         entity_ref entity::create(uint16_t id) {
-            return entity_data::get_entity(id).create_callback();
+            auto it = entity_data::get_entity(id);
+            entity_ref res = new entity();
+            res->entity_id = id;
+            if (it.create_callback)
+                it.create_callback(*res);
+            return res;
         }
 
         entity_ref entity::create(uint16_t id, const enbt::compound_const_ref& nbt) {
-            return entity_data::get_entity(id).create_callback_with_nbt(nbt);
+            auto it = entity_data::get_entity(id);
+            entity_ref res = new entity();
+            res->entity_id = id;
+            if (it.create_callback)
+                it.create_callback_with_nbt(*res, nbt);
+            else
+                res->nbt = nbt;
+            return res;
         }
 
         entity_ref entity::create(const std::string& id) {
-            return entity_data::get_entity(id).create_callback();
+            auto it = entity_data::get_entity(id);
+            entity_ref res = new entity();
+            res->entity_id = it.entity_id;
+            if (it.create_callback)
+                it.create_callback(*res);
+            return res;
         }
 
         entity_ref entity::create(const std::string& id, const enbt::compound_const_ref& nbt) {
-            return entity_data::get_entity(id).create_callback_with_nbt(nbt);
+            auto it = entity_data::get_entity(id);
+            entity_ref res = new entity();
+            res->entity_id = it.entity_id;
+            if (it.create_callback)
+                it.create_callback_with_nbt(*res, nbt);
+            else
+                res->nbt = nbt;
+            return res;
         }
 
         std::optional<int32_t> entity::get_object_field() {

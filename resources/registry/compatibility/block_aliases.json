@@ -7,5 +7,13 @@
     "minecraft:pale_moss_carpet": "minecraft:moss_carpet",
     "minecraft:creaking_heart": "minecraft:white_wool",
     "minecraft:vault": "minecraft:barrel",
-    "minecraft:heavy_core": "minecraft:player_head"
+    "minecraft:heavy_core": "minecraft:player_head",
+    "minecraft:resin_clump": "minecraft:vine",
+    "minecraft:resin_block": "minecraft:raw_gold_block",
+    "minecraft:resin_brick*": "minecraft:stone_brick$",
+    "minecraft:chiseled_resin_brick*": "minecraft:chiseled_stone_brick$",
+    "minecraft:open_eyeblossom": "minecraft:orange_tulip",
+    "minecraft:potted_open_eyeblossom": "minecraft:potted_orange_tulip",
+    "minecraft:closed_eyeblossom": "minecraft:wither_rose",
+    "minecraft:potted_closed_eyeblossom": "minecraft:potted_wither_rose"
 }

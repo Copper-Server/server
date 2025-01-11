@@ -19,6 +19,11 @@ namespace copper_server::api::protocol {
             base_objects::position position;
         };
 
+        struct bundle_item_selected {
+            int32_t inventory_slot;
+            int32_t bundle_slot;
+        };
+
         using chat_command = std::string;
 
         struct signed_chat_command {
@@ -67,6 +72,7 @@ namespace copper_server::api::protocol {
             bool allow_server_listings;
             int32_t chat_mode;
             int32_t main_hand;
+            int32_t particle_status = 0;
         };
 
         struct command_suggestion {
@@ -170,6 +176,7 @@ namespace copper_server::api::protocol {
             double z;
             float yaw;
             float pitch;
+            std::optional<bool> on_ground;
         };
 
         struct paddle_boat {
@@ -177,13 +184,23 @@ namespace copper_server::api::protocol {
             bool right_paddle;
         };
 
-        struct pick_item {
+        struct pick_item_old {
             int32_t slot;
         };
 
+        struct pick_item_from_block {
+            base_objects::position location;
+            bool include_data;
+        };
+
+        struct pick_item_from_entity {
+            int32_t entity_id;
+            bool include_data;
+        };
+
         struct place_recipe {
-            int8_t window_id;
-            std::string recipe_id;
+            int32_t window_id;
+            int32_t recipe_id;
             bool make_all;
         };
 
@@ -201,16 +218,21 @@ namespace copper_server::api::protocol {
         };
 
         struct player_input {
-            float sideways;
-            float forward;
+            /*deprecated*/ float sideways = 0; //since 768
+            /*deprecated*/ float forward = 0;  //since 768
 
             union input_flags {
                 struct {
+                    bool forward : 1;
+                    bool backward : 1;
+                    bool left : 1;
+                    bool right : 1;
                     bool jump : 1;
                     bool sneaking : 1;
+                    bool sprint : 1; // can be set to false even if player actually sprinting if protocol version lower than 768
                 };
 
-                uint8_t raw;
+                uint8_t raw = 0;
             } flags;
         };
 
@@ -316,6 +338,7 @@ namespace copper_server::api::protocol {
             float cursor_y;
             float cursor_z;
             bool inside_block;
+            bool world_border_hit = false;
             int32_t sequence;
         };
 
@@ -365,6 +388,7 @@ namespace copper_server::api::protocol {
 
     extern base_objects::events::event<event_data<data::teleport_request_completion>> on_teleport_request_completion;
     extern base_objects::events::event<event_data<data::block_nbt_request>> on_block_nbt_request;
+    extern base_objects::events::event<event_data<data::bundle_item_selected>> on_bundle_item_selected;
     extern base_objects::events::event<event_data<uint8_t>> on_change_difficulty;
     extern base_objects::events::event<event_data<int32_t>> on_acknowledge_message;
     extern base_objects::events::event<event_data<data::chat_command>> on_chat_command;
@@ -374,11 +398,12 @@ namespace copper_server::api::protocol {
     extern base_objects::events::event<event_data<data::player_session>> on_player_session;
     extern base_objects::events::event<event_data<float>> on_chunk_batch_received;
     extern base_objects::events::event<event_data<int32_t>> on_client_status;
+    extern base_objects::events::event<event_data<bool>> on_client_tick_end;
     extern base_objects::events::event<event_data<data::client_information>> on_client_information;
     extern base_objects::events::event<event_data<data::command_suggestion>> on_command_suggestion;
     extern base_objects::events::event<event_data<data::click_container_button>> on_click_container_button;
     extern base_objects::events::event<event_data<data::click_container>> on_click_container;
-    extern base_objects::events::event<event_data<uint8_t>> on_close_container;
+    extern base_objects::events::event<event_data<int32_t>> on_close_container;
     extern base_objects::events::event<event_data<data::change_container_slot_state>> on_change_container_slot_state;
     extern base_objects::events::event<event_data<data::cookie_response>> on_cookie_response;
     extern base_objects::events::event<event_data<data::plugin_message>> on_plugin_message;
@@ -394,16 +419,19 @@ namespace copper_server::api::protocol {
     extern base_objects::events::event<event_data<data::set_player_position>> on_set_player_position;
     extern base_objects::events::event<event_data<data::set_player_position_and_rotation>> on_set_player_position_and_rotation;
     extern base_objects::events::event<event_data<data::set_player_rotation>> on_set_player_rotation;
-    extern base_objects::events::event<event_data<bool>> on_set_player_on_ground;
+    extern base_objects::events::event<event_data<uint8_t>> on_set_player_movement_flags;
     extern base_objects::events::event<event_data<data::move_vehicle>> on_move_vehicle;
     extern base_objects::events::event<event_data<data::paddle_boat>> on_paddle_boat;
-    extern base_objects::events::event<event_data<data::pick_item>> on_pick_item;
+    extern base_objects::events::event<event_data<data::pick_item_old>> on_pick_item_old;
+    extern base_objects::events::event<event_data<data::pick_item_from_block>> on_pick_item_from_block;
+    extern base_objects::events::event<event_data<data::pick_item_from_entity>> on_pick_item_from_entity;
     extern base_objects::events::event<event_data<int64_t>> on_ping_request;
     extern base_objects::events::event<event_data<data::place_recipe>> on_place_recipe;
     extern base_objects::events::event<event_data<int8_t>> on_player_abilities;
     extern base_objects::events::event<event_data<data::player_action>> on_player_action;
     extern base_objects::events::event<event_data<data::player_command>> on_player_command;
     extern base_objects::events::event<event_data<data::player_input>> on_player_input;
+    extern base_objects::events::event<event_data<bool>> on_player_loaded; //since 768
     extern base_objects::events::event<event_data<data::pong>> on_pong;
     extern base_objects::events::event<event_data<data::change_recipe_book_settings>> on_change_recipe_book_settings;
     extern base_objects::events::event<event_data<std::string>> on_set_seen_recipe;

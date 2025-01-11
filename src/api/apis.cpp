@@ -23,6 +23,7 @@ namespace copper_server::api {
     namespace protocol {
         base_objects::events::event<event_data<data::teleport_request_completion>> on_teleport_request_completion;
         base_objects::events::event<event_data<data::block_nbt_request>> on_block_nbt_request;
+        base_objects::events::event<event_data<data::bundle_item_selected>> on_bundle_item_selected;
         base_objects::events::event<event_data<uint8_t>> on_change_difficulty;
         base_objects::events::event<event_data<int32_t>> on_acknowledge_message;
         base_objects::events::event<event_data<data::chat_command>> on_chat_command;
@@ -32,11 +33,12 @@ namespace copper_server::api {
         base_objects::events::event<event_data<data::player_session>> on_player_session;
         base_objects::events::event<event_data<float>> on_chunk_batch_received;
         base_objects::events::event<event_data<int32_t>> on_client_status;
+        base_objects::events::event<event_data<bool>> on_client_tick_end;
         base_objects::events::event<event_data<data::client_information>> on_client_information;
         base_objects::events::event<event_data<data::command_suggestion>> on_command_suggestion;
         base_objects::events::event<event_data<data::click_container_button>> on_click_container_button;
         base_objects::events::event<event_data<data::click_container>> on_click_container;
-        base_objects::events::event<event_data<uint8_t>> on_close_container;
+        base_objects::events::event<event_data<int32_t>> on_close_container;
         base_objects::events::event<event_data<data::change_container_slot_state>> on_change_container_slot_state;
         base_objects::events::event<event_data<data::cookie_response>> on_cookie_response;
         base_objects::events::event<event_data<data::plugin_message>> on_plugin_message;
@@ -52,16 +54,19 @@ namespace copper_server::api {
         base_objects::events::event<event_data<data::set_player_position>> on_set_player_position;
         base_objects::events::event<event_data<data::set_player_position_and_rotation>> on_set_player_position_and_rotation;
         base_objects::events::event<event_data<data::set_player_rotation>> on_set_player_rotation;
-        base_objects::events::event<event_data<bool>> on_set_player_on_ground;
+        base_objects::events::event<event_data<uint8_t>> on_set_player_movement_flags;
         base_objects::events::event<event_data<data::move_vehicle>> on_move_vehicle;
         base_objects::events::event<event_data<data::paddle_boat>> on_paddle_boat;
-        base_objects::events::event<event_data<data::pick_item>> on_pick_item;
+        base_objects::events::event<event_data<data::pick_item_old>> on_pick_item_old;
+        base_objects::events::event<event_data<data::pick_item_from_block>> on_pick_item_from_block;
+        base_objects::events::event<event_data<data::pick_item_from_entity>> on_pick_item_from_entity;
         base_objects::events::event<event_data<int64_t>> on_ping_request;
         base_objects::events::event<event_data<data::place_recipe>> on_place_recipe;
         base_objects::events::event<event_data<int8_t>> on_player_abilities;
         base_objects::events::event<event_data<data::player_action>> on_player_action;
         base_objects::events::event<event_data<data::player_command>> on_player_command;
         base_objects::events::event<event_data<data::player_input>> on_player_input;
+        base_objects::events::event<event_data<bool>> on_player_loaded; //since 768
         base_objects::events::event<event_data<data::pong>> on_pong;
         base_objects::events::event<event_data<data::change_recipe_book_settings>> on_change_recipe_book_settings;
         base_objects::events::event<event_data<std::string>> on_set_seen_recipe;
@@ -121,8 +126,6 @@ namespace copper_server::api {
         void unregister_virtual_client() {
             if (console_data)
                 console_data = nullptr;
-            else
-                throw std::runtime_error("Console's virtual client not yet registered");
         }
 
         void execute_as_console(const std::string& command) {

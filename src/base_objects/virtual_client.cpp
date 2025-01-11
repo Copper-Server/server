@@ -17,7 +17,7 @@ namespace copper_server::base_objects {
         client->player_data.op_level = 4;
         client->player_data.world_id = "virtual_client astral space";
 
-        client->packets_state.protocol_version = 767;
+        client->packets_state.protocol_version = 769;
         client->packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::play;
         client->special_callback = [this](base_objects::SharedClientData& self) {
             self.getPendingPackets().for_each([&](auto packet) {
@@ -69,32 +69,27 @@ namespace copper_server::base_objects {
         case 0x1B:
         case 0x1C:
         case 0x1D:
+            break;
         case 0x1E: {
             if (!disguisedChatMessage)
                 return;
-            list_array<uint8_t> message_text_component;
-            list_array<uint8_t> sender_text_component;
-            list_array<uint8_t> target_text_component;
-            while (uint8_t it = arr.read())
-                message_text_component.push_back(it);
+            size_t readed = 0;
+            Chat message_text_component = Chat::fromEnbt(NBT::readNBT_asENBT(arr.data_read(), arr.size_read(), readed));
+            arr.range_read(readed);
             int32_t chat_type = ReadVar<int32_t>(arr);
-            while (uint8_t it = arr.read())
-                sender_text_component.push_back(it);
-
-            if (arr.read()) {
-                while (uint8_t it = arr.read())
-                    target_text_component.push_back(it);
+            Chat sender_text_component = Chat::fromEnbt(NBT::readNBT_asENBT(arr.data_read(), arr.size_read(), readed));
+            arr.range_read(readed);
+            std::optional<Chat> target_text_component;
+            if (arr.read() != 0) {
+                target_text_component = Chat::fromEnbt(NBT::readNBT_asENBT(arr.data_read(), arr.size_read(), readed));
+                arr.range_read(readed);
             }
-            message_text_component.push_back(0);
-            sender_text_component.push_back(0);
-            target_text_component.push_back(0);
-
 
             disguisedChatMessage(
-                Chat::fromTextComponent(message_text_component),
+                message_text_component,
                 chat_type,
-                Chat::fromTextComponent(sender_text_component),
-                target_text_component.size() == 1 ? std::optional(Chat::fromTextComponent(target_text_component)) : std::nullopt
+                sender_text_component,
+                target_text_component
             );
             break;
         }
@@ -171,12 +166,19 @@ namespace copper_server::base_objects {
         case 0x69:
         case 0x6A:
         case 0x6B:
-        case 0x6C: { //systemChatMessage
+        case 0x6C:
+        case 0x6D:
+        case 0x6F:
+        case 0x70:
+        case 0x71:
+        case 0x72:
+            break;
+        case 0x73: { //systemChatMessage
             if (!systemChatMessage && !systemChatMessageOverlay)
                 return;
-            size_t readen = 0;
-            Chat message_text_component = Chat::fromEnbt(NBT::readNBT_asENBT(arr.data_read(), arr.size_read(), readen));
-            arr.range_read(readen);
+            size_t readed = 0;
+            Chat message_text_component = Chat::fromEnbt(NBT::readNBT_asENBT(arr.data_read(), arr.size_read(), readed));
+            arr.range_read(readed);
 
             if (arr.read()) {
                 if (systemChatMessageOverlay)
@@ -186,13 +188,7 @@ namespace copper_server::base_objects {
                     systemChatMessage(message_text_component);
             }
             break;
-        };
-        case 0x6D:
-        case 0x6F:
-        case 0x70:
-        case 0x71:
-        case 0x72:
-        case 0x73:
+        }
         case 0x74:
             break;
         }

@@ -10,6 +10,14 @@
 #include <src/protocolHelper/client_handler/767/login.hpp>
 #include <src/protocolHelper/client_handler/767/play.hpp>
 
+#include <src/protocolHelper/client_handler/768/configuration.hpp>
+#include <src/protocolHelper/client_handler/768/login.hpp>
+#include <src/protocolHelper/client_handler/768/play.hpp>
+
+#include <src/protocolHelper/client_handler/769/configuration.hpp>
+#include <src/protocolHelper/client_handler/769/login.hpp>
+#include <src/protocolHelper/client_handler/769/play.hpp>
+
 namespace copper_server {
     namespace client_handler {
         namespace abstract {
@@ -21,6 +29,10 @@ namespace copper_server {
                     return new release_766::handle_login(client);
                 case 767:
                     return new release_767::handle_login(client);
+                case 768:
+                    return new release_768::handle_login(client);
+                case 769:
+                    return new release_769::handle_login(client);
                 default:
                     throw std::runtime_error("Unknown protocol version");
                 }
@@ -34,6 +46,10 @@ namespace copper_server {
                     return new release_766::handle_configuration(client);
                 case 767:
                     return new release_767::handle_configuration(client);
+                case 768:
+                    return new release_768::handle_configuration(client);
+                case 769:
+                    return new release_769::handle_configuration(client);
                 default:
                     throw std::runtime_error("Unknown protocol version");
                 }
@@ -47,6 +63,10 @@ namespace copper_server {
                     return new release_766::handle_play(client);
                 case 767:
                     return new release_767::handle_play(client);
+                case 768:
+                    return new release_768::handle_play(client);
+                case 769:
+                    return new release_769::handle_play(client);
                 default:
                     throw std::runtime_error("Unknown protocol version");
                 }

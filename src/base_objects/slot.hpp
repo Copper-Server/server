@@ -203,7 +203,7 @@ namespace copper_server::base_objects {
             enbt::compound value;
 
             auto operator<=>(const custom_data& other) const = default;
-            static inline std::string component_name = "custom_data";
+            static inline std::string component_name = "minecraft:custom_data";
         };
 
         struct max_stack_size {
@@ -211,47 +211,47 @@ namespace copper_server::base_objects {
 
             auto operator<=>(const max_stack_size& other) const = default;
 
-            static inline std::string component_name = "max_stack_size";
+            static inline std::string component_name = "minecraft:max_stack_size";
         };
 
         struct max_damage {
             int32_t value;
 
             auto operator<=>(const max_damage& other) const = default;
-            static inline std::string component_name = "max_damage";
+            static inline std::string component_name = "minecraft:max_damage";
         };
 
         struct damage {
             int32_t value;
 
             auto operator<=>(const damage& other) const = default;
-            static inline std::string component_name = "damage";
+            static inline std::string component_name = "minecraft:damage";
         };
 
         struct unbreakable {
             bool value = true;
 
             auto operator<=>(const unbreakable& other) const = default;
-            static inline std::string component_name = "unbreakable";
+            static inline std::string component_name = "minecraft:unbreakable";
         };
 
         struct custom_name {
             Chat value;
 
             auto operator<=>(const custom_name& other) const = default;
-            static inline std::string component_name = "custom_name";
+            static inline std::string component_name = "minecraft:custom_name";
         };
 
         struct item_name {
             Chat value;
             auto operator<=>(const item_name& other) const = default;
-            static inline std::string component_name = "item_name";
+            static inline std::string component_name = "minecraft:item_name";
         };
 
         struct lore {
             list_array<Chat> value;
             auto operator<=>(const lore& other) const = default;
-            static inline std::string component_name = "lore";
+            static inline std::string component_name = "minecraft:lore";
         };
 
         struct rarity {
@@ -279,7 +279,7 @@ namespace copper_server::base_objects {
 
             auto operator<=>(const rarity& other) const
                 = default;
-            static inline std::string component_name = "rarity";
+            static inline std::string component_name = "minecraft:rarity";
         };
 
         struct enchantments {
@@ -287,7 +287,7 @@ namespace copper_server::base_objects {
             bool show_in_tooltip = true;
 
             auto operator<=>(const enchantments& other) const = default;
-            static inline std::string component_name = "enchantments";
+            static inline std::string component_name = "minecraft:enchantments";
         };
 
         struct can_place_on {
@@ -295,7 +295,7 @@ namespace copper_server::base_objects {
             bool show_in_tooltip = true;
 
             auto operator<=>(const can_place_on& other) const = default;
-            static inline std::string component_name = "can_place_on";
+            static inline std::string component_name = "minecraft:can_place_on";
         };
 
         struct can_break {
@@ -303,7 +303,7 @@ namespace copper_server::base_objects {
             bool show_in_tooltip = true;
 
             auto operator<=>(const can_break& other) const = default;
-            static inline std::string component_name = "can_break";
+            static inline std::string component_name = "minecraft:can_break";
         };
 
         struct attribute_modifiers {
@@ -311,7 +311,7 @@ namespace copper_server::base_objects {
             bool show_in_tooltip = true;
 
             auto operator<=>(const attribute_modifiers& other) const = default;
-            static inline std::string component_name = "attribute_modifiers";
+            static inline std::string component_name = "minecraft:attribute_modifiers";
         };
 
         struct banner_patterns {
@@ -330,47 +330,47 @@ namespace copper_server::base_objects {
             list_array<pattern> value;
 
             auto operator<=>(const banner_patterns& other) const = default;
-            static inline std::string component_name = "banner_patterns";
+            static inline std::string component_name = "minecraft:banner_patterns";
         };
 
         struct custom_model_data {
             int32_t value;
 
             auto operator<=>(const custom_model_data& other) const = default;
-            static inline std::string component_name = "custom_model_data";
+            static inline std::string component_name = "minecraft:custom_model_data";
         };
 
         struct hide_additional_tooltip { //NEED DOCUMENTATION in wiki.vg, what means `additional`
             auto operator<=>(const hide_additional_tooltip& other) const = default;
-            static inline std::string component_name = "hide_additional_tooltip";
+            static inline std::string component_name = "minecraft:hide_additional_tooltip";
         };
 
         struct hide_tooltip {
             auto operator<=>(const hide_tooltip& other) const = default;
-            static inline std::string component_name = "hide_tooltip";
+            static inline std::string component_name = "minecraft:hide_tooltip";
         };
 
         struct repair_cost {
             int32_t value;
             auto operator<=>(const repair_cost& other) const = default;
-            static inline std::string component_name = "repair_cost";
+            static inline std::string component_name = "minecraft:repair_cost";
         };
 
         struct creative_slot_lock {
             auto operator<=>(const creative_slot_lock& other) const = default;
-            static inline std::string component_name = "creative_slot_lock";
+            static inline std::string component_name = "minecraft:creative_slot_lock";
         };
 
         struct enchantment_glint_override {
             int32_t has_glint;
             auto operator<=>(const enchantment_glint_override& other) const = default;
-            static inline std::string component_name = "enchantment_glint_override";
+            static inline std::string component_name = "minecraft:enchantment_glint_override";
         };
 
         struct intangible_projectile {
             enbt::value value; //sent empty nbt in notchain server
             auto operator<=>(const intangible_projectile& other) const = default;
-            static inline std::string component_name = "intangible_projectile";
+            static inline std::string component_name = "minecraft:intangible_projectile";
         };
 
         struct food {
@@ -383,7 +383,7 @@ namespace copper_server::base_objects {
             //float seconds_to_eat; deprecated , since 1.21.2, use consumable.consume_seconds
             //slot_data* consuming_converts_to; deprecated , since 1.21.2, use use_remainder component
             //list_array<std::pair<int32_t, float>> effects; //effect ID, probability     deprecated, since 1.21.2, use consumable.on_consume_effects
-            static inline std::string component_name = "food";
+            static inline std::string component_name = "minecraft:food";
         };
 
         struct tool {
@@ -392,7 +392,7 @@ namespace copper_server::base_objects {
             int32_t damage_per_block = 1;
 
             auto operator<=>(const tool& other) const = default;
-            static inline std::string component_name = "tool";
+            static inline std::string component_name = "minecraft:tool";
         };
 
         struct stored_enchantments {
@@ -400,7 +400,7 @@ namespace copper_server::base_objects {
             bool show_in_tooltip = true;
 
             auto operator<=>(const stored_enchantments& other) const = default;
-            static inline std::string component_name = "stored_enchantments";
+            static inline std::string component_name = "minecraft:stored_enchantments";
         };
 
         struct dyed_color {
@@ -408,28 +408,28 @@ namespace copper_server::base_objects {
             bool show_in_tooltip = true;
 
             auto operator<=>(const dyed_color& other) const = default;
-            static inline std::string component_name = "dyed_color";
+            static inline std::string component_name = "minecraft:dyed_color";
         };
 
         struct map_color {
             int32_t rgb;
 
             auto operator<=>(const map_color& other) const = default;
-            static inline std::string component_name = "map_color";
+            static inline std::string component_name = "minecraft:map_color";
         };
 
         struct map_id {
             int32_t value;
 
             auto operator<=>(const map_id& other) const = default;
-            static inline std::string component_name = "map_id";
+            static inline std::string component_name = "minecraft:map_id";
         };
 
         struct map_decorations {
             enbt::value value;
 
             auto operator<=>(const map_decorations& other) const = default;
-            static inline std::string component_name = "map_decorations";
+            static inline std::string component_name = "minecraft:map_decorations";
         };
 
         struct charged_projectiles {
@@ -441,7 +441,7 @@ namespace copper_server::base_objects {
                 return !operator==(other);
             }
 
-            static inline std::string component_name = "charged_projectiles";
+            static inline std::string component_name = "minecraft:charged_projectiles";
         };
 
         struct bundle_contents {
@@ -453,7 +453,7 @@ namespace copper_server::base_objects {
                 return !operator==(other);
             }
 
-            static inline std::string component_name = "bundle_contents";
+            static inline std::string component_name = "minecraft:bundle_contents";
         };
 
         struct potion_contents {
@@ -482,24 +482,25 @@ namespace copper_server::base_objects {
 
 
             void iterate_custom_effects(std::function<void(const item_potion_effect&)> fn) const;
+            void iterate_custom_effects(std::function<void(size_t)> size_fn, std::function<void(const item_potion_effect&)> fn) const;
             std::optional<int32_t> get_potion_id() const;
             std::optional<int32_t> get_custom_color() const;
             std::optional<std::string> get_custom_name() const;
 
             auto operator<=>(const potion_contents& other) const = default;
-            static inline std::string component_name = "potion_contents";
+            static inline std::string component_name = "minecraft:potion_contents";
         };
 
         struct suspicious_stew_effects {
             list_array<std::pair<int32_t, int32_t>> effects; //id, duration
             auto operator<=>(const suspicious_stew_effects& other) const = default;
-            static inline std::string component_name = "suspicious_stew_effects";
+            static inline std::string component_name = "minecraft:suspicious_stew_effects";
         };
 
         struct writable_book_content {
             list_array<item_page> pages;
             auto operator<=>(const writable_book_content& other) const = default;
-            static inline std::string component_name = "writable_book_content";
+            static inline std::string component_name = "minecraft:writable_book_content";
         };
 
         struct written_book_content {
@@ -511,7 +512,7 @@ namespace copper_server::base_objects {
             bool resolved = false;
 
             auto operator<=>(const written_book_content& other) const = default;
-            static inline std::string component_name = "written_book_content";
+            static inline std::string component_name = "minecraft:written_book_content";
         };
 
         struct trim {
@@ -537,31 +538,31 @@ namespace copper_server::base_objects {
             bool show_in_tooltip = true;
 
             auto operator<=>(const trim& other) const = default;
-            static inline std::string component_name = "trim";
+            static inline std::string component_name = "minecraft:trim";
         };
 
         struct debug_stick_state {
             enbt::compound previous_state;
             auto operator<=>(const debug_stick_state& other) const = default;
-            static inline std::string component_name = "debug_stick_state";
+            static inline std::string component_name = "minecraft:debug_stick_state";
         };
 
         struct entity_data {
             enbt::compound value;
             auto operator<=>(const entity_data& other) const = default;
-            static inline std::string component_name = "entity_data";
+            static inline std::string component_name = "minecraft:entity_data";
         };
 
         struct bucket_entity_data {
             enbt::compound value;
             auto operator<=>(const bucket_entity_data& other) const = default;
-            static inline std::string component_name = "bucket_entity_data";
+            static inline std::string component_name = "minecraft:bucket_entity_data";
         };
 
         struct block_entity_data {
             enbt::compound value;
             auto operator<=>(const block_entity_data& other) const = default;
-            static inline std::string component_name = "block_entity_data";
+            static inline std::string component_name = "minecraft:block_entity_data";
         };
 
         struct instrument {
@@ -574,13 +575,13 @@ namespace copper_server::base_objects {
 
             std::variant<std::string, type_extended> type;
             auto operator<=>(const instrument& other) const = default;
-            static inline std::string component_name = "instrument";
+            static inline std::string component_name = "minecraft:instrument";
         };
 
         struct ominous_bottle_amplifier {
             int32_t amplifier; //0..4
             auto operator<=>(const ominous_bottle_amplifier& other) const = default;
-            static inline std::string component_name = "ominous_bottle_amplifier";
+            static inline std::string component_name = "minecraft:ominous_bottle_amplifier";
         };
 
         struct jukebox_playable {
@@ -604,13 +605,13 @@ namespace copper_server::base_objects {
             bool show_in_tooltip = true;
 
             auto operator<=>(const jukebox_playable& other) const = default;
-            static inline std::string component_name = "jukebox_playable";
+            static inline std::string component_name = "minecraft:jukebox_playable";
         };
 
         struct recipes {
             std::vector<std::string> value;
             auto operator<=>(const recipes& other) const = default;
-            static inline std::string component_name = "recipes";
+            static inline std::string component_name = "minecraft:recipes";
         };
 
         struct lodestone_tracker {
@@ -625,20 +626,20 @@ namespace copper_server::base_objects {
             bool tracked = true;
 
             auto operator<=>(const lodestone_tracker& other) const = default;
-            static inline std::string component_name = "lodestone_tracker";
+            static inline std::string component_name = "minecraft:lodestone_tracker";
         };
 
         struct firework_explosion {
             item_firework_explosion value;
             auto operator<=>(const firework_explosion& other) const = default;
-            static inline std::string component_name = "firework_explosion";
+            static inline std::string component_name = "minecraft:firework_explosion";
         };
 
         struct fireworks {
             list_array<item_firework_explosion> explosions;
             int32_t duration;
             auto operator<=>(const fireworks& other) const = default;
-            static inline std::string component_name = "fireworks";
+            static inline std::string component_name = "minecraft:fireworks";
         };
 
         struct profile {
@@ -654,25 +655,25 @@ namespace copper_server::base_objects {
             list_array<property_t> properties;
 
             auto operator<=>(const profile& other) const = default;
-            static inline std::string component_name = "profile";
+            static inline std::string component_name = "minecraft:profile";
         };
 
         struct note_block_sound {
             std::string sound;
             auto operator<=>(const note_block_sound& other) const = default;
-            static inline std::string component_name = "note_block_sound";
+            static inline std::string component_name = "minecraft:note_block_sound";
         };
 
         struct base_color {
             item_color color;
             auto operator<=>(const base_color& other) const = default;
-            static inline std::string component_name = "base_color";
+            static inline std::string component_name = "minecraft:base_color";
         };
 
         struct pot_decorations {
             std::string decorations[4];
             auto operator<=>(const pot_decorations& other) const = default;
-            static inline std::string component_name = "pot_decorations";
+            static inline std::string component_name = "minecraft:pot_decorations";
         };
 
         struct container {
@@ -731,7 +732,7 @@ namespace copper_server::base_objects {
                 return !operator==(other);
             }
 
-            static inline std::string component_name = "container";
+            static inline std::string component_name = "minecraft:container";
         };
 
         struct block_state {
@@ -744,7 +745,7 @@ namespace copper_server::base_objects {
             list_array<property_t> properties;
 
             auto operator<=>(const block_state& other) const = default;
-            static inline std::string component_name = "block_state";
+            static inline std::string component_name = "minecraft:block_state";
         };
 
         struct bees {
@@ -758,14 +759,14 @@ namespace copper_server::base_objects {
             list_array<bee> values;
 
             auto operator<=>(const bees& other) const = default;
-            static inline std::string component_name = "bees";
+            static inline std::string component_name = "minecraft:bees";
         };
 
         struct lock {
             std::string key; //1.21 in packet as NBT with string tag
 
             auto operator<=>(const lock& other) const = default;
-            static inline std::string component_name = "lock";
+            static inline std::string component_name = "minecraft:lock";
         };
 
         struct container_loot {
@@ -773,7 +774,7 @@ namespace copper_server::base_objects {
             int64_t seed;
 
             auto operator<=>(const container_loot& other) const = default;
-            static inline std::string component_name = "container_loot";
+            static inline std::string component_name = "minecraft:container_loot";
         };
 
         struct map_post_processing {
@@ -781,7 +782,7 @@ namespace copper_server::base_objects {
             int64_t locked_id = -1; // server side
 
             auto operator<=>(const map_post_processing& other) const = default;
-            static inline std::string component_name = "map_post_processing";
+            static inline std::string component_name = "minecraft:map_post_processing";
         };
 
         struct consumable {
@@ -792,34 +793,34 @@ namespace copper_server::base_objects {
             bool has_consume_particles = true;
 
             auto operator<=>(const consumable& other) const = default;
-            static inline std::string component_name = "consumable";
+            static inline std::string component_name = "minecraft:consumable";
         };
 
         struct damage_resistant { //since 1.21.2, replaces `fire_resistant` component
             std::string types;    //damage type tag tag
 
             auto operator<=>(const damage_resistant& other) const = default;
-            static inline std::string component_name = "damage_resistant";
+            static inline std::string component_name = "minecraft:damage_resistant";
         };
 
         struct death_protection {
             list_array<inner::application_effect> death_effects; //optional
 
             auto operator<=>(const death_protection& other) const = default;
-            static inline std::string component_name = "death_protection";
+            static inline std::string component_name = "minecraft:death_protection";
         };
 
         struct enchantable {
             int32_t value; //limit to enchanting cost
 
             auto operator<=>(const enchantable& other) const = default;
-            static inline std::string component_name = "enchantable";
+            static inline std::string component_name = "minecraft:enchantable";
         };
 
         struct equippable {
             struct equip_sound_custom {
-                std::string sound_id;
-                float range;
+                std::string sound_name;
+                std::optional<float> fixed_range;
                 auto operator<=>(const equip_sound_custom& other) const = default;
             };
 
@@ -833,31 +834,31 @@ namespace copper_server::base_objects {
             bool damage_on_hurt = true;
 
             auto operator<=>(const equippable& other) const = default;
-            static inline std::string component_name = "equippable";
+            static inline std::string component_name = "minecraft:equippable";
         };
 
         struct glider {
             auto operator<=>(const glider& other) const = default;
-            static inline std::string component_name = "glider";
+            static inline std::string component_name = "minecraft:glider";
         };
 
         struct item_model {
             std::string value;
             auto operator<=>(const item_model& other) const = default;
-            static inline std::string component_name = "item_model";
+            static inline std::string component_name = "minecraft:item_model";
         };
 
         struct repairable {
             std::variant<std::string, std::vector<std::string>> items;
             auto operator<=>(const repairable& other) const = default;
-            static inline std::string component_name = "repairable";
+            static inline std::string component_name = "minecraft:repairable";
         };
 
         struct tooltip_style {
             std::string value;
 
             auto operator<=>(const tooltip_style& other) const = default;
-            static inline std::string component_name = "tooltip_style";
+            static inline std::string component_name = "minecraft:tooltip_style";
         };
 
         struct use_cooldown {
@@ -865,7 +866,7 @@ namespace copper_server::base_objects {
             float seconds;
 
             auto operator<=>(const use_cooldown& other) const = default;
-            static inline std::string component_name = "use_cooldown";
+            static inline std::string component_name = "minecraft:use_cooldown";
         };
 
         struct use_remainder {
@@ -884,7 +885,7 @@ namespace copper_server::base_objects {
                 return !operator==(other);
             }
 
-            static inline std::string component_name = "use_remainder";
+            static inline std::string component_name = "minecraft:use_remainder";
         };
 
         using unified
@@ -961,6 +962,11 @@ namespace copper_server::base_objects {
     }
 
     struct static_slot_data {
+        struct alias_data {
+            uint32_t local_id;
+            std::string local_named_id;
+        };
+
         std::string id;
         std::unordered_map<std::string, slot_component::unified> default_components;
         int32_t internal_id;
@@ -976,8 +982,21 @@ namespace copper_server::base_objects {
         static void initialize_items(); //INTERNAL, used to assign internal_item_aliases ids from item_aliases
 
         list_array<std::string> item_aliases;
-        std::unordered_map<uint32_t, uint32_t> internal_item_aliases; //protocol id -> block id
-        static std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> internal_item_aliases_protocol;
+        std::unordered_map<uint32_t, alias_data> internal_item_aliases;                                                //protocol id -> local id/protocol block name
+        static std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> internal_item_aliases_protocol; //pritocol num -> name -> protocol id
+    };
+
+    struct item_id_t {
+        uint32_t id;
+
+        item_id_t(const std::string& id);
+        item_id_t(uint32_t id);
+        item_id_t(const item_id_t& id);
+        item_id_t();
+
+        int32_t to_protocol(uint32_t protocol_num) const;
+        const std::string& to_protocol_name(uint32_t protocol_num) const;
+        static_slot_data& get_data() const;
     };
 
     struct slot_data {

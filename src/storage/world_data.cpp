@@ -1027,18 +1027,29 @@ namespace copper_server::storage {
         return res;
     }
 
-    std::optional<base_objects::atomic_holder<chunk_data>> world_data::request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z) {
+    base_objects::atomic_holder<chunk_data> world_data::request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
                 if (y_axis->second)
                     return y_axis->second;
 
-        if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end())
-            return chunks[chunk_x][chunk_z] = load_chunk_sync(chunk_x, chunk_z);
-        else {
+        if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end()) {
+            auto it = on_load_process[{chunk_x, chunk_z}] = Future<base_objects::atomic_holder<chunk_data>>::start(
+                [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
+                    auto chunk = load_chunk_sync(chunk_x, chunk_z);
+                    if (!chunk)
+                        return nullptr;
+                    std::unique_lock lock(mutex);
+                    on_load_process.erase({chunk_x, chunk_z});
+                    return chunks[chunk_x][chunk_z] = chunk;
+                }
+            );
+            it->wait_with(lock);
+            return it->get();
+        } else {
             process->second->wait_with(lock);
-            return request_chunk_data_sync(chunk_x, chunk_z);
+            return process->second->get();
         }
     }
 
@@ -1088,6 +1099,44 @@ namespace copper_server::storage {
         return std::nullopt;
     }
 
+    std::optional<base_objects::atomic_holder<chunk_data>> world_data::request_chunk_data_weak(int64_t chunk_x, int64_t chunk_z) {
+        std::unique_lock lock(mutex);
+        if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
+            if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
+                if (y_axis->second)
+                    return std::make_optional(y_axis->second);
+
+        return std::nullopt;
+    }
+
+    std::optional<base_objects::atomic_holder<chunk_data>> world_data::request_chunk_data_weak_sync(int64_t chunk_x, int64_t chunk_z) {
+        std::unique_lock lock(mutex);
+        if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
+            if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
+                if (y_axis->second)
+                    return std::make_optional(y_axis->second);
+        if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end()) {
+            if (exists(chunk_x, chunk_z)) {
+                auto it = on_load_process[{chunk_x, chunk_z}] = Future<base_objects::atomic_holder<chunk_data>>::start(
+                    [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
+                        auto chunk = load_chunk_sync(chunk_x, chunk_z);
+                        if (!chunk)
+                            return nullptr;
+                        std::unique_lock lock(mutex);
+                        on_load_process.erase({chunk_x, chunk_z});
+                        return chunks[chunk_x][chunk_z] = chunk;
+                    }
+                );
+                it->wait_with(lock);
+                return it->get();
+            } else
+                return std::nullopt;
+        } else {
+            process->second->wait_with(lock);
+            return process->second->get();
+        }
+    }
+
     void world_data::request_chunk_gen(int64_t chunk_x, int64_t chunk_z) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
@@ -1107,8 +1156,7 @@ namespace copper_server::storage {
                 );
     }
 
-    bool
-    world_data::request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback) {
+    bool world_data::request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())

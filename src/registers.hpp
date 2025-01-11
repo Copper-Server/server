@@ -8,6 +8,7 @@
 #include <src/base_objects/number_provider.hpp>
 #include <src/base_objects/particle_data.hpp>
 #include <src/base_objects/position.hpp>
+#include <src/base_objects/recipe.hpp>
 #include <src/base_objects/slot.hpp>
 #include <string>
 #include <unordered_map>
@@ -17,6 +18,7 @@
 namespace copper_server {
     namespace registers {
 #pragma region CLIENT/SERVER
+
         struct IntegerDistribution {
             std::string type;
             enbt::value value;
@@ -25,7 +27,7 @@ namespace copper_server {
         struct Advancement {
             struct Display {
                 struct Icon {
-                    std::string item;
+                    base_objects::item_id_t item;
                     std::string nbt;
                 };
 
@@ -58,7 +60,7 @@ namespace copper_server {
 
         struct ArmorTrimMaterial {
             std::string asset_name;
-            std::string ingredient;
+            base_objects::item_id_t ingredient;
             std::unordered_map<std::string, std::string> override_armor_materials; //leather, chainmail, iron, gold, diamond, turtle, netherite
             std::variant<std::string, Chat> description;
             float item_model_index;
@@ -68,7 +70,7 @@ namespace copper_server {
 
         struct ArmorTrimPattern {
             std::string asset_id;
-            std::string template_item;
+            base_objects::item_id_t template_item;
             std::variant<std::string, Chat> description;
             bool decal;
             bool allow_override = false;
@@ -107,6 +109,7 @@ namespace copper_server {
                 int32_t min_delay = 12000;
                 int32_t max_delay = 24000;
                 bool replace_current_music = true;
+                float music_weight = 1;
             };
 
             struct SpawnersValue {
@@ -141,7 +144,7 @@ namespace copper_server {
                 std::optional<std::variant<std::string, AmbientSound>> ambient_sound;
                 std::optional<MoodSound> mood_sound;
                 std::optional<AdditionsSound> additions_sound;
-                std::optional<Music> music;
+                std::vector<Music> music;
             } effects;
 
             //server side:
@@ -269,26 +272,6 @@ namespace copper_server {
 #pragma endregion
 #pragma region server
 
-        struct EntityType {
-            std::string id;
-            virtual std::string GetName() = 0;
-
-            //bunch ai stuff and other
-            //...
-        };
-
-        struct ItemType {
-            std::string id;
-            uint8_t max_count;
-        };
-
-        struct BlockPalette {
-            uint16_t id : 15;
-
-
-            std::string full_id;
-        };
-
         struct enchantment {
             Chat description;
             std::variant<std::string, std::vector<std::string>, std::nullptr_t> exclusive_set;
@@ -410,7 +393,7 @@ namespace copper_server {
                 bool legacy_random_source;
 
                 struct state {
-                    std::string name;
+                    base_objects::block name; //in json there string
                     std::unordered_map<std::string, std::string> properties;
                 };
 
@@ -522,7 +505,7 @@ namespace copper_server {
 
             struct flat_level_generator_preset {
                 struct layer {
-                    std::string block;
+                    base_objects::block block;
                     int32_t height;
                 };
 
@@ -549,6 +532,7 @@ namespace copper_server {
             std::unordered_map<int32_t, int32_t> protocol;                                              //protocol -> protocol effect id, can be undefined
             static std::unordered_map<int32_t, std::unordered_map<int32_t, uint32_t>> protocol_aliases; //protocol -> protocol effect id -> internal id, can be undefined
         };
+
 #pragma endregion
         //CLIENT/SERVER
         extern std::unordered_map<std::string, ArmorTrimMaterial> armorTrimMaterials;
@@ -583,6 +567,15 @@ namespace copper_server {
 
 
         extern std::unordered_map<uint32_t, enbt::compound> individual_registers;
+        extern uint32_t use_registry_lastest;
+        enbt::compound& default_registry();
+        enbt::value& default_registry_entries(const std::string& registry);
+        int32_t view_reg_pro_id(const std::string& registry, const std::string& item, int32_t protocol = -1);
+        std::string view_reg_pro_name(const std::string& registry, int32_t id, int32_t protocol = -1);
+        list_array<int32_t> convert_reg_pro_id(const std::string& registry, const list_array<std::string>& item, int32_t protocol = -1);
+        list_array<int32_t> convert_reg_pro_id(const std::string& registry, const std::vector<std::string>& item, int32_t protocol = -1);
+        list_array<std::string> convert_reg_pro_name(const std::string& registry, const list_array<int32_t>& item, int32_t protocol = -1);
+        list_array<std::string> convert_reg_pro_name(const std::string& registry, const std::vector<int32_t>& item, int32_t protocol = -1);
 
 
         extern std::unordered_map<std::string, potion> potions;
@@ -599,7 +592,9 @@ namespace copper_server {
         extern std::unordered_map<std::string, loot_table_item> loot_table;
         extern list_array<decltype(loot_table)::iterator> loot_table_cache;
 
-        extern std::unordered_map<int32_t, ItemType*> itemList;
+        extern std::unordered_map<std::string, base_objects::recipe> recipe_table;
+        extern list_array<decltype(recipe_table)::iterator> recipe_table_cache;
+
         extern std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>>> tags; //[type][namespace][tag][values]   values can't contain other tags, parsers must resolve them
         extern std::string default_namespace;                                                                                                   //minecraft
 

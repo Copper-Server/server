@@ -60,6 +60,12 @@ namespace copper_server::base_objects {
         bool enable_filtering : 1 = false;
         bool allow_server_listings : 1 = true;
         bool enable_chat_colors : 1 = true;
+        enum class ParticleStatus : uint8_t {
+            ALL = 0,
+            DECREASED = 1,
+            MINIMAL = 2
+        } particle_status : 2
+            = ParticleStatus::ALL;
         player& player_data;
 
         struct ResourcePackData {

@@ -198,7 +198,7 @@ namespace copper_server {
 
             base_objects::network::response playerAbilities(base_objects::SharedClientData& client, uint8_t flags, float flying_speed, float field_of_view);
 
-            base_objects::network::response playerChatMessage(base_objects::SharedClientData& client, enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<enbt::value> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name);
+            base_objects::network::response playerChatMessage(base_objects::SharedClientData& client, enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<enbt::value> unsigned_content, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name);
 
             base_objects::network::response endCombat(base_objects::SharedClientData& client, int32_t duration);
 
@@ -266,7 +266,7 @@ namespace copper_server {
 
             base_objects::network::response setCamera(base_objects::SharedClientData& client, int32_t entity_id);
 
-            base_objects::network::response setHeldItem(base_objects::SharedClientData& client, uint8_t slot);
+            base_objects::network::response setHeldSlot(base_objects::SharedClientData& client, int32_t slot);
 
             base_objects::network::response setCenterChunk(base_objects::SharedClientData& client, int32_t x, int32_t z);
 

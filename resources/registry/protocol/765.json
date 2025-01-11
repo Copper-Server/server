@@ -11106,6 +11106,9 @@
       },
       "minecraft:stonecutting": {
         "protocol_id": 19
+      },
+      "copper_server:custom": {
+        "protocol_id": 23
       }
     },
     "protocol_id": 19

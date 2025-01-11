@@ -80,7 +80,7 @@ namespace copper_server::client_handler::release_767 {
             api::protocol::data::cookie_response data;
             data.key = ReadIdentifier(packet);
             if (packet.read())
-                data.payload = ReadArray<uint8_t>(packet);
+                data.payload = ReadArray<uint8_t>(packet, 5120);
             api::protocol::on_cookie_response.async_notify({data, *session, session->sharedDataRef()});
             break;
         }
@@ -89,7 +89,7 @@ namespace copper_server::client_handler::release_767 {
             std::string channel = ReadString(packet, 32767);
             auto it = pluginManagement.get_bind_plugin(PluginManagement::registration_on::configuration, channel);
             if (it != nullptr) {
-                auto result = it->OnConfigurationHandle(it, channel, packet.read_left().to_vector(), session->sharedDataRef());
+                auto result = it->OnConfigurationHandle(it, channel, packet.read_left(32767).to_vector(), session->sharedDataRef());
                 if (result)
                     return *result;
             }
