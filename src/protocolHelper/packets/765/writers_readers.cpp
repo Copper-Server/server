@@ -287,7 +287,7 @@ namespace copper_server::packets::release_765::reader {
 
     void WriteSlotItem(list_array<uint8_t>& data, const base_objects::slot& slot, int16_t protocol) {
         auto converted = to_old(*slot);
-        auto real_id = base_objects::slot_data::get_slot_data(converted.id).internal_item_aliases[protocol];
+        auto real_id = base_objects::slot_data::get_slot_data(converted.id).internal_item_aliases.at(protocol).local_id;
         WriteVar<int32_t>(real_id, data);
         if (converted.count > 255)
             data.push_back(255);
@@ -304,6 +304,15 @@ namespace copper_server::packets::release_765::reader {
         if (slot) {
             WriteSlotItem(data, slot, protocol);
         }
+    }
+
+    void WriteIngredient(list_array<uint8_t>& data, const base_objects::slot_display& item) {
+        std::visit(
+            [&](auto&& arg) {
+                //TODO
+            },
+            item.value
+        );
     }
 
     base_objects::slot ReadSlotItem(ArrayStream& data, int16_t protocol) {

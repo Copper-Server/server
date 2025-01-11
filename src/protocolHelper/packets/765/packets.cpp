@@ -2,6 +2,7 @@
 #include <src/api/entity_id_map.hpp>
 #include <src/api/mojang/session_server.hpp>
 #include <src/base_objects/network/tcp_server.hpp>
+#include <src/base_objects/slot_display.hpp>
 #include <src/protocolHelper/packets/765/packets.hpp>
 #include <src/protocolHelper/packets/765/writers_readers.hpp>
 #include <src/protocolHelper/util.hpp>
@@ -127,7 +128,7 @@ namespace copper_server::packets::release_765 {
                         { //element
                             enbt::compound element;
                             element["asset_name"] = it.asset_name;
-                            element["ingredient"] = it.ingredient;
+                            element["ingredient"] = it.ingredient.to_protocol_name(765);
                             element["item_model_index"] = it.item_model_index;
                             {
                                 enbt::compound override_armor_materials;
@@ -157,7 +158,7 @@ namespace copper_server::packets::release_765 {
                         { //element
                             enbt::compound element;
                             element["asset_id"] = it.asset_id;
-                            element["template_item"] = it.template_item;
+                            element["template_item"] = it.template_item.to_protocol_name(765);
                             if (std::holds_alternative<std::string>(it.description))
                                 element["description"] = std::get<std::string>(it.description);
                             else
@@ -226,12 +227,13 @@ namespace copper_server::packets::release_765 {
                                     additions_sound["tick_chance"] = it.effects.additions_sound->tick_chance;
                                     effects["additions_sound"] = std::move(additions_sound);
                                 }
-                                if (it.effects.music) {
+                                if (it.effects.music.size()) {
+                                    auto& music_it = *it.effects.music.begin();
                                     enbt::compound music;
-                                    music["sound"] = it.effects.music->sound;
-                                    music["min_delay"] = it.effects.music->min_delay;
-                                    music["max_delay"] = it.effects.music->max_delay;
-                                    music["replace_current_music"] = it.effects.music->replace_current_music;
+                                    music["sound"] = music_it.sound;
+                                    music["min_delay"] = music_it.min_delay;
+                                    music["max_delay"] = music_it.max_delay;
+                                    music["replace_current_music"] = music_it.replace_current_music;
                                     effects["music"] = std::move(music);
                                 }
                                 element["effects"] = std::move(effects);
@@ -1358,7 +1360,7 @@ namespace copper_server::packets::release_765 {
             return base_objects::network::response::answer({std::move(packet)});
         }
 
-        base_objects::network::response playerChatMessage(enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, const std::optional<enbt::value>& __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
+        base_objects::network::response playerChatMessage(enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, const std::optional<enbt::value>& unsigned_content, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
             if (prev_messages.size() > 20)
                 throw std::runtime_error("too many prev messages");
             list_array<uint8_t> packet;
@@ -1378,9 +1380,9 @@ namespace copper_server::packets::release_765 {
                 WriteVar<int32_t>(0, packet);
                 packet.push_back(msg_signature.data(), msg_signature.size());
             }
-            packet.push_back((bool)__UNDEFINED__FIELD__);
-            if (__UNDEFINED__FIELD__)
-                packet.push_back(NBT::build(*__UNDEFINED__FIELD__).get_as_normal());
+            packet.push_back((bool)unsigned_content);
+            if (unsigned_content)
+                packet.push_back(NBT::build(*unsigned_content).get_as_normal());
 
             WriteVar<int32_t>(filter_type, packet);
             if (filter_type == 2) { //PARTIALLY_FILTERED
@@ -1616,6 +1618,10 @@ namespace copper_server::packets::release_765 {
             return base_objects::network::response::answer({std::move(packet)});
         }
 
+        base_objects::network::response updateRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active) {
+            return addRecipeBook(crafting_recipe_book_open, crafting_recipe_book_filter_active, smelting_recipe_book_open, smelting_recipe_book_filter_active, blast_furnace_recipe_book_open, blast_furnace_recipe_book_filter_active, smoker_recipe_book_open, smoker_recipe_book_filter_active, {});
+        }
+
         base_objects::network::response removeEntities(const list_array<int32_t>& entity_ids) {
             list_array<uint8_t> packet;
             packet.reserve(1 + 4 + 4 * entity_ids.size());
@@ -1798,13 +1804,11 @@ namespace copper_server::packets::release_765 {
             return base_objects::network::response::answer({std::move(packet)});
         }
 
-        base_objects::network::response setHeldItem(uint8_t slot) {
-            if (slot > 8)
-                throw std::runtime_error("invalid slot");
+        base_objects::network::response setHeldSlot(int32_t slot) {
             list_array<uint8_t> packet;
-            packet.reserve(1 + 4);
+            packet.reserve(6);
             packet.push_back(0x51);
-            packet.push_back(slot);
+            WriteVar<int32_t>(slot, packet);
             return base_objects::network::response::answer({std::move(packet)});
         }
 
@@ -2420,38 +2424,60 @@ namespace copper_server::packets::release_765 {
             return entityEffect(entity_id, effect_id, amplifier, duration, flags, std::nullopt);
         }
 
+        list_array<list_array<uint8_t>> unfold_recipes(list_array<uint8_t>& header, list_array<base_objects::slot_display>&& recipes, const list_array<uint8_t>& footer = {}) {
+            list_array<list_array<list_array<uint8_t>>> tmp
+                = recipes
+                      .convert_fn([](auto& recipe) {
+                          return recipe.to_slots();
+                      })
+                      .convert_fn([](auto& slots) {
+                          return slots.convert_fn([](auto& slot) {
+                              list_array<uint8_t> res;
+                              reader::WriteSlotItem(res, slot);
+                              return res;
+                          });
+                      });
+
+            list_array<list_array<uint8_t>> results;
+            results.resize(tmp.count([](auto& arr) {
+                return arr.size();
+            }));
+            if (header.size())
+                results.push_back_for(header);
+
+            results.transform_with(tmp, [](list_array<uint8_t>& it, const list_array<uint8_t>& ss) {
+                it += ss;
+            });
+            if (footer.size())
+                results.push_back_for(footer);
+            return results;
+        }
+
         base_objects::network::response updateRecipes(const std::vector<base_objects::recipe>& recipes) {
             list_array<uint8_t> packet;
-            packet.push_back(0x73);
-            WriteVar<int32_t>(recipes.size(), packet);
+            size_t recipe_count = 0;
             for (auto& recipe : recipes) {
                 std::visit(
                     [&](auto&& item) {
                         using type = std::decay_t<decltype(item)>;
-                        WriteIdentifier(packet, base_objects::recipes::variant_data<type>::name);
-                        WriteIdentifier(packet, recipe.id);
+                        list_array<uint8_t> header;
+                        WriteIdentifier(header, base_objects::recipes::variant_data<type>::name);
+                        WriteIdentifier(header, recipe.full_id);
                         if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::crafting_shaped>) {
-                            WriteString(packet, item.group, 32767);
-                            WriteVar<int32_t>((int32_t)item.category, packet);
-                            WriteVar<int32_t>(item.width, packet);
-                            WriteVar<int32_t>(item.height, packet);
-                            for (auto& items : item.ingredients) {
-                                WriteVar<int32_t>(items.size(), packet);
-                                for (auto& ingredient : items)
-                                    reader::WriteSlotItem(packet, ingredient);
-                            }
-                            reader::WriteSlotItem(packet, item.result);
-                            packet.push_back(item.show_notification);
+                            WriteString(header, recipe.group, 32767);
+                            WriteVar<int32_t>((int32_t)item.category, header);
+                            WriteVar<int32_t>(item.width, header);
+                            WriteVar<int32_t>(item.height, header);
+                            auto results = unfold_recipes(header, to_list_array(item.ingredients).push_back(item.result), {item.show_notification});
+                            recipe_count += results.size();
+                            packet += results.take().concat();
                         } else if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::crafting_shapeless>) {
-                            WriteString(packet, item.group, 32767);
-                            WriteVar<int32_t>((int32_t)item.category, packet);
-                            WriteVar<int32_t>(item.ingredients.size(), packet);
-                            for (auto& items : item.ingredients) {
-                                WriteVar<int32_t>(items.size(), packet);
-                                for (auto& ingredient : items)
-                                    reader::WriteSlotItem(packet, ingredient);
-                            }
-                            reader::WriteSlotItem(packet, item.result);
+                            WriteString(header, recipe.group, 32767);
+                            WriteVar<int32_t>((int32_t)item.category, header);
+                            WriteVar<int32_t>(item.ingredients.size(), header);
+                            auto results = unfold_recipes(header, to_list_array(item.ingredients).push_back(item.result));
+                            recipe_count += results.size();
+                            packet += results.take().concat();
                         } else if constexpr (
                             std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_armordye>
                             | std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_bookcloning>
@@ -2468,56 +2494,52 @@ namespace copper_server::packets::release_765 {
                             | std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_repairitem>
                             | std::is_same_v<type, base_objects::recipes::minecraft::crafting_decorated_pot>
                         ) {
-                            WriteVar<int32_t>((int32_t)item.category, packet);
+                            WriteVar<int32_t>((int32_t)item.category, header);
+                            packet += header.take();
+                            recipe_count += 1;
                         } else if constexpr (
                             std::is_same_v<type, base_objects::recipes::minecraft::smelting>
                             | std::is_same_v<type, base_objects::recipes::minecraft::blasting>
                             | std::is_same_v<type, base_objects::recipes::minecraft::smoking>
                             | std::is_same_v<type, base_objects::recipes::minecraft::campfire_cooking>
                         ) {
-                            WriteString(packet, item.group, 32767);
-                            WriteVar<int32_t>((int32_t)item.category, packet);
-                            WriteVar<int32_t>(item.ingredient.size(), packet);
-                            for (auto& slot : item.ingredient)
-                                reader::WriteSlotItem(packet, slot);
-                            reader::WriteSlotItem(packet, item.result);
-                            WriteValue<float>(item.experience, packet);
-                            WriteVar<int32_t>(item.cooking_time, packet);
+                            WriteString(header, recipe.group, 32767);
+                            WriteVar<int32_t>((int32_t)item.category, header);
+                            list_array<uint8_t> footer;
+                            WriteValue<float>(item.experience, footer);
+                            WriteVar<int32_t>(item.cooking_time, footer);
+                            auto results = unfold_recipes(header, {item.ingredient, item.result}, footer);
+                            recipe_count += results.size();
+                            packet += results.take().concat();
                         } else if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::stonecutting>) {
-                            WriteString(packet, item.group, 32767);
-                            WriteVar<int32_t>(item.ingredient.size(), packet);
-                            for (auto& slot : item.ingredient)
-                                reader::WriteSlotItem(packet, slot);
-                            reader::WriteSlotItem(packet, item.result);
+                            WriteString(header, recipe.group, 32767);
+                            auto results = unfold_recipes(header, {item.ingredient, item.result});
+                            recipe_count += results.size();
+                            packet += results.take().concat();
                         } else if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::smithing_transform>) {
-                            WriteVar<int32_t>(item._template.size(), packet);
-                            for (auto& slot : item._template)
-                                reader::WriteSlotItem(packet, slot);
-                            WriteVar<int32_t>(item.base.size(), packet);
-                            for (auto& slot : item.base)
-                                reader::WriteSlotItem(packet, slot);
-                            WriteVar<int32_t>(item.addition.size(), packet);
-                            for (auto& slot : item.addition)
-                                reader::WriteSlotItem(packet, slot);
-                            reader::WriteSlotItem(packet, item.result);
+                            auto results = unfold_recipes(header, {item._template, item.base, item.addition, item.result});
+                            recipe_count += results.size();
+                            packet += results.take().concat();
                         } else if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::smithing_trim>) {
-                            WriteVar<int32_t>(item._template.size(), packet);
-                            for (auto& slot : item._template)
-                                reader::WriteSlotItem(packet, slot);
-                            WriteVar<int32_t>(item.base.size(), packet);
-                            for (auto& slot : item.base)
-                                reader::WriteSlotItem(packet, slot);
-                            WriteVar<int32_t>(item.addition.size(), packet);
-                            for (auto& slot : item.addition)
-                                reader::WriteSlotItem(packet, slot);
+                            auto results = unfold_recipes(header, {item._template, item.base, item.addition});
+                            recipe_count += results.size();
+                            packet += results.take().concat();
                         } else if constexpr (std::is_same_v<type, base_objects::recipes::custom>) {
-                            packet.push_back(item.data);
+                            header.push_back(item.data);
+                            packet.push_back(header.take());
+                            recipe_count += 1;
                         } else
                             throw std::runtime_error("invalid recipe type");
                     },
                     recipe.data
                 );
             }
+            list_array<uint8_t> header;
+
+            header.push_back(0x73);
+            WriteVar<int32_t>(recipe_count, header);
+            packet.push_front(header.take());
+
             return base_objects::network::response::answer({std::move(packet)});
         }
 

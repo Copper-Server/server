@@ -2,6 +2,7 @@
     #include <SDKDDKVer.h>
 #endif
 #include <boost/asio.hpp>
+#include <thread>
 
 namespace copper_server::api::asio {
     boost::asio::io_service service;
@@ -19,6 +20,6 @@ namespace copper_server::api::asio {
 
     void init(size_t threads) {
         if (thread_pool == nullptr)
-            thread_pool = new boost::asio::thread_pool(threads);
+            thread_pool = new boost::asio::thread_pool(threads ? threads : std::thread::hardware_concurrency());
     }
 }

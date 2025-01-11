@@ -64,11 +64,11 @@ namespace copper_server {
 
             std::function<void(entity& target_entity)> tick_callback;
             std::function<bool(entity& target_entity, bool force)> pre_death_callback;
-            std::function<entity_ref()> create_callback;
-            std::function<entity_ref(const enbt::compound_const_ref&)> create_callback_with_nbt;
+            std::function<void(entity& target_entity)> create_callback;
+            std::function<void(entity& target_entity, const enbt::compound_const_ref&)> create_callback_with_nbt;
             std::function<void(entity_ref& creating_entity, const enbt::compound_const_ref&)> create_from_enbt_callback;
             std::function<void(entity_ref& checking_entity, entity_data&, util::VECTOR pos)> check_bounds;   //if nullptr then used base_bounds, return true if entity is in bounds
-            std::function<int32_t(const entity& checking_entity)> get_object_field;                          //returns zero, if not defined
+            std::function<int32_t(const entity& checking_entity)> get_object_field;                          //optional
 
 
             std::unordered_map<uint32_t, uint32_t> internal_entity_aliases; //protocol id -> entity id

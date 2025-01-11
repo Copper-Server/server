@@ -250,13 +250,28 @@ namespace copper_server::resources {
                 effects.additions_sound = std::move(additions_sound);
             }
             if (effects_js.contains("music")) {
-                js_object music_js = js_object::get_object(effects_js["music"]);
-                Biome::Music music;
-                music.sound = (std::string)music_js["sound"];
-                music.min_delay = music_js["min_delay"].or_apply(12000);
-                music.max_delay = music_js["max_delay"].or_apply(24000);
-                music.replace_current_music = music_js["replace_current_music"].or_apply(true);
-                effects.music = std::move(music);
+                std::vector<Biome::Music> music_arr;
+                auto music_arr_js = js_array::get_array(effects_js["music"]);
+                music_arr.reserve(music_arr_js.size());
+                for (auto&& it : music_arr_js) {
+                    js_object music_js = js_object::get_object(it);
+                    Biome::Music music;
+                    if (music_js.contains("data")) {
+                        auto data = js_object::get_object(music_js["data"]);
+                        music.sound = (std::string)data["sound"];
+                        music.min_delay = data["min_delay"].or_apply(12000);
+                        music.max_delay = data["max_delay"].or_apply(24000);
+                        music.replace_current_music = data["replace_current_music"].or_apply(true);
+                    } else {
+                        music.sound = (std::string)music_js["sound"];
+                        music.min_delay = music_js["min_delay"].or_apply(12000);
+                        music.max_delay = music_js["max_delay"].or_apply(24000);
+                        music.replace_current_music = music_js["replace_current_music"].or_apply(true);
+                    }
+                    music.music_weight = music_js["weight"].or_apply(1.0);
+                    music_arr.emplace_back(std::move(music));
+                }
+                effects.music = std::move(music_arr);
             }
             bio.effects = std::move(effects);
         }
@@ -536,7 +551,7 @@ namespace copper_server::resources {
             Advancement::Display display;
             {
                 auto icon_js = js_object::get_object(display_js["icon"]);
-                display.icon.item = icon_js["item"];
+                display.icon.item = (std::string)icon_js["item"];
                 if (icon_js.contains("nbt"))
                     display.icon.nbt = icon_js["nbt"];
             }
@@ -706,7 +721,12 @@ namespace copper_server::resources {
         ArmorTrimPattern pattern;
         pattern.asset_id = (std::string)pattern_js["asset_id"];
         pattern.decal = pattern_js["decal"];
-        pattern.template_item = (std::string)pattern_js["template_item"];
+        try {
+            pattern.template_item = (std::string)pattern_js["template_item"];
+        } catch (...) {
+            log::debug("resource_load", "Skipping template_item: " + id);
+            return;
+        }
         {
             auto desc = pattern_js["description"];
             if (desc.is_string())
@@ -729,7 +749,12 @@ namespace copper_server::resources {
         check_override(armorTrimMaterials, id, "armor trim material");
         ArmorTrimMaterial material;
         material.asset_name = (std::string)material_js["asset_name"];
-        material.ingredient = (std::string)material_js["ingredient"];
+        try {
+            material.ingredient = (std::string)material_js["ingredient"];
+        } catch (...) {
+            log::debug("resource_load", "Skipped armor trim material: " + id);
+            return;
+        }
         material.item_model_index = material_js["item_model_index"];
         {
             auto desc = material_js["description"];
@@ -1313,14 +1338,25 @@ namespace copper_server::resources {
             {766, resources::registry::protocol::_766},
             {767, resources::registry::protocol::_767},
             {768, resources::registry::protocol::_768},
+            {769, resources::registry::protocol::_769},
         };
         latest_protocol_version
             = api::configuration::get().protocol.allowed_versions_processed.for_each(
                                                                                [&](uint32_t version) {
                                                                                    auto res = util::conversions::json::from_json(boost::json::parse(internal_protocol_aliases.at(version)));
+                                                                                   for (auto& it : res.as_compound()) {
+                                                                                       auto entries = it.second.at("entries").as_compound();
+                                                                                       enbt::fixed_array invert(entries.size());
+
+                                                                                       for (auto& [key, value] : it.second.at("entries").as_compound())
+                                                                                           invert.set(value.at("protocol_id"), key);
+
+                                                                                       it.second["proto_invert"] = std::move(invert);
+                                                                                   }
                                                                                    registers::individual_registers[version] = std::move(res);
                                                                                }
             ).max();
+        registers::use_registry_lastest = latest_protocol_version;
     }
 
     using tags_obj = std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>>>;
@@ -1558,7 +1594,7 @@ namespace copper_server::resources {
                 for (auto& [name, decl] : current_registry_blocks)
                     proto_data[name] = (uint32_t)decl.at("protocol_id");
             }
-            if (proto_id != 768) { //TODO update entities for 768
+            if (proto_id != 768 && proto_id != 769) { //TODO update entities for 768 and 769
                 auto& proto_data = base_objects::entity_data::internal_entity_aliases_protocol[proto_id];
                 for (auto& [name, decl] : decl.at("minecraft:entity_type").at("entries").as_compound())
                     proto_data[name] = (uint32_t)decl.at("protocol_id");
@@ -1641,13 +1677,40 @@ namespace copper_server::resources {
             {766, boost::json::parse(resources::registry::compatibility::versions::_766).as_object()},
             {767, boost::json::parse(resources::registry::compatibility::versions::_767).as_object()},
             {768, boost::json::parse(resources::registry::compatibility::versions::_768).as_object()},
+            {769, boost::json::parse(resources::registry::compatibility::versions::_769).as_object()},
         };
         initialize_entities();
         load_blocks();
+        auto parsed_items = boost::json::parse(resources::registry::items);
+        std::unordered_set<std::string> items_filter;
+        {
+            auto& to_filter = internal_compatibility_versions.at(api::configuration::get().protocol.allowed_versions_processed.min()).at("disabled_items").as_array();
+            items_filter.reserve(to_filter.size());
+            for (auto&& item : to_filter)
+                items_filter.insert((std::string)item.as_string());
+
+            for (auto&& [name, decl] : parsed_items.as_object()) {
+                if (items_filter.contains(name))
+                    continue;
+                base_objects::static_slot_data slot_data;
+                slot_data.id = name;
+                base_objects::slot_data::add_slot_data(std::move(slot_data));
+            }
+        }
         prepare_built_in_pack();
         prepare_versions();
         __initialization__versions_inital();
-        load_items();
+        {
+            //complete initialization
+            for (auto&& [name, decl] : parsed_items.as_object()) {
+                if (items_filter.contains(name))
+                    continue;
+                std::unordered_map<std::string, base_objects::slot_component::unified> components;
+                for (auto& [name, value] : decl.as_object().at("components").as_object())
+                    components[name] = base_objects::slot_component::parse_component(name, conversions::json::from_json(value));
+                base_objects::slot_data::get_slot_data(name).default_components = std::move(components);
+            }
+        }
         __initialization__versions_post();
         load_registers_complete();
         internal_compatibility_versions.clear();

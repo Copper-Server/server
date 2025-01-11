@@ -2,41 +2,40 @@
 #define SRC_BASE_OBJECTS_RECIPE
 #include <library/list_array.hpp>
 #include <src/base_objects/slot.hpp>
+#include <src/base_objects/slot_display.hpp>
 #include <string>
 #include <variant>
 
 namespace copper_server::base_objects {
     namespace recipes {
-        enum class category_t {
+        enum class compatibility_category_t {
             building = 0,
             redstone = 1,
             equipment = 2,
             misc = 3,
         };
 
-        using ingredient = list_array<slot>;
-
         namespace minecraft {
             template <int32_t id>
             struct special_recipe {
-                category_t category;
+                compatibility_category_t category;
             };
 
             struct crafting_shaped {
-                std::string group;
                 int32_t width;
                 int32_t height;
-                list_array<ingredient> ingredients;
-                slot result;
-                category_t category : 2;
+                std::vector<slot_display> ingredients;
+                slot_display result;
+                slot_display crafting_station;
+                compatibility_category_t category : 2;
                 bool show_notification : 1;
             };
 
             struct crafting_shapeless {
-                std::string group;
-                list_array<ingredient> ingredients;
-                slot result;
-                category_t category : 2;
+                std::vector<slot_display> ingredients;
+                slot_display result;
+                slot_display crafting_station;
+                compatibility_category_t category : 2;
                 bool show_notification : 1;
             };
 
@@ -57,12 +56,13 @@ namespace copper_server::base_objects {
 
             template <int32_t id>
             struct smelting_types {
-                std::string group;
-                ingredient ingredient;
-                slot result;
-                float experience;
+                slot_display ingredient;
+                slot_display fuel;
+                slot_display result;
+                slot_display crafting_station;
                 int32_t cooking_time;
-                category_t category : 2;
+                float experience;
+                compatibility_category_t category : 2;
             };
 
             using smelting = smelting_types<0>;
@@ -71,22 +71,31 @@ namespace copper_server::base_objects {
             using campfire_cooking = smelting_types<3>;
 
             struct stonecutting {
-                std::string group;
-                ingredient ingredient;
-                slot result;
+                slot_display ingredient;
+                slot_display result;
+                slot_display crafting_station;
             };
 
             struct smithing_transform {
-                ingredient _template;
-                ingredient base;
-                ingredient addition;
-                slot result;
+                slot_display _template;
+                slot_display base;
+                slot_display addition;
+                slot_display result;
+                slot_display crafting_station;
             };
 
             struct smithing_trim {
-                ingredient _template;
-                ingredient base;
-                ingredient addition;
+                slot_display _template;
+                slot_display base;
+                slot_display addition;
+                slot_display crafting_station;
+            };
+
+            struct crafting_transmute {
+                slot_display input;
+                slot_display material;
+                slot_display result;
+                slot_display crafting_station;
             };
         }
 
@@ -101,145 +110,176 @@ namespace copper_server::base_objects {
         template <>
         struct variant_data<minecraft::crafting_shaped> {
             constexpr static inline const char* name = "minecraft:crafting_shaped";
-            constexpr static inline int32_t id = 0;
+            constexpr static inline bool must_display = true;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_shapeless> {
             constexpr static inline const char* name = "minecraft:crafting_shapeless";
-            constexpr static inline int32_t id = 1;
+            constexpr static inline bool must_display = true;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_armordye> {
             constexpr static inline const char* name = "minecraft:crafting_special_armordye";
-            constexpr static inline int32_t id = 2;
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_bookcloning> {
             constexpr static inline const char* name = "minecraft:crafting_special_bookcloning";
-            constexpr static inline int32_t id = 3;
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_mapcloning> {
             constexpr static inline const char* name = "minecraft:crafting_special_mapcloning";
-            constexpr static inline int32_t id = 4;
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_mapextending> {
             constexpr static inline const char* name = "minecraft:crafting_special_mapextending";
-            constexpr static inline int32_t id = 5;
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_firework_rocket> {
             constexpr static inline const char* name = "minecraft:crafting_special_firework_rocket";
-            constexpr static inline int32_t id = 6;
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_firework_star> {
             constexpr static inline const char* name = "minecraft:crafting_special_firework_star";
-            constexpr static inline int32_t id = 7;
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_firework_star_fade> {
             constexpr static inline const char* name = "minecraft:crafting_special_firework_star_fade";
-            constexpr static inline int32_t id = 8;
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_tippedarrow> {
             constexpr static inline const char* name = "minecraft:crafting_special_tippedarrow";
-            constexpr static inline int32_t id = 9;
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_bannerduplicate> {
             constexpr static inline const char* name = "minecraft:crafting_special_bannerduplicate";
-            constexpr static inline int32_t id = 10;
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_shielddecoration> {
             constexpr static inline const char* name = "minecraft:crafting_special_shielddecoration";
-            constexpr static inline int32_t id = 11;
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
-        struct variant_data<minecraft::crafting_special_shulkerboxcoloring> {
+        struct variant_data<minecraft::crafting_special_shulkerboxcoloring> { //deprecated
             constexpr static inline const char* name = "minecraft:crafting_special_shulkerboxcoloring";
-            constexpr static inline int32_t id = 12;
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = true;
         };
 
         template <>
-        struct variant_data<minecraft::crafting_special_suspiciousstew> {
+        struct variant_data<minecraft::crafting_special_suspiciousstew> { //deprecated
             constexpr static inline const char* name = "minecraft:crafting_special_suspiciousstew";
-            constexpr static inline int32_t id = 13;
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = true;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_repairitem> {
             constexpr static inline const char* name = "minecraft:crafting_special_repairitem";
-            constexpr static inline int32_t id = 14;
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_decorated_pot> {
             constexpr static inline const char* name = "minecraft:crafting_decorated_pot";
-            constexpr static inline int32_t id = 22;
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::smelting> {
             constexpr static inline const char* name = "minecraft:smelting";
-            constexpr static inline int32_t id = 15;
+            constexpr static inline bool must_display = true;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::blasting> {
             constexpr static inline const char* name = "minecraft:blasting";
-            constexpr static inline int32_t id = 16;
+            constexpr static inline bool must_display = true;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::smoking> {
             constexpr static inline const char* name = "minecraft:smoking";
-            constexpr static inline int32_t id = 17;
+            constexpr static inline bool must_display = true;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::campfire_cooking> {
             constexpr static inline const char* name = "minecraft:campfire_cooking";
-            constexpr static inline int32_t id = 18;
+            constexpr static inline bool must_display = true;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::stonecutting> {
             constexpr static inline const char* name = "minecraft:stonecutting";
-            constexpr static inline int32_t id = 19;
+            constexpr static inline bool must_display = true;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::smithing_transform> {
             constexpr static inline const char* name = "minecraft:smithing_transform";
-            constexpr static inline int32_t id = 20;
+            constexpr static inline bool must_display = true;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::smithing_trim> {
             constexpr static inline const char* name = "minecraft:smithing_trim";
-            constexpr static inline int32_t id = 21;
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = false;
+        };
+
+        template <>
+        struct variant_data<minecraft::crafting_transmute> {
+            constexpr static inline const char* name = "minecraft:crafting_transmute";
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<custom> {
             constexpr static inline const char* name = "copper_server:custom";
-            constexpr static inline int32_t id = -1;
+            constexpr static inline bool must_display = false;
+            constexpr static inline bool is_deprecated = false;
         };
 
         using varies = std::variant<
@@ -266,12 +306,24 @@ namespace copper_server::base_objects {
             minecraft::stonecutting,
             minecraft::smithing_transform,
             minecraft::smithing_trim,
+            minecraft::crafting_transmute,
             custom>;
     }
 
     struct recipe {
         recipes::varies data;
-        std::string id;
+        std::string full_id;
+        std::string name;
+        std::string group;
+        std::string category;
+        std::vector<
+            std::variant<
+                std::string,
+                std::vector<std::string>>>
+            ingredients;
+        uint32_t id;
+        bool show_notification;
+        bool highlight_as_new;
     };
 }
 #endif /* SRC_BASE_OBJECTS_RECIPE */

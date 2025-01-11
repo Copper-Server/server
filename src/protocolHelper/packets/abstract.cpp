@@ -2,6 +2,8 @@
 #include <src/protocolHelper/packets/765/packets.hpp>
 #include <src/protocolHelper/packets/766/packets.hpp>
 #include <src/protocolHelper/packets/767/packets.hpp>
+#include <src/protocolHelper/packets/768/packets.hpp>
+#include <src/protocolHelper/packets/769/packets.hpp>
 #include <src/protocolHelper/packets/abstract.hpp>
 
 namespace copper_server {
@@ -24,20 +26,26 @@ namespace copper_server {
     };
 
 #define create_function_selector(_namespace, name)                   \
-    function_selector<decltype(release_767::_namespace::name)> name{ \
+    function_selector<decltype(release_769::_namespace::name)> name{ \
         {765, release_765::_namespace::name},                        \
         {766, release_766::_namespace::name},                        \
         {767, release_767::_namespace::name},                        \
+        {768, release_768::_namespace::name},                        \
+        {769, release_769::_namespace::name},                        \
     };
 
 #define create_function_selector_001(_namespace, name)               \
-    function_selector<decltype(release_767::_namespace::name)> name{ \
+    function_selector<decltype(release_769::_namespace::name)> name{ \
         {767, release_767::_namespace::name},                        \
+        {768, release_768::_namespace::name},                        \
+        {769, release_769::_namespace::name},                        \
     };
 #define create_function_selector_011(_namespace, name)               \
-    function_selector<decltype(release_767::_namespace::name)> name{ \
+    function_selector<decltype(release_769::_namespace::name)> name{ \
         {766, release_766::_namespace::name},                        \
         {767, release_767::_namespace::name},                        \
+        {768, release_768::_namespace::name},                        \
+        {769, release_769::_namespace::name},                        \
     };
 
     namespace packets {
@@ -225,7 +233,7 @@ namespace copper_server {
                 create_function_selector(play, setBorderWarningDelay);
                 create_function_selector(play, setBorderWarningDistance);
                 create_function_selector(play, setCamera);
-                create_function_selector(play, setHeldItem);
+                create_function_selector(play, setHeldSlot);
                 create_function_selector(play, setCenterChunk);
                 create_function_selector(play, setRenderDistance);
                 create_function_selector(play, setDefaultSpawnPosition);
@@ -672,8 +680,8 @@ namespace copper_server {
                 return selectors::play::playerAbilities.call(client, flags, flying_speed, field_of_view);
             }
 
-            base_objects::network::response playerChatMessage(base_objects::SharedClientData& client, enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<enbt::value> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
-                return selectors::play::playerChatMessage.call(client, sender, index, signature, message, timestamp, salt, prev_messages, __UNDEFINED__FIELD__, filter_type, filtered_symbols_bitfield, chat_type, sender_name, target_name);
+            base_objects::network::response playerChatMessage(base_objects::SharedClientData& client, enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<enbt::value> unsigned_content, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name) {
+                return selectors::play::playerChatMessage.call(client, sender, index, signature, message, timestamp, salt, prev_messages, unsigned_content, filter_type, filtered_symbols_bitfield, chat_type, sender_name, target_name);
             }
 
             base_objects::network::response endCombat(base_objects::SharedClientData& client, int32_t duration) {
@@ -810,8 +818,8 @@ namespace copper_server {
                 return selectors::play::setCamera.call(client, entity_id);
             }
 
-            base_objects::network::response setHeldItem(base_objects::SharedClientData& client, uint8_t slot) {
-                return selectors::play::setHeldItem.call(client, slot);
+            base_objects::network::response setHeldSlot(base_objects::SharedClientData& client, int32_t slot) {
+                return selectors::play::setHeldSlot.call(client, slot);
             }
 
             base_objects::network::response setCenterChunk(base_objects::SharedClientData& client, int32_t x, int32_t z) {

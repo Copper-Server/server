@@ -20,6 +20,8 @@ namespace copper_server::base_objects::packets {
 
             {"1.21.2", 768},
             {"1.21.3", 768},
+
+            {"1.21.4", 769},
         };
         return map.at(name_or_number);
     }

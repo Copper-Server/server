@@ -226,7 +226,8 @@ namespace copper_server::build_in_plugins {
     void WorldManagementPlugin::OnUnload(const PluginRegistrationPtr& self) {
         log::info("World", "saving worlds...");
         worlds_storage.locked([&](storage::worlds_data& worlds) {
-            fast_task::task::notify_cancel(world_ticking);
+            if (world_ticking)
+                fast_task::task::notify_cancel(world_ticking);
             worlds.for_each_world([&](uint64_t id, storage::world_data& world) {
                 log::info("World", "saving world " + world.world_name + "...");
                 world.save();
@@ -332,7 +333,7 @@ namespace copper_server::build_in_plugins {
             );
 
         response += packets::play::changeDifficulty(client, 1, true);
-        response += packets::play::setHeldItem(client, client.player_data.assigned_entity->get_selected_item());
+        response += packets::play::setHeldSlot(client, client.player_data.assigned_entity->get_selected_item());
 
         return response;
     }
@@ -620,9 +621,9 @@ namespace copper_server::build_in_plugins {
                 auto setblock = worlds.add_child("setblock");
                 auto world = setblock.add_child("world_id", cmd_pred_long());
                 auto world_name = setblock.add_child("world_name", cmd_pred_string());
-                auto positon = world.add_child("xyz", cmd_pred_block_pos());
-                world_name.add_child(positon);
-                auto block = positon.add_child("block", cmd_pred_block());
+                auto position = world.add_child("xyz", cmd_pred_block_pos());
+                world_name.add_child(position);
+                auto block = position.add_child("block", cmd_pred_block());
                 auto replace = block.add_child("replace");
                 auto destroy = block.add_child("destroy");
                 auto keep = block.add_child("keep");
@@ -1187,8 +1188,8 @@ namespace copper_server::build_in_plugins {
         }
         {
             auto setblock = browser.add_child("setblock");
-            auto positon = setblock.add_child("xyz", cmd_pred_block_pos());
-            auto block = positon.add_child("block", cmd_pred_block());
+            auto position = setblock.add_child("xyz", cmd_pred_block_pos());
+            auto block = position.add_child("block", cmd_pred_block());
             auto replace = block.add_child("replace");
             auto destroy = block.add_child("destroy");
             auto keep = block.add_child("keep");

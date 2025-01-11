@@ -18,6 +18,70 @@ namespace copper_server::packets::release_767::reader {
                 __effect_encoder(data, *effect.hidden_effect);
         }
 
+        void __consume_effect_encoder(list_array<uint8_t>& data, const slot_component::inner::apply_effects& effect) {
+            WriteVar<int32_t>(0, data);
+            WriteVar<int32_t>(effect.effects.size(), data);
+            for (auto& it : effect.effects) {
+                WriteVar<int32_t>(registers::effects_cache.at(it.potion_id)->second.id, data);
+                __effect_encoder(data, it.data);
+            }
+            WriteValue<float>(effect.probability, data);
+        }
+
+        void __consume_effect_encoder(list_array<uint8_t>& data, const slot_component::inner::remove_effects& effect) {
+            WriteVar<int32_t>(1, data);
+            std::visit(
+                [&data](auto& it) {
+                    if constexpr (std::is_same_v<std::decay_t<decltype(it)>, std::string>) {
+                        WriteVar<int32_t>(0, data); //custom
+                        WriteIdentifier(data, it);
+                    } else {
+                        WriteVar<int32_t>(1 + it.size(), data); //type 1 + arr size 1
+                        for (auto& c : it)
+                            WriteVar<int32_t>(registers::effects.at(c).id, data);
+                    }
+                },
+                effect.effects
+            );
+        }
+
+        void __consume_effect_encoder(list_array<uint8_t>& data, const slot_component::inner::clear_all_effects& effect) {
+            WriteVar<int32_t>(2, data);
+        }
+
+        void __consume_effect_encoder(list_array<uint8_t>& data, const slot_component::inner::teleport_randomly& effect) {
+            WriteVar<int32_t>(3, data);
+            WriteValue<float>(effect.diameter, data);
+        }
+
+        void __consume_effect_encoder(list_array<uint8_t>& data, const slot_component::inner::play_sound& effect) {
+            std::visit(
+                [&data](auto& it) {
+                    if constexpr (std::is_same_v<std::decay_t<decltype(it)>, std::string>) {
+                        WriteVar<int32_t>(4, data);
+                        WriteIdentifier(data, it);
+                        data.push_back(false);
+                    } else {
+                        WriteVar<int32_t>(4, data);
+                        WriteIdentifier(data, it.sound_name);
+                        data.push_back((bool)it.fixed_range);
+                        if (it.fixed_range)
+                            WriteValue<float>(*it.fixed_range, data);
+                    }
+                },
+                effect.sound
+            );
+        }
+
+        void __consume_effect_encoder(list_array<uint8_t>& data, const slot_component::inner::__custom& effect) {
+            //unsupported, fill gap with empty effects
+            __consume_effect_encoder(data, slot_component::inner::apply_effects{.probability = 0});
+        }
+
+        void __consume_effect_encoder(list_array<uint8_t>& data, const slot_component::inner::application_effect& effect) {
+            std::visit([&data](auto& it) { __consume_effect_encoder(data, it); }, effect);
+        }
+
         void __firework_explosion_encoder(list_array<uint8_t>& data, const item_firework_explosion& value) {
             WriteVar<int32_t>((int32_t)value.shape, data);
             WriteVar<int32_t>(value.colors.size(), data);
@@ -417,7 +481,43 @@ namespace copper_server::packets::release_767::reader {
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::jukebox_playable& value) {
             WriteVar<int32_t>(42, data);
-            //TODO
+            std::visit(
+                [&data](auto& it) {
+                    using T = std::decay_t<decltype(it)>;
+                    if constexpr (std::is_same_v<T, std::string>) {
+                        data.push_back(false);
+                        WriteString(data, it);
+                    } else if constexpr (std::is_same_v<T, slot_component::jukebox_playable::jukebox_compact>) {
+                        data.push_back(true);
+                        WriteVar<int32_t>(1 + it.song_type, data);
+                    } else if constexpr (std::is_same_v<T, slot_component::jukebox_playable::jukebox_extended>) {
+                        std::visit([&data](auto& it) {
+                            if constexpr (std::is_same_v<std::decay_t<decltype(it)>, std::string>) {
+                                int32_t id = 0;
+                                try {
+                                    id = registers::view_reg_pro_id("minecraft:sound_event", it, 768);
+                                } catch (...) {
+                                    id = registers::view_reg_pro_id("minecraft:sound_event", "minecraft:entity.generic.eat", 768);
+                                }
+                                data.push_back(true);
+                                WriteVar<int32_t>(1 + id, data);
+                            } else {
+                                data.push_back(true);
+                                WriteVar<int32_t>(0, data); //custom
+                                WriteIdentifier(data, it.sound_name);
+                                data.push_back((bool)it.fixed_range);
+                                if (it.fixed_range)
+                                    WriteValue<float>(*it.fixed_range, data);
+                            }
+                        },
+                                   it.sound_event);
+                        data.push_back(it.description.ToTextComponent());
+                        WriteValue<float>(it.length_in_seconds, data);
+                        WriteVar<int32_t>(it.comparator_output, data);
+                    }
+                },
+                value.song
+            );
         }
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::recipes& value) {
@@ -718,7 +818,7 @@ namespace copper_server::packets::release_767::reader {
             if (!slot.has_component(name))
                 removed_components.push_back(name);
 
-        auto real_id = sd.internal_item_aliases[protocol];
+        auto real_id = sd.internal_item_aliases.at(protocol).local_id;
 
         WriteVar<int32_t>(slot.count, data);
         WriteVar<int32_t>(real_id, data);
@@ -747,7 +847,7 @@ namespace copper_server::packets::release_767::reader {
             if (!slot.has_component(name))
                 removed_components.push_back(name);
 
-        auto real_id = sd.internal_item_aliases[protocol];
+        auto real_id = sd.internal_item_aliases.at(protocol).local_id;
 
         WriteVar<int32_t>(real_id, data);
         WriteVar<int32_t>(slot.count, data);

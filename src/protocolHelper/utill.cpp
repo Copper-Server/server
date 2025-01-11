@@ -172,8 +172,8 @@ namespace copper_server {
             WriteVar<int32_t>(packet.size(), build_packet);
             build_packet.push_back(std::move(packet));
         } else {
-            if (packet.size() > session->compression_threshold) {
-                WriteVar<int32_t>(packet.size(), build_packet);
+            if (packet.size() < session->compression_threshold) {
+                build_packet.push_back(0);
                 build_packet.push_back(std::move(packet));
             } else {
                 list_array<uint8_t> compressed_packet = std::move(packet);
@@ -296,22 +296,22 @@ namespace copper_server {
     }
 
     base_objects::network::response tcp_client_handle::on_switch() {
+        base_objects::network::response res;
         try {
             auto res = on_switching();
             if (!res.data.empty()) {
-                list_array<list_array<uint8_t>> answer;
-                for (auto& resp : res.data)
-                    answer.push_back(prepare_send(std::move(resp)));
-                res.data = answer.take().convert<base_objects::network::response::item>([](list_array<uint8_t>&& item) { return base_objects::network::response::item(std::move(item)); });
                 return res;
-            } else if (res.do_disconnect || res.do_disconnect_after_send)
+            } else if (res.do_disconnect)
                 return res;
-            else
-                return {};
         } catch (const std::exception& ex) {
-            return exception(ex);
+            res = exception(ex);
         } catch (...) {
-            return unexpected_exception();
+            res = unexpected_exception();
         }
+        list_array<list_array<uint8_t>> answer;
+        for (auto& resp : res.data)
+            answer.push_back(prepare_send(std::move(resp)));
+        res.data = answer.take().convert<base_objects::network::response::item>([](list_array<uint8_t>&& item) { return base_objects::network::response::item(std::move(item)); });
+        return res;
     }
 }

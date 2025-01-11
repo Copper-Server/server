@@ -339,10 +339,11 @@ namespace copper_server::storage {
         size_t loaded_chunks_count();
 
         bool exists(int64_t chunk_x, int64_t chunk_z);
-        //returns std::nullopt if chunk already queried for async load
-        std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z);
+        base_objects::atomic_holder<chunk_data> request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z);
         FuturePtr<base_objects::atomic_holder<chunk_data>> request_chunk_data(int64_t chunk_x, int64_t chunk_z);
         std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak_gen(int64_t chunk_x, int64_t chunk_z); //if chunk does not exists then it will be generated, if chunk exists or not loaded then std::nullopt
+        std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak(int64_t chunk_x, int64_t chunk_z);     //if chunk loaded returns it, else - std::nullopt
+        std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak_sync(int64_t chunk_x, int64_t chunk_z); //if chunk exists returns it, else - std::nullopt
         void request_chunk_gen(int64_t chunk_x, int64_t chunk_z);                                                             //generates chunk if it does not exists
         bool request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback);
         void request_chunk_data(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback, std::function<void()> fault);

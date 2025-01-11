@@ -7,6 +7,7 @@
 #include <src/protocolHelper/client_handler/abstract.hpp>
 #include <src/protocolHelper/packets/767/writers_readers.hpp>
 #include <src/protocolHelper/util.hpp>
+#include <src/registers.hpp>
 
 namespace copper_server::client_handler::play_767_release {
     void teleport_confirm(base_objects::network::tcp_session* session, ArrayStream& packet) {
@@ -157,14 +158,14 @@ namespace copper_server::client_handler::play_767_release {
         api::protocol::data::click_container data;
         data.window_id = packet.read();
         data.state_id = ReadVar<int32_t>(packet);
-        data.slot = ReadVar<int16_t>(packet);
+        data.slot = ReadValue<int16_t>(packet);
         data.button = packet.read();
         data.mode = ReadVar<int32_t>(packet);
         int32_t changed_slots_count = ReadVar<int32_t>(packet);
         data.changed_slots.reserve(changed_slots_count);
         for (int32_t i = 0; i < changed_slots_count; i++) {
             api::protocol::data::click_container::changed_slot slot;
-            slot.slot = ReadVar<int16_t>(packet);
+            slot.slot = ReadValue<int16_t>(packet);
             slot.item = packets::release_767::reader::ReadSlot(packet);
             data.changed_slots.push_back(slot);
         }
@@ -174,7 +175,7 @@ namespace copper_server::client_handler::play_767_release {
 
     void close_container(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Close container");
-        api::protocol::on_close_container.async_notify({packet.read(), *session, session->sharedDataRef()});
+        api::protocol::on_close_container.async_notify({ReadVar<int32_t>(packet), *session, session->sharedDataRef()});
     }
 
     void change_container_slot_state(base_objects::network::tcp_session* session, ArrayStream& packet) {
@@ -191,7 +192,7 @@ namespace copper_server::client_handler::play_767_release {
         api::protocol::data::cookie_response data;
         data.key = ReadIdentifier(packet);
         if (packet.read())
-            data.payload = ReadArray<uint8_t>(packet);
+            data.payload = ReadArray<uint8_t>(packet, 5120);
         api::protocol::on_cookie_response.async_notify({data, *session, session->sharedDataRef()});
     }
 
@@ -199,7 +200,7 @@ namespace copper_server::client_handler::play_767_release {
         log::debug("play", "Change container slot state");
         api::protocol::data::plugin_message msg;
         msg.channel = ReadIdentifier(packet);
-        msg.data = packet.read_left().to_vector();
+        msg.data = packet.read_left(32767).to_vector();
         auto plugin = pluginManagement.get_bind_plugin(PluginManagement::registration_on::play, msg.channel);
         if (plugin) {
             auto response = plugin->OnPlayHandle(plugin, msg.channel, msg.data, session->sharedDataRef());
@@ -318,8 +319,8 @@ namespace copper_server::client_handler::play_767_release {
 
     void set_player_on_ground(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Set player on ground state");
-        bool on_ground = packet.read();
-        api::protocol::on_set_player_on_ground.async_notify({on_ground, *session, session->sharedDataRef()});
+        uint8_t on_ground = packet.read();
+        api::protocol::on_set_player_movement_flags.async_notify({on_ground, *session, session->sharedDataRef()});
     }
 
     void move_vehicle(base_objects::network::tcp_session* session, ArrayStream& packet) {
@@ -343,7 +344,7 @@ namespace copper_server::client_handler::play_767_release {
 
     void pick_item(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Pick item");
-        api::protocol::on_pick_item.async_notify({{ReadVar<int32_t>(packet)}, *session, session->sharedDataRef()});
+        api::protocol::on_pick_item_old.async_notify({{ReadVar<int32_t>(packet)}, *session, session->sharedDataRef()});
     }
 
     base_objects::network::response ping_request(base_objects::network::tcp_session* session, ArrayStream& packet) {
@@ -361,7 +362,7 @@ namespace copper_server::client_handler::play_767_release {
         log::debug("play", "Place recipe");
         api::protocol::data::place_recipe data;
         data.window_id = ReadVar<int32_t>(packet);
-        data.recipe_id = ReadIdentifier(packet);
+        data.recipe_id = registers::recipe_table.at(ReadIdentifier(packet)).id;
         data.make_all = ReadValue<bool>(packet);
         api::protocol::on_place_recipe.async_notify({data, *session, session->sharedDataRef()});
     }
@@ -398,7 +399,13 @@ namespace copper_server::client_handler::play_767_release {
         api::protocol::data::player_input data;
         data.sideways = ReadValue<float>(packet);
         data.forward = ReadValue<float>(packet);
-        data.flags.raw = ReadValue<int8_t>(packet);
+        auto flags = ReadValue<int8_t>(packet);
+        data.flags.jump = flags & 1;
+        data.flags.sneaking = flags & 2;
+        data.flags.forward = data.forward > 0;
+        data.flags.backward = data.forward < 0;
+        data.flags.right = data.sideways > 0;
+        data.flags.left = data.sideways < 0;
         api::protocol::on_player_input.async_notify({data, *session, session->sharedDataRef()});
     }
 
@@ -455,7 +462,7 @@ namespace copper_server::client_handler::play_767_release {
 
     void set_held_item(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Set held item");
-        api::protocol::on_set_held_item.async_notify({ReadVar<int16_t>(packet), *session, session->sharedDataRef()});
+        api::protocol::on_set_held_item.async_notify({ReadValue<int16_t>(packet), *session, session->sharedDataRef()});
     }
 
     void program_command_block(base_objects::network::tcp_session* session, ArrayStream& packet) {
@@ -480,7 +487,7 @@ namespace copper_server::client_handler::play_767_release {
     void set_creative_slot(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Set creative slot");
         api::protocol::data::set_creative_slot data;
-        data.slot = ReadVar<int16_t>(packet);
+        data.slot = ReadValue<int16_t>(packet);
         data.item = packets::release_767::reader::ReadSlot(packet);
         api::protocol::on_set_creative_slot.async_notify({data, *session, session->sharedDataRef()});
     }

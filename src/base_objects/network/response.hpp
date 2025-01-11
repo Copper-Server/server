@@ -3,6 +3,10 @@
 #include <library/list_array.hpp>
 #include <optional>
 
+namespace enbt {
+    class raw_uuid;
+}
+
 namespace copper_server::base_objects::network {
     struct response {
         struct item {
@@ -13,9 +17,55 @@ namespace copper_server::base_objects::network {
             item();
             item(const list_array<uint8_t>& data, int32_t compression_threshold = -1, bool apply_compression = false);
             item(list_array<uint8_t>&& data, int32_t compression_threshold = -1, bool apply_compression = false);
+
+            void write_value(const enbt::raw_uuid& val);
+            void write_value(int8_t flo);
+            void write_value(int16_t flo);
+            void write_value(int32_t flo);
+            void write_value(int64_t flo);
+            void write_value(uint8_t flo);
+            void write_value(uint16_t flo);
+            void write_value(uint32_t flo);
+            void write_value(uint64_t flo);
+            void write_value(float flo);
+            void write_value(double flo);
+            void write_value(char flo);
+            void write_value(bool flo);
+            void write_var32(int32_t value);
+            void write_var64(int64_t value);
+            void write_string(const std::string& str, int32_t max_string_len = INT32_MAX);
+            void write_identifier(const std::string& str);
+            void write_json_component(const std::string& str);
+
+            template <class T>
+            void write_var32_check(T value) {
+                if constexpr (!std::is_same<T, int32_t>::value)
+                    if ((int32_t)value != value)
+                        throw std::out_of_range("Value out of range");
+                write_var32(value);
+            }
+
+            template <class T>
+            void write_var64_check(T value) {
+                if constexpr (!std::is_same<T, int64_t>::value)
+                    if ((int64_t)value != value)
+                        throw std::out_of_range("Value out of range");
+                write_var64(value);
+            }
+
+            template <class ArrayT>
+            void WriteArray(list_array<uint8_t>& data, const ArrayT& arr) {
+                WriteVar<int32_t>(arr.size(), data);
+                if constexpr (std::is_same_v<ArrayT, list_array<uint8_t>>)
+                    data.push_back(arr);
+                else
+                    for (auto& it : arr)
+                        WriteValue<ArrayT>(it, data);
+            }
         };
 
         response();
+        response(item&& move);
         response(response&& move);
         response(const response& copy);
         ~response();

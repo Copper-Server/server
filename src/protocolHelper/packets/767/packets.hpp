@@ -204,7 +204,7 @@ namespace copper_server {
             base_objects::network::response pingResponse(int32_t id);
             base_objects::network::response placeGhostRecipe(int32_t windows_id, const std::string& recipe_id);
             base_objects::network::response playerAbilities(uint8_t flags, float flying_speed, float field_of_view);
-            base_objects::network::response playerChatMessage(enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, const std::optional<enbt::value>& __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name);
+            base_objects::network::response playerChatMessage(enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, const std::optional<enbt::value>& unsigned_content, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name);
             //UNUSED by Notchian client
             base_objects::network::response endCombat(int32_t duration);
             //UNUSED by Notchian client
@@ -222,6 +222,7 @@ namespace copper_server {
             base_objects::network::response initRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, const list_array<std::string>& displayed_recipe_ids, const list_array<std::string>& had_access_to_recipe_ids);
             base_objects::network::response addRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, const list_array<std::string>& recipe_ids);
             base_objects::network::response removeRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, const list_array<std::string>& recipe_ids);
+            base_objects::network::response updateRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active);
             base_objects::network::response removeEntities(const list_array<int32_t>& entity_ids);
             base_objects::network::response removeEntityEffect(int32_t entity_id, int32_t effect_id);
             base_objects::network::response resetScore(const std::string& entity_name, const std::optional<std::string>& objective_name);
@@ -242,7 +243,7 @@ namespace copper_server {
             base_objects::network::response setBorderWarningDelay(int32_t warning_delay);
             base_objects::network::response setBorderWarningDistance(int32_t warning_distance);
             base_objects::network::response setCamera(int32_t entity_id);
-            base_objects::network::response setHeldItem(uint8_t slot);
+            base_objects::network::response setHeldSlot(int32_t slot);
             base_objects::network::response setCenterChunk(int32_t x, int32_t z);
             base_objects::network::response setRenderDistance(int32_t render_distance);
             base_objects::network::response setDefaultSpawnPosition(base_objects::position pos, float angle);
