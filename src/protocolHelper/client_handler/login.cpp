@@ -100,7 +100,7 @@ namespace copper_server::client_handler {
     }
 
     handle_login::handle_login(base_objects::network::tcp_session* session)
-        : tcp_client_handle(session), registry(base_objects::network::packet_registry.login.get(session->protocol_version)) {
+        : tcp_client_handle(session), registry(base_objects::network::packet_registry.serverbound.login.get(session->protocol_version)) {
         auto& login_data = *(session->sharedData().packets_state.login_data = base_objects::SharedClientData::packets_state_t::state_login{});
         session->sharedData().packets_state.protocol_version = session->protocol_version;
 

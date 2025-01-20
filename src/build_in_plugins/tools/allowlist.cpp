@@ -1,7 +1,7 @@
 #include <src/api/configuration.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/build_in_plugins/allowlist.hpp>
+#include <src/build_in_plugins/tools/allowlist.hpp>
 #include <src/log.hpp>
 #include <src/plugin/main.hpp>
 

@@ -17,7 +17,7 @@ namespace copper_server::build_in_plugins {
 
     MinecraftPlugin::plugin_response MinecraftPlugin::OnConfiguration(base_objects::client_data_holder& client) {
         list_array<uint8_t> response;
-        WriteString(response, "CopperServer ");
+        WriteString(response, "CopperServer");
         return packets::configuration::configuration(*client, "minecraft:brand", response);
     }
 

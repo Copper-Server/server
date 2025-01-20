@@ -69,7 +69,7 @@ namespace copper_server::client_handler {
     }
 
     handle_configuration::handle_configuration(base_objects::network::tcp_session* session)
-        : tcp_client_handle(session), registry(base_objects::network::packet_registry.configuration.get(session->sharedData().packets_state.protocol_version)) {
+        : tcp_client_handle(session), registry(base_objects::network::packet_registry.serverbound.configuration.get(session->sharedData().packets_state.protocol_version)) {
         _keep_alive_solution->set_callback(
             [this](int64_t keep_alive_packet) {
                 log::debug("configuration", "Send keep alive");

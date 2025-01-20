@@ -6,6 +6,10 @@
 namespace copper_server::client_handler {
     class handle_play : public tcp_client_handle {
         const base_objects::network::protocol_packet_registry_t& registry;
+        bool handle_tick_sync : 1 = false;
+        bool await_for_player_loading : 1 = false;
+        bool ____ : 1 = false;
+
         void check_response(base_objects::network::response& resp);
         base_objects::network::response IdleActions();
         base_objects::network::response work_packet(ArrayStream& packet) override;

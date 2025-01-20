@@ -1,19 +1,13 @@
-#include <src/api/configuration.hpp>
-#include <src/api/mojang/session_server.hpp>
-#include <src/api/players.hpp>
 #include <src/api/protocol.hpp>
 #include <src/base_objects/network/accept_packet_registry.hpp>
-#include <src/base_objects/network/tcp_server.hpp>
 #include <src/base_objects/player.hpp>
-#include <src/mojang/api/hash.hpp>
 #include <src/plugin/main.hpp>
 #include <src/protocolHelper/client_handler/abstract.hpp>
-#include <src/protocolHelper/packets/769/packets.hpp>
-#include <src/protocolHelper/packets/769/writers_readers.hpp>
-#include <src/protocolHelper/packets/abstract.hpp>
+#include <src/protocolHelper/packets/766/writers_readers.hpp>
 #include <src/protocolHelper/util.hpp>
+#include <src/registers.hpp>
 
-namespace copper_server::build_in_plugins::protocol::play_769 {
+namespace copper_server::build_in_plugins::protocol::play_766 {
     namespace play {
         void teleport_confirm(base_objects::network::tcp_session* session, ArrayStream& packet) {
             api::protocol::data::teleport_request_completion data;
@@ -31,13 +25,6 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             api::protocol::on_block_nbt_request.async_notify({data, *session, session->sharedDataRef()});
         }
 
-        void bundle_item_selected(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            api::protocol::data::bundle_item_selected data;
-            data.inventory_slot = packet.read_var<int32_t>();
-            data.bundle_slot = packet.read_var<int32_t>();
-            api::protocol::on_bundle_item_selected.async_notify({data, *session, session->sharedDataRef()});
-        }
-
         void change_difficulty(base_objects::network::tcp_session* session, ArrayStream& packet) {
             api::protocol::on_change_difficulty.async_notify({packet.read_value<uint8_t>(), *session, session->sharedDataRef()});
         }
@@ -47,12 +34,12 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
         }
 
         void chat_command(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            api::protocol::on_chat_command.async_notify({packet.read_string(32769), *session, session->sharedDataRef()});
+            api::protocol::on_chat_command.async_notify({packet.read_string(32767), *session, session->sharedDataRef()});
         }
 
         void signed_chat_command(base_objects::network::tcp_session* session, ArrayStream& packet) {
             api::protocol::data::signed_chat_command data;
-            data.command = packet.read_string(32769);
+            data.command = packet.read_string(32767);
             data.timestamp = packet.read_value<int64_t>();
             data.salt = packet.read_value<int64_t>();
             int32_t arguments_count = packet.read_var<int32_t>();
@@ -119,10 +106,6 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             api::protocol::on_client_status.async_notify({packet.read_var<int32_t>(), *session, session->sharedDataRef()});
         }
 
-        void client_tick_end(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            api::protocol::on_client_tick_end.async_notify({true, *session, session->sharedDataRef()});
-        }
-
         void client_information(base_objects::network::tcp_session* session, ArrayStream& packet) {
             api::protocol::data::client_information data;
             data.locale = packet.read_string(16);
@@ -133,7 +116,6 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             data.main_hand = packet.read_var<int32_t>();
             data.enable_text_filtering = packet.read();
             data.allow_server_listings = packet.read();
-            data.particle_status = packet.read_var<int32_t>();
             api::protocol::on_client_information.async_notify({data, *session, session->sharedDataRef()});
         }
 
@@ -168,10 +150,10 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             for (int32_t i = 0; i < changed_slots_count; i++) {
                 api::protocol::data::click_container::changed_slot slot;
                 slot.slot = packet.read_value<int16_t>();
-                slot.item = packets::release_769::reader::ReadSlot(packet);
+                slot.item = packets::release_766::reader::ReadSlot(packet);
                 data.changed_slots.push_back(slot);
             }
-            data.carried_item = packets::release_769::reader::ReadSlot(packet);
+            data.carried_item = packets::release_766::reader::ReadSlot(packet);
             api::protocol::on_click_container.async_notify({data, *session, session->sharedDataRef()});
         }
 
@@ -200,10 +182,9 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             msg.channel = packet.read_identifier();
             msg.data = packet.read_left(32767).to_vector();
             auto plugin = pluginManagement.get_bind_plugin(PluginManagement::registration_on::play, msg.channel);
-            if (plugin) {
+            if (plugin)
                 if (auto res = plugin->OnPlayHandle(plugin, msg.channel, msg.data, session->sharedDataRef()); res != std::nullopt)
                     session->sharedData().sendPacket(std::move(*res));
-            }
         }
 
         void subscribe_to_debug_sample(base_objects::network::tcp_session* session, ArrayStream& packet) {
@@ -303,9 +284,9 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             api::protocol::on_set_player_rotation.async_notify({data, *session, session->sharedDataRef()});
         }
 
-        void set_player_movement_flags(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            uint8_t flags = packet.read();
-            api::protocol::on_set_player_movement_flags.async_notify({flags, *session, session->sharedDataRef()});
+        void set_player_on_ground(base_objects::network::tcp_session* session, ArrayStream& packet) {
+            uint8_t on_ground = packet.read();
+            api::protocol::on_set_player_movement_flags.async_notify({on_ground, *session, session->sharedDataRef()});
         }
 
         void move_vehicle(base_objects::network::tcp_session* session, ArrayStream& packet) {
@@ -315,7 +296,6 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             data.z = packet.read_value<double>();
             data.yaw = packet.read_value<float>();
             data.pitch = packet.read_value<float>();
-            data.on_ground = packet.read();
             api::protocol::on_move_vehicle.async_notify({data, *session, session->sharedDataRef()});
         }
 
@@ -326,15 +306,8 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             api::protocol::on_paddle_boat.async_notify({data, *session, session->sharedDataRef()});
         }
 
-        void pick_item_from_block(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            base_objects::position pos;
-            pos.raw = packet.read_value<uint64_t>();
-            api::protocol::on_pick_item_from_block.async_notify({{pos, (bool)packet.read()}, *session, session->sharedDataRef()});
-        }
-
-        void pick_item_from_entity(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            int32_t id = packet.read_var<int32_t>();
-            api::protocol::on_pick_item_from_block.async_notify({{id, (bool)packet.read()}, *session, session->sharedDataRef()});
+        void pick_item(base_objects::network::tcp_session* session, ArrayStream& packet) {
+            api::protocol::on_pick_item_old.async_notify({{packet.read_var<int32_t>()}, *session, session->sharedDataRef()});
         }
 
         void pong(base_objects::network::tcp_session* session, ArrayStream& packet) {
@@ -358,13 +331,13 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             result.reserve(9);
             result.push_back(0x34);
             WriteValue<int64_t>(ping, result);
-            session->sharedDataRef()->sendPacket(base_objects::network::response::answer({std::move(result)}));
+            session->sharedData().sendPacket(base_objects::network::response::answer({std::move(result)}));
         }
 
         void place_recipe(base_objects::network::tcp_session* session, ArrayStream& packet) {
             api::protocol::data::place_recipe data;
             data.window_id = packet.read_var<int32_t>();
-            data.recipe_id = packet.read_var<int32_t>();
+            data.recipe_id = registers::recipe_table.at(packet.read_identifier()).id;
             data.make_all = packet.read_value<bool>();
             api::protocol::on_place_recipe.async_notify({data, *session, session->sharedDataRef()});
         }
@@ -395,19 +368,16 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
 
         void player_input(base_objects::network::tcp_session* session, ArrayStream& packet) {
             api::protocol::data::player_input data;
+            data.sideways = packet.read_value<float>();
+            data.forward = packet.read_value<float>();
             auto flags = packet.read_value<int8_t>();
-            data.flags.forward = flags & 1;
-            data.flags.backward = flags & 2;
-            data.flags.left = flags & 4;
-            data.flags.right = flags & 8;
-            data.flags.jump = flags & 16;
-            data.flags.sneaking = flags & 32;
-            data.flags.sprint = flags & 64;
+            data.flags.jump = flags & 1;
+            data.flags.sneaking = flags & 2;
+            data.flags.forward = data.forward > 0;
+            data.flags.backward = data.forward < 0;
+            data.flags.right = data.sideways > 0;
+            data.flags.left = data.sideways < 0;
             api::protocol::on_player_input.async_notify({data, *session, session->sharedDataRef()});
-        }
-
-        void player_loaded(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            api::protocol::on_player_loaded.sync_notify({true, *session, session->sharedDataRef()});
         }
 
         void change_recipe_book_settings(base_objects::network::tcp_session* session, ArrayStream& packet) {
@@ -478,7 +448,7 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
         void set_creative_slot(base_objects::network::tcp_session* session, ArrayStream& packet) {
             api::protocol::data::set_creative_slot data;
             data.slot = packet.read_value<int16_t>();
-            data.item = packets::release_769::reader::ReadSlot(packet);
+            data.item = packets::release_766::reader::ReadSlot(packet);
             api::protocol::on_set_creative_slot.async_notify({data, *session, session->sharedDataRef()});
         }
 
@@ -544,7 +514,6 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             data.cursor_y = packet.read_value<float>();
             data.cursor_z = packet.read_value<float>();
             data.inside_block = packet.read_value<bool>();
-            data.world_border_hit = packet.read_value<bool>();
             data.sequence = packet.read_var<int32_t>();
             api::protocol::on_use_item_on.async_notify({data, *session, session->sharedDataRef()});
         }
@@ -553,243 +522,18 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             api::protocol::data::use_item data;
             data.hand = packet.read_var<int32_t>();
             data.sequence = packet.read_var<int32_t>();
-            data.yaw = packet.read_value<float>();
-            data.pitch = packet.read_value<float>();
-
             api::protocol::on_use_item.async_notify({data, *session, session->sharedDataRef()});
         }
     }
 
-    namespace configuration {
-        void client_settings(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            auto& shared_data = session->sharedData();
-            shared_data.locale = packet.read_string(16);
-            shared_data.view_distance = packet.read();
-            shared_data.chat_mode = (base_objects::SharedClientData::ChatMode)packet.read_var<int32_t>();
-            shared_data.enable_chat_colors = packet.read();
-            shared_data.skin_parts.mask = packet.read();
-            shared_data.main_hand = (base_objects::SharedClientData::MainHand)packet.read_var<int32_t>();
-            shared_data.enable_filtering = packet.read();
-            shared_data.allow_server_listings = packet.read();
-            shared_data.particle_status = (base_objects::SharedClientData::ParticleStatus)packet.read_var<int32_t>();
-        }
-
-        void cookie_response(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            api::protocol::data::cookie_response data;
-            data.key = packet.read_identifier();
-            if (packet.read())
-                data.payload = packet.read_array<uint8_t>(5120);
-            api::protocol::on_cookie_response.async_notify({data, *session, session->sharedDataRef()});
-        }
-
-        void plugin_message(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            std::string channel = packet.read_string(32769);
-            auto it = pluginManagement.get_bind_plugin(PluginManagement::registration_on::configuration, channel);
-            if (it != nullptr)
-                if (auto res = it->OnConfigurationHandle(it, channel, packet.read_left(32767).to_vector(), session->sharedDataRef()); res)
-                    session->sharedData().sendPacket(std::move(*res));
-        }
-
-        void configuration_complete(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            auto& shared_data = session->sharedData();
-            if (shared_data.packets_state.load_state != base_objects::SharedClientData::packets_state_t::configuration_load_state_t::done) {
-                shared_data.sendPacket(packets::configuration::kick(session->sharedData(), "Configuration is not finished."));
-                return;
-            }
-            if (!session->sharedData().packets_state.pending_resource_packs.empty()) {
-                shared_data.sendPacket(packets::configuration::kick(session->sharedData(), "You are not downloaded all requested packs."));
-                return;
-            }
-            shared_data.packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::play;
-            shared_data.switchToHandler(client_handler::abstract::createhandle_play(session));
-        }
-
-        void keep_alive(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            int64_t keep_alive_packet_response = packet.read_value<int64_t>();
-            session->sharedData().gotKeepAlive(keep_alive_packet_response);
-        }
-
-        void pong(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            auto& shared_data = session->sharedData();
-            int32_t pong = packet.read_value<int32_t>();
-            if (pong == shared_data.packets_state.excepted_pong)
-                shared_data.packets_state.excepted_pong = 0;
-            else {
-                shared_data.sendPacket(packets::configuration::kick(session->sharedData(), "Invalid pong"));
-                return;
-            }
-            session->sharedData().ping = std::chrono::duration_cast<std::chrono::milliseconds>(shared_data.packets_state.pong_timer - std::chrono::system_clock::now());
-        }
-
-        void registry_resource_pack(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            enbt::raw_uuid id = packet.read_uuid();
-            int32_t result = packet.read_var<int32_t>();
-            auto res = session->sharedData().packets_state.pending_resource_packs.find(id);
-            if (res != session->sharedData().packets_state.pending_resource_packs.end()) {
-                switch (result) {
-                case 0:
-                case 3:
-                    session->sharedData().packets_state.active_resource_packs.insert(id);
-                    session->sharedData().packets_state.pending_resource_packs.erase(res);
-                    break;
-                default:
-                    if (res->second.required)
-                        session->sharedData().sendPacket(packets::configuration::kick(session->sharedData(), "Resource pack is required"));
-                    else
-                        session->sharedData().packets_state.pending_resource_packs.erase(res);
-                }
-            }
-        }
-
-        void known_packs(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            int32_t len = packet.read_var<int32_t>();
-            list_array<base_objects::data_packs::known_pack> packs;
-            for (int32_t i = 0; i < len; i++) {
-                std::string name = packet.read_string(32769);
-                std::string id = packet.read_string(32769);
-                std::string version = packet.read_string(32769);
-
-                packs.emplace_back(std::move(name), std::move(id), std::move(version));
-            }
-            session->sharedData().sendPacket(
-                packets::configuration::registry_data(session->sharedData())
-            );
-
-            pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::configuration, [session, &packs](PluginRegistrationPtr plugin) {
-                if (auto res = plugin->OnConfiguration_gotKnownPacks(session->sharedDataRef(), packs); res)
-                    session->sharedData().sendPacket(std::move(*res));
-            });
-
-            session->sharedData().packets_state.load_state = base_objects::SharedClientData::packets_state_t::configuration_load_state_t::await_processing;
-        }
-    }
-
-    namespace login {
-        void login_start(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            std::string nickname = packet.read_string(16);
-            auto player = api::players::get_player(nickname);
-            if (api::players::has_player(nickname)) {
-                if (api::configuration::get().protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::prevent_join) {
-                    session->sharedData().sendPacket(packets::login::kick(session->sharedData(), "Someone already connected with this nickname"));
-                    return;
-                } else
-                    session->sharedData().packets_state.login_data->had_conflict = true;
-            }
-
-            session->sharedData().name = nickname;
-            session->sharedData().packets_state.protocol_version = session->protocol_version;
-        }
-
-        void encryption_response(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            int32_t shared_secret_size = packet.read_var<int32_t>();
-            list_array<uint8_t> shared_secret = packet.range_read(shared_secret_size).to_vector();
-            int32_t verify_token_size = packet.read_var<int32_t>();
-            list_array<uint8_t> verify_token = packet.range_read(verify_token_size).to_vector();
-
-            if (!base_objects::network::tcp_server::instance().decrypt_data(verify_token)) {
-                session->sharedData().sendPacket(packets::login::kick(session->sharedData(), "Encryption error, invalid verify token"));
-                return;
-            }
-            if (memcmp(verify_token.data(), session->sharedData().packets_state.login_data->verify_token, 4)) {
-                session->sharedData().sendPacket(packets::login::kick(session->sharedData(), "Encryption error, invalid verify token"));
-                return;
-            }
-            if (!base_objects::network::tcp_server::instance().decrypt_data(shared_secret)) {
-                session->sharedData().sendPacket(packets::login::kick(session->sharedData(), "Encryption error"));
-                return;
-            }
-
-            mojang::api::hash serverId;
-            serverId.update(shared_secret);
-            serverId.update(base_objects::network::tcp_server::instance().public_key_buffer().data(), base_objects::network::tcp_server::instance().public_key_buffer().size());
-
-            session->sharedData().data = api::mojang::get_session_server().hasJoined(
-                session->sharedData().name,
-                serverId.hexdigest(),
-                !api::configuration::get().server.offline_mode
-            );
-            session->start_symmetric_encryption(shared_secret, shared_secret);
-        }
-
-        void plugin_response(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            int32_t message_id = packet.read_var<int32_t>();
-            bool successful = packet.read();
-            auto& login_data = *session->sharedData().packets_state.login_data;
-            if (message_id != login_data.plugin_sequence_id) {
-                session->sharedData().sendPacket(packets::login::kick(session->sharedData(), "Invalid plugin message id"));
-                return;
-            }
-            {
-                login_data.excepted_packet = -1;
-                while (!login_data.plugins_query.empty()) {
-                    auto&& it = login_data.plugins_query.front();
-                    auto response = it.second->OnLoginHandle(it.second, it.first, packet.read_left(32767).to_vector(), successful, session->sharedDataRef());
-                    std::visit(
-                        [&](auto& it) {
-                            using T = std::decay_t<decltype(it)>;
-                            if constexpr (std::is_same_v<T, PluginRegistration::PluginResponse>) {
-                                login_data.plugin_sequence_id++;
-                                session->sharedData().sendPacket(packets::login::login(session->sharedData(), login_data.plugin_sequence_id, it.plugin_chanel, it.data));
-                            } else if constexpr (std::is_same_v<T, base_objects::network::response>) {
-                                session->sharedData().sendPacket(std::move(it));
-                            } else if (it) {
-                                login_data.plugins_query.pop_front();
-                            }
-                        },
-                        response
-                    );
-                }
-            }
-        }
-
-        void login_ack(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            if (session->sharedData().packets_state.login_data->excepted_packet == -1) {
-                session->sharedData().sendPacket(packets::login::kick(session->sharedData(), "Unexpected packet"));
-                return;
-            }
-            if (
-                session->sharedData().packets_state.login_data->had_conflict && api::configuration::get().protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::kick_connected
-            ) {
-                api::players::iterate_players_not_state(base_objects::SharedClientData::packets_state_t::protocol_state::initialization, [&](base_objects::SharedClientData& player) {
-                    if (player.name == session->sharedData().name) {
-                        constexpr const char reason[] = "Some player with same nickname joined to this server";
-                        switch (player.packets_state.state) {
-                            using ps = base_objects::SharedClientData::packets_state_t::protocol_state;
-                        case ps::play:
-                            player.sendPacket(packets::play::kick(player, reason));
-                            break;
-                        case ps::configuration:
-                            player.sendPacket(packets::configuration::kick(player, reason));
-                        default:
-                            break;
-                        }
-                    }
-                    return true;
-                });
-            }
-            api::players::login_complete_to_cfg(session->sharedDataRef());
-            api::players::handlers::on_player_join(session->sharedDataRef());
-            session->sharedData().switchToHandler(client_handler::abstract::createhandle_configuration(session));
-        }
-
-        void cookie_response(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            api::protocol::data::cookie_response data;
-            data.key = packet.read_identifier();
-            if (packet.read())
-                data.payload = packet.read_array<uint8_t>(5120);
-            api::protocol::on_cookie_response.async_notify({data, *session, session->sharedDataRef()});
-        }
-    }
-
-    class ProtocolSupport_769 : public PluginAutoRegister<"protocol_support_for_769", ProtocolSupport_769> {
+    class ProtocolSupport_766_play : public PluginAutoRegister<"protocol_support_for_766_play", ProtocolSupport_766_play> {
     public:
         void OnRegister(const PluginRegistrationPtr& self) override {
-            base_objects::network::packet_registry.play.register_seq(
-                769,
+            base_objects::network::packet_registry.serverbound.play.register_seq(
+                766,
                 {
                     {"teleport_confirm", play::teleport_confirm},
                     {"query_block_nbt", play::query_block_nbt},
-                    {"bundle_item_selected", play::bundle_item_selected},
                     {"change_difficulty", play::change_difficulty},
                     {"acknowledge_message", play::acknowledge_message},
                     {"chat_command", play::chat_command},
@@ -798,7 +542,6 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
                     {"player_session", play::player_session},
                     {"chunk_batch_received", play::chunk_batch_received},
                     {"client_status", play::client_status},
-                    {"client_tick_end", play::client_tick_end},
                     {"client_information", play::client_information},
                     {"command_suggestion", play::command_suggestion},
                     {"switch_to_configuration", play::switch_to_configuration},
@@ -818,18 +561,16 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
                     {"set_player_position", play::set_player_position},
                     {"set_player_position_and_rotation", play::set_player_position_and_rotation},
                     {"set_player_rotation", play::set_player_rotation},
-                    {"set_player_movement_flags", play::set_player_movement_flags},
+                    {"set_player_on_ground", play::set_player_on_ground},
                     {"move_vehicle", play::move_vehicle},
                     {"paddle_boat", play::paddle_boat},
-                    {"pick_item_from_block", play::pick_item_from_block},
-                    {"pick_item_from_entity", play::pick_item_from_entity},
+                    {"pick_item", play::pick_item},
                     {"ping_request", play::ping_request},
                     {"place_recipe", play::place_recipe},
                     {"player_abilities", play::player_abilities},
                     {"player_action", play::player_action},
                     {"player_command", play::player_command},
                     {"player_input", play::player_input},
-                    {"player_loaded", play::player_loaded},
                     {"pong", play::pong},
                     {"change_recipe_book_settings", play::change_recipe_book_settings},
                     {"set_seen_recipe", play::set_seen_recipe},
@@ -849,31 +590,6 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
                     {"spectator_teleport", play::spectator_teleport},
                     {"use_item_on", play::use_item_on},
                     {"use_item", play::use_item},
-                }
-            );
-
-            base_objects::network::packet_registry.configuration.register_seq(
-                769,
-                {
-                    {"client_settings", configuration::client_settings},
-                    {"cookie_response", configuration::cookie_response},
-                    {"plugin_message", configuration::plugin_message},
-                    {"configuration_complete", configuration::configuration_complete},
-                    {"keep_alive", configuration::keep_alive},
-                    {"pong", configuration::pong},
-                    {"registry_resource_pack", configuration::registry_resource_pack},
-                    {"known_packs", configuration::known_packs},
-                }
-            );
-
-            base_objects::network::packet_registry.login.register_seq(
-                769,
-                {
-                    {"login_start", login::login_start},
-                    {"encryption_response", login::encryption_response},
-                    {"plugin_response", login::plugin_response},
-                    {"login_ack", login::login_ack},
-                    {"cookie_response", login::cookie_response},
                 }
             );
         }

@@ -22,6 +22,15 @@ namespace copper_server::base_objects::network {
         return it->second;
     }
 
+    bool protocol_packet_registry_t::has_packet_state(int32_t packet_state) const {
+        return registry.find(packet_state) != registry.end();
+    }
+
+    bool protocol_packet_registry_t::has_packet_name(std::string packet_name) const {
+        return registry_name_id.find(packet_name) != registry_name_id.end();
+    }
+
+
     void accept_packet_registry::register_packet(int32_t protocol_id, int32_t packet_state, std::string packet_name, read_packet_handler handler) {
         auto& it = registry[protocol_id];
         it.registry[packet_state] = handler;
@@ -59,6 +68,20 @@ namespace copper_server::base_objects::network {
         if (it == registry.end())
             throw std::runtime_error("Unrecognized protocol id: " + std::to_string(protocol_id));
         return it->second.get_packet_state(packet_name);
+    }
+
+    bool accept_packet_registry::has_packet_state(int32_t protocol_id, int32_t packet_state) const {
+        auto it = registry.find(protocol_id);
+        if (it == registry.end())
+            return false;
+        return it->second.has_packet_state(packet_state);
+    }
+
+    bool accept_packet_registry::has_packet_name(int32_t protocol_id, std::string packet_name) const {
+        auto it = registry.find(protocol_id);
+        if (it == registry.end())
+            return false;
+        return it->second.has_packet_name(packet_name);
     }
 
     const protocol_packet_registry_t& accept_packet_registry::get(int32_t protocol_id) const {

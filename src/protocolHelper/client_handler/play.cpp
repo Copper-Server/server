@@ -80,7 +80,9 @@ namespace copper_server::client_handler {
     }
 
     handle_play::handle_play(base_objects::network::tcp_session* session)
-        : tcp_client_handle(session), registry(base_objects::network::packet_registry.play.get(session->sharedData().packets_state.protocol_version)) {
+        : tcp_client_handle(session), registry(base_objects::network::packet_registry.serverbound.play.get(session->sharedData().packets_state.protocol_version)) {
+        handle_tick_sync = registry.has_packet_name("client_tick_end");
+        await_for_player_loading = registry.has_packet_name("player_loaded");
         _keep_alive_solution->set_callback(
             [this](int64_t keep_alive_packet) {
                 log::debug("play", "Send keep alive");

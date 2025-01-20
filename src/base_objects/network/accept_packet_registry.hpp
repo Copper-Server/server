@@ -17,6 +17,9 @@ namespace copper_server::base_objects::network {
         void handle(int32_t packet_state, base_objects::network::tcp_session* session, ArrayStream& packet) const;
         std::string get_packet_name(int32_t packet_state) const;
         int32_t get_packet_state(std::string packet_name) const;
+
+        bool has_packet_state(int32_t packet_state) const;
+        bool has_packet_name(std::string packet_name) const;
     };
 
     struct accept_packet_registry {
@@ -25,15 +28,21 @@ namespace copper_server::base_objects::network {
         void register_packet(int32_t protocol_id, int32_t packet_state, std::string packet_name, read_packet_handler handler);
         void register_seq(int32_t protocol_id, std::initializer_list<std::pair<std::string, read_packet_handler>> handlers);
         void handle(int32_t protocol_id, int32_t packet_state, base_objects::network::tcp_session* session, ArrayStream& packet) const;
+
         std::string get_packet_name(int32_t protocol_id, int32_t packet_state) const;
         int32_t get_packet_state(int32_t protocol_id, std::string packet_name) const;
+        bool has_packet_name(int32_t protocol_id, std::string packet_name) const;
+        bool has_packet_state(int32_t protocol_id, int32_t packet_state) const;
+
         const protocol_packet_registry_t& get(int32_t protocol_id) const;
     };
 
     struct packet_registry_t {
-        accept_packet_registry login;
-        accept_packet_registry configuration;
-        accept_packet_registry play;
+        struct {
+            accept_packet_registry login;
+            accept_packet_registry configuration;
+            accept_packet_registry play;
+        } serverbound;
     };
 
     extern packet_registry_t packet_registry;

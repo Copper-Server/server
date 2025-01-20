@@ -2,7 +2,7 @@
 #include <src/api/configuration.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/build_in_plugins/ban.hpp>
+#include <src/build_in_plugins/tools/ban.hpp>
 #include <src/log.hpp>
 #include <src/plugin/main.hpp>
 #include <src/plugin/registration.hpp>

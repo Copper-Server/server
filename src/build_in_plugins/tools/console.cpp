@@ -4,7 +4,7 @@
 #include <src/api/internal/console.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/build_in_plugins/console.hpp>
+#include <src/build_in_plugins/tools/console.hpp>
 #include <src/log.hpp>
 #include <src/plugin/registration.hpp>
 #include <src/storage/list_storage.hpp>
