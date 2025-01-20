@@ -17,7 +17,7 @@
 
 namespace copper_server {
     class keep_alive_solution {
-        std::function<base_objects::network::response()> callback;
+        std::function<base_objects::network::response(int64_t)> callback;
         boost::asio::deadline_timer timeout_timer;
         boost::asio::deadline_timer send_keep_alive_timer;
         bool send_keep_alive_requested = false;
@@ -32,12 +32,13 @@ namespace copper_server {
     public:
         keep_alive_solution(base_objects::network::tcp_session* session);
         ~keep_alive_solution();
-        void set_callback(const std::function<base_objects::network::response()>& fun);
+        void set_callback(const std::function<base_objects::network::response(int64_t)>& fun);
         void keep_alive_sended();
 
         base_objects::network::response send_keep_alive();
         //returns elapsed time from last keep_alive
-        std::chrono::system_clock::duration got_valid_keep_alive();
+        std::chrono::system_clock::duration got_valid_keep_alive(int64_t check);
+        void ignore_keep_alive(); //used to shut down the timer
         base_objects::network::response no_response();
     };
 

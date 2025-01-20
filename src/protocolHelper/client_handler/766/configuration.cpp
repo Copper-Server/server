@@ -16,7 +16,7 @@ namespace copper_server::client_handler::release_766 {
             return response;
         } else if (queriedPackets.empty()) {
             response += FinishConfiguration();
-            _keep_alive_solution->got_valid_keep_alive();
+            _keep_alive_solution->ignore_keep_alive();
             return response;
         }
 
@@ -57,27 +57,27 @@ namespace copper_server::client_handler::release_766 {
         case 0x00: { //client settings
             log::debug("configuration", "Client settings");
             auto& shared_data = session->sharedData();
-            shared_data.locale = ReadString(packet, 16);
+            shared_data.locale = packet.read_string(16);
             shared_data.view_distance = packet.read();
-            shared_data.chat_mode = (base_objects::SharedClientData::ChatMode)ReadVar<int32_t>(packet);
+            shared_data.chat_mode = (base_objects::SharedClientData::ChatMode)packet.read_var<int32_t>();
             shared_data.enable_chat_colors = packet.read();
             shared_data.skin_parts.mask = packet.read();
-            shared_data.main_hand = (base_objects::SharedClientData::MainHand)ReadVar<int32_t>(packet);
+            shared_data.main_hand = (base_objects::SharedClientData::MainHand)packet.read_var<int32_t>();
             shared_data.enable_filtering = packet.read();
             shared_data.allow_server_listings = packet.read();
             break;
         }
         case 0x01: { //cookie response
             api::protocol::data::cookie_response data;
-            data.key = ReadIdentifier(packet);
+            data.key = packet.read_identifier();
             if (packet.read())
-                data.payload = ReadArray<uint8_t>(packet, 5120);
+                data.payload = packet.read_array<uint8_t>(5120);
             api::protocol::on_cookie_response.async_notify({data, *session, session->sharedDataRef()});
             break;
         }
         case 0x02: { //plugin message
             log::debug("configuration", "Plugin message");
-            std::string channel = ReadString(packet, 32767);
+            std::string channel = packet.read_string(32767);
             auto it = pluginManagement.get_bind_plugin(PluginManagement::registration_on::configuration, channel);
             if (it != nullptr) {
                 auto result = it->OnConfigurationHandle(it, channel, packet.read_left(32767).to_vector(), session->sharedDataRef());
@@ -96,14 +96,15 @@ namespace copper_server::client_handler::release_766 {
             return base_objects::network::response::empty();
         case 0x04: { //keep alive
             log::debug("configuration", "Keep alive");
-            int64_t keep_alive_packet_response = ReadValue<int64_t>(packet);
-            if (keep_alive_packet == keep_alive_packet_response)
-                session->sharedData().packets_state.keep_alive_ping_ms = std::min<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(_keep_alive_solution->got_valid_keep_alive()).count(), INT32_MAX);
+            int64_t keep_alive_packet_response = packet.read_value<int64_t>();
+            auto delay = _keep_alive_solution->got_valid_keep_alive(keep_alive_packet_response);
+            session->sharedData().packets_state.keep_alive_ping_ms = std::min<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(delay).count(), INT32_MAX);
+            api::protocol::on_keep_alive.async_notify({keep_alive_packet_response, *session, session->sharedDataRef()});
             break;
         }
         case 0x05: { //pong
             log::debug("configuration", "Pong");
-            int32_t pong = ReadValue<int32_t>(packet);
+            int32_t pong = packet.read_value<int32_t>();
             if (pong == excepted_pong)
                 excepted_pong = 0;
             else
@@ -113,8 +114,8 @@ namespace copper_server::client_handler::release_766 {
         }
         case 0x06: { //registry resource pack
             log::debug("configuration", "Registry resource pack");
-            enbt::raw_uuid id = ReadUUID(packet);
-            int32_t result = ReadVar<int32_t>(packet);
+            enbt::raw_uuid id = packet.read_uuid();
+            int32_t result = packet.read_var<int32_t>();
             auto res = session->sharedData().packets_state.pending_resource_packs.find(id);
             if (res != session->sharedData().packets_state.pending_resource_packs.end()) {
                 switch (result) {
@@ -133,12 +134,12 @@ namespace copper_server::client_handler::release_766 {
             break;
         }
         case 0x07: {
-            int32_t len = ReadVar<int32_t>(packet);
-            list_array<base_objects::packets::known_pack> packs;
+            int32_t len = packet.read_var<int32_t>();
+            list_array<base_objects::data_packs::known_pack> packs;
             for (int32_t i = 0; i < len; i++) {
-                std::string name = ReadString(packet, 32767);
-                std::string id = ReadString(packet, 32767);
-                std::string version = ReadString(packet, 32767);
+                std::string name = packet.read_string(32767);
+                std::string id = packet.read_string(32767);
+                std::string version = packet.read_string(32767);
 
                 packs.emplace_back(std::move(name), std::move(id), std::move(version));
             }
@@ -167,7 +168,7 @@ namespace copper_server::client_handler::release_766 {
 
     handle_configuration::handle_configuration(base_objects::network::tcp_session* sock)
         : tcp_client_handle(sock) {
-        _keep_alive_solution->set_callback([this]() {
+        _keep_alive_solution->set_callback([this](int64_t keep_alive_packet) {
             log::debug("configuration", "Send keep alive");
             return packets::release_766::configuration::keep_alive(keep_alive_packet);
         });

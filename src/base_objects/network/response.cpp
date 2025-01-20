@@ -50,9 +50,17 @@ namespace copper_server::base_objects::network {
 
     template <class T>
     static void _write_value_tem(T val, list_array<uint8_t>& data) {
-        val = enbt::endian_helpers::convert_endian(std::endian::big, val);
-        for (size_t i = 0; i < sizeof(T); i++)
-            data.push_back(reinterpret_cast<uint8_t*>(&val)[i]);
+        if constexpr (sizeof(T) == 1) {
+            data.push_back(reinterpret_cast<uint8_t*>(&val)[0]);
+        } else {
+            val = enbt::endian_helpers::convert_endian(std::endian::big, val);
+            for (size_t i = 0; i < sizeof(T); i++)
+                data.push_back(reinterpret_cast<uint8_t*>(&val)[i]);
+        }
+    }
+
+    void response::item::write_id(uint8_t id) {
+        _write_value_tem(id, data);
     }
 
     void response::item::write_value(const enbt::raw_uuid& val) {
@@ -141,8 +149,25 @@ namespace copper_server::base_objects::network {
         write_string(str, 262144);
     }
 
+    void response::item::write_direct(const list_array<uint8_t>& data) {
+        this->data.push_back(data);
+    }
+
+    void response::item::write_direct(list_array<uint8_t>&& data) {
+        this->data.push_back(std::move(data));
+    }
+
+    void response::item::write_direct(const uint8_t* data, size_t size) {
+        this->data.push_back(data, size);
+    }
 
     response::response() = default;
+
+    response::response(const item& copy)
+        : data({copy}), do_disconnect(false), do_disconnect_after_send(false), valid_till(0) {}
+
+    response::response(item&& move)
+        : data({std::move(move)}), do_disconnect(false), do_disconnect_after_send(false), valid_till(0) {}
 
     response::response(response&& move)
         : data(std::move(move.data)), do_disconnect(move.do_disconnect), do_disconnect_after_send(move.do_disconnect_after_send), valid_till(move.valid_till) {}
@@ -165,12 +190,12 @@ namespace copper_server::base_objects::network {
         return response({item(data, compression_threshold, true)}, valid_till);
     }
 
-    response response::answer(const list_array<list_array<uint8_t>>& data, size_t valid_till) {
-        return response(data.copy().convert<item>([](auto&& i) { return item(std::move(i)); }), valid_till);
+    response response::answer(const list_array<item>& data, size_t valid_till) {
+        return response(data.copy(), valid_till);
     }
 
-    response response::answer(list_array<list_array<uint8_t>>&& data, size_t valid_till) {
-        return response(data.take().convert<item>([](auto&& i) { return item(std::move(i)); }), valid_till);
+    response response::answer(list_array<item>&& data, size_t valid_till) {
+        return response(data.take(), valid_till);
     }
 
     response response::empty() {
@@ -181,12 +206,12 @@ namespace copper_server::base_objects::network {
         return response({}, true);
     }
 
-    response response::disconnect(const list_array<list_array<uint8_t>>& data, size_t valid_till) {
-        return response(data.copy().convert<item>([](auto&& i) { return item(std::move(i)); }), valid_till, false, true);
+    response response::disconnect(const list_array<item>& data, size_t valid_till) {
+        return response(data.copy(), valid_till, false, true);
     }
 
-    response response::disconnect(list_array<list_array<uint8_t>>&& data, size_t valid_till) {
-        return response(data.take().convert<item>([](auto&& i) { return item(std::move(i)); }), valid_till, false, true);
+    response response::disconnect(list_array<item>&& data, size_t valid_till) {
+        return response(data.take(), valid_till, false, true);
     }
 
     bool response::is_disconnect() const {

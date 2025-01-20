@@ -11,47 +11,47 @@ namespace copper_server::client_handler::play_765_release {
     void teleport_confirm(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Teleport confirm");
         api::protocol::data::teleport_request_completion data;
-        data.teleport_id = ReadVar<int32_t>(packet);
-        data.success = session->sharedData().packets_state.pending_teleport_ids.front() != data.teleport_id;
+        data.teleport_id = packet.read_var<int32_t>();
+        data.success = session->sharedData().packets_state.play_data->pending_teleport_ids.front() != data.teleport_id;
         if (data.success)
-            session->sharedData().packets_state.pending_teleport_ids.pop_front();
+            session->sharedData().packets_state.play_data->pending_teleport_ids.pop_front();
         api::protocol::on_teleport_request_completion.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void query_block_nbt(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Query block nbt");
         api::protocol::data::block_nbt_request data;
-        data.transaction_id = ReadVar<int32_t>(packet);
-        data.position.raw = ReadValue<int64_t>(packet);
+        data.transaction_id = packet.read_var<int32_t>();
+        data.position.raw = packet.read_value<int64_t>();
         api::protocol::on_block_nbt_request.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void change_difficulty(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Change difficulty");
-        api::protocol::on_change_difficulty.async_notify({ReadValue<uint8_t>(packet), *session, session->sharedDataRef()});
+        api::protocol::on_change_difficulty.async_notify({packet.read_value<uint8_t>(), *session, session->sharedDataRef()});
     }
 
     void acknowledge_message(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Acknowledge message");
-        api::protocol::on_acknowledge_message.async_notify({ReadVar<int32_t>(packet), *session, session->sharedDataRef()});
+        api::protocol::on_acknowledge_message.async_notify({packet.read_var<int32_t>(), *session, session->sharedDataRef()});
     }
 
     void chat_command(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Signed chat command");
         api::protocol::data::signed_chat_command data;
-        data.command = ReadString(packet, 256);
-        data.timestamp = ReadValue<int64_t>(packet);
-        data.salt = ReadValue<int64_t>(packet);
-        int32_t arguments_count = ReadVar<int32_t>(packet);
+        data.command = packet.read_string(256);
+        data.timestamp = packet.read_value<int64_t>();
+        data.salt = packet.read_value<int64_t>();
+        int32_t arguments_count = packet.read_var<int32_t>();
         data.arguments_signature.reserve(arguments_count);
         for (int32_t i = 0; i < arguments_count; i++) {
             api::protocol::data::signed_chat_command::argument_signature arg;
-            arg.argument_name = ReadString(packet, 16);
+            arg.argument_name = packet.read_string(16);
             for (int i = 0; i < 256; i++)
                 arg.signature[i] = packet.read();
             data.arguments_signature.push_back(arg);
         }
-        data.message_count = ReadVar<int32_t>(packet);
+        data.message_count = packet.read_var<int32_t>();
         data.acknowledged.arr.push_back(packet.read());
         data.acknowledged.arr.push_back(packet.read());
         data.acknowledged.arr.push_back(packet.read());
@@ -61,15 +61,15 @@ namespace copper_server::client_handler::play_765_release {
 
     void chat_message(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Chat message");
-        std::string message = ReadString(packet, 256);
-        int64_t timestamp = ReadValue<int64_t>(packet);
-        int64_t salt = ReadValue<int64_t>(packet);
+        std::string message = packet.read_string(256);
+        int64_t timestamp = packet.read_value<int64_t>();
+        int64_t salt = packet.read_value<int64_t>();
         if (packet.read() == 0) {
             api::protocol::data::chat_message_unsigned data;
             data.message = message;
             data.timestamp = timestamp;
             data.salt = salt;
-            data.message_count = ReadVar<int32_t>(packet);
+            data.message_count = packet.read_var<int32_t>();
             data.acknowledged.arr.push_back(packet.read());
             data.acknowledged.arr.push_back(packet.read());
             data.acknowledged.arr.push_back(packet.read());
@@ -81,7 +81,7 @@ namespace copper_server::client_handler::play_765_release {
             data.message = message;
             data.timestamp = timestamp;
             data.salt = salt;
-            data.message_count = ReadVar<int32_t>(packet);
+            data.message_count = packet.read_var<int32_t>();
             data.acknowledged.arr.push_back(packet.read());
             data.acknowledged.arr.push_back(packet.read());
             data.acknowledged.arr.push_back(packet.read());
@@ -92,33 +92,33 @@ namespace copper_server::client_handler::play_765_release {
     void player_session(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Player session");
         api::protocol::data::player_session data;
-        data.session_id = ReadUUID(packet);
-        data.public_key.expiries_at = ReadValue<int64_t>(packet);
-        data.public_key.public_key = ReadListArray(packet);
-        data.public_key.key_signature = ReadListArray(packet);
+        data.session_id = packet.read_uuid();
+        data.public_key.expiries_at = packet.read_value<int64_t>();
+        data.public_key.public_key = packet.read_list_array();
+        data.public_key.key_signature = packet.read_list_array();
 
         api::protocol::on_player_session.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void chunk_batch_received(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Chunk batch received");
-        api::protocol::on_chunk_batch_received.async_notify({ReadValue<float>(packet), *session, session->sharedDataRef()});
+        api::protocol::on_chunk_batch_received.async_notify({packet.read_value<float>(), *session, session->sharedDataRef()});
     }
 
     void client_status(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Client status");
-        api::protocol::on_client_status.async_notify({ReadVar<int32_t>(packet), *session, session->sharedDataRef()});
+        api::protocol::on_client_status.async_notify({packet.read_var<int32_t>(), *session, session->sharedDataRef()});
     }
 
     void client_information(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Client information");
         api::protocol::data::client_information data;
-        data.locale = ReadString(packet, 16);
+        data.locale = packet.read_string(16);
         data.view_distance = packet.read();
-        data.chat_mode = ReadVar<int32_t>(packet);
+        data.chat_mode = packet.read_var<int32_t>();
         data.chat_colors = packet.read();
         data.displayed_skin_parts = packet.read();
-        data.main_hand = ReadVar<int32_t>(packet);
+        data.main_hand = packet.read_var<int32_t>();
         data.enable_text_filtering = packet.read();
         data.allow_server_listings = packet.read();
         api::protocol::on_client_information.async_notify({data, *session, session->sharedDataRef()});
@@ -127,8 +127,8 @@ namespace copper_server::client_handler::play_765_release {
     void command_suggestion(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Command suggestion");
         api::protocol::data::command_suggestion data;
-        data.transaction_id = ReadVar<int32_t>(packet);
-        data.text = ReadString(packet, 32500);
+        data.transaction_id = packet.read_var<int32_t>();
+        data.text = packet.read_string(32500);
         api::protocol::on_command_suggestion.async_notify({data, *session, session->sharedDataRef()});
     }
 
@@ -150,15 +150,15 @@ namespace copper_server::client_handler::play_765_release {
         log::debug("play", "Click container");
         api::protocol::data::click_container data;
         data.window_id = packet.read();
-        data.state_id = ReadVar<int32_t>(packet);
-        data.slot = ReadValue<int16_t>(packet);
+        data.state_id = packet.read_var<int32_t>();
+        data.slot = packet.read_value<int16_t>();
         data.button = packet.read();
-        data.mode = ReadVar<int32_t>(packet);
-        int32_t changed_slots_count = ReadVar<int32_t>(packet);
+        data.mode = packet.read_var<int32_t>();
+        int32_t changed_slots_count = packet.read_var<int32_t>();
         data.changed_slots.reserve(changed_slots_count);
         for (int32_t i = 0; i < changed_slots_count; i++) {
             api::protocol::data::click_container::changed_slot slot;
-            slot.slot = ReadValue<int16_t>(packet);
+            slot.slot = packet.read_value<int16_t>();
             slot.item = packets::release_765::reader::ReadSlot(packet);
             data.changed_slots.push_back(slot);
         }
@@ -168,14 +168,14 @@ namespace copper_server::client_handler::play_765_release {
 
     void close_container(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Close container");
-        api::protocol::on_close_container.async_notify({ReadVar<int32_t>(packet), *session, session->sharedDataRef()});
+        api::protocol::on_close_container.async_notify({packet.read_var<int32_t>(), *session, session->sharedDataRef()});
     }
 
     void change_container_slot_state(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Change container slot state");
         api::protocol::data::change_container_slot_state data;
-        data.slot_id = ReadVar<int32_t>(packet);
-        data.window_id = ReadVar<int32_t>(packet);
+        data.slot_id = packet.read_var<int32_t>();
+        data.window_id = packet.read_var<int32_t>();
         data.state = packet.read();
         api::protocol::on_change_container_slot_state.async_notify({data, *session, session->sharedDataRef()});
     }
@@ -183,7 +183,7 @@ namespace copper_server::client_handler::play_765_release {
     base_objects::network::response plugin_message(base_objects::network::tcp_session* session, ArrayStream& packet, std::list<base_objects::network::plugin_response>& queriedPackets) {
         log::debug("play", "Change container slot state");
         api::protocol::data::plugin_message msg;
-        msg.channel = ReadIdentifier(packet);
+        msg.channel = packet.read_identifier();
         msg.data = packet.read_left(32767).to_vector();
         auto plugin = pluginManagement.get_bind_plugin(PluginManagement::registration_on::play, msg.channel);
         if (plugin) {
@@ -198,27 +198,27 @@ namespace copper_server::client_handler::play_765_release {
     void edit_book(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Edit book");
         api::protocol::data::edit_book data;
-        data.slot = ReadVar<int32_t>(packet);
-        int32_t text_count = ReadVar<int32_t>(packet);
+        data.slot = packet.read_var<int32_t>();
+        int32_t text_count = packet.read_var<int32_t>();
         data.text.reserve(text_count);
-        data.text.push_back(ReadString(packet, 8192));
+        data.text.push_back(packet.read_string(8192));
         if (packet.read())
-            data.title = ReadString(packet, 128);
+            data.title = packet.read_string(128);
         api::protocol::on_edit_book.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void query_entity_tag(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Query entity tag");
         api::protocol::data::query_entity_tag data;
-        data.transaction_id = ReadVar<int32_t>(packet);
-        data.entity_id = ReadVar<int32_t>(packet);
+        data.transaction_id = packet.read_var<int32_t>();
+        data.entity_id = packet.read_var<int32_t>();
         api::protocol::on_query_entity_tag.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void interact(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Interact");
-        int32_t entity_id = ReadVar<int32_t>(packet);
-        int32_t type = ReadVar<int32_t>(packet);
+        int32_t entity_id = packet.read_var<int32_t>();
+        int32_t type = packet.read_var<int32_t>();
         switch (type) {
         case 0: {
             api::protocol::data::interact data;
@@ -236,9 +236,9 @@ namespace copper_server::client_handler::play_765_release {
         case 2: {
             api::protocol::data::interact_at data;
             data.entity_id = entity_id;
-            data.target_x = ReadValue<float>(packet);
-            data.target_y = ReadValue<float>(packet);
-            data.target_z = ReadValue<float>(packet);
+            data.target_x = packet.read_value<float>();
+            data.target_y = packet.read_value<float>();
+            data.target_z = packet.read_value<float>();
             data.hand = packet.read();
             data.sneaking = packet.read();
             api::protocol::on_interact_at.async_notify({data, *session, session->sharedDataRef()});
@@ -252,8 +252,8 @@ namespace copper_server::client_handler::play_765_release {
     void jigsaw_generate(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Jigsaw Generate");
         api::protocol::data::jigsaw_generate data;
-        data.location.raw = ReadValue<int64_t>(packet);
-        data.levels = ReadVar<int32_t>(packet);
+        data.location.raw = packet.read_value<int64_t>();
+        data.levels = packet.read_var<int32_t>();
         data.keep_jigsaws = packet.read();
         api::protocol::on_jigsaw_generate.async_notify({data, *session, session->sharedDataRef()});
     }
@@ -267,9 +267,9 @@ namespace copper_server::client_handler::play_765_release {
     void set_player_position(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Set player position");
         api::protocol::data::set_player_position data;
-        data.x = ReadValue<double>(packet);
-        data.y = ReadValue<double>(packet);
-        data.z = ReadValue<double>(packet);
+        data.x = packet.read_value<double>();
+        data.y = packet.read_value<double>();
+        data.z = packet.read_value<double>();
         data.on_ground = packet.read();
         api::protocol::on_set_player_position.async_notify({data, *session, session->sharedDataRef()});
     }
@@ -277,11 +277,11 @@ namespace copper_server::client_handler::play_765_release {
     void set_player_position_and_rotation(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Set player position and rotation");
         api::protocol::data::set_player_position_and_rotation data;
-        data.x = ReadValue<double>(packet);
-        data.y = ReadValue<double>(packet);
-        data.z = ReadValue<double>(packet);
-        data.yaw = ReadValue<float>(packet);
-        data.pitch = ReadValue<float>(packet);
+        data.x = packet.read_value<double>();
+        data.y = packet.read_value<double>();
+        data.z = packet.read_value<double>();
+        data.yaw = packet.read_value<float>();
+        data.pitch = packet.read_value<float>();
         data.on_ground = packet.read();
         api::protocol::on_set_player_position_and_rotation.async_notify({data, *session, session->sharedDataRef()});
     }
@@ -289,8 +289,8 @@ namespace copper_server::client_handler::play_765_release {
     void set_player_rotation(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Set player rotation");
         api::protocol::data::set_player_rotation data;
-        data.yaw = ReadValue<float>(packet);
-        data.pitch = ReadValue<float>(packet);
+        data.yaw = packet.read_value<float>();
+        data.pitch = packet.read_value<float>();
         data.on_ground = packet.read();
         api::protocol::on_set_player_rotation.async_notify({data, *session, session->sharedDataRef()});
     }
@@ -304,11 +304,11 @@ namespace copper_server::client_handler::play_765_release {
     void move_vehicle(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Move vehicle");
         api::protocol::data::move_vehicle data;
-        data.x = ReadValue<double>(packet);
-        data.y = ReadValue<double>(packet);
-        data.z = ReadValue<double>(packet);
-        data.yaw = ReadValue<float>(packet);
-        data.pitch = ReadValue<float>(packet);
+        data.x = packet.read_value<double>();
+        data.y = packet.read_value<double>();
+        data.z = packet.read_value<double>();
+        data.yaw = packet.read_value<float>();
+        data.pitch = packet.read_value<float>();
         api::protocol::on_move_vehicle.async_notify({data, *session, session->sharedDataRef()});
     }
 
@@ -322,12 +322,12 @@ namespace copper_server::client_handler::play_765_release {
 
     void pick_item(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Pick item");
-        api::protocol::on_pick_item_old.async_notify({{ReadVar<int32_t>(packet)}, *session, session->sharedDataRef()});
+        api::protocol::on_pick_item_old.async_notify({{packet.read_var<int32_t>()}, *session, session->sharedDataRef()});
     }
 
     base_objects::network::response ping_request(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Ping request");
-        int64_t ping = ReadValue<int64_t>(packet);
+        int64_t ping = packet.read_value<int64_t>();
         api::protocol::on_ping_request.async_notify({ping, *session, session->sharedDataRef()});
         list_array<uint8_t> result;
         result.reserve(9);
@@ -339,15 +339,15 @@ namespace copper_server::client_handler::play_765_release {
     void place_recipe(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Place recipe");
         api::protocol::data::place_recipe data;
-        data.window_id = ReadVar<int32_t>(packet);
-        data.recipe_id = registers::recipe_table.at(ReadIdentifier(packet)).id;
-        data.make_all = ReadValue<bool>(packet);
+        data.window_id = packet.read_var<int32_t>();
+        data.recipe_id = registers::recipe_table.at(packet.read_identifier()).id;
+        data.make_all = packet.read_value<bool>();
         api::protocol::on_place_recipe.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void player_abilities(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Player abilities");
-        int8_t flags = ReadValue<int8_t>(packet);
+        int8_t flags = packet.read_value<int8_t>();
         bool flying = flags & 0x02;
         api::protocol::on_player_abilities.async_notify({flags, *session, session->sharedDataRef()});
         session->sharedData().player_data.abilities.flags.flying = flying;
@@ -356,28 +356,28 @@ namespace copper_server::client_handler::play_765_release {
     void player_action(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Player action");
         api::protocol::data::player_action data;
-        data.status = ReadVar<int32_t>(packet);
-        data.location.raw = ReadValue<int64_t>(packet);
-        data.face = ReadValue<int8_t>(packet);
-        data.sequence_id = ReadVar<int32_t>(packet);
+        data.status = packet.read_var<int32_t>();
+        data.location.raw = packet.read_value<int64_t>();
+        data.face = packet.read_value<int8_t>();
+        data.sequence_id = packet.read_var<int32_t>();
         api::protocol::on_player_action.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void player_command(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Player command");
         api::protocol::data::player_command data;
-        data.entity_id = ReadVar<int32_t>(packet);
-        data.action_id = ReadVar<int32_t>(packet);
-        data.jump_boost = ReadVar<int32_t>(packet);
+        data.entity_id = packet.read_var<int32_t>();
+        data.action_id = packet.read_var<int32_t>();
+        data.jump_boost = packet.read_var<int32_t>();
         api::protocol::on_player_command.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void player_input(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Player input");
         api::protocol::data::player_input data;
-        data.sideways = ReadValue<float>(packet);
-        data.forward = ReadValue<float>(packet);
-        auto flags = ReadValue<int8_t>(packet);
+        data.sideways = packet.read_value<float>();
+        data.forward = packet.read_value<float>();
+        auto flags = packet.read_value<int8_t>();
         data.flags.jump = flags & 1;
         data.flags.sneaking = flags & 2;
         data.flags.forward = data.forward > 0;
@@ -390,82 +390,82 @@ namespace copper_server::client_handler::play_765_release {
     void change_recipe_book_settings(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Change recipe book settings");
         api::protocol::data::change_recipe_book_settings data;
-        data.book_id = ReadVar<int32_t>(packet);
-        data.book_open = ReadValue<bool>(packet);
-        data.filter_active = ReadValue<bool>(packet);
+        data.book_id = packet.read_var<int32_t>();
+        data.book_open = packet.read_value<bool>();
+        data.filter_active = packet.read_value<bool>();
         api::protocol::on_change_recipe_book_settings.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void set_seen_recipe(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Set seen recipe");
-        api::protocol::on_set_seen_recipe.async_notify({ReadIdentifier(packet), *session, session->sharedDataRef()});
+        api::protocol::on_set_seen_recipe.async_notify({packet.read_identifier(), *session, session->sharedDataRef()});
     }
 
     void rename_item(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Rename item");
-        api::protocol::on_rename_item.async_notify({ReadIdentifier(packet), *session, session->sharedDataRef()});
+        api::protocol::on_rename_item.async_notify({packet.read_identifier(), *session, session->sharedDataRef()});
     }
 
     void resource_pack_response(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Resource pack response");
         api::protocol::data::resource_pack_response data;
-        data.uuid = ReadUUID(packet);
-        data.result = ReadVar<int32_t>(packet);
+        data.uuid = packet.read_uuid();
+        data.result = packet.read_var<int32_t>();
         api::protocol::on_resource_pack_response.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void seen_advancements(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Seen advancements");
         api::protocol::data::seen_advancements data;
-        data.action = ReadVar<int32_t>(packet);
+        data.action = packet.read_var<int32_t>();
         if (data.action == 1)
-            data.tab_id = ReadIdentifier(packet);
+            data.tab_id = packet.read_identifier();
         api::protocol::on_seen_advancements.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void select_trade(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Select trade");
-        api::protocol::on_select_trade.async_notify({ReadVar<int32_t>(packet), *session, session->sharedDataRef()});
+        api::protocol::on_select_trade.async_notify({packet.read_var<int32_t>(), *session, session->sharedDataRef()});
     }
 
     void set_beacon_effect(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Set beacon effect");
         api::protocol::data::set_beacon_effect data;
-        if (ReadValue<bool>(packet))
-            data.primary_effect = ReadVar<int32_t>(packet);
-        if (ReadValue<bool>(packet))
-            data.secondary_effect = ReadVar<int32_t>(packet);
+        if (packet.read_value<bool>())
+            data.primary_effect = packet.read_var<int32_t>();
+        if (packet.read_value<bool>())
+            data.secondary_effect = packet.read_var<int32_t>();
         api::protocol::on_set_beacon_effect.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void set_held_item(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Set held item");
-        api::protocol::on_set_held_item.async_notify({ReadValue<int16_t>(packet), *session, session->sharedDataRef()});
+        api::protocol::on_set_held_item.async_notify({packet.read_value<int16_t>(), *session, session->sharedDataRef()});
     }
 
     void program_command_block(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Program command block");
         api::protocol::data::program_command_block data;
-        data.location.raw = ReadValue<int64_t>(packet);
-        data.command = ReadIdentifier(packet);
-        data.mode = ReadVar<int32_t>(packet);
-        data.flags = ReadValue<int8_t>(packet);
+        data.location.raw = packet.read_value<int64_t>();
+        data.command = packet.read_identifier();
+        data.mode = packet.read_var<int32_t>();
+        data.flags = packet.read_value<int8_t>();
         api::protocol::on_program_command_block.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void program_command_cart(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Program command block mineCart");
         api::protocol::data::program_command_cart data;
-        data.entity_id = ReadVar<int32_t>(packet);
-        data.command = ReadIdentifier(packet);
-        data.track_output = ReadValue<bool>(packet);
+        data.entity_id = packet.read_var<int32_t>();
+        data.command = packet.read_identifier();
+        data.track_output = packet.read_value<bool>();
         api::protocol::on_program_command_cart.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void set_creative_slot(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Set creative slot");
         api::protocol::data::set_creative_slot data;
-        data.slot = ReadValue<int16_t>(packet);
+        data.slot = packet.read_value<int16_t>();
         data.item = packets::release_765::reader::ReadSlot(packet);
         api::protocol::on_set_creative_slot.async_notify({data, *session, session->sharedDataRef()});
     }
@@ -473,80 +473,80 @@ namespace copper_server::client_handler::play_765_release {
     void program_jigsaw_block(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Program jigsaw block");
         api::protocol::data::program_jigsaw_block data;
-        data.location.raw = ReadValue<int64_t>(packet);
-        data.name = ReadIdentifier(packet);
-        data.target = ReadIdentifier(packet);
-        data.pool = ReadIdentifier(packet);
-        data.final_state = ReadIdentifier(packet);
-        data.joint_type = ReadIdentifier(packet);
-        data.selection_priority = ReadVar<int32_t>(packet);
-        data.placement_priority = ReadVar<int32_t>(packet);
+        data.location.raw = packet.read_value<int64_t>();
+        data.name = packet.read_identifier();
+        data.target = packet.read_identifier();
+        data.pool = packet.read_identifier();
+        data.final_state = packet.read_identifier();
+        data.joint_type = packet.read_identifier();
+        data.selection_priority = packet.read_var<int32_t>();
+        data.placement_priority = packet.read_var<int32_t>();
         api::protocol::on_program_jigsaw_block.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void program_structure_block(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Program structure block");
         api::protocol::data::program_structure_block data;
-        data.location.raw = ReadValue<int64_t>(packet);
-        data.action = ReadVar<int32_t>(packet);
-        data.mode = ReadVar<int32_t>(packet);
-        data.name = ReadIdentifier(packet);
-        data.offset_x = ReadValue<int8_t>(packet);
-        data.offset_y = ReadValue<int8_t>(packet);
-        data.offset_z = ReadValue<int8_t>(packet);
-        data.size_x = ReadVar<int8_t>(packet);
-        data.size_y = ReadVar<int8_t>(packet);
-        data.size_z = ReadVar<int8_t>(packet);
-        data.mirror = ReadVar<int32_t>(packet);
-        data.rotation = ReadVar<int32_t>(packet);
-        data.metadata = ReadString(packet, 128);
-        data.integrity = ReadValue<float>(packet);
-        data.seed = ReadValue<int64_t>(packet);
-        data.flags = ReadValue<int8_t>(packet);
+        data.location.raw = packet.read_value<int64_t>();
+        data.action = packet.read_var<int32_t>();
+        data.mode = packet.read_var<int32_t>();
+        data.name = packet.read_identifier();
+        data.offset_x = packet.read_value<int8_t>();
+        data.offset_y = packet.read_value<int8_t>();
+        data.offset_z = packet.read_value<int8_t>();
+        data.size_x = packet.read_var<int8_t>();
+        data.size_y = packet.read_var<int8_t>();
+        data.size_z = packet.read_var<int8_t>();
+        data.mirror = packet.read_var<int32_t>();
+        data.rotation = packet.read_var<int32_t>();
+        data.metadata = packet.read_string(128);
+        data.integrity = packet.read_value<float>();
+        data.seed = packet.read_value<int64_t>();
+        data.flags = packet.read_value<int8_t>();
         api::protocol::on_program_structure_block.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void update_sign(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Update sign");
         api::protocol::data::update_sign data;
-        data.location.raw = ReadValue<int64_t>(packet);
-        data.is_front_text = ReadValue<bool>(packet);
-        data.line1 = ReadString(packet, 384);
-        data.line2 = ReadString(packet, 384);
-        data.line3 = ReadString(packet, 384);
-        data.line4 = ReadString(packet, 384);
+        data.location.raw = packet.read_value<int64_t>();
+        data.is_front_text = packet.read_value<bool>();
+        data.line1 = packet.read_string(384);
+        data.line2 = packet.read_string(384);
+        data.line3 = packet.read_string(384);
+        data.line4 = packet.read_string(384);
         api::protocol::on_update_sign.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void swing_arm(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Swing arm");
-        api::protocol::on_swing_arm.async_notify({{ReadVar<int32_t>(packet)}, *session, session->sharedDataRef()});
+        api::protocol::on_swing_arm.async_notify({{packet.read_var<int32_t>()}, *session, session->sharedDataRef()});
     }
 
     void spectator_teleport(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Spectator request to teleport");
-        api::protocol::on_spectator_teleport.async_notify({{ReadUUID(packet)}, *session, session->sharedDataRef()});
+        api::protocol::on_spectator_teleport.async_notify({{packet.read_uuid()}, *session, session->sharedDataRef()});
     }
 
     void use_item_on(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Use item on");
         api::protocol::data::use_item_on data;
-        data.hand = ReadVar<int32_t>(packet);
-        data.location.raw = ReadValue<int64_t>(packet);
-        data.face = ReadVar<int32_t>(packet);
-        data.cursor_x = ReadValue<float>(packet);
-        data.cursor_y = ReadValue<float>(packet);
-        data.cursor_z = ReadValue<float>(packet);
-        data.inside_block = ReadValue<bool>(packet);
-        data.sequence = ReadVar<int32_t>(packet);
+        data.hand = packet.read_var<int32_t>();
+        data.location.raw = packet.read_value<int64_t>();
+        data.face = packet.read_var<int32_t>();
+        data.cursor_x = packet.read_value<float>();
+        data.cursor_y = packet.read_value<float>();
+        data.cursor_z = packet.read_value<float>();
+        data.inside_block = packet.read_value<bool>();
+        data.sequence = packet.read_var<int32_t>();
         api::protocol::on_use_item_on.async_notify({data, *session, session->sharedDataRef()});
     }
 
     void use_item(base_objects::network::tcp_session* session, ArrayStream& packet) {
         log::debug("play", "Use item");
         api::protocol::data::use_item data;
-        data.hand = ReadVar<int32_t>(packet);
-        data.sequence = ReadVar<int32_t>(packet);
+        data.hand = packet.read_var<int32_t>();
+        data.sequence = packet.read_var<int32_t>();
         api::protocol::on_use_item.async_notify({data, *session, session->sharedDataRef()});
     }
 }

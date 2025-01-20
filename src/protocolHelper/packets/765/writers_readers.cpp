@@ -317,7 +317,7 @@ namespace copper_server::packets::release_765::reader {
 
     base_objects::slot ReadSlotItem(ArrayStream& data, int16_t protocol) {
         slot_data_old old_slot;
-        old_slot.id = ReadVar<int32_t>(data);
+        old_slot.id = data.read_var<int32_t>();
         old_slot.count = data.read();
         if (data.peek() == 0) {
             size_t readed = 0;

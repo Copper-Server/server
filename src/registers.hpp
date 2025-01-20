@@ -22,6 +22,18 @@ namespace copper_server {
         struct IntegerDistribution {
             std::string type;
             enbt::value value;
+
+            enbt::compound get_enbt() const {
+                enbt::compound distribution;
+                if (value.is_compound()) {
+                    distribution = value;
+                    distribution["type"] = type;
+                } else {
+                    distribution["type"] = type;
+                    distribution["value"] = value;
+                }
+                return distribution;
+            }
         };
 
         struct Advancement {
@@ -95,7 +107,7 @@ namespace copper_server {
             struct MoodSound {
                 std::string sound;
                 int32_t tick_delay = 6000;
-                int32_t block_search_extend = 8;
+                int32_t block_search_extent = 8;
                 double offset = 2.0;
             };
 
@@ -261,6 +273,8 @@ namespace copper_server {
         };
 
         struct PaintingVariant {
+            Chat title;
+            Chat author;
             std::string asset_id;
             uint32_t height;
             uint32_t width;

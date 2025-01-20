@@ -2,16 +2,22 @@
 #define SRC_PLUGIN_REGISTRATION
 #include <library/list_array.hpp>
 #include <memory>
-#include <src/base_objects/commands.hpp>
+#include <src/base_objects/data_packs/known_pack.hpp>
 #include <src/base_objects/events/event.hpp>
 #include <src/base_objects/network/response.hpp>
-#include <src/base_objects/server_configuaration.hpp>
-#include <src/base_objects/shared_client_data.hpp>
 #include <string>
 #include <variant>
 #include <vector>
 
 namespace copper_server {
+    namespace base_objects {
+        class command_root_browser;
+        struct SharedClientData;
+        template <typename T>
+        class atomic_holder;
+        using client_data_holder = atomic_holder<SharedClientData>;
+    }
+
     class PluginRegistration {
         struct event_auto_cleanup_t {
             base_objects::events::base_event* event_obj;
@@ -88,7 +94,7 @@ namespace copper_server {
 
         virtual void OnCommandsLoadComplete(const std::shared_ptr<PluginRegistration>&, base_objects::command_root_browser&) {}
 
-        virtual void OnConfigReload(const std::shared_ptr<PluginRegistration>&, const base_objects::ServerConfiguration&) {}
+        virtual void OnConfigReload(const std::shared_ptr<PluginRegistration>&) {}
 
 #pragma endregion
 
@@ -96,6 +102,10 @@ namespace copper_server {
 
         //custom plugin handling
         virtual plugin_response_login OnLoginHandle(const std::shared_ptr<PluginRegistration>& self, const std::string& chanel, const list_array<uint8_t>& data, bool successful, base_objects::client_data_holder& client) {
+            return false;
+        }
+
+        virtual plugin_response_login OnLoginStart(const std::shared_ptr<PluginRegistration>& self, const std::string& chanel, base_objects::client_data_holder& client) {
             return false;
         }
 
@@ -116,7 +126,7 @@ namespace copper_server {
             return std::nullopt;
         }
 
-        virtual plugin_response OnConfiguration_gotKnownPacks(base_objects::client_data_holder&, const list_array<base_objects::packets::known_pack>& known_packs) {
+        virtual plugin_response OnConfiguration_gotKnownPacks(base_objects::client_data_holder&, const list_array<base_objects::data_packs::known_pack>& known_packs) {
             return std::nullopt;
         }
 
@@ -133,7 +143,15 @@ namespace copper_server {
             return std::nullopt;
         }
 
+        virtual plugin_response OnPlay_initialize_compatible(base_objects::client_data_holder& client) {
+            return std::nullopt;
+        }
+
         virtual plugin_response OnPlay_uninitialized(base_objects::client_data_holder& client) {
+            return std::nullopt;
+        }
+
+        virtual plugin_response OnPlay_uninitialized_compatible(base_objects::client_data_holder& client) {
             return std::nullopt;
         }
 

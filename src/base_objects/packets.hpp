@@ -356,11 +356,6 @@ namespace copper_server::base_objects::packets {
         list_array<entry> tags;
     };
 
-    struct known_pack {
-        std::string namespace_;
-        std::string id;
-        std::string version;
-    };
 
     struct server_link {
         enum class label_type {
@@ -404,5 +399,6 @@ namespace copper_server::base_objects::packets {
     };
 
     int32_t java_name_to_protocol(const std::string& name_or_number);
+    const char* protocol_to_java_name(int32_t id);
 }
 #endif /* SRC_BASE_OBJECTS_PACKETS */

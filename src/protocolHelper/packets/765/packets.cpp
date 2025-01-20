@@ -11,19 +11,18 @@
 namespace copper_server::packets::release_765 {
     namespace login {
         base_objects::network::response login(int32_t plugin_message_id, const std::string& chanel, const list_array<uint8_t>& data) {
-            list_array<uint8_t> packet;
-            packet.reserve(1 + 4 + 1 + data.size());
-            packet.push_back(0x04);
-            WriteVar<int32_t>(plugin_message_id, packet);
-            WriteIdentifier(packet, chanel);
-            packet.push_back(data);
-            return base_objects::network::response::answer({std::move(packet)});
+            base_objects::network::response::item packet;
+            packet.write_id(0x04);
+            packet.write_var32(plugin_message_id);
+            packet.write_identifier(chanel);
+            packet.write_direct(data);
+            return packet;
         }
 
         base_objects::network::response kick(const Chat& reason) {
-            list_array<uint8_t> packet;
-            packet.push_back(0x00);
-            WriteIdentifier(packet, reason.ToStr());
+            base_objects::network::response::item packet;
+            packet.write_id(0x00);
+            packet.write_direct(reason.ToTextComponent());
             return base_objects::network::response::disconnect({std::move(packet)});
         }
 
@@ -94,7 +93,9 @@ namespace copper_server::packets::release_765 {
         }
 
         base_objects::network::response finish() {
-            return base_objects::network::response::answer({{2}});
+            list_array<uint8_t> packet;
+            packet.push_back(0x02);
+            return base_objects::network::response::answer({std::move(packet)});
         }
 
         base_objects::network::response keep_alive(int64_t keep_alive_packet) {
@@ -217,7 +218,7 @@ namespace copper_server::packets::release_765 {
                                     enbt::compound mood_sound;
                                     mood_sound["sound"] = it.effects.mood_sound->sound;
                                     mood_sound["tick_delay"] = it.effects.mood_sound->tick_delay;
-                                    mood_sound["block_search_extend"] = it.effects.mood_sound->block_search_extend;
+                                    mood_sound["block_search_extent"] = it.effects.mood_sound->block_search_extent;
                                     mood_sound["offset"] = it.effects.mood_sound->offset;
                                     effects["mood_sound"] = std::move(mood_sound);
                                 }
@@ -380,13 +381,8 @@ namespace copper_server::packets::release_765 {
                             enbt::compound element;
                             if (std::holds_alternative<int32_t>(it.monster_spawn_light_level))
                                 element["monster_spawn_light_level"] = std::get<int32_t>(it.monster_spawn_light_level);
-                            else {
-                                enbt::compound distribution;
-                                auto& ddd = std::get<IntegerDistribution>(it.monster_spawn_light_level);
-                                distribution["type"] = ddd.type;
-                                distribution["value"] = ddd.value;
-                                element["monster_spawn_light_level"] = std::move(distribution);
-                            }
+                            else
+                                element["monster_spawn_light_level"] = std::get<IntegerDistribution>(it.monster_spawn_light_level).get_enbt();
                             if (it.fixed_time)
                                 element["fixed_time"] = it.fixed_time.value();
                             element["infiniburn"] = it.infiniburn;
@@ -578,7 +574,7 @@ namespace copper_server::packets::release_765 {
             list_array<uint8_t> packet;
             packet.reserve(5);
             packet.push_back(0x05);
-            WriteVar<int32_t>(client.packets_state.current_block_sequence_id, packet);
+            WriteVar<int32_t>(client.packets_state.play_data->current_block_sequence_id, packet);
             return base_objects::network::response::answer({std::move(packet)});
         }
 

@@ -41,18 +41,18 @@ namespace copper_server {
         }
         data.read(); //skip protocol version
 
-        int32_t protocol_version = ReadVar<int32_t>(data);
+        int32_t protocol_version = data.read_var<int32_t>();
         session->protocol_version = protocol_version;
 
         if (!AllowProtocolVersion(protocol_version))
             return base_objects::network::response::disconnect();
 
 
-        std::string server_address = ReadString(data, 255);
-        if (!AllowServerAddressAndPort(server_address, readValue<uint16_t>(data)))
+        std::string server_address = data.read_string();
+        if (!AllowServerAddressAndPort(server_address, data.read_value<uint16_t>()))
             return base_objects::network::response::disconnect();
 
-        switch (ReadVar<int32_t>(data)) {
+        switch (data.read_var<int32_t>()) {
         case 1: //status
             log::debug("Handshaking", "Switch to status");
             next_handler = new tcp_client_handle_status(session);

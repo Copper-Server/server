@@ -2,6 +2,8 @@
 #define SRC_RESOURCES_REGISTERS
 #include <boost/json/value.hpp>
 #include <filesystem>
+#include <library/list_array.hpp>
+#include <src/base_objects/data_packs/known_pack.hpp>
 
 namespace copper_server::resources {
     void initialize_entities();
@@ -16,6 +18,7 @@ namespace copper_server::resources {
     void process_pack(const std::filesystem::path& folder_path_to_data_without_namespace, const std::string& namespace_);
     void process_pack(boost::json::object& memory, const std::string& namespace_);
 
+    list_array<base_objects::data_packs::known_pack> loaded_packs();
     //Accepts types:
     // advancement,
     // banner_pattern,

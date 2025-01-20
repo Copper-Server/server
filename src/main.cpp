@@ -61,7 +61,7 @@ int main() {
             api::configuration::get().server.ssl_key_length
         );
 
-        log::disable_log_level(log::level::debug);
+        //log::disable_log_level(log::level::debug);
         special_handshake = new SpecialPluginHandshake();
         special_status = new build_in_plugins::special::Status();
         api::network::register_tcp_handler(new tcp_client_handle_handshaking());

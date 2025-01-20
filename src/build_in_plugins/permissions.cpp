@@ -2,6 +2,7 @@
 #include <src/api/internal/permissions.hpp>
 #include <src/api/permissions.hpp>
 #include <src/api/players.hpp>
+#include <src/base_objects/commands.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/build_in_plugins/permissions.hpp>
 #include <src/log.hpp>

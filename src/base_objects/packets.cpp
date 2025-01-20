@@ -25,4 +25,15 @@ namespace copper_server::base_objects::packets {
         };
         return map.at(name_or_number);
     }
+
+    const char* protocol_to_java_name(int32_t id) {
+        static const std::unordered_map<int32_t, const char*> map{
+            {765, "1.20.4"},
+            {766, "1.20.6"},
+            {767, "1.21"},
+            {768, "1.21.2"},
+            {769, "1.21.4"},
+        };
+        return map.at(id);
+    }
 }

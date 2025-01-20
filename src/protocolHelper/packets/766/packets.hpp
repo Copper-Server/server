@@ -3,6 +3,7 @@
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/chat.hpp>
 #include <src/base_objects/chunk.hpp>
+#include <src/base_objects/data_packs/known_pack.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/base_objects/network/response.hpp>
 #include <src/base_objects/packets.hpp>
@@ -309,7 +310,7 @@ namespace copper_server {
 
             base_objects::network::response updateTags(const list_array<base_objects::packets::tag_mapping>& tags_entries);
 
-            base_objects::network::response knownPacks(const list_array<base_objects::packets::known_pack>& packs);
+            base_objects::network::response knownPacks(const list_array<base_objects::data_packs::known_pack>& packs);
         }
 
         namespace play {

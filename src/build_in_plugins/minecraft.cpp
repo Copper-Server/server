@@ -24,7 +24,7 @@ namespace copper_server::build_in_plugins {
     MinecraftPlugin::plugin_response MinecraftPlugin::OnConfigurationHandle(const PluginRegistrationPtr& self, const std::string& chanel, const list_array<uint8_t>& data, base_objects::client_data_holder& client) {
         if (chanel == "minecraft:brand") {
             ArrayStream stream(data.data(), data.size());
-            int32_t len = ReadVar<int32_t>(stream);
+            int32_t len = stream.read_var<int32_t>();
             std::string brand((char*)stream.data_read(), len);
             stream.r += len;
             client->client_brand = brand;

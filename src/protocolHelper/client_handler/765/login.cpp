@@ -96,7 +96,7 @@ namespace copper_server::client_handler::release_765 {
         case 0: { //login start
 
             log::debug("login", "login start");
-            std::string nickname = ReadString(data, 16);
+            std::string nickname = data.read_string(16);
             auto player = api::players::get_player(nickname);
             if (api::players::has_player(nickname)) {
                 if (api::configuration::get().protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::prevent_join)
@@ -123,15 +123,15 @@ namespace copper_server::client_handler::release_765 {
         }
         case 1: { //encryption response
             log::debug("login", "encryption response");
-            int32_t shared_secret_size = ReadVar<int32_t>(data);
+            int32_t shared_secret_size = data.read_var<int32_t>();
             list_array<uint8_t> shared_secret = data.range_read(shared_secret_size).to_vector();
-            int32_t verify_token_size = ReadVar<int32_t>(data);
+            int32_t verify_token_size = data.read_var<int32_t>();
             list_array<uint8_t> verify_token = data.range_read(verify_token_size).to_vector();
 
             if (!base_objects::network::tcp_server::instance().decrypt_data(verify_token)) {
                 log::error("login", "invalid verify token");
                 return packets::release_765::login::kick("Invalid verify token");
-            }
+                       }
 
             if (memcmp(verify_token.data(), this->verify_token, 4)) {
                 log::error("login", "invalid verify token");
@@ -158,7 +158,7 @@ namespace copper_server::client_handler::release_765 {
         }
         case 2: { //login plugin response
             log::debug("login", "login plugin response");
-            int32_t message_id = ReadVar<int32_t>(data);
+            int32_t message_id = data.read_var<int32_t>();
             bool successful = data.read();
             if (message_id != plugin_message_id)
                 log::debug("login", "invalid plugin message id");

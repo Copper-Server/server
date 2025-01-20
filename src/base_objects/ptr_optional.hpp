@@ -10,7 +10,13 @@ namespace copper_server::base_objects {
 
     public:
         ptr_optional()
-            : data() {}
+            : data(nullptr) {}
+
+        ptr_optional(const T& data)
+            : data(new T(data)) {}
+
+        ptr_optional(T&& data)
+            : data(new T(std::move(data))) {}
 
         ptr_optional(T* data)
             : data(data) {}
@@ -18,6 +24,8 @@ namespace copper_server::base_objects {
         ptr_optional(const ptr_optional& other) {
             if (other.data)
                 data = new T(*other.data);
+            else
+                data = nullptr;
         }
 
         ptr_optional(ptr_optional&& other) {
@@ -41,6 +49,8 @@ namespace copper_server::base_objects {
                 delete data;
             if (other.data)
                 data = new T(*other.data);
+            else
+                data = nullptr;
             return *this;
         }
 
@@ -97,6 +107,12 @@ namespace copper_server::base_objects {
 
         bool operator!() const {
             return data == nullptr;
+        }
+
+        void reset() {
+            if (data)
+                delete data;
+            data = nullptr;
         }
     };
 }

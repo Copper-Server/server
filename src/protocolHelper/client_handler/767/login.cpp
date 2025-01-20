@@ -96,7 +96,7 @@ namespace copper_server::client_handler::release_767 {
         switch (packet_id) {
         case 0: { //login start
             log::debug("login", "login start");
-            std::string nickname = ReadString(packet, 16);
+            std::string nickname = packet.read_string(16);
             auto player = api::players::get_player(nickname);
             if (api::players::has_player(nickname)) {
                 if (api::configuration::get().protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::prevent_join)
@@ -124,9 +124,9 @@ namespace copper_server::client_handler::release_767 {
         }
         case 1: { //encryption response
             log::debug("login", "encryption response");
-            int32_t shared_secret_size = ReadVar<int32_t>(packet);
+            int32_t shared_secret_size = packet.read_var<int32_t>();
             list_array<uint8_t> shared_secret = packet.range_read(shared_secret_size).to_vector();
-            int32_t verify_token_size = ReadVar<int32_t>(packet);
+            int32_t verify_token_size = packet.read_var<int32_t>();
             list_array<uint8_t> verify_token = packet.range_read(verify_token_size).to_vector();
 
             if (!base_objects::network::tcp_server::instance().decrypt_data(verify_token)) {
@@ -168,7 +168,7 @@ namespace copper_server::client_handler::release_767 {
         }
         case 2: { //login plugin response
             log::debug("login", "login plugin response");
-            int32_t message_id = ReadVar<int32_t>(packet);
+            int32_t message_id = packet.read_var<int32_t>();
             bool successful = packet.read();
             if (message_id != plugin_message_id)
                 log::debug("login", "invalid plugin message id");
@@ -188,9 +188,9 @@ namespace copper_server::client_handler::release_767 {
             return base_objects::network::response::empty();
         case 4: { //from 767 Cookie response
             api::protocol::data::cookie_response data;
-            data.key = ReadIdentifier(packet);
+            data.key = packet.read_identifier();
             if (packet.read())
-                data.payload = ReadArray<uint8_t>(packet, 5120);
+                data.payload = packet.read_array<uint8_t>(5120);
             api::protocol::on_cookie_response.async_notify({data, *session, session->sharedDataRef()});
             break;
         }

@@ -1,3 +1,4 @@
+#include <src/base_objects/data_packs/known_pack.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/protocolHelper/packets/765/packets.hpp>
 #include <src/protocolHelper/packets/766/packets.hpp>
@@ -414,7 +415,7 @@ namespace copper_server {
                 return selectors::configuration::updateTags.call(client, tags_entries);
             }
 
-            base_objects::network::response knownPacks(base_objects::SharedClientData& client, const list_array<base_objects::packets::known_pack>& packs) {
+            base_objects::network::response knownPacks(base_objects::SharedClientData& client, const list_array<base_objects::data_packs::known_pack>& packs) {
                 return selectors::configuration::knownPacks.call(client, packs);
             }
 
@@ -729,8 +730,8 @@ namespace copper_server {
             }
 
             base_objects::network::response synchronizePlayerPosition(base_objects::SharedClientData& client, util::VECTOR pos, float yaw, float pitch, uint8_t flags) {
-                auto id = client.packets_state.teleport_id_sequence++;
-                client.packets_state.pending_teleport_ids.push_back(id);
+                auto id = client.packets_state.play_data->teleport_id_sequence++;
+                client.packets_state.play_data->pending_teleport_ids.push_back(id);
                 return selectors::play::synchronizePlayerPosition.call(client, pos, yaw, pitch, flags, id);
             }
 

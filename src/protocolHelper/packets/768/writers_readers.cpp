@@ -820,122 +820,120 @@ namespace copper_server::packets::release_768::reader {
         }
 
         slot_component::unified decode(ArrayStream& data) {
-            switch (ReadVar<int32_t>(data)) {
+            switch (data.read_var<int32_t>()) {
             case 0: {
                 slot_component::custom_data res;
                 res.value = ReadNBT(data).get_as_enbt();
                 return res;
             }
             case 1:
-                return slot_component::max_stack_size{.value = (uint8_t)ReadVar<int32_t>(data)};
+                return slot_component::max_stack_size{.value = (uint8_t)data.read_var<int32_t>()};
             case 2:
-                return slot_component::max_damage{.value = ReadVar<int32_t>(data)};
+                return slot_component::max_damage{.value = data.read_var<int32_t>()};
             case 3:
-                return slot_component::damage{.value = ReadVar<int32_t>(data)};
+                return slot_component::damage{.value = data.read_var<int32_t>()};
             case 4:
-                return slot_component::unbreakable{.value = ReadValue<bool>(data)};
+                return slot_component::unbreakable{.value = data.read_value<bool>()};
             case 5:
                 return slot_component::custom_name{.value = Chat::fromEnbt(ReadNBT(data).get_as_enbt())};
             case 6:
                 return slot_component::item_name{.value = Chat::fromEnbt(ReadNBT(data).get_as_enbt())};
             case 8: {
                 slot_component::lore res;
-                int32_t count = ReadVar<int32_t>(data);
+                int32_t count = data.read_var<int32_t>();
                 res.value.reserve(count);
                 for (int32_t i = 0; i < count; i++)
                     res.value.push_back(Chat::fromEnbt(ReadNBT(data).get_as_enbt()));
                 return res;
             }
             case 9:
-                return slot_component::rarity{(slot_component::rarity)ReadVar<int32_t>(data)};
+                return slot_component::rarity{(slot_component::rarity)data.read_var<int32_t>()};
             case 10: {
                 slot_component::enchantments res;
-                int32_t count = ReadVar<int32_t>(data);
+                int32_t count = data.read_var<int32_t>();
                 res.enchants.reserve(count);
                 for (int32_t i = 0; i < count; i++) {
-                    int32_t id = ReadVar<int32_t>(data);
-                    int32_t lvl = ReadVar<int32_t>(data);
+                    int32_t id = data.read_var<int32_t>();
+                    int32_t lvl = data.read_var<int32_t>();
                     res.enchants.push_back(
                         {registers::enchantments.at(registers::view_reg_pro_name("minecraft:enchantment", id, 768)).id, lvl}
                     );
                 }
-                res.show_in_tooltip = ReadValue<bool>(data);
+                res.show_in_tooltip = data.read_value<bool>();
                 return res;
-            }
-            case 11: {
-                slot_component::can_place_on res;
-                int32_t count = ReadVar<int32_t>(data);
-                res.predicates.reserve(count);
-                for (int32_t i = 0; i < count; i++)
-                    ;
-                //res.predicates.push_back(ReadNBT(data).get_as_enbt()); TODO
-                res.show_in_tooltip = ReadValue<bool>(data);
-                return res;
-            }
-            case 12: {
-                slot_component::can_break res;
-                int32_t count = ReadVar<int32_t>(data);
-                res.predicates.reserve(count);
-                for (int32_t i = 0; i < count; i++)
-                    ;
-                //res.predicates.push_back(ReadNBT(data).get_as_enbt()); TODO
-                res.show_in_tooltip = ReadValue<bool>(data);
-                return res;
-            }
-            case 13: {
-                slot_component::attribute_modifiers res;
-                int32_t count = ReadVar<int32_t>(data);
-                res.attributes.reserve(count);
-                for (int32_t i = 0; i < count; i++) {
-                    item_attribute attribute;
-                    attribute.type = registers::view_reg_pro_name("minecraft:attribute", ReadVar<int32_t>(data), 768);
-                    ReadUUID(data); //ignore UUID
-                    attribute.id = ReadString(data);
-                    attribute.amount = ReadValue<double>(data);
-                    attribute.operation = (item_attribute::operation_e)ReadVar<int32_t>(data);
-                    attribute.slot = (item_attribute::slot_filter)ReadVar<int32_t>(data);
-                    res.attributes.push_back(attribute);
                 }
-                res.show_in_tooltip = ReadValue<bool>(data);
-                return res;
-            }
-            case 14:
-                return slot_component::custom_model_data{.value = ReadVar<int32_t>(data)};
-            case 15:
-                return slot_component::hide_additional_tooltip{};
-            case 16:
-                return slot_component::hide_tooltip{};
-            case 17: {
-                slot_component::repair_cost res;
-                res.value = ReadVar<int32_t>(data);
-                return res;
-            }
-            case 18:
-                return slot_component::creative_slot_lock{};
-            case 19:
-                return slot_component::enchantment_glint_override{.has_glint = ReadVar<int32_t>(data)};
-            case 20:
-                return slot_component::intangible_projectile{};
-            case 21: {
-                slot_component::food res;
-                res.nutrition = ReadVar<int32_t>(data);
-                res.saturation = ReadValue<float>(data);
-                res.can_always_eat = ReadValue<bool>(data);
-                return res;
-            }
-            case 22: {
-                slot_component::consumable res;
-                //TODO
-                return res;
-            }
-            case 25:
-                return slot_component::damage_resistant{.types = ReadIdentifier(data)};
-                //TODO
-            case 23:
-            case 24:
-            default:
-                throw std::runtime_error("Undefined component id");
-            }
+                case 11: {
+                    slot_component::can_place_on res;
+                    int32_t count = data.read_var<int32_t>();
+                    res.predicates.reserve(count);
+                    for (int32_t i = 0; i < count; i++)
+                        //res.predicates.push_back(ReadNBT(data).get_as_enbt()); TODO
+                        res.show_in_tooltip = data.read_value<bool>();
+                    return res;
+                }
+                case 12: {
+                    slot_component::can_break res;
+                    int32_t count = data.read_var<int32_t>();
+                    res.predicates.reserve(count);
+                    for (int32_t i = 0; i < count; i++)
+                        //res.predicates.push_back(ReadNBT(data).get_as_enbt()); TODO
+                        res.show_in_tooltip = data.read_value<bool>();
+                    return res;
+                }
+                case 13: {
+                    slot_component::attribute_modifiers res;
+                    int32_t count = data.read_var<int32_t>();
+                    res.attributes.reserve(count);
+                    for (int32_t i = 0; i < count; i++) {
+                        item_attribute attribute;
+                        attribute.type = registers::view_reg_pro_name("minecraft:attribute", data.read_var<int32_t>(), 768);
+                        data.read_uuid(); //ignore UUID
+                        attribute.id = data.read_string();
+                        attribute.amount = data.read_value<double>();
+                        attribute.operation = (item_attribute::operation_e)data.read_var<int32_t>();
+                        attribute.slot = (item_attribute::slot_filter)data.read_var<int32_t>();
+                        res.attributes.push_back(attribute);
+                    }
+                    res.show_in_tooltip = data.read_value<bool>();
+                    return res;
+                }
+                case 14:
+                    return slot_component::custom_model_data{.value = data.read_var<int32_t>()};
+                case 15:
+                    return slot_component::hide_additional_tooltip{};
+                case 16:
+                    return slot_component::hide_tooltip{};
+                case 17: {
+                    slot_component::repair_cost res;
+                    res.value = data.read_var<int32_t>();
+                    return res;
+                }
+                case 18:
+                    return slot_component::creative_slot_lock{};
+                case 19:
+                    return slot_component::enchantment_glint_override{.has_glint = data.read_var<int32_t>()};
+                case 20:
+                    return slot_component::intangible_projectile{};
+                case 21: {
+                    slot_component::food res;
+                    res.nutrition = data.read_var<int32_t>();
+                    res.saturation = data.read_value<float>();
+                    res.can_always_eat = data.read_value<bool>();
+                    return res;
+                }
+                case 22: {
+                    slot_component::consumable res;
+                    //TODO
+                    return res;
+                }
+                case 25:
+                    return slot_component::damage_resistant{.types = data.read_identifier()};
+                    //TODO
+                case 23:
+                case 24:
+                default:
+                    throw std::runtime_error("Undefined component id");
+                }
         }
     }
 
@@ -1101,17 +1099,17 @@ namespace copper_server::packets::release_768::reader {
     }
 
     base_objects::slot ReadSlot(ArrayStream& data, int16_t protocol) {
-        int32_t item_count = ReadVar<int32_t>(data);
+        int32_t item_count = data.read_var<int32_t>();
         if (!item_count)
             return std::nullopt;
-        int32_t item_id = ReadVar<int32_t>(data);
+        int32_t item_id = data.read_var<int32_t>();
         base_objects::slot_data item = base_objects::slot_data::create_item(item_id);
-        int32_t num_to_add = ReadVar<int32_t>(data);
-        int32_t num_to_remove = ReadVar<int32_t>(data);
+        int32_t num_to_add = data.read_var<int32_t>();
+        int32_t num_to_remove = data.read_var<int32_t>();
         for (int32_t i = 0; i < num_to_add; i++)
             item.add_component(slot_component_decoder::decode(data));
         for (int32_t i = 0; i < num_to_remove; i++)
-            slot_component_decoder::variants(ReadVar<int32_t>(data)).for_each([&](auto& it) {
+            slot_component_decoder::variants(data.read_var<int32_t>()).for_each([&](auto& it) {
                 item.remove_component(it);
             });
         return item;

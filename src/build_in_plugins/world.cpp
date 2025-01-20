@@ -5,6 +5,7 @@
 #include <src/api/players.hpp>
 #include <src/api/protocol.hpp>
 #include <src/api/world.hpp>
+#include <src/base_objects/commands.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/build_in_plugins/world.hpp>

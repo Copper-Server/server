@@ -5,7 +5,6 @@
 namespace copper_server::client_handler::release_768 {
     class handle_play : public tcp_client_handle {
         std::list<base_objects::network::plugin_response> queriedPackets;
-        int64_t keep_alive_packet = 0;
         int32_t excepted_pong = 0;
         std::chrono::time_point<std::chrono::system_clock> pong_timer;
 

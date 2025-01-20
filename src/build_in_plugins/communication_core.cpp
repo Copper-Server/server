@@ -1,6 +1,7 @@
 #include <library/list_array.hpp>
 #include <src/api/players.hpp>
 #include <src/api/protocol.hpp>
+#include <src/base_objects/commands.hpp>
 #include <src/build_in_plugins/communication_core.hpp>
 #include <src/log.hpp>
 #include <src/protocolHelper/packets.hpp>

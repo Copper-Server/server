@@ -55,7 +55,7 @@ namespace copper_server {
         send_keep_alive_timer.cancel();
     }
 
-    void keep_alive_solution::set_callback(const std::function<base_objects::network::response()>& fun) {
+    void keep_alive_solution::set_callback(const std::function<base_objects::network::response(int64_t)>& fun) {
         callback = fun;
         _keep_alive_request();
         need_to_send = true;
@@ -72,19 +72,26 @@ namespace copper_server {
         if (!callback || !need_to_send)
             return {};
         _keep_alive_sended();
-        return callback();
+        return callback(last_keep_alive.time_since_epoch().count());
     }
 
-    std::chrono::system_clock::duration keep_alive_solution::got_valid_keep_alive() {
+    std::chrono::system_clock::duration keep_alive_solution::got_valid_keep_alive(int64_t check) {
         got_keep_alive = true;
         timeout_timer.cancel();
+        if (check != last_keep_alive.time_since_epoch().count())
+            throw std::runtime_error("got invalid keep alive packet");
         return last_keep_alive - std::chrono::system_clock::now();
+    }
+
+    void keep_alive_solution::ignore_keep_alive() {
+        got_keep_alive = true;
+        timeout_timer.cancel();
     }
 
     base_objects::network::response keep_alive_solution::no_response() {
         if (got_keep_alive && callback) {
             _keep_alive_sended();
-            return callback();
+            return callback(last_keep_alive.time_since_epoch().count());
         } else
             return {};
     }
@@ -137,7 +144,7 @@ namespace copper_server {
         if (session->compression_threshold == -1) {
             return packet.to_vector();
         } else {
-            int32_t uncompressed_packet_len = ReadVar<int32_t>(packet);
+            int32_t uncompressed_packet_len = packet.read_var<int32_t>();
 
             list_array<uint8_t> compressed_packet;
             z_stream stream;
@@ -243,7 +250,7 @@ namespace copper_server {
         size_t valid_till = 0;
 
         while (!data.empty()) {
-            int32_t packet_len = ReadVar<int32_t>(data);
+            int32_t packet_len = data.read_var<int32_t>();
             if (!data.can_read(packet_len)) {
                 if (packet_len > max_packet_size)
                     return too_large_packet();
@@ -298,11 +305,7 @@ namespace copper_server {
     base_objects::network::response tcp_client_handle::on_switch() {
         base_objects::network::response res;
         try {
-            auto res = on_switching();
-            if (!res.data.empty()) {
-                return res;
-            } else if (res.do_disconnect)
-                return res;
+            res = on_switching();
         } catch (const std::exception& ex) {
             res = exception(ex);
         } catch (...) {

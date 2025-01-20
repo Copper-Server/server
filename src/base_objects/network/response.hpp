@@ -18,6 +18,10 @@ namespace copper_server::base_objects::network {
             item(const list_array<uint8_t>& data, int32_t compression_threshold = -1, bool apply_compression = false);
             item(list_array<uint8_t>&& data, int32_t compression_threshold = -1, bool apply_compression = false);
 
+
+            //same as write_value(uint8_t)
+            void write_id(uint8_t id);
+
             void write_value(const enbt::raw_uuid& val);
             void write_value(int8_t flo);
             void write_value(int16_t flo);
@@ -36,6 +40,9 @@ namespace copper_server::base_objects::network {
             void write_string(const std::string& str, int32_t max_string_len = INT32_MAX);
             void write_identifier(const std::string& str);
             void write_json_component(const std::string& str);
+            void write_direct(const list_array<uint8_t>& data);
+            void write_direct(list_array<uint8_t>&& data);
+            void write_direct(const uint8_t* data, size_t size);
 
             template <class T>
             void write_var32_check(T value) {
@@ -54,17 +61,18 @@ namespace copper_server::base_objects::network {
             }
 
             template <class ArrayT>
-            void WriteArray(list_array<uint8_t>& data, const ArrayT& arr) {
-                WriteVar<int32_t>(arr.size(), data);
+            void write_array(const ArrayT& arr) {
+                write_var32_check(arr.size());
                 if constexpr (std::is_same_v<ArrayT, list_array<uint8_t>>)
                     data.push_back(arr);
                 else
                     for (auto& it : arr)
-                        WriteValue<ArrayT>(it, data);
+                        write_value(it);
             }
         };
 
         response();
+        response(const item& move);
         response(item&& move);
         response(response&& move);
         response(const response& copy);
@@ -78,12 +86,12 @@ namespace copper_server::base_objects::network {
         size_t valid_till = 0;
 
         static response enable_compress_answer(const list_array<uint8_t>& data, int32_t compression_threshold, size_t valid_till = 0);
-        static response answer(const list_array<list_array<uint8_t>>& data, size_t valid_till = 0);
-        static response answer(list_array<list_array<uint8_t>>&& data, size_t valid_till = 0);
+        static response answer(const list_array<item>& data, size_t valid_till = 0);
+        static response answer(list_array<item>&& data, size_t valid_till = 0);
         static response empty();
         static response disconnect();
-        static response disconnect(const list_array<list_array<uint8_t>>& data, size_t valid_till = 0);
-        static response disconnect(list_array<list_array<uint8_t>>&& data, size_t valid_till = 0);
+        static response disconnect(const list_array<item>& data, size_t valid_till = 0);
+        static response disconnect(list_array<item>&& data, size_t valid_till = 0);
 
         bool is_disconnect() const;
         response& operator+=(const response& other);

@@ -1,3 +1,4 @@
+#include <src/base_objects/data_packs/known_pack.hpp>
 #include <src/protocolHelper/packets/766/packets.hpp>
 #include <src/protocolHelper/packets/767/packets.hpp>
 #include <src/protocolHelper/packets/767/writers_readers.hpp>
@@ -60,11 +61,12 @@ namespace copper_server::packets::release_767 {
             return release_766::configuration::ping(excepted_pong);
         }
 
-        template <class FN, class RegistryT>
-        list_array<uint8_t> registry_data_serialize_entry(const std::string& identifier, std::unordered_map<std::string, RegistryT>& values, FN&& serializer) {
+        template <class RegistryT, class FN>
+        list_array<uint8_t> registry_data_serialize_entry(const std::string& identifier, list_array<typename std::unordered_map<std::string, RegistryT>::iterator>& values, FN&& serializer) {
             list_array<std::pair<std::string, enbt::compound>> fixed_data;
             fixed_data.resize(values.size());
-            for (auto& [name, it] : values) {
+            for (auto& _it : values) {
+                auto& [name, it] = *_it;
                 if (it.id >= fixed_data.size())
                     throw std::out_of_range("Invalid registry values");
                 fixed_data[it.id] = {name, serializer(it)};
@@ -87,9 +89,9 @@ namespace copper_server::packets::release_767 {
             static list_array<list_array<uint8_t>> data;
             if (data.empty()) {
                 { //minecraft:trim_material
-                    data.push_back(registry_data_serialize_entry(
+                    data.push_back(registry_data_serialize_entry<ArmorTrimMaterial>(
                         "minecraft:trim_material",
-                        registers::armorTrimMaterials,
+                        registers::armorTrimMaterials_cache,
                         [](registers::ArmorTrimMaterial& it) {
                             enbt::compound element;
                             element["asset_name"] = it.asset_name;
@@ -110,9 +112,9 @@ namespace copper_server::packets::release_767 {
                     ));
                 }
                 { //minecraft:trim_pattern
-                    data.push_back(registry_data_serialize_entry(
+                    data.push_back(registry_data_serialize_entry<ArmorTrimPattern>(
                         "minecraft:trim_pattern",
-                        registers::armorTrimPatterns,
+                        registers::armorTrimPatterns_cache,
                         [](registers::ArmorTrimPattern& it) {
                             enbt::compound element;
                             element["asset_id"] = it.asset_id;
@@ -127,9 +129,9 @@ namespace copper_server::packets::release_767 {
                     ));
                 }
                 { //minecraft:worldgen/biome
-                    data.push_back(registry_data_serialize_entry(
+                    data.push_back(registry_data_serialize_entry<Biome>(
                         "minecraft:worldgen/biome",
-                        registers::biomes,
+                        registers::biomes_cache,
                         [](registers::Biome& it) { //element
                             enbt::compound element;
                             element["has_precipitation"] = it.has_precipitation;
@@ -150,8 +152,9 @@ namespace copper_server::packets::release_767 {
                                     effects["grass_color_modifier"] = it.effects.grass_color_modifier.value();
                                 if (it.effects.particle) {
                                     enbt::compound particle;
-                                    particle["type"] = it.effects.particle->options.type;
+                                    particle["probability"] = it.effects.particle->probability;
                                     particle["options"] = it.effects.particle->options.options;
+                                    particle["options"]["type"] = it.effects.particle->options.type;
                                     effects["particle"] = std::move(particle);
                                 }
                                 if (it.effects.ambient_sound) {
@@ -168,7 +171,7 @@ namespace copper_server::packets::release_767 {
                                     enbt::compound mood_sound;
                                     mood_sound["sound"] = it.effects.mood_sound->sound;
                                     mood_sound["tick_delay"] = it.effects.mood_sound->tick_delay;
-                                    mood_sound["block_search_extend"] = it.effects.mood_sound->block_search_extend;
+                                    mood_sound["block_search_extent"] = it.effects.mood_sound->block_search_extent;
                                     mood_sound["offset"] = it.effects.mood_sound->offset;
                                     effects["mood_sound"] = std::move(mood_sound);
                                 }
@@ -194,9 +197,9 @@ namespace copper_server::packets::release_767 {
                     ));
                 }
                 { // minecraft:chat_type
-                    data.push_back(registry_data_serialize_entry(
+                    data.push_back(registry_data_serialize_entry<ChatType>(
                         "minecraft:chat_type",
-                        registers::chatTypes,
+                        registers::chatTypes_cache,
                         [](registers::ChatType& it) {
                             enbt::compound element;
                             if (it.chat) {
@@ -230,9 +233,9 @@ namespace copper_server::packets::release_767 {
                     ));
                 }
                 { // minecraft:damage_type
-                    data.push_back(registry_data_serialize_entry(
+                    data.push_back(registry_data_serialize_entry<DamageType>(
                         "minecraft:damage_type",
-                        registers::damageTypes,
+                        registers::damageTypes_cache,
                         [](registers::DamageType& it) { //element
                             enbt::compound element;
                             element["message_id"] = it.message_id;
@@ -303,20 +306,15 @@ namespace copper_server::packets::release_767 {
                     ));
                 }
                 { // minecraft:dimension_type
-                    data.push_back(registry_data_serialize_entry(
+                    data.push_back(registry_data_serialize_entry<DimensionType>(
                         "minecraft:dimension_type",
-                        registers::dimensionTypes,
+                        registers::dimensionTypes_cache,
                         [](registers::DimensionType& it) { //element
                             enbt::compound element;
                             if (std::holds_alternative<int32_t>(it.monster_spawn_light_level))
                                 element["monster_spawn_light_level"] = std::get<int32_t>(it.monster_spawn_light_level);
-                            else {
-                                enbt::compound distribution;
-                                auto& ddd = std::get<IntegerDistribution>(it.monster_spawn_light_level);
-                                distribution["type"] = ddd.type;
-                                distribution["value"] = ddd.value;
-                                element["monster_spawn_light_level"] = std::move(distribution);
-                            }
+                            else
+                                element["monster_spawn_light_level"] = std::get<IntegerDistribution>(it.monster_spawn_light_level).get_enbt();
                             if (it.fixed_time)
                                 element["fixed_time"] = it.fixed_time.value();
                             element["infiniburn"] = it.infiniburn;
@@ -340,9 +338,9 @@ namespace copper_server::packets::release_767 {
                     ));
                 }
                 { // minecraft:wolf_variant
-                    data.push_back(registry_data_serialize_entry(
+                    data.push_back(registry_data_serialize_entry<WolfVariant>(
                         "minecraft:wolf_variant",
-                        registers::wolfVariants,
+                        registers::wolfVariants_cache,
                         [](registers::WolfVariant& it) { //element
                             enbt::compound element;
                             element["wild_texture"] = it.wild_texture;
@@ -362,9 +360,9 @@ namespace copper_server::packets::release_767 {
                     ));
                 }
                 { // minecraft:painting_variant
-                    data.push_back(registry_data_serialize_entry(
+                    data.push_back(registry_data_serialize_entry<PaintingVariant>(
                         "minecraft:painting_variant",
-                        registers::paintingVariants,
+                        registers::paintingVariants_cache,
                         [](registers::PaintingVariant& it) { //element
                             enbt::compound element;
                             element["asset_id"] = it.asset_id;
@@ -378,8 +376,25 @@ namespace copper_server::packets::release_767 {
             return base_objects::network::response::answer(data);
         }
 
+        base_objects::network::response registry_item(const std::string& registry_id, list_array<std::pair<std::string, enbt::compound>>& entries) {
+            list_array<uint8_t> part;
+            part.push_back(0x07);
+            WriteIdentifier(part, registry_id);
+            WriteVar<int32_t>(entries.size(), part);
+            entries.for_each([&](const std::string& name, enbt::compound& data) {
+                WriteIdentifier(part, name);
+                part.push_back(data.size());
+                if (data.size())
+                    part.push_back(NBT::build((enbt::value&)data).get_as_network());
+            });
+            return base_objects::network::response::answer({std::move(part)});
+        }
+
+
         base_objects::network::response resetChat() {
-            return base_objects::network::response::answer({{0x06}});
+            list_array<uint8_t> packet;
+            packet.push_back(0x06);
+            return base_objects::network::response::answer({std::move(packet)});
         }
 
         base_objects::network::response removeResourcePacks() {
@@ -427,7 +442,7 @@ namespace copper_server::packets::release_767 {
             return release_766::configuration::updateTags(tags_entries);
         }
 
-        base_objects::network::response knownPacks(const list_array<base_objects::packets::known_pack>& packs) {
+        base_objects::network::response knownPacks(const list_array<base_objects::data_packs::known_pack>& packs) {
             list_array<uint8_t> packet;
             packet.push_back(0x0E);
             WriteVar<int32_t>(packs.size(), packet);

@@ -1,8 +1,8 @@
 #ifndef SRC_BASE_OBJECTS_CHAT
 #define SRC_BASE_OBJECTS_CHAT
+#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <optional>
-#include <src/protocolHelperNBT.hpp>
 #include <string>
 #include <vector>
 

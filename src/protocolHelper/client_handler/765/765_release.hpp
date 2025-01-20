@@ -1,5 +1,5 @@
-#ifndef SRC_PROTOCOLHELPER_CLIENT_PLAY_HANDLER_765_RELEASE
-#define SRC_PROTOCOLHELPER_CLIENT_PLAY_HANDLER_765_RELEASE
+#ifndef SRC_PROTOCOLHELPER_CLIENT_HANDLER_765_765_RELEASE
+#define SRC_PROTOCOLHELPER_CLIENT_HANDLER_765_765_RELEASE
 #include <src/protocolHelper/util.hpp>
 
 namespace copper_server::client_handler::play_765_release {
@@ -110,4 +110,4 @@ namespace copper_server::client_handler::play_765_release {
     void use_item(base_objects::network::tcp_session* session, ArrayStream& packet);
 }
 
-#endif /* SRC_PROTOCOLHELPER_CLIENT_PLAY_HANDLER_765_RELEASE */
+#endif /* SRC_PROTOCOLHELPER_CLIENT_HANDLER_765_765_RELEASE */

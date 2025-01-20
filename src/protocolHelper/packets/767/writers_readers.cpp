@@ -776,34 +776,42 @@ namespace copper_server::packets::release_767::reader {
         }
 
         slot_component::unified decode(ArrayStream& data) {
-            switch (ReadVar<int32_t>(data)) {
+            switch (data.read_var<int32_t>()) {
             case 0: {
                 slot_component::custom_data res;
                 res.value = ReadNBT(data).get_as_enbt();
                 return res;
             }
             case 1:
-                return slot_component::max_stack_size{.value = (uint8_t)ReadVar<int32_t>(data)};
+                return slot_component::max_stack_size{
+                    .value = (uint8_t)data.read_var<int32_t>()
+                };
             case 2:
-                return slot_component::max_damage{.value = ReadVar<int32_t>(data)};
+                return slot_component::max_damage{
+                    .value = data.read_var<int32_t>()
+                };
             case 3:
-                return slot_component::damage{.value = ReadVar<int32_t>(data)};
+                return slot_component::damage{
+                    .value = data.read_var<int32_t>()
+                };
             case 4:
-                return slot_component::unbreakable{.value = ReadValue<bool>(data)};
+                return slot_component::unbreakable{.value = data.read_value<bool>()};
             case 5:
                 return slot_component::custom_name{.value = Chat::fromEnbt(ReadNBT(data).get_as_enbt())};
             case 6:
                 return slot_component::item_name{.value = Chat::fromEnbt(ReadNBT(data).get_as_enbt())};
             case 7: {
                 slot_component::lore res;
-                int32_t count = ReadVar<int32_t>(data);
+                int32_t count = data.read_var<int32_t>();
                 res.value.reserve(count);
                 for (int32_t i = 0; i < count; i++)
                     res.value.push_back(Chat::fromEnbt(ReadNBT(data).get_as_enbt()));
                 return res;
             }
             case 8:
-                return slot_component::rarity{(slot_component::rarity)ReadVar<int32_t>(data)};
+                return slot_component::rarity{
+                    (slot_component::rarity)data.read_var<int32_t>()
+                };
                 //TODO
             default:
                 throw std::runtime_error("Undefined component id");
@@ -884,17 +892,17 @@ namespace copper_server::packets::release_767::reader {
     }
 
     base_objects::slot ReadSlot(ArrayStream& data, int16_t protocol) {
-        int32_t item_count = ReadVar<int32_t>(data);
+        int32_t item_count = data.read_var<int32_t>();
         if (!item_count)
             return std::nullopt;
-        int32_t item_id = ReadVar<int32_t>(data);
+        int32_t item_id = data.read_var<int32_t>();
         base_objects::slot_data item = base_objects::slot_data::create_item(item_id);
-        int32_t num_to_add = ReadVar<int32_t>(data);
-        int32_t num_to_remove = ReadVar<int32_t>(data);
+        int32_t num_to_add = data.read_var<int32_t>();
+        int32_t num_to_remove = data.read_var<int32_t>();
         for (int32_t i = 0; i < num_to_add; i++)
             item.add_component(slot_component_decoder::decode(data));
         for (int32_t i = 0; i < num_to_remove; i++)
-            slot_component_decoder::variants(ReadVar<int32_t>(data)).for_each([&](auto& it) {
+            slot_component_decoder::variants(data.read_var<int32_t>()).for_each([&](auto& it) {
                 item.remove_component(it);
             });
         return item;

@@ -4,6 +4,7 @@
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/chat.hpp>
 #include <src/base_objects/chunk.hpp>
+#include <src/base_objects/data_packs/known_pack.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/base_objects/packets.hpp>
 #include <src/base_objects/particle_data.hpp>
@@ -64,7 +65,7 @@ namespace copper_server {
 
             base_objects::network::response updateTags(base_objects::SharedClientData& client, const list_array<base_objects::packets::tag_mapping>& tags_entries);
 
-            base_objects::network::response knownPacks(base_objects::SharedClientData& client, const list_array<base_objects::packets::known_pack>& packs);
+            base_objects::network::response knownPacks(base_objects::SharedClientData& client, const list_array<base_objects::data_packs::known_pack>& packs);
 
             base_objects::network::response custom_report(base_objects::SharedClientData& client, const list_array<std::pair<std::string, std::string>>& values);
 

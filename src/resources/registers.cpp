@@ -1,6 +1,7 @@
 #include <resources/include.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/recipe.hpp>
+#include <src/base_objects/data_packs/known_pack.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/log.hpp>
 #include <src/registers.hpp>
@@ -9,7 +10,12 @@
 
 namespace copper_server::resources {
     std::unordered_map<uint32_t, boost::json::object> internal_compatibility_versions;
+    list_array<base_objects::data_packs::known_pack> loaded_packs_;
     int32_t latest_protocol_version = -1;
+
+    list_array<base_objects::data_packs::known_pack> loaded_packs() {
+        return loaded_packs_;
+    }
 
     template <class T, class Iterator>
     void id_assigner(std::unordered_map<std::string, T>& map, list_array<Iterator>& cache) {
@@ -238,7 +244,7 @@ namespace copper_server::resources {
                 Biome::MoodSound mood_sound;
                 mood_sound.sound = (std::string)mood_sound_js["sound"];
                 mood_sound.offset = mood_sound_js["offset"].or_apply(2.0);
-                mood_sound.block_search_extend = mood_sound_js["block_search_extend"].or_apply(8);
+                mood_sound.block_search_extent = mood_sound_js["block_search_extent"].or_apply(8);
                 mood_sound.tick_delay = mood_sound_js["tick_delay"].or_apply(6000);
                 effects.mood_sound = std::move(mood_sound);
             }
@@ -1467,7 +1473,9 @@ namespace copper_server::resources {
                 }
             }
         }
+        loaded_packs_.push_back({.namespace_ = namespace_, .id = namespace_});
     }
+
 
     void process_pack(boost::json::object& parsed, const std::string& namespace_) {
         process_pack(parsed, namespace_, false);

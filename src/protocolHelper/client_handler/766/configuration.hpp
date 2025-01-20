@@ -25,7 +25,6 @@ namespace copper_server::client_handler::release_766 {
         base_objects::network::response unexpected_exception() override;
         std::list<base_objects::network::plugin_response> queriedPackets;
         std::chrono::time_point<std::chrono::system_clock> pong_timer;
-        int64_t keep_alive_packet = 0;
         int32_t excepted_pong = 0;
         bool inited = false;
 

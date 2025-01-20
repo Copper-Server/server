@@ -47,7 +47,9 @@ namespace copper_server {
                     register_configuration(tmp_);
                 if (
                     &T::OnPlay_initialize != &PluginRegistration::OnPlay_initialize
+                    || &T::OnPlay_initialize_compatible != &PluginRegistration::OnPlay_initialize_compatible
                     || &T::OnPlay_uninitialized != &PluginRegistration::OnPlay_uninitialized
+                    || &T::OnPlay_uninitialized_compatible != &PluginRegistration::OnPlay_uninitialized_compatible
                     || &T::PlayerJoined != &PluginRegistration::PlayerJoined
                     || &T::PlayerLeave != &PluginRegistration::PlayerLeave
                 )

@@ -104,7 +104,7 @@ namespace copper_server::base_objects {
                     }
                     cfg.protocol.allowed_versions_processed.unify();
                     if (cfg.protocol.allowed_versions.empty())
-                        cfg.protocol.allowed_versions_processed = {765, 766, 767, 768};
+                        cfg.protocol.allowed_versions_processed = {765, 766, 767, 768, 769};
                 } else {
                     auto allowed_versions = js_array::get_array(protocol["allowed_versions"] = boost::json::array());
                     for (const auto& it : cfg.protocol.allowed_versions)

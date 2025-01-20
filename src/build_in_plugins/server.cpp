@@ -5,6 +5,7 @@
 #include <src/api/permissions.hpp>
 #include <src/api/players.hpp>
 #include <src/api/world.hpp>
+#include <src/base_objects/commands.hpp>
 #include <src/base_objects/network/tcp_server.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/build_in_plugins/server.hpp>
@@ -126,10 +127,11 @@ namespace copper_server::build_in_plugins {
             _config
                 .add_child({"reload", "reloads config from file", "/config reload"})
                 .set_callback({"command.config.reload", {"console"}}, [&](const list_array<predicate>& args, base_objects::command_context& context) {
-                    api::configuration::get().load(api::configuration::get().server.base_path);
+                    api::configuration::load(true);
                     pluginManagement.registeredPlugins().for_each([&](const PluginRegistrationPtr& plugin) {
-                        plugin->OnConfigReload(plugin, api::configuration::get());
+                        plugin->OnConfigReload(plugin);
                     });
+                    api::players::calls::on_system_message({context.executor, {"Config reloaded"}});
                 });
             _config.add_child("set")
                 .add_child("<config item>", cmd_pred_string::quotable_phrase)
@@ -138,7 +140,7 @@ namespace copper_server::build_in_plugins {
                     api::configuration::get().set(api::configuration::get().server.base_path, std::get<pred_string>(args[0]).value, std::get<pred_string>(args[1]).value);
                     api::players::calls::on_system_message({context.executor, {"Config updated"}});
                     pluginManagement.registeredPlugins().for_each([&](const PluginRegistrationPtr& plugin) {
-                        plugin->OnConfigReload(plugin, api::configuration::get());
+                        plugin->OnConfigReload(plugin);
                     });
                 });
             _config

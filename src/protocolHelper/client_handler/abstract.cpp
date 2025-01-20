@@ -14,61 +14,57 @@
 #include <src/protocolHelper/client_handler/768/login.hpp>
 #include <src/protocolHelper/client_handler/768/play.hpp>
 
-#include <src/protocolHelper/client_handler/769/configuration.hpp>
-#include <src/protocolHelper/client_handler/769/login.hpp>
-#include <src/protocolHelper/client_handler/769/play.hpp>
+#include <src/protocolHelper/client_handler/configuration.hpp>
+#include <src/protocolHelper/client_handler/login.hpp>
+#include <src/protocolHelper/client_handler/play.hpp>
 
+//`std::make_unique<handle_*>(client).release();` construction used to prevent memory leaks, it is same as `new handle_*(client);` but when thrown it will be deleted
 namespace copper_server {
     namespace client_handler {
         namespace abstract {
             base_objects::network::tcp_client* createhandle_login(base_objects::network::tcp_session* client) {
                 switch (client->protocol_version) {
                 case 765:
-                    return new release_765::handle_login(client);
+                    return std::make_unique<release_765::handle_login>(client).release();
                 case 766:
-                    return new release_766::handle_login(client);
+                    return std::make_unique<release_766::handle_login>(client).release();
                 case 767:
-                    return new release_767::handle_login(client);
+                    return std::make_unique<release_767::handle_login>(client).release();
                 case 768:
-                    return new release_768::handle_login(client);
-                case 769:
-                    return new release_769::handle_login(client);
+                    return std::make_unique<release_768::handle_login>(client).release();
                 default:
-                    throw std::runtime_error("Unknown protocol version");
+                    return std::make_unique<handle_login>(client).release();
                 }
             }
 
             base_objects::network::tcp_client* createhandle_configuration(base_objects::network::tcp_session* client) {
                 switch (client->protocol_version) {
                 case 765:
+                    return std::make_unique<release_765::handle_configuration>(client).release();
                     return new release_765::handle_configuration(client);
                 case 766:
-                    return new release_766::handle_configuration(client);
+                    return std::make_unique<release_766::handle_configuration>(client).release();
                 case 767:
-                    return new release_767::handle_configuration(client);
+                    return std::make_unique<release_767::handle_configuration>(client).release();
                 case 768:
-                    return new release_768::handle_configuration(client);
-                case 769:
-                    return new release_769::handle_configuration(client);
+                    return std::make_unique<release_768::handle_configuration>(client).release();
                 default:
-                    throw std::runtime_error("Unknown protocol version");
+                    return std::make_unique<handle_configuration>(client).release();
                 }
             }
 
             base_objects::network::tcp_client* createhandle_play(base_objects::network::tcp_session* client) {
                 switch (client->protocol_version) {
                 case 765:
-                    return new release_765::handle_play(client);
+                    return std::make_unique<release_765::handle_play>(client).release();
                 case 766:
-                    return new release_766::handle_play(client);
+                    return std::make_unique<release_766::handle_play>(client).release();
                 case 767:
-                    return new release_767::handle_play(client);
+                    return std::make_unique<release_767::handle_play>(client).release();
                 case 768:
-                    return new release_768::handle_play(client);
-                case 769:
-                    return new release_769::handle_play(client);
+                    return std::make_unique<release_768::handle_play>(client).release();
                 default:
-                    throw std::runtime_error("Unknown protocol version");
+                    return std::make_unique<handle_play>(client).release();
                 }
             }
         }

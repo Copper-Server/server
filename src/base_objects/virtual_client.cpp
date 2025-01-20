@@ -76,7 +76,7 @@ namespace copper_server::base_objects {
             size_t readed = 0;
             Chat message_text_component = Chat::fromEnbt(NBT::readNBT_asENBT(arr.data_read(), arr.size_read(), readed));
             arr.range_read(readed);
-            int32_t chat_type = ReadVar<int32_t>(arr);
+            int32_t chat_type = arr.read_var<int32_t>();
             Chat sender_text_component = Chat::fromEnbt(NBT::readNBT_asENBT(arr.data_read(), arr.size_read(), readed));
             arr.range_read(readed);
             std::optional<Chat> target_text_component;

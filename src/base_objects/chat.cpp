@@ -1,5 +1,6 @@
 
 #include <src/base_objects/chat.hpp>
+#include <src/protocolHelperNBT.hpp>
 #include <src/util/conversions.hpp>
 #include <src/util/json_helpers.hpp>
 #include <utf8.h>
@@ -670,6 +671,10 @@ namespace copper_server {
             for (auto& it : extra)
                 extra_enbt.set(i++, it.ToENBT());
             enbt["extra"] = std::move(extra_enbt);
+        }
+        if (enbt.size() == 1) {
+            if (enbt.contains("text"))
+                return enbt["text"];
         }
         return enbt;
     }

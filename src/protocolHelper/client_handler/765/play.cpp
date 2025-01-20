@@ -18,7 +18,7 @@ namespace copper_server::client_handler::release_765 {
             switch (data[0]) {
             case 0x33: { //client bound ping
                 ArrayStream packet(data.data(), data.size());
-                int32_t id = ReadVar<int32_t>(packet);
+                int32_t id = packet.read_var<int32_t>();
                 if (id == -1 && excepted_pong != -1) {
                     resp.data.erase(index);
                     goto re_check;
@@ -124,9 +124,9 @@ namespace copper_server::client_handler::release_765 {
             break;
         case 0x15: { //keep alive
             log::debug("play", "Keep alive");
-            int64_t keep_alive_packet_response = ReadValue<int64_t>(packet);
-            if (keep_alive_packet == keep_alive_packet_response)
-                session->sharedData().packets_state.keep_alive_ping_ms = std::min<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(_keep_alive_solution->got_valid_keep_alive()).count(), INT32_MAX);
+            int64_t keep_alive_packet_response = packet.read_value<int64_t>();
+            auto delay = _keep_alive_solution->got_valid_keep_alive(keep_alive_packet_response);
+            session->sharedData().packets_state.keep_alive_ping_ms = std::min<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(delay).count(), INT32_MAX);
             api::protocol::on_keep_alive.async_notify({keep_alive_packet_response, *session, session->sharedDataRef()});
             break;
         }
@@ -175,7 +175,7 @@ namespace copper_server::client_handler::release_765 {
         case 0x24: { //pong
             log::debug("play", "Pong");
             api::protocol::data::pong data;
-            data.id = ReadValue<int32_t>(packet);
+            data.id = packet.read_value<int32_t>();
             data.elapsed = std::chrono::system_clock::now() - pong_timer;
             if (data.id == excepted_pong) {
                 api::protocol::on_pong.async_notify({data, *session, session->sharedDataRef()});
@@ -271,7 +271,7 @@ namespace copper_server::client_handler::release_765 {
     handle_play::handle_play(base_objects::network::tcp_session* session)
         : tcp_client_handle(session) {
         _keep_alive_solution->set_callback(
-            [this]() {
+            [this](int64_t keep_alive_packet) {
                 log::debug("play", "Send keep alive");
                 keep_alive_packet = generate_random_int();
                 return packets::release_765::play::keepAlive(keep_alive_packet);
