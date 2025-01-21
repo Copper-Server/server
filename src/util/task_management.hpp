@@ -17,9 +17,9 @@ struct Future {
     bool _is_ready = false;
     std::exception_ptr ex_ptr;
 
-    static std::shared_ptr<Future> start(const std::function<T()>& fn) {
+    static std::shared_ptr<Future> start(const std::function<T()>& fn, uint16_t bind_id = (uint16_t)-1) {
         std::shared_ptr<Future> future = std::make_shared<Future>();
-        fast_task::task::start(std::make_shared<fast_task::task>([fn, future]() {
+        auto task = std::make_shared<fast_task::task>([fn, future]() {
             try {
                 future->result = fn();
             } catch (const fast_task::task_cancellation&) {
@@ -33,7 +33,10 @@ struct Future {
             std::lock_guard guard(future->task_mt);
             future->_is_ready = true;
             future->task_cv.notify_all();
-        }));
+        });
+        if (bind_id != (uint16_t)-1)
+            task->set_worker_id(bind_id);
+        fast_task::task::start(task);
         return future;
     }
 
@@ -161,9 +164,9 @@ struct Future<void> {
     bool _is_ready = false;
     std::exception_ptr ex_ptr;
 
-    static std::shared_ptr<Future> start(const std::function<void()>& fn) {
+    static std::shared_ptr<Future> start(const std::function<void()>& fn, uint16_t bind_id = (uint16_t)-1) {
         std::shared_ptr<Future> future = std::make_shared<Future>();
-        fast_task::task::start(std::make_shared<fast_task::task>([fn, future]() {
+        auto task = std::make_shared<fast_task::task>([fn, future]() {
             try {
                 fn();
             } catch (const fast_task::task_cancellation&) {
@@ -177,7 +180,10 @@ struct Future<void> {
             std::lock_guard guard(future->task_mt);
             future->_is_ready = true;
             future->task_cv.notify_all();
-        }));
+        });
+        if (bind_id != (uint16_t)-1)
+            task->set_worker_id(bind_id);
+        fast_task::task::start(task);
         return future;
     }
 
@@ -280,7 +286,7 @@ template <class T>
 struct CancelableFuture : public Future<T> {
     std::shared_ptr<fast_task::task> task;
 
-    static std::shared_ptr<CancelableFuture> start(const std::function<T()>& fn) {
+    static std::shared_ptr<CancelableFuture> start(const std::function<T()>& fn, uint16_t bind_id = (uint16_t)-1) {
         std::shared_ptr<CancelableFuture> future = std::make_shared<CancelableFuture>();
         future->task = std::make_shared<fast_task::task>([fn, future]() {
             try {
@@ -297,6 +303,8 @@ struct CancelableFuture : public Future<T> {
             future->_is_ready = true;
             future->task_cv.notify_all();
         });
+        if (bind_id != (uint16_t)-1)
+            future->task->set_worker_id(bind_id);
         fast_task::task::start(future->task);
         return future;
     }
@@ -350,7 +358,7 @@ template <>
 struct CancelableFuture<void> : public Future<void> {
     std::shared_ptr<fast_task::task> task;
 
-    static std::shared_ptr<CancelableFuture> start(const std::function<void()>& fn) {
+    static std::shared_ptr<CancelableFuture> start(const std::function<void()>& fn, uint16_t bind_id = (uint16_t)-1) {
         std::shared_ptr<CancelableFuture> future = std::make_shared<CancelableFuture>();
         future->task = std::make_shared<fast_task::task>([fn, future]() {
             try {
@@ -367,6 +375,8 @@ struct CancelableFuture<void> : public Future<void> {
             future->_is_ready = true;
             future->task_cv.notify_all();
         });
+        if (bind_id != (uint16_t)-1)
+            future->task->set_worker_id(bind_id);
         fast_task::task::start(future->task);
         return future;
     }

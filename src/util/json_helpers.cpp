@@ -46,13 +46,13 @@ namespace copper_server::util {
     }
 
     void pretty_print(std::ostream& os, const boost::json::value& jv, std::string* indent) {
-        std::string indent_;
+        std::string indent_ = "\n";
         if (!indent)
             indent = &indent_;
 
         switch (jv.kind()) {
         case boost::json::kind::object: {
-            os << "{\n";
+            os << "{";
             indent->append(4, ' ');
 
             std::vector<boost::json::string> keys;
@@ -68,15 +68,18 @@ namespace copper_server::util {
             for (auto const& k : keys) {
                 os << *indent << boost::json::serialize(k) << ": ";
                 pretty_print(os, jv.at(k), indent);
-                os << (++i == n ? "\n" : ",\n");
+                os << (++i == n ? "" : ",");
             }
 
             indent->resize(indent->size() - 4);
-            os << *indent << "}";
+            if (n > 0)
+                os << *indent << "}";
+            else
+                os << "}";
             break;
         }
         case boost::json::kind::array: {
-            os << "[\n";
+            os << "[";
             indent->append(4, ' ');
 
             auto const& a = jv.get_array();
@@ -86,11 +89,14 @@ namespace copper_server::util {
             for (auto const& v : a) {
                 os << *indent;
                 pretty_print(os, v, indent);
-                os << (++i == n ? "\n" : ",\n");
+                os << (++i == n ? "" : ",");
             }
 
             indent->resize(indent->size() - 4);
-            os << *indent << "]";
+            if (n > 0)
+                os << *indent << "]";
+            else
+                os << "]";
             break;
         }
 
@@ -100,7 +106,7 @@ namespace copper_server::util {
         }
         }
 
-        if (indent->empty())
+        if (*indent == "\n")
             os << "\n";
     }
 

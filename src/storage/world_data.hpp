@@ -254,9 +254,13 @@ namespace copper_server::storage {
         size_t world_spawn_ticket_id;
 
         std::chrono::high_resolution_clock::time_point last_usage;
+
+        FuturePtr<base_objects::atomic_holder<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback, std::function<void()> fault);
+        FuturePtr<base_objects::atomic_holder<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z);
         void make_save(int64_t chunk_x, int64_t chunk_z, bool also_unload);
         void make_save(int64_t chunk_x, int64_t chunk_z, chunk_row::iterator, bool also_unload);
         base_objects::atomic_holder<chunk_data> load_chunk_sync(int64_t chunk_x, int64_t chunk_z);
+        base_objects::atomic_holder<chunk_data> processed_load_chunk_sync(int64_t chunk_x, int64_t chunk_z, bool is_async_context = false);
 
         base_objects::atomic_holder<chunk_generator>& get_generator();
         base_objects::atomic_holder<chunk_light_processor>& get_light_processor();
@@ -515,6 +519,12 @@ namespace copper_server::storage {
             std::function<void(world_data& world, int64_t chunk_x, int64_t chunk_z, std::chrono::milliseconds tick_time)> slow_chunk_tick_callback = nullptr;
             std::function<void(world_data& world, std::chrono::milliseconds tick_time)> slow_world_tick_callback = nullptr;
             std::function<void(world_data& world)> got_tps_update = nullptr;
+            std::function<void(world_data& world, chunk_data&)> chunk_loaded;
+            std::function<void(world_data& world, int64_t chunk_x, int64_t chunk_z)> chunk_load_failed;
+            std::function<void(world_data& world, int64_t chunk_x, int64_t chunk_z)> chunk_unloaded;
+            std::atomic_size_t chunk_load_counter = 0; //load in process
+            size_t chunk_target_to_load = 0;
+            size_t chunk_total_loaded = 0;
         } profiling;
 
         //tick sync

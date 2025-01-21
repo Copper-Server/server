@@ -157,6 +157,7 @@ namespace copper_server::build_in_plugins {
             return false;
         });
 
+        std::list<std::shared_ptr<fast_task::task>> tasks;
         for (auto& it : api::configuration::get().allowed_dimensions) {
             api::world::pre_load_world(it, [&](storage::world_data& world) {
                 world.world_type = api::configuration::get().world.type;
@@ -173,6 +174,25 @@ namespace copper_server::build_in_plugins {
                 }
                 log::info("World", it + " initialized.");
             });
+
+            tasks.push_back(std::make_shared<fast_task::task>([it]() {
+                bool complete = false;
+                while (!complete) {
+                    size_t target = 0;
+                    size_t loaded = 0;
+                    api::world::get(it, [&](storage::world_data& world) {
+                        target = world.profiling.chunk_target_to_load;
+                        loaded = world.profiling.chunk_total_loaded;
+                    });
+                    if (target == loaded && target) {
+                        log::info("World", "world " + it + " loaded.");
+                        complete = true;
+                    } else {
+                        log::info("World", "world " + it + " loading... " + std::to_string(loaded) + " / " + std::to_string(target));
+                        fast_task::task::sleep(500);
+                    }
+                }
+            }));
         }
         if (worlds_storage.base_world_id == -1 && !api::configuration::get().allowed_dimensions.empty()) {
             log::info("World", "Base world not set, setting to first world.");
@@ -222,13 +242,17 @@ namespace copper_server::build_in_plugins {
             }
         });
         fast_task::task::start(world_ticking);
+        fast_task::task::await_multiple(tasks);
     }
 
     void WorldManagementPlugin::OnUnload(const PluginRegistrationPtr& self) {
         log::info("World", "saving worlds...");
+        if (world_ticking) {
+            fast_task::task::await_notify_cancel(world_ticking);
+            world_ticking = nullptr;
+        }
+
         worlds_storage.locked([&](storage::worlds_data& worlds) {
-            if (world_ticking)
-                fast_task::task::notify_cancel(world_ticking);
             worlds.for_each_world([&](uint64_t id, storage::world_data& world) {
                 log::info("World", "saving world " + world.world_name + "...");
                 world.save();

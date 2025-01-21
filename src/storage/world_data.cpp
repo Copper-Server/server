@@ -7,6 +7,7 @@
 #include <src/base_objects/player.hpp>
 #include <src/log.hpp>
 #include <src/storage/world_data.hpp>
+#include <src/util/shared_static_values.hpp>
 
 namespace enbt::io_helper {
     using namespace copper_server;
@@ -766,31 +767,44 @@ namespace copper_server::storage {
                     }
                     std::unique_lock lock(mutex);
                     on_save_process.erase({chunk_x, chunk_z});
-
-                    if (also_unload)
-                        if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
+                    if (also_unload) {
+                        if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end()) {
                             x_axis->second.erase(chunk_z);
+                            if (profiling.enable_world_profiling) {
+                                if (profiling.chunk_total_loaded)
+                                    --profiling.chunk_total_loaded;
+                                if (profiling.chunk_unloaded)
+                                    profiling.chunk_unloaded(*this, chunk_x, chunk_z);
+                            }
+                        }
+                    }
+
                     return true;
-                }
+                },
+                shared_values::saving_pool_tasks_id
             );
         }
     }
 
     base_objects::atomic_holder<chunk_data> world_data::load_chunk_sync(int64_t chunk_x, int64_t chunk_z) {
-        auto chunk = base_objects::atomic_holder<chunk_data>(new chunk_data(chunk_x, chunk_z));
-        if (!chunk->load(path / "chunks" / std::to_string(chunk_x) / (std::to_string(chunk_z) + ".dat"), tick_counter)) {
-            if (!chunk->load(get_generator()->generate_chunk(*this, chunk_x, chunk_z), tick_counter))
-                return nullptr;
+        try {
+            auto chunk = base_objects::atomic_holder<chunk_data>(new chunk_data(chunk_x, chunk_z));
+            if (!chunk->load(path / "chunks" / std::to_string(chunk_x) / (std::to_string(chunk_z) + ".dat"), tick_counter)) {
+                if (!chunk->load(get_generator()->generate_chunk(*this, chunk_x, chunk_z), tick_counter))
+                    return nullptr;
+            }
+            get_light_processor();
+            uint64_t y = 0;
+            chunk->for_each_sub_chunk([&](sub_chunk_data& sub_chunk) {
+                if (sub_chunk.need_to_recalculate_light)
+                    light_processor->process_sub_chunk(*this, chunk_x, y, chunk_z);
+                ++y;
+            });
+            chunk->load_level = 34;
+            return chunk;
+        } catch (...) {
+            return nullptr;
         }
-        get_light_processor();
-        uint64_t y = 0;
-        chunk->for_each_sub_chunk([&](sub_chunk_data& sub_chunk) {
-            if (sub_chunk.need_to_recalculate_light)
-                light_processor->process_sub_chunk(*this, chunk_x, y, chunk_z);
-            ++y;
-        });
-        chunk->load_level = 34;
-        return chunk;
     }
 
     base_objects::atomic_holder<chunk_generator>& world_data::get_generator() {
@@ -1027,6 +1041,56 @@ namespace copper_server::storage {
         return res;
     }
 
+    base_objects::atomic_holder<chunk_data> world_data::processed_load_chunk_sync(int64_t chunk_x, int64_t chunk_z, bool is_async_context) {
+        auto chunk = load_chunk_sync(chunk_x, chunk_z);
+        std::unique_lock lock(mutex);
+        chunks[chunk_x][chunk_z] = chunk;
+        if (is_async_context) {
+            on_load_process.erase({chunk_x, chunk_z});
+            if (profiling.enable_world_profiling)
+                --profiling.chunk_load_counter;
+        }
+        if (chunk) {
+            if (profiling.enable_world_profiling) {
+                if (profiling.chunk_loaded)
+                    profiling.chunk_loaded(*this, *chunk);
+                ++profiling.chunk_total_loaded;
+            }
+        } else {
+            if (profiling.enable_world_profiling)
+                if (profiling.chunk_load_failed)
+                    profiling.chunk_load_failed(*this, chunk_x, chunk_z);
+        }
+        return chunk;
+    }
+
+    FuturePtr<base_objects::atomic_holder<chunk_data>> world_data::create_chunk_load_future(int64_t chunk_x, int64_t chunk_z) {
+        if (profiling.enable_world_profiling)
+            ++profiling.chunk_load_counter;
+        return Future<base_objects::atomic_holder<chunk_data>>::start(
+            [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
+                return processed_load_chunk_sync(chunk_x, chunk_z, true);
+            },
+            shared_values::loading_pool_tasks_id
+        );
+    }
+
+    FuturePtr<base_objects::atomic_holder<chunk_data>> world_data::create_chunk_load_future(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback, std::function<void()> fault) {
+        if (profiling.enable_world_profiling)
+            ++profiling.chunk_load_counter;
+        return Future<base_objects::atomic_holder<chunk_data>>::start(
+            [this, chunk_x, chunk_z, callback, fault]() -> base_objects::atomic_holder<chunk_data> {
+                auto chunk = processed_load_chunk_sync(chunk_x, chunk_z, true);
+                if (chunk)
+                    callback(*chunk);
+                else
+                    fault();
+                return chunk;
+            },
+            shared_values::loading_pool_tasks_id
+        );
+    }
+
     base_objects::atomic_holder<chunk_data> world_data::request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
@@ -1035,16 +1099,7 @@ namespace copper_server::storage {
                     return y_axis->second;
 
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end()) {
-            auto it = on_load_process[{chunk_x, chunk_z}] = Future<base_objects::atomic_holder<chunk_data>>::start(
-                [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
-                    auto chunk = load_chunk_sync(chunk_x, chunk_z);
-                    if (!chunk)
-                        return nullptr;
-                    std::unique_lock lock(mutex);
-                    on_load_process.erase({chunk_x, chunk_z});
-                    return chunks[chunk_x][chunk_z] = chunk;
-                }
-            );
+            auto it = on_load_process[{chunk_x, chunk_z}] = create_chunk_load_future(chunk_x, chunk_z);
             it->wait_with(lock);
             return it->get();
         } else {
@@ -1061,16 +1116,7 @@ namespace copper_server::storage {
                     return make_ready_future(y_axis->second);
 
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end())
-            return on_load_process[{chunk_x, chunk_z}] = Future<base_objects::atomic_holder<chunk_data>>::start(
-                       [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
-                           auto chunk = load_chunk_sync(chunk_x, chunk_z);
-                           if (!chunk)
-                               return nullptr;
-                           std::unique_lock lock(mutex);
-                           on_load_process.erase({chunk_x, chunk_z});
-                           return chunks[chunk_x][chunk_z] = chunk;
-                       }
-                   );
+            return on_load_process[{chunk_x, chunk_z}] = create_chunk_load_future(chunk_x, chunk_z);
         else
             return process->second;
     }
@@ -1085,16 +1131,7 @@ namespace copper_server::storage {
 
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end()) {
             if (!exists(chunk_x, chunk_z))
-                on_load_process[{chunk_x, chunk_z}] = Future<base_objects::atomic_holder<chunk_data>>::start(
-                    [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
-                        auto chunk = load_chunk_sync(chunk_x, chunk_z);
-                        if (!chunk)
-                            return nullptr;
-                        std::unique_lock lock(mutex);
-                        on_load_process.erase({chunk_x, chunk_z});
-                        return chunks[chunk_x][chunk_z] = chunk;
-                    }
-                );
+                on_load_process[{chunk_x, chunk_z}] = create_chunk_load_future(chunk_x, chunk_z);
         }
         return std::nullopt;
     }
@@ -1117,16 +1154,7 @@ namespace copper_server::storage {
                     return std::make_optional(y_axis->second);
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end()) {
             if (exists(chunk_x, chunk_z)) {
-                auto it = on_load_process[{chunk_x, chunk_z}] = Future<base_objects::atomic_holder<chunk_data>>::start(
-                    [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
-                        auto chunk = load_chunk_sync(chunk_x, chunk_z);
-                        if (!chunk)
-                            return nullptr;
-                        std::unique_lock lock(mutex);
-                        on_load_process.erase({chunk_x, chunk_z});
-                        return chunks[chunk_x][chunk_z] = chunk;
-                    }
-                );
+                auto it = on_load_process[{chunk_x, chunk_z}] = create_chunk_load_future(chunk_x, chunk_z);
                 it->wait_with(lock);
                 return it->get();
             } else
@@ -1144,16 +1172,7 @@ namespace copper_server::storage {
                 return;
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end())
             if (!exists(chunk_x, chunk_z))
-                on_load_process[{chunk_x, chunk_z}] = Future<base_objects::atomic_holder<chunk_data>>::start(
-                    [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
-                        auto chunk = load_chunk_sync(chunk_x, chunk_z);
-                        if (!chunk)
-                            return nullptr;
-                        std::unique_lock lock(mutex);
-                        on_load_process.erase({chunk_x, chunk_z});
-                        return chunks[chunk_x][chunk_z] = chunk;
-                    }
-                );
+                on_load_process[{chunk_x, chunk_z}] = create_chunk_load_future(chunk_x, chunk_z);
     }
 
     bool world_data::request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback) {
@@ -1166,7 +1185,7 @@ namespace copper_server::storage {
                 }
 
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end()) {
-            auto res = load_chunk_sync(chunk_x, chunk_z);
+            auto res = processed_load_chunk_sync(chunk_x, chunk_z, false);
             if (res)
                 callback(*(chunks[chunk_x][chunk_z] = res));
             else
@@ -1188,19 +1207,7 @@ namespace copper_server::storage {
                 }
 
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end())
-            on_load_process[{chunk_x, chunk_z}] = Future<base_objects::atomic_holder<chunk_data>>::start(
-                [this, chunk_x, chunk_z, callback, fault]() -> base_objects::atomic_holder<chunk_data> {
-                    auto chunk = load_chunk_sync(chunk_x, chunk_z);
-                    std::unique_lock lock(mutex);
-                    on_load_process.erase({chunk_x, chunk_z});
-                    chunks[chunk_x][chunk_z] = chunk;
-                    if (chunk)
-                        callback(*chunk);
-                    else
-                        fault();
-                    return chunk;
-                }
-            );
+            on_load_process[{chunk_x, chunk_z}] = create_chunk_load_future(chunk_x, chunk_z, callback, fault);
         else
             process->second->when_ready([this, chunk_x, chunk_z, callback, fault](base_objects::atomic_holder<chunk_data> chunk) {
                 if (!request_chunk_data_sync(chunk_x, chunk_z, callback))
@@ -1256,14 +1263,7 @@ namespace copper_server::storage {
                 x_axis->second.erase(z_axis);
         std::filesystem::remove(path / std::to_string(chunk_x) / (std::to_string(chunk_z) + ".dat"));
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end())
-            on_load_process[{chunk_x, chunk_z}] = Future<base_objects::atomic_holder<chunk_data>>::start(
-                [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
-                    auto chunk = load_chunk_sync(chunk_x, chunk_z);
-                    std::unique_lock lock(mutex);
-                    on_load_process.erase({chunk_x, chunk_z});
-                    return chunks[chunk_x][chunk_z] = chunk;
-                }
-            );
+            on_load_process[{chunk_x, chunk_z}] = create_chunk_load_future(chunk_x, chunk_z);
     }
 
     void world_data::reset_light_data(int64_t chunk_x, uint64_t chunk_z) {
@@ -1821,6 +1821,9 @@ namespace copper_server::storage {
                         z_axis->load_level++;
             }
         }
+
+        std::unordered_map<int64_t, std::unordered_set<int64_t>> loading_tickets_cc;
+        size_t target_load_count = 0;
         for (auto& [id, ticket] : loading_tickets) {
             bool expired = false;
             std::visit(
@@ -1840,6 +1843,8 @@ namespace copper_server::storage {
             else if (ticket.level < 44) {
                 to_tick_chunks.reserve(ticket.point.count());
                 ticket.point.enum_points_from_center([&](int64_t x, int64_t z) {
+                    loading_tickets_cc[x].insert(z);
+                    ++target_load_count;
                     auto res = request_chunk_data(x, z);
                     if (res->is_ready()) {
                         res->get()->load_level = std::min<uint8_t>(res->get()->load_level, ticket.level);
@@ -1854,6 +1859,8 @@ namespace copper_server::storage {
                     bounds.enum_points_from_center_w_layer([&](int64_t x, int64_t z, int64_t layer) {
                         auto set_load_level = propagation + layer;
                         if (set_load_level <= 33) {
+                            loading_tickets_cc[x].insert(z);
+                            ++target_load_count;
                             auto res = request_chunk_data(x, z);
                             if (res->is_ready()) {
                                 res->get()->load_level = std::min<uint8_t>(res->get()->load_level, set_load_level);
@@ -1879,6 +1886,10 @@ namespace copper_server::storage {
                 chunk->tick(*this, random_tick_speed, random_engine, current_time);
             });
         } else {
+            target_load_count = 0;
+            for (auto& [__, z_axis] : loading_tickets_cc)
+                target_load_count += z_axis.size();
+            profiling.chunk_target_to_load = target_load_count;
             const auto tick_speed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::duration<double>(1) / ticks_per_second);
             auto tick_local_time = std::chrono::high_resolution_clock::now();
             to_tick_chunks.for_each([&](auto&& chunk) {

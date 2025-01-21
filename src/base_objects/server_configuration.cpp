@@ -6,6 +6,7 @@
 #include <src/base_objects/server_configuaration.hpp>
 #include <src/log.hpp>
 #include <src/util/json_helpers.hpp>
+#include <thread>
 
 namespace copper_server::base_objects {
     using namespace util;
@@ -201,10 +202,14 @@ namespace copper_server::base_objects {
                 cfg.server.port = server["port"].or_apply(cfg.server.port);
                 cfg.server.offline_mode = server["offline_mode"].or_apply(cfg.server.offline_mode);
                 cfg.server.max_players = server["max_players"].or_apply(cfg.server.max_players);
-                if (server.contains("accepting_threads"))
-                    cfg.server.accepting_threads = server["accepting_threads"];
+                if (server.contains("network_threads"))
+                    cfg.server.network_threads = server["network_threads"];
                 if (server.contains("working_threads"))
                     cfg.server.working_threads = server["working_threads"];
+                if (server.contains("reading_threads"))
+                    cfg.server.reading_threads = server["reading_threads"];
+                if (server.contains("writing_threads"))
+                    cfg.server.writing_threads = server["writing_threads"];
                 if (server.contains("ssl_key_length"))
                     cfg.server.ssl_key_length = server["ssl_key_length"];
 
@@ -212,6 +217,16 @@ namespace copper_server::base_objects {
                 cfg.server.timeout_seconds = server["timeout_seconds"].or_apply(cfg.server.timeout_seconds);
                 cfg.server.max_accept_buffer = server["max_accept_buffer"].or_apply(cfg.server.max_accept_buffer);
                 cfg.server.all_connections_timeout = server["all_connections_timeout"].or_apply(cfg.server.all_connections_timeout);
+
+                size_t total_threads_ = std::thread::hardware_concurrency();
+                if (cfg.server.network_threads == 0)
+                    cfg.server.network_threads = (total_threads_ / 4) ? (total_threads_ / 4) : 1;
+                if (cfg.server.working_threads == 0)
+                    cfg.server.working_threads = (total_threads_ / 4) ? (total_threads_ / 4) : 1;
+                if (cfg.server.reading_threads == 0)
+                    cfg.server.reading_threads = (total_threads_ / 4) ? (total_threads_ / 4) : 1;
+                if (cfg.server.writing_threads == 0)
+                    cfg.server.writing_threads = (total_threads_ / 4) ? (total_threads_ / 4) : 1;
             }
             {
                 auto allowed_dimensions = js_array::get_array(data["allowed_dimensions"]);

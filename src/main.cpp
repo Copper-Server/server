@@ -8,6 +8,7 @@
 #include <src/plugin/main.hpp>
 #include <src/protocolHelper/state_handshaking.hpp>
 #include <src/resources/registers.hpp>
+#include <src/util/shared_static_values.hpp>
 
 using namespace copper_server;
 
@@ -32,10 +33,15 @@ int main() {
         log::commands::deinit();
     });
     try {
-        size_t executors = api::configuration::get().server.working_threads;
-        fast_task::task::create_executor(executors ? executors : std::thread::hardware_concurrency());
+        size_t working_threads = api::configuration::get().server.working_threads;
+        size_t reading_threads = api::configuration::get().server.reading_threads;
+        size_t writing_threads = api::configuration::get().server.writing_threads;
+        fast_task::task::create_executor(working_threads);
+        fast_task::task::assign_bind_only_executor(shared_values::loading_pool_tasks_id, reading_threads, false);
+        fast_task::task::assign_bind_only_executor(shared_values::saving_pool_tasks_id, writing_threads, false);
         fast_task::task::task::enable_task_naming = false;
-        api::asio::init(api::configuration::get().server.accepting_threads);
+
+        api::asio::init(api::configuration::get().server.network_threads);
 
 
         log::commands::init();
