@@ -87,7 +87,7 @@ namespace copper_server::packets::release_768 {
 
         template <class RegistryT, class FN>
         list_array<uint8_t> registry_data_serialize_entry(const std::string& identifier, list_array<typename std::unordered_map<std::string, RegistryT>::iterator>& values, FN&& serializer) {
-            list_array<std::pair<std::string, enbt::compound>> fixed_data;
+            list_array<std::pair<std::string, enbt::value>> fixed_data;
             fixed_data.resize(values.size());
             for (auto& _it : values) {
                 auto& [name, it] = *_it;
@@ -99,11 +99,15 @@ namespace copper_server::packets::release_768 {
             part.push_back(0x07);
             WriteIdentifier(part, identifier);
             WriteVar<int32_t>(fixed_data.size(), part);
-            fixed_data.for_each([&](const std::string& name, enbt::compound& data) {
+            fixed_data.for_each([&](const std::string& name, enbt::value& data) {
                 WriteIdentifier(part, name);
-                part.push_back(data.size());
-                if (data.size())
-                    part.push_back(NBT::build((enbt::value&)data).get_as_network());
+                if (data.contains()) {
+                    part.push_back(data.size());
+                    if (data.size())
+                        part.push_back(NBT::build(data).get_as_network());
+                } else {
+                    part.push_back(0);
+                }
             });
             return part;
         }
@@ -116,7 +120,9 @@ namespace copper_server::packets::release_768 {
                     data.push_back(registry_data_serialize_entry<ArmorTrimMaterial>(
                         "minecraft:trim_material",
                         registers::armorTrimMaterials_cache,
-                        [](registers::ArmorTrimMaterial& it) {
+                        [](registers::ArmorTrimMaterial& it) -> enbt::value {
+                            if (!it.send_via_network_body)
+                                return enbt::value{};
                             enbt::compound element;
                             element["asset_name"] = it.asset_name;
                             element["ingredient"] = it.ingredient.to_protocol_name(768);
@@ -139,7 +145,9 @@ namespace copper_server::packets::release_768 {
                     data.push_back(registry_data_serialize_entry<ArmorTrimPattern>(
                         "minecraft:trim_pattern",
                         registers::armorTrimPatterns_cache,
-                        [](registers::ArmorTrimPattern& it) {
+                        [](registers::ArmorTrimPattern& it) -> enbt::value {
+                            if (!it.send_via_network_body)
+                                return enbt::value{};
                             enbt::compound element;
                             element["asset_id"] = it.asset_id;
                             element["template_item"] = it.template_item.to_protocol_name(768);
@@ -156,7 +164,9 @@ namespace copper_server::packets::release_768 {
                     data.push_back(registry_data_serialize_entry<Biome>(
                         "minecraft:worldgen/biome",
                         registers::biomes_cache,
-                        [](registers::Biome& it) { //element
+                        [](registers::Biome& it) -> enbt::value { //element
+                            if (!it.send_via_network_body)
+                                return enbt::value{};
                             enbt::compound element;
                             element["has_precipitation"] = it.has_precipitation;
                             element["temperature"] = it.temperature;
@@ -224,7 +234,9 @@ namespace copper_server::packets::release_768 {
                     data.push_back(registry_data_serialize_entry<ChatType>(
                         "minecraft:chat_type",
                         registers::chatTypes_cache,
-                        [](registers::ChatType& it) {
+                        [](registers::ChatType& it) -> enbt::value {
+                            if (!it.send_via_network_body)
+                                return enbt::value{};
                             enbt::compound element;
                             if (it.chat) {
                                 enbt::compound chat;
@@ -260,7 +272,9 @@ namespace copper_server::packets::release_768 {
                     data.push_back(registry_data_serialize_entry<DamageType>(
                         "minecraft:damage_type",
                         registers::damageTypes_cache,
-                        [](registers::DamageType& it) { //element
+                        [](registers::DamageType& it) -> enbt::value { //element
+                            if (!it.send_via_network_body)
+                                return enbt::value{};
                             enbt::compound element;
                             element["message_id"] = it.message_id;
                             {
@@ -333,7 +347,9 @@ namespace copper_server::packets::release_768 {
                     data.push_back(registry_data_serialize_entry<DimensionType>(
                         "minecraft:dimension_type",
                         registers::dimensionTypes_cache,
-                        [](registers::DimensionType& it) { //element
+                        [](registers::DimensionType& it) -> enbt::value { //element
+                            if (!it.send_via_network_body)
+                                return enbt::value{};
                             enbt::compound element;
                             if (std::holds_alternative<int32_t>(it.monster_spawn_light_level))
                                 element["monster_spawn_light_level"] = std::get<int32_t>(it.monster_spawn_light_level);
@@ -365,7 +381,9 @@ namespace copper_server::packets::release_768 {
                     data.push_back(registry_data_serialize_entry<WolfVariant>(
                         "minecraft:wolf_variant",
                         registers::wolfVariants_cache,
-                        [](registers::WolfVariant& it) { //element
+                        [](registers::WolfVariant& it) -> enbt::value { //element
+                            if (!it.send_via_network_body)
+                                return enbt::value{};
                             enbt::compound element;
                             element["wild_texture"] = it.wild_texture;
                             element["tame_texture"] = it.tame_texture;
@@ -387,7 +405,9 @@ namespace copper_server::packets::release_768 {
                     data.push_back(registry_data_serialize_entry<PaintingVariant>(
                         "minecraft:painting_variant",
                         registers::paintingVariants_cache,
-                        [](registers::PaintingVariant& it) { //element
+                        [](registers::PaintingVariant& it) -> enbt::value { //element
+                            if (!it.send_via_network_body)
+                                return enbt::value{};
                             enbt::compound element;
                             element["asset_id"] = it.asset_id;
                             element["height"] = it.height;

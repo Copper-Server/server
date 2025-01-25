@@ -85,6 +85,18 @@ namespace copper_server::base_objects {
                 cfg.game_play.allow_flight = game_play["allow_flight"].or_apply(cfg.game_play.allow_flight);
                 cfg.game_play.sync_chunk_writes = game_play["sync_chunk_writes"].or_apply(cfg.game_play.sync_chunk_writes);
                 cfg.game_play.enable_command_block = game_play["enable_command_block"].or_apply(cfg.game_play.enable_command_block);
+                if (game_play.contains("enabled_features")) {
+                    cfg.game_play.enabled_features.clear();
+                    auto enabled_features = js_array::get_array(game_play["enabled_features"]);
+                    cfg.game_play.enabled_features.reserve(enabled_features.size());
+                    for (auto&& it : enabled_features)
+                        cfg.game_play.enabled_features.emplace((std::string)it);
+                } else {
+                    auto& enabled_features = (game_play["enabled_features"] = boost::json::array()).get().get_array();
+                    enabled_features.reserve(cfg.game_play.enabled_features.size());
+                    for (auto& it : cfg.game_play.enabled_features)
+                        enabled_features.push_back((boost::json::string)it);
+                }
             }
             {
                 auto protocol = js_object::get_object(data["protocol"]);

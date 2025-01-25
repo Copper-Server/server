@@ -12,6 +12,7 @@ namespace copper_server {
         std::unordered_map<std::string, WolfVariant> wolfVariants;
         std::unordered_map<std::string, BannerPattern> bannerPatterns;
         std::unordered_map<std::string, PaintingVariant> paintingVariants;
+        std::unordered_map<std::string, Instrument> instruments;
 
         list_array<std::unordered_map<std::string, ArmorTrimMaterial>::iterator> armorTrimMaterials_cache;
         list_array<std::unordered_map<std::string, ArmorTrimPattern>::iterator> armorTrimPatterns_cache;
@@ -22,6 +23,7 @@ namespace copper_server {
         list_array<std::unordered_map<std::string, WolfVariant>::iterator> wolfVariants_cache;
         list_array<std::unordered_map<std::string, BannerPattern>::iterator> bannerPatterns_cache;
         list_array<std::unordered_map<std::string, PaintingVariant>::iterator> paintingVariants_cache;
+        list_array<std::unordered_map<std::string, Instrument>::iterator> instruments_cache;
 
         //SERVER
         std::unordered_map<std::string, Advancement> advancements;

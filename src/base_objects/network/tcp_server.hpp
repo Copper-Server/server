@@ -19,17 +19,13 @@ namespace copper_server::base_objects::network {
         boost::asio::ip::tcp::acceptor TCPacceptor;
 
         std::recursive_mutex close_mutex;
-        std::list<tcp_session*> queried_close;
         std::unordered_set<tcp_session*> sessions;
         RSA* server_rsa_key;
         list_array<uint8_t> server_private_key; //PEM
         list_array<uint8_t> server_public_key;  //PEM
         size_t ssl_key_length;
 
-        void make_clean_up();
-
         void AsyncWork(tcp_session* session);
-
         void Worker();
 
         std::atomic_bool disabled = true;

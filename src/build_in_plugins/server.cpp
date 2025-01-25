@@ -220,7 +220,8 @@ namespace copper_server::build_in_plugins {
         });
 
         response += packets::play::playerAbilities(client, client.player_data.abilities.flags.mask, client.player_data.abilities.flying_speed, client.player_data.abilities.field_of_view_modifier);
-
+        response += packets::play::changeDifficulty(client, 1, true);
+        response += packets::play::setHeldSlot(client, client.player_data.assigned_entity->get_selected_item());
 
         return response;
     }

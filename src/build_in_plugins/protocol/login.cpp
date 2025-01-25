@@ -127,6 +127,24 @@ namespace copper_server::build_in_plugins::protocol {
             if (packet.read())
                 data.payload = packet.read_array<uint8_t>(5120);
             api::protocol::on_cookie_response.async_notify({data, *session, session->sharedDataRef()});
+            if (auto plugin = pluginManagement.get_bind_cookies(PluginManagement::registration_on::login, data.key); plugin) {
+                auto response = plugin->OnLoginCookie(plugin, data.key, data.payload ? *data.payload : list_array<uint8_t>{}, !!data.payload, session->sharedDataRef());
+                std::visit(
+                    [&](auto& it) {
+                        auto& login_data = *session->sharedData().packets_state.login_data;
+                        using T = std::decay_t<decltype(it)>;
+                        if constexpr (std::is_same_v<T, PluginRegistration::PluginResponse>) {
+                            login_data.plugin_sequence_id++;
+                            session->sharedData().sendPacket(packets::login::login(session->sharedData(), login_data.plugin_sequence_id, it.plugin_chanel, it.data));
+                        } else if constexpr (std::is_same_v<T, base_objects::network::response>) {
+                            session->sharedData().sendPacket(std::move(it));
+                        } else if (it) {
+                            login_data.plugins_query.pop_front();
+                        }
+                    },
+                    response
+                );
+            }
         }
     }
 

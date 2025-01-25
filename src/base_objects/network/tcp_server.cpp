@@ -22,23 +22,12 @@ namespace copper_server::base_objects::network {
         return global_instance ? *global_instance : throw std::runtime_error("tcp_server not initialized");
     }
 
-    void tcp_server::make_clean_up() {
-        std::unique_lock lock(close_mutex);
-        std::list<tcp_session*> to_clean;
-        to_clean.swap(queried_close);
-        for (auto it : to_clean)
-            if (!sessions.erase(it)) {
-                log::error("protocol", "Failed to erase session from list");
-                return;
-            }
-        lock.unlock();
-        for (auto it : to_clean)
-            delete it;
-    }
-
     void tcp_server::close_session(tcp_session* session) {
         std::unique_lock lock(close_mutex);
-        queried_close.push_back(session);
+        if (!sessions.erase(session))
+            log::error("protocol", "Failed to erase session from list");
+        lock.unlock();
+        delete session;
     }
 
     void tcp_server::AsyncWork(tcp_session* session) {
@@ -49,13 +38,10 @@ namespace copper_server::base_objects::network {
             std::unique_lock lock(close_mutex);
             if (sessions.insert(session).second)
                 session->connect();
-            else
-                lock.unlock();
         }
     }
 
     void tcp_server::Worker() {
-        make_clean_up();
         tcp_session* session = new tcp_session(boost::asio::ip::tcp::socket(make_strand(api::asio::get_threads())), api::network::get_first_tcp_handler(), api::configuration::get().server.all_connections_timeout);
         TCPacceptor.async_accept(session->sock, [this, session](const boost::system::error_code& error) {
             if (error == boost::asio::error::operation_aborted || disabled)
@@ -180,7 +166,6 @@ namespace copper_server::base_objects::network {
     void tcp_server::stop() {
         if (!disabled) {
             std::lock_guard lock(close_mutex);
-            make_clean_up();
             TCPacceptor.close();
             for (auto it : sessions)
                 it->disconnect();

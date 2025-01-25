@@ -319,47 +319,6 @@ namespace copper_server::build_in_plugins {
         auto& client = *client_ref;
         base_objects::network::response response;
 
-        auto last_death_location = client.player_data.last_death_location ? std::optional(base_objects::packets::death_location_data(
-                                                                                client.player_data.last_death_location->world_id,
-                                                                                {(int32_t)client.player_data.last_death_location->x, (int32_t)client.player_data.last_death_location->y, (int32_t)client.player_data.last_death_location->z}
-                                                                            ))
-                                                                          : std::nullopt;
-
-
-        auto [world_id, world_name] = api::world::prepare_world(client_ref);
-
-        auto player_entity = base_objects::entity::create("minecraft:player");
-        auto player_entity_id = api::entity_id_map::allocate_id(client.data->uuid);
-        player_entity->id = client.data->uuid;
-
-
-        response
-            += packets::play::joinGame(
-                client,
-                player_entity_id,
-                client.player_data.hardcore_hearts,
-                registers::dimensionTypes_cache.convert<std::string>([](auto& a) { return a->first; }),
-                100,
-                client.view_distance,
-                client.simulation_distance,
-                client.player_data.reduced_debug_info,
-                true,
-                false,
-                world_id,
-                world_name,
-                0,
-                client.player_data.gamemode,
-                client.player_data.prev_gamemode,
-                false,
-                false,
-                last_death_location,
-                0,                                                      //ignore portal cooldown, did it used by client?
-                api::configuration::get().mojang.enforce_secure_profile //TODO, huh? not sure
-            );
-
-        response += packets::play::changeDifficulty(client, 1, true);
-        response += packets::play::setHeldSlot(client, client.player_data.assigned_entity->get_selected_item());
-
         return response;
     }
 

@@ -13,12 +13,16 @@ namespace copper_server::client_handler {
         auto& shared_data = session->sharedData();
         auto& load_state = shared_data.packets_state.load_state;
         base_objects::network::response response(base_objects::network::response::empty());
-        if (load_state == load_state_t::to_init) {
+        if (auto packets = session->sharedData().getPendingPackets(); !packets.empty()) {
+            for (auto& packet : packets)
+                response += std::move(packet);
+            if (load_state == load_state_t::done)
+                load_state = load_state_t::await_processing;
+        } else if (load_state == load_state_t::to_init) {
             std::string assigned_version = base_objects::packets::protocol_to_java_name(shared_data.packets_state.protocol_version);
             response += packets::configuration::knownPacks(
                 shared_data,
                 resources::loaded_packs()
-                    .push_back({"minecraft", "core"})
                     .transform([&assigned_version](auto&& pack) {
                         pack.version = assigned_version;
                         return std::move(pack);
@@ -26,11 +30,6 @@ namespace copper_server::client_handler {
             );
             load_state = load_state_t::await_known_packs;
             return response;
-        } else if (auto packets = session->sharedData().getPendingPackets(); !packets.empty()) {
-            for (auto& packet : packets)
-                response += std::move(packet);
-            if (load_state == load_state_t::done)
-                load_state = load_state_t::await_processing;
         } else if (response.data.empty() && load_state == load_state_t::await_processing) {
             load_state = load_state_t::done;
         } else if (load_state == load_state_t::done) {
@@ -62,6 +61,10 @@ namespace copper_server::client_handler {
     }
 
     base_objects::network::response handle_configuration::on_switching() {
+        pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::configuration, [&](auto&& plugin) {
+            if (auto res = plugin->OnConfiguration(session->sharedDataRef()); res)
+                session->sharedData().sendPacket(std::move(*res));
+        });
         session->sharedData().setSwitchToHandlerCallback([this](tcp_client* cl) {
             next_handler = cl;
         });

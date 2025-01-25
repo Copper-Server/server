@@ -78,38 +78,44 @@ namespace copper_server {
             struct {
                 struct {
                     std::unordered_map<std::string, PluginRegistrationPtr> plugins;
+                    std::unordered_map<std::string, PluginRegistrationPtr> cookies;
                 } login;
 
                 struct {
                     std::unordered_map<std::string, PluginRegistrationPtr> plugins;
+                    std::unordered_map<std::string, PluginRegistrationPtr> cookies;
                     list_array<PluginRegistrationPtr> on_init;
                 } configuration;
 
                 struct {
                     std::unordered_map<std::string, PluginRegistrationPtr> plugins;
+                    std::unordered_map<std::string, PluginRegistrationPtr> cookies;
                     list_array<PluginRegistrationPtr> on_init;
                 } play;
 
-                static void unregisterEvery(PluginRegistrationPtr& plugin, std::unordered_map<std::string, PluginRegistrationPtr>& plugins) {
+                static void unregisterEvery(PluginRegistrationPtr& plugin, std::unordered_map<std::string, PluginRegistrationPtr>& container) {
                     for (
                         std::unordered_map<std::string, PluginRegistrationPtr>::iterator it;
-                        it != plugins.end();
-                        it = std::find_if(plugins.begin(), plugins.end(), [&plugin](auto& item) {
+                        it != container.end();
+                        it = std::find_if(container.begin(), container.end(), [&plugin](auto& item) {
                             return item.second == plugin;
                         })
                     )
-                        plugins.erase(it);
+                        container.erase(it);
                 }
 
                 void unregister(PluginRegistrationPtr& plugin) {
                     //login
                     unregisterEvery(plugin, login.plugins);
+                    unregisterEvery(plugin, login.cookies);
                     //configuration
                     configuration.on_init.remove(plugin);
                     unregisterEvery(plugin, configuration.plugins);
+                    unregisterEvery(plugin, configuration.cookies);
                     //play
                     play.on_init.remove(plugin);
                     unregisterEvery(plugin, play.plugins);
+                    unregisterEvery(plugin, play.cookies);
                 }
             } registration;
         };
@@ -151,6 +157,24 @@ namespace copper_server {
                     break;
                 case registration_on::play:
                     vals.registration.play.plugins[channel] = plugin;
+                    break;
+                default:
+                    break;
+                }
+            });
+        }
+
+        void bindPluginCookiesOn(const std::string& cookie_id, PluginRegistrationPtr plugin, registration_on on) {
+            protected_values.set([&](protected_values_t& vals) {
+                switch (on) {
+                case registration_on::login:
+                    vals.registration.login.cookies[cookie_id] = plugin;
+                    break;
+                case registration_on::configuration:
+                    vals.registration.configuration.cookies[cookie_id] = plugin;
+                    break;
+                case registration_on::play:
+                    vals.registration.play.cookies[cookie_id] = plugin;
                     break;
                 default:
                     break;
@@ -289,6 +313,36 @@ namespace copper_server {
                 }
                 case registration_on::play: {
                     auto it = vals.registration.play.plugins.find(channel);
+                    if (it != vals.registration.play.plugins.end())
+                        return it->second;
+                    else
+                        return nullptr;
+                }
+                default:
+                    throw std::runtime_error("Unknown registration");
+                }
+            });
+        }
+
+        PluginRegistrationPtr get_bind_cookies(registration_on on, const std::string& cookie_id) const {
+            return protected_values.get([&](const protected_values_t& vals) -> PluginRegistrationPtr {
+                switch (on) {
+                case registration_on::login: {
+                    auto it = vals.registration.login.plugins.find(cookie_id);
+                    if (it != vals.registration.login.plugins.end())
+                        return it->second;
+                    else
+                        return nullptr;
+                }
+                case registration_on::configuration: {
+                    auto it = vals.registration.configuration.plugins.find(cookie_id);
+                    if (it != vals.registration.configuration.plugins.end())
+                        return it->second;
+                    else
+                        return nullptr;
+                }
+                case registration_on::play: {
+                    auto it = vals.registration.play.plugins.find(cookie_id);
                     if (it != vals.registration.play.plugins.end())
                         return it->second;
                     else

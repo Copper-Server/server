@@ -109,6 +109,10 @@ namespace copper_server {
             return false;
         }
 
+        virtual plugin_response_login OnLoginCookie(const std::shared_ptr<PluginRegistration>& self, const std::string& cookie_id, const list_array<uint8_t>& data, bool successful, base_objects::client_data_holder& client) {
+            return false;
+        }
+
 #pragma endregion
 
 #pragma region OnConfiguration
@@ -130,12 +134,20 @@ namespace copper_server {
             return std::nullopt;
         }
 
+        virtual plugin_response OnConfigurationCookie(const std::shared_ptr<PluginRegistration>& self, const std::string& cookie_id, const list_array<uint8_t>& data, base_objects::client_data_holder&) {
+            return std::nullopt;
+        }
+
 #pragma endregion
 
 #pragma region OnPlay
 
         //custom plugin handling
         virtual plugin_response OnPlayHandle(const std::shared_ptr<PluginRegistration>& self, const std::string& chanel, const list_array<uint8_t>& data, base_objects::client_data_holder&) {
+            return std::nullopt;
+        }
+
+        virtual plugin_response OnPlayCookie(const std::shared_ptr<PluginRegistration>& self, const std::string& cookie_id, const list_array<uint8_t>& data, base_objects::client_data_holder&) {
             return std::nullopt;
         }
 

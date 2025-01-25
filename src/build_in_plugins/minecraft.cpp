@@ -8,6 +8,7 @@ namespace copper_server::build_in_plugins {
 
     void MinecraftPlugin::OnLoad(const PluginRegistrationPtr& self) {
         pluginManagement.bindPluginOn("minecraft:brand", self, PluginManagement::registration_on::configuration);
+        //pluginManagement.bindPluginCookiesOn("minecraft:vanilla", self, PluginManagement::registration_on::configuration);
         log::info("Minecraft", "Minecraft plugin loaded!");
     }
 
@@ -18,7 +19,8 @@ namespace copper_server::build_in_plugins {
     MinecraftPlugin::plugin_response MinecraftPlugin::OnConfiguration(base_objects::client_data_holder& client) {
         list_array<uint8_t> response;
         WriteString(response, "CopperServer");
-        return packets::configuration::configuration(*client, "minecraft:brand", response);
+        return packets::configuration::configuration(*client, "minecraft:brand", response)
+               += packets::configuration::requestCookie(*client, "minecraft:vanilla");
     }
 
     MinecraftPlugin::plugin_response MinecraftPlugin::OnConfigurationHandle(const PluginRegistrationPtr& self, const std::string& chanel, const list_array<uint8_t>& data, base_objects::client_data_holder& client) {
@@ -29,6 +31,13 @@ namespace copper_server::build_in_plugins {
             stream.r += len;
             client->client_brand = brand;
         }
+        return std::nullopt;
+    }
+
+    MinecraftPlugin::plugin_response MinecraftPlugin::OnConfigurationCookie(const PluginRegistrationPtr& self, const std::string& chanel, const list_array<uint8_t>& data, base_objects::client_data_holder& client) {
+        //if (chanel == "minecraft:vanilla") {
+        //
+        //}
         return std::nullopt;
     }
 }

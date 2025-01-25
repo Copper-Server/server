@@ -186,6 +186,10 @@ namespace copper_server::build_in_plugins::protocol::play_768 {
             if (packet.read())
                 data.payload = packet.read_array<uint8_t>(5120);
             api::protocol::on_cookie_response.async_notify({data, *session, session->sharedDataRef()});
+            if (auto plugin = pluginManagement.get_bind_cookies(PluginManagement::registration_on::play, data.key); plugin) {
+                if (auto response = plugin->OnPlayCookie(plugin, data.key, data.payload ? *data.payload : list_array<uint8_t>{}, session->sharedDataRef()); response)
+                    session->sharedData().sendPacket(std::move(*response));
+            }
         }
 
         void plugin_message(base_objects::network::tcp_session* session, ArrayStream& packet) {

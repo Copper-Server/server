@@ -35,6 +35,7 @@ namespace copper_server::base_objects {
         } world;
 
         struct GamePlay {
+            std::unordered_set<std::string> enabled_features;
             std::string difficulty = "normal";
             std::string gamemode = "survival";
             uint64_t max_chained_neighbor_updates = 4000;

@@ -14,9 +14,9 @@ namespace copper_server::resources {
     //processes whole pack data,
     //tags always processed first, correctly handles replace flag and eats circular dependencies without problem, ignores unregistered tags
     //! Thread unsafe, should be called from wrapped api instead
-    void process_pack(const std::filesystem::path& folder_path_to_data);
-    void process_pack(const std::filesystem::path& folder_path_to_data_without_namespace, const std::string& namespace_);
-    void process_pack(boost::json::object& memory, const std::string& namespace_);
+    void process_pack(const std::filesystem::path& folder_path_to_data_packs);
+    void process_pack(const std::filesystem::path& folder_path_to_data_with_namespace, const std::string& namespace_, const std::string& id);
+    void process_pack(boost::json::object& memory, const std::string& namespace_, const std::string& id);
 
     list_array<base_objects::data_packs::known_pack> loaded_packs();
     //Accepts types:

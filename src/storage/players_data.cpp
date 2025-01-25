@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <library/enbt/io.hpp>
+#include <src/base_objects/entity.hpp>
 #include <src/storage/players_data.hpp>
 
 namespace copper_server::storage {

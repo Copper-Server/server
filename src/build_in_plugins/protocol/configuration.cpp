@@ -6,6 +6,7 @@
 #include <src/protocolHelper/client_handler/abstract.hpp>
 #include <src/protocolHelper/packets/abstract.hpp>
 #include <src/protocolHelper/util.hpp>
+#include <src/registers.hpp>
 
 namespace copper_server::build_in_plugins::protocol::play_769 {
     namespace configuration {
@@ -41,6 +42,10 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             if (packet.read())
                 data.payload = packet.read_array<uint8_t>(5120);
             api::protocol::on_cookie_response.async_notify({data, *session, session->sharedDataRef()});
+            if (auto plugin = pluginManagement.get_bind_cookies(PluginManagement::registration_on::configuration, data.key); plugin) {
+                if (auto response = plugin->OnConfigurationCookie(plugin, data.key, data.payload ? *data.payload : list_array<uint8_t>{}, session->sharedDataRef()); response)
+                    session->sharedData().sendPacket(std::move(*response));
+            }
         }
 
         void plugin_message(base_objects::network::tcp_session* session, ArrayStream& packet) {
@@ -115,6 +120,88 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             session->sharedData().sendPacket(
                 packets::configuration::registry_data(session->sharedData())
             );
+
+            {
+                base_objects::packets::tag_mapping block;
+                block.registry = "minecraft:block";
+                for (auto& [id, values] : registers::tags.at("block").at("minecraft")) {
+                    block.tags.push_back(
+                        {.tag_name = id,
+                         .entires = values.convert_fn(
+                             [&session](auto& it) -> int32_t {
+                                 return base_objects::block::get_block_id(it, session->protocol_version);
+                             }
+                         )}
+                    );
+                }
+
+                base_objects::packets::tag_mapping item;
+                item.registry = "minecraft:item";
+                for (auto& [id, values] : registers::tags.at("item").at("minecraft")) {
+                    item.tags.push_back(
+                        {.tag_name = id,
+                         .entires = values.convert_fn(
+                             [&session](auto& it) -> int32_t {
+                                 return base_objects::item_id_t(it).to_protocol(session->protocol_version);
+                             }
+                         )}
+                    );
+                }
+                base_objects::packets::tag_mapping fluid;
+                fluid.registry = "minecraft:fluid";
+                for (auto& [id, values] : registers::tags.at("fluid").at("minecraft")) {
+                    fluid.tags.push_back(
+                        {.tag_name = id,
+                         .entires = registers::convert_reg_pro_id("minecraft:fluid", values, session->protocol_version)
+                        }
+                    );
+                }
+                base_objects::packets::tag_mapping worldgen_biome;
+                worldgen_biome.registry = "minecraft:worldgen/biome";
+                for (auto& [id, values] : registers::tags.at("worldgen/biome").at("minecraft")) {
+                    worldgen_biome.tags.push_back(
+                        {.tag_name = id,
+                         .entires = values.convert_fn([&session](auto& it) -> int32_t {
+                             return registers::biomes.at(it).id;
+                         })
+                        }
+                    );
+                }
+                base_objects::packets::tag_mapping entity_type;
+                entity_type.registry = "minecraft:entity_type";
+                for (auto& [id, values] : registers::tags.at("entity_type").at("minecraft")) {
+                    entity_type.tags.push_back(
+                        {.tag_name = id,
+                         .entires = registers::convert_reg_pro_id("minecraft:entity_type", values, session->protocol_version)
+                        }
+                    );
+                }
+
+                base_objects::packets::tag_mapping game_event;
+                game_event.registry = "minecraft:game_event";
+                for (auto& [id, values] : registers::tags.at("game_event").at("minecraft")) {
+                    game_event.tags.push_back(
+                        {.tag_name = id,
+                         .entires = registers::convert_reg_pro_id("minecraft:game_event", values, session->protocol_version)
+                        }
+                    );
+                }
+
+
+                session->sharedData().sendPacket(
+                    packets::configuration::updateTags(
+                        session->sharedData(),
+                        {
+                            std::move(block),
+                            std::move(item),
+                            std::move(fluid),
+                            std::move(entity_type),
+                            std::move(game_event),
+                            std::move(worldgen_biome),
+                        }
+                    )
+                );
+            }
 
             pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::configuration, [session, &packs](PluginRegistrationPtr plugin) {
                 if (auto res = plugin->OnConfiguration_gotKnownPacks(session->sharedDataRef(), packs); res)

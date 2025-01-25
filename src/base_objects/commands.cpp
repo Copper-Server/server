@@ -3,10 +3,12 @@
 #include <src/api/permissions.hpp>
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/commands.hpp>
+#include <src/base_objects/entity.hpp>
 #include <src/base_objects/packets.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 #include <src/protocolHelper/util.hpp>
+#include <src/util/calculations.hpp>
 #include <src/util/conversions.hpp>
 
 namespace copper_server::base_objects {

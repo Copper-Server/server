@@ -17,6 +17,8 @@ namespace copper_server {
     }
 
     namespace base_objects {
+        struct SharedClientData;
+        using client_data_holder = atomic_holder<SharedClientData>;
         struct entity;
         using entity_ref = atomic_holder<entity>;
 
@@ -113,6 +115,7 @@ namespace copper_server {
             util::VECTOR head_rotation;
 
             storage::world_data* world = nullptr;
+            client_data_holder assigned_player;
 
             //nbt {
             //  float health = 20;
@@ -151,8 +154,6 @@ namespace copper_server {
             //  }
             //}
 
-
-            events::sync_event<entity&> changes_event;
             bool kill();
             void force_kill();
             bool is_died();

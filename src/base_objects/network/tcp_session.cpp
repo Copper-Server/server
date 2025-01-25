@@ -112,8 +112,6 @@ namespace copper_server::base_objects::network {
 
     bool tcp_session::checked(boost::system::error_code ec, std::string const& msg) {
         if (ec || sock.is_open() == false) {
-            if (ec != boost::asio::error::operation_aborted)
-                return false;
             if (do_log_connection_errors)
                 log::error("protocol", "[" + msg + "] [" + std::to_string(id) + "]" + ec.message());
             disconnect();

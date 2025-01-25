@@ -342,7 +342,11 @@ namespace copper_server {
         }
 
         uint8_t entity::get_selected_item() const {
-            return nbt.at("selected_item");
+            auto it = nbt.find("selected_item");
+            if (it == nbt.end())
+                return 0;
+            else
+                return it->second;
         }
 
         void entity::set_selected_item(uint8_t selected_item) {
