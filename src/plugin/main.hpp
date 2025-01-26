@@ -75,7 +75,7 @@ namespace copper_server {
         struct protected_values_t {
             std::unordered_map<std::string, PluginRegistrationPtr> plugins;
 
-            struct {
+            struct ___ {
                 struct {
                     std::unordered_map<std::string, PluginRegistrationPtr> plugins;
                     std::unordered_map<std::string, PluginRegistrationPtr> cookies;
@@ -93,30 +93,7 @@ namespace copper_server {
                     list_array<PluginRegistrationPtr> on_init;
                 } play;
 
-                static void unregisterEvery(PluginRegistrationPtr& plugin, std::unordered_map<std::string, PluginRegistrationPtr>& container) {
-                    for (
-                        std::unordered_map<std::string, PluginRegistrationPtr>::iterator it;
-                        it != container.end();
-                        it = std::find_if(container.begin(), container.end(), [&plugin](auto& item) {
-                            return item.second == plugin;
-                        })
-                    )
-                        container.erase(it);
-                }
-
-                void unregister(PluginRegistrationPtr& plugin) {
-                    //login
-                    unregisterEvery(plugin, login.plugins);
-                    unregisterEvery(plugin, login.cookies);
-                    //configuration
-                    configuration.on_init.remove(plugin);
-                    unregisterEvery(plugin, configuration.plugins);
-                    unregisterEvery(plugin, configuration.cookies);
-                    //play
-                    play.on_init.remove(plugin);
-                    unregisterEvery(plugin, play.plugins);
-                    unregisterEvery(plugin, play.cookies);
-                }
+                void unregister(PluginRegistrationPtr& plugin);
             } registration;
         };
 
@@ -129,58 +106,11 @@ namespace copper_server {
             play
         };
 
-        void registerPluginOn(PluginRegistrationPtr plugin, registration_on on) {
-            protected_values.set([&](protected_values_t& vals) {
-                switch (on) {
-                case registration_on::login:
-                    break;
-                case registration_on::configuration:
-                    vals.registration.configuration.on_init.push_back(plugin);
-                    break;
-                case registration_on::play:
-                    vals.registration.play.on_init.push_back(plugin);
-                    break;
-                default:
-                    break;
-                }
-            });
-        }
+        void registerPluginOn(PluginRegistrationPtr plugin, registration_on on);
 
-        void bindPluginOn(const std::string& channel, PluginRegistrationPtr plugin, registration_on on) {
-            protected_values.set([&](protected_values_t& vals) {
-                switch (on) {
-                case registration_on::login:
-                    vals.registration.login.plugins[channel] = plugin;
-                    break;
-                case registration_on::configuration:
-                    vals.registration.configuration.plugins[channel] = plugin;
-                    break;
-                case registration_on::play:
-                    vals.registration.play.plugins[channel] = plugin;
-                    break;
-                default:
-                    break;
-                }
-            });
-        }
+        void bindPluginOn(const std::string& channel, PluginRegistrationPtr plugin, registration_on on);
 
-        void bindPluginCookiesOn(const std::string& cookie_id, PluginRegistrationPtr plugin, registration_on on) {
-            protected_values.set([&](protected_values_t& vals) {
-                switch (on) {
-                case registration_on::login:
-                    vals.registration.login.cookies[cookie_id] = plugin;
-                    break;
-                case registration_on::configuration:
-                    vals.registration.configuration.cookies[cookie_id] = plugin;
-                    break;
-                case registration_on::play:
-                    vals.registration.play.cookies[cookie_id] = plugin;
-                    break;
-                default:
-                    break;
-                }
-            });
-        }
+        void bindPluginCookiesOn(const std::string& cookie_id, PluginRegistrationPtr plugin, registration_on on);
 
         template <class FN>
         void inspect_plugin_registration(registration_on on, FN&& fn) const {
@@ -294,85 +224,10 @@ namespace copper_server {
             return inspect_plugin_bind_future_accumulate(on, std::forward<FN>(fn)).take();
         }
 
-        PluginRegistrationPtr get_bind_plugin(registration_on on, const std::string& channel) const {
-            return protected_values.get([&](const protected_values_t& vals) -> PluginRegistrationPtr {
-                switch (on) {
-                case registration_on::login: {
-                    auto it = vals.registration.login.plugins.find(channel);
-                    if (it != vals.registration.login.plugins.end())
-                        return it->second;
-                    else
-                        return nullptr;
-                }
-                case registration_on::configuration: {
-                    auto it = vals.registration.configuration.plugins.find(channel);
-                    if (it != vals.registration.configuration.plugins.end())
-                        return it->second;
-                    else
-                        return nullptr;
-                }
-                case registration_on::play: {
-                    auto it = vals.registration.play.plugins.find(channel);
-                    if (it != vals.registration.play.plugins.end())
-                        return it->second;
-                    else
-                        return nullptr;
-                }
-                default:
-                    throw std::runtime_error("Unknown registration");
-                }
-            });
-        }
-
-        PluginRegistrationPtr get_bind_cookies(registration_on on, const std::string& cookie_id) const {
-            return protected_values.get([&](const protected_values_t& vals) -> PluginRegistrationPtr {
-                switch (on) {
-                case registration_on::login: {
-                    auto it = vals.registration.login.plugins.find(cookie_id);
-                    if (it != vals.registration.login.plugins.end())
-                        return it->second;
-                    else
-                        return nullptr;
-                }
-                case registration_on::configuration: {
-                    auto it = vals.registration.configuration.plugins.find(cookie_id);
-                    if (it != vals.registration.configuration.plugins.end())
-                        return it->second;
-                    else
-                        return nullptr;
-                }
-                case registration_on::play: {
-                    auto it = vals.registration.play.plugins.find(cookie_id);
-                    if (it != vals.registration.play.plugins.end())
-                        return it->second;
-                    else
-                        return nullptr;
-                }
-                default:
-                    throw std::runtime_error("Unknown registration");
-                }
-            });
-        }
-
-        void registerPlugin(const std::string& name, PluginRegistrationPtr plugin) {
-            protected_values.set(
-                [&](protected_values_t& vals) {
-                    vals.plugins[name] = plugin;
-                }
-            );
-            plugin->OnRegister(plugin);
-        }
-
-        PluginRegistrationPtr getPlugin(const std::string& name) const {
-            return protected_values.get(
-                [&](const protected_values_t& vals) -> PluginRegistrationPtr {
-                    auto it = vals.plugins.find(name);
-                    if (it == vals.plugins.end())
-                        return nullptr;
-                    return it->second;
-                }
-            );
-        }
+        PluginRegistrationPtr get_bind_plugin(registration_on on, const std::string& channel) const;
+        PluginRegistrationPtr get_bind_cookies(registration_on on, const std::string& cookie_id) const;
+        void registerPlugin(const std::string& name, PluginRegistrationPtr plugin);
+        PluginRegistrationPtr getPlugin(const std::string& name) const;
 
         template <class Plugin>
         std::shared_ptr<Plugin> requestPlugin(const std::string& name) const {
@@ -388,111 +243,14 @@ namespace copper_server {
             );
         }
 
-        void unloadPlugin(const std::string& name) {
-            PluginRegistrationPtr plugin;
-            protected_values.set(
-                [&](protected_values_t& vals) {
-                    auto it = vals.plugins.find(name);
-                    if (it == vals.plugins.end())
-                        return;
-                    plugin = it->second;
-                    vals.plugins.erase(it);
-                    vals.registration.unregister(plugin);
-                }
-            );
-            plugin->OnUnload(plugin);
-        }
-
-        list_array<PluginRegistrationPtr> registeredPlugins() const {
-            list_array<PluginRegistrationPtr> result;
-            return protected_values.get(
-                [&](const protected_values_t& vals) {
-                    result.reserve(vals.plugins.size());
-                    for (auto& [name, plugin] : vals.plugins)
-                        result.push_back(plugin);
-                    return result;
-                }
-            );
-        }
-
-        void autoRegister() {
-            for (auto& [name, plugin] : __internal__::registration_list()) {
-                registerPlugin(name, plugin->construct());
-            }
-            __internal__::registration_list().clear();
-        }
-
-        void callInitialization() {
-            std::unordered_map<std::string, PluginRegistrationPtr> plugins;
-            protected_values.get(
-                [&](const protected_values_t& vals) {
-                    plugins = vals.plugins;
-                }
-            );
-            for (auto& [name, plugin] : plugins)
-                plugin->OnInitialization(plugin);
-        }
-
-        void callLoad() {
-            std::unordered_map<std::string, PluginRegistrationPtr> plugins;
-            protected_values.get(
-                [&](const protected_values_t& vals) {
-                    plugins = vals.plugins;
-                }
-            );
-
-            future::forEach(plugins, [](auto& plugin) {
-                plugin.second->OnLoad(plugin.second);
-            })->wait();
-
-            future::forEach(plugins, [](auto& plugin) {
-                plugin.second->OnPostLoad(plugin.second);
-            })->wait();
-
-            future::forEach(plugins, [](auto& plugin) {
-                plugin.second->OnLoadComplete(plugin.second);
-            })->wait();
-        }
-
-        void callUnload() {
-            std::unordered_map<std::string, PluginRegistrationPtr> plugins;
-            protected_values.get(
-                [&](const protected_values_t& vals) {
-                    plugins = vals.plugins;
-                }
-            );
-            for (auto& [name, plugin] : plugins)
-                plugin->OnUnload(plugin);
-
-            for (auto& [name, plugin] : plugins)
-                plugin->OnPostUnload(plugin);
-
-            for (auto& [name, plugin] : plugins) {
-                plugin->OnUnloadComplete(plugin);
-                plugin->clean_up_registered_events();
-            }
-        }
-
-        void callFaultUnload() {
-            std::unordered_map<std::string, PluginRegistrationPtr> plugins;
-            protected_values.get(
-                [&](const protected_values_t& vals) {
-                    plugins = vals.plugins;
-                }
-            );
-            for (auto& [name, plugin] : plugins) {
-                plugin->OnFaultUnload(plugin);
-                plugin->clean_up_registered_events();
-            }
-        }
-
-        void unregisterAll() {
-            protected_values.set(
-                [&](protected_values_t& vals) {
-                    vals.plugins.clear();
-                }
-            );
-        }
+        void unloadPlugin(const std::string& name);
+        list_array<PluginRegistrationPtr> registeredPlugins() const;
+        void autoRegister();
+        void callInitialization();
+        void callLoad();
+        void callUnload();
+        void callFaultUnload();
+        void unregisterAll();
     };
 
     template <__internal__::CTS name, class Self>

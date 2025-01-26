@@ -350,7 +350,7 @@ struct CancelableFuture : public Future<T> {
     }
 
     void cancel() {
-        fast_task::task::notify_cancel(task);
+        fast_task::task::await_notify_cancel(task);
     }
 };
 
@@ -404,7 +404,7 @@ struct CancelableFuture<void> : public Future<void> {
     }
 
     void cancel() {
-        fast_task::task::notify_cancel(task);
+        fast_task::task::await_notify_cancel(task);
     }
 };
 
@@ -415,8 +415,8 @@ template <class T>
 using CancelableFuturePtr = std::shared_ptr<CancelableFuture<T>>;
 
 namespace future {
-    template <class T>
-    FuturePtr<void> forEach(T& container, const std::function<void(const typename T::value_type&)>& fn) {
+    template <class T, class FN>
+    FuturePtr<void> forEach(T& container, FN&& fn) {
         if (container.empty())
             return Future<void>::make_ready();
         std::vector<CancelableFuturePtr<void>> futures;
@@ -436,8 +436,8 @@ namespace future {
         });
     }
 
-    template <class T>
-    FuturePtr<void> forEachMove(T& container, const std::function<void(typename T::value_type&&)>& fn) {
+    template <class T, class FN>
+    FuturePtr<void> forEachMove(T&& container, FN&& fn) {
         if (container.empty())
             return Future<void>::make_ready();
         std::vector<CancelableFuturePtr<void>> futures;
@@ -457,6 +457,29 @@ namespace future {
                 throw;
             }
         });
+    }
+
+    template <class Result, class T, class FN>
+    list_array<Result> process(const list_array<T>& container, FN&& fn) {
+        if (container.empty())
+            return {};
+
+        std::vector<CancelableFuturePtr<Result>> futures;
+        futures.reserve(container.size());
+        for (auto& item : container)
+            futures.push_back(CancelableFuture<Result>::start([item, fn = fn]() mutable { return fn(item); }));
+
+        list_array<Result> res;
+        res.reserve(container.size());
+        try {
+            for (auto& future : futures)
+                res.push_back(future->take());
+        } catch (...) {
+            for (auto& future : futures)
+                future->cancel();
+            throw;
+        }
+        return res;
     }
 
     template <class Ret, class Accept>

@@ -192,6 +192,22 @@ namespace copper_server::base_objects {
             }
         }
 
+        template <class _FN>
+        void enum_points_from_center_w_layer_no_center(_FN fn) const {
+            for (int64_t layer = radius_begin ? radius_begin : 1; layer <= radius_end; ++layer) {
+                for (int64_t i = -layer + 1; i < layer; ++i) {
+                    fn(center_x + i, center_z - layer, layer);
+                    fn(center_x - layer, center_z + i, layer);
+                    fn(center_x + i, center_z + layer, layer);
+                    fn(center_x + layer, center_z + i, layer);
+                }
+                fn(center_x - layer, center_z - layer, layer);
+                fn(center_x + layer, center_z - layer, layer);
+                fn(center_x - layer, center_z + layer, layer);
+                fn(center_x + layer, center_z + layer, layer);
+            }
+        }
+
         bool in_bounds(int64_t x, int64_t z) const {
             return x >= (center_x - radius_begin) && x <= (center_x + radius_end) && z >= (center_z - radius_begin) && z <= (center_z + radius_end);
         }

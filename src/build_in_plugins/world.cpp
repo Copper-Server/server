@@ -204,8 +204,6 @@ namespace copper_server::build_in_plugins {
         log::info("World", "installing ticking task...");
         world_ticking = std::make_shared<fast_task::task>([this]() {
             log::info("World", "load complete.");
-            std::random_device rd;
-            std::mt19937 gen(rd());
             std::chrono::high_resolution_clock::time_point last_tick = std::chrono::high_resolution_clock::now();
             std::chrono::high_resolution_clock::time_point tick_next_awoke = std::chrono::high_resolution_clock::now();
             while (true) {
@@ -220,7 +218,7 @@ namespace copper_server::build_in_plugins {
                         fast_task::task::check_cancellation();
                         auto current_time = std::chrono::high_resolution_clock::now();
                         auto elapsed = current_time - last_tick;
-                        worlds_storage.apply_tick(gen, current_time, elapsed);
+                        worlds_storage.apply_tick(current_time, elapsed);
                         tick_next_awoke = std::chrono::high_resolution_clock::now();
                         auto to_tick = tick_next_awoke - current_time;
 

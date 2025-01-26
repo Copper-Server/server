@@ -8,6 +8,7 @@
 #include <src/log.hpp>
 #include <src/storage/world_data.hpp>
 #include <src/util/shared_static_values.hpp>
+#include <src/util/task_management.hpp>
 
 namespace enbt::io_helper {
     using namespace copper_server;
@@ -1843,7 +1844,10 @@ namespace copper_server::storage {
             else if (ticket.level < 44) {
                 to_tick_chunks.reserve(ticket.point.count());
                 ticket.point.enum_points_from_center([&](int64_t x, int64_t z) {
-                    loading_tickets_cc[x].insert(z);
+                    auto& local_x = loading_tickets_cc[x];
+                    if (local_x.contains(z))
+                        return;
+                    local_x.insert(z);
                     ++target_load_count;
                     auto res = request_chunk_data(x, z);
                     if (res->is_ready()) {
@@ -1856,10 +1860,13 @@ namespace copper_server::storage {
                 if (propagation) {
                     base_objects::cubic_bounds_chunk_radius_out bounds(ticket.point.center_x, ticket.point.center_z, ticket.point.radius, ticket.point.radius + propagation);
                     to_tick_chunks.reserve(bounds.count());
-                    bounds.enum_points_from_center_w_layer([&](int64_t x, int64_t z, int64_t layer) {
+                    bounds.enum_points_from_center_w_layer_no_center([&](int64_t x, int64_t z, int64_t layer) {
                         auto set_load_level = propagation + layer;
                         if (set_load_level <= 33) {
-                            loading_tickets_cc[x].insert(z);
+                            auto& local_x = loading_tickets_cc[x];
+                            if (local_x.contains(z))
+                                return;
+                            local_x.insert(z);
                             ++target_load_count;
                             auto res = request_chunk_data(x, z);
                             if (res->is_ready()) {
@@ -1877,18 +1884,12 @@ namespace copper_server::storage {
             loading_tickets.erase(id);
         });
         lock.unlock();
-        to_tick_chunks.unify([](const base_objects::atomic_holder<chunk_data>& a, const base_objects::atomic_holder<chunk_data>& b) {
-            return a->chunk_x == b->chunk_x && a->chunk_z == b->chunk_z;
-        });
         tick_counter++;
         if (!profiling.enable_world_profiling) {
             to_tick_chunks.for_each([&](auto&& chunk) {
                 chunk->tick(*this, random_tick_speed, random_engine, current_time);
             });
         } else {
-            target_load_count = 0;
-            for (auto& [__, z_axis] : loading_tickets_cc)
-                target_load_count += z_axis.size();
             profiling.chunk_target_to_load = target_load_count;
             const auto tick_speed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::duration<double>(1) / ticks_per_second);
             auto tick_local_time = std::chrono::high_resolution_clock::now();
@@ -2222,9 +2223,9 @@ namespace copper_server::storage {
                 func(id, *world);
         }
 
-        void worlds_data::apply_tick(std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time, std::chrono::nanoseconds ns) {
+        void worlds_data::apply_tick(std::chrono::high_resolution_clock::time_point current_time, std::chrono::nanoseconds ns) {
             std::unique_lock lock(mutex);
-            list_array<std::pair<int64_t, base_objects::atomic_holder<world_data>>> worlds_to_tick;
+            list_array<std::pair<uint64_t, base_objects::atomic_holder<world_data>>> worlds_to_tick;
             for (auto& [id, world] : cached_worlds) {
                 if (!world->last_usage.time_since_epoch().count())
                     world->last_usage = current_time;
@@ -2240,17 +2241,22 @@ namespace copper_server::storage {
                     worlds_to_tick.push_back({id, world});
             }
             lock.unlock();
-
-            list_array<uint64_t> to_unload_worlds;
-            for (auto& [id, world] : worlds_to_tick) {
-                world->tick(random_engine, current_time);
-
-                size_t unload_speed = configuration.world.unload_speed;
-                if (world->collect_unused_data(current_time, unload_speed))
-                    to_unload_worlds.push_back(id);
-            }
-            to_unload_worlds.for_each([this](uint64_t id) { save_and_unload(id); });
-
+            future::forEachMove(
+                future::process<std::optional<uint64_t>>(
+                    worlds_to_tick,
+                    [this, current_time, unload_speed = configuration.world.unload_speed](const auto& it) mutable -> std::optional<uint64_t> {
+                        auto& world = it.second;
+                        auto id = it.first;
+                        std::random_device rd;
+                        std::mt19937 gen(rd());
+                        world->tick(gen, current_time);
+                        if (world->collect_unused_data(current_time, unload_speed))
+                            return id;
+                        return std::nullopt;
+                    }
+                ),
+                [this](auto id) { if(id) save_and_unload(*id); }
+            )->wait();
             lock.lock();
             got_ticks++;
             auto new_current_time = std::chrono::high_resolution_clock::now();

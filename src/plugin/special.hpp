@@ -1,7 +1,6 @@
 #ifndef SRC_PLUGIN_SPECIAL
 #define SRC_PLUGIN_SPECIAL
 #include <optional>
-#include <src/base_objects/server_configuaration.hpp>
 #include <src/protocolHelper/util.hpp>
 
 namespace copper_server {

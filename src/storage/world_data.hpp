@@ -596,7 +596,7 @@ namespace copper_server::storage {
 
         void for_each_world(std::function<void(uint64_t id, world_data& world)> func);
 
-        void apply_tick(std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time, std::chrono::nanoseconds elapsed);
+        void apply_tick(std::chrono::high_resolution_clock::time_point current_time, std::chrono::nanoseconds elapsed);
     };
 }
 #endif /* SRC_STORAGE_WORLD_DATA */
