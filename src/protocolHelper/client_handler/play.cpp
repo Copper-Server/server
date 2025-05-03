@@ -73,14 +73,14 @@ namespace copper_server::client_handler {
             if (auto res = pluginManagement.getPlugin(plugin)->OnPlay_initialize_compatible(session->sharedDataRef()); res)
                 session->sharedData().sendPacket(std::move(*res));
         }
-        session->sharedData().setSwitchToHandlerCallback([this](tcp_client* cl) {
+        session->sharedData().setSwitchToHandlerCallback([this](base_objects::network::tcp::client* cl) {
             next_handler = cl;
         });
         return IdleActions();
     }
 
-    handle_play::handle_play(base_objects::network::tcp_session* session)
-        : tcp_client_handle(session), registry(base_objects::network::packet_registry.serverbound.play.get(session->sharedData().packets_state.protocol_version)) {
+    handle_play::handle_play(base_objects::network::tcp::session* session)
+        : tcp_client_handle(session), registry(base_objects::network::tcp::packet_registry.serverbound.play.get(session->sharedData().packets_state.protocol_version)) {
         handle_tick_sync = registry.has_packet_name("client_tick_end");
         await_for_player_loading = registry.has_packet_name("player_loaded");
         _keep_alive_solution->set_callback(
@@ -108,7 +108,7 @@ namespace copper_server::client_handler {
         }
     }
 
-    base_objects::network::tcp_client* handle_play::define_ourself(base_objects::network::tcp_session* sock) {
+    base_objects::network::tcp::client* handle_play::define_ourself(base_objects::network::tcp::session* sock) {
         return nullptr;
     }
 }

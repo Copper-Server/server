@@ -20,6 +20,9 @@
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/base_objects/slot.hpp>
 #include <src/base_objects/weather.hpp>
+#include <src/base_objects/world/height_maps.hpp>
+#include <src/base_objects/world/loading_point_ticket.hpp>
+#include <src/base_objects/world/sub_chunk_data.hpp>
 #include <src/util/calculations.hpp>
 #include <src/util/task_management.hpp>
 
@@ -50,78 +53,9 @@ namespace copper_server::storage {
         void on_block_tick(base_objects::block_id_t id, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z);
     };
 
-    struct loading_point_ticket {
-        std::variant<uint16_t, std::function<bool(world_data&, size_t, loading_point_ticket&)>> expiration;
-        base_objects::cubic_bounds_chunk_radius point;
-        std::string name;
-        int8_t level;
-
-        //sets the whole cubic point to specified level and propagates to neighbors by default
-    };
 
     class world_data;
     class worlds_data;
-    struct sub_chunk_data;
-
-    struct light_data {
-        union light_item {
-            struct {
-                //compact two values in one
-                uint8_t light_point : 4;
-                uint8_t _unused : 4;
-            };
-
-            uint8_t raw;
-        };
-
-        light_item light_map[16][16][16];
-
-        light_data()
-            : light_map() {}
-    };
-
-    struct sub_chunk_data {
-        base_objects::block blocks[16][16][16];
-        uint32_t biomes[4][4][4];
-        std::unordered_map<uint16_t, enbt::value> block_entities; //0xXYZ => block_entity
-        list_array<base_objects::entity_ref> stored_entities;
-
-
-        light_data sky_light;
-        light_data block_light;
-        bool has_tickable_blocks = false;
-        bool need_to_recalculate_light = false;
-        bool sky_lighted = false;   //set true if at least one block is lighted in this sub_chunk
-        bool block_lighted = false; //set true if at least one block is lighted in this sub_chunk
-
-        sub_chunk_data() {}
-
-        enbt::value& get_block_entity_data(uint8_t local_x, uint8_t local_y, uint8_t local_z);
-        void get_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, std::function<void(base_objects::block& block)> on_normal, std::function<void(base_objects::block& block, enbt::value& entity_data)> on_entity);
-        void set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::full_block_data& block);
-        void set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::full_block_data&& block);
-        uint32_t get_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z);
-        void set_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z, uint32_t id);
-        void for_each_block(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block& block)> func);
-    };
-
-    struct height_maps {
-        uint64_t surface[16][16];
-        uint64_t ocean_floor[16][16];
-        uint64_t motion_blocking[16][16];
-        uint64_t motion_blocking_no_leaves[16][16];
-
-        height_maps() {
-            for (int i = 0; i < 16; i++) {
-                for (int j = 0; j < 16; j++) {
-                    surface[i][j] = 0;
-                    ocean_floor[i][j] = 0;
-                    motion_blocking[i][j] = 0;
-                    motion_blocking_no_leaves[i][j] = 0;
-                }
-            }
-        }
-    };
 
     class chunk_data {
         friend world_data;
@@ -130,8 +64,8 @@ namespace copper_server::storage {
         bool save(const std::filesystem::path& chunk_z, uint64_t tick_counter);
 
     public:
-        height_maps height_maps;
-        std::vector<sub_chunk_data> sub_chunks;
+        base_objects::world::height_maps height_maps;
+        std::vector<base_objects::world::sub_chunk_data> sub_chunks;
 
         //instead of using negative values for priority, schedule ticks in reverse order
         // -1 == 1, -2 == 2, etc... means higher value == lower priority
@@ -148,8 +82,8 @@ namespace copper_server::storage {
         void for_each_block_entity(std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
         void for_each_block_entity(uint64_t sub_chunk_y, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
 
-        void for_each_sub_chunk(std::function<void(sub_chunk_data& sub_chunk)> func);
-        void get_sub_chunk(uint64_t sub_chunk_y, std::function<void(sub_chunk_data& sub_chunk)> func);
+        void for_each_sub_chunk(std::function<void(base_objects::world::sub_chunk_data& sub_chunk)> func);
+        void get_sub_chunk(uint64_t sub_chunk_y, std::function<void(base_objects::world::sub_chunk_data& sub_chunk)> func);
 
         //priority accepts only negative values
         void query_for_tick(uint8_t local_x, uint64_t global_y, uint8_t local_z, uint64_t on_tick, int8_t priority = 0);
@@ -288,7 +222,7 @@ namespace copper_server::storage {
         std::string generator_id;
         std::vector<std::string> enabled_datapacks;
         std::vector<std::string> enabled_plugins;
-        std::unordered_map<size_t, loading_point_ticket> loading_tickets;
+        std::unordered_map<size_t, base_objects::world::loading_point_ticket> loading_tickets;
 
         struct {
             int64_t x = 0;
@@ -338,17 +272,17 @@ namespace copper_server::storage {
         }
 
         void update_spawn_data(int64_t x, int64_t z, int64_t radius);
-        size_t add_loading_ticket(loading_point_ticket&& ticket);
+        size_t add_loading_ticket(base_objects::world::loading_point_ticket&& ticket);
         void remove_loading_ticket(size_t id);
         size_t loaded_chunks_count();
 
         bool exists(int64_t chunk_x, int64_t chunk_z);
         base_objects::atomic_holder<chunk_data> request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z);
         FuturePtr<base_objects::atomic_holder<chunk_data>> request_chunk_data(int64_t chunk_x, int64_t chunk_z);
-        std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak_gen(int64_t chunk_x, int64_t chunk_z); //if chunk does not exists then it will be generated, if chunk exists or not loaded then std::nullopt
-        std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak(int64_t chunk_x, int64_t chunk_z);     //if chunk loaded returns it, else - std::nullopt
+        std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak_gen(int64_t chunk_x, int64_t chunk_z);  //if chunk does not exists then it will be generated, if chunk exists or not loaded then std::nullopt
+        std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak(int64_t chunk_x, int64_t chunk_z);      //if chunk loaded returns it, else - std::nullopt
         std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak_sync(int64_t chunk_x, int64_t chunk_z); //if chunk exists returns it, else - std::nullopt
-        void request_chunk_gen(int64_t chunk_x, int64_t chunk_z);                                                             //generates chunk if it does not exists
+        void request_chunk_gen(int64_t chunk_x, int64_t chunk_z);                                                              //generates chunk if it does not exists
         bool request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback);
         void request_chunk_data(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback, std::function<void()> fault);
 
@@ -372,15 +306,15 @@ namespace copper_server::storage {
         void for_each_chunk(std::function<void(chunk_data& chunk)> func);
         void for_each_chunk(base_objects::cubic_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func);
         void for_each_chunk(base_objects::spherical_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func);
-        void for_each_sub_chunk(int64_t chunk_x, int64_t chunk_z, std::function<void(sub_chunk_data& chunk)> func);
-        void get_sub_chunk(int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, std::function<void(sub_chunk_data& chunk)> func);
+        void for_each_sub_chunk(int64_t chunk_x, int64_t chunk_z, std::function<void(base_objects::world::sub_chunk_data& chunk)> func);
+        void get_sub_chunk(int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, std::function<void(base_objects::world::sub_chunk_data& chunk)> func);
         void get_chunk(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> func);
 
 
         void for_each_chunk(base_objects::cubic_bounds_block bounds, std::function<void(chunk_data& chunk)> func);
         void for_each_chunk(base_objects::spherical_bounds_block bounds, std::function<void(chunk_data& chunk)> func);
-        void for_each_sub_chunk_at(int64_t global_x, int64_t global_z, std::function<void(sub_chunk_data& chunk)> func);
-        void get_sub_chunk_at(int64_t global_x, uint64_t global_y, int64_t global_z, std::function<void(sub_chunk_data& chunk)> func);
+        void for_each_sub_chunk_at(int64_t global_x, int64_t global_z, std::function<void(base_objects::world::sub_chunk_data& chunk)> func);
+        void get_sub_chunk_at(int64_t global_x, uint64_t global_y, int64_t global_z, std::function<void(base_objects::world::sub_chunk_data& chunk)> func);
         void get_chunk_at(int64_t global_y, int64_t global_z, std::function<void(chunk_data& chunk)> func);
 
 
@@ -435,8 +369,8 @@ namespace copper_server::storage {
         void set_biome_range(base_objects::spherical_bounds_block bounds, const list_array<uint32_t>& blocks, block_set_mode mode = block_set_mode::replace);
         void set_biome_range(base_objects::spherical_bounds_block bounds, list_array<uint32_t>&& blocks, block_set_mode mode = block_set_mode::replace);
 
-        void get_height_maps(int64_t chunk_x, int64_t chunk_z, std::function<void(storage::height_maps& height_maps)> func);
-        void get_height_maps_at(int64_t chunk_x, int64_t chunk_z, std::function<void(storage::height_maps& height_maps)> func);
+        void get_height_maps(int64_t chunk_x, int64_t chunk_z, std::function<void(base_objects::world::height_maps& height_maps)> func);
+        void get_height_maps_at(int64_t chunk_x, int64_t chunk_z, std::function<void(base_objects::world::height_maps& height_maps)> func);
 
         uint64_t register_client(const base_objects::client_data_holder& client);
         void unregister_client(uint64_t);

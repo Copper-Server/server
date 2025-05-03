@@ -1,3 +1,4 @@
+#include <library/fast_task/src/files/files.hpp>
 #include <src/log.hpp>
 #include <src/storage/scoreboard.hpp>
 #include <src/util/json_helpers.hpp>
@@ -230,7 +231,7 @@ namespace copper_server::storage {
         });
 
 
-        std::ofstream file(path, std::ofstream::trunc);
+        fast_task::files::async_iofstream file(path, std::ostream::trunc);
         if (!file.is_open()) {
             log::warn("server", "Failed to save permissions file. Can not open file.");
             return;

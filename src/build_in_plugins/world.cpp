@@ -1,4 +1,5 @@
 #include <library/enbt/senbt.hpp>
+#include <library/fast_task/src/files/files.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/entity_id_map.hpp>
 #include <src/api/internal/world.hpp>
@@ -51,14 +52,13 @@ namespace copper_server::build_in_plugins {
                                   + "_" + std::to_string(timeinfo->tm_sec)
                                   + ".senbt");
             std::filesystem::create_directories(report_path.parent_path());
-            std::ofstream report_file(report_path, std::ios::out | std::ios::binary);
+            fast_task::files::async_iofstream report_file(report_path, std::ios::out | std::ios::binary);
             if (!report_file.is_open()) {
                 Chat message("Failed to save chunk tick speed report for world: " + world_name + " to: " + report_path.string());
                 message.SetColor("red");
                 api::players::calls::on_system_message({executor, message});
             }
             report_file << senbt::serialize(enbt_collected_data);
-            report_file.close();
             //enbt::io_helper::write_token(report_file, enbt_collected_data);
 
             Chat message("Chunk tick speed report for world: " + world_name + " saved to: " + report_path.string());
@@ -302,11 +302,11 @@ namespace copper_server::build_in_plugins {
 
     base_objects::full_block_data extract_block(const pred_block& block_data) {
         auto& static_block_data = base_objects::block::get_block(block_data.block_id);
-        auto states = static_block_data.assigned_states.left.at(static_block_data.default_state);
+        auto states = static_block_data.assigned_states_to_properties->left.at(static_block_data.default_state);
         for (auto& [state, value] : block_data.states) {
             states.at(state) = value;
         }
-        base_objects::block block(static_block_data.assigned_states.right.at(states));
+        base_objects::block block(static_block_data.assigned_states_to_properties->right.at(states));
         if (block_data.data_tags.is_none())
             return block;
         else

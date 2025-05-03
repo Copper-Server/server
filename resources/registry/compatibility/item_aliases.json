@@ -1,22 +1,2 @@
 {
-    "minecraft:pale_oak_*": "minecraft:birch_$",
-    "minecraft:stripped_pale_oak_*": "minecraft:stripped_birch_$",
-    "minecraft:pale_hanging_moss": "minecraft:weeping_vines",
-    "minecraft:pale_moss_block": "minecraft:moss_block",
-    "minecraft:pale_moss_carpet": "minecraft:moss_carpet",
-    "minecraft:creaking_heart": "minecraft:white_wool",
-    "minecraft:vault": "minecraft:barrel",
-    "minecraft:ominous_bottle": "minecraft:experience_bottle",
-    "minecraft:ominous_trial_key": "minecraft:trial_key",
-    "minecraft:heavy_core": "minecraft:player_head",
-    "minecraft:*_bundle": "minecraft:bundle",
-    "minecraft:bogged_spawn_egg": "minecraft:stray_spawn_egg",
-    "minecraft:turtle_scute": "minecraft:scute",
-    "minecraft:resin_clump": "minecraft:raw_gold",
-    "minecraft:resin_block": "minecraft:raw_gold_block",
-    "minecraft:resin_brick*": "minecraft:stone_brick$",
-    "minecraft:resin_brick": "minecraft:brick",
-    "minecraft:chiseled_resin_brick*": "minecraft:chiseled_stone_brick$",
-    "minecraft:open_eyeblossom": "minecraft:orange_tulip",
-    "minecraft:closed_eyeblossom": "minecraft:wither_rose"
 }

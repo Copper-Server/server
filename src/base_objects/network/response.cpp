@@ -203,7 +203,7 @@ namespace copper_server::base_objects::network {
     }
 
     response response::disconnect() {
-        return response({}, true);
+        return response({}, 0, true);
     }
 
     response response::disconnect(const list_array<item>& data, size_t valid_till) {

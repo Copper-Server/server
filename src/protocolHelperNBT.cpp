@@ -446,6 +446,16 @@ namespace copper_server {
         return ret;
     }
 
+    NBT NBT::build_network(const list_array<uint8_t>& data) {
+        NBT ret;
+        ret.nbt_data = data;
+        uint8_t tmp[] = {0, 0};
+        if (ret.nbt_data[0] == 10)
+            ret.nbt_data.insert(1, tmp, 2); //add length to fix it
+
+        return ret;
+    }
+
     NBT::operator list_array<uint8_t>() const {
         return nbt_data;
     }

@@ -105,11 +105,11 @@ namespace copper_server {
         return base_objects::network::response::disconnect();
     }
 
-    tcp_client_handle_status::tcp_client_handle_status(base_objects::network::tcp_session* session)
+    tcp_client_handle_status::tcp_client_handle_status(base_objects::network::tcp::session* session)
         : tcp_client_handle(session) {
     }
 
-    base_objects::network::tcp_client* tcp_client_handle_status::define_ourself(base_objects::network::tcp_session* sock) {
+    base_objects::network::tcp::client* tcp_client_handle_status::define_ourself(base_objects::network::tcp::session* sock) {
         return new tcp_client_handle_status(sock);
     }
 }

@@ -1,25 +1,20 @@
-#include <fstream>
+#include <library/fast_task/src/files/files.hpp>
 #include <src/storage/list_storage.hpp>
-
 namespace copper_server::storage {
     list_storage::list_storage(const std::filesystem::path& path) {
         if (!std::filesystem::exists(path)) {
             std::filesystem::create_directories(path.parent_path());
-            std::ofstream file;
-            file.open(path, std::ios::out);
-            file.close();
+            fast_task::files::async_iofstream file(path, std::ios::out);
             _is_loaded = true;
             return;
         }
-        std::ifstream file;
-        file.open(path, std::ios::in);
+        fast_task::files::async_iofstream file(path, std::ios::in);
         if (!file.is_open())
             return;
         data.set([&](auto& value) {
             for (std::string line; std::getline(file, line);)
                 value.push_back(line);
         });
-        file.close();
         _is_loaded = true;
     }
 
@@ -32,11 +27,9 @@ namespace copper_server::storage {
             }
         });
         if (save) {
-            std::ofstream file;
-            file.open(path, std::ios::out | std::ios::app);
+            fast_task::files::async_iofstream file(path, std::ios::out | std::ios::app);
             file << set_value << std::endl;
             file.flush();
-            file.close();
         }
     }
 
@@ -53,14 +46,12 @@ namespace copper_server::storage {
         });
 
         if (save) {
-            std::ofstream file;
-            file.open(path, std::ios::out | std::ios::trunc);
+            fast_task::files::async_iofstream file(path, std::ios::out | std::ios::trunc);
             data.get([&](auto& value) {
                 for (const auto& line : value)
                     file << line << '\n';
             });
             file.flush();
-            file.close();
         }
     }
 
@@ -86,9 +77,7 @@ namespace copper_server::storage {
         data.set([&](auto& value) {
             value.clear();
         });
-        std::ofstream file;
-        file.open(path, std::ios::out | std::ios::trunc);
+        fast_task::files::async_iofstream file(path, std::ios::out | std::ios::trunc);
         file.flush();
-        file.close();
     }
 }

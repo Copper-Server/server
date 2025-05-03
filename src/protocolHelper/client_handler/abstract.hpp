@@ -5,9 +5,9 @@
 namespace copper_server {
     namespace client_handler {
         namespace abstract {
-            base_objects::network::tcp_client* createhandle_login(base_objects::network::tcp_session*);
-            base_objects::network::tcp_client* createhandle_configuration(base_objects::network::tcp_session*);
-            base_objects::network::tcp_client* createhandle_play(base_objects::network::tcp_session*);
+            base_objects::network::tcp::client* createhandle_login(base_objects::network::tcp::session*);
+            base_objects::network::tcp::client* createhandle_configuration(base_objects::network::tcp::session*);
+            base_objects::network::tcp::client* createhandle_play(base_objects::network::tcp::session*);
         }
     }
 }

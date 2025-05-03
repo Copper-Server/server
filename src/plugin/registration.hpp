@@ -87,6 +87,8 @@ namespace copper_server {
 
         virtual void OnUnloadComplete(const std::shared_ptr<PluginRegistration>&) {}
 
+        virtual void OnUnregister(const std::shared_ptr<PluginRegistration>&) {}
+
         //emergency unload to save important data, do not use any other api except configuration
         virtual void OnFaultUnload(const std::shared_ptr<PluginRegistration>&) {}
 

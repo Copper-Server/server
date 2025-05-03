@@ -66,7 +66,7 @@ namespace copper_server::api {
         base_objects::events::event<event_data<data::player_action>> on_player_action;
         base_objects::events::event<event_data<data::player_command>> on_player_command;
         base_objects::events::event<event_data<data::player_input>> on_player_input;
-        base_objects::events::event<event_data<bool>> on_player_loaded; //since 768
+        base_objects::events::event<event_data<bool>> on_player_loaded;
         base_objects::events::event<event_data<data::pong>> on_pong;
         base_objects::events::event<event_data<data::change_recipe_book_settings>> on_change_recipe_book_settings;
         base_objects::events::event<event_data<std::string>> on_set_seen_recipe;

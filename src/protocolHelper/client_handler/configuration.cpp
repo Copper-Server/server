@@ -65,14 +65,14 @@ namespace copper_server::client_handler {
             if (auto res = plugin->OnConfiguration(session->sharedDataRef()); res)
                 session->sharedData().sendPacket(std::move(*res));
         });
-        session->sharedData().setSwitchToHandlerCallback([this](tcp_client* cl) {
+        session->sharedData().setSwitchToHandlerCallback([this](base_objects::network::tcp::client* cl) {
             next_handler = cl;
         });
         return base_objects::network::response::empty();
     }
 
-    handle_configuration::handle_configuration(base_objects::network::tcp_session* session)
-        : tcp_client_handle(session), registry(base_objects::network::packet_registry.serverbound.configuration.get(session->sharedData().packets_state.protocol_version)) {
+    handle_configuration::handle_configuration(base_objects::network::tcp::session* session)
+        : tcp_client_handle(session), registry(base_objects::network::tcp::packet_registry.serverbound.configuration.get(session->sharedData().packets_state.protocol_version)) {
         _keep_alive_solution->set_callback(
             [this](int64_t keep_alive_packet) {
                 log::debug("configuration", "Send keep alive");
@@ -98,7 +98,7 @@ namespace copper_server::client_handler {
         }
     }
 
-    base_objects::network::tcp_client* handle_configuration::define_ourself(base_objects::network::tcp_session* sock) {
+    base_objects::network::tcp::client* handle_configuration::define_ourself(base_objects::network::tcp::session* sock) {
         return nullptr;
     }
 }

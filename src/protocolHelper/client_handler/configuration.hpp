@@ -1,11 +1,11 @@
 #ifndef SRC_PROTOCOLHELPER_CLIENT_HANDLER_CONFIGURATION
 #define SRC_PROTOCOLHELPER_CLIENT_HANDLER_CONFIGURATION
-#include <src/base_objects/network/accept_packet_registry.hpp>
+#include <src/base_objects/network/tcp/accept_packet_registry.hpp>
 #include <src/protocolHelper/util.hpp>
 
 namespace copper_server::client_handler {
     class handle_configuration : public tcp_client_handle {
-        const base_objects::network::protocol_packet_registry_t& registry;
+        const base_objects::network::tcp::protocol_packet_registry_t& registry;
         base_objects::network::response IdleActions();
         base_objects::network::response work_packet(ArrayStream& packet) override;
         base_objects::network::response too_large_packet() override;
@@ -14,9 +14,9 @@ namespace copper_server::client_handler {
         base_objects::network::response on_switching() override;
 
     public:
-        handle_configuration(base_objects::network::tcp_session* session);
+        handle_configuration(base_objects::network::tcp::session* session);
         ~handle_configuration() override;
-        base_objects::network::tcp_client* define_ourself(base_objects::network::tcp_session* sock) override;
+        base_objects::network::tcp::client* define_ourself(base_objects::network::tcp::session* sock) override;
     };
 }
 

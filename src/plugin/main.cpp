@@ -172,6 +172,10 @@ namespace copper_server {
             }
         );
         plugin->OnUnload(plugin);
+        plugin->OnPostUnload(plugin);
+        plugin->OnUnloadComplete(plugin);
+        plugin->clean_up_registered_events();
+        plugin->OnUnregister(plugin);
     }
 
     list_array<PluginRegistrationPtr> PluginManagement::registeredPlugins() const {

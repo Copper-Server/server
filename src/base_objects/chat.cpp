@@ -356,7 +356,7 @@ namespace copper_server {
     }
 
     Chat Chat::fromTextComponent(const list_array<uint8_t>& enbt) {
-        return fromEnbt(NBT::build(enbt).get_as_enbt());
+        return fromEnbt(NBT::build_network(enbt).get_as_enbt());
     }
 
     std::string Chat::ToStr() const {
@@ -680,7 +680,7 @@ namespace copper_server {
     }
 
     list_array<uint8_t> Chat::ToTextComponent() const {
-        return NBT::build(ToENBT()).get_as_normal();
+        return NBT::build(ToENBT()).get_as_network();
     }
 
     void Chat::setString(char*& char_ptr, const std::string& string) {

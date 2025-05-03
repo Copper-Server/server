@@ -18,9 +18,8 @@ namespace mojang::api {
 
             {
                 boost::asio::ip::tcp::resolver resolver(ioc);
-                boost::asio::ip::tcp::resolver::query address_query(address, port_string);
                 boost::system::error_code ec;
-                auto const results = resolver.resolve(address_query, ec);
+                auto const results = resolver.resolve(address, port_string, ec);
 
                 if (results.empty() || ec)
                     throw std::runtime_error("Failed to resolve " + address);

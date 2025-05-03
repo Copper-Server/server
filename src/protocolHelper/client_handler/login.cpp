@@ -93,14 +93,14 @@ namespace copper_server::client_handler {
     }
 
     base_objects::network::response handle_login::on_switching() {
-        session->sharedData().setSwitchToHandlerCallback([this](tcp_client* cl) {
+        session->sharedData().setSwitchToHandlerCallback([this](base_objects::network::tcp::client* cl) {
             next_handler = cl;
         });
         return base_objects::network::response::empty();
     }
 
-    handle_login::handle_login(base_objects::network::tcp_session* session)
-        : tcp_client_handle(session), registry(base_objects::network::packet_registry.serverbound.login.get(session->protocol_version)) {
+    handle_login::handle_login(base_objects::network::tcp::session* session)
+        : tcp_client_handle(session), registry(base_objects::network::tcp::packet_registry.serverbound.login.get(session->protocol_version)) {
         auto& login_data = *(session->sharedData().packets_state.login_data = base_objects::SharedClientData::packets_state_t::state_login{});
         session->sharedData().packets_state.protocol_version = session->protocol_version;
 
@@ -113,7 +113,7 @@ namespace copper_server::client_handler {
         session->sharedData().packets_state.login_data = nullptr;
     }
 
-    base_objects::network::tcp_client* handle_login::define_ourself(base_objects::network::tcp_session* sock) {
+    base_objects::network::tcp::client* handle_login::define_ourself(base_objects::network::tcp::session* sock) {
         return nullptr;
     }
 }

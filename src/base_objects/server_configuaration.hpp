@@ -145,8 +145,6 @@ namespace copper_server::base_objects {
 
             size_t network_threads = 0;   //0 == auto, optional
             size_t working_threads = 0;   //0 == auto, optional
-            size_t reading_threads = 0;   //0 == auto, optional
-            size_t writing_threads = 0;   //0 == auto, optional
             size_t ssl_key_length = 1024; //1024, 2048, 4096, optional
             bool handle_legacy = false;
             uint16_t timeout_seconds = 30;

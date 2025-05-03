@@ -9,7 +9,6 @@
 #include <src/base_objects/particle_data.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/recipe.hpp>
-#include <src/base_objects/slot.hpp>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -69,19 +68,25 @@ namespace copper_server {
             bool sends_telemetry_event = false;
         };
 
-        struct JukeboxSong : public base_objects::slot_component::jukebox_playable::jukebox_extended {
+        struct JukeboxSong {
+            struct custom {
+                std::string sound_id; //resource location
+                std::optional<float> fixed_range;
+            };
+
+            std::variant<std::string, custom> sound_event;
+            int32_t comparator_output;
+            int32_t length_in_seconds;
+            Chat description;
             bool send_via_network_body = true;
         };
 
         struct ArmorTrimMaterial {
-            std::string asset_name;
-            base_objects::item_id_t ingredient;
-            std::unordered_map<std::string, std::string> override_armor_materials; //leather, chainmail, iron, gold, diamond, turtle, netherite
             std::variant<std::string, Chat> description;
-            float item_model_index;
+            std::string asset_name;
             uint32_t id;
-            bool send_via_network_body = true;
             bool allow_override = false;
+            bool send_via_network_body = true;
         };
 
         struct ArmorTrimPattern {
@@ -264,10 +269,31 @@ namespace copper_server {
         };
 
         struct WolfVariant {
-            std::string wild_texture;
-            std::string tame_texture;
-            std::string angry_texture;
-            list_array<std::string> biomes;
+            enbt::compound assets;
+            enbt::dynamic_array spawn_conditions;
+
+            uint32_t id;
+            bool allow_override = false;
+            bool send_via_network_body = true;
+        };
+
+        struct EntityVariant {
+            std::string asset_id;
+            std::optional<std::string> model;
+            enbt::dynamic_array spawn_conditions;
+
+            uint32_t id;
+            bool allow_override = false;
+            bool send_via_network_body = true;
+        };
+
+        struct WolfSoundVariant {
+            std::string ambient_sound;
+            std::string death_sound;
+            std::string growl_sound;
+            std::string hurt_sound;
+            std::string pant_sound;
+            std::string whine_sound;
 
             uint32_t id;
             bool allow_override = false;
@@ -580,7 +606,13 @@ namespace copper_server {
         extern std::unordered_map<std::string, ChatType> chatTypes;
         extern std::unordered_map<std::string, DamageType> damageTypes;
         extern std::unordered_map<std::string, DimensionType> dimensionTypes;
+        extern std::unordered_map<std::string, WolfSoundVariant> wolfSoundVariants;
         extern std::unordered_map<std::string, WolfVariant> wolfVariants;
+        extern std::unordered_map<std::string, EntityVariant> catVariants;
+        extern std::unordered_map<std::string, EntityVariant> chickenVariants;
+        extern std::unordered_map<std::string, EntityVariant> cowVariants;
+        extern std::unordered_map<std::string, EntityVariant> pigVariants;
+        extern std::unordered_map<std::string, EntityVariant> frogVariants;
         extern std::unordered_map<std::string, BannerPattern> bannerPatterns;
         extern std::unordered_map<std::string, PaintingVariant> paintingVariants;
         extern std::unordered_map<std::string, Instrument> instruments;
@@ -591,7 +623,13 @@ namespace copper_server {
         extern list_array<std::unordered_map<std::string, ChatType>::iterator> chatTypes_cache;
         extern list_array<std::unordered_map<std::string, DamageType>::iterator> damageTypes_cache;
         extern list_array<std::unordered_map<std::string, DimensionType>::iterator> dimensionTypes_cache;
+        extern list_array<std::unordered_map<std::string, WolfSoundVariant>::iterator> wolfSoundVariants_cache;
         extern list_array<std::unordered_map<std::string, WolfVariant>::iterator> wolfVariants_cache;
+        extern list_array<std::unordered_map<std::string, EntityVariant>::iterator> catVariants_cache;
+        extern list_array<std::unordered_map<std::string, EntityVariant>::iterator> chickenVariants_cache;
+        extern list_array<std::unordered_map<std::string, EntityVariant>::iterator> cowVariants_cache;
+        extern list_array<std::unordered_map<std::string, EntityVariant>::iterator> pigVariants_cache;
+        extern list_array<std::unordered_map<std::string, EntityVariant>::iterator> frogVariants_cache;
         extern list_array<std::unordered_map<std::string, BannerPattern>::iterator> bannerPatterns_cache;
         extern list_array<std::unordered_map<std::string, PaintingVariant>::iterator> paintingVariants_cache;
         extern list_array<std::unordered_map<std::string, Instrument>::iterator> instruments_cache;
@@ -608,7 +646,7 @@ namespace copper_server {
 
 
         extern std::unordered_map<uint32_t, enbt::compound> individual_registers;
-        extern uint32_t use_registry_lastest;
+        extern uint32_t use_registry_latest;
         enbt::compound& default_registry();
         enbt::value& default_registry_entries(const std::string& registry);
         int32_t view_reg_pro_id(const std::string& registry, const std::string& item, int32_t protocol = -1);

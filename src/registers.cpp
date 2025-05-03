@@ -9,7 +9,13 @@ namespace copper_server {
         std::unordered_map<std::string, ChatType> chatTypes;
         std::unordered_map<std::string, DamageType> damageTypes;
         std::unordered_map<std::string, DimensionType> dimensionTypes;
+        std::unordered_map<std::string, WolfSoundVariant> wolfSoundVariants;
         std::unordered_map<std::string, WolfVariant> wolfVariants;
+        std::unordered_map<std::string, EntityVariant> catVariants;
+        std::unordered_map<std::string, EntityVariant> chickenVariants;
+        std::unordered_map<std::string, EntityVariant> cowVariants;
+        std::unordered_map<std::string, EntityVariant> pigVariants;
+        std::unordered_map<std::string, EntityVariant> frogVariants;
         std::unordered_map<std::string, BannerPattern> bannerPatterns;
         std::unordered_map<std::string, PaintingVariant> paintingVariants;
         std::unordered_map<std::string, Instrument> instruments;
@@ -20,7 +26,13 @@ namespace copper_server {
         list_array<std::unordered_map<std::string, ChatType>::iterator> chatTypes_cache;
         list_array<std::unordered_map<std::string, DamageType>::iterator> damageTypes_cache;
         list_array<std::unordered_map<std::string, DimensionType>::iterator> dimensionTypes_cache;
+        list_array<std::unordered_map<std::string, WolfSoundVariant>::iterator> wolfSoundVariants_cache;
         list_array<std::unordered_map<std::string, WolfVariant>::iterator> wolfVariants_cache;
+        list_array<std::unordered_map<std::string, EntityVariant>::iterator> catVariants_cache;
+        list_array<std::unordered_map<std::string, EntityVariant>::iterator> chickenVariants_cache;
+        list_array<std::unordered_map<std::string, EntityVariant>::iterator> cowVariants_cache;
+        list_array<std::unordered_map<std::string, EntityVariant>::iterator> pigVariants_cache;
+        list_array<std::unordered_map<std::string, EntityVariant>::iterator> frogVariants_cache;
         list_array<std::unordered_map<std::string, BannerPattern>::iterator> bannerPatterns_cache;
         list_array<std::unordered_map<std::string, PaintingVariant>::iterator> paintingVariants_cache;
         list_array<std::unordered_map<std::string, Instrument>::iterator> instruments_cache;
@@ -36,12 +48,12 @@ namespace copper_server {
 
 
         std::unordered_map<uint32_t, enbt::compound> individual_registers;
-        uint32_t use_registry_lastest = -1;
+        uint32_t use_registry_latest = -1;
 
         enbt::compound& default_registry() {
-            if (use_registry_lastest == -1)
+            if (use_registry_latest == -1)
                 throw std::runtime_error("No registry selected");
-            return individual_registers.at(use_registry_lastest);
+            return individual_registers.at(use_registry_latest);
         }
 
         enbt::value& default_registry_entries(const std::string& registry) {

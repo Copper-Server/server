@@ -13,9 +13,9 @@ namespace copper_server {
         base_objects::network::response unexpected_exception() override;
 
     public:
-        tcp_client_handle_status(base_objects::network::tcp_session* session);
+        tcp_client_handle_status(base_objects::network::tcp::session* session);
 
-        base_objects::network::tcp_client* define_ourself(base_objects::network::tcp_session* sock) override;
+        base_objects::network::tcp::client* define_ourself(base_objects::network::tcp::session* sock) override;
     };
 }
 #endif /* SRC_PROTOCOLHELPER_STATE_STATUS */

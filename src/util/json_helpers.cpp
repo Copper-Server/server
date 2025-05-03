@@ -1,5 +1,6 @@
 
 #include <format>
+#include <library/fast_task/src/files/files.hpp>
 #include <src/log.hpp>
 #include <src/util/json_helpers.hpp>
 
@@ -7,12 +8,11 @@ namespace copper_server::util {
     std::optional<boost::json::object> try_read_json_file(const std::filesystem::path& file_path) {
         boost::json::object data;
         {
-            std::ifstream file(file_path);
+            fast_task::files::async_iofstream file(file_path);
             if (file.is_open()) {
                 boost::system::error_code ec;
                 auto result = boost::json::parse(file, ec);
                 data = result.is_object() ? std::move(result).as_object() : boost::json::object{{"root", std::move(result)}};
-                file.close();
                 if (ec) {
                     if (ec.message() == "incomplete JSON")
                         if (std::filesystem::is_empty(file_path))

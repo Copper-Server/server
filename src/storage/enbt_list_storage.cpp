@@ -1,20 +1,17 @@
 #include <filesystem>
-#include <fstream>
 #include <library/enbt/io.hpp>
+#include <library/fast_task/src/files/files.hpp>
 #include <src/storage/enbt_list_storage.hpp>
-
 namespace copper_server::storage {
     enbt_list_storage::enbt_list_storage(const std::filesystem::path& path)
         : path(path) {
         if (!std::filesystem::exists(path)) {
             std::filesystem::create_directories(path.parent_path());
-            std::ofstream file;
-            file.open(path, std::ios::out);
-            file.close();
+            fast_task::files::async_iofstream file(path, std::ios::out);
             _is_loaded = true;
             return;
         }
-        std::ifstream file(path, std::ios::binary);
+        fast_task::files::async_iofstream file(path, std::ios::binary);
         if (!file.is_open())
             return;
         data.set([&](auto& value) {
@@ -26,7 +23,6 @@ namespace copper_server::storage {
             }
         });
         _is_loaded = true;
-        file.close();
     }
 
     void enbt_list_storage::add(const std::string& key, const enbt::value& enbt) {
@@ -38,12 +34,10 @@ namespace copper_server::storage {
             }
         });
         if (save) {
-            std::fstream file;
-            file.open(path, std::ios::out | std::ios::app | std::ios::binary);
+            fast_task::files::async_iofstream file(path, std::ios::out | std::ios::app | std::ios::binary);
             enbt::io_helper::write_string(file, key);
             enbt::io_helper::write_token(file, enbt);
             file.flush();
-            file.close();
         }
     }
 
@@ -58,8 +52,7 @@ namespace copper_server::storage {
         });
 
         if (save) {
-            std::fstream file;
-            file.open(path, std::ios::out | std::ios::trunc | std::ios::binary);
+            fast_task::files::async_iofstream file(path, std::ios::out | std::ios::trunc | std::ios::binary);
             data.get([&](auto& value) {
                 for (const auto& [key, value] : value) {
                     enbt::io_helper::write_string(file, key);
@@ -67,7 +60,6 @@ namespace copper_server::storage {
                 }
             });
             file.flush();
-            file.close();
         }
     }
 
@@ -97,8 +89,7 @@ namespace copper_server::storage {
         });
 
         if (save) {
-            std::fstream file;
-            file.open(path, std::ios::out | std::ios::trunc);
+            fast_task::files::async_iofstream file(path, std::ios::out | std::ios::trunc);
             data.get([&](auto& value) {
                 for (const auto& [key, value] : value) {
                     enbt::io_helper::write_string(file, key);
@@ -106,7 +97,6 @@ namespace copper_server::storage {
                 }
             });
             file.flush();
-            file.close();
         }
     }
 

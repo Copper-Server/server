@@ -2,13 +2,12 @@
 #include <src/api/asio.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/network.hpp>
-#include <src/base_objects/network/tcp_server.hpp>
+#include <src/base_objects/network/tcp/server.hpp>
 #include <src/build_in_plugins/special/status.hpp>
 #include <src/log.hpp>
 #include <src/plugin/main.hpp>
 #include <src/protocolHelper/state_handshaking.hpp>
 #include <src/resources/registers.hpp>
-#include <src/util/shared_static_values.hpp>
 
 using namespace copper_server;
 
@@ -34,11 +33,7 @@ int main() {
     });
     try {
         size_t working_threads = api::configuration::get().server.working_threads;
-        size_t reading_threads = api::configuration::get().server.reading_threads;
-        size_t writing_threads = api::configuration::get().server.writing_threads;
         fast_task::task::create_executor(working_threads);
-        fast_task::task::assign_bind_only_executor(shared_values::loading_pool_tasks_id, reading_threads, false);
-        fast_task::task::assign_bind_only_executor(shared_values::saving_pool_tasks_id, writing_threads, false);
         fast_task::task::task::enable_task_naming = false;
 
         api::asio::init(api::configuration::get().server.network_threads);
@@ -61,7 +56,7 @@ int main() {
         return 1;
     }
     try {
-        base_objects::network::tcp_server server(
+        base_objects::network::tcp::server server(
             api::configuration::get().server.ip,
             api::configuration::get().server.port,
             api::configuration::get().server.ssl_key_length

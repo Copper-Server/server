@@ -18,8 +18,8 @@
 #include <src/plugin/registration.hpp>
 
 namespace copper_server::base_objects {
-    namespace network {
-        class tcp_client;
+    namespace network::tcp {
+        class client;
     }
     class player;
 
@@ -175,12 +175,12 @@ namespace copper_server::base_objects {
         }
 
         //internal
-        void setSwitchToHandlerCallback(std::function<void(network::tcp_client*)> callback) {
+        void setSwitchToHandlerCallback(std::function<void(network::tcp::client*)> callback) {
             switch_to_handler_callback = callback;
         }
 
         //internal
-        void switchToHandler(network::tcp_client* handler) {
+        void switchToHandler(network::tcp::client* handler) {
             if (switch_to_handler_callback)
                 switch_to_handler_callback(handler);
         }
@@ -190,7 +190,7 @@ namespace copper_server::base_objects {
         void* assigned_data;
         std::function<void(base_objects::SharedClientData& self)> special_callback;
         std::function<void(int64_t)> keep_alive_callback;
-        std::function<void(network::tcp_client*)> switch_to_handler_callback;
+        std::function<void(network::tcp::client*)> switch_to_handler_callback;
         fast_task::task_rw_mutex pending_packets_lock;
         list_array<network::response> pending_packets;
     };

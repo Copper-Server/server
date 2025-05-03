@@ -7,7 +7,7 @@ namespace copper_server::build_in_plugins::light_processors {
     public:
         void process_chunk(storage::world_data& world, int64_t chunk_x, int64_t chunk_z) override {
             world.get_chunk(chunk_x, chunk_z, [&](storage::chunk_data& chunk) {
-                chunk.for_each_sub_chunk([&](storage::sub_chunk_data& sub_chunk) {
+                chunk.for_each_sub_chunk([&](base_objects::world::sub_chunk_data& sub_chunk) {
                     sub_chunk.for_each_block([&](uint8_t x, uint8_t y, uint8_t z, base_objects::block& block) {
 
                     });

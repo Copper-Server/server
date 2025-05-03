@@ -53,6 +53,7 @@ namespace copper_server {
 
         static NBT build(const enbt::value& enbt, bool compress = true, const std::string& entry_name = "");
         static NBT build(const list_array<uint8_t>& data);
+        static NBT build_network(const list_array<uint8_t>& data);
         operator list_array<uint8_t>() const;
         list_array<uint8_t> get_as_normal() const;
         list_array<uint8_t> get_as_network() const;

@@ -1,6 +1,6 @@
 #include <src/api/configuration.hpp>
 #include <src/api/protocol.hpp>
-#include <src/base_objects/network/accept_packet_registry.hpp>
+#include <src/base_objects/network/tcp/accept_packet_registry.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 #include <src/protocolHelper/client_handler/abstract.hpp>
@@ -8,22 +8,9 @@
 #include <src/protocolHelper/util.hpp>
 #include <src/registers.hpp>
 
-namespace copper_server::build_in_plugins::protocol::play_769 {
+namespace copper_server::build_in_plugins::protocol::play_770 {
     namespace configuration {
-        void client_settings_old(base_objects::network::tcp_session* session, ArrayStream& packet) {
-            auto& shared_data = session->sharedData();
-            shared_data.locale = packet.read_string(16);
-            shared_data.view_distance = packet.read();
-            shared_data.chat_mode = (base_objects::SharedClientData::ChatMode)packet.read_var<int32_t>();
-            shared_data.enable_chat_colors = packet.read();
-            shared_data.skin_parts.mask = packet.read();
-            shared_data.main_hand = (base_objects::SharedClientData::MainHand)packet.read_var<int32_t>();
-            shared_data.enable_filtering = packet.read();
-            shared_data.allow_server_listings = packet.read();
-            shared_data.particle_status = base_objects::SharedClientData::ParticleStatus::ALL;
-        }
-
-        void client_settings(base_objects::network::tcp_session* session, ArrayStream& packet) {
+        void client_settings(base_objects::network::tcp::session* session, ArrayStream& packet) {
             auto& shared_data = session->sharedData();
             shared_data.locale = packet.read_string(16);
             shared_data.view_distance = packet.read();
@@ -36,7 +23,7 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             shared_data.particle_status = (base_objects::SharedClientData::ParticleStatus)packet.read_var<int32_t>();
         }
 
-        void cookie_response(base_objects::network::tcp_session* session, ArrayStream& packet) {
+        void cookie_response(base_objects::network::tcp::session* session, ArrayStream& packet) {
             api::protocol::data::cookie_response data;
             data.key = packet.read_identifier();
             if (packet.read())
@@ -48,7 +35,7 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             }
         }
 
-        void plugin_message(base_objects::network::tcp_session* session, ArrayStream& packet) {
+        void plugin_message(base_objects::network::tcp::session* session, ArrayStream& packet) {
             std::string channel = packet.read_string(32769);
             auto it = pluginManagement.get_bind_plugin(PluginManagement::registration_on::configuration, channel);
             if (it != nullptr)
@@ -56,7 +43,7 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
                     session->sharedData().sendPacket(std::move(*res));
         }
 
-        void configuration_complete(base_objects::network::tcp_session* session, ArrayStream& packet) {
+        void configuration_complete(base_objects::network::tcp::session* session, ArrayStream& packet) {
             auto& shared_data = session->sharedData();
             if (shared_data.packets_state.load_state != base_objects::SharedClientData::packets_state_t::configuration_load_state_t::done) {
                 shared_data.sendPacket(packets::configuration::kick(session->sharedData(), "Configuration is not finished."));
@@ -70,12 +57,12 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             shared_data.switchToHandler(client_handler::abstract::createhandle_play(session));
         }
 
-        void keep_alive(base_objects::network::tcp_session* session, ArrayStream& packet) {
+        void keep_alive(base_objects::network::tcp::session* session, ArrayStream& packet) {
             int64_t keep_alive_packet_response = packet.read_value<int64_t>();
             session->sharedData().gotKeepAlive(keep_alive_packet_response);
         }
 
-        void pong(base_objects::network::tcp_session* session, ArrayStream& packet) {
+        void pong(base_objects::network::tcp::session* session, ArrayStream& packet) {
             auto& shared_data = session->sharedData();
             int32_t pong = packet.read_value<int32_t>();
             if (pong == shared_data.packets_state.excepted_pong)
@@ -87,7 +74,7 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             session->sharedData().ping = std::chrono::duration_cast<std::chrono::milliseconds>(shared_data.packets_state.pong_timer - std::chrono::system_clock::now());
         }
 
-        void registry_resource_pack(base_objects::network::tcp_session* session, ArrayStream& packet) {
+        void registry_resource_pack(base_objects::network::tcp::session* session, ArrayStream& packet) {
             enbt::raw_uuid id = packet.read_uuid();
             int32_t result = packet.read_var<int32_t>();
             auto res = session->sharedData().packets_state.pending_resource_packs.find(id);
@@ -107,7 +94,7 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
             }
         }
 
-        void known_packs(base_objects::network::tcp_session* session, ArrayStream& packet) {
+        void known_packs(base_objects::network::tcp::session* session, ArrayStream& packet) {
             int32_t len = packet.read_var<int32_t>();
             list_array<base_objects::data_packs::known_pack> packs;
             for (int32_t i = 0; i < len; i++) {
@@ -215,47 +202,8 @@ namespace copper_server::build_in_plugins::protocol::play_769 {
     class ProtocolSupport_configuration : public PluginAutoRegister<"protocol_support_for_configuration_state_universal", ProtocolSupport_configuration> {
     public:
         void OnRegister(const PluginRegistrationPtr& self) override {
-            base_objects::network::packet_registry.serverbound.configuration.register_seq(
-                766,
-                {
-                    {"client_settings", configuration::client_settings_old},
-                    {"cookie_response", configuration::cookie_response},
-                    {"plugin_message", configuration::plugin_message},
-                    {"configuration_complete", configuration::configuration_complete},
-                    {"keep_alive", configuration::keep_alive},
-                    {"pong", configuration::pong},
-                    {"registry_resource_pack", configuration::registry_resource_pack},
-                    {"known_packs", configuration::known_packs},
-                }
-            );
-            base_objects::network::packet_registry.serverbound.configuration.register_seq(
-                767,
-                {
-                    {"client_settings", configuration::client_settings_old},
-                    {"cookie_response", configuration::cookie_response},
-                    {"plugin_message", configuration::plugin_message},
-                    {"configuration_complete", configuration::configuration_complete},
-                    {"keep_alive", configuration::keep_alive},
-                    {"pong", configuration::pong},
-                    {"registry_resource_pack", configuration::registry_resource_pack},
-                    {"known_packs", configuration::known_packs},
-                }
-            );
-            base_objects::network::packet_registry.serverbound.configuration.register_seq(
-                768,
-                {
-                    {"client_settings", configuration::client_settings},
-                    {"cookie_response", configuration::cookie_response},
-                    {"plugin_message", configuration::plugin_message},
-                    {"configuration_complete", configuration::configuration_complete},
-                    {"keep_alive", configuration::keep_alive},
-                    {"pong", configuration::pong},
-                    {"registry_resource_pack", configuration::registry_resource_pack},
-                    {"known_packs", configuration::known_packs},
-                }
-            );
-            base_objects::network::packet_registry.serverbound.configuration.register_seq(
-                769,
+            base_objects::network::tcp::packet_registry.serverbound.configuration.register_seq(
+                770,
                 {
                     {"client_settings", configuration::client_settings},
                     {"cookie_response", configuration::cookie_response},

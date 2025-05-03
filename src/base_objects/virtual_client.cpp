@@ -17,7 +17,7 @@ namespace copper_server::base_objects {
         client->player_data.op_level = 4;
         client->player_data.world_id = "virtual_client astral space";
 
-        client->packets_state.protocol_version = 769;
+        client->packets_state.protocol_version = 770;
         client->packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::play;
         client->special_callback = [this](base_objects::SharedClientData& self) {
             self.getPendingPackets().for_each([&](auto packet) {

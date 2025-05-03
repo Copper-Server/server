@@ -218,9 +218,6 @@ namespace copper_server::api::protocol {
         };
 
         struct player_input {
-            /*deprecated*/ float sideways = 0; //since 768
-            /*deprecated*/ float forward = 0;  //since 768
-
             union input_flags {
                 struct {
                     bool forward : 1;
@@ -229,7 +226,7 @@ namespace copper_server::api::protocol {
                     bool right : 1;
                     bool jump : 1;
                     bool sneaking : 1;
-                    bool sprint : 1; // can be set to false even if player actually sprinting if protocol version lower than 768
+                    bool sprint : 1;
                 };
 
                 uint8_t raw = 0;
@@ -382,7 +379,7 @@ namespace copper_server::api::protocol {
     template <class T>
     struct event_data {
         T data;
-        base_objects::network::tcp_session& client;
+        base_objects::network::tcp::session& client;
         base_objects::client_data_holder client_data;
     };
 
@@ -431,7 +428,7 @@ namespace copper_server::api::protocol {
     extern base_objects::events::event<event_data<data::player_action>> on_player_action;
     extern base_objects::events::event<event_data<data::player_command>> on_player_command;
     extern base_objects::events::event<event_data<data::player_input>> on_player_input;
-    extern base_objects::events::event<event_data<bool>> on_player_loaded; //since 768
+    extern base_objects::events::event<event_data<bool>> on_player_loaded;
     extern base_objects::events::event<event_data<data::pong>> on_pong;
     extern base_objects::events::event<event_data<data::change_recipe_book_settings>> on_change_recipe_book_settings;
     extern base_objects::events::event<event_data<std::string>> on_set_seen_recipe;

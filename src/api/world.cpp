@@ -115,7 +115,7 @@ namespace copper_server::api::world {
             base_objects::cubic_bounds_block_radius rs{world->spawn_data.x, 0, world->spawn_data.z, world->spawn_data.radius};
             auto [x, y, z] = rs.random_point();
             int64_t pos_y = 0;
-            world->get_height_maps_at(x, z, [&](storage::height_maps& height_maps) {
+            world->get_height_maps_at(x, z, [&](base_objects::world::height_maps& height_maps) {
                 auto mt = height_maps.motion_blocking[x % 16][z % 16];
                 auto oc_flor = height_maps.ocean_floor[x % 16][z % 16];
                 auto oc = height_maps.surface[x % 16][z % 16];

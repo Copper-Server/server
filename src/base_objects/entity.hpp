@@ -2,7 +2,6 @@
 #define SRC_BASE_OBJECTS_ENTITY
 #include <chrono>
 #include <filesystem>
-#include <fstream>
 #include <library/enbt/enbt.hpp>
 #include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/bounds.hpp>
@@ -31,32 +30,66 @@ namespace copper_server {
             std::string id;
             std::string name;
             std::string translation_resource_key;
-            std::string kind_name;
+            std::string spawn_group;
+
             bounding base_bounds;
-            float base_health; //NaN == infinity
-            enum class bounds_mode_t {
-                solid,
-                solid_except_self_type,
-                solid_for_vehicles,
-                weak,
-                none,
-            } bounds_mode
-                = bounds_mode_t::weak;
+            float eye_height;
+
             float acceleration; // block\tick
+            float drag_vertical;
+            float drag_horizontal;
+            float terminal_velocity;
+
+            int32_t max_track_distance = 0;
+            int32_t track_tick_interval = 0;
+
             uint16_t entity_id;
-            bool living_entity;
+
+            bool drag_applied_after_acceleration = false;
+            bool is_summonable = false;
+            bool is_fire_immune = false;
+            bool is_saveable = false;
+            bool is_spawnable_far_from_player = false;
+
+            struct living_entity_data_t {
+                int32_t inventory_size = 0;
+                float base_health;
+                uint16_t max_air = 300;
+                bool can_avoid_traps = false;
+                bool can_be_hit_by_projectile = true;
+                bool can_freeze;
+                bool can_hit;
+                bool is_collidable;
+                bool is_attackable;
+
+                struct brain_task {
+                    std::string name;
+                    //TODO implement system
+                };
+
+                std::vector<brain_task> brain_tasks;
+                std::vector<std::string> brain_sensors;
+                std::vector<std::string> brain_memories;
+            };
+
+            std::optional<living_entity_data_t> living_entity_data;
+
             enbt::compound data;
+
+
             //"data"{
+            //  "loot_table": {table...},
             //  "slot":{
             //      "size": array_size,
             //      "main_hand": id,
             //      "off_hand": id,
-            //      "hand": [id, id, ...]
+            //      "hand": [id, id]
             //      "head": id,
             //      "chest": id,
             //      "legs": id,
             //      "feet": id,
-            //      "body": [id, id, id, id, ...]
+            //      "body": [id, id, id, id, ...],
+            //      "storage": [id, id, id, id, ...]
             //  },
             //  "custom_data":{
             //      ...

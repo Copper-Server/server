@@ -46,7 +46,7 @@ namespace copper_server {
         });
     }
 
-    keep_alive_solution::keep_alive_solution(base_objects::network::tcp_session* session)
+    keep_alive_solution::keep_alive_solution(base_objects::network::tcp::session* session)
         : timeout_timer(session->sock.get_executor()), send_keep_alive_timer(session->sock.get_executor()), session(session) {
     }
 
@@ -258,8 +258,8 @@ namespace copper_server {
             }
 
             ArrayStream packet = data.range_read(packet_len);
+            base_objects::network::response answer_it = base_objects::network::response::empty();
             try {
-                base_objects::network::response answer_it = base_objects::network::response::empty();
                 if (session->compression_threshold != -1) {
                     list_array<uint8_t> compressed_packet = prepare_incoming(packet);
                     ArrayStream compressed_data(compressed_packet.data(), compressed_packet.size());
@@ -268,19 +268,27 @@ namespace copper_server {
                     answer_it = work_packet(packet);
 
                 answer.push_back(prepare_send(answer_it));
-                if (answer_it.do_disconnect)
-                    return base_objects::network::response::disconnect(std::move(answer));
+                if ((answer_it.do_disconnect || answer_it.do_disconnect_after_send) && answer.size())
+                    break;
 
-                if (answer_it.do_disconnect_after_send)
-                    return base_objects::network::response::disconnect(std::move(answer));
+                if (answer_it.do_disconnect)
+                    break;
+
                 valid_till = data.r;
                 if (next_handler)
                     break;
             } catch (const std::exception& ex) {
-                return exception(ex);
+                answer_it = exception(ex);
+                answer.push_back(prepare_send(answer_it));
             } catch (...) {
-                return unexpected_exception();
+                answer_it = unexpected_exception();
+                answer.push_back(prepare_send(answer_it));
             }
+            if ((answer_it.do_disconnect || answer_it.do_disconnect_after_send) && answer.size())
+                return base_objects::network::response::disconnect(std::move(answer));
+
+            if (answer_it.do_disconnect)
+                return base_objects::network::response::disconnect();
         }
         if (answer.empty() && next_handler == nullptr)
             if (_keep_alive_solution)
@@ -288,13 +296,13 @@ namespace copper_server {
         return base_objects::network::response::answer(std::move(answer), valid_till);
     }
 
-    tcp_client_handle::tcp_client_handle(base_objects::network::tcp_session* session)
+    tcp_client_handle::tcp_client_handle(base_objects::network::tcp::session* session)
         : session(session), _keep_alive_solution(session ? new keep_alive_solution(session) : nullptr) {
     }
 
     tcp_client_handle::~tcp_client_handle() {}
 
-    base_objects::network::tcp_client* tcp_client_handle::redefine_handler() {
+    base_objects::network::tcp::client* tcp_client_handle::redefine_handler() {
         return next_handler;
     }
 

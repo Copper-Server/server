@@ -24,6 +24,24 @@ namespace copper_server::base_objects {
         return eff;
     }
 
+    base_objects::slot_component::inner::sound_extended parse_sound_extended(const enbt::value& ref) {
+        if (ref.is_string())
+            return base_objects::slot_component::inner::sound_extended{.sound_name = ref.as_string()};
+        base_objects::slot_component::inner::sound_extended sound;
+        sound.sound_name = ref.at("sound").as_string();
+        if (ref.contains("range"))
+            sound.fixed_range = ref["range"];
+        return sound;
+    }
+
+    std::variant<std::string, base_objects::slot_component::inner::sound_extended> parse_sound(const enbt::value& ref) {
+
+        if (ref.is_string())
+            return ref.as_string();
+        else
+            return parse_sound_extended(ref);
+    }
+
     base_objects::slot_component::inner::application_effect parse_application_effect(enbt::compound_const_ref ref) {
         auto type = ref.at("type").as_string();
         if (type == "minecraft:apply_effects") {
@@ -53,55 +71,36 @@ namespace copper_server::base_objects {
                 return base_objects::slot_component::inner::teleport_randomly{ref["diameter"]};
             else
                 return base_objects::slot_component::inner::teleport_randomly{};
-        } else if (type == "minecraft:play_sound") {
-            if (ref.at("sound").is_string())
-                return base_objects::slot_component::inner::play_sound{.sound = ref["sound"].as_string()};
-            else {
-                auto c = ref.at("sound").as_compound();
-                base_objects::slot_component::inner::sound_extended sound;
-                sound.sound_name = c.at("sound_id").as_string();
-                if (c.contains("range"))
-                    sound.fixed_range = c["range"];
-                return base_objects::slot_component::inner::play_sound{.sound = sound};
-            }
-        } else
+        } else if (type == "minecraft:play_sound")
+            return base_objects::slot_component::inner::play_sound{.sound = parse_sound_extended(ref.at("sound"))};
+        else
             throw std::runtime_error("Not implemented");
     }
 
     std::unordered_map<std::string, base_objects::slot_component::unified (*)(const enbt::value&)> load_items_parser{
         {"minecraft:attribute_modifiers",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
-             auto comp = it.as_compound();
              base_objects::slot_component::attribute_modifiers attributes;
-             if (comp.contains("show_in_tooltip"))
-                 attributes.show_in_tooltip = comp["show_in_tooltip"];
-
-             if (comp.contains("modifiers")) {
-                 list_array<base_objects::item_attribute> modifiers;
-                 for (auto& i : comp["modifiers"].as_array()) {
-                     base_objects::item_attribute modifier;
-
-                     auto c = i.as_compound();
-                     modifier.type = c.at("type").as_string();
-                     modifier.id = c.at("id").as_string();
-                     modifier.operation = base_objects::item_attribute::id_to_operation((std::string)c.at("operation").as_string());
-                     modifier.amount = c.at("amount");
-                     modifier.slot = base_objects::item_attribute::name_to_slot((std::string)c.at("slot").as_string());
-                     modifiers.push_back(modifier);
-                 }
-                 modifiers.commit();
-                 attributes.attributes = std::move(modifiers);
+             for (auto& i : it.as_array()) {
+                 base_objects::item_attribute modifier;
+                 auto c = i.as_compound();
+                 modifier.type = c.at("type").as_string();
+                 modifier.id = c.at("id").as_string();
+                 modifier.operation = base_objects::item_attribute::id_to_operation((std::string)c.at("operation").as_string());
+                 modifier.amount = c.at("amount");
+                 modifier.slot = base_objects::item_attribute::name_to_slot((std::string)c.at("slot").as_string());
+                 attributes.value.push_back(modifier);
              }
+             attributes.value.commit();
              return std::move(attributes);
-         }
-        },
+         }},
         {"minecraft:banner_patterns",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              base_objects::slot_component::banner_patterns banner_patterns;
              for (auto& value : it.as_array()) {
                  auto comp = value.as_compound();
                  base_objects::slot_component::banner_patterns::pattern pattern;
-                 pattern.color = base_objects::item_color::from_string(comp.at("color").as_string());
+                 pattern.color = base_objects::dye_color::from_string(comp.at("color").as_string());
                  auto& pattern_json = comp.at("pattern");
                  if (pattern_json.is_string())
                      pattern.pattern = (std::string)pattern_json.as_string();
@@ -116,49 +115,47 @@ namespace copper_server::base_objects {
              }
              banner_patterns.value.commit();
              return std::move(banner_patterns);
-         }
-        },
+         }},
         {"minecraft:base_color",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto& color = it.as_string();
              base_objects::slot_component::base_color base_color;
              if (color == "white")
-                 base_color.color = base_objects::item_color::white;
+                 base_color.color = base_objects::dye_color::white;
              else if (color == "orange")
-                 base_color.color = base_objects::item_color::orange;
+                 base_color.color = base_objects::dye_color::orange;
              else if (color == "magenta")
-                 base_color.color = base_objects::item_color::magenta;
+                 base_color.color = base_objects::dye_color::magenta;
              else if (color == "light_blue")
-                 base_color.color = base_objects::item_color::light_blue;
+                 base_color.color = base_objects::dye_color::light_blue;
              else if (color == "yellow")
-                 base_color.color = base_objects::item_color::yellow;
+                 base_color.color = base_objects::dye_color::yellow;
              else if (color == "lime")
-                 base_color.color = base_objects::item_color::lime;
+                 base_color.color = base_objects::dye_color::lime;
              else if (color == "pink")
-                 base_color.color = base_objects::item_color::pink;
+                 base_color.color = base_objects::dye_color::pink;
              else if (color == "gray")
-                 base_color.color = base_objects::item_color::gray;
+                 base_color.color = base_objects::dye_color::gray;
              else if (color == "light_gray")
-                 base_color.color = base_objects::item_color::light_gray;
+                 base_color.color = base_objects::dye_color::light_gray;
              else if (color == "cyan")
-                 base_color.color = base_objects::item_color::cyan;
+                 base_color.color = base_objects::dye_color::cyan;
              else if (color == "purple")
-                 base_color.color = base_objects::item_color::purple;
+                 base_color.color = base_objects::dye_color::purple;
              else if (color == "blue")
-                 base_color.color = base_objects::item_color::blue;
+                 base_color.color = base_objects::dye_color::blue;
              else if (color == "brown")
-                 base_color.color = base_objects::item_color::brown;
+                 base_color.color = base_objects::dye_color::brown;
              else if (color == "green")
-                 base_color.color = base_objects::item_color::green;
+                 base_color.color = base_objects::dye_color::green;
              else if (color == "red")
-                 base_color.color = base_objects::item_color::red;
+                 base_color.color = base_objects::dye_color::red;
              else if (color == "black")
-                 base_color.color = base_objects::item_color::black;
+                 base_color.color = base_objects::dye_color::black;
              else
                  throw std::runtime_error("Unrecognized color");
              return std::move(base_color);
-         }
-        },
+         }},
         {"minecraft:bees",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              base_objects::slot_component::bees bees;
@@ -172,15 +169,13 @@ namespace copper_server::base_objects {
              }
              bees.values.commit();
              return std::move(bees);
-         }
-        },
+         }},
         {"minecraft:block_entity_data",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              base_objects::slot_component::block_entity_data res;
              res.value = it;
              return res;
-         }
-        },
+         }},
         {"minecraft:block_state",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              base_objects::slot_component::block_state block_state;
@@ -188,15 +183,13 @@ namespace copper_server::base_objects {
                  block_state.properties.push_back({(std::string)state, (std::string)value.as_string()});
              block_state.properties.commit();
              return std::move(block_state);
-         }
-        },
+         }},
         {"minecraft:bucket_entity_data",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              base_objects::slot_component::bucket_entity_data res;
              res.value = it;
              return res;
-         }
-        },
+         }},
         {"minecraft:bundle_contents",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              base_objects::slot_component::bundle_contents bundle_contents;
@@ -205,56 +198,54 @@ namespace copper_server::base_objects {
              }
              bundle_contents.items.commit();
              return std::move(bundle_contents);
-         }
-        },
+         }},
         {"minecraft:can_break",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
-             auto comp = it.as_compound();
              base_objects::slot_component::can_break can_break;
-             if (comp.contains("show_in_tooltip"))
-                 can_break.show_in_tooltip = comp["show_in_tooltip"];
-             if (comp.contains("blocks")) {
-                 enbt::compound pred;
-                 pred["blocks"] = comp["blocks"];
-                 if (comp.contains("state"))
-                     pred["state"] = comp["state"];
-                 if (comp.contains("nbt"))
-                     pred["nbt"] = comp["nbt"];
-                 can_break.predicates.push_back(std::move(pred));
-             }
-             if (comp.contains("predicates")) {
-                 for (auto& it : comp.at("predicates").as_array()) {
-                     auto item = it.as_compound();
+             if (it.is_array()) {
+                 for (auto& item : it.as_array()) {
+                     auto comp = item.as_compound();
                      enbt::compound pred;
-                     pred["blocks"] = item["blocks"];
-                     if (item.contains("state"))
-                         pred["state"] = item["state"];
-                     if (item.contains("nbt"))
-                         pred["nbt"] = item["nbt"];
-                     can_break.predicates.push_back(std::move(pred));
+                     pred["blocks"] = comp["blocks"];
+                     if (comp.contains("state"))
+                         pred["state"] = comp["state"];
+                     if (comp.contains("nbt"))
+                         pred["nbt"] = comp["nbt"];
+                     can_break.value.push_back(std::move(pred));
+                 }
+             } else {
+                 auto comp = it.as_compound();
+                 if (comp.contains("blocks")) {
+                     enbt::compound pred;
+                     pred["blocks"] = comp["blocks"];
+                     if (comp.contains("state"))
+                         pred["state"] = comp["state"];
+                     if (comp.contains("nbt"))
+                         pred["nbt"] = comp["nbt"];
+                     can_break.value.push_back(std::move(pred));
+                 }
+                 if (comp.contains("predicates")) {
+                     for (auto& it : comp.at("predicates").as_array()) {
+                         auto item = it.as_compound();
+                         enbt::compound pred;
+                         pred["blocks"] = item["blocks"];
+                         if (item.contains("state"))
+                             pred["state"] = item["state"];
+                         if (item.contains("nbt"))
+                             pred["nbt"] = item["nbt"];
+                         can_break.value.push_back(std::move(pred));
+                     }
                  }
              }
-             can_break.predicates.commit();
+             can_break.value.commit();
              return std::move(can_break);
-         }
-        },
+         }},
         {"minecraft:can_place_on",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
              base_objects::slot_component::can_place_on can_place_on;
-             if (comp.contains("show_in_tooltip"))
-                 can_place_on.show_in_tooltip = comp["show_in_tooltip"];
-             if (comp.contains("blocks")) {
-                 enbt::compound pred;
-                 pred["blocks"] = comp["blocks"];
-                 if (comp.contains("state"))
-                     pred["state"] = comp["state"];
-                 if (comp.contains("nbt"))
-                     pred["nbt"] = comp["nbt"];
-                 can_place_on.predicates.push_back(std::move(pred));
-             }
-             if (comp.contains("predicates")) {
-                 for (auto& it : comp.at("predicates").as_array()) {
+             if (it.is_array()) {
+                 for (auto& it : it.as_array()) {
                      auto item = it.as_compound();
                      enbt::compound pred;
                      pred["blocks"] = item["blocks"];
@@ -262,13 +253,34 @@ namespace copper_server::base_objects {
                          pred["state"] = item["state"];
                      if (item.contains("nbt"))
                          pred["nbt"] = item["nbt"];
-                     can_place_on.predicates.push_back(std::move(pred));
+                     can_place_on.value.push_back(std::move(pred));
+                 }
+             } else {
+                 if (comp.contains("blocks")) {
+                     enbt::compound pred;
+                     pred["blocks"] = comp["blocks"];
+                     if (comp.contains("state"))
+                         pred["state"] = comp["state"];
+                     if (comp.contains("nbt"))
+                         pred["nbt"] = comp["nbt"];
+                     can_place_on.value.push_back(std::move(pred));
+                 }
+                 if (comp.contains("predicates")) {
+                     for (auto& it : comp.at("predicates").as_array()) {
+                         auto item = it.as_compound();
+                         enbt::compound pred;
+                         pred["blocks"] = item["blocks"];
+                         if (item.contains("state"))
+                             pred["state"] = item["state"];
+                         if (item.contains("nbt"))
+                             pred["nbt"] = item["nbt"];
+                         can_place_on.value.push_back(std::move(pred));
+                     }
                  }
              }
-             can_place_on.predicates.commit();
+             can_place_on.value.commit();
              return std::move(can_place_on);
-         }
-        },
+         }},
         {"minecraft:charged_projectiles",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              base_objects::slot_component::charged_projectiles charged_projectiles;
@@ -277,8 +289,7 @@ namespace copper_server::base_objects {
              }
              charged_projectiles.data.commit();
              return std::move(charged_projectiles);
-         }
-        },
+         }},
         {"minecraft:container",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              base_objects::slot_component::container container;
@@ -288,8 +299,7 @@ namespace copper_server::base_objects {
                  container.set(slot, slot_data::from_enbt(comp.at("item").as_compound()));
              }
              return std::move(container);
-         }
-        },
+         }},
         {"minecraft:container_loot",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
@@ -297,8 +307,7 @@ namespace copper_server::base_objects {
              container_loot.loot_table = comp.at("loot_table").as_string();
              container_loot.seed = comp.at("seed");
              return std::move(container_loot);
-         }
-        },
+         }},
         {"minecraft:custom_data",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              base_objects::slot_component::custom_data custom_data;
@@ -311,63 +320,48 @@ namespace copper_server::base_objects {
              } else
                  custom_data.value = it;
              return std::move(custom_data);
-         }
-        },
+         }},
         {"minecraft:custom_model_data",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::custom_model_data{.value = (int32_t)it};
-         }
-        },
+         }},
         {"minecraft:custom_name",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::custom_name{
                  .value = Chat::fromEnbt(it)
              };
-         }
-        },
+         }},
         {"minecraft:damage",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::damage{
                  .value = (int32_t)it
              };
-         }
-        },
+         }},
         {"minecraft:debug_stick_state",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              base_objects::slot_component::debug_stick_state debug_stick_state;
              debug_stick_state.previous_state = it;
              return std::move(debug_stick_state);
-         }
-        },
+         }},
         {"minecraft:dyed_color",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
-             auto comp = it.as_compound();
-             base_objects::slot_component::dyed_color dyed_color;
-             if (comp.contains("show_in_tooltip"))
-                 dyed_color.show_in_tooltip = comp["show_in_tooltip"];
-             dyed_color.rgb = comp.at("rgb");
-             return std::move(dyed_color);
-         }
-        },
+             return base_objects::slot_component::dyed_color{.rgb = (int32_t)it};
+         }},
         {"minecraft:enchantment_glint_override",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              base_objects::slot_component::enchantment_glint_override enchantment_glint_override;
              enchantment_glint_override.has_glint = it;
              return std::move(enchantment_glint_override);
-         }
-        },
+         }},
         {"minecraft:enchantments",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
-             auto comp = it.as_compound();
              base_objects::slot_component::enchantments enchantments;
-             for (auto& [enchantment, level] : comp.at("levels").as_compound())
-                 enchantments.enchants.push_back({registers::enchantments.at((std::string)enchantment).id, level});
-             enchantments.enchants.commit();
-             if (comp.contains("show_in_tooltip"))
-                 enchantments.show_in_tooltip = comp.at("show_in_tooltip");
+             enchantments.value.reserve(it.size());
+             for (auto& [enchantment, level] : it.as_compound())
+                 enchantments.value.push_back({registers::enchantments.at((std::string)enchantment).id, level});
+             enchantments.value.commit();
              return std::move(enchantments);
-         }
-        },
+         }},
         {"minecraft:entity_data",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
@@ -376,8 +370,7 @@ namespace copper_server::base_objects {
              base_objects::slot_component::entity_data entity_data;
              entity_data.value = it;
              return std::move(entity_data);
-         }
-        },
+         }},
         {"minecraft:entity_data",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
@@ -386,8 +379,7 @@ namespace copper_server::base_objects {
              base_objects::slot_component::entity_data entity_data;
              entity_data.value = it;
              return std::move(entity_data);
-         }
-        },
+         }},
         {"minecraft:firework_explosion",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
@@ -420,8 +412,7 @@ namespace copper_server::base_objects {
              res.fade_colors.commit();
 
              return base_objects::slot_component::firework_explosion{.value = std::move(res)};
-         }
-        },
+         }},
         {"minecraft:fireworks",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
@@ -439,8 +430,7 @@ namespace copper_server::base_objects {
                  }
              }
              return std::move(fireworks);
-         }
-        },
+         }},
         {"minecraft:food",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
@@ -450,18 +440,7 @@ namespace copper_server::base_objects {
              if (comp.contains("can_always_eat"))
                  food.can_always_eat = comp.at("can_always_eat");
              return std::move(food);
-         }
-        },
-        {"minecraft:hide_additional_tooltip",
-         [](const enbt::value& it) -> base_objects::slot_component::unified {
-             return base_objects::slot_component::hide_additional_tooltip{};
-         }
-        },
-        {"minecraft:hide_tooltip",
-         [](const enbt::value& it) -> base_objects::slot_component::unified {
-             return base_objects::slot_component::hide_tooltip{};
-         }
-        },
+         }},
         {"minecraft:instrument",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              if (it.is_string())
@@ -471,45 +450,27 @@ namespace copper_server::base_objects {
                  base_objects::slot_component::instrument::type_extended instrument;
                  instrument.duration = comp.at("use_duration");
                  instrument.range = comp.at("range");
-                 if (comp.at("sound").is_string())
-                     instrument.sound = (std::string)comp.at("sound").as_string();
-                 else {
-                     auto sound = comp.at("sound").as_compound();
-                     base_objects::slot_component::inner::sound_extended sound_extended;
-                     sound_extended.sound_name = sound.at("sound_id").as_string();
-                     if (sound.contains("range"))
-                         sound_extended.fixed_range = sound.at("range");
-                     instrument.sound = sound_extended;
-                 }
+                 instrument.sound = parse_sound(comp.at("sound"));
+                 instrument.description = Chat::fromEnbt(comp.at("description"));
                  return base_objects::slot_component::instrument{instrument};
              }
-         }
-        },
+         }},
         {"minecraft:intangible_projectile",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::intangible_projectile{};
-         }
-        },
+         }},
         {"minecraft:item_name",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
-             return base_objects::slot_component::item_name{.value = Chat::fromStr((std::string)it.as_string())};
-         }
-        },
+             return base_objects::slot_component::item_name{.value = Chat::fromEnbt(it)};
+         }},
         {"minecraft:jukebox_playable",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
-             auto comp = it.as_compound();
-             base_objects::slot_component::jukebox_playable jukebox_playable;
-             jukebox_playable.song = (std::string)comp.at("song").as_string();
-             if (comp.contains("show_in_tooltip"))
-                 jukebox_playable.show_in_tooltip = comp.at("show_in_tooltip");
-             return std::move(jukebox_playable);
-         }
-        },
+             return base_objects::slot_component::jukebox_playable{it.as_string()};
+         }},
         {"minecraft:lock",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::lock{.key = (std::string)it.as_string()};
-         }
-        },
+         }},
         {"minecraft:lodestone_tracker",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
@@ -530,54 +491,45 @@ namespace copper_server::base_objects {
                  };
              }
              return std::move(lodestone_tracker);
-         }
-        },
+         }},
         {"minecraft:lore",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              base_objects::slot_component::lore lore;
              for (auto& line : it.as_array())
-                 lore.value.push_back(Chat::fromStr((std::string)line.as_string()));
+                 lore.value.push_back(Chat::fromEnbt(line));
              lore.value.commit();
              return std::move(lore);
-         }
-        },
+         }},
         {"minecraft:map_color",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::map_color{(int32_t)it};
-         }
-        },
+         }},
         {"minecraft:map_decorations",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              base_objects::slot_component::map_decorations map_decorations;
              map_decorations.value = it;
              return std::move(map_decorations);
-         }
-        },
+         }},
         {"minecraft:map_id",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::map_id{it};
-         }
-        },
+         }},
         {"minecraft:max_damage",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::max_damage{it};
-         }
-        },
+         }},
         {"minecraft:max_stack_size",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::max_stack_size{it};
-         }
-        },
+         }},
         {"minecraft:note_block_sound",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::note_block_sound{(std::string)it.as_string()};
-         }
-        },
+         }},
         {"minecraft:ominous_bottle_amplifier",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::ominous_bottle_amplifier{it};
-         }
-        },
+         }},
         {"minecraft:pot_decorations",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_array();
@@ -603,8 +555,7 @@ namespace copper_server::base_objects {
                  pot_decorations.decorations[3] = "minecraft:brick";
 
              return std::move(pot_decorations);
-         }
-        },
+         }},
         {"minecraft:potion_contents",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              base_objects::slot_component::potion_contents potion_contents;
@@ -624,8 +575,7 @@ namespace copper_server::base_objects {
                  }
              }
              return potion_contents;
-         }
-        },
+         }},
         {"minecraft:profile",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
@@ -648,13 +598,11 @@ namespace copper_server::base_objects {
                  }
              }
              return profile;
-         }
-        },
+         }},
         {"minecraft:rarity",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::rarity::from_string(it.as_string());
-         }
-        },
+         }},
         {"minecraft:recipes",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto arr = it.as_array();
@@ -663,8 +611,7 @@ namespace copper_server::base_objects {
              for (auto& it : arr)
                  recipes.value.push_back(it.as_string());
              return recipes;
-         }
-        },
+         }},
         {"minecraft:repairable",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              if (it.is_array()) {
@@ -676,28 +623,22 @@ namespace copper_server::base_objects {
                  return base_objects::slot_component::repairable{.items = std::move(res)};
              } else
                  return base_objects::slot_component::repairable{.items = it.at("items").as_string()};
-         }
-        },
+         }},
         {"minecraft:repair_cost",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::repair_cost{.value = it};
-         }
-        },
+         }},
         {"minecraft:stored_enchantments",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
-             auto comp = it.as_compound();
+             auto levels = it.as_compound();
              base_objects::slot_component::stored_enchantments stored_enchantments;
-             if (comp.contains("show_in_tooltip"))
-                 stored_enchantments.show_in_tooltip = comp["show_in_tooltip"];
-             auto levels = comp.at("levels").as_compound();
              stored_enchantments.enchants.reserve(levels.size());
              for (auto& [name, level] : levels) {
                  auto id = registers::enchantments.at(name).id;
                  stored_enchantments.enchants.push_back({id, (int32_t)level});
              }
              return stored_enchantments;
-         }
-        },
+         }},
         {"minecraft:suspicious_stew_effects",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto arr = it.as_array();
@@ -712,8 +653,7 @@ namespace copper_server::base_objects {
                  suspicious_stew_effects.effects.push_back({id, dur});
              }
              return suspicious_stew_effects;
-         }
-        },
+         }},
         {"minecraft:tool",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
@@ -746,29 +686,23 @@ namespace copper_server::base_objects {
                  }
              }
              return tool;
-         }
-        },
+         }},
         {"minecraft:tooltip_style",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::tooltip_style{.value = it.as_string()};
-         }
-        },
+         }},
         {"minecraft:trim",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
-             base_objects::slot_component::trim trim; //TODO extend
+             base_objects::slot_component::trim trim;
              trim.pattern = registers::armorTrimPatterns.at(comp.at("pattern").as_string()).id;
              trim.material = registers::armorTrimMaterials.at(comp.at("material").as_string()).id;
-             if (comp.contains("show_in_tooltip"))
-                 trim.show_in_tooltip = comp["show_in_tooltip"];
              return trim;
-         }
-        },
+         }},
         {"minecraft:unbreakable",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
-             return base_objects::slot_component::unbreakable{.value = it.at("show_in_tooltip")};
-         }
-        },
+             return base_objects::slot_component::unbreakable{};
+         }},
         {"minecraft:use_cooldown",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
@@ -777,8 +711,7 @@ namespace copper_server::base_objects {
              if (comp.contains("cooldown_group"))
                  use_cooldown.cooldown_group = comp.at("cooldown_group").as_string();
              return use_cooldown;
-         }
-        },
+         }},
         {"minecraft:use_remainder",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
@@ -786,8 +719,7 @@ namespace copper_server::base_objects {
                  return base_objects::slot_component::use_remainder(weak_slot_data(comp["id"].as_string(), comp["count"]));
              } else
                  return base_objects::slot_component::use_remainder(slot_data::from_enbt(it.as_compound()));
-         }
-        },
+         }},
         {"minecraft:writable_book_content",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
@@ -809,8 +741,7 @@ namespace copper_server::base_objects {
                  }
              }
              return writable_book_content;
-         }
-        },
+         }},
         {"minecraft:written_book_content",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
@@ -841,28 +772,23 @@ namespace copper_server::base_objects {
                  }
              }
              return written_book_content;
-         }
-        },
+         }},
         {"minecraft:creative_slot_lock",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::creative_slot_lock{};
-         }
-        },
+         }},
         {"minecraft:map_post_processing",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::map_post_processing{.value = it};
-         }
-        },
+         }},
         {"minecraft:item_model",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::item_model{.value = it.as_string()};
-         }
-        },
+         }},
         {"minecraft:glider",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::glider{};
-         }
-        },
+         }},
         {"minecraft:equippable",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
@@ -882,15 +808,11 @@ namespace copper_server::base_objects {
                  auto equip_sound = comp.at("equip_sound");
                  if (equip_sound.is_string())
                      equippable.equip_sound = equip_sound.as_string();
-                 else {
-                     auto equip_sound_com = equip_sound.as_compound();
-                     equippable.equip_sound = base_objects::slot_component::equippable::equip_sound_custom{
-                         .sound_name = equip_sound_com.at("sound_id").as_string(),
-                         .fixed_range = equip_sound_com.at("range")
-                     };
-                 }
+                 else
+                     equippable.equip_sound = parse_sound_extended(equip_sound);
              } else
-                 equippable.equip_sound = nullptr;
+                 equippable.equip_sound = "minecraft:item.armor.equip_generic";
+
              if (comp.contains("allowed_entities")) {
                  auto allowed_entities = comp.at("allowed_entities");
                  if (allowed_entities.is_string())
@@ -906,13 +828,11 @@ namespace copper_server::base_objects {
              } else
                  equippable.allowed_entities = nullptr;
              return equippable;
-         }
-        },
+         }},
         {"minecraft:enchantable",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::enchantable{.value = it.at("value")};
-         }
-        },
+         }},
         {"minecraft:death_protection",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
@@ -925,28 +845,22 @@ namespace copper_server::base_objects {
                  death_protection.death_effects = res;
              }
              return death_protection;
-         }
-        },
+         }},
         {"minecraft:damage_resistant",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              return base_objects::slot_component::damage_resistant{.types = it.at("types").as_string()};
-         }
-        },
+         }},
         {"minecraft:consumable",
          [](const enbt::value& it) -> base_objects::slot_component::unified {
              auto comp = it.as_compound();
              base_objects::slot_component::consumable consumable;
              if (comp.contains("consume_seconds"))
-                 consumable.consume_seconds = comp["consume_seconds"];
+                 consumable.consume_seconds = comp.at("consume_seconds");
              if (comp.contains("animation"))
-                 consumable.animation = comp["animation"].as_string();
-             if (comp.contains("sound")) {
-                 if (comp["sound"].is_string())
-                     consumable.sound = comp["sound"].as_string();
-                 else {
-                     auto c = comp["sound"].as_compound();
-                 }
-             }
+                 consumable.animation = comp.at("animation").as_string();
+             if (comp.contains("sound"))
+                 consumable.sound = parse_sound(comp.at("sound"));
+
              if (comp.contains("on_consume_effects")) {
                  list_array<base_objects::slot_component::inner::application_effect> res;
                  for (auto& it : comp.at("on_consume_effects").as_array())
@@ -955,8 +869,171 @@ namespace copper_server::base_objects {
                  consumable.on_consume_effects = res;
              }
              return consumable;
-         }
-        },
+         }},
+        {"minecraft:axolotl_variant",
+         [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::axolotl_variant{it.as_string()};
+         }},
+        {"minecraft:blocks_attacks",
+         [](const enbt::value& it) -> base_objects::slot_component::unified {
+             base_objects::slot_component::blocks_attacks res;
+             if (it.contains("block_delay_seconds"))
+                 res.block_delay_seconds = it.at("block_delay_seconds");
+             else
+                 res.disable_cooldown_scale = 0;
+
+             if (it.contains("disable_cooldown_scale"))
+                 res.disable_cooldown_scale = it.at("disable_cooldown_scale");
+             else
+                 res.disable_cooldown_scale = 1;
+             if (it.contains("damage_reductions")) {
+                 res.damage_reductions.reserve(it.at("damage_reductions").size());
+                 for (auto& reduction_ : it.at("damage_reductions").as_array()) {
+                     auto comp = reduction_.as_compound();
+                     base_objects::slot_component::blocks_attacks::damage_reduction_t reduction;
+                     auto type = comp.at("type");
+                     if (type.is_string()) {
+                         auto type_str = type.as_string();
+                         if (type_str.starts_with("#"))
+                             reduction.type = registers::unfold_tag("damage_type", type_str);
+                         else
+                             reduction.type = {type_str};
+                     }
+                     reduction.base = comp.at("base");
+                     reduction.factor = comp.at("factor");
+                     if (comp.contains("horizontal_blocking_angle"))
+                         reduction.horizontal_blocking_angle = comp.at("horizontal_blocking_angle");
+                     else
+                         reduction.horizontal_blocking_angle = 90;
+                     res.damage_reductions.push_back(reduction);
+                 }
+             }
+
+             {
+                 auto item_damage = it.at("item_damage").as_compound();
+                 res.item_damage.base = item_damage.at("base");
+                 res.item_damage.factor = item_damage.at("factor");
+                 res.item_damage.threshold = item_damage.at("threshold");
+             }
+
+             if (it.contains("bypassed_by"))
+                 res.bypassed_by = it.at("bypassed_by").as_string();
+
+             if (it.contains("block_sound"))
+                 res.block_sound = parse_sound(it.at("block_sound"));
+
+             if (it.contains("disabled_sound"))
+                 res.block_sound = parse_sound(it.at("disabled_sound"));
+
+             return res;
+         }},
+        {"minecraft:break_sound",
+         [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::break_sound{it.as_string()};
+         }},
+        {"minecraft:chicken/variant",
+         [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::chicken_variant{it.as_string()};
+         }},
+        {"minecraft:cat/collar", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::cat_collar{dye_color::from_string(it.as_string())};
+         }},
+        {"minecraft:cat/variant", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::cat_variant{it.as_string()};
+         }},
+        {"minecraft:cow/variant", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::cow_variant{it.as_string()};
+         }},
+        {"minecraft:fox/variant", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::fox_variant{it.as_string()};
+         }},
+        {"minecraft:frog/variant", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::frog_variant{it.as_string()};
+         }},
+        {"minecraft:horse/variant", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::horse_variant{it.as_string()};
+         }},
+        {"minecraft:llama/variant", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::llama_variant{it.as_string()};
+         }},
+        {"minecraft:mooshroom/variant", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::mooshroom_variant{it.as_string()};
+         }},
+        {"minecraft:painting/variant", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::painting_variant{it.as_string()};
+         }},
+        {"minecraft:parrot/variant", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::parrot_variant{it.as_string()};
+         }},
+        {"minecraft:pig/variant", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::pig_variant{it.as_string()};
+         }},
+        {"minecraft:potion_duration_scale", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::potion_duration_scale{it};
+         }},
+        {"minecraft:provides_banner_patterns", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::provides_banner_patterns{it.as_string()};
+         }},
+        {"minecraft:provides_trim_material", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::provides_trim_material{it.as_string()};
+         }},
+        {"minecraft:rabbit/variant", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::rabbit_variant{it.as_string()};
+         }},
+        {"minecraft:salmon/size", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::salmon_size{it};
+         }},
+        {"minecraft:sheep/color", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::sheep_color{dye_color::from_string(it.as_string())};
+         }},
+        {"minecraft:shulker/color", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::shulker_color{dye_color::from_string(it.as_string())};
+         }},
+        {"minecraft:tooltip_display", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             base_objects::slot_component::tooltip_display res;
+             if (it.contains("hide_tooltip"))
+                 res.hide_tooltip = it.at("hide_tooltip");
+             if (it.contains("hidden_components")) {
+                 auto hidden_components = it.at("hidden_components").as_array();
+                 res.hidden_components.reserve(hidden_components.size());
+                 for (auto& it : hidden_components)
+                     res.hidden_components.push_back(it.as_string());
+             }
+             return res;
+         }},
+        {"minecraft:tropical_fish/base_color", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::tropical_fish_base_color{dye_color::from_string(it.as_string())};
+         }},
+        {"minecraft:tropical_fish/pattern", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::tropical_fish_pattern{it.as_string()};
+         }},
+        {"minecraft:tropical_fish/pattern_color", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::tropical_fish_pattern_color{dye_color::from_string(it.as_string())};
+         }},
+        {"minecraft:villager/variant", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::villager_variant{it.as_string()};
+         }},
+        {"minecraft:weapon", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             base_objects::slot_component::weapon weapon;
+             if (it.contains("item_damage_per_attack"))
+                 weapon.item_damage_per_attack = it.at("item_damage_per_attack");
+             else
+                 weapon.item_damage_per_attack = 1;
+             if (it.contains("disable_blocking_for_seconds"))
+                 weapon.disable_blocking_for_seconds = it.at("disable_blocking_for_seconds");
+             else
+                 weapon.disable_blocking_for_seconds = 0;
+             return weapon;
+         }},
+        {"minecraft:wolf/collar", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::wolf_collar{dye_color::from_string(it.as_string())};
+         }},
+        {"minecraft:wolf/sound_variant", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::wolf_sound_variant{it.as_string()};
+         }},
+        {"minecraft:wolf/variant", [](const enbt::value& it) -> base_objects::slot_component::unified {
+             return base_objects::slot_component::wolf_variant{it.as_string()};
+         }},
     };
 
     base_objects::slot_component::unified slot_component::parse_component(const std::string& name, const enbt::value& item) {
@@ -980,82 +1057,6 @@ namespace copper_server::base_objects {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-    std::string item_color::to_string() const {
-        switch (value) {
-        case white:
-            return "white";
-        case orange:
-            return "orange";
-        case magenta:
-            return "magenta";
-        case light_blue:
-            return "light_blue";
-        case yellow:
-            return "yellow";
-        case lime:
-            return "lime";
-        case pink:
-            return "pink";
-        case gray:
-            return "gray";
-        case light_gray:
-            return "light_gray";
-        case cyan:
-            return "cyan";
-        case purple:
-            return "purple";
-        case blue:
-            return "blue";
-        case brown:
-            return "brown";
-        case green:
-            return "green";
-        case red:
-            return "red";
-        case black:
-            return "black";
-        default:
-            return "undefined";
-        }
-    }
-
-    item_color item_color::from_string(const std::string& color) {
-        if (color == "white")
-            return white;
-        else if (color == "orange")
-            return orange;
-        else if (color == "magenta")
-            return magenta;
-        else if (color == "light_blue")
-            return light_blue;
-        else if (color == "yellow")
-            return yellow;
-        else if (color == "lime")
-            return lime;
-        else if (color == "pink")
-            return pink;
-        else if (color == "gray")
-            return gray;
-        else if (color == "light_gray")
-            return light_gray;
-        else if (color == "cyan")
-            return cyan;
-        else if (color == "purple")
-            return purple;
-        else if (color == "blue")
-            return blue;
-        else if (color == "brown")
-            return brown;
-        else if (color == "green")
-            return green;
-        else if (color == "red")
-            return red;
-        else if (color == "black")
-            return black;
-        else
-            return white;
-    }
 
     bool item_potion_effect::effect_data::operator==(const effect_data& other) const {
         if (ambient != other.ambient

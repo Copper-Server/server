@@ -111,175 +111,138 @@ namespace copper_server::base_objects {
         struct variant_data<minecraft::crafting_shaped> {
             constexpr static inline const char* name = "minecraft:crafting_shaped";
             constexpr static inline bool must_display = true;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_shapeless> {
             constexpr static inline const char* name = "minecraft:crafting_shapeless";
             constexpr static inline bool must_display = true;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_armordye> {
             constexpr static inline const char* name = "minecraft:crafting_special_armordye";
             constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_bookcloning> {
             constexpr static inline const char* name = "minecraft:crafting_special_bookcloning";
             constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_mapcloning> {
             constexpr static inline const char* name = "minecraft:crafting_special_mapcloning";
             constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_mapextending> {
             constexpr static inline const char* name = "minecraft:crafting_special_mapextending";
             constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_firework_rocket> {
             constexpr static inline const char* name = "minecraft:crafting_special_firework_rocket";
             constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_firework_star> {
             constexpr static inline const char* name = "minecraft:crafting_special_firework_star";
             constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_firework_star_fade> {
             constexpr static inline const char* name = "minecraft:crafting_special_firework_star_fade";
             constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_tippedarrow> {
             constexpr static inline const char* name = "minecraft:crafting_special_tippedarrow";
             constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_bannerduplicate> {
             constexpr static inline const char* name = "minecraft:crafting_special_bannerduplicate";
             constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_shielddecoration> {
             constexpr static inline const char* name = "minecraft:crafting_special_shielddecoration";
             constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = false;
-        };
-
-        template <>
-        struct variant_data<minecraft::crafting_special_shulkerboxcoloring> { //deprecated
-            constexpr static inline const char* name = "minecraft:crafting_special_shulkerboxcoloring";
-            constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = true;
-        };
-
-        template <>
-        struct variant_data<minecraft::crafting_special_suspiciousstew> { //deprecated
-            constexpr static inline const char* name = "minecraft:crafting_special_suspiciousstew";
-            constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = true;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_repairitem> {
             constexpr static inline const char* name = "minecraft:crafting_special_repairitem";
             constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_decorated_pot> {
             constexpr static inline const char* name = "minecraft:crafting_decorated_pot";
             constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::smelting> {
             constexpr static inline const char* name = "minecraft:smelting";
             constexpr static inline bool must_display = true;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::blasting> {
             constexpr static inline const char* name = "minecraft:blasting";
             constexpr static inline bool must_display = true;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::smoking> {
             constexpr static inline const char* name = "minecraft:smoking";
             constexpr static inline bool must_display = true;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::campfire_cooking> {
             constexpr static inline const char* name = "minecraft:campfire_cooking";
             constexpr static inline bool must_display = true;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::stonecutting> {
             constexpr static inline const char* name = "minecraft:stonecutting";
             constexpr static inline bool must_display = true;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::smithing_transform> {
             constexpr static inline const char* name = "minecraft:smithing_transform";
             constexpr static inline bool must_display = true;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::smithing_trim> {
             constexpr static inline const char* name = "minecraft:smithing_trim";
             constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_transmute> {
             constexpr static inline const char* name = "minecraft:crafting_transmute";
             constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = false;
         };
 
         template <>
         struct variant_data<custom> {
             constexpr static inline const char* name = "copper_server:custom";
             constexpr static inline bool must_display = false;
-            constexpr static inline bool is_deprecated = false;
         };
 
         using varies = std::variant<
@@ -295,8 +258,6 @@ namespace copper_server::base_objects {
             minecraft::crafting_special_tippedarrow,
             minecraft::crafting_special_bannerduplicate,
             minecraft::crafting_special_shielddecoration,
-            minecraft::crafting_special_shulkerboxcoloring,
-            minecraft::crafting_special_suspiciousstew,
             minecraft::crafting_special_repairitem,
             minecraft::crafting_decorated_pot,
             minecraft::smelting,

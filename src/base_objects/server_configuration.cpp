@@ -1,6 +1,6 @@
 #include <filesystem>
-#include <fstream>
 #include <library/enbt/enbt.hpp>
+#include <library/fast_task/src/files/files.hpp>
 #include <library/list_array.hpp>
 #include <src/base_objects/packets.hpp>
 #include <src/base_objects/server_configuaration.hpp>
@@ -117,7 +117,7 @@ namespace copper_server::base_objects {
                     }
                     cfg.protocol.allowed_versions_processed.unify();
                     if (cfg.protocol.allowed_versions.empty())
-                        cfg.protocol.allowed_versions_processed = {765, 766, 767, 768, 769};
+                        cfg.protocol.allowed_versions_processed = {770};
                 } else {
                     auto allowed_versions = js_array::get_array(protocol["allowed_versions"] = boost::json::array());
                     for (const auto& it : cfg.protocol.allowed_versions)
@@ -218,10 +218,6 @@ namespace copper_server::base_objects {
                     cfg.server.network_threads = server["network_threads"];
                 if (server.contains("working_threads"))
                     cfg.server.working_threads = server["working_threads"];
-                if (server.contains("reading_threads"))
-                    cfg.server.reading_threads = server["reading_threads"];
-                if (server.contains("writing_threads"))
-                    cfg.server.writing_threads = server["writing_threads"];
                 if (server.contains("ssl_key_length"))
                     cfg.server.ssl_key_length = server["ssl_key_length"];
 
@@ -232,13 +228,9 @@ namespace copper_server::base_objects {
 
                 size_t total_threads_ = std::thread::hardware_concurrency();
                 if (cfg.server.network_threads == 0)
-                    cfg.server.network_threads = (total_threads_ / 4) ? (total_threads_ / 4) : 1;
+                    cfg.server.network_threads = (total_threads_ / 2) ? (total_threads_ / 2) : 1;
                 if (cfg.server.working_threads == 0)
-                    cfg.server.working_threads = (total_threads_ / 4) ? (total_threads_ / 4) : 1;
-                if (cfg.server.reading_threads == 0)
-                    cfg.server.reading_threads = (total_threads_ / 4) ? (total_threads_ / 4) : 1;
-                if (cfg.server.writing_threads == 0)
-                    cfg.server.writing_threads = (total_threads_ / 4) ? (total_threads_ / 4) : 1;
+                    cfg.server.working_threads = (total_threads_ / 2) ? (total_threads_ / 2) : 1;
             }
             {
                 auto allowed_dimensions = js_array::get_array(data["allowed_dimensions"]);
@@ -253,15 +245,15 @@ namespace copper_server::base_objects {
             }
 
             if (cfg.status.favicon_path != "" && calculate_favicon) {
-                std::ifstream file(cfg.status.favicon_path, std::ifstream::in | std::ifstream::binary);
+                fast_task::files::async_iofstream file(cfg.status.favicon_path, std::istream::in | std::istream::binary);
                 if (file.is_open()) {
-                    file.seekg(0, std::ifstream::end);
+                    file.seekg(0, std::istream::end);
                     size_t file_size = file.tellg();
                     if (file_size < 28) {
                         log::error("server", "Failed to read favicon, icon too small, skipping...");
                         return;
                     }
-                    file.seekg(0, std::ifstream::beg);
+                    file.seekg(0, std::istream::beg);
                     std::vector<uint8_t> res;
                     res.resize(file_size);
                     file.read((char*)res.data(), res.size());
@@ -280,7 +272,7 @@ namespace copper_server::base_objects {
         }
 
         void save_config(const std::filesystem::path& config_file_path, boost::json::object& config_data) {
-            std::ofstream file(config_file_path / "config.json", std::ofstream::trunc);
+            fast_task::files::async_iofstream file(config_file_path / "config.json", std::iostream::trunc);
             if (!file.is_open()) {
                 log::warn("server", "Failed to save config file. Can not open file.");
                 return;
@@ -293,7 +285,8 @@ namespace copper_server::base_objects {
             if (!config_data.has_value() && !fill_default_values) {
                 log::warn("server", "Failed to read config file. Using default values.");
                 return;
-            }
+            } else if (!config_data.has_value())
+                config_data = boost::json::object();
             auto config = js_object::get_object(*config_data);
             //if (fill_default_values) {
 

@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <library/enbt/io.hpp>
+#include <library/fast_task/src/files/files.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/storage/players_data.hpp>
 
@@ -19,9 +20,8 @@ namespace copper_server::storage {
         : path(path) {}
 
     void player_data::load() {
-        std::ifstream file(path, std::ios::binary);
+        fast_task::files::async_iofstream file(path, std::ios::binary);
         if (!file.is_open()) {
-            file.close();
             if (std::filesystem::exists(path))
                 throw std::runtime_error("Failed to open file: " + path.string());
             else {
@@ -100,7 +100,6 @@ namespace copper_server::storage {
 
         if (!player.assigned_entity)
             player.assigned_entity = base_objects::entity::create("minecraft:player");
-        file.close();
     }
 
     void player_data::save() {
@@ -154,14 +153,11 @@ namespace copper_server::storage {
         if (player.assigned_entity)
             as_file_data["assigned_entity"] = player.assigned_entity->copy_to_enbt();
 
-        std::ofstream file(path, std::ios::binary);
-        if (!file.is_open()) {
-            file.close();
+        fast_task::files::async_iofstream file(path, std::ios::binary);
+        if (!file.is_open())
             throw std::runtime_error("Failed to open file: " + path.string());
-        }
         enbt::io_helper::write_token(file, as_file_data);
         file.flush();
-        file.close();
     }
 
     players_data::players_data(const std::filesystem::path& base_path)

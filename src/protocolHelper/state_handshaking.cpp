@@ -8,11 +8,6 @@
 #include <src/protocolHelper/state_status.hpp>
 
 namespace copper_server {
-
-    bool tcp_client_handle_handshaking::AllowProtocolVersion(int proto_version) {
-        return api::configuration::get().protocol.allowed_versions_processed.contains(proto_version);
-    }
-
     bool tcp_client_handle_handshaking::AllowServerAddressAndPort(std::string& str, uint16_t port) {
         return true;
     }
@@ -43,10 +38,6 @@ namespace copper_server {
 
         int32_t protocol_version = data.read_var<int32_t>();
         session->protocol_version = protocol_version;
-
-        if (!AllowProtocolVersion(protocol_version))
-            return base_objects::network::response::disconnect();
-
 
         std::string server_address = data.read_string();
         if (!AllowServerAddressAndPort(server_address, data.read_value<uint16_t>()))
@@ -82,17 +73,17 @@ namespace copper_server {
         return base_objects::network::response::disconnect();
     }
 
-    tcp_client_handle_handshaking::tcp_client_handle_handshaking(base_objects::network::tcp_session* sock)
+    tcp_client_handle_handshaking::tcp_client_handle_handshaking(base_objects::network::tcp::session* sock)
         : tcp_client_handle(sock) {}
 
     tcp_client_handle_handshaking::tcp_client_handle_handshaking()
         : tcp_client_handle(nullptr) {}
 
-    base_objects::network::tcp_client* tcp_client_handle_handshaking::define_ourself(base_objects::network::tcp_session* sock) {
+    base_objects::network::tcp::client* tcp_client_handle_handshaking::define_ourself(base_objects::network::tcp::session* sock) {
         return new tcp_client_handle_handshaking(sock);
     }
 
-    base_objects::network::tcp_client* tcp_client_handle_handshaking::redefine_handler() {
+    base_objects::network::tcp::client* tcp_client_handle_handshaking::redefine_handler() {
         return next_handler;
     }
 }

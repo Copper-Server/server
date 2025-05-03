@@ -339,9 +339,9 @@ namespace copper_server::build_in_plugins::processors_providers {
         }
         if (predicate.contains("state")) {
             auto properties = predicate["state"].as_compound();
-            auto states_ = block.assigned_states.left.at(block_id);
+            auto states_ = block.assigned_states_to_properties->left.at(block_id);
             for (auto& [key, value] : properties) {
-                if (!block.defintion.contains(key))
+                if (!states_.contains(key))
                     return false;
                 if (!value.is_compound()) {
                     if (states_.at(key) != (std::string)value)
@@ -385,9 +385,9 @@ namespace copper_server::build_in_plugins::processors_providers {
             return true;
         else {
             auto properties = predicate["properties"].as_compound();
-            auto states_ = block.assigned_states.left.at(block_id);
+            auto states_ = block.assigned_states_to_properties->left.at(block_id);
             for (auto& [key, value] : properties) {
-                if (!block.defintion.contains(key))
+                if (!states_.contains(key))
                     return false;
                 if (!value.is_compound()) {
                     if (states_.at(key) != (std::string)value)
@@ -509,7 +509,7 @@ namespace copper_server::build_in_plugins::processors_providers {
     }
 
     bool random_chance_with_enchanted_bonus(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
-        int32_t enchantmant_level = 0;
+        int32_t enchantment_level = 0;
         if (context.other_data.contains("loot_context")) {
             auto loot_context = context.other_data.at("loot_context").as_compound();
             if (loot_context.contains("attacker")) {

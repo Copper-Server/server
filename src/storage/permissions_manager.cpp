@@ -1,6 +1,6 @@
 #include <boost/json.hpp>
 #include <format>
-#include <fstream>
+#include <library/fast_task/src/files/files.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/log.hpp>
@@ -484,7 +484,7 @@ namespace copper_server::storage {
             return values;
         });
         {
-            std::ofstream file(base_path, std::ofstream::trunc);
+            fast_task::files::async_iofstream file(base_path, std::ostream::trunc);
             if (!file.is_open()) {
                 log::warn("server", "Failed to save permissions file. Can not open file.");
                 return;

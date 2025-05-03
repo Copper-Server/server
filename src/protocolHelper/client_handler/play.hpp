@@ -1,11 +1,11 @@
 #ifndef SRC_PROTOCOLHELPER_CLIENT_HANDLER_PLAY
 #define SRC_PROTOCOLHELPER_CLIENT_HANDLER_PLAY
-#include <src/base_objects/network/accept_packet_registry.hpp>
+#include <src/base_objects/network/tcp/accept_packet_registry.hpp>
 #include <src/protocolHelper/util.hpp>
 
 namespace copper_server::client_handler {
     class handle_play : public tcp_client_handle {
-        const base_objects::network::protocol_packet_registry_t& registry;
+        const base_objects::network::tcp::protocol_packet_registry_t& registry;
         bool handle_tick_sync : 1 = false;
         bool await_for_player_loading : 1 = false;
         bool ____ : 1 = false;
@@ -19,9 +19,9 @@ namespace copper_server::client_handler {
         base_objects::network::response on_switching() override;
 
     public:
-        handle_play(base_objects::network::tcp_session* session);
+        handle_play(base_objects::network::tcp::session* session);
         ~handle_play() override;
-        base_objects::network::tcp_client* define_ourself(base_objects::network::tcp_session* sock) override;
+        base_objects::network::tcp::client* define_ourself(base_objects::network::tcp::session* sock) override;
     };
 }
 

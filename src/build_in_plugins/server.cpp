@@ -6,7 +6,7 @@
 #include <src/api/players.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/network/tcp_server.hpp>
+#include <src/base_objects/network/tcp/server.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/build_in_plugins/server.hpp>
 #include <src/log.hpp>
@@ -117,7 +117,7 @@ namespace copper_server::build_in_plugins {
         {
             browser.add_child({"stop", "stop server", "/stop"})
                 .set_callback("command.stop", [this](const list_array<predicate>&, base_objects::command_context& context) {
-                    base_objects::network::tcp_server::instance().stop();
+                    base_objects::network::tcp::server::instance().stop();
                 });
         }
 

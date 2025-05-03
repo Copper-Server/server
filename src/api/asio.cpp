@@ -5,10 +5,10 @@
 #include <thread>
 
 namespace copper_server::api::asio {
-    boost::asio::io_service service;
+    boost::asio::io_context service;
     boost::asio::thread_pool* thread_pool;
 
-    boost::asio::io_service& get_service() {
+    boost::asio::io_context& get_service() {
         return service;
     }
 

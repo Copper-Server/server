@@ -3,15 +3,18 @@
 #include <library/enbt/io.hpp>
 #include <library/enbt/io_tools.hpp>
 #include <library/enbt/senbt.hpp>
+#include <library/fast_task/src/files/files.hpp>
 #include <src/api/configuration.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/log.hpp>
 #include <src/storage/world_data.hpp>
-#include <src/util/shared_static_values.hpp>
 #include <src/util/task_management.hpp>
 
 namespace enbt::io_helper {
     using namespace copper_server;
+
+    using light_data = base_objects::world::light_data;
+    using height_maps = base_objects::world::height_maps;
 
     template <>
     struct serialization_simple_cast<base_objects::block> {
@@ -27,27 +30,27 @@ namespace enbt::io_helper {
     };
 
     template <>
-    struct serialization_simple_cast<storage::light_data::light_item> {
-        static std::uint8_t write_cast(const storage::light_data::light_item& value) {
+    struct serialization_simple_cast<light_data::light_item> {
+        static std::uint8_t write_cast(const light_data::light_item& value) {
             return value.raw;
         }
 
-        static storage::light_data::light_item read_cast(std::uint8_t value) {
-            storage::light_data::light_item lit;
+        static light_data::light_item read_cast(std::uint8_t value) {
+            light_data::light_item lit;
             lit.raw = value;
             return lit;
         }
     };
 
     template <>
-    struct serialization<storage::height_maps> {
-        static storage::height_maps read(enbt::io_helper::value_read_stream& self) {
-            storage::height_maps height_maps;
+    struct serialization<height_maps> {
+        static height_maps read(enbt::io_helper::value_read_stream& self) {
+            height_maps height_maps;
             read(height_maps, self);
             return height_maps;
         }
 
-        static void read(storage::height_maps& height_maps, enbt::io_helper::value_read_stream& self) {
+        static void read(height_maps& height_maps, enbt::io_helper::value_read_stream& self) {
             self.iterate(
                 [&](std::string_view name, enbt::io_helper::value_read_stream& self) {
                     if (name == "ocean_floor")
@@ -62,7 +65,7 @@ namespace enbt::io_helper {
             );
         }
 
-        static void write(const storage::height_maps& height_maps, enbt::io_helper::value_write_stream& write_stream) {
+        static void write(const height_maps& height_maps, enbt::io_helper::value_write_stream& write_stream) {
             write_stream.write_compound()
                 .write("ocean_floor", [&](enbt::io_helper::value_write_stream& write_stream) {
                     serialization_write(height_maps.ocean_floor, write_stream);
@@ -80,35 +83,35 @@ namespace enbt::io_helper {
     };
 
     template <>
-    struct serialization<storage::light_data> {
-        static storage::light_data read(enbt::io_helper::value_read_stream& self) {
-            storage::light_data light_data;
+    struct serialization<light_data> {
+        static light_data read(enbt::io_helper::value_read_stream& self) {
+            light_data light_data;
             read(light_data, self);
             return light_data;
         }
 
-        static void read(storage::light_data& light_data, enbt::io_helper::value_read_stream& self) {
+        static void read(light_data& light_data, enbt::io_helper::value_read_stream& self) {
             serialization_read(light_data.light_map, self);
         }
 
-        static void write(const storage::light_data& light_data, enbt::io_helper::value_write_stream& write_stream) {
+        static void write(const light_data& light_data, enbt::io_helper::value_write_stream& write_stream) {
             serialization_write(light_data.light_map, write_stream);
         }
     };
 
     template <>
-    struct serialization<storage::light_data::light_item> {
-        static storage::light_data::light_item read(enbt::io_helper::value_read_stream& self) {
-            storage::light_data::light_item light_item;
+    struct serialization<light_data::light_item> {
+        static light_data::light_item read(enbt::io_helper::value_read_stream& self) {
+            light_data::light_item light_item;
             read(light_item, self);
             return light_item;
         }
 
-        static void read(storage::light_data::light_item& light_data, enbt::io_helper::value_read_stream& self) {
+        static void read(light_data::light_item& light_data, enbt::io_helper::value_read_stream& self) {
             light_data.raw = self.read();
         }
 
-        static void write(const storage::light_data::light_item& light_data, enbt::io_helper::value_write_stream& write_stream) {
+        static void write(const light_data::light_item& light_data, enbt::io_helper::value_write_stream& write_stream) {
             write_stream.write(light_data.raw);
         }
     };
@@ -157,6 +160,7 @@ namespace enbt::io_helper {
 }
 
 namespace copper_server::storage {
+    using sub_chunk_data = base_objects::world::sub_chunk_data;
 
     template <class T>
     T convert_chunk_global_pos(T pos) {
@@ -180,69 +184,10 @@ namespace copper_server::storage {
     class world_data;
     class worlds_data;
 
-    enbt::value& sub_chunk_data::get_block_entity_data(uint8_t local_x, uint8_t local_y, uint8_t local_z) {
-        return block_entities[local_z | (local_y << 4) | (local_x << 8)];
-    }
-
-    void sub_chunk_data::get_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, std::function<void(base_objects::block& block)> on_normal, std::function<void(base_objects::block& block, enbt::value& entity_data)> on_entity) {
-        auto& block = blocks[local_x][local_y][local_z];
-        if (block.is_block_entity())
-            on_entity(block, get_block_entity_data(local_x, local_y, local_z));
-        else
-            on_normal(block);
-    }
-
-    void sub_chunk_data::set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::full_block_data& block) {
-        std::visit(
-            [&](auto& block) {
-                using T = std::decay_t<decltype(block)>;
-                if constexpr (std::is_same_v<T, base_objects::block>) {
-                    blocks[local_x][local_y][local_z] = block;
-                    block_entities.erase(local_z | (local_y << 4) | (local_x << 8));
-                } else {
-                    blocks[local_x][local_y][local_z] = block.block;
-                    get_block_entity_data(local_x, local_y, local_z) = block.data;
-                }
-            },
-            block
-        );
-    }
-
-    void sub_chunk_data::set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::full_block_data&& block) {
-        std::visit(
-            [&](auto& block) {
-                using T = std::decay_t<decltype(block)>;
-                if constexpr (std::is_same_v<T, base_objects::block>) {
-                    blocks[local_x][local_y][local_z] = block;
-                    block_entities.erase(local_z | (local_y << 4) | (local_x << 8));
-                } else {
-                    blocks[local_x][local_y][local_z] = block.block;
-                    get_block_entity_data(local_x, local_y, local_z) = std::move(block.data);
-                }
-            },
-            block
-        );
-    }
-
-    uint32_t sub_chunk_data::get_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z) {
-        return biomes[2 >> local_x][2 >> local_y][2 >> local_z];
-    }
-
-    void sub_chunk_data::set_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z, uint32_t id) {
-        biomes[2 >> local_x][2 >> local_y][2 >> local_z] = id;
-    }
-
-    void sub_chunk_data::for_each_block(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block& block)> func) {
-        for (uint8_t x = 0; x < 16; x++)
-            for (uint8_t y = 0; y < 16; y++)
-                for (uint8_t z = 0; z < 16; z++)
-                    func(x, y, z, blocks[x][y][z]);
-    }
-
     bool chunk_data::load(const std::filesystem::path& chunk_z, uint64_t tick_counter) {
         if (!std::filesystem::exists(chunk_z))
             return false;
-        std::ifstream file(chunk_z, std::ios::binary);
+        fast_task::files::async_iofstream file(chunk_z, std::ios::binary);
         if (std::filesystem::file_size(chunk_z) == 0)
             return false;
         if (!file.is_open())
@@ -420,7 +365,7 @@ namespace copper_server::storage {
         return true;
     }
 
-    void load_light_data(const enbt::value& chunk, light_data& data, bool& need_to_recalculate_light) {
+    void load_light_data(const enbt::value& chunk, base_objects::world::light_data& data, bool& need_to_recalculate_light) {
         if (!valid_sub_chunk_size(chunk)) {
             need_to_recalculate_light = true;
             return;
@@ -513,7 +458,7 @@ namespace copper_server::storage {
 
     bool chunk_data::save(const std::filesystem::path& chunk_z, uint64_t tick_counter) {
         std::filesystem::create_directories(chunk_z.parent_path());
-        std::ofstream file(chunk_z, std::ios::binary);
+        fast_task::files::async_iofstream file(chunk_z, std::ios::binary);
         if (!file.is_open())
             return false;
         auto mode = api::configuration::get().world.saving_mode;
@@ -636,7 +581,7 @@ namespace copper_server::storage {
 
     void chunk_data::query_for_tick(uint8_t local_x, uint64_t global_y, uint8_t local_z, uint64_t on_tick, int8_t priority) {
         if (priority > 0)
-            throw std::runtime_error("Priorithy must be negative");
+            throw std::runtime_error("Priority must be negative");
         uint8_t real_priority = +priority;
         if (real_priority >= queried_for_tick.size())
             queried_for_tick.resize(real_priority + 1);
@@ -781,8 +726,7 @@ namespace copper_server::storage {
                     }
 
                     return true;
-                },
-                shared_values::saving_pool_tasks_id
+                }
             );
         }
     }
@@ -906,7 +850,7 @@ namespace copper_server::storage {
 
     void world_data::load() {
         std::unique_lock lock(mutex);
-        std::ifstream file(path / "world.senbt", std::ios::binary);
+        fast_task::files::async_iofstream file(path / "world.senbt", std::ios::binary);
         if (!file.is_open())
             throw std::runtime_error("Can't open world file");
         std::string res((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
@@ -916,7 +860,7 @@ namespace copper_server::storage {
     void world_data::save() {
         std::unique_lock lock(mutex);
         std::filesystem::create_directories(path);
-        std::ofstream file(path / "world.senbt", std::ios::binary);
+        fast_task::files::async_iofstream file(path / "world.senbt", std::ios::binary);
         if (!file.is_open())
             throw std::runtime_error("Can't open world file");
         enbt::compound world_data_file;
@@ -972,7 +916,7 @@ namespace copper_server::storage {
 
     std::string world_data::preview_world_name() {
         std::unique_lock lock(mutex);
-        std::ifstream file(path / "world.senbt", std::ios::binary);
+        fast_task::files::async_iofstream file(path / "world.senbt", std::ios::binary);
         if (!file.is_open())
             throw std::runtime_error("Can't open world file");
         std::string res((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
@@ -984,12 +928,11 @@ namespace copper_server::storage {
         if (!std::filesystem::exists(path))
             std::filesystem::create_directories(path);
         world_spawn_ticket_id = add_loading_ticket(
-            loading_point_ticket{
+            base_objects::world::loading_point_ticket{
                 [](auto&, auto, auto&) { return true; },
                 {convert_chunk_global_pos(spawn_data.x),
                  convert_chunk_global_pos(spawn_data.z),
-                 convert_chunk_global_pos(spawn_data.radius)
-                },
+                 convert_chunk_global_pos(spawn_data.radius)},
                 "Start ticket",
                 22
             }
@@ -1006,7 +949,7 @@ namespace copper_server::storage {
         };
     }
 
-    size_t world_data::add_loading_ticket(loading_point_ticket&& ticket) {
+    size_t world_data::add_loading_ticket(base_objects::world::loading_point_ticket&& ticket) {
         std::unique_lock lock(mutex);
         size_t id = loading_tickets.size();
         while (loading_tickets.contains(id))
@@ -1071,8 +1014,7 @@ namespace copper_server::storage {
         return Future<base_objects::atomic_holder<chunk_data>>::start(
             [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
                 return processed_load_chunk_sync(chunk_x, chunk_z, true);
-            },
-            shared_values::loading_pool_tasks_id
+            }
         );
     }
 
@@ -1087,8 +1029,7 @@ namespace copper_server::storage {
                 else
                     fault();
                 return chunk;
-            },
-            shared_values::loading_pool_tasks_id
+            }
         );
     }
 
@@ -1300,7 +1241,7 @@ namespace copper_server::storage {
         std::unique_lock lock(mutex);
         for (auto& [x, x_axis] : chunks)
             for (auto& [z, chunk] : x_axis)
-                if(chunk)
+                if (chunk)
                     func(*chunk);
     }
 
@@ -1399,7 +1340,7 @@ namespace copper_server::storage {
     void world_data::for_each_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
-            if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end()) 
+            if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
                 if (chunk->second)
                     chunk->second->for_each_entity(func);
     }
@@ -1758,13 +1699,13 @@ namespace copper_server::storage {
         }
     }
 
-    void world_data::get_height_maps(int64_t chunk_x, int64_t chunk_z, std::function<void(storage::height_maps& height_maps)> func) {
+    void world_data::get_height_maps(int64_t chunk_x, int64_t chunk_z, std::function<void(base_objects::world::height_maps& height_maps)> func) {
         get_chunk(chunk_x, chunk_z, [&](chunk_data& chunk) {
             func(chunk.height_maps);
         });
     }
 
-    void world_data::get_height_maps_at(int64_t global_x, int64_t global_z, std::function<void(storage::height_maps& height_maps)> func) {
+    void world_data::get_height_maps_at(int64_t global_x, int64_t global_z, std::function<void(base_objects::world::height_maps& height_maps)> func) {
         get_chunk_at(global_x, global_z, [&](chunk_data& chunk) {
             func(chunk.height_maps);
         });
@@ -1817,7 +1758,7 @@ namespace copper_server::storage {
 
         for (auto& [x, x_axis] : chunks) {
             for (auto& [z, z_axis] : x_axis) {
-                if(z_axis)
+                if (z_axis)
                     if (z_axis->load_level <= 44)
                         z_axis->load_level++;
             }
@@ -1960,314 +1901,314 @@ namespace copper_server::storage {
 
 #pragma region worlds_data
 
-        base_objects::atomic_holder<world_data> worlds_data::load(uint64_t world_id) {
-            std::unique_lock lock(mutex);
-            if (cached_worlds.find(world_id) == cached_worlds.end()) {
-                auto path = base_path / std::to_string(world_id);
-                if (!std::filesystem::exists(path))
-                    throw std::runtime_error("World not found");
+    base_objects::atomic_holder<world_data> worlds_data::load(uint64_t world_id) {
+        std::unique_lock lock(mutex);
+        if (cached_worlds.find(world_id) == cached_worlds.end()) {
+            auto path = base_path / std::to_string(world_id);
+            if (!std::filesystem::exists(path))
+                throw std::runtime_error("World not found");
 
-                auto world = base_objects::atomic_holder<world_data>(new world_data(path.string()));
-                world->load();
-                auto& res = cached_worlds[world_id] = world;
-                on_world_loaded(world_id);
-                return res;
-            }
-            return cached_worlds[world_id];
-        }
-
-        worlds_data::worlds_data(base_objects::ServerConfiguration& configuration, const std::filesystem::path& base_path)
-            : base_path(base_path), configuration(configuration) {
-            if (!std::filesystem::exists(base_path))
-                std::filesystem::create_directories(base_path);
-        }
-
-        const list_array<uint64_t>& worlds_data::get_ids() {
-            std::unique_lock lock(mutex);
-            if (!cached_ids.empty())
-                return cached_ids;
-            list_array<uint64_t> result;
-            for (auto& entry : std::filesystem::directory_iterator{base_path}) {
-                if (entry.is_directory()) {
-                    auto& path = entry.path();
-                    try {
-                        result.push_back(std::stoi(path.filename().string()));
-                    } catch (const std::exception&) {
-                        log::warn("storage:worlds_data", "Got corrupted file path: " + path.string());
-                    }
-                }
-            }
-            result.commit();
-            return cached_ids = result;
-        }
-
-        size_t worlds_data::loaded_chunks_count() {
-            std::unique_lock lock(mutex);
-            size_t res = 0;
-            for (auto& world : cached_worlds)
-                res += world.second->loaded_chunks_count();
+            auto world = base_objects::atomic_holder<world_data>(new world_data(path.string()));
+            world->load();
+            auto& res = cached_worlds[world_id] = world;
+            on_world_loaded(world_id);
             return res;
         }
+        return cached_worlds[world_id];
+    }
 
-        size_t worlds_data::loaded_chunks_count(uint64_t world_id) {
-            std::unique_lock lock(mutex);
-            if (auto on_load = cached_worlds.find(world_id); on_load != cached_worlds.end())
-                return on_load->second->loaded_chunks_count();
-            return 0;
-        }
+    worlds_data::worlds_data(base_objects::ServerConfiguration& configuration, const std::filesystem::path& base_path)
+        : base_path(base_path), configuration(configuration) {
+        if (!std::filesystem::exists(base_path))
+            std::filesystem::create_directories(base_path);
+    }
 
-        bool worlds_data::exists(uint64_t world_id) {
-            std::unique_lock lock(mutex);
-            if (cached_ids.empty()) {
-                lock.unlock();
-                get_list();
-                lock.lock();
-            }
-            return cached_ids.contains(world_id);
-        }
-
-        bool worlds_data::exists(const std::string& name) {
-            return get_id(name) != -1;
-        }
-
-        const list_array<uint64_t>& worlds_data::get_list() {
-            std::unique_lock lock(mutex);
-            return get_ids();
-        }
-
-        std::string worlds_data::get_name(uint64_t world_id) {
-            std::unique_lock lock(mutex);
-            if (auto on_load = cached_worlds.find(world_id); on_load != cached_worlds.end())
-                return on_load->second->world_name;
-
-            auto world_path = base_path / std::to_string(world_id);
-            if (std::filesystem::exists(world_path))
-                return world_data(world_path).preview_world_name();
-            else
-                throw std::runtime_error("World with id " + std::to_string(world_id) + " not found.");
-        }
-
-        uint64_t worlds_data::get_id(const std::string& name) {
-            std::unique_lock lock(mutex);
-            for (auto& world : cached_worlds)
-                if (world.second->world_name == name)
-                    return world.first;
-
-            if (cached_ids.empty())
-                get_ids();
-            size_t found = cached_ids.find_if([this, &name](uint64_t id) {
-                return world_data(base_path / std::to_string(id)).preview_world_name() == name;
-            });
-            return found == list_array<uint64_t>::npos ? -1 : cached_ids[found];
-        }
-
-        base_objects::atomic_holder<world_data> worlds_data::get(uint64_t world_id) {
-            std::unique_lock lock(mutex);
-            if (auto world = cached_worlds.find(world_id); world == cached_worlds.end())
-                return load(world_id);
-            else
-                return world->second;
-        }
-
-        void worlds_data::save(uint64_t world_id) {
-            std::unique_lock lock(mutex);
-            if (auto item = cached_worlds.find(world_id); item == cached_worlds.end())
-                throw std::runtime_error("World not found");
-            else {
-                item->second->save();
-                item->second->save_chunks();
+    const list_array<uint64_t>& worlds_data::get_ids() {
+        std::unique_lock lock(mutex);
+        if (!cached_ids.empty())
+            return cached_ids;
+        list_array<uint64_t> result;
+        for (auto& entry : std::filesystem::directory_iterator{base_path}) {
+            if (entry.is_directory()) {
+                auto& path = entry.path();
+                try {
+                    result.push_back(std::stoi(path.filename().string()));
+                } catch (const std::exception&) {
+                    log::warn("storage:worlds_data", "Got corrupted file path: " + path.string());
+                }
             }
         }
+        result.commit();
+        return cached_ids = result;
+    }
 
-        void worlds_data::save_all() {
-            std::unique_lock lock(mutex);
-            for (auto& [id, world] : cached_worlds) {
-                world->save();
-                world->save_chunks();
-            }
-        }
+    size_t worlds_data::loaded_chunks_count() {
+        std::unique_lock lock(mutex);
+        size_t res = 0;
+        for (auto& world : cached_worlds)
+            res += world.second->loaded_chunks_count();
+        return res;
+    }
 
-        void worlds_data::save_and_unload(uint64_t world_id) {
-            std::unique_lock lock(mutex);
-            if (auto item = cached_worlds.find(world_id); item == cached_worlds.end())
-                throw std::runtime_error("World not found");
-            else {
-                auto& world = item->second;
-                on_world_unloaded(world_id);
-                world->save();
-                world->save_chunks(true);
-                world->await_save_chunks();
-                cached_worlds.erase(item);
-            }
-        }
+    size_t worlds_data::loaded_chunks_count(uint64_t world_id) {
+        std::unique_lock lock(mutex);
+        if (auto on_load = cached_worlds.find(world_id); on_load != cached_worlds.end())
+            return on_load->second->loaded_chunks_count();
+        return 0;
+    }
 
-        void worlds_data::save_and_unload_all() {
-            std::unique_lock lock(mutex);
-            for (auto& [id, world] : cached_worlds) {
-                on_world_unloaded(id);
-                world->save();
-                world->save_chunks();
-                world->await_save_chunks();
-            }
-            cached_worlds.clear();
-        }
-
-        //be sure that world is not used by anything, otherwise will throw exception
-        void worlds_data::unload(uint64_t world_id) {
-            std::unique_lock lock(mutex);
-            on_world_unloaded(world_id);
-            cached_worlds.erase(world_id);
-        }
-
-        void worlds_data::unload_all() {
-            std::unique_lock lock(mutex);
-            for (auto&& [id, world] : cached_worlds)
-                on_world_unloaded(id);
-            cached_worlds.clear();
-        }
-
-        void worlds_data::erase(uint64_t world_id) {
-            std::unique_lock lock(mutex);
-            std::filesystem::remove_all(std::filesystem::path(base_path) / std::to_string(world_id));
-            cached_worlds.erase(world_id);
-            on_world_unloaded(world_id);
-        }
-
-        uint64_t worlds_data::create(const std::string& name) {
-            std::unique_lock lock(mutex);
-            if (get_id(name) != -1)
-                throw std::runtime_error("World with name " + name + " already exists.");
-            uint64_t id = 0;
-            while (exists(id))
-                id++;
-            cached_ids.push_back(id);
-            cached_worlds[id] = new world_data(base_path / std::to_string(id));
-            cached_worlds[id]->world_name = name;
-            cached_worlds[id]->save();
-            on_world_loaded(id);
-            return id;
-        }
-
-        uint64_t worlds_data::create(const std::string& name, std::function<void(world_data& world)> init) {
-            std::unique_lock lock(mutex);
-            if (get_id(name) != -1)
-                throw std::runtime_error("World with name " + name + " already exists.");
-            uint64_t id = 0;
-            while (exists(id))
-                id++;
-            base_objects::atomic_holder<world_data> world = new world_data(base_path / std::to_string(id));
-            init(*world);
-            cached_ids.push_back(id);
-            cached_worlds[id] = world;
-            cached_worlds[id]->world_name = name;
-            cached_worlds[id]->save();
-            on_world_loaded(id);
-            return id;
-        }
-
-        void worlds_data::locked(std::function<void()> func) {
-            std::unique_lock lock(mutex);
-            func();
-        }
-
-        void worlds_data::locked(std::function<void(worlds_data& self)> func) {
-            std::unique_lock lock(mutex);
-            func(*this);
-        }
-
-        void worlds_data::for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func) {
-            std::unique_lock lock(mutex);
-            for (auto& [id, world] : cached_worlds)
-                world->for_each_entity(func);
-        }
-
-        void worlds_data::for_each_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func) {
-            std::unique_lock lock(mutex);
-            for (auto& [id, world] : cached_worlds)
-                world->for_each_entity(chunk_x, chunk_z, func);
-        }
-
-        void worlds_data::for_each_entity(int64_t chunk_x, int64_t chunk_z, uint64_t sub_chunk_y, std::function<void(const base_objects::entity_ref& entity)> func) {
-            std::unique_lock lock(mutex);
-            for (auto& [id, world] : cached_worlds)
-                world->for_each_entity(chunk_x, chunk_z, sub_chunk_y, func);
-        }
-
-        void worlds_data::for_each_entity(uint64_t world_id, std::function<void(const base_objects::entity_ref& entity)> func) {
-            std::unique_lock lock(mutex);
-            if (auto world = cached_worlds.find(world_id); world == cached_worlds.end())
-                load(world_id)->for_each_entity(func);
-            else
-                world->second->for_each_entity(func);
-        }
-
-        void worlds_data::for_each_entity(uint64_t world_id, int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func) {
-            std::unique_lock lock(mutex);
-            if (auto world = cached_worlds.find(world_id); world == cached_worlds.end())
-                load(world_id)->for_each_entity(chunk_x, chunk_z, func);
-            else
-                world->second->for_each_entity(chunk_x, chunk_z, func);
-        }
-
-        void worlds_data::for_each_entity(uint64_t world_id, int64_t chunk_x, int64_t chunk_z, uint64_t sub_chunk_y, std::function<void(const base_objects::entity_ref& entity)> func) {
-            std::unique_lock lock(mutex);
-            if (auto world = cached_worlds.find(world_id); world == cached_worlds.end())
-                load(world_id)->for_each_entity(chunk_x, chunk_z, sub_chunk_y, func);
-            else
-                world->second->for_each_entity(chunk_x, chunk_z, sub_chunk_y, func);
-        }
-
-        void worlds_data::for_each_world(std::function<void(uint64_t id, world_data& world)> func) {
-            std::unique_lock lock(mutex);
-            for (auto& [id, world] : cached_worlds)
-                func(id, *world);
-        }
-
-        void worlds_data::apply_tick(std::chrono::high_resolution_clock::time_point current_time, std::chrono::nanoseconds ns) {
-            std::unique_lock lock(mutex);
-            list_array<std::pair<uint64_t, base_objects::atomic_holder<world_data>>> worlds_to_tick;
-            for (auto& [id, world] : cached_worlds) {
-                if (!world->last_usage.time_since_epoch().count())
-                    world->last_usage = current_time;
-                if (ticks_per_second > world->ticks_per_second) {
-                    auto tick_interval = std::chrono::nanoseconds(1'000'000'000 / world->ticks_per_second);
-                    world->accumulated_time += current_time - world->last_usage;
-                    world->last_usage = current_time;
-                    if (world->accumulated_time / tick_interval) {
-                        world->accumulated_time -= tick_interval;
-                        worlds_to_tick.push_back({id, world});
-                    }
-                } else
-                    worlds_to_tick.push_back({id, world});
-            }
+    bool worlds_data::exists(uint64_t world_id) {
+        std::unique_lock lock(mutex);
+        if (cached_ids.empty()) {
             lock.unlock();
-            future::forEachMove(
-                future::process<std::optional<uint64_t>>(
-                    worlds_to_tick,
-                    [this, current_time, unload_speed = configuration.world.unload_speed](const auto& it) mutable -> std::optional<uint64_t> {
-                        auto& world = it.second;
-                        auto id = it.first;
-                        std::random_device rd;
-                        std::mt19937 gen(rd());
-                        world->tick(gen, current_time);
-                        if (world->collect_unused_data(current_time, unload_speed))
-                            return id;
-                        return std::nullopt;
-                    }
-                ),
-                [this](auto id) { if(id) save_and_unload(*id); }
-            )->wait();
+            get_list();
             lock.lock();
-            got_ticks++;
-            auto new_current_time = std::chrono::high_resolution_clock::now();
-            if (current_time - last_tps_calculated >= std::chrono::seconds(1)) {
-                auto elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(new_current_time - last_tps_calculated).count();
-                tps = double(got_ticks) / elapsed;
-                on_tps_changed.async_notify(tps);
-                last_tps_calculated = new_current_time;
-                got_ticks = 0;
-            }
         }
+        return cached_ids.contains(world_id);
+    }
+
+    bool worlds_data::exists(const std::string& name) {
+        return get_id(name) != -1;
+    }
+
+    const list_array<uint64_t>& worlds_data::get_list() {
+        std::unique_lock lock(mutex);
+        return get_ids();
+    }
+
+    std::string worlds_data::get_name(uint64_t world_id) {
+        std::unique_lock lock(mutex);
+        if (auto on_load = cached_worlds.find(world_id); on_load != cached_worlds.end())
+            return on_load->second->world_name;
+
+        auto world_path = base_path / std::to_string(world_id);
+        if (std::filesystem::exists(world_path))
+            return world_data(world_path).preview_world_name();
+        else
+            throw std::runtime_error("World with id " + std::to_string(world_id) + " not found.");
+    }
+
+    uint64_t worlds_data::get_id(const std::string& name) {
+        std::unique_lock lock(mutex);
+        for (auto& world : cached_worlds)
+            if (world.second->world_name == name)
+                return world.first;
+
+        if (cached_ids.empty())
+            get_ids();
+        size_t found = cached_ids.find_if([this, &name](uint64_t id) {
+            return world_data(base_path / std::to_string(id)).preview_world_name() == name;
+        });
+        return found == list_array<uint64_t>::npos ? -1 : cached_ids[found];
+    }
+
+    base_objects::atomic_holder<world_data> worlds_data::get(uint64_t world_id) {
+        std::unique_lock lock(mutex);
+        if (auto world = cached_worlds.find(world_id); world == cached_worlds.end())
+            return load(world_id);
+        else
+            return world->second;
+    }
+
+    void worlds_data::save(uint64_t world_id) {
+        std::unique_lock lock(mutex);
+        if (auto item = cached_worlds.find(world_id); item == cached_worlds.end())
+            throw std::runtime_error("World not found");
+        else {
+            item->second->save();
+            item->second->save_chunks();
+        }
+    }
+
+    void worlds_data::save_all() {
+        std::unique_lock lock(mutex);
+        for (auto& [id, world] : cached_worlds) {
+            world->save();
+            world->save_chunks();
+        }
+    }
+
+    void worlds_data::save_and_unload(uint64_t world_id) {
+        std::unique_lock lock(mutex);
+        if (auto item = cached_worlds.find(world_id); item == cached_worlds.end())
+            throw std::runtime_error("World not found");
+        else {
+            auto& world = item->second;
+            on_world_unloaded(world_id);
+            world->save();
+            world->save_chunks(true);
+            world->await_save_chunks();
+            cached_worlds.erase(item);
+        }
+    }
+
+    void worlds_data::save_and_unload_all() {
+        std::unique_lock lock(mutex);
+        for (auto& [id, world] : cached_worlds) {
+            on_world_unloaded(id);
+            world->save();
+            world->save_chunks();
+            world->await_save_chunks();
+        }
+        cached_worlds.clear();
+    }
+
+    //be sure that world is not used by anything, otherwise will throw exception
+    void worlds_data::unload(uint64_t world_id) {
+        std::unique_lock lock(mutex);
+        on_world_unloaded(world_id);
+        cached_worlds.erase(world_id);
+    }
+
+    void worlds_data::unload_all() {
+        std::unique_lock lock(mutex);
+        for (auto&& [id, world] : cached_worlds)
+            on_world_unloaded(id);
+        cached_worlds.clear();
+    }
+
+    void worlds_data::erase(uint64_t world_id) {
+        std::unique_lock lock(mutex);
+        std::filesystem::remove_all(std::filesystem::path(base_path) / std::to_string(world_id));
+        cached_worlds.erase(world_id);
+        on_world_unloaded(world_id);
+    }
+
+    uint64_t worlds_data::create(const std::string& name) {
+        std::unique_lock lock(mutex);
+        if (get_id(name) != -1)
+            throw std::runtime_error("World with name " + name + " already exists.");
+        uint64_t id = 0;
+        while (exists(id))
+            id++;
+        cached_ids.push_back(id);
+        cached_worlds[id] = new world_data(base_path / std::to_string(id));
+        cached_worlds[id]->world_name = name;
+        cached_worlds[id]->save();
+        on_world_loaded(id);
+        return id;
+    }
+
+    uint64_t worlds_data::create(const std::string& name, std::function<void(world_data& world)> init) {
+        std::unique_lock lock(mutex);
+        if (get_id(name) != -1)
+            throw std::runtime_error("World with name " + name + " already exists.");
+        uint64_t id = 0;
+        while (exists(id))
+            id++;
+        base_objects::atomic_holder<world_data> world = new world_data(base_path / std::to_string(id));
+        init(*world);
+        cached_ids.push_back(id);
+        cached_worlds[id] = world;
+        cached_worlds[id]->world_name = name;
+        cached_worlds[id]->save();
+        on_world_loaded(id);
+        return id;
+    }
+
+    void worlds_data::locked(std::function<void()> func) {
+        std::unique_lock lock(mutex);
+        func();
+    }
+
+    void worlds_data::locked(std::function<void(worlds_data& self)> func) {
+        std::unique_lock lock(mutex);
+        func(*this);
+    }
+
+    void worlds_data::for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func) {
+        std::unique_lock lock(mutex);
+        for (auto& [id, world] : cached_worlds)
+            world->for_each_entity(func);
+    }
+
+    void worlds_data::for_each_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func) {
+        std::unique_lock lock(mutex);
+        for (auto& [id, world] : cached_worlds)
+            world->for_each_entity(chunk_x, chunk_z, func);
+    }
+
+    void worlds_data::for_each_entity(int64_t chunk_x, int64_t chunk_z, uint64_t sub_chunk_y, std::function<void(const base_objects::entity_ref& entity)> func) {
+        std::unique_lock lock(mutex);
+        for (auto& [id, world] : cached_worlds)
+            world->for_each_entity(chunk_x, chunk_z, sub_chunk_y, func);
+    }
+
+    void worlds_data::for_each_entity(uint64_t world_id, std::function<void(const base_objects::entity_ref& entity)> func) {
+        std::unique_lock lock(mutex);
+        if (auto world = cached_worlds.find(world_id); world == cached_worlds.end())
+            load(world_id)->for_each_entity(func);
+        else
+            world->second->for_each_entity(func);
+    }
+
+    void worlds_data::for_each_entity(uint64_t world_id, int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func) {
+        std::unique_lock lock(mutex);
+        if (auto world = cached_worlds.find(world_id); world == cached_worlds.end())
+            load(world_id)->for_each_entity(chunk_x, chunk_z, func);
+        else
+            world->second->for_each_entity(chunk_x, chunk_z, func);
+    }
+
+    void worlds_data::for_each_entity(uint64_t world_id, int64_t chunk_x, int64_t chunk_z, uint64_t sub_chunk_y, std::function<void(const base_objects::entity_ref& entity)> func) {
+        std::unique_lock lock(mutex);
+        if (auto world = cached_worlds.find(world_id); world == cached_worlds.end())
+            load(world_id)->for_each_entity(chunk_x, chunk_z, sub_chunk_y, func);
+        else
+            world->second->for_each_entity(chunk_x, chunk_z, sub_chunk_y, func);
+    }
+
+    void worlds_data::for_each_world(std::function<void(uint64_t id, world_data& world)> func) {
+        std::unique_lock lock(mutex);
+        for (auto& [id, world] : cached_worlds)
+            func(id, *world);
+    }
+
+    void worlds_data::apply_tick(std::chrono::high_resolution_clock::time_point current_time, std::chrono::nanoseconds ns) {
+        std::unique_lock lock(mutex);
+        list_array<std::pair<uint64_t, base_objects::atomic_holder<world_data>>> worlds_to_tick;
+        for (auto& [id, world] : cached_worlds) {
+            if (!world->last_usage.time_since_epoch().count())
+                world->last_usage = current_time;
+            if (ticks_per_second > world->ticks_per_second) {
+                auto tick_interval = std::chrono::nanoseconds(1'000'000'000 / world->ticks_per_second);
+                world->accumulated_time += current_time - world->last_usage;
+                world->last_usage = current_time;
+                if (world->accumulated_time / tick_interval) {
+                    world->accumulated_time -= tick_interval;
+                    worlds_to_tick.push_back({id, world});
+                }
+            } else
+                worlds_to_tick.push_back({id, world});
+        }
+        lock.unlock();
+        future::forEachMove(
+            future::process<std::optional<uint64_t>>(
+                worlds_to_tick,
+                [this, current_time, unload_speed = configuration.world.unload_speed](const auto& it) mutable -> std::optional<uint64_t> {
+                    auto& world = it.second;
+                    auto id = it.first;
+                    std::random_device rd;
+                    std::mt19937 gen(rd());
+                    world->tick(gen, current_time);
+                    if (world->collect_unused_data(current_time, unload_speed))
+                        return id;
+                    return std::nullopt;
+                }
+            ),
+            [this](auto id) { if(id) save_and_unload(*id); }
+        )->wait();
+        lock.lock();
+        got_ticks++;
+        auto new_current_time = std::chrono::high_resolution_clock::now();
+        if (current_time - last_tps_calculated >= std::chrono::seconds(1)) {
+            auto elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(new_current_time - last_tps_calculated).count();
+            tps = double(got_ticks) / elapsed;
+            on_tps_changed.async_notify(tps);
+            last_tps_calculated = new_current_time;
+            got_ticks = 0;
+        }
+    }
 
 #pragma endregion
 }

@@ -6,7 +6,7 @@
 #include <boost/asio.hpp>
 
 namespace copper_server::api::asio {
-    boost::asio::io_service& get_service();
+    boost::asio::io_context& get_service();
     boost::asio::thread_pool& get_threads();
 
     void init(size_t threads);

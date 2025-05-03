@@ -39,7 +39,7 @@ namespace copper_server::base_objects {
                 if constexpr (std::is_same_v<slot_displays::minecraft::empty, T>) {
                     return {};
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::any_fuel, T>) {
-                    return registers::unfold_tag("minecraft:item", "minecraft:fuel").convert<slot>([](const std::string& item) {
+                    return registers::unfold_tag("item", "minecraft:fuel").convert<slot>([](const std::string& item) {
                         return std::make_optional(slot_data::create_item(item));
                     });
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::item, T>) {
@@ -47,7 +47,7 @@ namespace copper_server::base_objects {
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::item_stack, T>) {
                     return {std::make_optional(it.item)};
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::tag, T>) {
-                    return registers::unfold_tag("minecraft:item", it.tag).convert<slot>([](const std::string& item) {
+                    return registers::unfold_tag("item", it.tag).convert<slot>([](const std::string& item) {
                         return std::make_optional(slot_data::create_item(item));
                     });
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::smithing_trim, T>) {
