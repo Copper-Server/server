@@ -673,13 +673,6 @@ namespace copper_server {
 
         extern std::unordered_map<std::string, base_objects::recipe> recipe_table;
         extern list_array<decltype(recipe_table)::iterator> recipe_table_cache;
-
-        extern std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>>> tags; //[type][namespace][tag][values]   values can't contain other tags, parsers must resolve them
-        extern std::string default_namespace;                                                                                                   //minecraft
-
-
-        const list_array<std::string>& unfold_tag(const std::string& type, const std::string& namespace_, const std::string& tag);
-        const list_array<std::string>& unfold_tag(const std::string& type, const std::string& tag);
     }
 }
 

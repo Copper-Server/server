@@ -164,6 +164,7 @@ namespace copper_server::build_in_plugins {
             auto data = players_data.get_player_data(client.data->uuid_str);
             data.load();
             data.player.assigned_entity->id = client.data->uuid;
+            data.player.assigned_entity->assigned_player = client_ref;
             client.player_data = std::move(data.player);
         }
         base_objects::network::response response = base_objects::network::response::empty();
@@ -179,17 +180,18 @@ namespace copper_server::build_in_plugins {
                                                                             ))
                                                                           : std::nullopt;
 
+
         auto [world_id, world_name] = api::world::prepare_world(client_ref);
         api::world::get(world_id, [&](storage::world_data& data) {
-            world_debug = data.world_generator_data.contains("debug");
-            world_flat = data.world_generator_data.contains("flat");
+            world_debug = data.world_generator_data.contains("debug") ? (bool)data.world_generator_data["debug"] : false;
+            world_flat = data.world_generator_data.contains("flat") ? (bool)data.world_generator_data["flat"] : false;
             enable_respawn_screen = !(data.world_game_rules.contains("doImmediateRespawn") ? (bool)data.world_game_rules["doImmediateRespawn"] : false);
             reduced_debug_info = data.world_game_rules.contains("reducedDebugInfo") ? (bool)data.world_game_rules["reducedDebugInfo"] : false;
             do_limited_crafting = data.world_game_rules.contains("doLimitedCrafting") ? (bool)data.world_game_rules["doLimitedCrafting"] : false;
         });
         auto player_entity_id = api::entity_id_map::allocate_id(client.data->uuid);
-
-
+        api::entity_id_map::assign_entity(player_entity_id, client.player_data.assigned_entity);
+        client.player_data.assigned_entity->protocol_id = player_entity_id;
         response += packets::play::joinGame(
             client,
             player_entity_id,
@@ -212,6 +214,35 @@ namespace copper_server::build_in_plugins {
             0,                                                      //ignore portal cooldown, did it used by client?
             api::configuration::get().mojang.enforce_secure_profile //TODO, huh? not sure
         );
+        api::world::sync_settings(client_ref);
+        response += packets::play::playerAbilities(client, client.player_data.abilities.flags.mask, client.player_data.abilities.flying_speed, client.player_data.abilities.field_of_view_modifier);
+        response += packets::play::setExperience(client, client.player_data.experience.progress, client.player_data.experience.level, client.player_data.experience.total);
+        response += packets::play::setHeldSlot(client, client.player_data.assigned_entity->get_selected_item());
+        response += packets::play::entityEvent(
+            client,
+            player_entity_id,
+            api::configuration::get().game_play.reduced_debug_screen
+                ? base_objects::packets::entity_event_id::enable_reduced_debug_screen
+                : base_objects::packets::entity_event_id::disable_reduced_debug_screen
+        );
+        response += packets::play::commands(client, 0, manager.compile_to_graph());
+        auto [yaw, pitch] = util::to_yaw_pitch(client_ref->player_data.assigned_entity->rotation);
+        response += packets::play::synchronizePlayerPosition(
+            *client_ref,
+            client_ref->player_data.assigned_entity->position,
+            yaw,
+            pitch,
+            0
+        );
+
+        response += packets::play::gameEvent(
+            *client_ref,
+            base_objects::packets::game_event_id::start_waiting_for_level_chunks,
+            0
+        );
+
+        api::world::register_player(client_ref);
+
 
         pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::play, [&](auto&& plugin) {
             auto res = plugin->PlayerJoined(client_ref);
@@ -219,9 +250,6 @@ namespace copper_server::build_in_plugins {
                 response += *res;
         });
 
-        response += packets::play::playerAbilities(client, client.player_data.abilities.flags.mask, client.player_data.abilities.flying_speed, client.player_data.abilities.field_of_view_modifier);
-        response += packets::play::changeDifficulty(client, 1, true);
-        response += packets::play::setHeldSlot(client, client.player_data.assigned_entity->get_selected_item());
 
         return response;
     }

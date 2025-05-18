@@ -1,6 +1,7 @@
 #ifndef SRC_BASE_OBJECTS_PACKETS
 #define SRC_BASE_OBJECTS_PACKETS
 #include <src/base_objects/chat.hpp>
+#include <src/base_objects/packets/enums.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/slot.hpp>
 #include <string>
@@ -397,6 +398,7 @@ namespace copper_server::base_objects::packets {
         float yaw, pitch;
         float weight;
     };
+
 
     int32_t java_name_to_protocol(const std::string& name_or_number);
     const char* protocol_to_java_name(int32_t id);

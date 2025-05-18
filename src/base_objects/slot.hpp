@@ -239,7 +239,7 @@ namespace copper_server::base_objects {
             float disable_cooldown_scale = 1;
 
             struct damage_reduction_t {
-                list_array<std::string> type;
+                list_array<uint32_t> type;
                 float base;
                 float factor;
                 float horizontal_blocking_angle;

@@ -35,32 +35,6 @@ namespace copper_server::build_in_plugins {
 
     void ConsolePlugin::OnLoad(const PluginRegistrationPtr& self) {
         api::console::register_virtual_client(console_data);
-        register_event(log::commands::on_command, base_objects::events::priority::heigh, [&](const std::string& command) {
-            if (command.empty())
-                return false;
-            log::info("command", command);
-            try {
-                api::console::execute_as_console(command);
-            } catch (const base_objects::command_exception& ex) {
-                try {
-                    std::rethrow_exception(ex.exception);
-                } catch (const std::exception& inner_ex) {
-                    std::string error_message = command;
-                    std::string error_place(command.size() + 4, ' ');
-                    error_place[0] = '\n';
-                    error_place[error_place.size() - 2] = '\n';
-                    error_place[error_place.size() - 1] = '\t';
-                    if (ex.pos != -1)
-                        error_place[ex.pos] = '^';
-                    log::error("command", error_message + error_place + inner_ex.what());
-                }
-                return false;
-            } catch (const std::exception& ex) {
-                log::error("command", command + "\n Failed to execute command, reason:\n\t" + ex.what());
-                return false;
-            }
-            return true;
-        });
 
         log::commands::registerCommandSuggestion([this](const std::string& line, int position) {
             auto tmp = line;
@@ -98,10 +72,39 @@ namespace copper_server::build_in_plugins {
         };
 
         console_data.client->player_data.permission_groups = {"console", "operator"};
+
+        register_event(log::commands::on_command, base_objects::events::priority::heigh, [&](const std::string& command) {
+            if (command.empty())
+                return false;
+            log::info("command", command);
+            try {
+                api::console::execute_as_console(command);
+            } catch (const base_objects::command_exception& ex) {
+                try {
+                    std::rethrow_exception(ex.exception);
+                } catch (const std::exception& inner_ex) {
+                    std::string error_message = command;
+                    std::string error_place(command.size() + 4, ' ');
+                    error_place[0] = '\n';
+                    error_place[error_place.size() - 2] = '\n';
+                    error_place[error_place.size() - 1] = '\t';
+                    if (ex.pos != -1)
+                        error_place[ex.pos] = '^';
+                    log::error("command", error_message + error_place + inner_ex.what());
+                }
+                return false;
+            } catch (const std::exception& ex) {
+                log::error("command", command + "\n Failed to execute command, reason:\n\t" + ex.what());
+                return false;
+            }
+            return true;
+        });
+
         log::info("Console", "console registered.");
     }
 
     void ConsolePlugin::OnUnload(const PluginRegistrationPtr& self) {
+        clean_up_registered_events();
         api::console::unregister_virtual_client();
     }
 

@@ -1,5 +1,15 @@
+#include <src/base_objects/entity.hpp>
 #include <src/base_objects/world/sub_chunk_data.hpp>
+
 namespace copper_server::base_objects::world {
+
+
+    sub_chunk_data::sub_chunk_data() {
+    }
+
+    sub_chunk_data::~sub_chunk_data() {
+    }
+
     enbt::value& sub_chunk_data::get_block_entity_data(uint8_t local_x, uint8_t local_y, uint8_t local_z) {
         return block_entities[local_z | (local_y << 4) | (local_x << 8)];
     }

@@ -1,7 +1,9 @@
 #include <library/enbt/senbt.hpp>
 #include <src/api/command.hpp>
+#include <src/api/tags.hpp>
 #include <src/base_objects/slot.hpp>
 #include <src/registers.hpp>
+
 
 namespace copper_server::base_objects {
     std::unordered_map<std::string, std::shared_ptr<static_slot_data>> slot_data::named_full_item_data;
@@ -895,9 +897,9 @@ namespace copper_server::base_objects {
                      if (type.is_string()) {
                          auto type_str = type.as_string();
                          if (type_str.starts_with("#"))
-                             reduction.type = registers::unfold_tag("damage_type", type_str);
+                             reduction.type = api::tags::unfold_tag(api::tags::builtin_entry::damage_type, type_str);
                          else
-                             reduction.type = {type_str};
+                             reduction.type = {api::tags::resolve_entry_item(api::tags::builtin_entry::damage_type, type_str)};
                      }
                      reduction.base = comp.at("base");
                      reduction.factor = comp.at("factor");

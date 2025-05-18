@@ -88,6 +88,7 @@ namespace copper_server::base_objects {
             };
 
             struct state_play {
+                bit_list_array<> loaded_chunks;
                 std::list<int32_t> pending_teleport_ids;
                 int32_t teleport_id_sequence = 0;
                 int32_t windows_id = 0;

@@ -12,7 +12,7 @@ namespace copper_server::resources {
     void prepare_built_in_pack();
 
     //processes whole pack data,
-    //tags always processed first, correctly handles replace flag and eats circular dependencies without problem, ignores unregistered tags
+    //tags always processed first, correctly handles replace flag and processes circular dependencies without problem
     //! Thread unsafe, should be called from wrapped api instead
     void process_pack(const std::filesystem::path& folder_path_to_data_packs);
     void process_pack(const std::filesystem::path& folder_path_to_data_with_namespace, const std::string& namespace_, const std::string& id);
@@ -31,8 +31,8 @@ namespace copper_server::resources {
     // loot_table,
     // painting_variant,
     // recipe,
-    // tag/[the tag type], // like from file data/<namespace>/tags/<function>/<name>.json // the `function` is the tag type
-    // tags/[the tag type],
+    // tag/[the tag entry], // like from file data/<namespace>/tags/<entry>/<name>.json // the `entry` is the tag entry
+    // tags/[the tag entry],
     // trim_pattern,
     // trim_material,
     // wolf_variant,

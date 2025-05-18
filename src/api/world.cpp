@@ -1,5 +1,7 @@
 #include <functional>
 #include <src/base_objects/player.hpp>
+#include <src/base_objects/shared_client_data.hpp>
+#include <src/protocolHelper/packets/abstract.hpp>
 #include <src/storage/world_data.hpp>
 
 namespace copper_server::api::world {
@@ -124,14 +126,98 @@ namespace copper_server::api::world {
 
             client_ref->player_data.world_id = id;
 
-            client_ref->player_data.assigned_entity->position.x = world->spawn_data.x;
+            client_ref->player_data.assigned_entity->position.x = x;
             client_ref->player_data.assigned_entity->position.y = pos_y;
-            client_ref->player_data.assigned_entity->position.z = world->spawn_data.z;
+            client_ref->player_data.assigned_entity->position.z = z;
             client_ref->player_data.assigned_entity->rotation = {0, 0, 0};
         }
 
-
         return {id, get_worlds().get(id)->world_name};
+    }
+
+    void sync_settings(base_objects::client_data_holder& client_ref) {
+        auto id = get_worlds().get_id(client_ref->player_data.world_id);
+        if (id == -1)
+            throw std::runtime_error("World with id " + client_ref->player_data.world_id + " does not exists.");
+        auto world = get_worlds().get(id);
+
+        client_ref->sendPacket(
+            packets::play::changeDifficulty(
+                *client_ref,
+                world->difficulty,
+                world->difficulty_locked
+            )
+            += packets::play::initializeWorldBorder(
+                *client_ref,
+                world->border_center_x,
+                world->border_center_z,
+                world->border_size,
+                world->border_size,
+                world->border_lerp_time,
+                world->portal_teleport_boundary,
+                world->border_warning_blocks,
+                world->border_warning_time
+            )
+            += packets::play::setTickingState(
+                *client_ref,
+                world->ticks_per_second,
+                world->ticking_frozen
+            )
+            += packets::play::stepTick(
+                *client_ref,
+                1
+            )
+            += packets::play::updateTime(
+                *client_ref,
+                world->time,
+                world->day_time
+            )
+            += packets::play::setDefaultSpawnPosition(
+                *client_ref,
+                {(int32_t)world->spawn_data.x,
+                 (int32_t)world->spawn_data.y,
+                 (int32_t)world->spawn_data.z},
+                world->spawn_data.angle
+            )
+        );
+    }
+
+    void transfer(
+        base_objects::client_data_holder& client_ref,
+        uint64_t world_id,
+        util::VECTOR position,
+        util::ANGLE_DEG rotation,
+        util::VECTOR velocity,
+        std::function<void(storage::world_data& world)> callback = nullptr
+    ) {
+        //TODO
+    }
+
+    void transfer(
+        base_objects::client_data_holder& client_ref,
+        uint64_t world_id,
+        util::VECTOR position,
+        util::ANGLE_DEG rotation,
+        std::function<void(storage::world_data& world)> callback = nullptr
+    ) {
+        //TODO
+    }
+
+    void transfer(
+        base_objects::client_data_holder& client_ref,
+        uint64_t world_id,
+        util::VECTOR position,
+        std::function<void(storage::world_data& world)> callback = nullptr
+    ) {
+        //TODO
+    }
+
+    void register_entity(uint64_t world_id, base_objects::entity_ref& entity_ref) {
+        get_worlds().get(world_id)->register_entity(entity_ref);
+    }
+
+    void unregister_entity(uint64_t world_id, base_objects::entity_ref& entity_ref) {
+        get_worlds().get(world_id)->unregister_entity(entity_ref);
     }
 
     std::pair<uint64_t, std::string> prepare_world(const std::string& name) {

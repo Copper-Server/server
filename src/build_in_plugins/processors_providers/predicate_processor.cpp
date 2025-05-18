@@ -1,5 +1,6 @@
 #include <src/api/internal/predicate.hpp>
 #include <src/api/predicate.hpp>
+#include <src/api/tags.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/build_in_plugins/processors_providers/predicate_processor.hpp>
@@ -20,7 +21,7 @@ namespace copper_server::build_in_plugins::processors_providers {
         return false; //TODO
     }
 
-    bool __location_check(const enbt::compound_const_ref& predicate, util::VECTOR pos, util::VECTOR rot, storage::world_data* assigned_world) {
+    bool __location_check(const enbt::compound_const_ref& predicate, util::VECTOR pos, util::ANGLE_DEG rot, storage::world_data& assigned_world) {
         return false; //TODO
     }
 
@@ -67,24 +68,22 @@ namespace copper_server::build_in_plugins::processors_providers {
                 if (!entity->nbt.contains("effects"))
                     return false;
 
-                auto entity_effects = entity->nbt.at("effects").as_compound();
-                if (!entity_effects.contains(key))
-                    return false;
-                auto effect = entity_effects.at(key).as_compound();
+                auto id = registers::effects.at(key).id;
+                auto& effect = entity->active_effects.at(id);
                 if (conditions.contains("amplifier"))
-                    if (!diff_min_max(conditions.at("amplifier"), (int32_t)effect.at("amplifier")))
+                    if (!diff_min_max(conditions.at("amplifier"), effect.amplifier))
                         return false;
 
                 if (conditions.contains("duration"))
-                    if (!diff_min_max(conditions.at("duration"), (int32_t)effect.at("duration")))
+                    if (!diff_min_max(conditions.at("duration"), effect.duration))
                         return false;
 
                 if (conditions.contains("ambient"))
-                    if (conditions.at("ambient") != effect.at("ambient"))
+                    if ((bool)conditions.at("ambient") != effect.ambient)
                         return false;
 
                 if (conditions.contains("visible"))
-                    if (conditions.at("visible") != effect.at("visible"))
+                    if ((bool)conditions.at("visible") != effect.particles)
                         return false;
             }
         }
@@ -152,8 +151,10 @@ namespace copper_server::build_in_plugins::processors_providers {
         }
 
         if (predicate.contains("location")) {
+            if (!entity->world_syncing_data)
+                return false;
             auto location = predicate["location"].as_compound();
-            if (!__location_check(location, entity->position, entity->rotation, entity->world))
+            if (!__location_check(location, entity->position, entity->rotation, *entity->world_syncing_data->world))
                 return false;
         }
 
@@ -186,18 +187,22 @@ namespace copper_server::build_in_plugins::processors_providers {
         }
 
         if (predicate.contains("stepping_on")) {
+            if (!entity->world_syncing_data)
+                return false;
             auto stepping_on = predicate["stepping_on"].as_compound();
-            if (!__location_check(stepping_on, entity->position, entity->rotation, entity->world))
+            if (!__location_check(stepping_on, entity->position, entity->rotation, *entity->world_syncing_data->world))
                 return false;
         }
 
         if (predicate.contains("movement_affected_by")) {
+            if (!entity->world_syncing_data)
+                return false;
             auto movement_affected_by = predicate["movement_affected_by"].as_compound();
             if (!__location_check(
                     movement_affected_by,
                     {entity->position.x, entity->position.y - 0.5, entity->position.z},
                     entity->rotation,
-                    entity->world
+                    *entity->world_syncing_data->world
                 ))
                 return false;
         }
@@ -320,7 +325,7 @@ namespace copper_server::build_in_plugins::processors_providers {
         if (pred_block.is_string()) {
             const std::string& block_or_id = pred_block.as_string();
             if (block_or_id.starts_with('#')) {
-                if (!registers::unfold_tag("block", block_or_id).contains(block.name))
+                if (!api::tags::unfold_tag(api::tags::builtin_entry::block, block_or_id).contains(block.general_block_id))
                     return false;
             } else {
                 if (block.name != block_or_id)
@@ -485,10 +490,9 @@ namespace copper_server::build_in_plugins::processors_providers {
                 predicate.at("predicate").as_compound(),
                 {pos.x + offset_x,
                  pos.y + offset_y,
-                 pos.z + offset_z
-                },
+                 pos.z + offset_z},
                 {0, 0},
-                &world
+                world
             );
         });
         return res;

@@ -1,7 +1,9 @@
 #include <src/api/command.hpp>
 #include <src/api/players.hpp>
 #include <src/api/protocol.hpp>
+#include <src/base_objects/player.hpp>
 #include <src/build_in_plugins/play_engine.hpp>
+#include <src/protocolHelper/packets/abstract.hpp>
 
 namespace copper_server::build_in_plugins {
     PlayEngine::PlayEngine() {}
@@ -36,6 +38,43 @@ namespace copper_server::build_in_plugins {
     }
 
     PlayEngine::plugin_response PlayEngine::PlayerJoined(base_objects::client_data_holder& client_ref) {
-        return std::nullopt;
+        base_objects::network::response response = base_objects::network::response::empty();
+        list_array<base_objects::packets::player_actions_add> all_players;
+        list_array<base_objects::packets::player_actions_add> new_player;
+        new_player.push_back(
+            base_objects::packets::player_actions_add{
+                .player_id = client_ref->data->uuid,
+                .name = client_ref->name,
+                .properties = to_list_array(client_ref->data->properties).convert_fn([](auto&& mojang) {
+                    return base_objects::packets::player_actions_add::property{
+                        .name = std::move(mojang.name),
+                        .value = std::move(mojang.value),
+                        .signature = std::move(mojang.signature)
+                    };
+                })
+            }
+        );
+        api::players::iterate_online([&new_player, &all_players, &client_ref](base_objects::SharedClientData& client) {
+            if (&client != &*client_ref) {
+                all_players.push_back(
+                    base_objects::packets::player_actions_add{
+                        .player_id = client.data->uuid,
+                        .name = client.name,
+                        .properties = to_list_array(client.data->properties).convert_fn([](auto&& mojang) {
+                            return base_objects::packets::player_actions_add::property{
+                                .name = std::move(mojang.name),
+                                .value = std::move(mojang.value),
+                                .signature = std::move(mojang.signature)
+                            };
+                        })
+                    }
+                );
+                client.sendPacket(packets::play::playerInfoAdd(client, new_player));
+            }
+            return false;
+        });
+        response += packets::play::playerInfoAdd(*client_ref, all_players);
+        response += packets::play::playerInfoAdd(*client_ref, new_player);
+        return response;
     }
 }

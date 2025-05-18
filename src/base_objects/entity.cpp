@@ -99,13 +99,84 @@ namespace copper_server {
             res["server_data"] = server_data;
             res["position"] = enbt::fixed_array({position.x, position.y, position.z});
             res["motion"] = enbt::fixed_array({motion.x, motion.y, motion.z});
-            res["rotation"] = enbt::fixed_array({rotation.x, rotation.y, rotation.z});
-            res["head_rotation"] = enbt::fixed_array({head_rotation.x, head_rotation.y, head_rotation.z});
+            res["rotation"] = enbt::fixed_array({rotation.x, rotation.y});
+            res["head_rotation"] = enbt::fixed_array({head_rotation.x, head_rotation.y});
             res["entity_id"] = entity_id;
             res["id"] = id;
             res["died"] = died;
-            if (world)
-                res["bound_world"] = world->world_name;
+            if (world_syncing_data)
+                res["bound_world"] = world_syncing_data->world->world_name;
+
+            if (inventory.size()) {
+                enbt::compound inventory_enbt;
+                inventory_enbt.reserve(inventory.size());
+                for (auto& [id, value] : inventory)
+                    inventory_enbt[std::to_string(id)] = value.to_enbt();
+                res["inventory"] = std::move(inventory_enbt);
+            }
+
+
+            if (custom_inventory.size()) {
+                enbt::compound custom_inventory_enbt;
+                custom_inventory_enbt.reserve(custom_inventory.size());
+                for (auto& [id, inventory] : custom_inventory) {
+                    enbt::compound inventory_enbt;
+                    inventory_enbt.reserve(inventory.size());
+                    for (auto& [id, value] : inventory)
+                        inventory_enbt[std::to_string(id)] = value.to_enbt();
+                    custom_inventory_enbt[id] = std::move(inventory_enbt);
+                }
+
+                res["custom_inventory"] = std::move(custom_inventory_enbt);
+            }
+
+            if (ride_entity_id)
+                res["ride_entity_id"] = *ride_entity_id;
+
+            if (hidden_effects.size()) {
+                enbt::compound hidden_effects_enbt;
+                hidden_effects_enbt.reserve(hidden_effects.size());
+                for (auto& [id, effects] : hidden_effects) {
+                    enbt::fixed_array effects_enbt;
+                    effects_enbt.reserve(effects.size());
+                    for (auto& effect : effects) {
+                        effects_enbt.push_back(enbt::compound{
+                            {"is_ambient", effect.ambient},
+                            {"amplifier", effect.amplifier},
+                            {"duration", effect.duration},
+                            {"id", effect.id},
+                            {"particles", effect.particles},
+                        });
+                    }
+                    hidden_effects_enbt[std::to_string(id)] = std::move(effects_enbt);
+                }
+                res["hidden_effects"] = std::move(hidden_effects_enbt);
+            }
+            if (active_effects.size()) {
+                enbt::compound active_effects_enbt;
+                active_effects_enbt.reserve(active_effects.size());
+                for (auto& [id, effect] : active_effects)
+                    active_effects_enbt[std::to_string(id)] = enbt::compound{
+                        {"is_ambient", effect.ambient},
+                        {"amplifier", effect.amplifier},
+                        {"duration", effect.duration},
+                        {"id", effect.id},
+                        {"particles", effect.particles},
+                    };
+                res["active_effects"] = std::move(active_effects_enbt);
+            }
+
+            if (attached_to)
+                res["attached_to"] = *attached_to;
+
+            if (attached.size()) {
+                enbt::fixed_array arr;
+                arr.reserve(attached.size());
+                for (auto& it : attached)
+                    arr.push_back(it);
+
+                res["attached"] = std::move(arr);
+            }
             return res;
         }
 
@@ -148,32 +219,112 @@ namespace copper_server {
             res->position = {position[0], position[1], position[2]};
 
             auto rotation = nbt["rotation"].as_fixed_array();
-            res->rotation = {rotation[0], rotation[1], rotation[2]};
+            res->rotation = {rotation[0], rotation[1]};
 
             auto head_rotation = nbt["head_rotation"].as_fixed_array();
-            res->head_rotation = {head_rotation[0], head_rotation[1], head_rotation[2]};
+            res->head_rotation = {head_rotation[0], head_rotation[1]};
 
             res->nbt = nbt["nbt"];
             res->server_data = nbt["server_data"];
 
             if (nbt.contains("bound_world")) {
-                res->world = (storage::world_data*)0XFFFFFFFFFFF;
                 api::world::get((std::string)nbt["bound_world"], [&](storage::world_data& it) {
                     it.register_entity(res);
                 });
-                if (res->world == (storage::world_data*)0XFFFFFFFFFFF) {
-                    res->world = nullptr;
+                if (!res->world_syncing_data)
                     throw std::runtime_error("World " + (std::string)nbt["bound_world"] + " not found.");
-                }
             };
             try {
                 auto creation_callback = entity_data::get_entity(res->entity_id).create_from_enbt_callback;
                 if (creation_callback)
                     creation_callback(res, nbt);
             } catch (...) {
-                if (res->world)
-                    res->world->unregister_entity(res);
+                if (res->world_syncing_data)
+                    res->world_syncing_data->world->unregister_entity(res);
                 throw;
+            }
+
+            if (nbt.contains("inventory")) {
+                auto inventory_enbt = nbt["inventory"].as_compound();
+                res->inventory.reserve(inventory_enbt.size());
+                for (auto& [id, value] : inventory_enbt) {
+                    uint32_t id_ = 0;
+                    auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
+                    if (parsing_res.ec == std::errc{})
+                        res->inventory[id_] = slot_data::from_enbt(value.as_compound());
+                }
+            }
+            if (nbt.contains("custom_inventory")) {
+                auto custom_inventory_enbt = nbt["custom_inventory"].as_compound();
+                res->custom_inventory.reserve(custom_inventory_enbt.size());
+                for (auto& [id, value] : custom_inventory_enbt) {
+                    decltype(res->inventory) custom_inventory;
+                    res->inventory.reserve(value.size());
+                    for (auto& [id, value] : value.as_compound()) {
+                        uint32_t id_ = 0;
+                        auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
+                        if (parsing_res.ec == std::errc{})
+                            custom_inventory[id_] = slot_data::from_enbt(value.as_compound());
+                    }
+                    res->custom_inventory[id] = std::move(custom_inventory);
+                }
+            }
+
+            if (nbt.contains("ride_entity_id"))
+                res->ride_entity_id = (enbt::raw_uuid)nbt["ride_entity_id"];
+
+
+            if (nbt.contains("hidden_effects")) {
+                auto hidden_effects_enbt = nbt["hidden_effects"].as_compound();
+                res->hidden_effects.reserve(hidden_effects_enbt.size());
+                for (auto& [id, value] : hidden_effects_enbt) {
+                    uint32_t id_ = 0;
+                    auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
+                    if (parsing_res.ec == std::errc{}) {
+                        list_array<entity::effect> effects;
+                        res->inventory.reserve(value.size());
+                        for (auto& value : value.as_array()) {
+                            auto effect = value.as_compound();
+                            effects.push_back(entity::effect{
+                                .duration = effect.at("duration"),
+                                .id = effect.at("id"),
+                                .amplifier = effect.at("amplifier"),
+                                .ambient = effect.at("is_ambient"),
+                                .particles = effect.at("particles"),
+                            });
+                        }
+                        res->hidden_effects[id_] = std::move(effects);
+                    }
+                }
+            }
+            if (nbt.contains("active_effects")) {
+                auto active_effects_enbt = nbt["active_effects"].as_compound();
+                res->active_effects.reserve(active_effects_enbt.size());
+                for (auto& [id, value] : active_effects_enbt) {
+                    uint32_t id_ = 0;
+                    auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
+                    if (parsing_res.ec == std::errc{}) {
+                        auto effect = value.as_compound();
+                        res->active_effects[id_] = entity::effect{
+                            .duration = effect.at("duration"),
+                            .id = effect.at("id"),
+                            .amplifier = effect.at("amplifier"),
+                            .ambient = effect.at("is_ambient"),
+                            .particles = effect.at("particles"),
+                        };
+                    }
+                }
+            }
+
+
+            if (nbt.contains("attached_to"))
+                res->attached_to = nbt["attached_to"];
+
+            if (nbt.contains("attached")) {
+                auto attached_enbt = nbt["attached"].as_array();
+                res->attached.reserve(attached_enbt.size());
+                for (auto& value : attached_enbt)
+                    res->attached.push_back(value);
             }
             return res;
         }
@@ -194,7 +345,7 @@ namespace copper_server {
             //TODO
         }
 
-        void entity::add_effect(uint32_t id, std::chrono::seconds duration, uint8_t amplifier, bool ambient, bool show_particles) {
+        void entity::add_effect(uint32_t id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles) {
             //TODO
         }
 
@@ -386,30 +537,29 @@ namespace copper_server {
             //TODO
         }
 
-        util::VECTOR entity::get_rotation() const {
-            return {0, 0, 0}; //TODO
+        util::ANGLE_DEG entity::get_rotation() const {
+            return {0, 0}; //TODO
         }
 
-        void entity::set_rotation(util::VECTOR mot) {
+        void entity::set_rotation(util::ANGLE_DEG mot) {
             //TODO
         }
 
-        void entity::add_rotation(util::VECTOR mot) {
+        void entity::add_rotation(util::ANGLE_DEG mot) {
             //TODO
         }
 
-        util::VECTOR entity::get_head_rotation() const {
-            return {0, 0, 0}; //TODO
+        util::ANGLE_DEG entity::get_head_rotation() const {
+            return {0, 0}; //TODO
         }
 
-        void entity::set_head_rotation(util::VECTOR rot) {
+        void entity::set_head_rotation(util::ANGLE_DEG rot) {
             //TODO
         }
 
-        void entity::add_head_rotation(util::VECTOR rot) {
+        void entity::add_head_rotation(util::ANGLE_DEG rot) {
             //TODO
         }
-
 
         entity_ref entity::create(uint16_t id) {
             auto it = entity_data::get_entity(id);

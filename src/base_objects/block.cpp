@@ -65,6 +65,118 @@ namespace copper_server::base_objects {
         }
     }
 
+    bool block::is_solid() const {
+        return getStaticData().is_solid;
+    }
+
+    const std::vector<shape_data*>& block::collision_shapes() const {
+        return getStaticData().collision_shapes;
+    }
+
+    const std::string& block::instrument() const {
+        return getStaticData().instrument;
+    }
+
+    const std::string& block::piston_behavior() const {
+        return getStaticData().piston_behavior;
+    }
+
+    const std::string& block::name() const {
+        return getStaticData().name;
+    }
+
+    const std::string& block::translation_key() const {
+        return getStaticData().translation_key;
+    }
+
+    block_id_t block::general_block_id() const {
+        return getStaticData().general_block_id;
+    }
+
+    float block::slipperiness() const {
+        return getStaticData().slipperiness;
+    }
+
+    float block::velocity_multiplier() const {
+        return getStaticData().velocity_multiplier;
+    }
+
+    float block::jump_velocity_multiplier() const {
+        return getStaticData().jump_velocity_multiplier;
+    }
+
+    float block::hardness() const {
+        return getStaticData().hardness;
+    }
+
+    float block::blast_resistance() const {
+        return getStaticData().blast_resistance;
+    }
+
+    int32_t block::map_color_rgb() const {
+        return getStaticData().map_color_rgb;
+    }
+
+    int32_t block::block_entity_id() const {
+        return getStaticData().block_entity_id;
+    }
+
+    int32_t block::default_drop_item_id() const {
+        return getStaticData().default_drop_item_id;
+    }
+
+    int32_t block::experience() const {
+        return getStaticData().experience;
+    }
+
+    block_id_t block::default_state() const {
+        return getStaticData().default_state;
+    }
+
+    uint8_t block::luminance() const {
+        return getStaticData().luminance;
+    }
+
+    uint8_t block::opacity() const {
+        return getStaticData().opacity;
+    }
+
+    bool block::is_air() const {
+        return getStaticData().is_air;
+    }
+
+    bool block::is_liquid() const {
+        return getStaticData().is_liquid;
+    }
+
+    bool block::is_burnable() const {
+        return getStaticData().is_burnable;
+    }
+
+    bool block::is_emits_redstone() const {
+        return getStaticData().is_emits_redstone;
+    }
+
+    bool block::is_full_cube() const {
+        return getStaticData().is_full_cube;
+    }
+
+    bool block::is_tool_required() const {
+        return getStaticData().is_tool_required;
+    }
+
+    bool block::is_sided_transparency() const {
+        return getStaticData().is_sided_transparency;
+    }
+
+    bool block::is_replaceable() const {
+        return getStaticData().is_replaceable;
+    }
+
+    bool block::is_block_entity() const {
+        return getStaticData().is_block_entity;
+    }
+
     void block::initialize() {
         static bool inited = false;
         if (inited)

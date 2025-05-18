@@ -1134,6 +1134,7 @@ namespace copper_server::base_objects {
         list_array<uint8_t> res;
         bool is_root = true;
 
+        WriteVar<int32_t>(command_nodes.size(), res);
         for (auto& command : command_nodes) {
             auto node = build_node(command, is_root);
             is_root = false;

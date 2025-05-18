@@ -142,39 +142,5 @@ namespace copper_server {
         list_array<decltype(recipe_table)::iterator> recipe_table_cache;
 
         std::unordered_map<base_objects::block, uint16_t, base_objects::block_hash> blockPalette;
-        std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>>> tags; //[type][namespace][tag][values]
-        std::string default_namespace = "minecraft";
-
-        const list_array<std::string>& unfold_tag(const std::string& type, const std::string& namespace_, const std::string& tag) {
-            static list_array<std::string> empty;
-            auto ns = tags.find(type);
-            if (ns == tags.end())
-                return empty;
-            auto t = ns->second.find(namespace_);
-            if (t == ns->second.end())
-                return empty;
-            auto y = t->second.find(tag);
-            if (y == t->second.end())
-                return empty;
-            return y->second;
-        }
-
-        const list_array<std::string>& unfold_tag(const std::string& type, const std::string& tag) {
-            if (tag.starts_with('#')) {
-                if (auto nam = tag.find(':'); nam != tag.npos) {
-                    std::string _namespace = tag.substr(1, nam - 1);
-                    std::string _tag = tag.substr(nam);
-                    return unfold_tag(type, _namespace, _tag);
-                } else
-                    return unfold_tag(type, default_namespace, tag.substr(1));
-            } else {
-                if (auto nam = tag.find(':'); nam != tag.npos) {
-                    std::string _namespace = tag.substr(0, nam - 1);
-                    std::string _tag = tag.substr(nam);
-                    return unfold_tag(type, _namespace, _tag);
-                } else
-                    return unfold_tag(type, default_namespace, tag);
-            }
-        }
     }
 }

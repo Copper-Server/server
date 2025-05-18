@@ -1,13 +1,15 @@
 #include <array>
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/chat.hpp>
-#include <src/base_objects/chunk.hpp>
 #include <src/base_objects/data_packs/known_pack.hpp>
 #include <src/base_objects/entity.hpp>
+#include <src/base_objects/entity/animation.hpp>
+#include <src/base_objects/entity/event.hpp>
 #include <src/base_objects/packets.hpp>
 #include <src/base_objects/particle_data.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/recipe.hpp>
+#include <src/base_objects/world/chunk.hpp>
 
 namespace copper_server {
     namespace base_objects {
@@ -50,7 +52,7 @@ namespace copper_server {
         namespace play {
             base_objects::network::response bundleResponse(base_objects::SharedClientData& client, base_objects::network::response&& response);
             base_objects::network::response spawnEntity(base_objects::SharedClientData& client, const base_objects::entity& entity, uint16_t protocol);
-            base_objects::network::response entityAnimation(base_objects::SharedClientData& client, const base_objects::entity& entity, uint8_t animation);
+            base_objects::network::response entityAnimation(base_objects::SharedClientData& client, const base_objects::entity& entity, base_objects::entity_animation animation);
             base_objects::network::response awardStatistics(base_objects::SharedClientData& client, const list_array<base_objects::packets::statistics>& statistics);
             base_objects::network::response acknowledgeBlockChange(base_objects::SharedClientData& client);
             base_objects::network::response setBlockDestroyStage(base_objects::SharedClientData& client, const base_objects::entity& entity, base_objects::position block, uint8_t stage);
@@ -69,7 +71,7 @@ namespace copper_server {
             base_objects::network::response chunkBiomes(base_objects::SharedClientData& client, list_array<base_objects::chunk::chunk_biomes>& chunk);
             base_objects::network::response clearTitles(base_objects::SharedClientData& client, bool reset);
             base_objects::network::response commandSuggestionsResponse(base_objects::SharedClientData& client, int32_t transaction_id, int32_t start_pos, int32_t length, const list_array<base_objects::packets::command_suggestion>& suggestions);
-            base_objects::network::response commands(base_objects::SharedClientData& client, int32_t root_id, const list_array<base_objects::packets::command_node>& nodes);
+            base_objects::network::response commands(base_objects::SharedClientData& client, int32_t root_id, const list_array<uint8_t>& compiled_graph);
             base_objects::network::response closeContainer(base_objects::SharedClientData& client, uint8_t container_id);
             base_objects::network::response setContainerContent(base_objects::SharedClientData& client, uint8_t windows_id, int32_t state_id, const list_array<base_objects::slot>& slots, const base_objects::slot& carried_item);
             base_objects::network::response setContainerProperty(base_objects::SharedClientData& client, uint8_t windows_id, uint16_t property, uint16_t value);
@@ -84,10 +86,10 @@ namespace copper_server {
             base_objects::network::response deleteMessageByID(base_objects::SharedClientData& client, int32_t message_id);
             base_objects::network::response kick(base_objects::SharedClientData& client, const Chat& reason);
             base_objects::network::response disguisedChatMessage(base_objects::SharedClientData& client, const Chat& message, int32_t chat_type, const Chat& sender, const std::optional<Chat>& target_name);
-            base_objects::network::response entityEvent(base_objects::SharedClientData& client, int32_t entity_id, uint8_t entity_status);
+            base_objects::network::response entityEvent(base_objects::SharedClientData& client, int32_t entity_id, base_objects::entity_event entity_status);
             base_objects::network::response explosion(base_objects::SharedClientData& client, util::VECTOR pos, float strength, const list_array<util::XYZ<int8_t>>& affected_blocks, util::VECTOR player_motion, int32_t block_interaction, int32_t small_explosion_particle_id, const base_objects::particle_data& small_explosion_particle_data, int32_t large_explosion_particle_id, const base_objects::particle_data& large_explosion_particle_data, const std::string& sound_name, std::optional<float> fixed_range);
             base_objects::network::response unloadChunk(base_objects::SharedClientData& client, int32_t x, int32_t z);
-            base_objects::network::response gameEvent(base_objects::SharedClientData& client, uint8_t event_id, float value);
+            base_objects::network::response gameEvent(base_objects::SharedClientData& client, base_objects::packets::game_event_id event_id, float value);
             base_objects::network::response openHorseWindow(base_objects::SharedClientData& client, uint8_t window_id, int32_t slots, int32_t entity_id);
             base_objects::network::response hurtAnimation(base_objects::SharedClientData& client, int32_t entity_id, float yaw);
             base_objects::network::response initializeWorldBorder(base_objects::SharedClientData& client, double x, double z, double old_diameter, double new_diameter, int64_t speed_ms, int32_t portal_teleport_boundary, int32_t warning_blocks, int32_t warning_time);
@@ -254,7 +256,7 @@ namespace copper_server {
 
                 virtual base_objects::network::response bundleResponse(base_objects::network::response&& response) = 0;
                 virtual base_objects::network::response spawnEntity(const base_objects::entity& entity, uint16_t protocol = -1) = 0;
-                virtual base_objects::network::response entityAnimation(const base_objects::entity& entity, uint8_t animation) = 0;
+                virtual base_objects::network::response entityAnimation(const base_objects::entity& entity, base_objects::entity_animation animation) = 0;
                 virtual base_objects::network::response awardStatistics(const list_array<base_objects::packets::statistics>& statistics) = 0;
                 virtual base_objects::network::response acknowledgeBlockChange(base_objects::SharedClientData& client) = 0;
                 virtual base_objects::network::response setBlockDestroyStage(const base_objects::entity& entity, base_objects::position block, uint8_t stage) = 0;
@@ -273,7 +275,7 @@ namespace copper_server {
                 virtual base_objects::network::response chunkBiomes(list_array<base_objects::chunk::chunk_biomes>& chunk) = 0;
                 virtual base_objects::network::response clearTitles(bool reset) = 0;
                 virtual base_objects::network::response commandSuggestionsResponse(int32_t transaction_id, int32_t start_pos, int32_t length, const list_array<base_objects::packets::command_suggestion>& suggestions) = 0;
-                virtual base_objects::network::response commands(int32_t root_id, const list_array<base_objects::packets::command_node>& nodes) = 0;
+                virtual base_objects::network::response commands(int32_t root_id, const list_array<uint8_t>& compiled_graph) = 0;
                 virtual base_objects::network::response closeContainer(uint8_t container_id) = 0;
                 virtual base_objects::network::response setContainerContent(uint8_t windows_id, int32_t state_id, const list_array<base_objects::slot>& slots, const base_objects::slot& carried_item) = 0;
                 virtual base_objects::network::response setContainerProperty(uint8_t windows_id, uint16_t property, uint16_t value) = 0;
@@ -288,7 +290,7 @@ namespace copper_server {
                 virtual base_objects::network::response deleteMessageByID(int32_t message_id) = 0;
                 virtual base_objects::network::response kick(const Chat& reason) = 0;
                 virtual base_objects::network::response disguisedChatMessage(const Chat& message, int32_t chat_type, const Chat& sender, const std::optional<Chat>& target_name) = 0;
-                virtual base_objects::network::response entityEvent(int32_t entity_id, uint8_t entity_status) = 0;
+                virtual base_objects::network::response entityEvent(int32_t entity_id, base_objects::entity_event entity_status) = 0;
                 virtual base_objects::network::response teleportEntityEX(int32_t entity_id, util::VECTOR pos, util::VECTOR velocity, float yaw, float pitch, bool on_ground, base_objects::packets::teleport_flags flags) = 0;
                 virtual base_objects::network::response explosion(
                     util::VECTOR pos,
@@ -304,7 +306,7 @@ namespace copper_server {
                     std::optional<float> fixed_range
                 ) = 0;
                 virtual base_objects::network::response unloadChunk(int32_t x, int32_t z) = 0;
-                virtual base_objects::network::response gameEvent(uint8_t event_id, float value) = 0;
+                virtual base_objects::network::response gameEvent(base_objects::packets::game_event_id event_id, float value) = 0;
                 virtual base_objects::network::response openHorseWindow(uint8_t window_id, int32_t slots, int32_t entity_id) = 0;
                 virtual base_objects::network::response hurtAnimation(int32_t entity_id, float yaw) = 0;
                 virtual base_objects::network::response initializeWorldBorder(double x, double z, double old_diameter, double new_diameter, int64_t speed_ms, int32_t portal_teleport_boundary, int32_t warning_blocks, int32_t warning_time) = 0;

@@ -85,6 +85,7 @@ namespace copper_server::base_objects {
                 cfg.game_play.allow_flight = game_play["allow_flight"].or_apply(cfg.game_play.allow_flight);
                 cfg.game_play.sync_chunk_writes = game_play["sync_chunk_writes"].or_apply(cfg.game_play.sync_chunk_writes);
                 cfg.game_play.enable_command_block = game_play["enable_command_block"].or_apply(cfg.game_play.enable_command_block);
+                cfg.game_play.reduced_debug_screen = game_play["reduced_debug_screen"].or_apply(cfg.game_play.reduced_debug_screen);
                 if (game_play.contains("enabled_features")) {
                     cfg.game_play.enabled_features.clear();
                     auto enabled_features = js_array::get_array(game_play["enabled_features"]);

@@ -6,6 +6,7 @@
 #include <src/base_objects/player.hpp>
 #include <src/build_in_plugins/tools/permissions.hpp>
 #include <src/log.hpp>
+#include <src/protocolHelper/packets/abstract.hpp>
 
 namespace copper_server::build_in_plugins {
     PermissionsPlugin::PermissionsPlugin()
@@ -201,8 +202,32 @@ namespace copper_server::build_in_plugins {
         }
     }
 
-    PermissionsPlugin::plugin_response PermissionsPlugin::OnPlay_initialize(base_objects::client_data_holder& client_ref) {
+    PermissionsPlugin::plugin_response PermissionsPlugin::PlayerJoined(base_objects::client_data_holder& client_ref) {
         update_perm(*client_ref);
-        return std::nullopt;
+        base_objects::packets::entity_event_id event;
+        switch (client_ref->player_data.op_level) {
+        case 0:
+            event = base_objects::packets::entity_event_id::set_op_0;
+            break;
+        case 1:
+            event = base_objects::packets::entity_event_id::set_op_1;
+            break;
+        case 2:
+            event = base_objects::packets::entity_event_id::set_op_2;
+            break;
+        case 3:
+            event = base_objects::packets::entity_event_id::set_op_3;
+            break;
+        case 4:
+            event = base_objects::packets::entity_event_id::set_op_4;
+            break;
+        default:
+            if (client_ref->player_data.op_level < 0)
+                event = base_objects::packets::entity_event_id::set_op_0;
+            else
+                event = base_objects::packets::entity_event_id::set_op_4;
+            break;
+        }
+        return packets::play::entityEvent(*client_ref, client_ref->player_data.assigned_entity->protocol_id, event);
     }
 }

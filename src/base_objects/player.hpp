@@ -30,6 +30,11 @@ namespace copper_server::base_objects {
             float field_of_view_modifier = 0.1f;
         } abilities;
 
+        struct ExperienceData {
+            float progress;
+            int32_t level, total;
+        } experience;
+
         std::string world_id;
         std::string player_name;
 
@@ -49,7 +54,16 @@ namespace copper_server::base_objects {
             std::string world_id;
         };
 
+        struct OwnRespawnLocation {
+            int32_t x = 0;
+            int32_t y = 0;
+            int32_t z = 0;
+            float angle = 0;
+            std::string world_id;
+        };
+
         std::optional<DeathLocation> last_death_location;
+        std::optional<OwnRespawnLocation> own_respawn_location;
 
         list_array<std::string> permission_groups;
 

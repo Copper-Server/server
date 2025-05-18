@@ -12,7 +12,14 @@ namespace copper_server::storage {
 
 namespace copper_server::base_objects::world {
     struct loading_point_ticket {
-        std::variant<uint16_t, std::function<bool(storage::world_data&, size_t, loading_point_ticket&)>> expiration;
+        //returns true if ticket not expired
+        using callback = std::function<bool(copper_server::storage::world_data&, size_t, loading_point_ticket&)>;
+
+        struct entity_bound_ticket {
+            size_t id;
+        };
+
+        std::variant<uint16_t, callback, entity_bound_ticket> expiration;
         base_objects::cubic_bounds_chunk_radius point;
         std::string name;
         int8_t level;

@@ -40,6 +40,34 @@ namespace copper_server::api::world {
 
     //gets client world, checks if world exists, returns pair of id and name, if world does not exists then returns default world and sets default position for player in new world
     std::pair<uint64_t, std::string> prepare_world(base_objects::client_data_holder& client_ref);
+    void sync_settings(base_objects::client_data_holder& client_ref); //sends world settings to client
+
+    void transfer(
+        base_objects::entity_ref& entity,
+        uint64_t world_id,
+        util::VECTOR position,
+        util::ANGLE_DEG rotation,
+        util::VECTOR velocity,
+        std::function<void(storage::world_data& world)> callback = nullptr
+    );
+
+    void transfer(
+        base_objects::entity_ref& entity,
+        uint64_t world_id,
+        util::VECTOR position,
+        util::ANGLE_DEG rotation,
+        std::function<void(storage::world_data& world)> callback = nullptr
+    );
+
+    void transfer(
+        base_objects::entity_ref& entity,
+        uint64_t world_id,
+        util::VECTOR position,
+        std::function<void(storage::world_data& world)> callback = nullptr
+    );
+
+    void register_entity(uint64_t world_id, base_objects::entity_ref& entity_ref);
+    void unregister_entity(uint64_t world_id, base_objects::entity_ref& entity_ref);
 
     base_objects::events::event<uint64_t>& on_world_loaded();
     base_objects::events::event<uint64_t>& on_world_unloaded();

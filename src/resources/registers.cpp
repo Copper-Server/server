@@ -1,6 +1,7 @@
 #include <resources/include.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/recipe.hpp>
+#include <src/api/tags.hpp>
 #include <src/base_objects/data_packs/known_pack.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/log.hpp>
@@ -139,7 +140,7 @@ namespace copper_server::resources {
         bannerPatterns_cache.clear();
         paintingVariants_cache.clear();
         instruments_cache.clear();
-        tags.clear();
+        api::tags::loading_stage_begin();
     }
 
     void load_registers_complete() {
@@ -159,11 +160,7 @@ namespace copper_server::resources {
         id_assigner(bannerPatterns, bannerPatterns_cache);
         id_assigner(paintingVariants, paintingVariants_cache);
         id_assigner(instruments, instruments_cache);
-
-        for (auto& it : tags)
-            for (auto& it2 : it.second)
-                for (auto& it3 : it2.second)
-                    it3.second.commit();
+        api::tags::loading_stage_end();
     }
 
     void hardcoded_values_for_entity(base_objects::entity_data& data) {
@@ -1245,20 +1242,14 @@ namespace copper_server::resources {
                 auto tag_ = js_object::get_object(tag);
                 the_tag = (std::string)tag_.at("id");
             }
-
-            if (the_tag.starts_with("#")) {
-                result.push_back(unfold_tag(type, namespace_, the_tag.substr(1)));
-            } else
-                result.push_back(the_tag);
+            result.push_back(the_tag);
         }
-        tags[type][namespace_][path_].push_back(std::move(result));
+        api::tags::add_tag(type, namespace_ + ":" + path_, result, !replace);
     }
 
     void load_file_tags(js_object&& tags_, const std::string& type, const std::string& namespace_, const std::string& path_) {
         if (tags_.contains("replace")) {
             bool replace = tags_["replace"];
-            if (replace)
-                tags[type][namespace_][path_].clear();
             apply_tags(tags_["values"], type, namespace_, path_, replace);
         } else if (tags_.contains("values"))
             apply_tags(tags_["values"], type, namespace_, path_, false);
@@ -1278,7 +1269,7 @@ namespace copper_server::resources {
     void load_register_file(std::string_view memory, const std::string& namespace_, const std::string& path_, const std::string& type) {
         if (path_.empty())
             throw std::runtime_error("Path is empty");
-        std::string id = (namespace_.empty() ? default_namespace : namespace_) + ":" + path_;
+        std::string id = (namespace_.empty() ? "minecraft" : namespace_) + ":" + path_;
         if (type == "advancement") {
             load_file_advancements(memory, id);
         } else if (type == "banner_pattern")
@@ -1363,7 +1354,7 @@ namespace copper_server::resources {
     void load_register_file(const std::filesystem::path& file_path, const std::string& namespace_, const std::string& path_, const std::string& type) {
         if (path_.empty())
             throw std::runtime_error("Path is empty");
-        std::string id = (namespace_.empty() ? default_namespace : namespace_) + ":" + path_;
+        std::string id = (namespace_.empty() ? "minecraft" : namespace_) + ":" + path_;
         if (type == "advancement") {
             load_file_advancements(file_path, id);
         } else if (type == "banner_pattern")
@@ -1528,6 +1519,7 @@ namespace copper_server::resources {
 
                     auto default_state_data = std::make_shared<base_objects::static_block_data>();
                     default_state_data->name = name;
+                    default_state_data->general_block_id = decl.at("id").to_number<base_objects::block_id_t>();
                     default_state_data->translation_key = decl.at("translation_key").as_string();
                     default_state_data->slipperiness = decl.at("slipperiness").to_number<float>();
                     default_state_data->velocity_multiplier = decl.at("velocity_multiplier").to_number<float>();
@@ -1657,9 +1649,7 @@ namespace copper_server::resources {
         registers::use_registry_latest = latest_protocol_version;
     }
 
-    using tags_obj = std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>>>;
-
-    void __prepare_tags(tags_obj& tmp_obj, boost::json::object& parsed, const std::string& type, const std::string& namespace_, const std::string& tag) {
+    void __prepare_tags(boost::json::object& parsed, const std::string& type, const std::string& namespace_, const std::string& tag) {
         for (auto&& [name, decl] : parsed) {
             auto& obj = decl.as_object();
             if (name.ends_with(".json")) {
@@ -1671,42 +1661,21 @@ namespace copper_server::resources {
                         if (computed_tag.size())
                             computed_tag += "/";
                         computed_tag += (std::string)name.substr(0, name.size() - 5);
-                        auto& items = tmp_obj[type][namespace_][computed_tag];
-                        if (replace)
-                            items.clear();
+                        list_array<std::string> res;
                         for (auto&& value : values.get_array())
-                            items.push_back((std::string)value.as_string());
+                            res.push_back((std::string)value.as_string());
+                        api::tags::add_tag(type, namespace_ + ":" + tag, res);
                         continue;
                     }
                 }
             } else
-                __prepare_tags(tmp_obj, obj, type + "/" + (std::string)name, namespace_, tag);
+                __prepare_tags(obj, type + "/" + (std::string)name, namespace_, tag);
         }
     }
 
     void prepare_tags(boost::json::object& parsed, const std::string& namespace_) {
-        tags_obj tmp_obj = registers::tags;
         for (auto&& [type, decl] : parsed)
-            __prepare_tags(tmp_obj, decl.get_object(), type, namespace_, "");
-
-        registers::tags = tmp_obj;
-        for (auto&& [type, decl] : tmp_obj) {
-            for (auto&& [namespace_, decl] : decl) {
-                for (auto&& [tag, decl] : decl) {
-                    list_array<std::string> resolved_items;
-                    for (auto& item : decl) {
-                        if (item.starts_with("#")) {
-                            resolved_items.push_back(unfold_tag(type, item).where([](const std::string& tag) {
-                                return !tag.starts_with("#");
-                            }));
-                        }
-                    }
-                    decl = std::move(resolved_items.commit());
-                }
-            }
-        }
-
-        registers::tags = std::move(tmp_obj);
+            __prepare_tags(decl.get_object(), type, namespace_, "");
     }
 
     void process_item_(boost::json::object& decl, const std::string& namespace_, void (*fn)(js_object&&, const std::string&, bool send_via_network_body), bool send_via_network_body) {

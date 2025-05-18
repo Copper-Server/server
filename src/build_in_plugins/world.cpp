@@ -317,6 +317,7 @@ namespace copper_server::build_in_plugins {
         auto& client = *client_ref;
         base_objects::network::response response;
 
+
         return response;
     }
 

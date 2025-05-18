@@ -170,7 +170,7 @@ namespace copper_server {
                 return call_function_selector(play, spawnEntity, entity, 1)
             }
 
-            base_objects::network::response entityAnimation(base_objects::SharedClientData& client, const base_objects::entity& entity, uint8_t animation){
+            base_objects::network::response entityAnimation(base_objects::SharedClientData& client, const base_objects::entity& entity, base_objects::entity_animation animation){
                 return call_function_selector(play, entityAnimation, entity, animation)
             }
 
@@ -246,7 +246,7 @@ namespace copper_server {
                 return call_function_selector(play, commandSuggestionsResponse, transaction_id, start_pos, length, suggestions)
             }
 
-            base_objects::network::response commands(base_objects::SharedClientData& client, int32_t root_id, const list_array<base_objects::packets::command_node>& nodes){
+            base_objects::network::response commands(base_objects::SharedClientData& client, int32_t root_id, const list_array<uint8_t>& nodes){
                 return call_function_selector(play, commands, root_id, nodes)
             }
 
@@ -306,7 +306,7 @@ namespace copper_server {
                 return call_function_selector(play, disguisedChatMessage, message, chat_type, sender, target_name)
             }
 
-            base_objects::network::response entityEvent(base_objects::SharedClientData& client, int32_t entity_id, uint8_t entity_status){
+            base_objects::network::response entityEvent(base_objects::SharedClientData& client, int32_t entity_id, base_objects::entity_event entity_status){
                 return call_function_selector(play, entityEvent, entity_id, entity_status)
             }
 
@@ -318,7 +318,7 @@ namespace copper_server {
                 return call_function_selector(play, unloadChunk, x, z)
             }
 
-            base_objects::network::response gameEvent(base_objects::SharedClientData& client, uint8_t event_id, float value){
+            base_objects::network::response gameEvent(base_objects::SharedClientData& client, base_objects::packets::game_event_id event_id, float value){
                 return call_function_selector(play, gameEvent, event_id, value)
             }
 

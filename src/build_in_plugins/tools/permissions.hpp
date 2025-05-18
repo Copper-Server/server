@@ -20,7 +20,7 @@ namespace copper_server::build_in_plugins {
         void OnPostLoad(const PluginRegistrationPtr& self) override;
 
         void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override;
-        base_objects::network::plugin_response OnPlay_initialize(base_objects::client_data_holder& client_ref) override;
+        base_objects::network::plugin_response PlayerJoined(base_objects::client_data_holder& client_ref) override;
     };
 }
 #endif /* SRC_BUILD_IN_PLUGINS_PERMISHIONS */

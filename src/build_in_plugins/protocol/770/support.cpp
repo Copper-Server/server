@@ -728,11 +728,11 @@ namespace copper_server::build_in_plugins::protocol::play_770 {
                 return packet;
             }
 
-            base_objects::network::response entityAnimation(const base_objects::entity& entity, uint8_t animation) override {
+            base_objects::network::response entityAnimation(const base_objects::entity& entity, base_objects::entity_animation animation) override {
                 base_objects::network::response::item packet;
                 packet.write_id(0x02);
                 packet.write_var32(api::entity_id_map::get_id(entity.id));
-                packet.write_value(animation);
+                packet.write_value((uint8_t)animation);
                 return packet;
             }
 
@@ -909,38 +909,10 @@ namespace copper_server::build_in_plugins::protocol::play_770 {
                 return packet;
             }
 
-            base_objects::network::response commands(int32_t root_id, const list_array<base_objects::packets::command_node>& nodes) override {
+            base_objects::network::response commands(int32_t root_id, const list_array<uint8_t>& compiled_graph) override {
                 base_objects::network::response::item packet;
                 packet.write_id(0x10);
-                packet.write_var32_check(nodes.size());
-                for (auto& node : nodes) {
-                    packet.write_value(node.flags.raw);
-                    packet.write_var32_check(node.children.size());
-                    for (auto& child : node.children)
-                        packet.write_var32(child);
-                    if (node.flags.has_redirect)
-                        packet.write_var32(node.redirect_node.value());
-                    if (node.flags.node_type == base_objects::packets::command_node::node_type::literal || node.flags.node_type == base_objects::packets::command_node::node_type::argument)
-                        packet.write_identifier(node.name.value());
-                    if (node.flags.has_suggestion)
-                        packet.write_identifier(node.suggestion_type.value());
-                    if (node.flags.node_type == base_objects::packets::command_node::node_type::argument) {
-                        packet.write_var32((int32_t)node.parser_id.value());
-                        if (node.properties) {
-                            auto& properties = *node.properties;
-                            if (properties.flags)
-                                packet.write_value(*properties.flags);
-                            if (properties.min)
-                                std::visit([&packet](auto&& arg) { packet.write_value(arg); }, *properties.min);
-                            if (properties.max)
-                                std::visit([&packet](auto&& arg) { packet.write_value(arg); }, *properties.max);
-                            if (properties.registry)
-                                packet.write_identifier(*properties.registry);
-                        }
-                    }
-                    if (node.flags.has_suggestion)
-                        packet.write_identifier(node.suggestion_type.value());
-                }
+                packet.write_direct(compiled_graph);
                 packet.write_var32(root_id);
                 return base_objects::network::response::answer({std::move(packet)});
             }
@@ -1077,12 +1049,12 @@ namespace copper_server::build_in_plugins::protocol::play_770 {
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
-            base_objects::network::response entityEvent(int32_t entity_id, uint8_t entity_status) override {
+            base_objects::network::response entityEvent(int32_t entity_id, base_objects::entity_event entity_status) override {
                 list_array<uint8_t> packet;
                 packet.reserve(1 + 4 + 1);
                 packet.push_back(0x1E);
                 WriteValue<int32_t>(entity_id, packet);
-                packet.push_back(entity_status);
+                packet.push_back((uint8_t)entity_status);
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -1179,11 +1151,11 @@ namespace copper_server::build_in_plugins::protocol::play_770 {
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
-            base_objects::network::response gameEvent(uint8_t event_id, float value) override {
+            base_objects::network::response gameEvent(base_objects::packets::game_event_id event_id, float value) override {
                 list_array<uint8_t> packet;
                 packet.reserve(1 + 1 + 4);
                 packet.push_back(0x22);
-                packet.push_back(event_id);
+                packet.push_back((uint8_t)event_id);
                 WriteValue<float>(value, packet);
                 return base_objects::network::response::answer({std::move(packet)});
             }

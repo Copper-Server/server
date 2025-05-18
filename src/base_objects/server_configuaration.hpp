@@ -52,6 +52,7 @@ namespace copper_server::base_objects {
             bool allow_flight = true;
             bool sync_chunk_writes = false;
             bool enable_command_block = false;
+            bool reduced_debug_screen = false;
         } game_play;
 
         struct Protocol {
