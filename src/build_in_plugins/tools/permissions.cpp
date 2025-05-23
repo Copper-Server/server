@@ -204,28 +204,28 @@ namespace copper_server::build_in_plugins {
 
     PermissionsPlugin::plugin_response PermissionsPlugin::PlayerJoined(base_objects::client_data_holder& client_ref) {
         update_perm(*client_ref);
-        base_objects::packets::entity_event_id event;
+        base_objects::entity_event event;
         switch (client_ref->player_data.op_level) {
         case 0:
-            event = base_objects::packets::entity_event_id::set_op_0;
+            event = base_objects::entity_event::set_op_0;
             break;
         case 1:
-            event = base_objects::packets::entity_event_id::set_op_1;
+            event = base_objects::entity_event::set_op_1;
             break;
         case 2:
-            event = base_objects::packets::entity_event_id::set_op_2;
+            event = base_objects::entity_event::set_op_2;
             break;
         case 3:
-            event = base_objects::packets::entity_event_id::set_op_3;
+            event = base_objects::entity_event::set_op_3;
             break;
         case 4:
-            event = base_objects::packets::entity_event_id::set_op_4;
+            event = base_objects::entity_event::set_op_4;
             break;
         default:
             if (client_ref->player_data.op_level < 0)
-                event = base_objects::packets::entity_event_id::set_op_0;
+                event = base_objects::entity_event::set_op_0;
             else
-                event = base_objects::packets::entity_event_id::set_op_4;
+                event = base_objects::entity_event::set_op_4;
             break;
         }
         return packets::play::entityEvent(*client_ref, client_ref->player_data.assigned_entity->protocol_id, event);

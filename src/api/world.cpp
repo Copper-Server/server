@@ -129,7 +129,7 @@ namespace copper_server::api::world {
             client_ref->player_data.assigned_entity->position.x = x;
             client_ref->player_data.assigned_entity->position.y = pos_y;
             client_ref->player_data.assigned_entity->position.z = z;
-            client_ref->player_data.assigned_entity->rotation = {0, 0, 0};
+            client_ref->player_data.assigned_entity->rotation = {0, 0};
         }
 
         return {id, get_worlds().get(id)->world_name};

@@ -249,7 +249,7 @@ namespace copper_server {
                 return bound_check.id;
             }
 
-            static void access_full_block_data(std::function<void(std::vector<std::shared_ptr<static_block_data>>&, std::unordered_map<std::string, std::shared_ptr<static_block_data>>&)> access) {
+            static void access_full_block_data(std::function<void(list_array<std::shared_ptr<static_block_data>>&, std::unordered_map<std::string, std::shared_ptr<static_block_data>>&)> access) {
                 access(full_block_data_, named_full_block_data);
             }
 
@@ -336,23 +336,27 @@ namespace copper_server {
             bool is_replaceable() const;
             bool is_block_entity() const;
 
-
-            bool is_block_entity() const {
-                return getStaticData().is_block_entity;
-            }
-
             static static_block_data& get_block(const std::string& name) {
                 return *named_full_block_data.at(name);
             }
 
-            static block_id_t get_block_id(const std::string& name, int32_t protocol) {
+            static static_block_data& get_block(block_id_t id) {
+                return *full_block_data_.at(id);
+            }
+
+            static block_id_t get_protocol_block_id(const std::string& name, int32_t protocol) {
                 auto& st = get_block(name);
+                return st.internal_block_aliases.at(st.default_state).at(protocol);
+            }
+
+            static block_id_t get_protocol_block_id(block_id_t id, int32_t protocol) {
+                auto& st = get_block(id);
                 return st.internal_block_aliases.at(st.default_state).at(protocol);
             }
 
         private:
             static std::unordered_map<std::string, std::shared_ptr<static_block_data>> named_full_block_data;
-            static std::vector<std::shared_ptr<static_block_data>> full_block_data_;
+            static list_array<std::shared_ptr<static_block_data>> full_block_data_;
         };
 
         // clang-format off

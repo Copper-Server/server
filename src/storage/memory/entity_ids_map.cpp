@@ -73,7 +73,6 @@ namespace copper_server::storage::memory {
     }
 
     [[nodiscard]] int32_t entity_ids_map_storage::allocate_special_sequence(const enbt::raw_uuid& uuid, uint8_t required_ids) {
-        enbt::raw_uuid uuid = enbt::raw_uuid::generate_v4();
         std::unique_lock lock(mutex);
         if (ids_l.size() == INT32_MAX)
             throw std::runtime_error("Too many registered UUID's, can't allocate more");

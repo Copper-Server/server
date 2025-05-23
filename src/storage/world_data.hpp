@@ -27,6 +27,7 @@ namespace copper_server::base_objects {
     struct entity;
     using entity_ref = atomic_holder<entity>;
 }
+
 namespace copper_server::storage {
 
 
@@ -41,6 +42,7 @@ namespace copper_server::storage {
         uint32_t y : 21;
         uint8_t z : 4;
     };
+
     struct on_tick_state {
         using block_callback = std::function<void(base_objects::block_id_t id, int64_t x, int64_t y, int64_t z)>;
         using entity_callback = std::function<void(const base_objects::entity_ref& entity, int64_t x, int64_t y, int64_t z)>;
@@ -154,18 +156,18 @@ namespace copper_server::storage {
 
     class chunk_light_processor {
     public:
-        bool enable_entity_updates_when_hold_light_source : 1 = false;
         bool enable_entity_light_source_updates : 1 = false;
+        bool enable_entity_light_source_updates_include_rot : 1 = false;
 
         chunk_light_processor() {}
 
         virtual ~chunk_light_processor() {}
 
-        //updates every time when entity moved
-        virtual void process_entity_light_source(world_data& world, const base_objects::entity_ref& entity) {}
+        //fired after entity_teleport and entity_move
+        virtual void process_entity_light_source(world_data& world, const base_objects::entity& entity, util::VECTOR new_pos) {}
 
-        //updates every time when entity moved
-        virtual void process_entity_hold_light_source(world_data& world, const base_objects::entity_ref& entity) {}
+        //fired after entity_look_changes
+        virtual void process_entity_light_source_rot(world_data& world, const base_objects::entity& entity, util::ANGLE_DEG new_rot) {}
 
         virtual void process_chunk(world_data& world, int64_t chunk_x, int64_t chunk_z) = 0;
         virtual void process_sub_chunk(world_data& world, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z) = 0;
@@ -215,62 +217,28 @@ namespace copper_server::storage {
         base_objects::atomic_holder<chunk_generator>& get_generator();
         base_objects::atomic_holder<chunk_light_processor>& get_light_processor();
 
-
-        void entity_init(base_objects::entity_ref&);
-
-        void entity_teleport(base_objects::entity_ref&, util::VECTOR new_pos);
-        void entity_move(base_objects::entity_ref&, util::VECTOR move);
-        void entity_look_changes(base_objects::entity_ref&, util::ANGLE_DEG new_rotation);
-        void entity_rotation_changes(base_objects::entity_ref&, util::ANGLE_DEG new_rotation);
-        void entity_motion_changes(base_objects::entity_ref&, util::VECTOR new_motion);
-
-        void entity_rides(base_objects::entity_ref&, size_t other_entity_id);
-        void entity_leaves_ride(base_objects::entity_ref&);
-
-        void entity_attach(base_objects::entity_ref&, size_t other_entity_id);
-        void entity_detach(base_objects::entity_ref&, size_t other_entity_id);
-
-        void entity_attack(base_objects::entity_ref&, size_t other_entity_id);
-        void entity_iteract(base_objects::entity_ref&, size_t other_entity_id);
-        void entity_iteract(base_objects::entity_ref&, int64_t x, int64_t y, int64_t z);
-
-        void entity_break(base_objects::entity_ref&, int64_t x, int64_t y, int64_t z, uint8_t state); //form 0 to 9, other ignored
-        void entity_cancel_break(base_objects::entity_ref&, int64_t x, int64_t y, int64_t z);
-        void entity_finish_break(base_objects::entity_ref&, int64_t x, int64_t y, int64_t z);
-        void entity_place(base_objects::entity_ref&, int64_t x, int64_t y, int64_t z, base_objects::block);
-        void entity_place(base_objects::entity_ref&, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref);
-
-
-        void entity_animation(base_objects::entity_ref&, base_objects::entity_animation animation);
-        void entity_event(base_objects::entity_ref&, base_objects::entity_event status);
-
-        void entity_death(base_objects::entity_ref&);
-        void entity_deinit(base_objects::entity_ref&);
-
-
-        void notify_block_event(const base_objects::world::block_action& action, int64_t x, int64_t y, int64_t z);
-        void notify_block_change(int64_t x, int64_t y, int64_t z, base_objects::block);
-        void notify_block_change(int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref);
-        void notify_block_destroy_change(int64_t x, int64_t y, int64_t z, base_objects::block);
-        void notify_block_destroy_change(int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref);
-        void notify_biome_change(int64_t x, int64_t y, int64_t z, uint32_t);
-
-        void notify_sub_chunk(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z); //used after multiply changes
-        void notify_chunk(int64_t chunk_x, int64_t chunk_z);                      //used after multiply changes or to init
-
-        void notify_sub_chunk_light(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z); //used after multiply changes
-        void notify_chunk_light(int64_t chunk_x, int64_t chunk_z);                      //used after multiply changes
-
-        void notify_sub_chunk_blocks(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z); //used after multiply changes
-        void notify_chunk_blocks(int64_t chunk_x, int64_t chunk_z);                      //used after multiply changes
-
-
         int32_t internal_version = 0;
         uint16_t chunk_y_count = 20;      // == (320 / 16), do not change this config
         int16_t world_y_chunk_offset = 0; //calculated_from(world_y_offset)
         int16_t world_y_offset = 0;
 
+
+        void __set_block_silent(const base_objects::full_block_data& block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
+        void __set_block_silent(base_objects::full_block_data&& block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
+
     public:
+        uint16_t get_chunk_y_count() const {
+            return chunk_y_count;
+        }
+
+        int16_t get_world_y_chunk_offset() const {
+            return world_y_chunk_offset;
+        }
+
+        int16_t get_world_y_offset() const {
+            return world_y_offset;
+        }
+
         //metadata
         void load(const enbt::compound_const_ref& load_from_nbt);
         //metadata
@@ -312,10 +280,9 @@ namespace copper_server::storage {
         double border_warning_time = 15;
         int64_t day_time = 0;
         int64_t time = 0;
-        size_t random_tick_speed = 3;
+        uint64_t random_tick_speed = 3;
         uint64_t ticks_per_second = 20;
         int32_t portal_teleport_boundary = 29999984;
-        bool ticking_frozen : 1 = false;
 
         std::chrono::milliseconds chunk_lifetime = std::chrono::seconds(1);
         std::chrono::milliseconds world_lifetime = std::chrono::seconds(50);
@@ -328,12 +295,13 @@ namespace copper_server::storage {
 
         int8_t difficulty = 0;
         uint8_t default_gamemode = 0;
+        bool ticking_frozen : 1 = false;
         bool difficulty_locked : 1 = false;
         bool is_hardcore : 1 = false;
         bool initialized : 1 = false;
         bool has_skylight : 1 = true;
-        bool enable_entity_updates_when_hold_light_source : 1 = false;
-        bool enable_entity_light_source_updates : 1 = false;
+        bool enable_entity_light_source_updates : 1 = false; //calculated from light processor
+        bool enable_entity_light_source_updates_include_rot : 1 = false;
 
         const uint64_t world_id;
 
@@ -457,6 +425,64 @@ namespace copper_server::storage {
         bool collect_unused_data(std::chrono::high_resolution_clock::time_point current_time, size_t& unload_limit);
 
 
+#pragma region Communication
+        void entity_init(base_objects::entity&);
+
+        void entity_teleport(base_objects::entity&, util::VECTOR new_pos);
+        void entity_move(base_objects::entity&, util::VECTOR move);
+        void entity_look_changes(base_objects::entity&, util::ANGLE_DEG new_rotation);
+        void entity_rotation_changes(base_objects::entity&, util::ANGLE_DEG new_rotation);
+        void entity_motion_changes(base_objects::entity&, util::VECTOR new_motion);
+
+        void entity_rides(base_objects::entity&, size_t other_entity_id);
+        void entity_leaves_ride(base_objects::entity&);
+
+        void entity_attach(base_objects::entity&, size_t other_entity_id);
+        void entity_detach(base_objects::entity&, size_t other_entity_id);
+
+        void entity_damage(base_objects::entity&, float health, int32_t type_id, std::optional<util::VECTOR> pos);
+        void entity_damage(base_objects::entity&, float health, int32_t type_id, base_objects::entity_ref& source, std::optional<util::VECTOR> pos);
+        void entity_damage(base_objects::entity&, float health, int32_t type_id, base_objects::entity_ref& source, base_objects::entity_ref& source_direct, std::optional<util::VECTOR> pos);
+
+        void entity_attack(base_objects::entity&, size_t other_entity_id);
+        void entity_iteract(base_objects::entity&, size_t other_entity_id);
+        void entity_iteract(base_objects::entity&, int64_t x, int64_t y, int64_t z);
+
+        void entity_break(base_objects::entity&, int64_t x, int64_t y, int64_t z, uint8_t state); //form 0 to 9, other ignored
+        void entity_cancel_break(base_objects::entity&, int64_t x, int64_t y, int64_t z);
+        void entity_finish_break(base_objects::entity&, int64_t x, int64_t y, int64_t z);
+        void entity_place(base_objects::entity&, int64_t x, int64_t y, int64_t z, base_objects::block);
+        void entity_place(base_objects::entity&, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref);
+
+
+        void entity_animation(base_objects::entity&, base_objects::entity_animation animation);
+        void entity_event(base_objects::entity&, base_objects::entity_event status);
+
+
+        void entity_add_effect(base_objects::entity&, uint32_t id, uint32_t duration, uint8_t amplifier = 1, bool ambient = false, bool show_particles = true, bool show_icon = true, bool use_blend = false);
+        void entity_remove_effect(base_objects::entity&, uint32_t id);
+
+        void entity_death(base_objects::entity&);
+        void entity_deinit(base_objects::entity&);
+
+
+        void notify_block_event(const base_objects::world::block_action& action, int64_t x, int64_t y, int64_t z);
+        void notify_block_change(int64_t x, int64_t y, int64_t z, base_objects::block);
+        void notify_block_change(int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref);
+        void notify_block_destroy_change(int64_t x, int64_t y, int64_t z, base_objects::block);
+        void notify_block_destroy_change(int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref);
+        void notify_biome_change(int64_t x, int64_t y, int64_t z, uint32_t);
+
+        void notify_sub_chunk(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z); //used after multiply changes
+        void notify_chunk(int64_t chunk_x, int64_t chunk_z);                      //used after multiply changes or to init
+
+        void notify_sub_chunk_light(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z); //used after multiply changes
+        void notify_chunk_light(int64_t chunk_x, int64_t chunk_z);                      //used after multiply changes
+
+        void notify_sub_chunk_blocks(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z); //used after multiply changes
+        void notify_chunk_blocks(int64_t chunk_x, int64_t chunk_z);                      //used after multiply changes
+#pragma endregion
+
         struct profiling_data {
             std::chrono::high_resolution_clock::time_point last_tick = std::chrono::high_resolution_clock::now();
             uint64_t got_ticks = 0;
@@ -519,7 +545,7 @@ namespace copper_server::storage {
         uint64_t base_world_id = -1;
 
         //calculated
-        double tps = 1;
+        double tps = ticks_per_second;
 
 
         worlds_data(const std::filesystem::path& base_path);

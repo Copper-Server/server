@@ -68,9 +68,7 @@ namespace copper_server::base_objects {
         case 0x1A:
         case 0x1B:
         case 0x1C:
-        case 0x1D:
-            break;
-        case 0x1E: {
+        case 0x1D: {
             if (!disguisedChatMessage)
                 return;
             size_t readed = 0;
@@ -93,6 +91,7 @@ namespace copper_server::base_objects {
             );
             break;
         }
+        case 0x1E:
         case 0x1F:
         case 0x20:
         case 0x21:
@@ -171,9 +170,8 @@ namespace copper_server::base_objects {
         case 0x6F:
         case 0x70:
         case 0x71:
-        case 0x72:
             break;
-        case 0x73: { //systemChatMessage
+        case 0x72: { //systemChatMessage
             if (!systemChatMessage && !systemChatMessageOverlay)
                 return;
             size_t readed = 0;
@@ -189,6 +187,7 @@ namespace copper_server::base_objects {
             }
             break;
         }
+        case 0x73:
         case 0x74:
             break;
         }

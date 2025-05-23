@@ -357,11 +357,11 @@ namespace copper_server::storage {
 
     bool valid_sub_chunk_size(const enbt::value& chunk) {
         try {
-            auto dim_0 = chunk.as_fixed_array();
+            auto dim_0 = chunk.as_array();
             if (dim_0.size() != 16)
                 return false;
             for (auto& x : dim_0) {
-                auto dim_1 = x.as_fixed_array();
+                auto dim_1 = x.as_array();
                 if (dim_1.size() != 16)
                     return false;
                 for (auto& y : dim_1) {
@@ -383,9 +383,9 @@ namespace copper_server::storage {
         }
 
         size_t x_ = 0;
-        for (auto& x : chunk.as_fixed_array()) {
+        for (auto& x : chunk.as_array()) {
             size_t y_ = 0;
-            for (auto& y : x.as_fixed_array()) {
+            for (auto& y : x.as_array()) {
                 size_t z_ = 0;
                 for (auto& z : y.as_ui8_array())
                     data.light_map[x_][y_][z_++].raw = z;
@@ -397,9 +397,9 @@ namespace copper_server::storage {
 
     void load_block_data(const enbt::value& chunk, base_objects::block (&data)[16][16][16], bool& has_tickable_blocks) {
         size_t x_ = 0;
-        for (auto& x : chunk.as_fixed_array()) {
+        for (auto& x : chunk.as_array()) {
             size_t y_ = 0;
-            for (auto& y : x.as_fixed_array()) {
+            for (auto& y : x.as_array()) {
                 size_t z_ = 0;
                 for (auto z : y.as_ui32_array()) {
                     data[x_][y_][z_].raw = z;
@@ -728,22 +728,22 @@ namespace copper_server::storage {
         });
     }
 
-    fast_task::protected_value<std::unordered_map<std::string, base_objects::atomic_holder<chunk_light_processor>>> light_orocessors;
+    fast_task::protected_value<std::unordered_map<std::string, base_objects::atomic_holder<chunk_light_processor>>> light_processors;
 
     void chunk_light_processor::register_it(const std::string& id, base_objects::atomic_holder<chunk_light_processor> processor) {
-        light_orocessors.set([&](auto& map) {
+        light_processors.set([&](auto& map) {
             map[id] = std::move(processor);
         });
     }
 
     void chunk_light_processor::unregister_it(const std::string& id) {
-        light_orocessors.set([&](auto& map) {
+        light_processors.set([&](auto& map) {
             map.erase(id);
         });
     }
 
     base_objects::atomic_holder<chunk_light_processor> chunk_light_processor::get_it(const std::string& id) {
-        return light_orocessors.set([&](auto& map) {
+        return light_processors.set([&](auto& map) {
             return map.at(id);
         });
     }
@@ -817,14 +817,17 @@ namespace copper_server::storage {
     }
 
     base_objects::atomic_holder<chunk_light_processor>& world_data::get_light_processor() {
-        if (!light_processor)
+        if (!light_processor) {
             light_processor = chunk_light_processor::get_it(light_processor_id);
+            enable_entity_light_source_updates = light_processor->enable_entity_light_source_updates;
+            enable_entity_light_source_updates_include_rot = light_processor->enable_entity_light_source_updates_include_rot;
+        }
         return light_processor;
     }
 
 #define ENTITY_NOTIFY_BLOCK(fun, ...)                                                                                                  \
     for (auto& [id, entity] : entities)                                                                                                \
-        if (entity != self) {                                                                                                          \
+        if (&*entity != &self) {                                                                                                       \
             auto processor = entity->const_data().processor;                                                                           \
             if (entity->world_syncing_data && processor) {                                                                             \
                 if (entity->world_syncing_data->processing_region.in_bounds(convert_chunk_global_pos(x), convert_chunk_global_pos(z))) \
@@ -832,10 +835,10 @@ namespace copper_server::storage {
             }                                                                                                                          \
         }
 #define ENTITY_NOTIFY_CHANGE(fun, ...)                                                         \
-    auto chunk_x = convert_chunk_global_pos(self->position.x);                                 \
-    auto chunk_z = convert_chunk_global_pos(self->position.z);                                 \
+    auto chunk_x = convert_chunk_global_pos(self.position.x);                                  \
+    auto chunk_z = convert_chunk_global_pos(self.position.z);                                  \
     for (auto& [id, entity] : entities)                                                        \
-        if (entity != self) {                                                                  \
+        if (&*entity != &self) {                                                               \
             auto processor = entity->const_data().processor;                                   \
             if (entity->world_syncing_data && processor) {                                     \
                 if (entity->world_syncing_data->processing_region.in_bounds(chunk_z, chunk_z)) \
@@ -843,15 +846,26 @@ namespace copper_server::storage {
             }                                                                                  \
         }
 
+#define ENTITY_NOTIFY_CHANGE_ALL(fun, ...)                                                 \
+    auto chunk_x = convert_chunk_global_pos(self.position.x);                              \
+    auto chunk_z = convert_chunk_global_pos(self.position.z);                              \
+    for (auto& [id, entity] : entities) {                                                  \
+        auto processor = entity->const_data().processor;                                   \
+        if (entity->world_syncing_data && processor) {                                     \
+            if (entity->world_syncing_data->processing_region.in_bounds(chunk_z, chunk_z)) \
+                processor->fun(*entity, self __VA_OPT__(, __VA_ARGS__));                   \
+        }                                                                                  \
+    }
+
 #define ENTITY_NOTIFY_CHANGE_W_E(fun, ...)                                                     \
     auto other_entity_it = entities.find(other_entity_id);                                     \
     if (other_entity_it == entities.end())                                                     \
         throw std::runtime_error("Entity not registered on world");                            \
-    auto chunk_x = convert_chunk_global_pos(self->position.x);                                 \
-    auto chunk_z = convert_chunk_global_pos(self->position.z);                                 \
+    auto chunk_x = convert_chunk_global_pos(self.position.x);                                  \
+    auto chunk_z = convert_chunk_global_pos(self.position.z);                                  \
     auto& other_entity = other_entity_it->second;                                              \
     for (auto& [id, entity] : entities)                                                        \
-        if (entity != self) {                                                                  \
+        if (&*entity != &self) {                                                               \
             auto processor = entity->const_data().processor;                                   \
             if (entity->world_syncing_data && processor) {                                     \
                 if (entity->world_syncing_data->processing_region.in_bounds(chunk_z, chunk_z)) \
@@ -870,116 +884,142 @@ namespace copper_server::storage {
         }                                                                                  \
     }
 
-#define WORLD_ASYNC_RUN(funtion, ...) \
-    fast_task::task::run([id = world_id __VA_OPT__(, __VA_ARGS__)] { api::world::get(id, [__VA_ARGS__](auto& world) { world.funtion(__VA_ARGS__); }); })
+#define WORLD_ASYNC_RUN(function, ...) \
+    fast_task::task::run([id = world_id __VA_OPT__(, __VA_ARGS__)] { api::world::get(id, [__VA_ARGS__](auto& world) { world.function(__VA_ARGS__); }); })
 
-    void world_data::entity_init(base_objects::entity_ref& self) {
+    void world_data::entity_init(base_objects::entity& self) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_CHANGE(entity_init)
     }
 
-    void world_data::entity_teleport(base_objects::entity_ref& self, util::VECTOR new_pos) {
+    void world_data::entity_teleport(base_objects::entity& self, util::VECTOR new_pos) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_CHANGE(entity_teleport, new_pos)
+        if (enable_entity_light_source_updates)
+            get_light_processor()->process_entity_light_source(*this, self, new_pos);
     }
 
-    void world_data::entity_move(base_objects::entity_ref& self, util::VECTOR move) {
+    void world_data::entity_move(base_objects::entity& self, util::VECTOR move) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_CHANGE(entity_move, move)
+        if (enable_entity_light_source_updates)
+            get_light_processor()->process_entity_light_source(*this, self, move);
     }
 
-    void world_data::entity_look_changes(base_objects::entity_ref& self, util::ANGLE_DEG new_rotation) {
+    void world_data::entity_look_changes(base_objects::entity& self, util::ANGLE_DEG new_rotation) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_CHANGE(entity_look_changes, new_rotation)
+        if (enable_entity_light_source_updates_include_rot)
+            get_light_processor()->process_entity_light_source_rot(*this, self, new_rotation);
     }
 
-    void world_data::entity_rotation_changes(base_objects::entity_ref& self, util::ANGLE_DEG new_rotation) {
+    void world_data::entity_rotation_changes(base_objects::entity& self, util::ANGLE_DEG new_rotation) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_CHANGE(entity_rotation_changes, new_rotation)
     }
 
-    void world_data::entity_motion_changes(base_objects::entity_ref& self, util::VECTOR new_motion) {
+    void world_data::entity_motion_changes(base_objects::entity& self, util::VECTOR new_motion) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_CHANGE(entity_motion_changes, new_motion)
     }
 
-    void world_data::entity_rides(base_objects::entity_ref& self, size_t other_entity_id) {
+    void world_data::entity_rides(base_objects::entity& self, size_t other_entity_id) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_CHANGE_W_E(entity_rides)
     }
 
-    void world_data::entity_leaves_ride(base_objects::entity_ref& self) {
+    void world_data::entity_leaves_ride(base_objects::entity& self) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_CHANGE(entity_leaves_ride)
     }
 
-    void world_data::entity_attach(base_objects::entity_ref& self, size_t other_entity_id) {
+    void world_data::entity_attach(base_objects::entity& self, size_t other_entity_id) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_CHANGE_W_E(entity_attach)
     }
 
-    void world_data::entity_detach(base_objects::entity_ref& self, size_t other_entity_id) {
+    void world_data::entity_detach(base_objects::entity& self, size_t other_entity_id) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_CHANGE_W_E(entity_detach)
     }
 
-    void world_data::entity_attack(base_objects::entity_ref& self, size_t other_entity_id) {
+    void world_data::entity_damage(base_objects::entity& self, float health, int32_t type_id, std::optional<util::VECTOR> pos) {
+        ENTITY_NOTIFY_CHANGE_ALL(entity_damage, health, type_id, pos)
+    }
+
+    void world_data::entity_damage(base_objects::entity& self, float health, int32_t type_id, base_objects::entity_ref& source, std::optional<util::VECTOR> pos) {
+        ENTITY_NOTIFY_CHANGE_ALL(entity_damage_with_source, health, type_id, source, pos)
+    }
+
+    void world_data::entity_damage(base_objects::entity& self, float health, int32_t type_id, base_objects::entity_ref& source, base_objects::entity_ref& source_direct, std::optional<util::VECTOR> pos) {
+        ENTITY_NOTIFY_CHANGE_ALL(entity_damage_with_sources, health, type_id, source, source_direct, pos)
+    }
+
+    void world_data::entity_attack(base_objects::entity& self, size_t other_entity_id) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_CHANGE_W_E(entity_attack)
     }
 
-    void world_data::entity_iteract(base_objects::entity_ref& self, size_t other_entity_id) {
+    void world_data::entity_iteract(base_objects::entity& self, size_t other_entity_id) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_CHANGE_W_E(entity_iteract)
     }
 
-    void world_data::entity_iteract(base_objects::entity_ref& self, int64_t x, int64_t y, int64_t z) {
+    void world_data::entity_iteract(base_objects::entity& self, int64_t x, int64_t y, int64_t z) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_BLOCK(entity_iteract_block);
     }
 
-    void world_data::entity_break(base_objects::entity_ref& self, int64_t x, int64_t y, int64_t z, uint8_t state) {
+    void world_data::entity_break(base_objects::entity& self, int64_t x, int64_t y, int64_t z, uint8_t state) {
         if (state > 9)
             return;
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_BLOCK(entity_break, state);
     }
 
-    void world_data::entity_cancel_break(base_objects::entity_ref& self, int64_t x, int64_t y, int64_t z) {
+    void world_data::entity_cancel_break(base_objects::entity& self, int64_t x, int64_t y, int64_t z) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_BLOCK(entity_cancel_break);
     }
 
-    void world_data::entity_finish_break(base_objects::entity_ref& self, int64_t x, int64_t y, int64_t z) {
+    void world_data::entity_finish_break(base_objects::entity& self, int64_t x, int64_t y, int64_t z) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_BLOCK(entity_finish_break);
     }
 
-    void world_data::entity_place(base_objects::entity_ref& self, int64_t x, int64_t y, int64_t z, base_objects::block block) {
+    void world_data::entity_place(base_objects::entity& self, int64_t x, int64_t y, int64_t z, base_objects::block block) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_BLOCK(entity_place_block, block);
     }
 
-    void world_data::entity_place(base_objects::entity_ref& self, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block) {
+    void world_data::entity_place(base_objects::entity& self, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_BLOCK(entity_place_block_entity, block);
     }
 
-    void world_data::entity_animation(base_objects::entity_ref& self, base_objects::entity_animation animation) {
+    void world_data::entity_animation(base_objects::entity& self, base_objects::entity_animation animation) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_CHANGE(entity_animation, animation)
     }
 
-    void world_data::entity_event(base_objects::entity_ref& self, base_objects::entity_event status) {
+    void world_data::entity_event(base_objects::entity& self, base_objects::entity_event status) {
         ENTITY_NOTIFY_CHANGE(entity_event, status)
     }
 
-    void world_data::entity_death(base_objects::entity_ref& self) {
+    void world_data::entity_add_effect(base_objects::entity& self, uint32_t id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) {
+        ENTITY_NOTIFY_CHANGE_ALL(entity_add_effect, id, duration, amplifier, ambient, show_particles, show_icon, use_blend)
+    }
+
+    void world_data::entity_remove_effect(base_objects::entity& self, uint32_t id) {
+        ENTITY_NOTIFY_CHANGE_ALL(entity_remove_effect, id)
+    }
+
+    void world_data::entity_death(base_objects::entity& self) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_CHANGE(entity_death)
     }
 
-    void world_data::entity_deinit(base_objects::entity_ref& self) {
+    void world_data::entity_deinit(base_objects::entity& self) {
         std::unique_lock lock(mutex);
         ENTITY_NOTIFY_CHANGE(entity_deinit)
     }
@@ -1113,6 +1153,34 @@ namespace copper_server::storage {
         );
     }
 
+    void world_data::__set_block_silent(const base_objects::full_block_data& block, int64_t global_x, int64_t global_y_raw, int64_t global_z, block_set_mode mode) {
+        TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
+        bool updates_height_map = false;
+        get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
+            sub_chunk.set_block(global_x & 15, global_y & 15, global_z & 15, block);
+            get_light_processor()->block_changed(*this, global_x, global_y, global_z);
+        });
+
+        if (updates_height_map)
+            get_chunk_at(global_x, global_z, [&](auto& chunk) {
+                chunk.update_height_map_on(convert_chunk_local_pos(global_x), global_y, convert_chunk_local_pos(global_z));
+            });
+    }
+
+    void world_data::__set_block_silent(base_objects::full_block_data&& block, int64_t global_x, int64_t global_y_raw, int64_t global_z, block_set_mode mode) {
+        TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
+        bool updates_height_map = false;
+        get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
+            sub_chunk.set_block(global_x & 15, global_y & 15, global_z & 15, block);
+            get_light_processor()->block_changed(*this, global_x, global_y, global_z);
+        });
+
+        if (updates_height_map)
+            get_chunk_at(global_x, global_z, [&](auto& chunk) {
+                chunk.update_height_map_on(convert_chunk_local_pos(global_x), global_y, convert_chunk_local_pos(global_z));
+            });
+    }
+
     template <class T>
     enbt::fixed_array to_fixed_array(const std::vector<T>& vec) {
         enbt::fixed_array _enabled_datapacks(vec.size());
@@ -1209,11 +1277,6 @@ namespace copper_server::storage {
         is_hardcore = load_from_nbt.at("is_hardcore");
         initialized = load_from_nbt.at("initialized");
         has_skylight = load_from_nbt.at("has_skylight");
-
-        if (load_from_nbt.contains("enable_entity_updates_when_hold_light_source"))
-            enable_entity_updates_when_hold_light_source = load_from_nbt.at("enable_entity_updates_when_hold_light_source");
-        if (load_from_nbt.contains("enable_entity_light_source_updates"))
-            enable_entity_light_source_updates = load_from_nbt.at("enable_entity_light_source_updates");
     }
 
     void world_data::load() {
@@ -1288,11 +1351,6 @@ namespace copper_server::storage {
         world_data_file["is_hardcore"] = is_hardcore;
         world_data_file["initialized"] = initialized;
         world_data_file["has_skylight"] = has_skylight;
-
-        if (enable_entity_updates_when_hold_light_source)
-            world_data_file["enable_entity_updates_when_hold_light_source"] = true;
-        if (enable_entity_light_source_updates)
-            world_data_file["enable_entity_light_source_updates"] = true;
 
         auto stringized = senbt::serialize(world_data_file, false, true);
         file.write(stringized.data(), stringized.size());
@@ -1939,13 +1997,15 @@ namespace copper_server::storage {
         func(*this);
     }
 
+    //TODO optimize more
     void world_data::set_block_range(base_objects::cubic_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks, block_set_mode mode) {
         if (blocks.size() == bounds.count()) {
             size_t i = 0;
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                    world.set_block(blocks[i++], x, y, z, mode);
+                    world.__set_block_silent(blocks[i++], x, y, z, mode);
                 });
+
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
                     get_light_processor()->block_changed(*this, x, y, z);
                 });
@@ -1955,7 +2015,7 @@ namespace copper_server::storage {
             size_t max = blocks.size();
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                    world.set_block(blocks[i++], x, y, z, mode);
+                    world.__set_block_silent(blocks[i++], x, y, z, mode);
                     if (i == max)
                         i = 0;
                 });
@@ -1964,6 +2024,9 @@ namespace copper_server::storage {
                 });
             });
         }
+        ((base_objects::cubic_bounds_chunk)bounds).enum_points([&](int64_t x, int64_t z) {
+            WORLD_ASYNC_RUN(notify_chunk_blocks, x, z);
+        });
     }
 
     void world_data::set_block_range(base_objects::cubic_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks, block_set_mode mode) {
@@ -1971,7 +2034,7 @@ namespace copper_server::storage {
             size_t i = 0;
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                    world.set_block(std::move(blocks[i++]), x, y, z, mode);
+                    world.__set_block_silent(std::move(blocks[i++]), x, y, z, mode);
                 });
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
                     get_light_processor()->block_changed(*this, x, y, z);
@@ -1982,7 +2045,7 @@ namespace copper_server::storage {
             size_t max = blocks.size();
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                    world.set_block(blocks[i++], x, y, z, mode);
+                    world.__set_block_silent(blocks[i++], x, y, z, mode);
                     if (++i == max)
                         i = 0;
                 });
@@ -1991,6 +2054,9 @@ namespace copper_server::storage {
                 });
             });
         }
+        ((base_objects::cubic_bounds_chunk)bounds).enum_points([&](int64_t x, int64_t z) {
+            WORLD_ASYNC_RUN(notify_chunk_blocks, x, z);
+        });
     }
 
     void world_data::set_block_range(base_objects::spherical_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks, block_set_mode mode) {
@@ -1998,7 +2064,7 @@ namespace copper_server::storage {
             size_t i = 0;
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                    world.set_block(blocks[i++], x, y, z, mode);
+                    world.__set_block_silent(blocks[i++], x, y, z, mode);
                 });
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
                     get_light_processor()->block_changed(*this, x, y, z);
@@ -2009,7 +2075,7 @@ namespace copper_server::storage {
             size_t max = blocks.size();
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                    world.set_block(blocks[i++], x, y, z, mode);
+                    world.__set_block_silent(blocks[i++], x, y, z, mode);
                 });
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
                     get_light_processor()->block_changed(*this, x, y, z);
@@ -2018,6 +2084,9 @@ namespace copper_server::storage {
                     i = 0;
             });
         }
+        ((base_objects::spherical_bounds_chunk)bounds).enum_points([&](int64_t x, int64_t z) {
+            WORLD_ASYNC_RUN(notify_chunk_blocks, x, z);
+        });
     }
 
     void world_data::set_block_range(base_objects::spherical_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks, block_set_mode mode) {
@@ -2025,7 +2094,7 @@ namespace copper_server::storage {
             size_t i = 0;
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                    world.set_block(std::move(blocks[i++]), x, y, z, mode);
+                    world.__set_block_silent(std::move(blocks[i++]), x, y, z, mode);
                 });
             });
         } else {
@@ -2033,12 +2102,15 @@ namespace copper_server::storage {
             size_t max = blocks.size();
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                    world.set_block(std::move(blocks[i++]), x, y, z, mode);
+                    world.__set_block_silent(std::move(blocks[i++]), x, y, z, mode);
                     if (i++ == max)
                         i = 0;
                 });
             });
         }
+        ((base_objects::spherical_bounds_chunk)bounds).enum_points([&](int64_t x, int64_t z) {
+            WORLD_ASYNC_RUN(notify_chunk_blocks, x, z);
+        });
     }
 
     uint32_t world_data::get_biome(int64_t global_x, int64_t global_y_raw, int64_t global_z) {
@@ -2171,13 +2243,13 @@ namespace copper_server::storage {
             this
         );
         entities[id] = entity;
-        entity_init(entity);
+        entity_init(*entity);
     }
 
     void world_data::unregister_entity(base_objects::entity_ref& entity) {
         std::unique_lock lock(mutex);
         if (entity->world_syncing_data) {
-            entity_deinit(entity);
+            entity_deinit(*entity);
             entities.erase(entity->world_syncing_data->assigned_world_id);
             entity->world_syncing_data = std::nullopt;
         }

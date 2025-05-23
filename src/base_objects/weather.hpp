@@ -4,7 +4,7 @@
 #include <unordered_map>
 namespace copper_server::base_objects {
     struct weather {
-        enum _value {
+        enum _value : uint8_t {
             clear,
             rain,
             thunder
@@ -30,6 +30,10 @@ namespace copper_server::base_objects {
                 {thunder, "thunder"},
             };
             return map.at(value);
+        }
+
+        operator _value() const {
+            return value;
         }
 
     private:

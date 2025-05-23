@@ -1,6 +1,8 @@
 #include <library/fast_task.hpp>
+#include <src/api/entity_id_map.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/entity.hpp>
+#include <src/protocolHelper/packets.hpp>
 #include <src/storage/world_data.hpp>
 #include <src/util/calculations.hpp>
 
@@ -130,9 +132,6 @@ namespace copper_server {
                 res["custom_inventory"] = std::move(custom_inventory_enbt);
             }
 
-            if (ride_entity_id)
-                res["ride_entity_id"] = *ride_entity_id;
-
             if (hidden_effects.size()) {
                 enbt::compound hidden_effects_enbt;
                 hidden_effects_enbt.reserve(hidden_effects.size());
@@ -166,22 +165,100 @@ namespace copper_server {
                 res["active_effects"] = std::move(active_effects_enbt);
             }
 
-            if (attached_to)
-                res["attached_to"] = *attached_to;
+            if (nbt.contains("ride_by_entity")) {
+                enbt::fixed_array arr;
+                arr.reserve(ride_by_entity.size());
+                for (auto& value : ride_by_entity)
+                    arr.push_back(value->copy_to_enbt());
+                res["ride_by_entity"] = std::move(arr);
+            }
+
+            if (attached_to) {
+                std::visit(
+                    [&res](auto& it) {
+                        if constexpr (std::is_same_v<std::decay_t<decltype(it)>, enbt::raw_uuid>)
+                            res["attached_to"] = it;
+                        else
+                            res["attached_to"] = it->id;
+                    },
+                    *attached_to
+                );
+            }
 
             if (attached.size()) {
                 enbt::fixed_array arr;
                 arr.reserve(attached.size());
-                for (auto& it : attached)
-                    arr.push_back(it);
+                for (auto& it : attached) {
+                    std::visit(
+                        [&arr](auto& it) {
+                            if constexpr (std::is_same_v<std::decay_t<decltype(it)>, enbt::raw_uuid>)
+                                arr.push_back(it);
+                            else
+                                arr.push_back(it->id);
+                        },
+                        it
+                    );
+                }
 
                 res["attached"] = std::move(arr);
             }
             return res;
         }
 
+        void resolve_entity(std::variant<entity_ref, enbt::raw_uuid>& it) {
+            if (std::holds_alternative<enbt::raw_uuid>(it)) {
+                auto entity = api::entity_id_map::get_entity(std::get<enbt::raw_uuid>(it));
+                if (entity)
+                    it = entity;
+            }
+        }
+
+        void reduce_effects(std::unordered_map<uint32_t, list_array<entity::effect>>& hidden_effects, std::unordered_map<uint32_t, entity::effect>& active_effects) {
+            list_array<uint32_t> experied_effects;
+
+            for (auto& [id, effect] : active_effects) {
+                if (!effect.duration) {
+                    experied_effects.push_back(id);
+                    continue;
+                }
+                if (effect.duration != UINT32_MAX)
+                    effect.duration--;
+            }
+
+            for (auto& [id, effects] : hidden_effects) {
+                for (auto& effect : effects) {
+                    if (!effect.duration)
+                        continue;
+                    if (effect.duration != UINT32_MAX)
+                        effect.duration--;
+                }
+
+                effects.remove_if([](const entity::effect& effect) {
+                    return !effect.duration;
+                });
+                effects.sort([](const entity::effect& effect0, const entity::effect& effect1) {
+                    return effect0.amplifier > effect1.amplifier;
+                });
+            }
+            for (auto& id : experied_effects) {
+                if (hidden_effects.contains(id))
+                    active_effects.at(id) = hidden_effects.at(id).take_front();
+                else
+                    active_effects.erase(id);
+            }
+        }
+
         void entity::tick() {
-            const_data().tick_callback(*this);
+            if (world_syncing_data) {
+                if (attached_to)
+                    resolve_entity(*attached_to);
+
+                for (auto& it : attached)
+                    resolve_entity(it);
+
+                const_data().tick_callback(*this);
+                reduce_effects(hidden_effects, active_effects);
+            }
         }
 
         bool entity::kill() {
@@ -189,12 +266,22 @@ namespace copper_server {
                 return false;
 
             died = true;
+            if (world_syncing_data)
+                world_syncing_data->world->entity_death(*this);
             return true;
         }
 
         void entity::force_kill() {
             const_data().pre_death_callback(*this, true);
             died = true;
+            if (world_syncing_data)
+                world_syncing_data->world->entity_death(*this);
+        }
+
+        void entity::erase() {
+            died = true;
+            if (world_syncing_data)
+                world_syncing_data->world->entity_deinit(*this);
         }
 
         bool entity::is_died() {
@@ -270,10 +357,6 @@ namespace copper_server {
                 }
             }
 
-            if (nbt.contains("ride_entity_id"))
-                res->ride_entity_id = (enbt::raw_uuid)nbt["ride_entity_id"];
-
-
             if (nbt.contains("hidden_effects")) {
                 auto hidden_effects_enbt = nbt["hidden_effects"].as_compound();
                 res->hidden_effects.reserve(hidden_effects_enbt.size());
@@ -316,81 +399,153 @@ namespace copper_server {
                 }
             }
 
+            if (nbt.contains("ride_by_entity")) {
+                auto ride_by_entity = nbt["ride_by_entity"].as_array();
+                res->ride_by_entity.reserve(ride_by_entity.size());
+                for (auto& value : ride_by_entity) {
+                    auto ride_entity = entity::load_from_enbt(value.as_compound());
+                    res->world_syncing_data->world->register_entity(ride_entity);
+                    ride_entity->set_ride_entity(res);
+                }
+            }
 
-            if (nbt.contains("attached_to"))
-                res->attached_to = nbt["attached_to"];
+            if (nbt.contains("attached_to")) {
+                auto& attached_to = nbt["attached_to"];
+                if (attached_to.is_uuid())
+                    res->attached_to = (enbt::raw_uuid)nbt["attached_to"];
+            }
 
             if (nbt.contains("attached")) {
                 auto attached_enbt = nbt["attached"].as_array();
                 res->attached.reserve(attached_enbt.size());
                 for (auto& value : attached_enbt)
-                    res->attached.push_back(value);
+                    res->attached.push_back((enbt::raw_uuid)value);
             }
             return res;
         }
 
+        void entity::teleport(util::VECTOR pos) {
+            if (world_syncing_data)
+                world_syncing_data->world->entity_teleport(*this, pos);
+            position = pos;
+        }
+
+        void entity::teleport(util::VECTOR pos, float yaw, float pitch) {
+            if (world_syncing_data) {
+                world_syncing_data->world->entity_teleport(*this, pos);
+                world_syncing_data->world->entity_rotation_changes(*this, {yaw, pitch});
+            }
+            position = pos;
+            rotation = {yaw, pitch};
+        }
+
         void entity::teleport(util::VECTOR pos, float yaw, float pitch, bool on_ground) {
-            //TODO
+            if (world_syncing_data) {
+                world_syncing_data->world->entity_teleport(*this, pos);
+                world_syncing_data->world->entity_rotation_changes(*this, {yaw, pitch});
+            }
+            position = pos;
+            rotation = {yaw, pitch};
+            set_on_ground(on_ground);
         }
 
-        void entity::teleport(int32_t x, int32_t y, int32_t z, float yaw, float pitch, bool on_ground) {
-            //TODO
-        }
-
-        void entity::set_ride_entity(enbt::raw_uuid entity) {
-            //TODO
+        void entity::set_ride_entity(entity_ref entity) {
+            if (entity && world_syncing_data) {
+                if (entity->world_syncing_data->world == world_syncing_data->world) {
+                    world_syncing_data->world->entity_rides(*this, entity->world_syncing_data->assigned_world_id);
+                    ride_entity = entity;
+                    return;
+                }
+            }
+            ride_entity = std::nullopt;
         }
 
         void entity::remove_ride_entity() {
-            //TODO
+            if (ride_entity && world_syncing_data) {
+                if ((*ride_entity)->world_syncing_data->world == world_syncing_data->world) {
+                    world_syncing_data->world->entity_leaves_ride(*this);
+                    ride_entity = nullptr;
+                    return;
+                }
+            }
+            ride_entity = std::nullopt;
         }
 
-        void entity::add_effect(uint32_t id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles) {
-            //TODO
+        void entity::add_effect(uint32_t id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) {
+            entity::effect to_add_effect{
+                .duration = duration,
+                .id = id,
+                .amplifier = amplifier,
+                .ambient = ambient,
+                .particles = show_particles,
+                .show_icon = show_icon,
+                .use_blend = use_blend,
+            };
+            if (auto it = active_effects.find(id); it != active_effects.end()) {
+                auto& effect = it->second;
+                if (effect.amplifier >= amplifier) {
+                    if (effect.duration < duration)
+                        hidden_effects[id].push_back(to_add_effect);
+                    if (world_syncing_data)
+                        world_syncing_data->world->entity_add_effect(*this, id, duration, amplifier, ambient, show_particles, show_icon, use_blend);
+                    return;
+                } else
+                    hidden_effects[id].push_back(effect);
+            }
+            active_effects[id] = to_add_effect;
+            if (world_syncing_data)
+                world_syncing_data->world->entity_add_effect(*this, id, duration, amplifier, ambient, show_particles, show_icon, use_blend);
         }
 
         void entity::remove_effect(uint32_t id) {
-            //TODO
+            active_effects.erase(id);
+            hidden_effects.erase(id);
+            if (world_syncing_data)
+                world_syncing_data->world->entity_remove_effect(*this, id);
         }
 
         void entity::remove_all_effects() {
-            //TODO
+            if (world_syncing_data)
+                for (auto& [id, effect] : active_effects)
+                    world_syncing_data->world->entity_remove_effect(*this, id);
+            active_effects.clear();
+            hidden_effects.clear();
         }
 
         bool entity::is_sleeping() const {
-            return false;
-            //TODO
+            return world_syncing_data ? world_syncing_data->is_sleeping : false;
         }
 
         bool entity::is_on_ground() const {
-            return false;
-            //TODO
+            return world_syncing_data ? world_syncing_data->on_ground : false;
         }
 
         bool entity::is_sneaking() const {
-            return false;
-            //TODO
+            return world_syncing_data ? world_syncing_data->is_sneaking : false;
         }
 
         bool entity::is_sprinting() const {
-            return false;
-            //TODO
+            return world_syncing_data ? world_syncing_data->is_sprinting : false;
         }
 
         void entity::set_sleeping(bool sleeping) {
-            //TODO
+            if (world_syncing_data)
+                world_syncing_data->is_sleeping = sleeping;
         }
 
         void entity::set_on_ground(bool on_ground) {
-            //TODO
+            if (world_syncing_data)
+                world_syncing_data->on_ground = on_ground;
         }
 
         void entity::set_sneaking(bool sneaking) {
-            //TODO
+            if (world_syncing_data)
+                world_syncing_data->is_sneaking = sneaking;
         }
 
         void entity::set_sprinting(bool sprinting) {
-            //TODO
+            if (world_syncing_data)
+                world_syncing_data->is_sprinting = sprinting;
         }
 
         float entity::get_health() const {
@@ -398,19 +553,38 @@ namespace copper_server {
         }
 
         void entity::set_health(float health) {
-            //TODO
+            nbt.at("health") = health;
+            if(assigned_player)
+                copper_server::packets::play::setHealth(*assigned_player, health, get_food(), get_saturation());
+
+            if (health <= 0.0f)
+                force_kill();
         }
 
         void entity::add_health(float health) {
-            //TODO
+            set_health(get_health() + health);
         }
 
-        void entity::damage(float health) {
-            //TODO
+        void entity::damage(float health, int32_t type_id, std::optional<util::VECTOR> pos) {
+            if (world_syncing_data)
+                world_syncing_data->world->entity_damage(*this, health, type_id, pos);
+            reduce_health(health);
+        }
+
+        void entity::damage(float health, int32_t type_id, entity_ref& source, std::optional<util::VECTOR> pos) {
+            if (world_syncing_data)
+                world_syncing_data->world->entity_damage(*this, health, type_id, source, pos);
+            reduce_health(health);
+        }
+
+        void entity::damage(float health, int32_t type_id, entity_ref& source, entity_ref& source_direct, std::optional<util::VECTOR> pos) {
+            if (world_syncing_data)
+                world_syncing_data->world->entity_damage(*this, health, type_id, source, source_direct, pos);
+            reduce_health(health);
         }
 
         void entity::reduce_health(float health) {
-            //TODO
+            set_health(get_health() - health);
         }
 
         uint8_t entity::get_food() const {
@@ -418,15 +592,17 @@ namespace copper_server {
         }
 
         void entity::set_food(uint8_t food) {
-            //TODO
+            nbt.at("food") = food;
+            if (assigned_player)
+                copper_server::packets::play::setHealth(*assigned_player, get_health(), food, get_saturation());
         }
 
         void entity::add_food(uint8_t food) {
-            //TODO
+            set_food(get_health() + food);
         }
 
         void entity::reduce_food(uint8_t food) {
-            //TODO
+            set_food(get_health() - food);
         }
 
         float entity::get_saturation() const {
@@ -434,15 +610,17 @@ namespace copper_server {
         }
 
         void entity::set_saturation(float saturation) {
-            //TODO
+            nbt.at("saturation") = saturation;
+            if (assigned_player)
+                copper_server::packets::play::setHealth(*assigned_player, get_health(), get_food(), saturation);
         }
 
         void entity::add_saturation(float saturation) {
-            //TODO
+            set_saturation(get_saturation() - saturation);
         }
 
         void entity::reduce_saturation(float saturation) {
-            //TODO
+            set_saturation(get_saturation() - saturation);
         }
 
         float entity::get_breath() const {
@@ -502,10 +680,6 @@ namespace copper_server {
         }
 
         void entity::set_selected_item(uint8_t selected_item) {
-            //TODO
-        }
-
-        void entity::set_position(util::VECTOR pos) {
             //TODO
         }
 

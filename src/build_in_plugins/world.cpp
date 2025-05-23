@@ -134,7 +134,7 @@ namespace copper_server::build_in_plugins {
     }
 
     WorldManagementPlugin::WorldManagementPlugin()
-        : worlds_storage(api::configuration::get(), api::configuration::get().server.get_worlds_path()) {
+        : worlds_storage(api::configuration::get().server.get_worlds_path()) {
     }
 
     void WorldManagementPlugin::OnInitialization(const PluginRegistrationPtr& self) {

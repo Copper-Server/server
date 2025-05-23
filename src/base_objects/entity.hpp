@@ -119,63 +119,115 @@ namespace copper_server {
             std::function<int32_t(const entity& checking_entity)> get_object_field;                        //optional
 
             struct world_processor { //used to handle changes applied for entity and implement AI or send changes to client
-                void (*entity_init)(entity& self, base_objects::entity_ref&);
+                void (*entity_init)(entity& self, entity&) = nullptr;
 
-                void (*entity_teleport)(entity& self, base_objects::entity_ref&, util::VECTOR new_pos);
-                void (*entity_move)(entity& self, base_objects::entity_ref&, util::VECTOR move);
-                void (*entity_look_changes)(entity& self, base_objects::entity_ref&, util::ANGLE_DEG new_rotation);
-                void (*entity_rotation_changes)(entity& self, base_objects::entity_ref&, util::ANGLE_DEG new_rotation);
-                void (*entity_motion_changes)(entity& self, base_objects::entity_ref&, util::VECTOR new_motion);
+                void (*entity_teleport)(entity& self, entity&, util::VECTOR new_pos) = nullptr;
+                void (*entity_move)(entity& self, entity&, util::VECTOR move) = nullptr;
+                void (*entity_look_changes)(entity& self, entity&, util::ANGLE_DEG new_rotation) = nullptr;
+                void (*entity_rotation_changes)(entity& self, entity&, util::ANGLE_DEG new_rotation) = nullptr;
+                void (*entity_motion_changes)(entity& self, entity&, util::VECTOR new_motion) = nullptr;
 
-                void (*entity_rides)(entity& self, base_objects::entity_ref&, base_objects::entity_ref& other_entity_id);
-                void (*entity_leaves_ride)(entity& self, base_objects::entity_ref&);
+                void (*entity_rides)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
+                void (*entity_leaves_ride)(entity& self, entity&) = nullptr;
 
-                void (*entity_attach)(entity& self, base_objects::entity_ref&, base_objects::entity_ref& other_entity_id);
-                void (*entity_detach)(entity& self, base_objects::entity_ref&, base_objects::entity_ref& other_entity_id);
+                void (*entity_attach)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
+                void (*entity_detach)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
 
-                void (*entity_attack)(entity& self, base_objects::entity_ref&, base_objects::entity_ref& other_entity_id);
-                void (*entity_iteract)(entity& self, base_objects::entity_ref&, base_objects::entity_ref& other_entity_id);
-                void (*entity_iteract_block)(entity& self, base_objects::entity_ref&, int64_t x, int64_t y, int64_t z);
+                void (*entity_damage)(entity& self, entity&, float health, int32_t type_id, const std::optional<util::VECTOR>& pos);
+                void (*entity_damage_with_source)(entity& self, entity&, float health, int32_t type_id, base_objects::entity_ref& source, const std::optional<util::VECTOR>& pos);
+                void (*entity_damage_with_sources)(entity& self, entity&, float health, int32_t type_id, base_objects::entity_ref& source, base_objects::entity_ref& source_direct, const std::optional<util::VECTOR>& pos);
 
-                void (*entity_break)(entity& self, base_objects::entity_ref&, int64_t x, int64_t y, int64_t z, uint8_t state); //form 0 to 9, other ignored
-                void (*entity_cancel_break)(entity& self, base_objects::entity_ref&, int64_t x, int64_t y, int64_t z);
-                void (*entity_finish_break)(entity& self, base_objects::entity_ref&, int64_t x, int64_t y, int64_t z);
-                void (*entity_place_block)(entity& self, base_objects::entity_ref&, int64_t x, int64_t y, int64_t z, const base_objects::block&);
-                void (*entity_place_block_entity)(entity& self, base_objects::entity_ref&, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref);
+                void (*entity_attack)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
+                void (*entity_iteract)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
+                void (*entity_iteract_block)(entity& self, entity&, int64_t x, int64_t y, int64_t z) = nullptr;
 
-
-                void (*entity_animation)(entity& self, base_objects::entity_ref&, base_objects::entity_animation animation);
-                void (*entity_event)(entity& self, base_objects::entity_ref&, base_objects::entity_event status);
-
-                void (*entity_death)(entity& self, base_objects::entity_ref&);
-                void (*entity_deinit)(entity& self, base_objects::entity_ref&);
+                void (*entity_break)(entity& self, entity&, int64_t x, int64_t y, int64_t z, uint8_t state) = nullptr; //form 0 to 9, other ignored
+                void (*entity_cancel_break)(entity& self, entity&, int64_t x, int64_t y, int64_t z) = nullptr;
+                void (*entity_finish_break)(entity& self, entity&, int64_t x, int64_t y, int64_t z) = nullptr;
+                void (*entity_place_block)(entity& self, entity&, int64_t x, int64_t y, int64_t z, const base_objects::block&) = nullptr;
+                void (*entity_place_block_entity)(entity& self, entity&, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref) = nullptr;
 
 
-                void (*notify_block_event)(entity& self, const base_objects::world::block_action& action, int64_t x, int64_t y, int64_t z);
-                void (*notify_block_change)(entity& self, int64_t x, int64_t y, int64_t z, const base_objects::block& block);
-                void (*notify_block_entity_change)(entity& self, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block);
-                void (*notify_block_destroy_change)(entity& self, int64_t x, int64_t y, int64_t z, const base_objects::block& block);
-                void (*notify_block_entity_destroy_change)(entity& self, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block);
-                void (*notify_biome_change)(entity& self, int64_t x, int64_t y, int64_t z, uint32_t);
+                void (*entity_animation)(entity& self, entity&, base_objects::entity_animation animation) = nullptr;
+                void (*entity_event)(entity& self, entity&, base_objects::entity_event status) = nullptr;
 
-                void (*notify_sub_chunk)(entity& self, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const world::sub_chunk_data&); //used after multiply changes
-                void (*notify_chunk)(entity& self, int64_t chunk_x, int64_t chunk_z, const storage::chunk_data&);                        //used after multiply changes
+                void (*entity_add_effect)(entity& self, entity&, uint32_t id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) = nullptr;
+                void (*entity_remove_effect)(entity& self, entity&, uint32_t id) = nullptr;
 
-                void (*notify_sub_chunk_light)(entity& self, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const world::sub_chunk_data&); //used after multiply changes
-                void (*notify_chunk_light)(entity& self, int64_t chunk_x, int64_t chunk_z, const storage::chunk_data&);                        //used after multiply changes
+                void (*entity_death)(entity& self, entity&) = nullptr;
+                void (*entity_deinit)(entity& self, entity&) = nullptr;
 
-                void (*notify_sub_chunk_blocks)(entity& self, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const world::sub_chunk_data&); //used after multiply changes
-                void (*notify_chunk_blocks)(entity& self, int64_t chunk_x, int64_t chunk_z, const storage::chunk_data&);                        //used after multiply changes
 
-                void (*on_transfer)(entity& self, storage::world_data& old_world, storage::world_data& new_world);
+                void (*notify_block_event)(entity& self, const base_objects::world::block_action& action, int64_t x, int64_t y, int64_t z) = nullptr;
+                void (*notify_block_change)(entity& self, int64_t x, int64_t y, int64_t z, const base_objects::block& block) = nullptr;
+                void (*notify_block_entity_change)(entity& self, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block) = nullptr;
+                void (*notify_block_destroy_change)(entity& self, int64_t x, int64_t y, int64_t z, const base_objects::block& block) = nullptr;
+                void (*notify_block_entity_destroy_change)(entity& self, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block) = nullptr;
+                void (*notify_biome_change)(entity& self, int64_t x, int64_t y, int64_t z, uint32_t) = nullptr;
+
+                void (*notify_sub_chunk)(entity& self, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const world::sub_chunk_data&) = nullptr; //used after multiply changes
+                void (*notify_chunk)(entity& self, int64_t chunk_x, int64_t chunk_z, const storage::chunk_data&) = nullptr;                        //used after multiply changes
+
+                void (*notify_sub_chunk_light)(entity& self, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const world::sub_chunk_data&) = nullptr; //used after multiply changes
+                void (*notify_chunk_light)(entity& self, int64_t chunk_x, int64_t chunk_z, const storage::chunk_data&) = nullptr;                        //used after multiply changes
+
+                void (*notify_sub_chunk_blocks)(entity& self, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const world::sub_chunk_data&) = nullptr; //used after multiply changes
+                void (*notify_chunk_blocks)(entity& self, int64_t chunk_x, int64_t chunk_z, const storage::chunk_data&) = nullptr;                        //used after multiply changes
+
+                void (*on_transfer)(entity& self, storage::world_data& old_world, storage::world_data& new_world) = nullptr;
             };
 
             std::shared_ptr<world_processor> processor;
 
             std::unordered_map<uint32_t, uint32_t> internal_entity_aliases; //protocol id -> entity id
 
+            struct metadata_sync {
+                uint8_t index;
 
-            //entity can be added without reload, but it can be removed only by `reset_entities`
+                enum class type_t : uint8_t {
+                    byte,
+                    varint,
+                    varlong,
+                    _float,
+                    _string,
+                    text,
+                    opt_text,
+                    slot,
+                    boolean,
+                    euler_angle,
+                    postion,
+                    opt_position,
+                    direction,
+                    entity_refrence,
+                    block_state,
+                    opt_block_state,
+                    nbt,
+                    particle,
+                    particles,
+                    villager_data,
+                    opt_varint,
+                    pose,
+                    cat_variant,
+                    cow_variant,
+                    wolf_variant,
+                    wolf_sound_variant,
+                    frog_variant,
+                    pig_variant,
+                    chicken_variant,
+                    global_pos,
+                    painting_variant,
+                    sniffer_state,
+                    armadillo_state,
+                    vector3,
+                    quaternion,
+                };
+                type_t type;
+            };
+
+            std::unordered_map<std::string, metadata_sync> metadata;
+
+
+            //entity can be added without reload, but it could be removed only by `reset_entities`
             //multi threaded
             static const entity_data& get_entity(uint16_t id);
             static const entity_data& get_entity(const std::string& id);
@@ -197,6 +249,8 @@ namespace copper_server {
                 uint8_t amplifier : 8 = 1;
                 bool ambient : 1 = false;
                 bool particles : 1 = true;
+                bool show_icon : 1 = true;
+                bool use_blend : 1 = false; //for darkness
             };
 
             struct world_syncing {
@@ -205,7 +259,11 @@ namespace copper_server {
                 uint64_t assigned_world_id = -1;
                 storage::world_data* world = nullptr;
                 uint32_t attached_to_distance = 0;
-                bool on_ground = true; //local calculation
+                uint16_t keep_alive_ticks = 0; //used for handling entity animation
+                bool on_ground : 1 = true;
+                bool is_sleeping : 1 = false;
+                bool is_sneaking : 1 = false;
+                bool is_sprinting : 1 = false;
             };
 
             enbt::raw_uuid id;
@@ -213,9 +271,10 @@ namespace copper_server {
             enbt::compound server_data;
             std::unordered_map<uint32_t, slot_data> inventory;
             std::unordered_map<std::string, std::unordered_map<uint32_t, slot_data>> custom_inventory;
-            std::optional<enbt::raw_uuid> ride_entity_id;
-            std::optional<enbt::raw_uuid> attached_to; //this entity follows entity
-            list_array<enbt::raw_uuid> attached;       //entities follows this entity
+            std::optional<entity_ref> ride_entity;
+            list_array<entity_ref> ride_by_entity;                               //used for storing entities, first element is main entity
+            std::optional<std::variant<entity_ref, enbt::raw_uuid>> attached_to; //this entity follows entity
+            list_array<std::variant<entity_ref, enbt::raw_uuid>> attached;       //entities follows this entity
 
 
             std::unordered_map<uint32_t, list_array<effect>> hidden_effects; //effects with lower amplifier than active effect but longer duration
@@ -248,7 +307,7 @@ namespace copper_server {
             //  bool is_sprinting = false;
             //  bool is_sneaking = false;
             //
-            //  calculated_values { //does not trigger `changes_event` event, calculated every tick
+            //  calculated_values {
             //      float absorption_health;
             //      float max_health;
             //      float acceleration; //falling speed
@@ -273,20 +332,22 @@ namespace copper_server {
 
             bool kill();
             void force_kill();
+            void erase(); //same as force_kill but without animation and other handling(pre_death_callback not called)
             bool is_died();
             const entity_data& const_data();
 
             entity_ref copy() const;
             enbt::compound copy_to_enbt() const;
 
+            void teleport(util::VECTOR pos);
+            void teleport(util::VECTOR pos, float yaw, float pitch);
             void teleport(util::VECTOR pos, float yaw, float pitch, bool on_ground);
-            void teleport(int32_t x, int32_t y, int32_t z, float yaw, float pitch, bool on_ground);
 
 
-            void set_ride_entity(enbt::raw_uuid entity);
+            void set_ride_entity(entity_ref entity);
             void remove_ride_entity();
 
-            void add_effect(uint32_t id, uint32_t duration, uint8_t amplifier = 1, bool ambient = false, bool show_particles = true);
+            void add_effect(uint32_t id, uint32_t duration, uint8_t amplifier = 1, bool ambient = false, bool show_particles = true, bool show_icon = true, bool use_blend = false);
             void remove_effect(uint32_t id);
             void remove_all_effects();
 
@@ -303,8 +364,10 @@ namespace copper_server {
             float get_health() const;
             void set_health(float health);
             void add_health(float health);
-            void damage(float health);
             void reduce_health(float health);
+            void damage(float health, int32_t type_id, std::optional<util::VECTOR> pos);
+            void damage(float health, int32_t type_id, entity_ref& source, std::optional<util::VECTOR> pos);
+            void damage(float health, int32_t type_id, entity_ref& source, entity_ref& source_direct, std::optional<util::VECTOR> pos);
 
             uint8_t get_food() const;
             void set_food(uint8_t food);
@@ -334,8 +397,6 @@ namespace copper_server {
             uint8_t get_selected_item() const;
             void set_selected_item(uint8_t selected_item);
 
-
-            void set_position(util::VECTOR pos);
             void move(float side, float forward, bool jump = false, bool sneaking = false);
             void look(float yaw, float pitch);
             void look_at(float x, float y, float z);
@@ -343,8 +404,6 @@ namespace copper_server {
 
             //looks only if this and another entity registered to same world
             void look_at(const entity_ref& entity);
-            void look_at(uint64_t world_entity_id);
-            void look_at(enbt::raw_uuid id);
 
             util::VECTOR get_motion() const;
             void set_motion(util::VECTOR mot);
@@ -360,8 +419,6 @@ namespace copper_server {
 
             //attack passes only if this and another entity registered to same world
             void attack_from_this(const entity_ref& entity);
-            void attack_from_this(uint64_t world_entity_id);
-            void attack_from_this(enbt::raw_uuid id);
 
             void breaking_block(int64_t global_x, uint64_t global_y, int64_t global_z, uint32_t time);
             void place_block(int64_t global_x, uint64_t global_y, int64_t global_z, const block&);

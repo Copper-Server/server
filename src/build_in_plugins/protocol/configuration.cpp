@@ -1,5 +1,6 @@
 #include <src/api/configuration.hpp>
 #include <src/api/protocol.hpp>
+#include <src/api/tags.hpp>
 #include <src/base_objects/network/tcp/accept_packet_registry.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
@@ -111,12 +112,12 @@ namespace copper_server::build_in_plugins::protocol::play_770 {
             {
                 base_objects::packets::tag_mapping block;
                 block.registry = "minecraft:block";
-                for (auto& [id, values] : registers::tags.at("block").at("minecraft")) {
+                for (auto& [id, values] : api::tags::view_tag(api::tags::builtin_entry::block, "minecraft")) {
                     block.tags.push_back(
                         {.tag_name = id,
                          .entires = values.convert_fn(
                              [&session](auto& it) -> int32_t {
-                                 return base_objects::block::get_block_id(it, session->protocol_version);
+                                 return base_objects::block::get_protocol_block_id(it, session->protocol_version);
                              }
                          )}
                     );
@@ -124,7 +125,7 @@ namespace copper_server::build_in_plugins::protocol::play_770 {
 
                 base_objects::packets::tag_mapping item;
                 item.registry = "minecraft:item";
-                for (auto& [id, values] : registers::tags.at("item").at("minecraft")) {
+                for (auto& [id, values] : api::tags::view_tag(api::tags::builtin_entry::item, "minecraft")) {
                     item.tags.push_back(
                         {.tag_name = id,
                          .entires = values.convert_fn(
@@ -136,7 +137,7 @@ namespace copper_server::build_in_plugins::protocol::play_770 {
                 }
                 base_objects::packets::tag_mapping fluid;
                 fluid.registry = "minecraft:fluid";
-                for (auto& [id, values] : registers::tags.at("fluid").at("minecraft")) {
+                for (auto& [id, values] : api::tags::view_tag("minecraft:fluid", "minecraft")) {
                     fluid.tags.push_back(
                         {.tag_name = id,
                          .entires = registers::convert_reg_pro_id("minecraft:fluid", values, session->protocol_version)
@@ -145,7 +146,7 @@ namespace copper_server::build_in_plugins::protocol::play_770 {
                 }
                 base_objects::packets::tag_mapping worldgen_biome;
                 worldgen_biome.registry = "minecraft:worldgen/biome";
-                for (auto& [id, values] : registers::tags.at("worldgen/biome").at("minecraft")) {
+                for (auto& [id, values] : api::tags::view_tag("minecraft:worldgen/biome", "minecraft")) {
                     worldgen_biome.tags.push_back(
                         {.tag_name = id,
                          .entires = values.convert_fn([&session](auto& it) -> int32_t {
@@ -156,17 +157,16 @@ namespace copper_server::build_in_plugins::protocol::play_770 {
                 }
                 base_objects::packets::tag_mapping entity_type;
                 entity_type.registry = "minecraft:entity_type";
-                for (auto& [id, values] : registers::tags.at("entity_type").at("minecraft")) {
+                for (auto& [id, values] : api::tags::view_tag(api::tags::builtin_entry::entity_type, "minecraft")) {
                     entity_type.tags.push_back(
                         {.tag_name = id,
-                         .entires = registers::convert_reg_pro_id("minecraft:entity_type", values, session->protocol_version)
-                        }
+                         .entires = values.convert_fn([&session](auto& it) -> int32_t { return base_objects::entity_data::get_entity(it).internal_entity_aliases.at(session->protocol_version); })}
                     );
                 }
 
                 base_objects::packets::tag_mapping game_event;
                 game_event.registry = "minecraft:game_event";
-                for (auto& [id, values] : registers::tags.at("game_event").at("minecraft")) {
+                for (auto& [id, values] : api::tags::view_tag("minecraft:game_event", "minecraft")) {
                     game_event.tags.push_back(
                         {.tag_name = id,
                          .entires = registers::convert_reg_pro_id("minecraft:game_event", values, session->protocol_version)

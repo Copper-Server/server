@@ -221,6 +221,58 @@ namespace copper_server::api::tags {
             throw std::runtime_error("Tag " + _namespace + ":" + _tag + " in entry " + entry + " does not allow to override.");
     }
 
+    std::unordered_map<std::string, list_array<int32_t>> view_tag(builtin_entry entry, std::string_view _namespace) {
+        auto ns = tags.find(builtin_entry_to_string[(uint8_t)entry]);
+        if (ns == tags.end())
+            return {};
+        auto t = ns->second.find((std::string)_namespace);
+        if (t == ns->second.end())
+            return {};
+        std::unordered_map<std::string, list_array<int32_t>> res;
+        res.reserve(t->second.size());
+        for (auto&& [tag, decl] : t->second)
+            res[tag] = decl.as_ids(entry);
+        return res;
+    }
+
+    std::unordered_map<std::string, list_array<std::string>> view_tag(std::string_view custom_entry, std::string_view _namespace) {
+        auto ns = tags.find((std::string)custom_entry);
+        if (ns == tags.end())
+            return {};
+        auto t = ns->second.find((std::string)_namespace);
+        if (t == ns->second.end())
+            return {};
+        std::unordered_map<std::string, list_array<std::string>> res;
+        res.reserve(t->second.size());
+        for (auto&& [tag, decl] : t->second)
+            res[tag] = decl.items;
+        return res;
+    }
+
+    std::unordered_map<std::string, std::unordered_map<std::string, list_array<int32_t>>> view_entry(builtin_entry entry) {
+        auto ns = tags.find(builtin_entry_to_string[(uint8_t)entry]);
+        if (ns == tags.end())
+            return {};
+        std::unordered_map<std::string, std::unordered_map<std::string, list_array<int32_t>>> res;
+        res.reserve(ns->second.size());
+        for (auto&& [namespace_, decl] : ns->second)
+            for (auto&& [tag, decl] : decl)
+                res[namespace_][tag] = decl.as_ids(entry);
+        return res;
+    }
+
+    std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>> view_entry(std::string_view custom_entry) {
+        auto ns = tags.find((std::string)custom_entry);
+        if (ns == tags.end())
+            return {};
+        std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>> res;
+        res.reserve(ns->second.size());
+        for (auto&& [namespace_, decl] : ns->second)
+            for (auto&& [tag, decl] : decl)
+                res[namespace_][tag] = decl.items;
+        return res;
+    }
+
     void resolve_cross_references(bool secold_preset) {
         decltype(tags) tmp_obj = tags;
         for (auto&& [entry, decl] : tmp_obj) {

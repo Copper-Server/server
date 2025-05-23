@@ -765,7 +765,7 @@ namespace copper_server {
                 return call_function_selector(play, updateAttributes, entity_id, properties)
             }
 
-            base_objects::network::response entityEffect(base_objects::SharedClientData& client, int32_t entity_id, int32_t effect_id, int32_t amplifier, int32_t duration, int8_t flags){
+            base_objects::network::response entityEffect(base_objects::SharedClientData& client, int32_t entity_id, int32_t effect_id, int32_t amplifier, int32_t duration, base_objects::packets::effect_flags flags){
                 return call_function_selector(play, entityEffect, entity_id, effect_id, amplifier, duration, flags)
             }
 

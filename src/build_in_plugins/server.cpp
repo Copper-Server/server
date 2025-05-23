@@ -222,8 +222,8 @@ namespace copper_server::build_in_plugins {
             client,
             player_entity_id,
             api::configuration::get().game_play.reduced_debug_screen
-                ? base_objects::packets::entity_event_id::enable_reduced_debug_screen
-                : base_objects::packets::entity_event_id::disable_reduced_debug_screen
+                ? base_objects::entity_event::enable_reduced_debug_screen
+                : base_objects::entity_event::disable_reduced_debug_screen
         );
         response += packets::play::commands(client, 0, manager.compile_to_graph());
         auto [yaw, pitch] = util::to_yaw_pitch(client_ref->player_data.assigned_entity->rotation);
@@ -241,7 +241,7 @@ namespace copper_server::build_in_plugins {
             0
         );
 
-        api::world::register_player(client_ref);
+        api::world::register_entity(world_id, client_ref->player_data.assigned_entity);
 
 
         pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::play, [&](auto&& plugin) {

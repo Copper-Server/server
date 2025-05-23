@@ -21,6 +21,12 @@ namespace copper_server::api::tags {
     const list_array<int32_t>& unfold_tag(builtin_entry entry, std::string_view tag);
     const list_array<std::string>& unfold_tag(std::string_view custom_entry, std::string_view tag);
 
+    std::unordered_map<std::string, list_array<int32_t>> view_tag(builtin_entry entry, std::string_view _namespace);
+    std::unordered_map<std::string, list_array<std::string>> view_tag(std::string_view custom_entry, std::string_view _namespace);
+
+    std::unordered_map<std::string, std::unordered_map<std::string, list_array<int32_t>>> view_entry(builtin_entry entry);
+    std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>> view_entry(std::string_view custom_entry);
+
     int32_t resolve_entry_item(builtin_entry entry, const std::string& value);
 
     void loading_stage_begin();//clear entries

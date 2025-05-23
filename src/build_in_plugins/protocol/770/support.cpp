@@ -2660,14 +2660,14 @@ namespace copper_server::build_in_plugins::protocol::play_770 {
                 return res;
             }
 
-            base_objects::network::response entityEffect(int32_t entity_id, int32_t effect_id, int32_t amplifier, int32_t duration, int8_t flags) override {
+            base_objects::network::response entityEffect(int32_t entity_id, int32_t effect_id, int32_t amplifier, int32_t duration, base_objects::packets::effect_flags flags) override {
                 list_array<uint8_t> packet;
                 packet.push_back(0x7D);
                 WriteVar<int32_t>(entity_id, packet);
                 WriteVar<int32_t>(effect_id, packet);
                 WriteVar<int32_t>(amplifier, packet);
                 WriteVar<int32_t>(duration, packet);
-                packet.push_back(flags);
+                packet.push_back(flags.raw);
                 return base_objects::network::response::answer({std::move(packet)});
             }
 

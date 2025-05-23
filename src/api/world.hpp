@@ -4,6 +4,13 @@
 #include <functional>
 #include <src/storage/world_data.hpp>
 
+namespace copper_server::base_objects {
+    struct SharedClientData;
+    template <typename T>
+    class atomic_holder;
+    using client_data_holder = atomic_holder<SharedClientData>;
+}
+
 namespace copper_server::api::world {
     void unload(uint64_t world_id);
     void save(uint64_t world_id);

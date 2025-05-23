@@ -1,3 +1,6 @@
+#include <boost/iostreams/filter/zstd.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <library/enbt/io_tools.hpp>
 #include <resources/include.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/recipe.hpp>
@@ -308,6 +311,66 @@ namespace copper_server::resources {
             }
             if (obj.contains("loot_table"))
                 data.data["loot_table"] = util::conversions::json::from_json(obj.at("loot_table"));
+
+            {
+                using type = base_objects::entity_data::metadata_sync::type_t;
+                //global_pos,
+                static std::unordered_map<std::string, type> types = {
+                    {"Byte", type::byte},
+                    {"Integer", type::varint},
+                    {"Long", type::varlong},
+                    {"Boolean", type::boolean},
+                    {"Float", type::_float},
+                    {"OptionalInt", type::opt_varint},
+                    {"NBT", type::nbt},
+                    {"NbtCompound", type::nbt},
+                    {"String", type::_string},
+
+                    {"Text", type::text},
+                    {"Optional<Text>", type::opt_text},
+
+                    {"ItemStack", type::slot},
+
+                    {"EulerAngle", type::euler_angle},
+                    {"Vector3f", type::vector3},
+                    {"Quaternionf", type::quaternion},
+
+                    {"BlockPos", type::postion},
+                    {"Optional<BlockPos>", type::opt_position},
+
+                    {"Direction", type::direction},
+                    {"EntityPose", type::pose},
+                    {"BlockState", type::block_state},
+                    {"Optional<BlockState>", type::opt_block_state},
+
+                    {"VillagerData", type::villager_data},
+
+                    {"ParticleEffect", type::particle},
+                    {"List<ParticleEffect>", type::particles},
+
+                    {"SnifferEntity$State", type::sniffer_state},
+                    {"ArmadilloEntity$State", type::armadillo_state},
+                    {"RegistryEntry<CatVariant>", type::cat_variant},
+                    {"RegistryEntry<ChickenVariant>", type::chicken_variant},
+                    {"RegistryEntry<CowVariant>", type::cow_variant},
+                    {"RegistryEntry<FrogVariant>", type::frog_variant},
+                    {"RegistryEntry<PaintingVariant>", type::painting_variant},
+                    {"RegistryEntry<PigVariant>", type::pig_variant},
+                    {"RegistryEntry<WolfVariant>", type::wolf_variant},
+                    {"RegistryEntry<WolfSoundVariant>", type::wolf_sound_variant},
+
+                    {"Optional<LazyEntityReference<LivingEntity>>", type::entity_refrence},
+                };
+                auto metadata = obj.at("metadata").as_array();
+                data.metadata.reserve(metadata.size());
+                for (auto& meta : obj.at("metadata").as_array()) {
+                    base_objects::entity_data::metadata_sync metadata_sync;
+                    metadata_sync.index = meta.at("network_id").to_number<uint8_t>();
+                    std::string name = (std::string)meta.at("field_name").as_string();
+                    metadata_sync.type = types.at((std::string)meta.at("type_name").as_string());
+                    data.metadata[name] = std::move(metadata_sync);
+                }
+            }
 
             data.name = (std::string)id;
             data.translation_resource_key = obj.at("translation_key").as_string();
@@ -968,7 +1031,6 @@ namespace copper_server::resources {
         load_file_wolfSoundVariant(js_object::get_object(res.value()), id);
     }
 
-
     void load_file_dimensionType(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
         check_override(dimensionTypes, id, "dimension type");
         DimensionType type;
@@ -1477,132 +1539,186 @@ namespace copper_server::resources {
                     throw std::runtime_error("Unknown type: " + std::string(type));
             }
         }
-        auto parsed = boost::json::parse(resources::registry::blocks).as_object();
+
+        std::string tmp;
         {
-            auto& shapes = parsed.at("shapes").as_array();
-            base_objects::static_block_data::all_shapes.reserve(shapes.size());
-            for (auto& item : shapes) {
-                auto& min = item.at("min");
-                auto& max = item.at("max");
-                base_objects::static_block_data::all_shapes.push_back(
-                    base_objects::shape_data{
-                        .min_x = min.at(0).to_number<double>(),
-                        .min_y = min.at(1).to_number<double>(),
-                        .min_z = min.at(2).to_number<double>(),
-                        .max_x = max.at(0).to_number<double>(),
-                        .max_y = max.at(1).to_number<double>(),
-                        .max_z = max.at(2).to_number<double>()
-                    }
-                );
-            }
+            boost::iostreams::filtering_istream filter;
+            boost::iostreams::array_source source(resources::registry::blocks.data(), resources::registry::blocks.size());
+            filter.push(boost::iostreams::zstd_decompressor());
+            filter.push(source);
+            std::ostringstream buffer;
+            buffer << filter.rdbuf();
+            tmp = std::move(buffer).str();
         }
-        {
-            auto& block_entity_types = parsed.at("block_entity_types").as_array();
-            base_objects::static_block_data::block_entity_types.reserve(block_entity_types.size());
-            for (auto& item : block_entity_types)
-                base_objects::static_block_data::block_entity_types.push_back((std::string)item.as_string());
-        }
-        {
-            auto& blocks = parsed.at("blocks").as_array();
-            size_t blocks_count = 0;
-            for (auto&& decl_ : blocks)
-                blocks_count += decl_.at("states").as_array().size();
+        std::stringstream ss(std::move(tmp));
+        enbt::io_helper::value_read_stream read_stream(ss);
+        read_stream.peek_at("shapes", [](auto& shapes) {
+            shapes.iterate(
+                [](auto size) {
+                    base_objects::static_block_data::all_shapes.reserve(size);
+                },
+                [&](auto& shape) {
+                    auto item = shape.read();
+                    auto& min = item.at("min");
+                    auto& max = item.at("max");
+                    base_objects::static_block_data::all_shapes.push_back(
+                        base_objects::shape_data{
+                            .min_x = min.at(0),
+                            .min_y = min.at(1),
+                            .min_z = min.at(2),
+                            .max_x = max.at(0),
+                            .max_y = max.at(1),
+                            .max_z = max.at(2)
+                        }
+                    );
+                }
+            );
+        });
 
-            base_objects::block::access_full_block_data(std::function([&](std::vector<std::shared_ptr<base_objects::static_block_data>>& full_block_data_, std::unordered_map<std::string, std::shared_ptr<base_objects::static_block_data>>& named_full_block_data) {
-                full_block_data_.resize(blocks_count);
-                for (auto&& decl_ : blocks) {
-                    auto& decl = decl_.as_object();
-                    auto name = "minecraft:" + std::string(decl.at("name").as_string());
-                    if (named_full_block_data.contains((std::string)name))
-                        throw std::runtime_error("Duplicate block name: " + (std::string)name);
-                    auto states = decl.at("states").as_array();
 
-                    auto default_state_data = std::make_shared<base_objects::static_block_data>();
-                    default_state_data->name = name;
-                    default_state_data->general_block_id = decl.at("id").to_number<base_objects::block_id_t>();
-                    default_state_data->translation_key = decl.at("translation_key").as_string();
-                    default_state_data->slipperiness = decl.at("slipperiness").to_number<float>();
-                    default_state_data->velocity_multiplier = decl.at("velocity_multiplier").to_number<float>();
-                    default_state_data->jump_velocity_multiplier = decl.at("jump_velocity_multiplier").to_number<float>();
-                    default_state_data->hardness = decl.at("hardness").to_number<float>();
-                    default_state_data->blast_resistance = decl.at("blast_resistance").to_number<float>();
-                    default_state_data->default_drop_item_id = decl.at("item_id").to_number<int32_t>();
-                    default_state_data->map_color_rgb = decl.at("map_color_rgb").to_number<int32_t>();
-                    if (decl.contains("loot_table"))
-                        *(default_state_data->loot_table = std::make_shared<enbt::compound>()) = util::conversions::json::from_json(decl.at("loot_table"));
+        read_stream.peek_at("block_entity_types", [](auto& block_entity_types) {
+            block_entity_types.iterate(
+                [](auto size) {
+                    base_objects::static_block_data::block_entity_types.reserve(size);
+                },
+                [&](auto& item) {
+                    base_objects::static_block_data::block_entity_types.push_back((std::string)item.read());
+                }
+            );
+        });
 
-                    if (decl.contains("properties")) {
-                        std::vector<int32_t> properties;
-                        auto properties_json = decl.at("properties").as_array();
-                        properties.reserve(properties_json.size());
-                        for (auto&& value : properties_json)
-                            properties.push_back(value.to_number<int32_t>());
-                        default_state_data->allowed_properties = std::move(properties);
-                    }
+        read_stream.peek_at("blocks", [&](enbt::io_helper::value_read_stream& blocks) {
+            base_objects::block::access_full_block_data(std::function([&](list_array<std::shared_ptr<base_objects::static_block_data>>& full_block_data_, std::unordered_map<std::string, std::shared_ptr<base_objects::static_block_data>>& named_full_block_data) {
+                blocks.iterate([&](enbt::io_helper::value_read_stream& decl) {
+                    std::shared_ptr<base_objects::static_block_data> default_state_data = std::make_shared<base_objects::static_block_data>();
+                    enbt::value delayed_states;
+                    decl.iterate([&](std::string_view name, enbt::io_helper::value_read_stream& item) {
+                        if (name == "name") {
+                            if ((default_state_data->name = "minecraft:" + item.read().as_string()) == "minecraft:cobbled_deepslate_wall")
+                                return;
 
-                    base_objects::block_id_t default_state = decl.at("states").as_array()[0].at("id").to_number<base_objects::block_id_t>();
+                            if (named_full_block_data.contains(default_state_data->name))
+                                throw std::runtime_error("Duplicate block name: " + default_state_data->name);
+                        } else if (name == "id")
+                            default_state_data->general_block_id = item.read();
+                        else if (name == "translation_key")
+                            default_state_data->translation_key = item.read().as_string();
+                        else if (name == "slipperiness")
+                            default_state_data->slipperiness = item.read();
+                        else if (name == "velocity_multiplier")
+                            default_state_data->velocity_multiplier = item.read();
+                        else if (name == "jump_velocity_multiplier")
+                            default_state_data->jump_velocity_multiplier = item.read();
+                        else if (name == "hardness")
+                            default_state_data->hardness = item.read();
+                        else if (name == "blast_resistance")
+                            default_state_data->blast_resistance = item.read();
+                        else if (name == "item_id")
+                            default_state_data->default_drop_item_id = item.read();
+                        else if (name == "map_color_rgb")
+                            default_state_data->map_color_rgb = item.read();
+                        else if (name == "loot_table")
+                            *(default_state_data->loot_table = std::make_shared<enbt::compound>()) = item.read();
+                        else if (name == "properties") {
+                            std::vector<int32_t> properties;
+                            item.iterate(
+                                [&properties](auto size) { properties.reserve(size); },
+                                [&properties](enbt::io_helper::value_read_stream& item) { properties.push_back(item.read()); }
+                            );
+                            default_state_data->allowed_properties = std::move(properties);
+                        } else if (name == "states") {
+                            delayed_states = item.read();
+                        }
+                    });
+
                     std::shared_ptr<base_objects::static_block_data::map_of_states> associated_states = std::make_shared<base_objects::static_block_data::map_of_states>();
-                    for (auto&& state_ : decl.at("states").as_array()) {
-                        auto&& state = state_.as_object();
-                        auto id = state.at("id").to_number<base_objects::block_id_t>();
-                        auto& block_data = full_block_data_.at(id);
-                        if (block_data)
-                            throw std::runtime_error("Duplicate block id: " + std::to_string(id));
-                        block_data = std::make_shared<base_objects::static_block_data>(*default_state_data);
-                        block_data->is_air = state.at("air").as_bool();
-                        block_data->is_solid = state.at("is_solid").as_bool();
-                        block_data->instrument = state.at("instrument").as_string();
-                        block_data->is_liquid = state.at("is_liquid").as_bool();
-                        block_data->luminance = state.at("luminance").to_number<int32_t>();
-                        block_data->is_burnable = state.at("burnable").as_bool();
-                        block_data->is_emits_redstone = state.at("emits_redstone").as_bool();
-                        block_data->is_full_cube = state.at("is_full_cube").as_bool();
-                        block_data->is_tool_required = state.at("tool_required").as_bool();
-                        block_data->piston_behavior = state.at("piston_behavior").as_string();
-                        block_data->hardness = state.at("hardness").to_number<float>();
-                        block_data->is_sided_transparency = state.at("sided_transparency").as_bool();
-                        block_data->is_replaceable = state.at("replaceable").as_bool();
-                        block_data->opacity = state.contains("opacity") ? state.at("opacity").to_number<int8_t>() : 255;
-                        if (state.contains("default_state_id")) {
-                            default_state = state.at("default_state_id").to_number<base_objects::block_id_t>();
-                            block_data->is_default_state = true;
+                    base_objects::block_id_t default_state = 0;
+                    bool has_default_state = false;
+                    for (auto& state : delayed_states.as_array()) {
+                        std::shared_ptr<base_objects::static_block_data> block_data = std::make_shared<base_objects::static_block_data>(*default_state_data);
+                        base_objects::block_id_t block_data_id = 0;
+                        block_data->opacity = 255;
+#define ARGS__d base_objects::block_id_t &default_state, bool &has_default_state, list_array<std::shared_ptr<base_objects::static_block_data>>&full_block_data_, std::shared_ptr<base_objects::static_block_data>&block_data, base_objects::block_id_t &block_data_id, enbt::value &item
+#define ARGS__pass default_state, has_default_state, full_block_data_, block_data, block_data_id, item
+
+                        static std::unordered_map<std::string, void (*)(ARGS__d)> map{
+                            {"id", [](ARGS__d) {
+                                 base_objects::block_id_t id = block_data_id = item;
+                                 if (id >= full_block_data_.size()) {
+                                     if (full_block_data_.reserved() == 0)
+                                         full_block_data_.reserve(id);
+                                     full_block_data_.resize(id + 1);
+                                 }
+                                 auto& ref = full_block_data_.at(id);
+                                 if (ref)
+                                     throw std::runtime_error("Duplicate block id: " + std::to_string(id));
+                                 ref = block_data;
+                                 if (!has_default_state) {
+                                     default_state = id;
+                                     has_default_state = true;
+                                 }
+                             }},
+                            {"air", [](ARGS__d) { block_data->is_air = item; }},
+                            {"is_solid", [](ARGS__d) { block_data->is_solid = item; }},
+                            {"opacity", [](ARGS__d) { block_data->opacity = item; }},
+                            {"instrument", [](ARGS__d) { block_data->instrument = item.as_string(); }},
+                            {"is_liquid", [](ARGS__d) { block_data->is_liquid = item; }},
+                            {"luminance", [](ARGS__d) { block_data->luminance = item; }},
+                            {"burnable", [](ARGS__d) { block_data->is_burnable = item; }},
+                            {"emits_redstone", [](ARGS__d) { block_data->is_emits_redstone = item; }},
+                            {"is_full_cube", [](ARGS__d) { block_data->is_full_cube = item; }},
+                            {"tool_required", [](ARGS__d) { block_data->is_tool_required = item; }},
+                            {"piston_behavior", [](ARGS__d) { block_data->piston_behavior = item.as_string(); }},
+                            {"replaceable", [](ARGS__d) { block_data->is_replaceable = item; }},
+                            {"hardness", [](ARGS__d) { block_data->hardness = item; }},
+                            {"sided_transparency", [](ARGS__d) { block_data->is_sided_transparency = item; }},
+                            {"default_state_id", [](ARGS__d) {
+                                 default_state = item;
+                                 block_data->is_default_state = true;
+                                 has_default_state = true;
+                             }},
+                            {"properties", [](ARGS__d) {
+                                 std::unordered_map<std::string, std::string> properties;
+                                 properties.reserve(item.size());
+                                 for (auto& [name, item] : item.as_compound())
+                                     properties[name] = (std::string)item;
+                                 block_data->current_properties = std::move(properties);
+                             }},
+                            {"collision_shapes", [](ARGS__d) {
+                                 block_data->collision_shapes.reserve(item.size());
+                                 for (auto& item : item.as_array())
+                                     block_data->collision_shapes.push_back(&base_objects::static_block_data::all_shapes.at(item));
+                             }},
+                            {"block_entity_type", [](ARGS__d) {
+                                 block_data->is_block_entity = true;
+                                 block_data->block_entity_id = item;
+                             }},
+
+
+                        };
+                        for (auto& [name, item] : state.as_compound()) {
+                            map.at(name)(ARGS__pass);
                         }
-                        std::unordered_map<std::string, std::string> state_properties;
-                        if (state.contains("properties")) {
-                            for (auto&& [prop_name, prop] : state_.at("properties").as_object())
-                                state_properties[prop_name] = (std::string)prop.as_string();
-                        }
-                        block_data->current_properties = state_properties;
-                        associated_states->insert({id, std::move(state_properties)});
-                        if (state.contains("collision_shapes")) {
-                            auto collision_shapes = state.at("collision_shapes").as_array();
-                            block_data->collision_shapes.reserve(collision_shapes.size());
-                            for (auto&& shape : collision_shapes)
-                                block_data->collision_shapes.push_back(&base_objects::static_block_data::all_shapes.at(shape.to_number<int32_t>()));
-                        }
-                        if (state.contains("block_entity_type")) {
-                            block_data->is_block_entity = true;
-                            block_data->block_entity_id = state.at("block_entity_type").to_number<int32_t>();
-                        }
+                        associated_states->insert({block_data_id, block_data->current_properties});
                     }
 
-                    for (auto&& state_ : decl.at("states").as_array()) {
-                        auto& block_data = full_block_data_.at(state_.at("id").to_number<base_objects::block_id_t>());
+#undef ARGS__d
+#undef ARGS__pass
+                    for (auto& state : delayed_states.as_array()) {
+                        auto& block_data = full_block_data_.at(state.at("id"));
                         block_data->assigned_states_to_properties = associated_states;
                         block_data->default_state = default_state;
                     }
-
-                    named_full_block_data[(std::string)name] = full_block_data_.at(default_state);
-                }
+                    named_full_block_data[(std::string)default_state_data->name] = full_block_data_.at(default_state);
+                });
 
                 for (auto it = full_block_data_.begin(); it != full_block_data_.end(); ++it) {
-                    if (*it == nullptr) {
+                    if (*it == nullptr)
                         throw std::runtime_error("Gap between block definitions");
-                    }
                 }
-                full_block_data_.shrink_to_fit();
+                full_block_data_.commit();
             }));
-        }
+        });
     }
 
     void load_items() {

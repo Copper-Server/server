@@ -338,7 +338,7 @@ namespace copper_server::build_in_plugins::protocol::play_770::reader {
                         } else {
                             WriteVar<int32_t>(1 + rul.size(), data);
                             for (auto id : rul)
-                                WriteVar<int32_t>(block::get_block_id(id, 770), data);
+                                WriteVar<int32_t>(block::get_protocol_block_id(id, 770), data);
                         }
                     },
                     rule.value
@@ -461,11 +461,11 @@ namespace copper_server::build_in_plugins::protocol::play_770::reader {
                 if (reduction.type.size()) {
                     if (reduction.type.size() == 1) {
                         WriteVar<int32_t>(0, data);
-                        WriteVar<int32_t>(registers::view_reg_pro_id("minecraft:damage_kind", reduction.type[0], 770), data);
+                        WriteVar<int32_t>(registers::view_reg_pro_id("minecraft:damage_kind", registers::damageTypes_cache.at(reduction.type[0])->first, 770), data);
                     } else {
                         WriteVar<int32_t>(1 + reduction.type.size(), data);
                         for (auto& id : reduction.type)
-                            WriteVar<int32_t>(registers::view_reg_pro_id("minecraft:damage_kind", id, 770), data);
+                            WriteVar<int32_t>(registers::view_reg_pro_id("minecraft:damage_kind", registers::damageTypes_cache.at(id)->first, 770), data);
                     }
                 }
                 WriteValue<float>(reduction.base, data);
@@ -800,10 +800,10 @@ namespace copper_server::build_in_plugins::protocol::play_770::reader {
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::pot_decorations& value) {
             WriteVar<int32_t>(65, data);
             WriteVar<int32_t>(4, data);
-            WriteVar<int32_t>(block::get_block_id(value.decorations[0], 770), data);
-            WriteVar<int32_t>(block::get_block_id(value.decorations[1], 770), data);
-            WriteVar<int32_t>(block::get_block_id(value.decorations[2], 770), data);
-            WriteVar<int32_t>(block::get_block_id(value.decorations[3], 770), data);
+            WriteVar<int32_t>(block::get_protocol_block_id(value.decorations[0], 770), data);
+            WriteVar<int32_t>(block::get_protocol_block_id(value.decorations[1], 770), data);
+            WriteVar<int32_t>(block::get_protocol_block_id(value.decorations[2], 770), data);
+            WriteVar<int32_t>(block::get_protocol_block_id(value.decorations[3], 770), data);
         }
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::container& value) {

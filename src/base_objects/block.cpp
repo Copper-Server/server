@@ -13,7 +13,7 @@ namespace copper_server::base_objects {
         static_block_data::assigned_property_name;
 
     std::unordered_map<std::string, std::shared_ptr<static_block_data>> block::named_full_block_data;
-    std::vector<std::shared_ptr<static_block_data>> block::full_block_data_;
+    list_array<std::shared_ptr<static_block_data>> block::full_block_data_;
 
     void block::tick(storage::world_data& world, base_objects::world::sub_chunk_data& sub_chunk, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked) {
     retry:
@@ -193,7 +193,7 @@ namespace copper_server::base_objects {
     }
 
     void static_block_data::initialize_blocks() {
-        block::access_full_block_data([&](std::vector<std::shared_ptr<static_block_data>>& arr, auto& ignored) {
+        block::access_full_block_data([&](list_array<std::shared_ptr<static_block_data>>& arr, auto& ignored) {
             block_id_t id;
             internal_block_aliases.clear();
             for (auto& _block : arr) {

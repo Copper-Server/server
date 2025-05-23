@@ -1,6 +1,5 @@
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/chat.hpp>
-#include <src/base_objects/chunk.hpp>
 #include <src/base_objects/data_packs/known_pack.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/base_objects/network/response.hpp>

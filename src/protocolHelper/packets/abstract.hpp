@@ -5,12 +5,13 @@
 #include <src/base_objects/entity.hpp>
 #include <src/base_objects/entity/animation.hpp>
 #include <src/base_objects/entity/event.hpp>
+#include <src/base_objects/network/response.hpp>
 #include <src/base_objects/packets.hpp>
+#include <src/base_objects/packets/effect_flags.hpp>
 #include <src/base_objects/particle_data.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/recipe.hpp>
 #include <src/base_objects/world/chunk.hpp>
-
 namespace copper_server {
     namespace base_objects {
         struct SharedClientData;
@@ -202,7 +203,7 @@ namespace copper_server {
             base_objects::network::response transfer(base_objects::SharedClientData& client, const std::string& host, int32_t port);
             base_objects::network::response updateAdvancements(base_objects::SharedClientData& client, bool reset, const list_array<base_objects::packets::advancements_maping> advancement_mapping, const list_array<std::string>& remove_advancements, const list_array<base_objects::packets::advancement_progress> progress_advancements);
             base_objects::network::response updateAttributes(base_objects::SharedClientData& client, int32_t entity_id, const list_array<base_objects::packets::attributes>& properties);
-            base_objects::network::response entityEffect(base_objects::SharedClientData& client, int32_t entity_id, int32_t effect_id, int32_t amplifier, int32_t duration, int8_t flags);
+            base_objects::network::response entityEffect(base_objects::SharedClientData& client, int32_t entity_id, int32_t effect_id, int32_t amplifier, int32_t duration, base_objects::packets::effect_flags flags);
             base_objects::network::response updateRecipes(base_objects::SharedClientData& client, const std::vector<base_objects::recipe>& recipes);
             base_objects::network::response updateTags(base_objects::SharedClientData& client, const list_array<base_objects::packets::tag_mapping>& tag_mappings);
             base_objects::network::response projectilePower(base_objects::SharedClientData& client, int32_t entity_id, double power_x, double power_y, double power_z);
@@ -446,7 +447,7 @@ namespace copper_server {
                 virtual base_objects::network::response transfer(const std::string& host, int32_t port) = 0;
                 virtual base_objects::network::response updateAdvancements(bool reset, const list_array<base_objects::packets::advancements_maping>& advancement_mapping, const list_array<std::string>& remove_advancements, const list_array<base_objects::packets::advancement_progress>& progress_advancements) = 0;
                 virtual base_objects::network::response updateAttributes(int32_t entity_id, const list_array<base_objects::packets::attributes>& properties) = 0;
-                virtual base_objects::network::response entityEffect(int32_t entity_id, int32_t effect_id, int32_t amplifier, int32_t duration, int8_t flags) = 0;
+                virtual base_objects::network::response entityEffect(int32_t entity_id, int32_t effect_id, int32_t amplifier, int32_t duration, base_objects::packets::effect_flags flags) = 0;
                 virtual base_objects::network::response updateRecipes(const std::vector<base_objects::recipe>& recipes) = 0;
                 virtual base_objects::network::response updateTags(const list_array<base_objects::packets::tag_mapping>& tag_mappings) = 0;
                 virtual base_objects::network::response projectilePower(int32_t entity_id, double power_x, double power_y, double power_z) = 0;
