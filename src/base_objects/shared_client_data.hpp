@@ -65,6 +65,7 @@ namespace copper_server::base_objects {
         bool enable_filtering : 1 = false;
         bool allow_server_listings : 1 = true;
         bool enable_chat_colors : 1 = true;
+        bool is_virtual : 1 = false;
         enum class ParticleStatus : uint8_t {
             ALL = 0,
             DECREASED = 1,
@@ -152,15 +153,15 @@ namespace copper_server::base_objects {
         SharedClientData(void* assigned_data = nullptr, std::function<void(base_objects::SharedClientData& self)> special_callback = nullptr);
         ~SharedClientData();
 
-        void* getAssignedData() {
+        void* getAssignedData() const {
             return assigned_data;
         }
 
-        bool canBeRemoved() {
+        bool canBeRemoved() const {
             return !special_callback;
         }
 
-        bool isSpecial() {
+        bool isSpecial() const {
             return (bool)special_callback;
         }
 

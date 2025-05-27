@@ -243,6 +243,20 @@ namespace copper_server {
             );
         }
 
+        template <class Plugin>
+        std::shared_ptr<Plugin> requestPlugin() const {
+            static_assert(std::is_base_of<PluginRegistration, Plugin>::value, "Plugin must derive from PluginRegistration");
+            return protected_values.get(
+                [&](const protected_values_t& vals) -> std::shared_ptr<Plugin> {
+                    auto it = vals.plugins.find(Plugin::registered_name);
+                    if (it == vals.plugins.end())
+                        return nullptr;
+                    auto pluginPtr = it->second;
+                    return std::dynamic_pointer_cast<Plugin>(pluginPtr);
+                }
+            );
+        }
+
         void unloadPlugin(const std::string& name);
         list_array<PluginRegistrationPtr> registeredPlugins() const;
         void autoRegister();
@@ -255,7 +269,7 @@ namespace copper_server {
 
     template <__internal__::CTS name, class Self>
     class PluginAutoRegister : public PluginRegistration {
-    protected:
+    public:
         static inline const std::string registered_name = []() {
             __internal__::register_value<Self, name>();
             return name.data;

@@ -1,16 +1,11 @@
 #include <library/fast_task.hpp>
-#include <src/api/asio.hpp>
 #include <src/api/configuration.hpp>
-#include <src/api/network.hpp>
-#include <src/base_objects/network/tcp/server.hpp>
-#include <src/build_in_plugins/special/status.hpp>
+#include <src/api/server.hpp>
 #include <src/log.hpp>
 #include <src/plugin/main.hpp>
-#include <src/protocolHelper/state_handshaking.hpp>
 #include <src/resources/registers.hpp>
 
 using namespace copper_server;
-
 
 int main() {
     atexit([]() {
@@ -36,8 +31,6 @@ int main() {
         fast_task::task::create_executor(working_threads);
         fast_task::task::task::enable_task_naming = false;
 
-        api::asio::init(api::configuration::get().server.network_threads);
-
 
         log::commands::init();
         log::info("Initializer thread", "Initializing server...");
@@ -45,7 +38,6 @@ int main() {
         pluginManagement.callInitialization();
 
         resources::initialize();
-
     } catch (const std::exception& e) {
         log::fatal("Initializer thread", "An error occurred while initializing the server, shutting down...");
         log::fatal("Initializer thread", e.what());
@@ -55,18 +47,13 @@ int main() {
         pluginManagement.callFaultUnload();
         return 1;
     }
+    log::info("Initializer thread", "Initialization complete.");
+
+    if (api::server::is_shutting_down())
+        return 0;
+
     try {
-        base_objects::network::tcp::server server(
-            api::configuration::get().server.ip,
-            api::configuration::get().server.port,
-            api::configuration::get().server.ssl_key_length
-        );
-
         //log::disable_log_level(log::level::debug);
-        special_handshake = new SpecialPluginHandshake();
-        special_status = new build_in_plugins::special::Status();
-        api::network::register_tcp_handler(new tcp_client_handle_handshaking());
-
         log::info("Initializer thread", "Loading plugins");
         try {
             pluginManagement.callLoad();
@@ -80,14 +67,7 @@ int main() {
             pluginManagement.callFaultUnload();
             return 1;
         }
-        log::info("Initializer thread", "Start handling to clients");
-        try {
-            server.start();
-        } catch (...) {
-            log::fatal("Initializer thread", "An error occurred while starting the tcp server, shutting down...");
-            pluginManagement.callFaultUnload();
-            return 1;
-        }
+        log::info("Initializer thread", "Loading complete.");
     } catch (const std::exception& e) {
         log::fatal("Initializer thread", "An error occurred while initializing the server, shutting down...");
         log::fatal("Initializer thread", e.what());
@@ -98,5 +78,6 @@ int main() {
         pluginManagement.callFaultUnload();
         return 1;
     }
+    fast_task::task::await_end_tasks(true);
     return 0;
 }

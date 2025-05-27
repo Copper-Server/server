@@ -248,6 +248,10 @@ namespace copper_server::base_objects::network {
         data.reserve(size);
     }
 
+    bool response::has_data() const {
+        return !data.empty() || do_disconnect || do_disconnect_after_send;
+    }
+
     response::response(const list_array<item>& response_bytes, size_t valid_till, bool disconnect, bool disconnect_after_send)
         : valid_till(valid_till) {
         data = response_bytes;

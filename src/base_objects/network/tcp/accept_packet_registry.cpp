@@ -1,7 +1,7 @@
 #include <src/base_objects/network/tcp/accept_packet_registry.hpp>
 
 namespace copper_server::base_objects::network::tcp {
-    void protocol_packet_registry_t::handle(int32_t packet_state, base_objects::network::tcp::session* session, ArrayStream& packet) const {
+    void protocol_packet_registry_t::handle(int32_t packet_state, api::network::tcp::session* session, ArrayStream& packet) const {
         auto it = registry.find(packet_state);
         if (it == registry.end())
             throw std::runtime_error("Unrecognized packet state: " + std::to_string(packet_state));
@@ -51,7 +51,7 @@ namespace copper_server::base_objects::network::tcp {
         }
     }
 
-    void accept_packet_registry::handle(int32_t protocol_id, int32_t packet_state, base_objects::network::tcp::session* session, ArrayStream& packet) const {
+    void accept_packet_registry::handle(int32_t protocol_id, int32_t packet_state, api::network::tcp::session* session, ArrayStream& packet) const {
         auto it = registry.find(protocol_id);
         if (it == registry.end())
             throw std::runtime_error("Unrecognized protocol id: " + std::to_string(protocol_id));

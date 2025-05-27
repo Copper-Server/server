@@ -7,7 +7,6 @@
 #include <src/base_objects/packets.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
-#include <src/protocolHelper/util.hpp>
 #include <src/util/calculations.hpp>
 #include <src/util/conversions.hpp>
 
@@ -1094,6 +1093,8 @@ namespace copper_server::base_objects {
                 } else if constexpr (std::is_same_v<T, parsers::command::custom_virtual>) {
                     node.parser_id = packets::command_node::parsers::brigadier_string;
                     node.properties = {.flags = (int8_t)parsers::command::string::single_word};
+                } else if constexpr (std::is_same_v<T, parsers::command::block_pos>) {
+                    node.parser_id = packets::command_node::parsers::minecraft_block_pos;
                 } else {
                     assert((false && __LINE__ && __FILE__ " Failed to convert command predicate to parser"));
                 }

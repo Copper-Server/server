@@ -1277,6 +1277,7 @@ namespace copper_server::storage {
         is_hardcore = load_from_nbt.at("is_hardcore");
         initialized = load_from_nbt.at("initialized");
         has_skylight = load_from_nbt.at("has_skylight");
+        increase_time = load_from_nbt.at("increase_time");
     }
 
     void world_data::load() {
@@ -1351,6 +1352,7 @@ namespace copper_server::storage {
         world_data_file["is_hardcore"] = is_hardcore;
         world_data_file["initialized"] = initialized;
         world_data_file["has_skylight"] = has_skylight;
+        world_data_file["increase_time"] = increase_time;
 
         auto stringized = senbt::serialize(world_data_file, false, true);
         file.write(stringized.data(), stringized.size());

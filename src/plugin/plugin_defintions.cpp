@@ -2,7 +2,6 @@
 #include <src/plugin/special.hpp>
 
 namespace copper_server {
-    SpecialPluginHandshake* special_handshake;
     SpecialPluginStatus* special_status;
 
     namespace __internal__ {

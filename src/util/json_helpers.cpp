@@ -10,6 +10,8 @@ namespace copper_server::util {
         {
             fast_task::files::async_iofstream file(file_path);
             if (file.is_open()) {
+                if (!std::filesystem::file_size(file_path))
+                    return data;
                 boost::system::error_code ec;
                 auto result = boost::json::parse(file, ec);
                 data = result.is_object() ? std::move(result).as_object() : boost::json::object{{"root", std::move(result)}};
@@ -31,6 +33,8 @@ namespace copper_server::util {
     std::optional<boost::json::object> try_read_json_file(std::string_view from_memory) {
         boost::json::object data;
         {
+            if (from_memory.empty())
+                return data;
             boost::system::error_code ec;
             auto result = boost::json::parse(from_memory, ec);
             data = result.is_object() ? std::move(result).as_object() : boost::json::object{{"root", std::move(result)}};

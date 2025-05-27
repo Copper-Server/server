@@ -32,6 +32,12 @@ namespace copper_server::base_objects {
             } spawn;
 
             std::unordered_map<std::string, std::string> generator_settings = {};
+            enum class world_not_found_for_client_e {
+                kick,
+                transfer_to_default,
+                request_plugin_or_default
+            } world_not_found_for_client
+                = world_not_found_for_client_e::transfer_to_default;
         } world;
 
         struct GamePlay {

@@ -1,45 +1,51 @@
 #ifndef SRC_MOJANG_API_HTTP
 #define SRC_MOJANG_API_HTTP
-#if defined(_MSC_VER)
-    #include <SDKDDKVer.h>
-#endif
-#include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
+#include <boost/beast/http/parser.hpp>
 #include <string>
+
+#include <library/fast_task/src/networking/networking.hpp>
+#include <library/list_array.hpp>
 
 namespace mojang::api {
     class http {
     public:
         static std::string request(const std::string& mode, const std::string& address, const std::string& query, uint16_t port = 80, uint8_t max_redirects = 4) {
             auto port_string = std::to_string(port);
-            boost::asio::io_context ioc;
-            boost::asio::ip::tcp::socket socket(ioc);
 
-            {
-                boost::asio::ip::tcp::resolver resolver(ioc);
-                boost::system::error_code ec;
-                auto const results = resolver.resolve(address, port_string, ec);
+            std::unique_ptr<fast_task::networking::TcpClientSocket> client(fast_task::networking::TcpClientSocket::connect({address, port}));
 
-                if (results.empty() || ec)
-                    throw std::runtime_error("Failed to resolve " + address);
-                boost::asio::connect(socket, results.begin(), results.end(), ec);
-                if (ec)
-                    throw std::runtime_error("Failed to connect " + address);
-            }
 
             boost::beast::flat_buffer buf;
             boost::beast::http::response<boost::beast::http::string_body> res;
             {
-                boost::asio::streambuf request;
-                std::ostream request_stream(&request);
+                std::stringstream request_stream;
                 request_stream << mode << " " << query << " HTTP/1.1\r\n";
                 request_stream << "Host: " << address + (port != 80 ? (":" + port_string) : "") << "\r\n";
                 request_stream << "Accept: */*\r\n";
                 request_stream << "Connection: close\r\n\r\n";
-                boost::asio::write(socket, request);
+                std::string str = request_stream.str();
+                client->send((uint8_t*)str.data(), str.size());
             }
-            boost::beast::http::read(socket, buf, res);
+
+            {
+                boost::beast::http::parser<false, boost::beast::http::string_body> parser;
+                list_array<uint8_t> answer;
+                uint8_t recv_buf[1024];
+                while (auto res = client->recv(recv_buf, 1024))
+                    answer.push_back((uint8_t*)recv_buf, res);
+
+                try {
+                    boost::beast::error_code ec;
+                    boost::asio::const_buffer buf(answer.data(), answer.size());
+                    parser.put(buf, ec);
+                    parser.put_eof(ec);
+                    res = parser.get();
+                } catch (const std::exception& ex) {
+                    throw std::runtime_error("HTTP parse error: " + std::string(ex.what()));
+                }
+            }
 
 
             switch (res.result()) {

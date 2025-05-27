@@ -489,7 +489,7 @@ namespace copper_server::storage {
                 log::warn("server", "Failed to save permissions file. Can not open file.");
                 return;
             }
-            util::pretty_print(file, *config_holder);
+            file << util::pretty_print(*config_holder);
         }
     }
 }

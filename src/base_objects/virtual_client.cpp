@@ -1,6 +1,5 @@
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/virtual_client.hpp>
-#include <src/protocolHelper/util.hpp>
 
 namespace copper_server::base_objects {
 
@@ -11,12 +10,13 @@ namespace copper_server::base_objects {
         client->ip = "";
         client->client_brand = brand;
         client->locale = "en_US";
+        client->data = {};
 
         client->player_data.local_data["virtual_client"] = name;
         client->player_data.gamemode = -1;
         client->player_data.op_level = 4;
         client->player_data.world_id = "virtual_client astral space";
-
+        client->is_virtual = true;
         client->packets_state.protocol_version = 770;
         client->packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::play;
         client->special_callback = [this](base_objects::SharedClientData& self) {

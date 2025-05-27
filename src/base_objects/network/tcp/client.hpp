@@ -3,8 +3,11 @@
 #include <src/base_objects/network/response.hpp>
 #include <string>
 
-namespace copper_server::base_objects::network::tcp {
+namespace copper_server::api::network::tcp {
     class session;
+}
+
+namespace copper_server::base_objects::network::tcp {
 
     class client {
     protected:
@@ -15,7 +18,7 @@ namespace copper_server::base_objects::network::tcp {
 
         //will return nullptr if Redefine not needed
         virtual client* redefine_handler() = 0;
-        virtual client* define_ourself(session* session) = 0;
+        virtual client* define_ourself(api::network::tcp::session* session) = 0;
 
         virtual ~client();
 

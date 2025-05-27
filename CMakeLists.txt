@@ -52,6 +52,8 @@ FILE(GLOB SRCFILES
   src/*/*/*.cpp 
   src/*/*/*/*.cpp
   src/*/*/*/*/*.cpp
+  src/*/*/*/*/*/*.cpp
+  src/*/*/*/*/*/*/*.cpp
   library/enbt/*.cpp
 )
 

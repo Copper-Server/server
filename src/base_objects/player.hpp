@@ -31,8 +31,8 @@ namespace copper_server::base_objects {
         } abilities;
 
         struct ExperienceData {
-            float progress;
-            int32_t level, total;
+            float progress = 0;
+            int32_t level = 0, total = 0;
         } experience;
 
         std::string world_id;

@@ -2,7 +2,7 @@
 #include <src/api/entity_id_map.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/entity.hpp>
-#include <src/protocolHelper/packets.hpp>
+#include <src/api/packets.hpp>
 #include <src/storage/world_data.hpp>
 #include <src/util/calculations.hpp>
 
@@ -555,7 +555,7 @@ namespace copper_server {
         void entity::set_health(float health) {
             nbt.at("health") = health;
             if(assigned_player)
-                copper_server::packets::play::setHealth(*assigned_player, health, get_food(), get_saturation());
+                api::packets::play::setHealth(*assigned_player, health, get_food(), get_saturation());
 
             if (health <= 0.0f)
                 force_kill();
@@ -594,7 +594,7 @@ namespace copper_server {
         void entity::set_food(uint8_t food) {
             nbt.at("food") = food;
             if (assigned_player)
-                copper_server::packets::play::setHealth(*assigned_player, get_health(), food, get_saturation());
+                api::packets::play::setHealth(*assigned_player, get_health(), food, get_saturation());
         }
 
         void entity::add_food(uint8_t food) {
@@ -612,7 +612,7 @@ namespace copper_server {
         void entity::set_saturation(float saturation) {
             nbt.at("saturation") = saturation;
             if (assigned_player)
-                copper_server::packets::play::setHealth(*assigned_player, get_health(), get_food(), saturation);
+                api::packets::play::setHealth(*assigned_player, get_health(), get_food(), saturation);
         }
 
         void entity::add_saturation(float saturation) {

@@ -2,10 +2,10 @@
 #define SRC_API_PROTOCOL
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
+#include <src/api/network/tcp.hpp>
 #include <src/base_objects/events/event.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/slot.hpp>
-#include <src/protocolHelper/util.hpp>
 
 namespace copper_server::api::protocol {
     namespace data {
@@ -379,7 +379,7 @@ namespace copper_server::api::protocol {
     template <class T>
     struct event_data {
         T data;
-        base_objects::network::tcp::session& client;
+        api::network::tcp::session& client;
         base_objects::client_data_holder client_data;
     };
 

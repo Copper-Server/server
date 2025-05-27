@@ -1,10 +1,12 @@
 #ifndef SRC_PLUGIN_REGISTRATION
 #define SRC_PLUGIN_REGISTRATION
 #include <library/list_array.hpp>
-#include <memory>
+#include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/data_packs/known_pack.hpp>
 #include <src/base_objects/events/event.hpp>
 #include <src/base_objects/network/response.hpp>
+
+#include <memory>
 #include <string>
 #include <variant>
 #include <vector>

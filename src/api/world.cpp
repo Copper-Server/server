@@ -1,7 +1,8 @@
 #include <functional>
+#include <src/api/configuration.hpp>
+#include <src/api/packets.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
-#include <src/protocolHelper/packets/abstract.hpp>
 #include <src/storage/world_data.hpp>
 
 namespace copper_server::api::world {
@@ -124,7 +125,7 @@ namespace copper_server::api::world {
                 pos_y = std::max(mt, std::max(oc_flor, oc));
             });
 
-            client_ref->player_data.world_id = id;
+            client_ref->player_data.world_id = get_worlds().get(id)->world_name;
 
             client_ref->player_data.assigned_entity->position.x = x;
             client_ref->player_data.assigned_entity->position.y = pos_y;
@@ -132,22 +133,33 @@ namespace copper_server::api::world {
             client_ref->player_data.assigned_entity->rotation = {0, 0};
         }
 
-        return {id, get_worlds().get(id)->world_name};
+        return {id, client_ref->player_data.world_id};
     }
 
     void sync_settings(base_objects::client_data_holder& client_ref) {
         auto id = get_worlds().get_id(client_ref->player_data.world_id);
-        if (id == -1)
-            throw std::runtime_error("World with id " + client_ref->player_data.world_id + " does not exists.");
+        if (id == -1) {
+            using enum_ = base_objects::ServerConfiguration::World::world_not_found_for_client_e;
+            switch (api::configuration::get().world.world_not_found_for_client) {
+            case enum_::kick:
+                throw std::runtime_error("World with id " + client_ref->player_data.world_id + " does not exists.");
+            case enum_::transfer_to_default:
+            case enum_::request_plugin_or_default:
+            default:
+                id = get_default_world_id();
+                client_ref->player_data.world_id = get_worlds().get_name(id);
+                break;
+            }
+        }
         auto world = get_worlds().get(id);
 
         client_ref->sendPacket(
-            packets::play::changeDifficulty(
+            api::packets::play::changeDifficulty(
                 *client_ref,
                 world->difficulty,
                 world->difficulty_locked
             )
-            += packets::play::initializeWorldBorder(
+            += api::packets::play::initializeWorldBorder(
                 *client_ref,
                 world->border_center_x,
                 world->border_center_z,
@@ -158,21 +170,22 @@ namespace copper_server::api::world {
                 world->border_warning_blocks,
                 world->border_warning_time
             )
-            += packets::play::setTickingState(
+            += api::packets::play::setTickingState(
                 *client_ref,
                 world->ticks_per_second,
                 world->ticking_frozen
             )
-            += packets::play::stepTick(
+            += api::packets::play::stepTick(
                 *client_ref,
                 1
             )
-            += packets::play::updateTime(
+            += api::packets::play::updateTime(
                 *client_ref,
                 world->time,
-                world->day_time
+                world->day_time,
+                world->increase_time
             )
-            += packets::play::setDefaultSpawnPosition(
+            += api::packets::play::setDefaultSpawnPosition(
                 *client_ref,
                 {(int32_t)world->spawn_data.x,
                  (int32_t)world->spawn_data.y,

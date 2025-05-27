@@ -299,6 +299,7 @@ namespace copper_server::storage {
         bool difficulty_locked : 1 = false;
         bool is_hardcore : 1 = false;
         bool initialized : 1 = false;
+        bool increase_time : 1 = true;
         bool has_skylight : 1 = true;
         bool enable_entity_light_source_updates : 1 = false; //calculated from light processor
         bool enable_entity_light_source_updates_include_rot : 1 = false;

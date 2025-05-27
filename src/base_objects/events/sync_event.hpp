@@ -2,20 +2,18 @@
 #define SRC_BASE_OBJECTS_SYNC_EVENT
 #include <functional>
 #include <random>
+#include <src/base_objects/events/base_event.hpp>
 #include <src/base_objects/events/priority.hpp>
 #include <unordered_map>
 
 namespace copper_server::base_objects::events {
 
-    struct sync_event_register_id {
-        uint64_t id;
-    };
 
     template <typename... Args>
-    struct sync_event {
+    struct sync_event : public base_event {
         using function = std::function<bool(Args...)>;
 
-        sync_event_register_id operator+=(function func) {
+        event_register_id operator+=(function func) {
             return join(func);
         }
 
@@ -23,7 +21,7 @@ namespace copper_server::base_objects::events {
             return notify(std::forward<Args>(args)...);
         }
 
-        sync_event_register_id join(function func, priority priority = priority::avg) {
+        event_register_id join(function func, priority priority = priority::avg) {
             switch (priority) {
             case priority::heigh:
                 return addOne(heigh_priority, func);
@@ -39,7 +37,7 @@ namespace copper_server::base_objects::events {
             throw std::runtime_error("Invalid priority");
         }
 
-        bool leave(sync_event_register_id func, priority priority = priority::avg) {
+        bool leave(event_register_id func, priority priority = priority::avg) {
             switch (priority) {
             case priority::heigh:
                 return removeOne(heigh_priority, func);
@@ -53,6 +51,10 @@ namespace copper_server::base_objects::events {
                 return removeOne(low_priority, func);
             }
             return false;
+        }
+
+        bool leave(event_register_id func, priority priority, bool _ignored0) override {
+            return leave(func, priority);
         }
 
         bool notify(Args... args) {
@@ -89,7 +91,7 @@ namespace copper_server::base_objects::events {
         std::unordered_map<uint64_t, function> lower_avg_priority;
         std::unordered_map<uint64_t, function> low_priority;
 
-        static bool removeOne(std::unordered_map<uint64_t, function>& map, sync_event_register_id func) {
+        static bool removeOne(std::unordered_map<uint64_t, function>& map, event_register_id func) {
             auto it = map.find(func.id);
             if (it != map.end()) {
                 map.erase(it);
@@ -98,9 +100,9 @@ namespace copper_server::base_objects::events {
             return false;
         }
 
-        sync_event_register_id addOne(std::unordered_map<uint64_t, function>& map, function func) {
+        event_register_id addOne(std::unordered_map<uint64_t, function>& map, function func) {
             std::uniform_int_distribution<uint64_t> dis;
-            sync_event_register_id id;
+            event_register_id id;
             do {
                 id.id = dis(gen);
             } while (map.find(id.id) != map.end());

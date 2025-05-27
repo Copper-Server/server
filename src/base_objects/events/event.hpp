@@ -2,20 +2,13 @@
 #define SRC_BASE_OBJECTS_EVENTS_EVENT
 #include <functional>
 #include <library/fast_task.hpp>
+#include <library/list_array.hpp>
 #include <random>
+#include <src/base_objects/events/base_event.hpp>
 #include <src/base_objects/events/priority.hpp>
 #include <unordered_map>
 
 namespace copper_server::base_objects::events {
-
-    struct event_register_id {
-        uint64_t id;
-    };
-
-    class base_event {
-    public:
-        virtual bool leave(event_register_id func, priority priority = priority::avg, bool async_mode = false) = 0;
-    };
 
     template <typename T>
     class event : public base_event {
@@ -103,83 +96,83 @@ namespace copper_server::base_objects::events {
         }
 
         bool await_notify(const T& args) {
-            std::lock_guard<fast_task::task_mutex> lock(mutex);
+            std::unique_lock<fast_task::task_mutex> lock(mutex);
             if (can_skip())
                 return false;
-            if (await_call(async_heigh_priority, args))
+            if (await_call(async_heigh_priority, lock, args))
                 return true;
-            if (await_call(async_upper_avg_priority, args))
+            if (await_call(async_upper_avg_priority, lock, args))
                 return true;
-            if (await_call(async_avg_priority, args))
+            if (await_call(async_avg_priority, lock, args))
                 return true;
-            if (await_call(async_lower_avg_priority, args))
+            if (await_call(async_lower_avg_priority, lock, args))
                 return true;
-            if (await_call(async_low_priority, args))
+            if (await_call(async_low_priority, lock, args))
                 return true;
-            if (sync_call(heigh_priority, args))
+            if (sync_call(heigh_priority, lock, args))
                 return true;
-            if (sync_call(upper_avg_priority, args))
+            if (sync_call(upper_avg_priority, lock, args))
                 return true;
-            if (sync_call(avg_priority, args))
+            if (sync_call(avg_priority, lock, args))
                 return true;
-            if (sync_call(lower_avg_priority, args))
+            if (sync_call(lower_avg_priority, lock, args))
                 return true;
-            if (sync_call(low_priority, args))
+            if (sync_call(low_priority, lock, args))
                 return true;
             return false;
         }
 
         bool notify(const T& args) {
-            std::lock_guard<fast_task::task_mutex> lock(mutex);
+            std::unique_lock<fast_task::task_mutex> lock(mutex);
             if (can_skip())
                 return false;
-            if (await_call(async_heigh_priority, args))
+            if (await_call(async_heigh_priority, lock, args))
                 return true;
-            if (await_call(async_upper_avg_priority, args))
+            if (await_call(async_upper_avg_priority, lock, args))
                 return true;
-            if (await_call(async_avg_priority, args))
+            if (await_call(async_avg_priority, lock, args))
                 return true;
-            if (await_call(async_lower_avg_priority, args))
+            if (await_call(async_lower_avg_priority, lock, args))
                 return true;
-            if (await_call(async_low_priority, args))
+            if (await_call(async_low_priority, lock, args))
                 return true;
-            if (sync_call(heigh_priority, args))
+            if (sync_call(heigh_priority, lock, args))
                 return true;
-            if (sync_call(upper_avg_priority, args))
+            if (sync_call(upper_avg_priority, lock, args))
                 return true;
-            if (sync_call(avg_priority, args))
+            if (sync_call(avg_priority, lock, args))
                 return true;
-            if (sync_call(lower_avg_priority, args))
+            if (sync_call(lower_avg_priority, lock, args))
                 return true;
-            if (sync_call(low_priority, args))
+            if (sync_call(low_priority, lock, args))
                 return true;
             return false;
         }
 
         bool sync_notify(const T& args) {
-            std::lock_guard<fast_task::task_mutex> lock(mutex);
+            std::unique_lock<fast_task::task_mutex> lock(mutex);
             if (can_skip())
                 return false;
-            if (sync_call(async_heigh_priority, args))
+            if (sync_call(async_heigh_priority, lock, args))
                 return true;
-            if (sync_call(async_upper_avg_priority, args))
+            if (sync_call(async_upper_avg_priority, lock, args))
                 return true;
-            if (sync_call(async_avg_priority, args))
+            if (sync_call(async_avg_priority, lock, args))
                 return true;
-            if (sync_call(async_lower_avg_priority, args))
+            if (sync_call(async_lower_avg_priority, lock, args))
                 return true;
-            if (sync_call(async_low_priority, args))
+            if (sync_call(async_low_priority, lock, args))
                 return true;
 
-            if (sync_call(heigh_priority, args))
+            if (sync_call(heigh_priority, lock, args))
                 return true;
-            if (sync_call(upper_avg_priority, args))
+            if (sync_call(upper_avg_priority, lock, args))
                 return true;
-            if (sync_call(avg_priority, args))
+            if (sync_call(avg_priority, lock, args))
                 return true;
-            if (sync_call(lower_avg_priority, args))
+            if (sync_call(lower_avg_priority, lock, args))
                 return true;
-            if (sync_call(low_priority, args))
+            if (sync_call(low_priority, lock, args))
                 return true;
             return false;
         }
@@ -253,7 +246,7 @@ namespace copper_server::base_objects::events {
             return id;
         }
 
-        bool await_call(std::unordered_map<uint64_t, function>& map, const T& args) const {
+        bool await_call(std::unordered_map<uint64_t, function>& map, std::unique_lock<fast_task::task_mutex>& lock, const T& args) const {
             std::list<std::shared_ptr<fast_task::task>> tasks;
             bool result = false;
             for (auto& [id, func] : map) {
@@ -266,15 +259,22 @@ namespace copper_server::base_objects::events {
                 tasks.push_back(task);
                 fast_task::task::start(task);
             }
+            lock.unlock();
             fast_task::task::await_multiple(tasks, true, true);
+            lock.lock();
             return result;
         }
 
-        bool sync_call(std::unordered_map<uint64_t, function>& map, const T& args) const {
+        bool sync_call(std::unordered_map<uint64_t, function>& map, std::unique_lock<fast_task::task_mutex>& lock, const T& args) const {
+            list_array<function> fns;
+            fns.reserve(map.size());
+            for (auto& [id, func] : map)
+                fns.push_back(func);
+            lock.unlock();
             for (auto& [id, func] : map)
                 if (func(args))
                     return true;
-
+            lock.lock();
             return false;
         }
     };
@@ -365,83 +365,83 @@ namespace copper_server::base_objects::events {
         }
 
         bool await_notify() {
-            std::lock_guard<fast_task::task_mutex> lock(mutex);
+            std::unique_lock<fast_task::task_mutex> lock(mutex);
             if (can_skip())
                 return false;
-            if (await_call(async_heigh_priority))
+            if (await_call(async_heigh_priority, lock))
                 return true;
-            if (await_call(async_upper_avg_priority))
+            if (await_call(async_upper_avg_priority, lock))
                 return true;
-            if (await_call(async_avg_priority))
+            if (await_call(async_avg_priority, lock))
                 return true;
-            if (await_call(async_lower_avg_priority))
+            if (await_call(async_lower_avg_priority, lock))
                 return true;
-            if (await_call(async_low_priority))
+            if (await_call(async_low_priority, lock))
                 return true;
-            if (sync_call(heigh_priority))
+            if (sync_call(heigh_priority, lock))
                 return true;
-            if (sync_call(upper_avg_priority))
+            if (sync_call(upper_avg_priority, lock))
                 return true;
-            if (sync_call(avg_priority))
+            if (sync_call(avg_priority, lock))
                 return true;
-            if (sync_call(lower_avg_priority))
+            if (sync_call(lower_avg_priority, lock))
                 return true;
-            if (sync_call(low_priority))
+            if (sync_call(low_priority, lock))
                 return true;
             return false;
         }
 
         bool notify() {
-            std::lock_guard<fast_task::task_mutex> lock(mutex);
+            std::unique_lock<fast_task::task_mutex> lock(mutex);
             if (can_skip())
                 return false;
-            if (await_call(async_heigh_priority))
+            if (await_call(async_heigh_priority, lock))
                 return true;
-            if (await_call(async_upper_avg_priority))
+            if (await_call(async_upper_avg_priority, lock))
                 return true;
-            if (await_call(async_avg_priority))
+            if (await_call(async_avg_priority, lock))
                 return true;
-            if (await_call(async_lower_avg_priority))
+            if (await_call(async_lower_avg_priority, lock))
                 return true;
-            if (await_call(async_low_priority))
+            if (await_call(async_low_priority, lock))
                 return true;
-            if (sync_call(heigh_priority))
+            if (sync_call(heigh_priority, lock))
                 return true;
-            if (sync_call(upper_avg_priority))
+            if (sync_call(upper_avg_priority, lock))
                 return true;
-            if (sync_call(avg_priority))
+            if (sync_call(avg_priority, lock))
                 return true;
-            if (sync_call(lower_avg_priority))
+            if (sync_call(lower_avg_priority, lock))
                 return true;
-            if (sync_call(low_priority))
+            if (sync_call(low_priority, lock))
                 return true;
             return false;
         }
 
         bool sync_notify() {
-            std::lock_guard<fast_task::task_mutex> lock(mutex);
+            std::unique_lock<fast_task::task_mutex> lock(mutex);
             if (can_skip())
                 return false;
-            if (sync_call(async_heigh_priority))
+            if (sync_call(async_heigh_priority, lock))
                 return true;
-            if (sync_call(async_upper_avg_priority))
+            if (sync_call(async_upper_avg_priority, lock))
                 return true;
-            if (sync_call(async_avg_priority))
+            if (sync_call(async_avg_priority, lock))
                 return true;
-            if (sync_call(async_lower_avg_priority))
+            if (sync_call(async_lower_avg_priority, lock))
                 return true;
-            if (sync_call(async_low_priority))
+            if (sync_call(async_low_priority, lock))
                 return true;
 
-            if (sync_call(heigh_priority))
+            if (sync_call(heigh_priority, lock))
                 return true;
-            if (sync_call(upper_avg_priority))
+            if (sync_call(upper_avg_priority, lock))
                 return true;
-            if (sync_call(avg_priority))
+            if (sync_call(avg_priority, lock))
                 return true;
-            if (sync_call(lower_avg_priority))
+            if (sync_call(lower_avg_priority, lock))
                 return true;
-            if (sync_call(low_priority))
+            if (sync_call(low_priority, lock))
                 return true;
             return false;
         }
@@ -515,7 +515,7 @@ namespace copper_server::base_objects::events {
             return id;
         }
 
-        bool await_call(std::unordered_map<uint64_t, function>& map) const {
+        bool await_call(std::unordered_map<uint64_t, function>& map, std::unique_lock<fast_task::task_mutex>& lock) const {
             std::list<std::shared_ptr<fast_task::task>> tasks;
             bool result = false;
             for (auto& [id, func] : map) {
@@ -528,15 +528,22 @@ namespace copper_server::base_objects::events {
                 tasks.push_back(task);
                 fast_task::task::start(task);
             }
+            lock.unlock();
             fast_task::task::await_multiple(tasks, true, true);
+            lock.lock();
             return result;
         }
 
-        bool sync_call(std::unordered_map<uint64_t, function>& map) const {
+        bool sync_call(std::unordered_map<uint64_t, function>& map, std::unique_lock<fast_task::task_mutex>& lock) const {
+            list_array<function> fns;
+            fns.reserve(map.size());
+            for (auto& [id, func] : map)
+                fns.push_back(func);
+            lock.unlock();
             for (auto& [id, func] : map)
                 if (func())
                     return true;
-
+            lock.lock();
             return false;
         }
     };

@@ -98,6 +98,8 @@ namespace copper_server::base_objects::network {
         response& operator+=(response&& other);
         void reserve(size_t size);
 
+        bool has_data() const; //return true if this response has any data or requests to change connection state
+
     private:
         response(const list_array<item>& response_bytes, size_t valid_till, bool disconnect = false, bool disconnect_after_send = false);
         response(list_array<item>&& response_bytes, size_t valid_till, bool disconnect = false, bool disconnect_after_send = false);

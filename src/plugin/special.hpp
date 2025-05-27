@@ -1,26 +1,11 @@
 #ifndef SRC_PLUGIN_SPECIAL
 #define SRC_PLUGIN_SPECIAL
+#include <library/enbt/enbt.hpp>
 #include <optional>
-#include <src/protocolHelper/util.hpp>
+#include <src/base_objects/chat.hpp>
+#include <string>
 
 namespace copper_server {
-    class SpecialPluginHandshake {
-    public:
-        //allows to handle custom packets from the client, like send a packet from server to server or another use case.
-        //if tcp_client_handle nullptr then connection will be closed,
-        //if list_array<uint8_t> empty then client will be disconnected
-        virtual std::pair<tcp_client_handle*, list_array<uint8_t>> InvalidPacket(uint8_t packet_id, ArrayStream& data) {
-            return {nullptr, {}};
-        }
-
-        //allows to set custom handler for this protocol, packet will be again parsed by this new handler
-        virtual tcp_client_handle* UnsupportedProtocolVersion(int protocol_version) {
-            return nullptr;
-        }
-
-        virtual ~SpecialPluginHandshake() {}
-    };
-
     class SpecialPluginStatus {
     public:
         SpecialPluginStatus() {}
@@ -71,7 +56,6 @@ namespace copper_server {
         virtual ~SpecialPluginStatus() {}
     };
 
-    extern SpecialPluginHandshake* special_handshake;
     extern SpecialPluginStatus* special_status;
 }
 

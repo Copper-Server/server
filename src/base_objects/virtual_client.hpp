@@ -1,7 +1,7 @@
 #ifndef SRC_BASE_OBJECTS_VIRTUAL_CLIENT
 #define SRC_BASE_OBJECTS_VIRTUAL_CLIENT
+#include <src/api/packets.hpp>
 #include <src/base_objects/shared_client_data.hpp>
-#include <src/protocolHelper/packets.hpp>
 
 namespace copper_server::base_objects {
     struct virtual_client {

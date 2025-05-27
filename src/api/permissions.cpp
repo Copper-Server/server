@@ -11,25 +11,25 @@ namespace copper_server::api::permissions {
 
     bool has_rights(const std::string& action_name, const base_objects::client_data_holder& client) {
         if (perm == nullptr)
-            return false;
+            return true;
         return perm->has_rights(action_name, client);
     }
 
     bool has_action(const std::string& action_name) {
         if (perm == nullptr)
-            return false;
+            return true;
         return perm->has_action(action_name);
     }
 
     bool has_permission(const std::string& permission_name) {
         if (perm == nullptr)
-            return false;
+            return true;
         return perm->has_permission(permission_name);
     }
 
     bool has_group(const std::string& group_name) {
         if (perm == nullptr)
-            return false;
+            return true;
         return perm->has_group(group_name);
     }
 
