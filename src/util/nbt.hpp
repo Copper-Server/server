@@ -1,10 +1,10 @@
-#ifndef SRC_PROTOCOLHELPERNBT
-#define SRC_PROTOCOLHELPERNBT
+#ifndef SRC_UTIL_NBT
+#define SRC_UTIL_NBT
 
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 
-namespace copper_server {
+namespace copper_server::util {
     //bridge class between ENBT and NBT formats
     class NBT {
         list_array<uint8_t> nbt_data;
@@ -39,6 +39,7 @@ namespace copper_server {
 
         static enbt::value RecursiveExtractor_1(uint8_t type, const uint8_t* data, size_t& i, size_t max_size, bool in_array);
         static enbt::value RecursiveExtractor(const uint8_t* data, size_t& i, size_t max_size);
+        static enbt::value RecursiveExtractorNetwork(const uint8_t* data, size_t& i, size_t max_size);
 
 #pragma endregion
 
@@ -47,6 +48,9 @@ namespace copper_server {
     public:
         static enbt::value readNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size);
         static NBT readNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress = true, const std::string& entry_name = "");
+
+        static enbt::value readNetworkNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size);
+        static NBT readNetworkNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress = true, const std::string& entry_name = "");
 
         NBT(NBT&& move);
         ~NBT();
@@ -63,4 +67,4 @@ namespace copper_server {
     };
 }
 
-#endif /* SRC_PROTOCOLHELPERNBT */
+#endif /* SRC_UTIL_NBT */

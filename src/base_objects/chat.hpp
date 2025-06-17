@@ -432,7 +432,6 @@ namespace copper_server {
         std::string ToStr() const;
         static Chat fromStr(const std::string& str);
         enbt::value ToENBT() const;
-        list_array<uint8_t> ToTextComponent() const;
 
         void removeColor() {
             if (color)

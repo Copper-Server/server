@@ -161,6 +161,14 @@ namespace copper_server::base_objects::network {
         this->data.push_back(data, size);
     }
 
+    void response::item::write_in(item&& data) {
+        this->data.push_back(std::move(data.data));
+    }
+
+    void response::item::write_in(const item& data) {
+        this->data.push_back(data.data);
+    }
+
     response::response() = default;
 
     response::response(const item& copy)

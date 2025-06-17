@@ -144,7 +144,7 @@ namespace copper_server::build_in_plugins {
                     .add_child("<config item>", cmd_pred_string::quotable_phrase)
                     .add_child({"<value>", "updates config in file and applies for program", "/config set <config item> <value>"}, cmd_pred_string::greedy_phrase)
                     .set_callback({"command.config.set", {"console"}}, [&](const list_array<predicate>& args, base_objects::command_context& context) {
-                        api::configuration::get().set(api::configuration::get().server.base_path, std::get<pred_string>(args[0]).value, std::get<pred_string>(args[1]).value);
+                        api::configuration::set_item(std::get<pred_string>(args[0]).value, std::get<pred_string>(args[1]).value);
                         api::players::calls::on_system_message({context.executor, {"Config updated"}});
                         pluginManagement.registeredPlugins().for_each([&](const PluginRegistrationPtr& plugin) {
                             plugin->OnConfigReload(plugin);
@@ -180,18 +180,23 @@ namespace copper_server::build_in_plugins {
             bool enable_respawn_screen = false;
             bool reduced_debug_info = false;
             bool do_limited_crafting = false;
+            int8_t difficulty = 0;
+            bool difficulty_locked = false;
 
             auto last_death_location = client.player_data.last_death_location ? std::optional(base_objects::packets::death_location_data(client.player_data.last_death_location->world_id, {(int32_t)client.player_data.last_death_location->x, (int32_t)client.player_data.last_death_location->y, (int32_t)client.player_data.last_death_location->z}))
                                                                               : std::nullopt;
 
 
             auto [world_id, world_name] = api::world::prepare_world(client_ref);
+
             api::world::get(world_id, [&](storage::world_data& data) {
                 world_debug = data.world_generator_data.contains("debug") ? (bool)data.world_generator_data["debug"] : false;
                 world_flat = data.world_generator_data.contains("flat") ? (bool)data.world_generator_data["flat"] : false;
                 enable_respawn_screen = !(data.world_game_rules.contains("doImmediateRespawn") ? (bool)data.world_game_rules["doImmediateRespawn"] : false);
                 reduced_debug_info = data.world_game_rules.contains("reducedDebugInfo") ? (bool)data.world_game_rules["reducedDebugInfo"] : false;
                 do_limited_crafting = data.world_game_rules.contains("doLimitedCrafting") ? (bool)data.world_game_rules["doLimitedCrafting"] : false;
+                difficulty = data.difficulty;
+                difficulty_locked = data.difficulty_locked;
             });
             auto player_entity_id = api::entity_id_map::allocate_id(client.data->uuid);
             api::entity_id_map::assign_entity(player_entity_id, client.player_data.assigned_entity);
@@ -216,34 +221,29 @@ namespace copper_server::build_in_plugins {
                 world_flat,
                 last_death_location,
                 0,                                                      //ignore portal cooldown, did it used by client?
+                0,                                                      //ignore sea level, did it used by client?
                 api::configuration::get().mojang.enforce_secure_profile //TODO, huh? not sure
             );
-            api::world::sync_settings(client_ref);
-            response += api::packets::play::playerAbilities(client, client.player_data.abilities.flags.mask, client.player_data.abilities.flying_speed, client.player_data.abilities.field_of_view_modifier);
-            response += api::packets::play::setExperience(client, client.player_data.experience.progress, client.player_data.experience.level, client.player_data.experience.total);
-            response += api::packets::play::setHeldSlot(client, client.player_data.assigned_entity->get_selected_item());
-            response += api::packets::play::entityEvent(
-                client,
-                player_entity_id,
-                api::configuration::get().game_play.reduced_debug_screen
-                    ? base_objects::entity_event::enable_reduced_debug_screen
-                    : base_objects::entity_event::disable_reduced_debug_screen
+            response += api::packets::play::changeDifficulty(
+                *client_ref,
+                difficulty,
+                difficulty_locked
             );
-            response += api::packets::play::commands(client, 0, manager.compile_to_graph());
+            response += api::packets::play::playerAbilities(client, client.player_data.abilities.flags.mask, client.player_data.abilities.flying_speed, client.player_data.abilities.field_of_view_modifier);
+            response += api::packets::play::setHeldSlot(client, client.player_data.assigned_entity->get_selected_item());
+            response += api::packets::play::setExperience(client, client.player_data.experience.progress, client.player_data.experience.level, client.player_data.experience.total);
+            //response += api::packets::play::commands(client, manager);
+
             auto [yaw, pitch] = util::to_yaw_pitch(client_ref->player_data.assigned_entity->rotation);
             response += api::packets::play::synchronizePlayerPosition(
                 *client_ref,
                 client_ref->player_data.assigned_entity->position,
+                client_ref->player_data.assigned_entity->motion,
                 yaw,
                 pitch,
                 0
             );
-
-            response += api::packets::play::gameEvent(
-                *client_ref,
-                base_objects::packets::game_event_id::start_waiting_for_level_chunks,
-                0
-            );
+            //api::world::sync_settings(client_ref);
 
             api::world::register_entity(world_id, client_ref->player_data.assigned_entity);
 

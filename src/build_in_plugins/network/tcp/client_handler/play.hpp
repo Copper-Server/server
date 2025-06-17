@@ -1,5 +1,6 @@
-#ifndef SRC_PROTOCOLHELPER_CLIENT_HANDLER_PLAY
-#define SRC_PROTOCOLHELPER_CLIENT_HANDLER_PLAY
+#ifndef SRC_BUILD_IN_PLUGINS_NETWORK_TCP_CLIENT_HANDLER_PLAY
+#define SRC_BUILD_IN_PLUGINS_NETWORK_TCP_CLIENT_HANDLER_PLAY
+
 #include <src/base_objects/network/tcp/accept_packet_registry.hpp>
 #include <src/build_in_plugins/network/tcp/util.hpp>
 
@@ -25,4 +26,5 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
     };
 }
 
-#endif /* SRC_PROTOCOLHELPER_CLIENT_HANDLER_PLAY */
+
+#endif /* SRC_BUILD_IN_PLUGINS_NETWORK_TCP_CLIENT_HANDLER_PLAY */

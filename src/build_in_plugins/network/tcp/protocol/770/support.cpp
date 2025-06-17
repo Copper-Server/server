@@ -4,6 +4,7 @@
 #include <src/api/network.hpp>
 #include <src/api/protocol.hpp>
 
+#include <src/base_objects/commands.hpp>
 #include <src/base_objects/network/tcp/accept_packet_registry.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
@@ -34,7 +35,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response kick(const Chat& reason) override {
                 base_objects::network::response::item packet;
                 packet.write_id(0x00);
-                packet.write_direct(reason.ToTextComponent());
+                packet.write_direct(reader::toTextComponent(reason));
                 return base_objects::network::response::disconnect({std::move(packet)});
             }
 
@@ -111,7 +112,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response kick(const Chat& reason) override {
                 base_objects::network::response::item packet;
                 packet.write_id(0x02);
-                packet.write_direct(reason.ToTextComponent());
+                packet.write_direct(reader::toTextComponent(reason));
                 return base_objects::network::response::disconnect({std::move(packet)});
             }
 
@@ -157,7 +158,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                     } else {
                         packet.write_value(bool(data.size()));
                         if (data.size())
-                            packet.write_direct(NBT::build(data).get_as_network());
+                            packet.write_direct(util::NBT::build(data).get_as_network());
                     }
                 });
                 return packet;
@@ -533,7 +534,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                     packet.write_identifier(name);
                     packet.write_value(bool(data.size()));
                     if (data.size())
-                        packet.write_direct(NBT::build((enbt::value&)data).get_as_network());
+                        packet.write_direct(util::NBT::build((enbt::value&)data).get_as_network());
                 });
                 return packet;
             }
@@ -579,7 +580,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.write_string(hash, 40);
                 packet.write_value(forced);
                 packet.write_value(true);
-                packet.write_direct(prompt.ToTextComponent());
+                packet.write_direct(reader::toTextComponent(prompt));
                 client.packets_state.pending_resource_packs[pack_id] = {.required = forced};
                 return packet;
             }
@@ -666,7 +667,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                                 packet.write_var32((int32_t)item);
                             } else {
                                 packet.write_value(true);
-                                packet.write_direct(item.ToTextComponent());
+                                packet.write_direct(reader::toTextComponent(item));
                             }
                         },
                         label
@@ -765,32 +766,32 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 return packet;
             }
 
-            base_objects::network::response blockEntityData(base_objects::position block, int32_t type, const enbt::value& data) override {
+            //block_type is from "minecraft:block_entity_type" registry, not a block state.
+            base_objects::network::response blockEntityData(base_objects::position pos, const base_objects::block& block_type, const enbt::value& data) override {
                 base_objects::network::response::item packet;
                 packet.write_id(0x06);
-                packet.write_value(block.raw);
-                packet.write_var32(type);
-                packet.write_direct(NBT::build(data).get_as_network());
+                packet.write_value(pos.raw);
+                packet.write_var32(block_type.getStaticData().block_entity_id);
+                packet.write_direct(util::NBT::build(data).get_as_network());
                 return packet;
             }
 
             //block_type is from "minecraft:block" registry, not a block state.
-            base_objects::network::response blockAction(base_objects::position block, int32_t action_id, int32_t param, int32_t block_type) override {
+            base_objects::network::response blockAction(base_objects::position pos, int32_t action_id, int32_t param, const base_objects::block& block_type) override {
                 base_objects::network::response::item packet;
                 packet.write_id(0x07);
-                packet.write_value(block.raw);
+                packet.write_value(pos.raw);
                 packet.write_var32(action_id);
                 packet.write_var32(param);
-                packet.write_var32(block_type);
+                packet.write_var32(block_type.getStaticData().general_block_id);
                 return packet;
             }
 
-            //block_type is from "minecraft:block" registry, not a block state.
-            base_objects::network::response blockUpdate(base_objects::position block, int32_t block_type) override {
+            base_objects::network::response blockUpdate(base_objects::position pos, const base_objects::block& block_type) override {
                 base_objects::network::response::item packet;
                 packet.write_id(0x08);
-                packet.write_value(block.raw);
-                packet.write_var32(block_type);
+                packet.write_value(pos.raw);
+                packet.write_var32(block_type.id);
                 return packet;
             }
 
@@ -905,16 +906,60 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                     packet.write_string(suggestion, 32767);
                     packet.write_value(!!tooltip);
                     if (tooltip)
-                        packet.write_direct(tooltip->ToTextComponent());
+                        packet.write_direct(reader::toTextComponent(*tooltip));
                 }
                 return packet;
             }
 
-            base_objects::network::response commands(int32_t root_id, const list_array<uint8_t>& compiled_graph) override {
+            static std::pair<base_objects::network::response::item, int32_t> build_commands(const base_objects::command_manager& compiled_graph) {
+                base_objects::network::response::item res;
+                bool is_root = true;
+                auto& command_nodes = compiled_graph.get_nodes();
+
+                res.write_var32_check(command_nodes.size());
+                for (auto& command : command_nodes) {
+                    auto node = command.build_node(is_root);
+                    is_root = false;
+                    res.write_value((uint8_t)node.flags.raw);
+                    res.write_var32_check(command.childs.size());
+                    for (auto& child : command.childs)
+                        res.write_var32(child);
+                    if (node.flags.has_redirect)
+                        res.write_var32(*node.redirect_node);
+                    if (node.flags.node_type != base_objects::packets::command_node::node_type::root)
+                        res.write_string(*node.name, 32767);
+                    if (node.flags.node_type == base_objects::packets::command_node::node_type::argument) {
+                        res.write_var32((int32_t)*node.parser_id);
+                        if (node.properties) {
+                            auto& parser_data = *node.properties;
+                            if (parser_data.flags)
+                                res.write_value(*parser_data.flags);
+                            if (parser_data.min)
+                                std::visit([&res](auto val) { res.write_value(val); }, *parser_data.min);
+                            if (parser_data.max)
+                                std::visit([&res](auto val) { res.write_value(val); }, *parser_data.max);
+                            if (parser_data.registry)
+                                res.write_identifier(*parser_data.registry);
+                        }
+                    }
+                    if (node.flags.has_suggestion)
+                        res.write_identifier(*node.suggestion_type);
+                }
+                return {res, 0};
+            }
+
+            base_objects::network::response commands(const base_objects::command_manager& compiled_graph) override {
+                static std::pair<base_objects::network::response::item, int32_t> res;
+                static size_t changes_id = -1;
+                if (auto current_changes_id = compiled_graph.get_changes_id(); changes_id != current_changes_id) {
+                    res = build_commands(compiled_graph);
+                    changes_id = current_changes_id;
+                }
+
                 base_objects::network::response::item packet;
                 packet.write_id(0x10);
-                packet.write_direct(compiled_graph);
-                packet.write_var32(root_id);
+                packet.write_in(res.first);     //nodes tree
+                packet.write_var32(res.second); //root id
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -1034,19 +1079,19 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             }
 
             base_objects::network::response kick(const Chat& reason) override {
-                return base_objects::network::response::disconnect({list_array<uint8_t>::concat(0x1C, reason.ToTextComponent())});
+                return base_objects::network::response::disconnect({list_array<uint8_t>::concat(0x1C, reader::toTextComponent(reason))});
             }
 
             base_objects::network::response disguisedChatMessage(const Chat& message, int32_t chat_type, const Chat& sender, const std::optional<Chat>& target_name) override {
                 list_array<uint8_t> packet;
                 packet.reserve(1 + 2 + 2 + 1);
                 packet.push_back(0x1D);
-                packet.push_back(message.ToTextComponent());
+                packet.push_back(reader::toTextComponent(message));
                 WriteVar<int32_t>(chat_type, packet);
-                packet.push_back(sender.ToTextComponent());
+                packet.push_back(reader::toTextComponent(sender));
                 packet.push_back((bool)target_name);
                 if (target_name)
-                    packet.push_back(target_name->ToTextComponent());
+                    packet.push_back(reader::toTextComponent(*target_name));
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -1207,7 +1252,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response updateChunkDataWLights(
                 int32_t chunk_x,
                 int32_t chunk_z,
-                const NBT& heightmaps,
+                const util::NBT& heightmaps,
                 const std::vector<uint8_t>& data,
                 //block_entries not implemented, this is legal to send later by blockEntityData,
                 const bit_list_array<>& sky_light_mask,
@@ -1247,11 +1292,11 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
-            base_objects::network::response worldEvent(int32_t event, base_objects::position pos, int32_t data, bool global) override {
+            base_objects::network::response worldEvent(base_objects::packets::world_event_id event, base_objects::position pos, int32_t data, bool global) override {
                 list_array<uint8_t> packet;
                 packet.reserve(1 + 4 + 8 + 4 + 1);
                 packet.push_back(0x28);
-                WriteVar<int32_t>(event, packet);
+                WriteVar<int32_t>((int32_t)event, packet);
                 WriteValue<uint64_t>(pos.raw, packet);
                 WriteVar<int32_t>(data, packet);
                 packet.push_back(global);
@@ -1313,36 +1358,36 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
-            base_objects::network::response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, bool enforces_secure_chat) override {
-                list_array<uint8_t> packet;
-                packet.push_back(0x2B);
-                WriteValue<int32_t>(entity_id, packet);
-                packet.push_back(is_hardcore);
-                WriteVar<int32_t>(dimension_names.size(), packet);
+            base_objects::network::response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, int32_t sea_level, bool enforces_secure_chat) override {
+                base_objects::network::response::item packet;
+                packet.write_id(0x2B);
+                packet.write_value(entity_id);
+                packet.write_value(is_hardcore);
+                packet.write_var32_check(dimension_names.size());
                 for (auto& it : dimension_names)
-                    WriteIdentifier(packet, it);
-                WriteVar<int32_t>(max_players, packet);
-                WriteVar<int32_t>(view_distance, packet);
-                WriteVar<int32_t>(simulation_distance, packet);
-                packet.push_back(reduced_debug_info);
-                packet.push_back(enable_respawn_screen);
-                packet.push_back(do_limited_crafting);
-                WriteVar<int32_t>(current_dimension_type, packet);
-                WriteIdentifier(packet, dimension_name);
-                WriteValue<int64_t>(hashed_seed, packet);
-                packet.push_back(gamemode);
-                packet.push_back(prev_gamemode);
-                packet.push_back(is_debug);
-                packet.push_back(is_flat);
-                packet.push_back((bool)death_location);
+                    packet.write_identifier(it);
+                packet.write_var32(max_players);
+                packet.write_var32(view_distance);
+                packet.write_var32(simulation_distance);
+                packet.write_value(reduced_debug_info);
+                packet.write_value(enable_respawn_screen);
+                packet.write_value(do_limited_crafting);
+                packet.write_var32(current_dimension_type);
+                packet.write_identifier(dimension_name);
+                packet.write_value(hashed_seed);
+                packet.write_value(gamemode);
+                packet.write_value(prev_gamemode);
+                packet.write_value(is_debug);
+                packet.write_value(is_flat);
+                packet.write_value((bool)death_location);
                 if (death_location) {
-                    WriteValue(death_location->position.raw, packet);
-                    WriteIdentifier(packet, death_location->dimension);
+                    packet.write_identifier(death_location->dimension);
+                    packet.write_value(death_location->position.raw);
                 }
-                WriteVar<int32_t>(portal_cooldown, packet);
-                WriteVar<int32_t>(0, packet); //sea level
-                packet.push_back(enforces_secure_chat);
-                return base_objects::network::response::answer({std::move(packet)});
+                packet.write_var32(portal_cooldown);
+                packet.write_var32(sea_level);
+                packet.write_value(enforces_secure_chat);
+                return packet;
             }
 
             base_objects::network::response mapData(int32_t map_id, uint8_t scale, bool locked, const list_array<base_objects::packets::map_icon>& icons, uint8_t columns, uint8_t rows, uint8_t x, uint8_t z, const list_array<uint8_t>& data) override {
@@ -1362,7 +1407,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         packet.push_back(direction);
                         packet.push_back((bool)name);
                         if (name)
-                            packet.push_back(name->ToTextComponent());
+                            packet.push_back(reader::toTextComponent(*name));
                     }
                 }
                 packet.push_back(columns);
@@ -1414,7 +1459,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
-            base_objects::network::response updateEntityPositionAndRotation(int32_t entity_id, util::XYZ<float> pos, util::VECTOR rot, bool on_ground) override {
+            base_objects::network::response updateEntityPositionAndRotation(int32_t entity_id, util::XYZ<float> pos, util::ANGLE_DEG rot, bool on_ground) override {
                 list_array<uint8_t> packet;
                 packet.reserve(1 + 4 + 4 * 3 + 4 * 3 + 1);
                 packet.push_back(0x2F);
@@ -1450,7 +1495,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
-            base_objects::network::response updateEntityRotation(int32_t entity_id, util::VECTOR rot, bool on_ground) override {
+            base_objects::network::response updateEntityRotation(int32_t entity_id, util::ANGLE_DEG rot, bool on_ground) override {
                 list_array<uint8_t> packet;
                 packet.reserve(1 + 4 + 4 * 2 + 1);
                 packet.push_back(0x31);
@@ -1462,7 +1507,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
-            base_objects::network::response moveVehicle(util::VECTOR pos, util::VECTOR rot) override {
+            base_objects::network::response moveVehicle(util::VECTOR pos, util::ANGLE_DEG rot) override {
                 list_array<uint8_t> packet;
                 packet.reserve(1 + 4 * 3 + 4 * 3);
                 packet.push_back(0x32);
@@ -1489,7 +1534,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.push_back(0x34);
                 packet.push_back(window_id);
                 WriteVar<int32_t>(type, packet);
-                packet.push_back(title.ToTextComponent());
+                packet.push_back(reader::toTextComponent(title));
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -1560,7 +1605,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 }
                 packet.push_back((bool)unsigned_content);
                 if (unsigned_content)
-                    packet.push_back(NBT::build(*unsigned_content).get_as_network());
+                    packet.push_back(util::NBT::build(*unsigned_content).get_as_network());
                 WriteVar<int32_t>(filter_type, packet);
                 if (filter_type == 2) { //PARTIALLY_FILTERED
                     size_t need_bytes_for_message = (message.size() + 7) / 8;
@@ -1569,10 +1614,10 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                     packet.push_back(filtered_symbols_bitfield);
                 }
                 WriteVar<int32_t>(chat_type, packet);
-                packet.push_back(sender_name.ToTextComponent());
+                packet.push_back(reader::toTextComponent(sender_name));
                 packet.push_back((bool)target_name);
                 if (target_name)
-                    packet.push_back(target_name->ToTextComponent());
+                    packet.push_back(reader::toTextComponent(*target_name));
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -1593,7 +1638,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.reserve(1 + 4);
                 packet.push_back(0x3D);
                 WriteVar<int32_t>(player_id, packet);
-                packet.push_back(message.ToTextComponent());
+                packet.push_back(reader::toTextComponent(message));
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -1696,7 +1741,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                     WriteUUID(uuid, packet);
                     packet.push_back((bool)display_name);
                     if (display_name)
-                        packet.push_back(display_name->ToTextComponent());
+                        packet.push_back(reader::toTextComponent(*display_name));
                 }
                 return base_objects::network::response::answer({std::move(packet)});
             }
@@ -1717,18 +1762,20 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
-            base_objects::network::response synchronizePlayerPosition(util::VECTOR pos, float yaw, float pitch, uint8_t flags, int32_t teleport_id) override {
-                list_array<uint8_t> packet;
-                packet.reserve(1 + 4 * 3 + 4 * 2 + 1);
-                packet.push_back(0x41);
-                WriteValue<double>(pos.x, packet);
-                WriteValue<double>(pos.y, packet);
-                WriteValue<double>(pos.z, packet);
-                WriteValue<float>(yaw, packet);
-                WriteValue<float>(pitch, packet);
-                packet.push_back(flags);
-                WriteVar<int32_t>(teleport_id, packet);
-                return base_objects::network::response::answer({std::move(packet)});
+            base_objects::network::response synchronizePlayerPosition(util::VECTOR pos, util::VECTOR velocity, float yaw, float pitch, int flags, int32_t teleport_id) override {
+                base_objects::network::response::item packet;
+                packet.write_id(0x41);
+                packet.write_var32(teleport_id);
+                packet.write_value(pos.x);
+                packet.write_value(pos.y);
+                packet.write_value(pos.z);
+                packet.write_value(velocity.x);
+                packet.write_value(velocity.y);
+                packet.write_value(velocity.z);
+                packet.write_value(yaw);
+                packet.write_value(pitch);
+                packet.write_value(flags);
+                return packet;
             }
 
             base_objects::network::response synchronizePlayerRotation(float yaw, float pitch) override {
@@ -1933,7 +1980,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.push_back(forced);
                 packet.push_back((bool)prompt);
                 if (prompt)
-                    packet.push_back(prompt->ToTextComponent());
+                    packet.push_back(reader::toTextComponent(*prompt));
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -1959,7 +2006,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
-            base_objects::network::response setHeadRotation(int32_t entity_id, util::VECTOR head_rotation) override {
+            base_objects::network::response setHeadRotation(int32_t entity_id, util::ANGLE_DEG head_rotation) override {
                 list_array<uint8_t> packet;
                 packet.push_back(0x4C);
                 WriteVar<int32_t>(entity_id, packet);
@@ -1992,7 +2039,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response serverData(const Chat& motd, const std::optional<list_array<uint8_t>>& icon_png) override {
                 list_array<uint8_t> packet;
                 packet.push_back(0x4F);
-                packet.push_back(motd.ToTextComponent());
+                packet.push_back(reader::toTextComponent(motd));
                 packet.push_back((bool)icon_png);
                 if (icon_png) {
                     WriteVar<int32_t>(icon_png->size(), packet);
@@ -2004,7 +2051,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response setActionBarText(const Chat& text) override {
                 list_array<uint8_t> packet;
                 packet.push_back(0x50);
-                packet.push_back(text.ToTextComponent());
+                packet.push_back(reader::toTextComponent(text));
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -2157,7 +2204,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.push_back(0x63);
                 WriteString(packet, objective_name, 32767);
                 packet.push_back(0);
-                packet.push_back(display_name.ToTextComponent());
+                packet.push_back(reader::toTextComponent(display_name));
                 packet.push_back(render_type);
                 packet.push_back(0);
                 return base_objects::network::response::answer({std::move(packet)});
@@ -2168,11 +2215,11 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.push_back(0x63);
                 WriteString(packet, objective_name, 32767);
                 packet.push_back(0);
-                packet.push_back(display_name.ToTextComponent());
+                packet.push_back(reader::toTextComponent(display_name));
                 packet.push_back(render_type);
                 packet.push_back(true);
                 packet.push_back(1);
-                packet.push_back(NBT::build(style).get_as_network());
+                packet.push_back(util::NBT::build(style).get_as_network());
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -2181,11 +2228,11 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.push_back(0x63);
                 WriteString(packet, objective_name, 32767);
                 packet.push_back(0);
-                packet.push_back(display_name.ToTextComponent());
+                packet.push_back(reader::toTextComponent(display_name));
                 packet.push_back(render_type);
                 packet.push_back(true);
                 packet.push_back(2);
-                packet.push_back(content.ToTextComponent());
+                packet.push_back(reader::toTextComponent(content));
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -2202,7 +2249,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.push_back(0x63);
                 WriteString(packet, objective_name, 32767);
                 packet.push_back(2);
-                packet.push_back(display_name.ToTextComponent());
+                packet.push_back(reader::toTextComponent(display_name));
                 packet.push_back(render_type);
                 packet.push_back(false);
                 return base_objects::network::response::answer({std::move(packet)});
@@ -2213,11 +2260,11 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.push_back(0x63);
                 WriteString(packet, objective_name, 32767);
                 packet.push_back(2);
-                packet.push_back(display_name.ToTextComponent());
+                packet.push_back(reader::toTextComponent(display_name));
                 packet.push_back(render_type);
                 packet.push_back(true);
                 packet.push_back(1);
-                packet.push_back(NBT::build(style).get_as_network());
+                packet.push_back(util::NBT::build(style).get_as_network());
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -2226,11 +2273,11 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.push_back(0x63);
                 WriteString(packet, objective_name, 32767);
                 packet.push_back(2);
-                packet.push_back(display_name.ToTextComponent());
+                packet.push_back(reader::toTextComponent(display_name));
                 packet.push_back(render_type);
                 packet.push_back(true);
                 packet.push_back(2);
-                packet.push_back(content.ToTextComponent());
+                packet.push_back(reader::toTextComponent(content));
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -2257,13 +2304,13 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.push_back(0x66);
                 WriteString(packet, team_name, 32767);
                 packet.push_back(0);
-                packet.push_back(display_name.ToTextComponent());
+                packet.push_back(reader::toTextComponent(display_name));
                 packet.push_back(int8_t(allow_fire_co_teamer) & (int8_t(see_invisible_co_teamer) << 1));
                 WriteString(packet, name_tag_visibility, 40);
                 WriteString(packet, collision_rule, 40);
                 WriteVar<int32_t>(team_color, packet);
-                packet.push_back(prefix.ToTextComponent());
-                packet.push_back(suffix.ToTextComponent());
+                packet.push_back(reader::toTextComponent(prefix));
+                packet.push_back(reader::toTextComponent(suffix));
                 WriteVar<int32_t>(entities.size(), packet);
                 for (auto& it : entities)
                     WriteString(packet, it, 32767);
@@ -2283,13 +2330,13 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.push_back(0x66);
                 WriteString(packet, team_name, 32767);
                 packet.push_back(2);
-                packet.push_back(display_name.ToTextComponent());
+                packet.push_back(reader::toTextComponent(display_name));
                 packet.push_back(int8_t(allow_fire_co_teamer) & (int8_t(see_invisible_co_teamer) << 1));
                 WriteString(packet, name_tag_visibility, 40);
                 WriteString(packet, collision_rule, 40);
                 WriteVar<int32_t>(team_color, packet);
-                packet.push_back(prefix.ToTextComponent());
-                packet.push_back(suffix.ToTextComponent());
+                packet.push_back(reader::toTextComponent(prefix));
+                packet.push_back(reader::toTextComponent(suffix));
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -2324,7 +2371,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 WriteVar<int32_t>(value, packet);
                 packet.push_back((bool)display_name);
                 if (display_name)
-                    packet.push_back(display_name->ToTextComponent());
+                    packet.push_back(reader::toTextComponent(*display_name));
                 packet.push_back(0);
                 return base_objects::network::response::answer({std::move(packet)});
             }
@@ -2337,9 +2384,9 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 WriteVar<int32_t>(value, packet);
                 packet.push_back((bool)display_name);
                 if (display_name)
-                    packet.push_back(display_name->ToTextComponent());
+                    packet.push_back(reader::toTextComponent(*display_name));
                 packet.push_back(1);
-                packet.push_back(NBT::build(styled).get_as_network());
+                packet.push_back(util::NBT::build(styled).get_as_network());
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -2351,9 +2398,9 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 WriteVar<int32_t>(value, packet);
                 packet.push_back((bool)display_name);
                 if (display_name)
-                    packet.push_back(display_name->ToTextComponent());
+                    packet.push_back(reader::toTextComponent(*display_name));
                 packet.push_back(2);
-                packet.push_back(content.ToTextComponent());
+                packet.push_back(reader::toTextComponent(content));
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -2367,7 +2414,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response setSubtitleText(const Chat& text) override {
                 list_array<uint8_t> packet;
                 packet.push_back(0x69);
-                packet.push_back(text.ToTextComponent());
+                packet.push_back(reader::toTextComponent(text));
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -2383,7 +2430,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response setTitleText(const Chat& text) override {
                 list_array<uint8_t> packet;
                 packet.push_back(0x6B);
-                packet.push_back(text.ToTextComponent());
+                packet.push_back(reader::toTextComponent(text));
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -2520,7 +2567,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response systemChatMessage(const Chat& message) override {
                 list_array<uint8_t> packet;
                 packet.push_back(0x72);
-                packet.push_back(message.ToTextComponent());
+                packet.push_back(reader::toTextComponent(message));
                 packet.push_back(false);
                 return base_objects::network::response::answer({std::move(packet)});
             }
@@ -2528,7 +2575,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response systemChatMessageOverlay(const Chat& message) override {
                 list_array<uint8_t> packet;
                 packet.push_back(0x72);
-                packet.push_back(message.ToTextComponent());
+                packet.push_back(reader::toTextComponent(message));
                 packet.push_back(true);
                 return base_objects::network::response::answer({std::move(packet)});
             }
@@ -2536,8 +2583,8 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response setTabListHeaderAndFooter(const Chat& header, const Chat& footer) override {
                 list_array<uint8_t> packet;
                 packet.push_back(0x73);
-                packet.push_back(header.ToTextComponent());
-                packet.push_back(footer.ToTextComponent());
+                packet.push_back(reader::toTextComponent(header));
+                packet.push_back(reader::toTextComponent(footer));
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -2546,7 +2593,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.reserve(1 + 4);
                 packet.push_back(0x74);
                 WriteVar<int32_t>(transaction_id, packet);
-                packet.push_back(NBT::build(nbt).get_as_network());
+                packet.push_back(util::NBT::build(nbt).get_as_network());
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -2581,7 +2628,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response test_instance_block_status(const Chat& status, std::optional<util::VECTOR> size) {
                 list_array<uint8_t> packet;
                 packet.push_back(0x77);
-                packet.push_back(status.ToTextComponent());
+                packet.push_back(reader::toTextComponent(status));
                 packet.push_back((bool)size);
                 if (size) {
                     WriteValue<double>(size->x, packet);
@@ -2627,8 +2674,8 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                     packet.push_back((bool)item.display);
                     if (item.display) {
                         auto& display = *item.display;
-                        packet.push_back(display.title.ToTextComponent());
-                        packet.push_back(display.description.ToTextComponent());
+                        packet.push_back(reader::toTextComponent(display.title));
+                        packet.push_back(reader::toTextComponent(display.description));
                         reader::WriteSlot(packet, display.icon);
                         WriteVar<int32_t>(display.frame_type, packet);
                         //automaticaly set background_texture flag(0x01) to true if it has value
@@ -2810,7 +2857,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                                 WriteVar<int32_t>((int32_t)item, packet);
                             } else {
                                 packet.push_back(true);
-                                packet.push_back(item.ToTextComponent());
+                                packet.push_back(reader::toTextComponent(item));
                             }
                         },
                         label

@@ -128,7 +128,7 @@ namespace copper_server {
                 void (*entity_motion_changes)(entity& self, entity&, util::VECTOR new_motion) = nullptr;
 
                 void (*entity_rides)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
-                void (*entity_leaves_ride)(entity& self, entity&) = nullptr;
+                void (*entity_leaves_ride)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
 
                 void (*entity_attach)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
                 void (*entity_detach)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
@@ -144,8 +144,8 @@ namespace copper_server {
                 void (*entity_break)(entity& self, entity&, int64_t x, int64_t y, int64_t z, uint8_t state) = nullptr; //form 0 to 9, other ignored
                 void (*entity_cancel_break)(entity& self, entity&, int64_t x, int64_t y, int64_t z) = nullptr;
                 void (*entity_finish_break)(entity& self, entity&, int64_t x, int64_t y, int64_t z) = nullptr;
-                void (*entity_place_block)(entity& self, entity&, int64_t x, int64_t y, int64_t z, const base_objects::block&) = nullptr;
-                void (*entity_place_block_entity)(entity& self, entity&, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref) = nullptr;
+                void (*entity_place_block)(entity& self, entity&, bool is_main_hand, int64_t x, int64_t y, int64_t z, const base_objects::block&) = nullptr;
+                void (*entity_place_block_entity)(entity& self, entity&, bool is_main_hand, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref) = nullptr;
 
 
                 void (*entity_animation)(entity& self, entity&, base_objects::entity_animation animation) = nullptr;
@@ -233,6 +233,8 @@ namespace copper_server {
             static const entity_data& get_entity(const std::string& id);
             static uint16_t register_entity(entity_data);
             static const entity_data& view(const entity& entity);
+            static void register_entity_world_processor(std::shared_ptr<world_processor> processor, const std::string& id);
+
             //USED ONLY DURING FULL SERVER RELOAD!  DO NOT ALLOW CALL FROM THE USER CODE
             static void reset_entities();      //INTERNAL
             static void initialize_entities(); //INTERNAL, used to assign internal_entity_aliases ids from entity_aliases
@@ -298,7 +300,9 @@ namespace copper_server {
             //  uint8_t food = 20;
             //  float saturation = 5;
             //  float breath = 10;
-            //  float experience = 0;
+            //  int32_t level = 0;
+            //  int32_t required_experience = 0;
+            //  int32_t experience = 0;
             //  int32_t fall_distance = 0;
             //  uint8_t selected_item = 0; //hotbar, 0..8
             //
@@ -384,15 +388,18 @@ namespace copper_server {
             void add_breath(float breath);
             void reduce_breath(float breath);
 
-            float get_experience() const;
-            void set_experience(float experience);
-            void add_experience(float experience);
-            void reduce_experience(float experience);
+            int32_t get_level() const;
+            void set_level(int32_t level);
+            void add_level(int32_t level);
+            void reduce_level(int32_t level);
+
+            int32_t get_experience() const;
+            void set_experience(int32_t experience);
+            void add_experience(int32_t experience);
+            void reduce_experience(int32_t experience);
 
             int32_t get_fall_distance() const;
             void set_fall_distance(int32_t fall_distance);
-            void add_fall_distance(int32_t fall_distance);
-            void reduce_fall_distance(int32_t fall_distance);
 
             uint8_t get_selected_item() const;
             void set_selected_item(uint8_t selected_item);

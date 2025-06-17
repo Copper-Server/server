@@ -16,5 +16,8 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
     base_objects::slot ReadSlot(ArrayStream& data, int16_t protocol = 770);
 
     bool WriteRecipeDisplay(list_array<uint8_t>& data, const base_objects::recipe& display);
+
+    Chat fromTextComponent(const list_array<uint8_t>& enbt);
+    list_array<uint8_t> toTextComponent(const Chat&);
 }
 #endif /* SRC_BUILD_IN_PLUGINS_PROTOCOL_770_WRITERS_READERS */

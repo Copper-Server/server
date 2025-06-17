@@ -189,7 +189,7 @@ namespace copper_server::build_in_plugins {
                             target = world.profiling.chunk_target_to_load;
                             loaded = world.profiling.chunk_total_loaded;
                         });
-                        if (target == loaded && target) {
+                        if (target <= loaded && target) {
                             log::info("World", "world " + it + " loaded.");
                             complete = true;
                         } else {

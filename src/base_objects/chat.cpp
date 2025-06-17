@@ -1,6 +1,5 @@
 
 #include <src/base_objects/chat.hpp>
-#include <src/protocolHelperNBT.hpp>
 #include <src/util/conversions.hpp>
 #include <src/util/json_helpers.hpp>
 #include <utf8.h>
@@ -355,10 +354,6 @@ namespace copper_server {
         return result;
     }
 
-    Chat Chat::fromTextComponent(const list_array<uint8_t>& enbt) {
-        return fromEnbt(NBT::build_network(enbt).get_as_enbt());
-    }
-
     std::string Chat::ToStr() const {
         std::string str = "{";
         if (text) {
@@ -677,10 +672,6 @@ namespace copper_server {
                 return enbt["text"];
         }
         return enbt;
-    }
-
-    list_array<uint8_t> Chat::ToTextComponent() const {
-        return NBT::build(ToENBT()).get_as_network();
     }
 
     void Chat::setString(char*& char_ptr, const std::string& string) {

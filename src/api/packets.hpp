@@ -18,6 +18,7 @@
 namespace copper_server {
     namespace base_objects {
         struct SharedClientData;
+        class command_manager;
     }
 
     namespace api::packets {
@@ -59,10 +60,10 @@ namespace copper_server {
             base_objects::network::response entityAnimation(base_objects::SharedClientData& client, const base_objects::entity& entity, base_objects::entity_animation animation);
             base_objects::network::response awardStatistics(base_objects::SharedClientData& client, const list_array<base_objects::packets::statistics>& statistics);
             base_objects::network::response acknowledgeBlockChange(base_objects::SharedClientData& client);
-            base_objects::network::response setBlockDestroyStage(base_objects::SharedClientData& client, const base_objects::entity& entity, base_objects::position block, uint8_t stage);
-            base_objects::network::response blockEntityData(base_objects::SharedClientData& client, base_objects::position block, int32_t type, const enbt::value& data);
-            base_objects::network::response blockAction(base_objects::SharedClientData& client, base_objects::position block, int32_t action_id, int32_t param, int32_t block_type);
-            base_objects::network::response blockUpdate(base_objects::SharedClientData& client, base_objects::position block, int32_t block_type);
+            base_objects::network::response setBlockDestroyStage(base_objects::SharedClientData& client, const base_objects::entity& entity, base_objects::position pos, uint8_t stage);
+            base_objects::network::response blockEntityData(base_objects::SharedClientData& client, base_objects::position pos, const base_objects::block& block_type, const enbt::value& data);
+            base_objects::network::response blockAction(base_objects::SharedClientData& client, base_objects::position pos, int32_t action_id, int32_t param, const base_objects::block& block_type);
+            base_objects::network::response blockUpdate(base_objects::SharedClientData& client, base_objects::position pos, const base_objects::block& block_type);
             base_objects::network::response bossBarAdd(base_objects::SharedClientData& client, const enbt::raw_uuid& id, const Chat& title, float health, int32_t color, int32_t division, uint8_t flags);
             base_objects::network::response bossBarRemove(base_objects::SharedClientData& client, const enbt::raw_uuid& id);
             base_objects::network::response bossBarUpdateHealth(base_objects::SharedClientData& client, const enbt::raw_uuid& id, float health);
@@ -75,7 +76,7 @@ namespace copper_server {
             base_objects::network::response chunkBiomes(base_objects::SharedClientData& client, list_array<base_objects::chunk::chunk_biomes>& chunk);
             base_objects::network::response clearTitles(base_objects::SharedClientData& client, bool reset);
             base_objects::network::response commandSuggestionsResponse(base_objects::SharedClientData& client, int32_t transaction_id, int32_t start_pos, int32_t length, const list_array<base_objects::packets::command_suggestion>& suggestions);
-            base_objects::network::response commands(base_objects::SharedClientData& client, int32_t root_id, const list_array<uint8_t>& compiled_graph);
+            base_objects::network::response commands(base_objects::SharedClientData& client, const base_objects::command_manager& compiled_graph);
             base_objects::network::response closeContainer(base_objects::SharedClientData& client, uint8_t container_id);
             base_objects::network::response setContainerContent(base_objects::SharedClientData& client, uint8_t windows_id, int32_t state_id, const list_array<base_objects::slot>& slots, const base_objects::slot& carried_item);
             base_objects::network::response setContainerProperty(base_objects::SharedClientData& client, uint8_t windows_id, uint16_t property, uint16_t value);
@@ -98,17 +99,17 @@ namespace copper_server {
             base_objects::network::response hurtAnimation(base_objects::SharedClientData& client, int32_t entity_id, float yaw);
             base_objects::network::response initializeWorldBorder(base_objects::SharedClientData& client, double x, double z, double old_diameter, double new_diameter, int64_t speed_ms, int32_t portal_teleport_boundary, int32_t warning_blocks, int32_t warning_time);
             base_objects::network::response keepAlive(base_objects::SharedClientData& client, int64_t id);
-            base_objects::network::response updateChunkDataWLights(base_objects::SharedClientData& client, int32_t chunk_x, int32_t chunk_z, const NBT& heightmaps, const std::vector<uint8_t> data, const bit_list_array<>& sky_light_mask, const bit_list_array<>& block_light_mask, const bit_list_array<>& empty_skylight_mask, const bit_list_array<>& empty_block_light_mask, const list_array<std::vector<uint8_t>> sky_light_arrays, const list_array<std::vector<uint8_t>> block_light_arrays);
-            base_objects::network::response worldEvent(base_objects::SharedClientData& client, int32_t event, base_objects::position pos, int32_t data, bool global);
+            base_objects::network::response updateChunkDataWLights(base_objects::SharedClientData& client, int32_t chunk_x, int32_t chunk_z, const util::NBT& heightmaps, const std::vector<uint8_t> data, const bit_list_array<>& sky_light_mask, const bit_list_array<>& block_light_mask, const bit_list_array<>& empty_skylight_mask, const bit_list_array<>& empty_block_light_mask, const list_array<std::vector<uint8_t>> sky_light_arrays, const list_array<std::vector<uint8_t>> block_light_arrays);
+            base_objects::network::response worldEvent(base_objects::SharedClientData& client, base_objects::packets::world_event_id event, base_objects::position pos, int32_t data, bool global);
             base_objects::network::response particle(base_objects::SharedClientData& client, int32_t particle_id, bool long_distance, util::VECTOR pos, util::XYZ<float> offset, float max_speed, int32_t count, const list_array<uint8_t>& data);
             base_objects::network::response updateLight(base_objects::SharedClientData& client, int32_t chunk_x, int32_t chunk_z, const bit_list_array<>& sky_light_mask, const bit_list_array<>& block_light_mask, const bit_list_array<>& empty_skylight_mask, const bit_list_array<>& empty_block_light_mask, const list_array<std::vector<uint8_t>> sky_light_arrays, const list_array<std::vector<uint8_t>> block_light_arrays);
-            base_objects::network::response joinGame(base_objects::SharedClientData& client, int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, std::optional<base_objects::packets::death_location_data> death_location, int32_t portal_cooldown, bool enforces_secure_chat);
+            base_objects::network::response joinGame(base_objects::SharedClientData& client, int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, std::optional<base_objects::packets::death_location_data> death_location, int32_t portal_cooldown, int32_t sea_level, bool enforces_secure_chat);
             base_objects::network::response mapData(base_objects::SharedClientData& client, int32_t map_id, uint8_t scale, bool locked, const list_array<base_objects::packets::map_icon>& icons, uint8_t column, uint8_t rows, uint8_t x, uint8_t z, const list_array<uint8_t>& data);
             base_objects::network::response merchantOffers(base_objects::SharedClientData& client, int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade> trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock);
             base_objects::network::response updateEntityPosition(base_objects::SharedClientData& client, int32_t entity_id, util::XYZ<float> pos, bool on_ground);
-            base_objects::network::response updateEntityPositionAndRotation(base_objects::SharedClientData& client, int32_t entity_id, util::XYZ<float> pos, util::VECTOR rot, bool on_ground);
-            base_objects::network::response updateEntityRotation(base_objects::SharedClientData& client, int32_t entity_id, util::VECTOR rot, bool on_ground);
-            base_objects::network::response moveVehicle(base_objects::SharedClientData& client, util::VECTOR pos, util::VECTOR rot);
+            base_objects::network::response updateEntityPositionAndRotation(base_objects::SharedClientData& client, int32_t entity_id, util::XYZ<float> pos, util::ANGLE_DEG rot, bool on_ground);
+            base_objects::network::response updateEntityRotation(base_objects::SharedClientData& client, int32_t entity_id, util::ANGLE_DEG rot, bool on_ground);
+            base_objects::network::response moveVehicle(base_objects::SharedClientData& client, util::VECTOR pos, util::ANGLE_DEG rot);
             base_objects::network::response openBook(base_objects::SharedClientData& client, int32_t hand);
             base_objects::network::response openScreen(base_objects::SharedClientData& client, int32_t window_id, int32_t type, const Chat& title);
             base_objects::network::response openSignEditor(base_objects::SharedClientData& client, base_objects::position pos, bool is_front_text);
@@ -128,7 +129,7 @@ namespace copper_server {
             base_objects::network::response playerInfoUpdateLatency(base_objects::SharedClientData& client, const list_array<base_objects::packets::player_actions_update_latency>& update_latency);
             base_objects::network::response playerInfoUpdateDisplayName(base_objects::SharedClientData& client, const list_array<base_objects::packets::player_actions_update_display_name>& update_display_name);
             base_objects::network::response lookAt(base_objects::SharedClientData& client, bool from_feet_or_eyes, util::VECTOR target, std::optional<std::pair<int32_t, bool>> entity_id);
-            base_objects::network::response synchronizePlayerPosition(base_objects::SharedClientData& client, util::VECTOR pos, float yaw, float pitch, uint8_t flags);
+            base_objects::network::response synchronizePlayerPosition(base_objects::SharedClientData& client, util::VECTOR pos, util::VECTOR velocity, float yaw, float pitch, int flags);
             base_objects::network::response initRecipeBook(base_objects::SharedClientData& client, bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> displayed_recipe_ids, list_array<std::string> had_access_to_recipe_ids);
             base_objects::network::response addRecipeBook(base_objects::SharedClientData& client, bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> recipe_ids);
             base_objects::network::response removeRecipeBook(base_objects::SharedClientData& client, bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> recipe_ids);
@@ -139,7 +140,7 @@ namespace copper_server {
             base_objects::network::response removeResourcePack(base_objects::SharedClientData& client, enbt::raw_uuid id);
             base_objects::network::response addResourcePack(base_objects::SharedClientData& client, enbt::raw_uuid id, const std::string& url, const std::string& hash, bool forced, const std::optional<Chat>& prompt);
             base_objects::network::response respawn(base_objects::SharedClientData& client, int32_t dimension_type, const std::string& dimension_name, long hashed_seed, uint8_t gamemode, uint8_t previous_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, bool keep_attributes, bool keep_metadata);
-            base_objects::network::response setHeadRotation(base_objects::SharedClientData& client, int32_t entity_id, util::VECTOR head_rotation);
+            base_objects::network::response setHeadRotation(base_objects::SharedClientData& client, int32_t entity_id, util::ANGLE_DEG head_rotation);
             base_objects::network::response updateSectionBlocks(base_objects::SharedClientData& client, int32_t section_x, int32_t section_z, int32_t section_y, const list_array<base_objects::compressed_block_state>& blocks);
             base_objects::network::response setAdvancementsTab(base_objects::SharedClientData& client, const std::optional<std::string>& tab_id);
             base_objects::network::response serverData(base_objects::SharedClientData& client, const Chat& motd, const std::optional<list_array<uint8_t>>& icon_png);
@@ -263,10 +264,10 @@ namespace copper_server {
                 virtual base_objects::network::response entityAnimation(const base_objects::entity& entity, base_objects::entity_animation animation) = 0;
                 virtual base_objects::network::response awardStatistics(const list_array<base_objects::packets::statistics>& statistics) = 0;
                 virtual base_objects::network::response acknowledgeBlockChange(base_objects::SharedClientData& client) = 0;
-                virtual base_objects::network::response setBlockDestroyStage(const base_objects::entity& entity, base_objects::position block, uint8_t stage) = 0;
-                virtual base_objects::network::response blockEntityData(base_objects::position block, int32_t type, const enbt::value& data) = 0;
-                virtual base_objects::network::response blockAction(base_objects::position block, int32_t action_id, int32_t param, int32_t block_type) = 0;
-                virtual base_objects::network::response blockUpdate(base_objects::position block, int32_t block_type) = 0;
+                virtual base_objects::network::response setBlockDestroyStage(const base_objects::entity& entity, base_objects::position pos, uint8_t stage) = 0;
+                virtual base_objects::network::response blockEntityData(base_objects::position pos, const base_objects::block& block_type, const enbt::value& data) = 0;
+                virtual base_objects::network::response blockAction(base_objects::position pos, int32_t action_id, int32_t param, const base_objects::block& block_type) = 0;
+                virtual base_objects::network::response blockUpdate(base_objects::position pos, const base_objects::block& block_type) = 0;
                 virtual base_objects::network::response bossBarAdd(const enbt::raw_uuid& id, const Chat& title, float health, int32_t color, int32_t division, uint8_t flags) = 0;
                 virtual base_objects::network::response bossBarRemove(const enbt::raw_uuid& id) = 0;
                 virtual base_objects::network::response bossBarUpdateHealth(const enbt::raw_uuid& id, float health) = 0;
@@ -279,7 +280,7 @@ namespace copper_server {
                 virtual base_objects::network::response chunkBiomes(list_array<base_objects::chunk::chunk_biomes>& chunk) = 0;
                 virtual base_objects::network::response clearTitles(bool reset) = 0;
                 virtual base_objects::network::response commandSuggestionsResponse(int32_t transaction_id, int32_t start_pos, int32_t length, const list_array<base_objects::packets::command_suggestion>& suggestions) = 0;
-                virtual base_objects::network::response commands(int32_t root_id, const list_array<uint8_t>& compiled_graph) = 0;
+                virtual base_objects::network::response commands(const base_objects::command_manager& compiled_graph) = 0;
                 virtual base_objects::network::response closeContainer(uint8_t container_id) = 0;
                 virtual base_objects::network::response setContainerContent(uint8_t windows_id, int32_t state_id, const list_array<base_objects::slot>& slots, const base_objects::slot& carried_item) = 0;
                 virtual base_objects::network::response setContainerProperty(uint8_t windows_id, uint16_t property, uint16_t value) = 0;
@@ -318,7 +319,7 @@ namespace copper_server {
                 virtual base_objects::network::response updateChunkDataWLights(
                     int32_t chunk_x,
                     int32_t chunk_z,
-                    const NBT& heightmaps,
+                    const util::NBT& heightmaps,
                     const std::vector<uint8_t>& data,
                     const bit_list_array<>& sky_light_mask,
                     const bit_list_array<>& block_light_mask,
@@ -327,7 +328,7 @@ namespace copper_server {
                     const list_array<std::vector<uint8_t>>& sky_light_arrays,
                     const list_array<std::vector<uint8_t>>& block_light_arrays
                 ) = 0;
-                virtual base_objects::network::response worldEvent(int32_t event, base_objects::position pos, int32_t data, bool global) = 0;
+                virtual base_objects::network::response worldEvent(base_objects::packets::world_event_id event, base_objects::position pos, int32_t data, bool global) = 0;
                 virtual base_objects::network::response particle(int32_t particle_id, bool long_distance, util::VECTOR pos, util::XYZ<float> offset, float max_speed, int32_t count, const list_array<uint8_t>& data) = 0;
                 virtual base_objects::network::response updateLight(
                     int32_t chunk_x,
@@ -339,14 +340,14 @@ namespace copper_server {
                     const list_array<std::vector<uint8_t>>& sky_light_arrays,
                     const list_array<std::vector<uint8_t>>& block_light_arrays
                 ) = 0;
-                virtual base_objects::network::response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, bool enforces_secure_chat) = 0;
+                virtual base_objects::network::response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, int32_t sea_level, bool enforces_secure_chat) = 0;
                 virtual base_objects::network::response mapData(int32_t map_id, uint8_t scale, bool locked, const list_array<base_objects::packets::map_icon>& icons = {}, uint8_t columns = 0, uint8_t rows = 0, uint8_t x = 0, uint8_t z = 0, const list_array<uint8_t>& data = {}) = 0;
                 virtual base_objects::network::response merchantOffers(int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade>& trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock) = 0;
                 virtual base_objects::network::response updateEntityPosition(int32_t entity_id, util::XYZ<float> pos, bool on_ground) = 0;
-                virtual base_objects::network::response updateEntityPositionAndRotation(int32_t entity_id, util::XYZ<float> pos, util::VECTOR rot, bool on_ground) = 0;
+                virtual base_objects::network::response updateEntityPositionAndRotation(int32_t entity_id, util::XYZ<float> pos, util::ANGLE_DEG rot, bool on_ground) = 0;
                 virtual base_objects::network::response moveMinecartAlongTrack(int32_t entity_id, list_array<base_objects::packets::minecart_state>& states) = 0;
-                virtual base_objects::network::response updateEntityRotation(int32_t entity_id, util::VECTOR rot, bool on_ground) = 0;
-                virtual base_objects::network::response moveVehicle(util::VECTOR pos, util::VECTOR rot) = 0;
+                virtual base_objects::network::response updateEntityRotation(int32_t entity_id, util::ANGLE_DEG rot, bool on_ground) = 0;
+                virtual base_objects::network::response moveVehicle(util::VECTOR pos, util::ANGLE_DEG rot) = 0;
                 virtual base_objects::network::response openBook(int32_t hand) = 0;
                 virtual base_objects::network::response openScreen(int32_t window_id, int32_t type, const Chat& title) = 0;
                 virtual base_objects::network::response openSignEditor(base_objects::position pos, bool is_front_text) = 0;
@@ -366,7 +367,7 @@ namespace copper_server {
                 virtual base_objects::network::response playerInfoUpdateLatency(const list_array<base_objects::packets::player_actions_update_latency>& update_latency) = 0;
                 virtual base_objects::network::response playerInfoUpdateDisplayName(const list_array<base_objects::packets::player_actions_update_display_name>& update_display_name) = 0;
                 virtual base_objects::network::response lookAt(bool from_feet_or_eyes, util::VECTOR target, std::optional<std::pair<int32_t, bool>> entity_id) = 0;
-                virtual base_objects::network::response synchronizePlayerPosition(util::VECTOR pos, float yaw, float pitch, uint8_t flags, int32_t teleport_id) = 0;
+                virtual base_objects::network::response synchronizePlayerPosition(util::VECTOR pos, util::VECTOR velocity, float yaw, float pitch, int flags, int32_t teleport_id) = 0;
                 virtual base_objects::network::response synchronizePlayerRotation(float yaw, float pitch) = 0;
                 virtual base_objects::network::response initRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, const list_array<std::string>& displayed_recipe_ids, const list_array<std::string>& had_access_to_recipe_ids) = 0;
                 virtual base_objects::network::response addRecipeBook(bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, const list_array<std::string>& recipe_ids) = 0;
@@ -382,7 +383,7 @@ namespace copper_server {
                 virtual base_objects::network::response removeResourcePack(enbt::raw_uuid id) = 0;
                 virtual base_objects::network::response addResourcePack(enbt::raw_uuid id, const std::string& url, const std::string& hash, bool forced, const std::optional<Chat>& prompt) = 0;
                 virtual base_objects::network::response respawn(int32_t dimension_type, const std::string& dimension_name, long hashed_seed, uint8_t gamemode, uint8_t previous_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, bool keep_attributes, bool keep_metadata) = 0;
-                virtual base_objects::network::response setHeadRotation(int32_t entity_id, util::VECTOR head_rotation) = 0;
+                virtual base_objects::network::response setHeadRotation(int32_t entity_id, util::ANGLE_DEG head_rotation) = 0;
                 virtual base_objects::network::response updateSectionBlocks(int32_t section_x, int32_t section_z, int32_t section_y, const list_array<base_objects::compressed_block_state>& blocks) = 0;
                 virtual base_objects::network::response setAdvancementsTab(const std::optional<std::string>& tab_id) = 0;
                 virtual base_objects::network::response serverData(const Chat& motd, const std::optional<list_array<uint8_t>>& icon_png) = 0;

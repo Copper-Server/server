@@ -43,6 +43,9 @@ namespace copper_server::base_objects::network {
             void write_direct(const list_array<uint8_t>& data);
             void write_direct(list_array<uint8_t>&& data);
             void write_direct(const uint8_t* data, size_t size);
+            //appends item data to current item, but does not affect the flags
+            void write_in(item&& data);
+            void write_in(const item& data);
 
             template <class T>
             void write_var32_check(T value) {

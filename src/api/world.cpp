@@ -139,7 +139,7 @@ namespace copper_server::api::world {
     void sync_settings(base_objects::client_data_holder& client_ref) {
         auto id = get_worlds().get_id(client_ref->player_data.world_id);
         if (id == -1) {
-            using enum_ = base_objects::ServerConfiguration::World::world_not_found_for_client_e;
+            using enum_ = api::configuration::ServerConfiguration::World::world_not_found_for_client_e;
             switch (api::configuration::get().world.world_not_found_for_client) {
             case enum_::kick:
                 throw std::runtime_error("World with id " + client_ref->player_data.world_id + " does not exists.");
@@ -154,12 +154,7 @@ namespace copper_server::api::world {
         auto world = get_worlds().get(id);
 
         client_ref->sendPacket(
-            api::packets::play::changeDifficulty(
-                *client_ref,
-                world->difficulty,
-                world->difficulty_locked
-            )
-            += api::packets::play::initializeWorldBorder(
+            api::packets::play::initializeWorldBorder(
                 *client_ref,
                 world->border_center_x,
                 world->border_center_z,

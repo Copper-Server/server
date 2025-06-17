@@ -1,6 +1,6 @@
-#include "protocolHelperNBT.hpp"
+#include <src/util/nbt.hpp>
 
-namespace copper_server {
+namespace copper_server::util {
 #pragma region ENBT_TO_NBT
 
     template <class T>
@@ -416,6 +416,12 @@ namespace copper_server {
         return RecursiveExtractor_1(data[i++], data, i, max_size, false);
     }
 
+    enbt::value NBT::RecursiveExtractorNetwork(const uint8_t* data, size_t& i, size_t max_size) {
+        if (max_size == 0)
+            return enbt::value();
+        return RecursiveExtractor_1(data[i++], data, i, max_size, data[0] == 10);
+    }
+
 #pragma endregion
 
     NBT::NBT() {}
@@ -427,6 +433,15 @@ namespace copper_server {
 
     NBT NBT::readNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress, const std::string& entry_name) {
         return build(readNBT_asENBT(data, max_size, nbt_size), compress, entry_name);
+    }
+
+    enbt::value NBT::readNetworkNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size) {
+        nbt_size = 0;
+        return RecursiveExtractorNetwork(data, nbt_size, max_size);
+    }
+
+    NBT NBT::readNetworkNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress, const std::string& entry_name) {
+        return build(readNetworkNBT_asENBT(data, max_size, nbt_size), compress, entry_name);
     }
 
     NBT::NBT(NBT&& move)

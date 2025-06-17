@@ -39,6 +39,9 @@ namespace copper_server::base_objects::world {
         struct shulker_box_closed {};
 
         struct shulker_box_opened {
+        };
+
+        struct shulker_box_opened_count {
             uint32_t count = 0;
         };
 
@@ -60,6 +63,7 @@ namespace copper_server::base_objects::world {
             end_gateway_activated,
             shulker_box_closed,
             shulker_box_opened,
+            shulker_box_opened_count,
             bell_ring,
             decorated_block_woble>
             action;

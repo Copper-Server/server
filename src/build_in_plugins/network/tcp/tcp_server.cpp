@@ -72,8 +72,10 @@ namespace copper_server::build_in_plugins::network::tcp {
         }
 
         void OnPostLoad(const PluginRegistrationPtr&) override {
-            if (!tcp_server)
+            if (!tcp_server) {
                 tcp_server = std::make_shared<fast_task::networking::TcpNetworkServer>(handler, api::configuration::get().server.ip + ":" + std::to_string(api::configuration::get().server.port));
+                tcp_server->set_configuration(fast_task::networking::TcpConfiguration{.allow_ip4 = true});
+            }
             if (!tcp_server->is_running())
                 start();
         }

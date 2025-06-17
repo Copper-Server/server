@@ -6,6 +6,7 @@
     [x] Make interface for entity
     [x] Change world_data to handle entities
     [ ] Use new interface in player and add handlers 
+        [ ] Implement chunk encoding and send to player
 
 
 [ ] Fix file corruption for async streams

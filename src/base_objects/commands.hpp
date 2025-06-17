@@ -139,6 +139,9 @@ namespace copper_server::base_objects {
 
         int32_t get_child(list_array<command>& commands_nodes, const std::string& name);
 
+        packets::command_node build_node(bool is_root = false) const;
+
+
         command(const char* name)
             : name(name), suggestions("") {}
 
@@ -180,8 +183,7 @@ namespace copper_server::base_objects {
              })}
         };
         list_array<command> command_nodes;
-        list_array<uint8_t> graph_cache;
-        bool graph_ready;
+        size_t changes_id = 0;
         void remove(size_t id);
 
     public:
@@ -204,13 +206,13 @@ namespace copper_server::base_objects {
         void execute_command_from(const std::string& command_string, command& cmd, command_context&);
         list_array<std::string> request_suggestions(const std::string& command, command_context&);
 
-        const list_array<uint8_t>& compile_to_graph();
-        bool is_graph_fresh() const;
-
         bool belongs(command* command);
 
         //every command refrence after this command become invalid, even when created by plugins in OnCommandsLoad, bc. of the commit command for optimization
         void reload_commands();
+
+        size_t get_changes_id() const;
+        const list_array<command>& get_nodes() const;
 
 
         std::optional<parser> parse_string(command_parser&& config, const std::string& string);

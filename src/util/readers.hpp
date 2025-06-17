@@ -5,7 +5,7 @@
 #include <exception>
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
-#include <src/protocolHelperNBT.hpp>
+#include <src/util/nbt.hpp>
 #include <string>
 
 namespace copper_server {
@@ -304,9 +304,9 @@ namespace copper_server {
         return std::string(buf, 36);
     }
 
-    static NBT ReadNBT(ArrayStream& data) {
+    static util::NBT ReadNBT(ArrayStream& data) {
         size_t readed = 0;
-        NBT res(NBT::readNBT(data.data_read(), data.size_read(), readed));
+        util::NBT res(util::NBT::readNBT(data.data_read(), data.size_read(), readed));
         data.range_read(readed);
         return res;
     }

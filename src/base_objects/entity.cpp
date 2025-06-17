@@ -1,8 +1,8 @@
 #include <library/fast_task.hpp>
 #include <src/api/entity_id_map.hpp>
+#include <src/api/packets.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/entity.hpp>
-#include <src/api/packets.hpp>
 #include <src/storage/world_data.hpp>
 #include <src/util/calculations.hpp>
 
@@ -11,6 +11,7 @@ namespace copper_server {
         struct entities_storage {
             std::unordered_map<uint16_t, entity_data> _registry;
             std::unordered_map<std::string, uint16_t> _name_to_id;
+            std::unordered_map<std::string, std::shared_ptr<entity_data::world_processor>> entity_processors;
             uint16_t id_adder = 0;
         };
 
@@ -55,6 +56,13 @@ namespace copper_server {
             return get_entity(entity.entity_id);
         }
 
+        void entity_data::register_entity_world_processor(std::shared_ptr<world_processor> processor, const std::string& id) {
+            data_for_entities.set([&](auto& data) {
+                if (!data.entity_processors.emplace(id, processor).second)
+                    throw std::runtime_error("Processor for this entity already registered.");
+            });
+        }
+
         void entity_data::reset_entities() {
             data_for_entities.set([&](auto& data) {
                 data.id_adder = 0;
@@ -66,6 +74,10 @@ namespace copper_server {
             data_for_entities.set([&](auto& data) {
                 for (auto& [id, entity] : data._registry) {
                     entity.internal_entity_aliases.clear();
+
+                    if (auto it = data.entity_processors.find(entity.id); it != data.entity_processors.end())
+                        entity.processor = it->second;
+
                     for (auto& [protocol, assignations] : internal_entity_aliases_protocol) {
                         if (assignations.find(entity.id) != assignations.end()) {
                             entity.internal_entity_aliases[protocol] = assignations[entity.id];
@@ -214,11 +226,11 @@ namespace copper_server {
         }
 
         void reduce_effects(std::unordered_map<uint32_t, list_array<entity::effect>>& hidden_effects, std::unordered_map<uint32_t, entity::effect>& active_effects) {
-            list_array<uint32_t> experied_effects;
+            list_array<uint32_t> expired_effects;
 
             for (auto& [id, effect] : active_effects) {
                 if (!effect.duration) {
-                    experied_effects.push_back(id);
+                    expired_effects.push_back(id);
                     continue;
                 }
                 if (effect.duration != UINT32_MAX)
@@ -240,7 +252,7 @@ namespace copper_server {
                     return effect0.amplifier > effect1.amplifier;
                 });
             }
-            for (auto& id : experied_effects) {
+            for (auto& id : expired_effects) {
                 if (hidden_effects.contains(id))
                     active_effects.at(id) = hidden_effects.at(id).take_front();
                 else
@@ -463,7 +475,7 @@ namespace copper_server {
         void entity::remove_ride_entity() {
             if (ride_entity && world_syncing_data) {
                 if ((*ride_entity)->world_syncing_data->world == world_syncing_data->world) {
-                    world_syncing_data->world->entity_leaves_ride(*this);
+                    world_syncing_data->world->entity_leaves_ride(*this, (*ride_entity)->world_syncing_data->assigned_world_id);
                     ride_entity = nullptr;
                     return;
                 }
@@ -549,12 +561,16 @@ namespace copper_server {
         }
 
         float entity::get_health() const {
-            return nbt.at("health");
+            auto it = nbt.find("health");
+            if (it == nbt.end())
+                return 0;
+            else
+                return it->second;
         }
 
         void entity::set_health(float health) {
-            nbt.at("health") = health;
-            if(assigned_player)
+            nbt["health"] = health;
+            if (assigned_player)
                 api::packets::play::setHealth(*assigned_player, health, get_food(), get_saturation());
 
             if (health <= 0.0f)
@@ -588,11 +604,15 @@ namespace copper_server {
         }
 
         uint8_t entity::get_food() const {
-            return nbt.at("food");
+            auto it = nbt.find("food");
+            if (it == nbt.end())
+                return 0;
+            else
+                return it->second;
         }
 
         void entity::set_food(uint8_t food) {
-            nbt.at("food") = food;
+            nbt["food"] = food;
             if (assigned_player)
                 api::packets::play::setHealth(*assigned_player, get_health(), food, get_saturation());
         }
@@ -624,51 +644,142 @@ namespace copper_server {
         }
 
         float entity::get_breath() const {
-            return nbt.at("breath");
+            auto it = nbt.find("breath");
+            if (it == nbt.end())
+                return 0;
+            else
+                return it->second;
         }
 
         void entity::set_breath(float breath) {
-            //TODO
+            nbt["breath"] = breath;
+            if (const_data().metadata.contains("AIR"))
+                if (assigned_player)
+                    api::packets::play::setEntityMetadata(*assigned_player, protocol_id, {}); //todo
         }
 
         void entity::add_breath(float breath) {
-            //TODO
+            set_breath(get_breath() + breath);
         }
 
         void entity::reduce_breath(float breath) {
-            //TODO
+            set_breath(get_breath() - breath);
         }
 
-        float entity::get_experience() const {
-            return nbt.at("experience");
+        int32_t entity::get_level() const {
+            auto it = nbt.find("level");
+            if (it == nbt.end())
+                return 0;
+            else
+                return it->second;
         }
 
-        void entity::set_experience(float experience) {
-            //TODO
+        int32_t calculate_required_experience(int32_t level) {
+            // clang-format off
+            int32_t required_exp = level;
+            switch(level){
+                case  0:case  1:case  2:case  3:case  4:case  5:case 6: case  7:
+                case  8:case  9:case 10:case 11:case 12:case 13:case 14:case 15:
+                    required_exp = required_exp * 2 + 7;
+                    break;
+                case 16:case 17:case 18:case 19:case 20:case 21:case 22:case 23:
+                case 24:case 25:case 26:case 27:case 28:case 29:case 30:
+                    required_exp = required_exp * 5 - 38;
+                    break;
+                default:
+                    required_exp = required_exp * 9 - 158;
+                    break;
+            }
+            // clang-format on
+            return required_exp;
         }
 
-        void entity::add_experience(float experience) {
-            //TODO
+        int32_t calculate_experience_from_level(int32_t level) {
+            // clang-format off
+            int32_t required_exp = level;
+            switch(level){
+                case  0:case  1:case  2:case  3:case  4:case  5:case 6: case  7:
+                case  8:case  9:case 10:case 11:case 12:case 13:case 14:case 15:
+                    required_exp = required_exp * required_exp + 6 * required_exp;
+                    break;
+                case 16:case 17:case 18:case 19:case 20:case 21:case 22:case 23:
+                case 24:case 25:case 26:case 27:case 28:case 29:case 30:case 31:
+                    required_exp = 2.5 * required_exp * required_exp - 40.5 * required_exp + 360;
+                    break;
+                default:
+                    required_exp = 4.5 * required_exp * required_exp - 162.5 * required_exp + 2220;
+                break;
+            }
+            // clang-format on
+            return required_exp;
         }
 
-        void entity::reduce_experience(float experience) {
-            //TODO
+        void entity::set_level(int32_t level) {
+            int32_t old_lvl = nbt["level"];
+            nbt["level"] = level;
+            float progress_old = 1.0 / calculate_required_experience(old_lvl) * get_experience();
+            set_experience(progress_old * calculate_required_experience(level));
+        }
+
+        void entity::add_level(int32_t level) {
+            set_level(get_level() + level);
+        }
+
+        void entity::reduce_level(int32_t level) {
+            set_level(get_level() - level);
+        }
+
+        int32_t entity::get_experience() const {
+            auto it = nbt.find("experience");
+            if (it == nbt.end())
+                return 0;
+            else
+                return it->second;
+        }
+
+        void entity::set_experience(int32_t experience) {
+            int32_t add_levels = 0;
+
+            auto required_exp = calculate_required_experience(get_level());
+            for (; required_exp <= experience; required_exp = calculate_required_experience(get_level())) {
+                experience -= required_exp;
+                ++add_levels;
+            }
+
+            int32_t levels = get_level() + add_levels;
+            while (experience < 0 && levels) {
+                levels--;
+                experience += calculate_required_experience(levels);
+            }
+
+            nbt["experience"] = experience;
+            nbt["level"] = levels;
+
+            float progress = 1.0 / required_exp * experience;
+            int32_t total = calculate_experience_from_level(levels) + experience;
+
+            if (assigned_player)
+                api::packets::play::setExperience(*assigned_player, progress, required_exp, total);
+        }
+
+        void entity::add_experience(int32_t experience) {
+            set_experience(get_experience() + experience);
+        }
+
+        void entity::reduce_experience(int32_t experience) {
+            set_experience(get_experience() - experience);
         }
 
         int32_t entity::get_fall_distance() const {
-            return nbt.at("fall_distance");
+            auto it = nbt.find("fall_distance");
+            if (it == nbt.end())
+                return 0;
+            else
+                return it->second;
         }
 
         void entity::set_fall_distance(int32_t fall_distance) {
-            //TODO
-        }
-
-        void entity::add_fall_distance(int32_t fall_distance) {
-            //TODO
-        }
-
-        void entity::reduce_fall_distance(int32_t fall_distance) {
-            //TODO
+            nbt["fall_distance"] = fall_distance;
         }
 
         uint8_t entity::get_selected_item() const {
@@ -680,7 +791,9 @@ namespace copper_server {
         }
 
         void entity::set_selected_item(uint8_t selected_item) {
-            //TODO
+            nbt["selected_item"] = selected_item;
+            if (assigned_player)
+                api::packets::play::setHeldSlot(*assigned_player, selected_item);
         }
 
         void entity::move(float side, float forward, bool jump, bool sneaking) {
@@ -688,51 +801,70 @@ namespace copper_server {
         }
 
         void entity::look(float yaw, float pitch) {
-            //TODO
+            set_head_rotation({yaw, pitch});
         }
 
         void entity::look_at(float x, float y, float z) {
-            //TODO
+            set_head_rotation(util::direction(position, util::VECTOR{x, y, z}));
         }
 
         void entity::look_at(util::VECTOR pos) {
-            //TODO
+            set_head_rotation(util::direction(position, pos));
+        }
+
+        void entity::look_at(const entity_ref& entity) {
+            if (entity) {
+                if (entity->world_syncing_data && world_syncing_data) {
+                    if (entity->world_syncing_data->world == world_syncing_data->world) {
+                        look_at(entity->position);
+                    }
+                }
+            }
         }
 
         util::VECTOR entity::get_motion() const {
-            return {0, 0, 0}; //TODO
+            return motion;
         }
 
         void entity::set_motion(util::VECTOR mot) {
-            //TODO
+            motion = mot;
+            if (world_syncing_data)
+                if (world_syncing_data->world)
+                    world_syncing_data->world->entity_motion_changes(*this, mot);
         }
 
         void entity::add_motion(util::VECTOR mot) {
-            //TODO
+            set_motion(get_motion() += mot);
         }
 
         util::ANGLE_DEG entity::get_rotation() const {
-            return {0, 0}; //TODO
+            return rotation;
         }
 
-        void entity::set_rotation(util::ANGLE_DEG mot) {
-            //TODO
+        void entity::set_rotation(util::ANGLE_DEG rot) {
+            rotation = rot;
+            if (world_syncing_data)
+                if (world_syncing_data->world)
+                    world_syncing_data->world->entity_rotation_changes(*this, rot);
         }
 
-        void entity::add_rotation(util::ANGLE_DEG mot) {
-            //TODO
+        void entity::add_rotation(util::ANGLE_DEG rot) {
+            set_rotation(get_rotation() += rot);
         }
 
         util::ANGLE_DEG entity::get_head_rotation() const {
-            return {0, 0}; //TODO
+            return head_rotation;
         }
 
         void entity::set_head_rotation(util::ANGLE_DEG rot) {
-            //TODO
+            head_rotation = rot;
+            if (world_syncing_data)
+                if (world_syncing_data->world)
+                    world_syncing_data->world->entity_look_changes(*this, rot);
         }
 
         void entity::add_head_rotation(util::ANGLE_DEG rot) {
-            //TODO
+            set_head_rotation(get_head_rotation() += rot);
         }
 
         entity_ref entity::create(uint16_t id) {

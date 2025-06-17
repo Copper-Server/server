@@ -41,6 +41,10 @@ namespace copper_server::util {
         return val;
     }
 
+    ANGLE_DEG direction(VECTOR pos, VECTOR target) {
+        return convert(normalize(dif(target, pos)));
+    }
+
     double rad_to_deg180(double val) {
         return (val * pi) / 180;
     }
@@ -58,7 +62,7 @@ namespace copper_server::util {
     }
 
     YAW_PITCH to_yaw_pitch(ANGLE_DEG val) {
-        return {rad_to_deg180(val.x), rad_to_deg180(val.y)};
+        return {rad_to_deg180(val.x), rad_to_deg180(val.y)}; //TODO check
     }
 
     YAW_PITCH to_yaw_pitch(ANGLE_RAD val) {
@@ -70,7 +74,7 @@ namespace copper_server::util {
     }
 
     YAW_PITCH_256 to_yaw_pitch_256(ANGLE_DEG val) {
-        return {(uint8_t)rad_to_deg360(val.x), (uint8_t)rad_to_deg360(val.y)};
+        return {(uint8_t)rad_to_deg360(val.x), (uint8_t)rad_to_deg360(val.y)}; //TODO check
     }
 
     YAW_PITCH_256 to_yaw_pitch_256(ANGLE_RAD val) {

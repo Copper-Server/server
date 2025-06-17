@@ -1,3 +1,4 @@
+#include <src/log.hpp>
 #include <src/plugin/main.hpp>
 
 namespace copper_server {

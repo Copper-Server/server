@@ -88,6 +88,8 @@ namespace copper_server::storage {
         list_array<std::pair<uint64_t, base_objects::chunk_block_pos>> queried_for_liquid_tick;
         const int64_t chunk_x, chunk_z;
         uint8_t load_level = 44;
+        uint8_t resume_gen_level = 255; //if load_level would be lower or equal than this, then generation would be resumed, used by generators
+        uint8_t generator_stage = 0xFF; //0xFF == the chunk is complete and accessible, should be managed by generator
 
         chunk_data(int64_t chunk_x, int64_t chunk_z);
 
@@ -109,6 +111,13 @@ namespace copper_server::storage {
 
 
         void tick(world_data& world, size_t random_tick_speed, std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time);
+
+
+        //generator functions
+        void gen_set_block(const base_objects::full_block_data& block, uint8_t local_x, uint64_t local_y, uint8_t local_z);
+        void gen_set_block(base_objects::full_block_data&& block, uint8_t local_x, uint64_t local_y, uint8_t local_z);
+        void gen_remove_block(uint8_t local_x, uint64_t local_y, uint8_t local_z);
+        base_objects::full_block_data_ref gen_get_block(uint8_t local_x, uint64_t local_y, uint8_t local_z);
     };
 
     class chunk_generator {
@@ -142,8 +151,50 @@ namespace copper_server::storage {
         //  ]
         //}
 
+        //Chunk format:
+        //  all fields is optional, the subchunk array size must match world.get_chunk_y_count(), if it does not match, the array would be resized
+        //  the "height_maps" used only in files, for generators this is ignored
+        //
+        //{
+        //  "sub_chunks" : [Subchunk],
+        //  "queried_for_tick" : [
+        //      {
+        //          "x" : int,//used ui8
+        //          "y" : int,//used ui32
+        //          "z" : int,//used ui8
+        //          "duration" : int,//used uint32_t
+        //      }
+        //  ],
+        //  "generator_stage" : int,//used ui8
+        //  "resume_gen_level" : int, //used ui8
+        //  "height_maps": [internal]
+        //}
+
+        enum class preset_mode {
+            sync, // default
+            parallel
+        };
+
+        //generating pipeline:
+        //  sync mode blocks current preset stage up till all previous queried tasks is completed and executes current in sequence, after completion next stage executed
+        //  parallel mode used to parallelize ippendent changes to chunks and generate them accordingly, if the next stage is also parallel they also executed without awaiting
+        //
+        // when new or incomplete chunk requested, engine starts calling process_chunk function to process each chunk, when generation is complete the request is completes
+        // for new chunk, generate_chunk is always called, and processed parallel
+
+        //if not set, all stages is parallel
+        //preset_it -> mode
+        std::unordered_map<uint8_t, preset_mode> config;
+
+        //this function also should increment generator_stage for chunk and set to 0xFF when complete
+        //to access information from other chunk, the generator must use request_chunk_data_weak_* or request_chunk_data_weak
+        //if chunk is not fully generated, it would not be accessible other way
+        virtual void process_chunk(world_data& world, chunk_data& chunk, uint8_t preset_stage) {
+            chunk.generator_stage = 0xFF;
+        };
 
         //Returns {Chunk}
+        //If generator uses process_chunk this function should return compound with "generator_stage" and (optionally) "resume_gen_level"
         virtual enbt::compound generate_chunk(world_data& world, int64_t chunk_x, int64_t chunk_z) = 0;
         //Returns {Subchunk}
         virtual enbt::compound generate_sub_chunk(world_data& world, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z) = 0;
@@ -185,15 +236,49 @@ namespace copper_server::storage {
     };
 
     class world_data {
-
         using chunk_row = std::unordered_map<uint64_t, base_objects::atomic_holder<chunk_data>>;
         using chunk_column = std::unordered_map<uint64_t, chunk_row>;
 
         fast_task::task_recursive_mutex mutex;
         chunk_column chunks;
-        base_objects::atomic_holder<chunk_generator> generator;
         base_objects::atomic_holder<chunk_light_processor> light_processor;
 
+        std::unordered_map<util::XY<int64_t>, FuturePtr<base_objects::atomic_holder<chunk_data>>> on_generate_process;
+
+        struct {
+            std::bitset<255> sync_modes;
+            fast_task::task_mutex mutex;
+            fast_task::task_condition_variable notifier;
+            fast_task::task_limiter limiter;
+            base_objects::atomic_holder<chunk_generator> process;
+            uint32_t count = 0;
+            uint32_t lock_count = 0;
+            uint32_t stage_complete_count = 0;
+            uint8_t chunks_next_blocking_stage = 0xFF;
+            uint8_t lowest_stage = 0xFF;
+            uint8_t lowest_sync_stage = 0xFF;
+            bool sync_mode = false;
+
+            void next_stage_sync() {
+                auto old_stage = chunks_next_blocking_stage;
+                for (uint16_t i = chunks_next_blocking_stage + 1; i < 255; i++)
+                    if (sync_modes[i])
+                        chunks_next_blocking_stage = i;
+                if (old_stage == chunks_next_blocking_stage)
+                    chunks_next_blocking_stage = 0xFF;
+                sync_mode = chunks_next_blocking_stage == 0xFF;
+            }
+
+            void calculate() {
+                sync_modes.reset();
+                lowest_sync_stage = 0xFF;
+                for (auto& [stage, mode] : process->config) {
+                    if (lowest_sync_stage > stage)
+                        lowest_sync_stage = stage;
+                    sync_modes[stage] = mode == chunk_generator::preset_mode::sync;
+                }
+            }
+        } generator;
 
         friend class worlds_data;
         std::string preview_world_name();
@@ -207,6 +292,7 @@ namespace copper_server::storage {
 
         std::chrono::high_resolution_clock::time_point last_usage;
 
+        FuturePtr<base_objects::atomic_holder<chunk_data>> create_chunk_generate_future(int64_t chunk_x, int64_t chunk_z, base_objects::atomic_holder<chunk_data>& chunk);
         FuturePtr<base_objects::atomic_holder<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback, std::function<void()> fault);
         FuturePtr<base_objects::atomic_holder<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z);
         void make_save(int64_t chunk_x, int64_t chunk_z, bool also_unload);
@@ -436,7 +522,7 @@ namespace copper_server::storage {
         void entity_motion_changes(base_objects::entity&, util::VECTOR new_motion);
 
         void entity_rides(base_objects::entity&, size_t other_entity_id);
-        void entity_leaves_ride(base_objects::entity&);
+        void entity_leaves_ride(base_objects::entity&, size_t other_entity_id);
 
         void entity_attach(base_objects::entity&, size_t other_entity_id);
         void entity_detach(base_objects::entity&, size_t other_entity_id);
@@ -452,8 +538,8 @@ namespace copper_server::storage {
         void entity_break(base_objects::entity&, int64_t x, int64_t y, int64_t z, uint8_t state); //form 0 to 9, other ignored
         void entity_cancel_break(base_objects::entity&, int64_t x, int64_t y, int64_t z);
         void entity_finish_break(base_objects::entity&, int64_t x, int64_t y, int64_t z);
-        void entity_place(base_objects::entity&, int64_t x, int64_t y, int64_t z, base_objects::block);
-        void entity_place(base_objects::entity&, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref);
+        void entity_place(base_objects::entity&, bool is_main_hand, int64_t x, int64_t y, int64_t z, base_objects::block);
+        void entity_place(base_objects::entity&, bool is_main_hand, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref);
 
 
         void entity_animation(base_objects::entity&, base_objects::entity_animation animation);
@@ -515,6 +601,8 @@ namespace copper_server::storage {
             std::function<void(world_data& world, chunk_data&)> chunk_loaded;
             std::function<void(world_data& world, int64_t chunk_x, int64_t chunk_z)> chunk_load_failed;
             std::function<void(world_data& world, int64_t chunk_x, int64_t chunk_z)> chunk_unloaded;
+
+            std::atomic_size_t chunk_generator_counter = 0; //generating in process
             std::atomic_size_t chunk_load_counter = 0; //load in process
             size_t chunk_target_to_load = 0;
             size_t chunk_total_loaded = 0;

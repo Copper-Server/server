@@ -1,4 +1,4 @@
-#include <src/build_in_plugins/world_generators/default_gen.hpp>
+#include <src/plugin/main.hpp>
 #include <src/storage/world_data.hpp>
 
 namespace copper_server::build_in_plugins::world_generators {
@@ -36,7 +36,12 @@ namespace copper_server::build_in_plugins::world_generators {
         }
     };
 
-    void DefaultGen::OnRegister(const PluginRegistrationPtr& self) {
-        storage::chunk_generator::register_it("default", new DefaultGeneratorImpl());
-    }
+    class DefaultGen : public PluginAutoRegister<"default_world_generator", DefaultGen> {
+    public:
+        DefaultGen() {}
+
+        void OnRegister(const PluginRegistrationPtr& self) override {
+            storage::chunk_generator::register_it("default", new DefaultGeneratorImpl());
+        }
+    };
 }

@@ -12,8 +12,7 @@ namespace copper_server::build_in_plugins::network::tcp {
     void SpecialPluginHandshakeRegistration::unregister_handle(SpecialPluginHandshake* self) {
         list.set([&](auto& arr) {
             arr.remove_if([&](auto& it) {
-                if (it.get() == self)
-                    return true;
+                return it.get() == self;
             });
         });
     }

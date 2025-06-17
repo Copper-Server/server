@@ -349,7 +349,10 @@ namespace copper_server::storage {
                     );
                 } else if (name == "height_maps") {
                     enbt::io_helper::serialization_read(height_maps, self);
-                }
+                } else if (name == "generator_stage") {
+                    generator_stage = self.read();
+                } else if (name == "resume_gen_level")
+                    resume_gen_level = self.read();
             });
         }
         return true;
@@ -416,6 +419,7 @@ namespace copper_server::storage {
         if (!chunk_data.contains("sub_chunks"))
             return false;
         auto sub_chunks_ref = chunk_data["sub_chunks"].as_fixed_array();
+
         sub_chunks.reserve(sub_chunks_ref.size());
         for (auto& sub_chunk : sub_chunks_ref) {
             std::shared_ptr<storage::sub_chunk_data> sub_chunk_data = std::make_shared<storage::sub_chunk_data>();
@@ -451,6 +455,7 @@ namespace copper_server::storage {
             sub_chunks.push_back(std::move(*sub_chunk_data));
         }
 
+        sub_chunks.resize(world.get_chunk_y_count());
         if (chunk_data.contains("queried_for_tick")) {
             auto queried_for_tick_ref = chunk_data["queried_for_tick"].as_fixed_array();
             queried_for_tick.reserve(queried_for_tick_ref.size());
@@ -465,6 +470,13 @@ namespace copper_server::storage {
                 queried_for_tick.push_back(queried_for_tick_tmp.take());
             }
         }
+
+
+        if (chunk_data.contains("generator_stage"))
+            generator_stage = chunk_data["generator_stage"];
+
+        if (chunk_data.contains("resume_gen_level"))
+            resume_gen_level = chunk_data["resume_gen_level"];
         return true;
     }
 
@@ -482,65 +494,74 @@ namespace copper_server::storage {
         enbt::io_helper::write_token(filter, 0ui8);
         std::stringstream ss;
         enbt::io_helper::value_write_stream stream(ss);
-        stream.write_compound()
-            .write("sub_chunks", [&](enbt::io_helper::value_write_stream& stream) {
-                stream.write_array(sub_chunks.size()).iterable(sub_chunks, [&](const storage::sub_chunk_data& sub_chunk, enbt::io_helper::value_write_stream& stream) {
-                    auto compound = stream.write_compound();
-                    compound.write("blocks", [&](enbt::io_helper::value_write_stream& stream) {
-                        enbt::io_helper::serialization_write(sub_chunk.blocks, stream);
-                    });
-                    compound.write("block_entities", [&](enbt::io_helper::value_write_stream& stream) {
-                        stream.write_array(sub_chunk.block_entities.size()).iterable(sub_chunk.block_entities, [&](auto& item, enbt::io_helper::value_write_stream& stream) {
-                            auto& [_pos, data] = item;
-                            base_objects::local_block_pos pos;
-                            pos.x = _pos >> 8;
-                            pos.y = (_pos >> 4) & 0xF;
-                            pos.z = _pos & 0xF;
+        {
+            auto comp
+                = stream.write_compound()
+                      .write("sub_chunks", [&](enbt::io_helper::value_write_stream& stream) {
+                          stream.write_array(sub_chunks.size()).iterable(sub_chunks, [&](const storage::sub_chunk_data& sub_chunk, enbt::io_helper::value_write_stream& stream) {
+                              auto compound = stream.write_compound();
+                              compound.write("blocks", [&](enbt::io_helper::value_write_stream& stream) {
+                                  enbt::io_helper::serialization_write(sub_chunk.blocks, stream);
+                              });
+                              compound.write("block_entities", [&](enbt::io_helper::value_write_stream& stream) {
+                                  stream.write_array(sub_chunk.block_entities.size()).iterable(sub_chunk.block_entities, [&](auto& item, enbt::io_helper::value_write_stream& stream) {
+                                      auto& [_pos, data] = item;
+                                      base_objects::local_block_pos pos;
+                                      pos.x = _pos >> 8;
+                                      pos.y = (_pos >> 4) & 0xF;
+                                      pos.z = _pos & 0xF;
 
-                            auto compound = stream.write_compound();
-                            compound.write("id", sub_chunk.blocks[pos.x][pos.y][pos.z].id);
-                            compound.write("state", sub_chunk.blocks[pos.x][pos.y][pos.z].block_state_data);
-                            compound.write("nbt", data);
-                            compound.write("x", pos.x);
-                            compound.write("y", pos.y);
-                            compound.write("z", pos.z);
-                        });
-                    });
-                    compound.write("biomes", [&](enbt::io_helper::value_write_stream& stream) {
-                        enbt::io_helper::serialization_write(sub_chunk.biomes, stream);
-                    });
-                    if (!sub_chunk.need_to_recalculate_light) {
-                        compound.write("block_light", [&](enbt::io_helper::value_write_stream& stream) {
-                            enbt::io_helper::serialization_write(sub_chunk.block_light.light_map, stream);
-                        });
-                        compound.write("sky_light", [&](enbt::io_helper::value_write_stream& stream) {
-                            enbt::io_helper::serialization_write(sub_chunk.block_light.light_map, stream);
-                        });
-                    }
-                    compound.write("entities", [&](enbt::io_helper::value_write_stream& stream) {
-                        auto entities = stream.write_array(sub_chunk.stored_entities.size());
-                        for (auto& [id, entity] : sub_chunk.stored_entities) {
-                            if (entity->const_data().is_saveable)
-                                entities.write(entity->copy_to_enbt());
-                        }
-                    });
-                });
-            })
-            .write("queried_for_tick", [&](enbt::io_helper::value_write_stream& stream) {
-                stream.write_array(queried_for_tick.size()).iterable(queried_for_tick, [&](auto& item, enbt::io_helper::value_write_stream& stream) {
-                    stream.write_array(item.size()).iterable(item, [&](auto& item, enbt::io_helper::value_write_stream& stream) {
-                        auto& [till_tick, block_pos] = item;
-                        auto compound = stream.write_compound();
-                        compound.write("x", block_pos.x);
-                        compound.write("y", block_pos.y);
-                        compound.write("z", block_pos.z);
-                        compound.write("duration", till_tick - tick_counter);
-                    });
-                });
-            })
-            .write("height_maps", [&](enbt::io_helper::value_write_stream& stream) {
-                serialization_write(height_maps, stream);
-            });
+                                      auto compound = stream.write_compound();
+                                      compound.write("id", sub_chunk.blocks[pos.x][pos.y][pos.z].id);
+                                      compound.write("state", sub_chunk.blocks[pos.x][pos.y][pos.z].block_state_data);
+                                      compound.write("nbt", data);
+                                      compound.write("x", pos.x);
+                                      compound.write("y", pos.y);
+                                      compound.write("z", pos.z);
+                                  });
+                              });
+                              compound.write("biomes", [&](enbt::io_helper::value_write_stream& stream) {
+                                  enbt::io_helper::serialization_write(sub_chunk.biomes, stream);
+                              });
+                              if (!sub_chunk.need_to_recalculate_light) {
+                                  compound.write("block_light", [&](enbt::io_helper::value_write_stream& stream) {
+                                      enbt::io_helper::serialization_write(sub_chunk.block_light.light_map, stream);
+                                  });
+                                  compound.write("sky_light", [&](enbt::io_helper::value_write_stream& stream) {
+                                      enbt::io_helper::serialization_write(sub_chunk.block_light.light_map, stream);
+                                  });
+                              }
+                              compound.write("entities", [&](enbt::io_helper::value_write_stream& stream) {
+                                  auto entities = stream.write_array(sub_chunk.stored_entities.size());
+                                  for (auto& [id, entity] : sub_chunk.stored_entities) {
+                                      if (entity->const_data().is_saveable)
+                                          entities.write(entity->copy_to_enbt());
+                                  }
+                              });
+                          });
+                      })
+                      .write("queried_for_tick", [&](enbt::io_helper::value_write_stream& stream) {
+                          stream.write_array(queried_for_tick.size()).iterable(queried_for_tick, [&](auto& item, enbt::io_helper::value_write_stream& stream) {
+                              stream.write_array(item.size()).iterable(item, [&](auto& item, enbt::io_helper::value_write_stream& stream) {
+                                  auto& [till_tick, block_pos] = item;
+                                  auto compound = stream.write_compound();
+                                  compound.write("x", block_pos.x);
+                                  compound.write("y", block_pos.y);
+                                  compound.write("z", block_pos.z);
+                                  compound.write("duration", till_tick - tick_counter);
+                              });
+                          });
+                      })
+                      .write("height_maps", [&](enbt::io_helper::value_write_stream& stream) {
+                          serialization_write(height_maps, stream);
+                      });
+            if (generator_stage != 0xFF)
+                comp.write("generator_stage", generator_stage);
+            if (resume_gen_level != 255)
+                comp.write("resume_gen_level", resume_gen_level);
+        }
+
+
         auto tmp = ss.str();
         filter.write(tmp.c_str(), tmp.size());
         return true;
@@ -553,7 +574,6 @@ namespace copper_server::storage {
     }
 
     void chunk_data::update_height_map() {
-
         height_maps.make_zero();
         uint64_t local_y = sub_chunks.size() - 1;
         auto& leaves = api::tags::unfold_tag(api::tags::builtin_entry::block, "minecraft:block/leaves");
@@ -661,8 +681,7 @@ namespace copper_server::storage {
                 auto local = convert_chunk_local_pos(block_pos.y);
                 auto& sub_chunk = sub_chunks.at(sub_chunk_y);
 
-                sub_chunk.blocks[block_pos.x][local][block_pos.z]
-                    .tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, block_pos.x, local, block_pos.z, false);
+                sub_chunk.blocks[block_pos.x][local][block_pos.z].tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, block_pos.x, local, block_pos.z, false);
             }
         }
 
@@ -676,8 +695,7 @@ namespace copper_server::storage {
             auto local = convert_chunk_local_pos(block_pos.y);
             auto& sub_chunk = sub_chunks.at(sub_chunk_y);
 
-            sub_chunk.blocks[block_pos.x][local][block_pos.z]
-                .tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, block_pos.x, local, block_pos.z, false);
+            sub_chunk.blocks[block_pos.x][local][block_pos.z].tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, block_pos.x, local, block_pos.z, false);
         }
 
         uint64_t sub_chunk_y = 0;
@@ -706,6 +724,25 @@ namespace copper_server::storage {
             }
             sub_chunk_y++;
         }
+    }
+
+    //generator functions
+    void chunk_data::gen_set_block(const base_objects::full_block_data& block, uint8_t local_x, uint64_t local_y, uint8_t local_z) {
+        sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, block);
+    }
+
+    void chunk_data::gen_set_block(base_objects::full_block_data&& block, uint8_t local_x, uint64_t local_y, uint8_t local_z) {
+        sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, std::move(block));
+    }
+
+    void chunk_data::gen_remove_block(uint8_t local_x, uint64_t local_y, uint8_t local_z) {
+        sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, base_objects::block());
+    }
+
+    base_objects::full_block_data_ref chunk_data::gen_get_block(uint8_t local_x, uint64_t local_y, uint8_t local_z) {
+        std::optional<base_objects::full_block_data_ref> res;
+        sub_chunks.at(local_y >> 4).get_block(local_x, local_y & 15, local_z, [&res](auto& block) { res = block; }, [&res](auto& block, auto& enbt) { res.emplace(base_objects::block_entity_ref(block, enbt)); });
+        return *res;
     }
 
     fast_task::protected_value<std::unordered_map<std::string, base_objects::atomic_holder<chunk_generator>>> chunk_generators;
@@ -785,6 +822,57 @@ namespace copper_server::storage {
         }
     }
 
+    FuturePtr<base_objects::atomic_holder<chunk_data>> world_data::create_chunk_generate_future(int64_t chunk_x, int64_t chunk_z, base_objects::atomic_holder<chunk_data>& chunk) {
+        if (profiling.enable_world_profiling)
+            ++profiling.chunk_generator_counter;
+
+        return Future<base_objects::atomic_holder<chunk_data>>::start(
+            [this, chunk_x, chunk_z, chunk = chunk]() {
+                auto gen = get_generator();
+                fast_task::mutex_unify unify(generator.mutex);
+                std::unique_lock lock(unify);
+                ++generator.count;
+                generator.chunks_next_blocking_stage = generator.lowest_sync_stage;
+                while (chunk->generator_stage != 0xFF) {
+                    while (chunk->generator_stage >= generator.chunks_next_blocking_stage && !generator.sync_mode) { //sync all tasks to switch mode
+                        ++generator.lock_count;
+                        if (generator.lock_count < generator.count)
+                            generator.notifier.wait(lock);
+                        else {
+                            generator.sync_mode = true;
+                            generator.notifier.notify_all();
+                        }
+                        --generator.lock_count;
+                    }
+
+                    while (chunk->generator_stage > generator.chunks_next_blocking_stage) { //block all tasks that has too big mode
+                        ++generator.stage_complete_count;
+                        if (generator.stage_complete_count < generator.count)
+                            generator.notifier.wait(lock);
+                        else {
+                            generator.next_stage_sync();
+                            generator.notifier.notify_all();
+                        }
+                        --generator.stage_complete_count;
+                    }
+
+                    bool make_lock = generator.sync_mode && chunk->generator_stage == generator.chunks_next_blocking_stage;
+                    lock.unlock();
+                    std::unique_lock sync_guard(generator.limiter, std::defer_lock);
+                    if (make_lock)
+                        sync_guard.lock();
+                    gen->process_chunk(*this, *chunk, chunk->generator_stage);
+                    if (chunk->load_level > chunk->resume_gen_level)
+                        break;
+                }
+                --generator.count;
+                if (profiling.enable_world_profiling)
+                    --profiling.chunk_generator_counter;
+                return chunk;
+            }
+        );
+    }
+
     base_objects::atomic_holder<chunk_data> world_data::load_chunk_sync(int64_t chunk_x, int64_t chunk_z) {
         try {
             auto chunk = base_objects::atomic_holder<chunk_data>(new chunk_data(chunk_x, chunk_z));
@@ -792,18 +880,35 @@ namespace copper_server::storage {
                 if (!chunk->load(get_generator()->generate_chunk(*this, chunk_x, chunk_z), tick_counter, *this))
                     return nullptr;
             }
-            get_light_processor();
-            uint64_t y = chunk->sub_chunks.size();
-            auto end = chunk->sub_chunks.rend();
-            bool done_process = false;
-            for (auto beg = chunk->sub_chunks.rbegin(); beg != end; beg++) {
-                --y;
-                if (beg->need_to_recalculate_light || done_process) {
-                    light_processor->process_sub_chunk(*this, chunk_x, y, chunk_z);
-                    done_process = true;
+            if (chunk->generator_stage != 0xFF) {
+                chunk->load_level = 31;
+                std::unique_lock lock(mutex);
+                if (auto process = on_generate_process.find({chunk_x, chunk_z}); process == on_generate_process.end()) {
+                    chunks[chunk_x][chunk_z] = chunk;
+                    auto it = on_generate_process[{chunk_x, chunk_z}] = create_chunk_generate_future(chunk_x, chunk_z, chunk);
+                    it->wait_with(lock);
+                    on_generate_process.erase({chunk_x, chunk_z});
+                    return it->get();
+                } else {
+                    auto fut = process->second;
+                    fut->wait_with(lock);
+                    return fut->get();
                 }
+            } else {
+                chunk->load_level = 34;
+                get_light_processor();
+                uint64_t y = chunk->sub_chunks.size();
+                auto end = chunk->sub_chunks.rend();
+                bool done_process = false;
+                for (auto beg = chunk->sub_chunks.rbegin(); beg != end; beg++) {
+                    --y;
+                    if (beg->need_to_recalculate_light || done_process) {
+                        light_processor->process_sub_chunk(*this, chunk_x, y, chunk_z);
+                        done_process = true;
+                    }
+                }
+                chunk->update_height_map();
             }
-            chunk->load_level = 34;
             return chunk;
         } catch (...) {
             return nullptr;
@@ -811,9 +916,11 @@ namespace copper_server::storage {
     }
 
     base_objects::atomic_holder<chunk_generator>& world_data::get_generator() {
-        if (!generator)
-            generator = chunk_generator::get_it(light_processor_id);
-        return generator;
+        if (!generator.process) {
+            generator.process = chunk_generator::get_it(light_processor_id);
+            generator.calculate();
+        }
+        return generator.process;
     }
 
     base_objects::atomic_holder<chunk_light_processor>& world_data::get_light_processor() {
@@ -925,12 +1032,16 @@ namespace copper_server::storage {
 
     void world_data::entity_rides(base_objects::entity& self, size_t other_entity_id) {
         std::unique_lock lock(mutex);
+        entities.at(other_entity_id)->ride_by_entity.push_back(entities.at(self.world_syncing_data->assigned_world_id));
         ENTITY_NOTIFY_CHANGE_W_E(entity_rides)
     }
 
-    void world_data::entity_leaves_ride(base_objects::entity& self) {
+    void world_data::entity_leaves_ride(base_objects::entity& self, size_t other_entity_id) {
         std::unique_lock lock(mutex);
-        ENTITY_NOTIFY_CHANGE(entity_leaves_ride)
+        entities.at(other_entity_id)->ride_by_entity.remove_if([&self](auto& it) {
+            return &*it == &self;
+        });
+        ENTITY_NOTIFY_CHANGE_W_E(entity_leaves_ride)
     }
 
     void world_data::entity_attach(base_objects::entity& self, size_t other_entity_id) {
@@ -987,14 +1098,28 @@ namespace copper_server::storage {
         ENTITY_NOTIFY_BLOCK(entity_finish_break);
     }
 
-    void world_data::entity_place(base_objects::entity& self, int64_t x, int64_t y, int64_t z, base_objects::block block) {
+    void world_data::entity_place(base_objects::entity& self, bool is_main_hand, int64_t x, int64_t y, int64_t z, base_objects::block block) {
         std::unique_lock lock(mutex);
-        ENTITY_NOTIFY_BLOCK(entity_place_block, block);
+        for (auto& [id, entity] : entities)
+            if (&*entity != &self) {
+                auto processor = entity->const_data().processor;
+                if (entity->world_syncing_data && processor) {
+                    if (entity->world_syncing_data->processing_region.in_bounds(convert_chunk_global_pos(x), convert_chunk_global_pos(z)))
+                        processor->entity_place_block(*entity, self, is_main_hand, x, y, z, block);
+                }
+            }
     }
 
-    void world_data::entity_place(base_objects::entity& self, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block) {
+    void world_data::entity_place(base_objects::entity& self, bool is_main_hand, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block) {
         std::unique_lock lock(mutex);
-        ENTITY_NOTIFY_BLOCK(entity_place_block_entity, block);
+        for (auto& [id, entity] : entities)
+            if (&*entity != &self) {
+                auto processor = entity->const_data().processor;
+                if (entity->world_syncing_data && processor) {
+                    if (entity->world_syncing_data->processing_region.in_bounds(convert_chunk_global_pos(x), convert_chunk_global_pos(z)))
+                        processor->entity_place_block_entity(*entity, is_main_hand, self, x, y, z, block);
+                }
+            }
     }
 
     void world_data::entity_animation(base_objects::entity& self, base_objects::entity_animation animation) {
@@ -1369,6 +1494,7 @@ namespace copper_server::storage {
 
     world_data::world_data(uint64_t world_id, const std::filesystem::path& path)
         : path(path), world_id(world_id) {
+        world_game_rules["reducedDebugInfo"] = api::configuration::get().game_play.reduced_debug_screen;
         if (!std::filesystem::exists(path))
             std::filesystem::create_directories(path);
         world_spawn_ticket_id = add_loading_ticket(
@@ -1488,15 +1614,17 @@ namespace copper_server::storage {
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
                 if (y_axis->second)
-                    return y_axis->second;
+                    if (y_axis->second->generator_stage == 0xFF)
+                        return y_axis->second;
 
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end()) {
             auto it = on_load_process[{chunk_x, chunk_z}] = create_chunk_load_future(chunk_x, chunk_z);
             it->wait_with(lock);
             return it->get();
         } else {
-            process->second->wait_with(lock);
-            return process->second->get();
+            auto fut = process->second;
+            fut->wait_with(lock);
+            return fut->get();
         }
     }
 
@@ -1505,7 +1633,8 @@ namespace copper_server::storage {
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
                 if (y_axis->second)
-                    return make_ready_future(y_axis->second);
+                    if (y_axis->second->generator_stage == 0xFF)
+                        return make_ready_future(y_axis->second);
 
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end())
             return on_load_process[{chunk_x, chunk_z}] = create_chunk_load_future(chunk_x, chunk_z);
@@ -1552,8 +1681,9 @@ namespace copper_server::storage {
             } else
                 return std::nullopt;
         } else {
-            process->second->wait_with(lock);
-            return process->second->get();
+            auto fut = process->second;
+            fut->wait_with(lock);
+            return fut->get();
         }
     }
 
@@ -1562,17 +1692,33 @@ namespace copper_server::storage {
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
                 return;
-        if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end())
+        if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end()) {
+            bool make_gen = false;
             if (!exists(chunk_x, chunk_z))
+                make_gen = true;
+            else if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
+                if (auto z_axis = x_axis->second.find(chunk_z); z_axis != x_axis->second.end()) {
+                    auto chunk = z_axis->second;
+                    if (chunk)
+                        if (chunk->generator_stage != 0xFF)
+                            if (chunk->load_level <= chunk->resume_gen_level)
+                                if (!on_generate_process.contains({chunk_x, chunk_z})) {
+                                    make_gen = true;
+                                    chunk->resume_gen_level = 0xFF;
+                                }
+                }
+
+            if (make_gen)
                 on_load_process[{chunk_x, chunk_z}] = create_chunk_load_future(chunk_x, chunk_z);
+        }
     }
 
     bool world_data::request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
-            if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
-                if (y_axis->second) {
-                    callback(*y_axis->second);
+            if (auto z_axis = x_axis->second.find(chunk_z); z_axis != x_axis->second.end())
+                if (z_axis->second) {
+                    callback(*z_axis->second);
                     return true;
                 }
 
@@ -1692,7 +1838,8 @@ namespace copper_server::storage {
         for (auto& [x, x_axis] : chunks)
             for (auto& [z, chunk] : x_axis)
                 if (chunk)
-                    func(*chunk);
+                    if (chunk->generator_stage == 0xFF)
+                        func(*chunk);
     }
 
     void world_data::for_each_chunk(base_objects::cubic_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func) {
@@ -1702,7 +1849,8 @@ namespace copper_server::storage {
                 if (auto x_axis = chunks.find(x); x_axis != chunks.end())
                     if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
                         if (chunk->second)
-                            func(*chunk->second);
+                            if (chunk->second->generator_stage == 0xFF)
+                                func(*chunk->second);
     }
 
     void world_data::for_each_chunk(base_objects::spherical_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func) {
@@ -1711,7 +1859,8 @@ namespace copper_server::storage {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
                 if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
                     if (chunk->second)
-                        func(*chunk->second);
+                        if (chunk->second->generator_stage == 0xFF)
+                            func(*chunk->second);
         });
     }
 
@@ -1720,7 +1869,8 @@ namespace copper_server::storage {
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
                 if (chunk->second)
-                    chunk->second->for_each_sub_chunk(func);
+                    if (chunk->second->generator_stage == 0xFF)
+                        chunk->second->for_each_sub_chunk(func);
     }
 
     void world_data::get_sub_chunk(int64_t chunk_x, int64_t chunk_y_raw, int64_t chunk_z, std::function<void(sub_chunk_data& chunk)> func) {
@@ -1729,7 +1879,8 @@ namespace copper_server::storage {
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
                 if (chunk->second)
-                    chunk->second->get_sub_chunk(chunk_y, func);
+                    if (chunk->second->generator_stage == 0xFF)
+                        chunk->second->get_sub_chunk(chunk_y, func);
     }
 
     void world_data::get_chunk(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> func) {
@@ -1737,7 +1888,8 @@ namespace copper_server::storage {
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
                 if (chunk->second)
-                    func(*chunk->second);
+                    if (chunk->second->generator_stage == 0xFF)
+                        func(*chunk->second);
     }
 
     void world_data::for_each_chunk(base_objects::cubic_bounds_block bounds, std::function<void(chunk_data& chunk)> func) {
@@ -1811,8 +1963,7 @@ namespace copper_server::storage {
                 if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
                     if (chunk->second)
                         chunk->second->for_each_block_entity(func);
-        }
-        );
+        });
     }
 
     void world_data::for_each_block_entity(base_objects::spherical_bounds_chunk bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {

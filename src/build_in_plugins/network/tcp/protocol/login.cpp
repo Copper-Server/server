@@ -18,7 +18,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol {
             std::string nickname = packet.read_string(16);
             auto player = api::players::get_player(nickname);
             if (api::players::has_player(nickname)) {
-                if (api::configuration::get().protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::prevent_join) {
+                if (api::configuration::get().protocol.connection_conflict == api::configuration::ServerConfiguration::Protocol::connection_conflict_t::prevent_join) {
                     session->shared_data().sendPacket(api::packets::login::kick(session->shared_data(), "Someone already connected with this nickname"));
                     return;
                 } else
@@ -97,7 +97,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol {
                 return;
             }
             if (
-                session->shared_data().packets_state.login_data->had_conflict && api::configuration::get().protocol.connection_conflict == base_objects::ServerConfiguration::Protocol::connection_conflict_t::kick_connected
+                session->shared_data().packets_state.login_data->had_conflict && api::configuration::get().protocol.connection_conflict == api::configuration::ServerConfiguration::Protocol::connection_conflict_t::kick_connected
             ) {
                 api::players::iterate_players_not_state(base_objects::SharedClientData::packets_state_t::protocol_state::initialization, [&](base_objects::SharedClientData& player) {
                     if (player.name == session->shared_data().name) {

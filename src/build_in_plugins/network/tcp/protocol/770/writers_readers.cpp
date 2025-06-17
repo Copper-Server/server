@@ -46,7 +46,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
                 data.push_back(false);
             if (predicate.contains("nbt")) {
                 data.push_back(true);
-                data.push_back(NBT::build(predicate.at("nbt")).get_as_network());
+                data.push_back(util::NBT::build(predicate.at("nbt")).get_as_network());
             } else
                 data.push_back(false);
         }
@@ -137,7 +137,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::custom_data& value) {
             WriteVar<int32_t>(0, data);
-            data.push_back(NBT::build((const enbt::value&)value.value).get_as_network());
+            data.push_back(util::NBT::build((const enbt::value&)value.value).get_as_network());
         }
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::max_stack_size& value) {
@@ -161,12 +161,12 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::custom_name& value) {
             WriteVar<int32_t>(5, data);
-            data.push_back(NBT::build((const enbt::value&)value.value).get_as_network());
+            data.push_back(util::NBT::build((const enbt::value&)value.value).get_as_network());
         }
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::item_name& value) {
             WriteVar<int32_t>(6, data);
-            data.push_back(NBT::build((const enbt::value&)value.value).get_as_network());
+            data.push_back(util::NBT::build((const enbt::value&)value.value).get_as_network());
         }
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::item_model& value) {
@@ -178,7 +178,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
             WriteVar<int32_t>(8, data);
             WriteVar<int32_t>(value.value.size(), data);
             for (auto& lore : value.value)
-                data.push_back(NBT::build(lore.ToENBT()).get_as_network());
+                data.push_back(util::NBT::build(lore.ToENBT()).get_as_network());
         }
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::rarity& value) {
@@ -509,12 +509,12 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::map_decorations& value) {
             WriteVar<int32_t>(38, data);
-            data.push_back(NBT::build((const enbt::value&)value.value).get_as_network());
+            data.push_back(util::NBT::build((const enbt::value&)value.value).get_as_network());
         }
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::map_post_processing& value) {
             WriteVar<int32_t>(39, data);
-            data.push_back(NBT::build((const enbt::value&)value.value).get_as_network());
+            data.push_back(util::NBT::build((const enbt::value&)value.value).get_as_network());
         }
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::charged_projectiles& value) {
@@ -590,10 +590,10 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
             WriteVar<int32_t>(value.generation, data);
             WriteVar<int32_t>(value.pages.size(), data);
             for (auto& page : value.pages) {
-                data.push_back(NBT::build(page.text.ToENBT()).get_as_network());
+                data.push_back(util::NBT::build(page.text.ToENBT()).get_as_network());
                 data.push_back((bool)page.filtered);
                 if (page.filtered)
-                    data.push_back(NBT::build(page.filtered->ToENBT()).get_as_network());
+                    data.push_back(util::NBT::build(page.filtered->ToENBT()).get_as_network());
             }
             data.push_back((bool)value.resolved);
         }
@@ -614,7 +614,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
                             WriteVar<int32_t>(override_.first, data);
                             WriteString(data, override_.second);
                         }
-                        data.push_back(NBT::build(it.description.ToENBT()).get_as_network());
+                        data.push_back(util::NBT::build(it.description.ToENBT()).get_as_network());
                     }
                 },
                 value.material
@@ -627,7 +627,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
                     } else {
                         WriteString(data, it.asset_name);
                         WriteVar<int32_t>(it.template_item, data);
-                        data.push_back(NBT::build(it.description.ToENBT()).get_as_network());
+                        data.push_back(util::NBT::build(it.description.ToENBT()).get_as_network());
                         data.push_back(it.decal);
                     }
                 },
@@ -637,22 +637,22 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::debug_stick_state& value) {
             WriteVar<int32_t>(48, data);
-            data.push_back(NBT::build((const enbt::value&)value.previous_state).get_as_network());
+            data.push_back(util::NBT::build((const enbt::value&)value.previous_state).get_as_network());
         }
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::entity_data& value) {
             WriteVar<int32_t>(49, data);
-            data.push_back(NBT::build((const enbt::value&)value.value).get_as_network());
+            data.push_back(util::NBT::build((const enbt::value&)value.value).get_as_network());
         }
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::bucket_entity_data& value) {
             WriteVar<int32_t>(50, data);
-            data.push_back(NBT::build((const enbt::value&)value.value).get_as_network());
+            data.push_back(util::NBT::build((const enbt::value&)value.value).get_as_network());
         }
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::block_entity_data& value) {
             WriteVar<int32_t>(51, data);
-            data.push_back(NBT::build((const enbt::value&)value.value).get_as_network());
+            data.push_back(util::NBT::build((const enbt::value&)value.value).get_as_network());
         }
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::instrument& value) {
@@ -668,7 +668,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
                         __sound_event_encoder(data, it.sound);
                         WriteValue<float>(it.duration, data);
                         WriteValue<float>(it.range, data);
-                        data.push_back(NBT::build(it.description.ToENBT()).get_as_network());
+                        data.push_back(util::NBT::build(it.description.ToENBT()).get_as_network());
                     }
                 },
                 value.type
@@ -722,7 +722,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
                             }
                         },
                                    it.sound_event);
-                        data.push_back(it.description.ToTextComponent());
+                        data.push_back(toTextComponent(it.description));
                         WriteValue<float>(it.length_in_seconds, data);
                         WriteVar<int32_t>(it.comparator_output, data);
                     }
@@ -738,7 +738,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::recipes& value) {
             WriteVar<int32_t>(57, data);
-            data.push_back(NBT::build((const enbt::value&)value.value).get_as_network());
+            data.push_back(util::NBT::build((const enbt::value&)value.value).get_as_network());
         }
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::lodestone_tracker& value) {
@@ -830,7 +830,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
             WriteVar<int32_t>(68, data);
             WriteVar<int32_t>(value.values.size(), data);
             for (auto& it : value.values) {
-                data.push_back(NBT::build(it.entity_data).get_as_network());
+                data.push_back(util::NBT::build(it.entity_data).get_as_network());
                 WriteVar<int32_t>(it.ticks_in_hive, data);
                 WriteVar<int32_t>(it.min_ticks_in_hive, data);
             }
@@ -838,7 +838,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::lock& value) {
             WriteVar<int32_t>(69, data);
-            data.push_back(NBT::build(enbt::value(value.key)).get_as_network());
+            data.push_back(util::NBT::build(enbt::value(value.key)).get_as_network());
         }
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::container_loot& value) {
@@ -846,7 +846,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
             enbt::compound dat;
             dat["loot_table"] = value.loot_table;
             dat["seed"] = value.seed;
-            data.push_back(NBT::build((enbt::value&)dat).get_as_network());
+            data.push_back(util::NBT::build((enbt::value&)dat).get_as_network());
         }
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const slot_component::break_sound& value) {
@@ -1355,5 +1355,13 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
                 item.remove_component(it);
             });
         return item;
+    }
+
+    Chat fromTextComponent(const list_array<uint8_t>& enbt) {
+        return Chat::fromEnbt(util::NBT::build_network(enbt).get_as_enbt());
+    }
+
+    list_array<uint8_t> toTextComponent(const Chat& chat) {
+        return util::NBT::build(chat.ToENBT()).get_as_network();
     }
 }

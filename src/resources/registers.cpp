@@ -1591,12 +1591,15 @@ namespace copper_server::resources {
             base_objects::block::access_full_block_data(std::function([&](list_array<std::shared_ptr<base_objects::static_block_data>>& full_block_data_, std::unordered_map<std::string, std::shared_ptr<base_objects::static_block_data>>& named_full_block_data) {
                 blocks.iterate([&](enbt::io_helper::value_read_stream& decl) {
                     std::shared_ptr<base_objects::static_block_data> default_state_data = std::make_shared<base_objects::static_block_data>();
-                    enbt::value delayed_states;
+                    list_array<base_objects::block_id_t> init_states;
+                    std::shared_ptr<base_objects::static_block_data::map_of_states> associated_states = std::make_shared<base_objects::static_block_data::map_of_states>();
+                    base_objects::block_id_t default_state = 0;
+                    bool has_default_state = false;
+
+
                     decl.iterate([&](std::string_view name, enbt::io_helper::value_read_stream& item) {
                         if (name == "name") {
-                            if ((default_state_data->name = "minecraft:" + item.read().as_string()) == "minecraft:cobbled_deepslate_wall")
-                                return;
-
+                            default_state_data->name = "minecraft:" + item.read().as_string();
                             if (named_full_block_data.contains(default_state_data->name))
                                 throw std::runtime_error("Duplicate block name: " + default_state_data->name);
                         } else if (name == "id")
@@ -1627,87 +1630,97 @@ namespace copper_server::resources {
                             );
                             default_state_data->allowed_properties = std::move(properties);
                         } else if (name == "states") {
-                            delayed_states = item.read();
+                            item.iterate(
+                                [&](auto size) { init_states.reserve(size); },
+                                [&](enbt::io_helper::value_read_stream& decl) {
+                                std::shared_ptr<base_objects::static_block_data> block_data = std::make_shared<base_objects::static_block_data>();
+                                base_objects::block_id_t block_data_id = 0;
+                                block_data->opacity = 255;
+#define ARGS__d base_objects::block_id_t &default_state, bool &has_default_state, list_array<std::shared_ptr<base_objects::static_block_data>>&full_block_data_, std::shared_ptr<base_objects::static_block_data>&block_data, base_objects::block_id_t &block_data_id, enbt::io_helper::value_read_stream &item
+#define ARGS__pass default_state, has_default_state, full_block_data_, block_data, block_data_id, item
+
+                                static std::unordered_map<std::string, void (*)(ARGS__d)> map{
+                                    {"id", [](ARGS__d) {
+                                         base_objects::block_id_t id = block_data_id = item.read();
+                                         if (id >= full_block_data_.size()) {
+                                             if (full_block_data_.reserved() == 0)
+                                                 full_block_data_.reserve(id);
+                                             full_block_data_.resize(id + 1);
+                                         }
+                                         auto& ref = full_block_data_.at(id);
+                                         if (ref)
+                                             throw std::runtime_error("Duplicate block id: " + std::to_string(id));
+                                         ref = block_data;
+                                         if (!has_default_state) {
+                                             default_state = id;
+                                             has_default_state = true;
+                                         }
+                                     }},
+                                    {"air", [](ARGS__d) { block_data->is_air = item.read(); }},
+                                    {"is_solid", [](ARGS__d) { block_data->is_solid = item.read(); }},
+                                    {"opacity", [](ARGS__d) { block_data->opacity = item.read(); }},
+                                    {"instrument", [](ARGS__d) { block_data->instrument = item.read().as_string(); }},
+                                    {"is_liquid", [](ARGS__d) { block_data->is_liquid = item.read(); }},
+                                    {"luminance", [](ARGS__d) { block_data->luminance = item.read(); }},
+                                    {"burnable", [](ARGS__d) { block_data->is_burnable = item.read(); }},
+                                    {"emits_redstone", [](ARGS__d) { block_data->is_emits_redstone = item.read(); }},
+                                    {"is_full_cube", [](ARGS__d) { block_data->is_full_cube = item.read(); }},
+                                    {"tool_required", [](ARGS__d) { block_data->is_tool_required = item.read(); }},
+                                    {"piston_behavior", [](ARGS__d) { block_data->piston_behavior = item.read().as_string(); }},
+                                    {"replaceable", [](ARGS__d) { block_data->is_replaceable = item.read(); }},
+                                    {"hardness", [](ARGS__d) { block_data->hardness = item.read(); }},
+                                    {"sided_transparency", [](ARGS__d) { block_data->is_sided_transparency = item.read(); }},
+                                    {"default_state_id", [](ARGS__d) {
+                                         default_state = item.read();
+                                         block_data->is_default_state = true;
+                                         has_default_state = true;
+                                     }},
+                                    {"properties", [](ARGS__d) {
+                                         std::unordered_map<std::string, std::string> properties;
+                                         item.iterate([&](auto size) { properties.reserve(size); }, [&](const std::string& name, enbt::io_helper::value_read_stream& item) {
+                                             properties[name] = item.read().as_string();
+                                         });
+                                         block_data->current_properties = std::move(properties);
+                                     }},
+                                    {"collision_shapes", [](ARGS__d) {
+                                         item.iterate(
+                                             [&](auto size) { block_data->collision_shapes.reserve(size); },
+                                             [&](enbt::io_helper::value_read_stream& item) { block_data->collision_shapes.push_back(&base_objects::static_block_data::all_shapes.at(item.read())); }
+                                         );
+                                     }},
+                                    {"block_entity_type", [](ARGS__d) {
+                                         block_data->is_block_entity = true;
+                                         block_data->block_entity_id = item.read();
+                                     }},
+                                };
+
+                                decl.iterate([&](const std::string& name, enbt::io_helper::value_read_stream& item) {
+                                    map.at(name)(ARGS__pass);
+                                });
+                                init_states.push_back(block_data_id);
+#undef ARGS__d
+#undef ARGS__pass
+                            });
                         }
                     });
 
-                    std::shared_ptr<base_objects::static_block_data::map_of_states> associated_states = std::make_shared<base_objects::static_block_data::map_of_states>();
-                    base_objects::block_id_t default_state = 0;
-                    bool has_default_state = false;
-                    for (auto& state : delayed_states.as_array()) {
-                        std::shared_ptr<base_objects::static_block_data> block_data = std::make_shared<base_objects::static_block_data>(*default_state_data);
-                        base_objects::block_id_t block_data_id = 0;
-                        block_data->opacity = 255;
-#define ARGS__d base_objects::block_id_t &default_state, bool &has_default_state, list_array<std::shared_ptr<base_objects::static_block_data>>&full_block_data_, std::shared_ptr<base_objects::static_block_data>&block_data, base_objects::block_id_t &block_data_id, enbt::value &item
-#define ARGS__pass default_state, has_default_state, full_block_data_, block_data, block_data_id, item
-
-                        static std::unordered_map<std::string, void (*)(ARGS__d)> map{
-                            {"id", [](ARGS__d) {
-                                 base_objects::block_id_t id = block_data_id = item;
-                                 if (id >= full_block_data_.size()) {
-                                     if (full_block_data_.reserved() == 0)
-                                         full_block_data_.reserve(id);
-                                     full_block_data_.resize(id + 1);
-                                 }
-                                 auto& ref = full_block_data_.at(id);
-                                 if (ref)
-                                     throw std::runtime_error("Duplicate block id: " + std::to_string(id));
-                                 ref = block_data;
-                                 if (!has_default_state) {
-                                     default_state = id;
-                                     has_default_state = true;
-                                 }
-                             }},
-                            {"air", [](ARGS__d) { block_data->is_air = item; }},
-                            {"is_solid", [](ARGS__d) { block_data->is_solid = item; }},
-                            {"opacity", [](ARGS__d) { block_data->opacity = item; }},
-                            {"instrument", [](ARGS__d) { block_data->instrument = item.as_string(); }},
-                            {"is_liquid", [](ARGS__d) { block_data->is_liquid = item; }},
-                            {"luminance", [](ARGS__d) { block_data->luminance = item; }},
-                            {"burnable", [](ARGS__d) { block_data->is_burnable = item; }},
-                            {"emits_redstone", [](ARGS__d) { block_data->is_emits_redstone = item; }},
-                            {"is_full_cube", [](ARGS__d) { block_data->is_full_cube = item; }},
-                            {"tool_required", [](ARGS__d) { block_data->is_tool_required = item; }},
-                            {"piston_behavior", [](ARGS__d) { block_data->piston_behavior = item.as_string(); }},
-                            {"replaceable", [](ARGS__d) { block_data->is_replaceable = item; }},
-                            {"hardness", [](ARGS__d) { block_data->hardness = item; }},
-                            {"sided_transparency", [](ARGS__d) { block_data->is_sided_transparency = item; }},
-                            {"default_state_id", [](ARGS__d) {
-                                 default_state = item;
-                                 block_data->is_default_state = true;
-                                 has_default_state = true;
-                             }},
-                            {"properties", [](ARGS__d) {
-                                 std::unordered_map<std::string, std::string> properties;
-                                 properties.reserve(item.size());
-                                 for (auto& [name, item] : item.as_compound())
-                                     properties[name] = (std::string)item;
-                                 block_data->current_properties = std::move(properties);
-                             }},
-                            {"collision_shapes", [](ARGS__d) {
-                                 block_data->collision_shapes.reserve(item.size());
-                                 for (auto& item : item.as_array())
-                                     block_data->collision_shapes.push_back(&base_objects::static_block_data::all_shapes.at(item));
-                             }},
-                            {"block_entity_type", [](ARGS__d) {
-                                 block_data->is_block_entity = true;
-                                 block_data->block_entity_id = item;
-                             }},
-
-
-                        };
-                        for (auto& [name, item] : state.as_compound()) {
-                            map.at(name)(ARGS__pass);
-                        }
-                        associated_states->insert({block_data_id, block_data->current_properties});
-                    }
-
-#undef ARGS__d
-#undef ARGS__pass
-                    for (auto& state : delayed_states.as_array()) {
-                        auto& block_data = full_block_data_.at(state.at("id"));
+                    for (auto& state : init_states) {
+                        auto& block_data = full_block_data_.at(state);
                         block_data->assigned_states_to_properties = associated_states;
                         block_data->default_state = default_state;
+
+                        block_data->name = default_state_data->name;
+                        block_data->general_block_id = default_state_data->general_block_id;
+                        block_data->translation_key = default_state_data->translation_key;
+                        block_data->slipperiness = default_state_data->slipperiness;
+                        block_data->velocity_multiplier = default_state_data->velocity_multiplier;
+                        block_data->jump_velocity_multiplier = default_state_data->jump_velocity_multiplier;
+                        block_data->hardness = default_state_data->hardness;
+                        block_data->blast_resistance = default_state_data->blast_resistance;
+                        block_data->default_drop_item_id = default_state_data->default_drop_item_id;
+                        block_data->map_color_rgb = default_state_data->map_color_rgb;
+                        block_data->loot_table = default_state_data->loot_table;
+                        block_data->allowed_properties = default_state_data->allowed_properties;
                     }
                     named_full_block_data[(std::string)default_state_data->name] = full_block_data_.at(default_state);
                 });

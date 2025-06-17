@@ -23,11 +23,12 @@ int main() {
         } catch (...) {
             log::error("Initializer thread", "An error occurred while unregistering plugins");
         }
-        fast_task::task::shutDown();
         log::commands::deinit();
+        fast_task::task::shutDown();
     });
     try {
         size_t working_threads = api::configuration::get().server.working_threads;
+        fast_task::task::reduce_executor(fast_task::task::total_executors());
         fast_task::task::create_executor(working_threads);
         fast_task::task::task::enable_task_naming = false;
 

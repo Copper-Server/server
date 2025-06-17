@@ -246,8 +246,8 @@ namespace copper_server {
                 return call_function_selector(play, commandSuggestionsResponse, transaction_id, start_pos, length, suggestions)
             }
 
-            base_objects::network::response commands(base_objects::SharedClientData& client, int32_t root_id, const list_array<uint8_t>& nodes){
-                return call_function_selector(play, commands, root_id, nodes)
+            base_objects::network::response commands(base_objects::SharedClientData& client, const base_objects::command_manager& nodes){
+                return call_function_selector(play, commands, nodes)
             }
 
             base_objects::network::response closeContainer(base_objects::SharedClientData& client, uint8_t container_id){
@@ -338,11 +338,11 @@ namespace copper_server {
                 return call_function_selector(play, keepAlive, id)
             }
 
-            base_objects::network::response updateChunkDataWLights(base_objects::SharedClientData& client, int32_t chunk_x, int32_t chunk_z, const NBT& heightmaps, const std::vector<uint8_t> data, const bit_list_array<>& sky_light_mask, const bit_list_array<>& block_light_mask, const bit_list_array<>& empty_skylight_mask, const bit_list_array<>& empty_block_light_mask, const list_array<std::vector<uint8_t>> sky_light_arrays, const list_array<std::vector<uint8_t>> block_light_arrays){
+            base_objects::network::response updateChunkDataWLights(base_objects::SharedClientData& client, int32_t chunk_x, int32_t chunk_z, const util::NBT& heightmaps, const std::vector<uint8_t> data, const bit_list_array<>& sky_light_mask, const bit_list_array<>& block_light_mask, const bit_list_array<>& empty_skylight_mask, const bit_list_array<>& empty_block_light_mask, const list_array<std::vector<uint8_t>> sky_light_arrays, const list_array<std::vector<uint8_t>> block_light_arrays){
                 return call_function_selector(play, updateChunkDataWLights, chunk_x, chunk_z, heightmaps, data, sky_light_mask, block_light_mask, block_light_mask, empty_skylight_mask, sky_light_arrays, block_light_arrays)
             }
 
-            base_objects::network::response worldEvent(base_objects::SharedClientData& client, int32_t event, base_objects::position pos, int32_t data, bool global){
+            base_objects::network::response worldEvent(base_objects::SharedClientData& client, base_objects::packets::world_event_id event, base_objects::position pos, int32_t data, bool global){
                 return call_function_selector(play, worldEvent, event, pos, data, global)
             }
 
@@ -354,8 +354,8 @@ namespace copper_server {
                 return call_function_selector(play, updateLight, chunk_x, chunk_z, sky_light_mask, block_light_mask, empty_skylight_mask, empty_block_light_mask, sky_light_arrays, block_light_arrays)
             }
 
-            base_objects::network::response joinGame(base_objects::SharedClientData& client, int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, std::optional<base_objects::packets::death_location_data> death_location, int32_t portal_cooldown, bool enforces_secure_chat){
-                return call_function_selector(play, joinGame, entity_id, is_hardcore, dimension_names, max_players, view_distance, simulation_distance, reduced_debug_info, enable_respawn_screen, do_limited_crafting, current_dimension_type, dimension_name, hashed_seed, gamemode, prev_gamemode, is_debug, is_flat, death_location, portal_cooldown, enforces_secure_chat)
+            base_objects::network::response joinGame(base_objects::SharedClientData& client, int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, std::optional<base_objects::packets::death_location_data> death_location, int32_t portal_cooldown, int32_t sea_level, bool enforces_secure_chat){
+                return call_function_selector(play, joinGame, entity_id, is_hardcore, dimension_names, max_players, view_distance, simulation_distance, reduced_debug_info, enable_respawn_screen, do_limited_crafting, current_dimension_type, dimension_name, hashed_seed, gamemode, prev_gamemode, is_debug, is_flat, death_location, portal_cooldown, sea_level, enforces_secure_chat)
             }
 
             base_objects::network::response mapData(base_objects::SharedClientData& client, int32_t map_id, uint8_t scale, bool locked, const list_array<base_objects::packets::map_icon>& icons, uint8_t column, uint8_t rows, uint8_t x, uint8_t z, const list_array<uint8_t>& data){
@@ -370,15 +370,15 @@ namespace copper_server {
                 return call_function_selector(play, updateEntityPosition, entity_id, pos, on_ground)
             }
 
-            base_objects::network::response updateEntityPositionAndRotation(base_objects::SharedClientData& client, int32_t entity_id, util::XYZ<float> pos, util::VECTOR rot, bool on_ground){
+            base_objects::network::response updateEntityPositionAndRotation(base_objects::SharedClientData& client, int32_t entity_id, util::XYZ<float> pos, util::ANGLE_DEG rot, bool on_ground){
                 return call_function_selector(play, updateEntityPositionAndRotation, entity_id, pos, rot, on_ground)
             }
 
-            base_objects::network::response updateEntityRotation(base_objects::SharedClientData& client, int32_t entity_id, util::VECTOR rot, bool on_ground){
+            base_objects::network::response updateEntityRotation(base_objects::SharedClientData& client, int32_t entity_id, util::ANGLE_DEG rot, bool on_ground){
                 return call_function_selector(play, updateEntityRotation, entity_id, rot, on_ground)
             }
 
-            base_objects::network::response moveVehicle(base_objects::SharedClientData& client, util::VECTOR pos, util::VECTOR rot){
+            base_objects::network::response moveVehicle(base_objects::SharedClientData& client, util::VECTOR pos, util::ANGLE_DEG rot){
                 return call_function_selector(play, moveVehicle, pos, rot)
             }
 
@@ -458,10 +458,10 @@ namespace copper_server {
                 return call_function_selector(play, lookAt, from_feet_or_eyes, target, entity_id)
             }
 
-            base_objects::network::response synchronizePlayerPosition(base_objects::SharedClientData& client, util::VECTOR pos, float yaw, float pitch, uint8_t flags) {
+            base_objects::network::response synchronizePlayerPosition(base_objects::SharedClientData& client, util::VECTOR pos, util::VECTOR velocity, float yaw, float pitch, int flags) {
                 auto id = client.packets_state.play_data->teleport_id_sequence++;
                 client.packets_state.play_data->pending_teleport_ids.push_back(id);
-                return call_function_selector(play, synchronizePlayerPosition, pos, yaw, pitch, flags, id)
+                return call_function_selector(play, synchronizePlayerPosition, pos, velocity, yaw, pitch, flags, id)
             }
 
             base_objects::network::response initRecipeBook(base_objects::SharedClientData& client, bool crafting_recipe_book_open, bool crafting_recipe_book_filter_active, bool smelting_recipe_book_open, bool smelting_recipe_book_filter_active, bool blast_furnace_recipe_book_open, bool blast_furnace_recipe_book_filter_active, bool smoker_recipe_book_open, bool smoker_recipe_book_filter_active, list_array<std::string> displayed_recipe_ids, list_array<std::string> had_access_to_recipe_ids){
@@ -504,7 +504,7 @@ namespace copper_server {
                 return call_function_selector(play, respawn, dimension_type, dimension_name, hashed_seed, gamemode, previous_gamemode, is_debug, is_flat, death_location, portal_cooldown, keep_attributes, keep_metadata)
             }
 
-            base_objects::network::response setHeadRotation(base_objects::SharedClientData& client, int32_t entity_id, util::VECTOR head_rotation){
+            base_objects::network::response setHeadRotation(base_objects::SharedClientData& client, int32_t entity_id, util::ANGLE_DEG head_rotation){
                 return call_function_selector(play, setHeadRotation, entity_id, head_rotation)
             }
 

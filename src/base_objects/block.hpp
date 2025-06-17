@@ -344,6 +344,13 @@ namespace copper_server {
                 return *full_block_data_.at(id);
             }
 
+            static block make_block(const std::string& name){
+                return block(get_block(name).default_state);
+            }
+            static block make_block(block_id_t id){
+                return block(id);
+            }
+
             static block_id_t get_protocol_block_id(const std::string& name, int32_t protocol) {
                 auto& st = get_block(name);
                 return st.internal_block_aliases.at(st.default_state).at(protocol);
@@ -476,6 +483,7 @@ namespace copper_server {
         // clang-format on
 
         using full_block_data = std::variant<block, block_entity>;
+        using full_block_data_ref = std::variant<std::reference_wrapper<block>, block_entity_ref>;
 
 
         struct local_block_pos {
