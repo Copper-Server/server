@@ -62,10 +62,35 @@ namespace copper_server::base_objects::world {
         biomes[2 >> local_x][2 >> local_y][2 >> local_z] = id;
     }
 
+    void sub_chunk_data::for_each_block(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block block)> func) const {
+        for (uint8_t x = 0; x < 16; x++)
+            for (uint8_t y = 0; y < 16; y++)
+                for (uint8_t z = 0; z < 16; z++)
+                    func(x, y, z, blocks[x][y][z]);
+    }
+
+    void sub_chunk_data::for_each_block_entity(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block block, const enbt::value& entity_data)> func) const {
+        for (auto& [pos, data] : block_entities) {
+            auto local_z = pos & 0xF;
+            auto local_y = (pos >> 4) & 0xF;
+            auto local_x = (pos >> 8) & 0xF;
+            func(local_x, local_y, local_z, blocks[local_x][local_y][local_z], data);
+        }
+    }
+
     void sub_chunk_data::for_each_block(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block& block)> func) {
         for (uint8_t x = 0; x < 16; x++)
             for (uint8_t y = 0; y < 16; y++)
                 for (uint8_t z = 0; z < 16; z++)
                     func(x, y, z, blocks[x][y][z]);
+    }
+
+    void sub_chunk_data::for_each_block_entity(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block& block, enbt::value& entity_data)> func) {
+        for (auto& [pos, data] : block_entities) {
+            auto local_z = pos & 0xF;
+            auto local_y = (pos >> 4) & 0xF;
+            auto local_x = (pos >> 8) & 0xF;
+            func(local_x, local_y, local_z, blocks[local_x][local_y][local_z], data);
+        }
     }
 }

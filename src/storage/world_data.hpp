@@ -287,6 +287,7 @@ namespace copper_server::storage {
         std::unordered_map<util::XY<int64_t>, FuturePtr<base_objects::atomic_holder<chunk_data>>> on_load_process;
         std::unordered_map<util::XY<int64_t>, FuturePtr<bool>> on_save_process;
         std::unordered_map<size_t, base_objects::entity_ref> entities;
+        std::unordered_map<size_t, base_objects::entity_ref> to_load_entities;
         size_t local_entity_id_generator = 0;
         size_t world_spawn_ticket_id;
 

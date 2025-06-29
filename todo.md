@@ -10,3 +10,4 @@
 
 
 [ ] Fix file corruption for async streams
+[ ] Get rid of multiple protocols support, lend it to plugins

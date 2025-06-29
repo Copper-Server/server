@@ -1,5 +1,6 @@
 #include <src/build_in_plugins/network/tcp/client_handler/configuration.hpp>
 
+#include <src/api/configuration.hpp>
 #include <src/api/packets.hpp>
 #include <src/api/protocol.hpp>
 #include <src/base_objects/shared_client_data.hpp>
@@ -14,12 +15,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
         auto& shared_data = session->shared_data();
         auto& load_state = shared_data.packets_state.load_state;
         base_objects::network::response response(base_objects::network::response::empty());
-        if (auto packets = session->shared_data().getPendingPackets(); !packets.empty()) {
-            for (auto& packet : packets)
-                response += std::move(packet);
-            if (load_state == load_state_t::done)
-                load_state = load_state_t::await_processing;
-        } else if (load_state == load_state_t::to_init) {
+        if (load_state == load_state_t::to_init) {
             std::string assigned_version = base_objects::packets::protocol_to_java_name(shared_data.packets_state.protocol_version);
             response += api::packets::configuration::knownPacks(
                 shared_data,
@@ -30,15 +26,19 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     })
             );
             load_state = load_state_t::await_known_packs;
+            response += _keep_alive_solution->make_keep_alive_packet();
             return response;
+        } else if (auto packets = session->shared_data().getPendingPackets(); !packets.empty()) {
+            for (auto& packet : packets)
+                response += std::move(packet);
         } else if (response.data.empty() && load_state == load_state_t::await_processing) {
             load_state = load_state_t::done;
-        } else if (load_state == load_state_t::done) {
+        }
+        if (load_state == load_state_t::done) {
             response += api::packets::configuration::finish(shared_data);
-            _keep_alive_solution->ignore_keep_alive();
+            _keep_alive_solution = nullptr;
             return response;
         }
-        response += _keep_alive_solution->send_keep_alive();
         return response;
     }
 
@@ -68,7 +68,10 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
         });
         session->shared_data().setSwitchToHandlerCallback([this](base_objects::network::tcp::client* cl) {
             next_handler = cl;
+            _keep_alive_solution = nullptr;
         });
+        session->request_buffer(api::configuration::get().protocol.buffer);
+        _keep_alive_solution->start();
         return base_objects::network::response::empty();
     }
 

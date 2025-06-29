@@ -5,7 +5,7 @@ namespace copper_server::base_objects::world {
     struct light_data {
         union light_item {
             struct {
-                //compact two values in one
+                //TODO compact two values in one
                 uint8_t light_point : 4;
                 uint8_t _unused : 4;
             };

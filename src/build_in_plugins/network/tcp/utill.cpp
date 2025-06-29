@@ -11,84 +11,86 @@
 #include <zlib.h>
 
 namespace copper_server::build_in_plugins::network::tcp {
-    void keep_alive_solution::_keep_alive_sended() {
-        need_to_send = false;
-        got_keep_alive = false;
 
-        timeout_timer.expires_from_now(std::chrono::seconds(api::configuration::get().server.timeout_seconds));
+    struct keep_alive_solution::handle_t {
+        std::function<base_objects::network::response(int64_t)> callback;
+        fast_task::deadline_timer timeout_timer;
+        fast_task::deadline_timer next_keep_alive;
+        api::network::tcp::session* session;
+        std::chrono::system_clock::time_point last_keep_alive;
 
-        last_keep_alive = std::chrono::system_clock::now();
-        timeout_timer.async_wait([this](fast_task::deadline_timer::status status) {
-            if (status == fast_task::deadline_timer::status::timeouted)
-                session->disconnect();
-        });
-    }
-
-    void keep_alive_solution::_keep_alive_request() {
-        if (!callback) {
-            send_keep_alive_requested = false;
-            return;
+        handle_t(api::network::tcp::session* session)
+            : session(session), last_keep_alive(std::chrono::system_clock::time_point::min()) {
         }
-        auto seconds = std::min<uint16_t>(api::configuration::get().server.timeout_seconds, 2);
-        send_keep_alive_requested = true;
-        send_keep_alive_timer.cancel();
-        send_keep_alive_timer.expires_from_now(std::chrono::seconds(seconds));
-        send_keep_alive_timer.async_wait([this](fast_task::deadline_timer::status status) {
-            if (status == fast_task::deadline_timer::status::timeouted) {
-                need_to_send = true;
-                _keep_alive_request();
+
+        void _keep_alive_sended() {
+            timeout_timer.expires_from_now(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(api::configuration::get().protocol.timeout_seconds)));
+
+            last_keep_alive = std::chrono::system_clock::now();
+            timeout_timer.async_wait([this](fast_task::deadline_timer::status status) {
+                if (status == fast_task::deadline_timer::status::timeouted)
+                    session->disconnect();
+            });
+        }
+
+        std::chrono::system_clock::duration got_valid_keep_alive(int64_t check) {
+            timeout_timer.cancel();
+            if (check != last_keep_alive.time_since_epoch().count())
+                throw std::runtime_error("got invalid keep alive packet");
+            auto res = last_keep_alive - std::chrono::system_clock::now();
+
+            next_keep_alive.expires_from_now(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(api::configuration::get().protocol.keep_alive_send_each_seconds)));
+            next_keep_alive.async_wait([this](fast_task::deadline_timer::status status) {
+                if (status == fast_task::deadline_timer::status::timeouted)
+                    start();
+            });
+            return res;
+        }
+
+        void start() {
+            if (callback) {
+                _keep_alive_sended();
+                session->send_indirect(callback(last_keep_alive.time_since_epoch().count()));
             }
-        });
-    }
+        }
+
+        base_objects::network::response make_keep_alive_packet() {
+            if (timeout_timer.timed_out() && !next_keep_alive.timed_out()) {
+                if (next_keep_alive.cancel()) {
+                    _keep_alive_sended();
+                    return callback(last_keep_alive.time_since_epoch().count());
+                }
+            }
+            return base_objects::network::response::empty();
+        }
+    };
 
     keep_alive_solution::keep_alive_solution(api::network::tcp::session* session)
-        : session(session) {
+        : handle(std::make_shared<handle_t>(session)) {
     }
 
     keep_alive_solution::~keep_alive_solution() {
-        timeout_timer.cancel();
-        send_keep_alive_timer.cancel();
+        handle->next_keep_alive.cancel();
+        handle->timeout_timer.cancel();
     }
 
     void keep_alive_solution::set_callback(const std::function<base_objects::network::response(int64_t)>& fun) {
-        callback = fun;
-        _keep_alive_request();
-        need_to_send = true;
-    }
-
-    void keep_alive_solution::keep_alive_sended() {
-        if (!callback)
-            return;
-        _keep_alive_sended();
-        send_keep_alive_timer.cancel();
-    }
-
-    base_objects::network::response keep_alive_solution::send_keep_alive() {
-        if (!callback || !need_to_send)
-            return {};
-        _keep_alive_sended();
-        return callback(last_keep_alive.time_since_epoch().count());
+        handle->callback = fun;
     }
 
     std::chrono::system_clock::duration keep_alive_solution::got_valid_keep_alive(int64_t check) {
-        got_keep_alive = true;
-        timeout_timer.cancel();
-        if (check != last_keep_alive.time_since_epoch().count())
-            throw std::runtime_error("got invalid keep alive packet");
-        return last_keep_alive - std::chrono::system_clock::now();
+        return handle->got_valid_keep_alive(check);
     }
 
-    void keep_alive_solution::ignore_keep_alive() {
-        got_keep_alive = true;
-        timeout_timer.cancel();
+    base_objects::network::response keep_alive_solution::make_keep_alive_packet() {
+        if (!handle)
+            return base_objects::network::response::empty();
+
+        return handle->make_keep_alive_packet();
     }
 
-    base_objects::network::response keep_alive_solution::no_response() {
-        if (got_keep_alive && callback) {
-            _keep_alive_sended();
-            return callback(last_keep_alive.time_since_epoch().count());
-        } else
-            return {};
+    void keep_alive_solution::start() {
+        handle->start();
     }
 
     list_array<uint8_t> tcp_client_handle::legacy_motd_helper(const std::u8string& motd) {
@@ -167,7 +169,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         }
     }
 
-    list_array<uint8_t> tcp_client_handle::prepare_send(base_objects::network::response::item&& packet_item) {
+    list_array<uint8_t> tcp_client_handle::prepare_send(base_objects::network::response::item&& packet_item, api::network::tcp::session* session) {
         list_array<uint8_t>& packet = packet_item.data;
         list_array<uint8_t> build_packet;
         if (session->compression_threshold == -1) {
@@ -212,11 +214,11 @@ namespace copper_server::build_in_plugins::network::tcp {
         return build_packet;
     }
 
-    list_array<list_array<uint8_t>> tcp_client_handle::prepare_send(auto&& packet) {
+    list_array<list_array<uint8_t>> tcp_client_handle::prepare_send(base_objects::network::response&& packet, api::network::tcp::session* session) {
         list_array<list_array<uint8_t>> answer;
         if (packet.data.size()) {
             for (auto& resp : packet.data)
-                answer.push_back(prepare_send(std::move(resp)));
+                answer.push_back(prepare_send(std::move(resp), session));
         }
         return answer;
     }
@@ -247,7 +249,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         while (!data.empty()) {
             int32_t packet_len = data.read_var<int32_t>();
             if (!data.can_read(packet_len)) {
-                if (packet_len > max_packet_size)
+                if (packet_len > api::configuration::get().protocol.max_accept_packet_size)
                     return too_large_packet();
                 break;
             }
@@ -262,7 +264,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                 } else
                     answer_it = work_packet(packet);
 
-                answer.push_back(prepare_send(answer_it));
+                answer.push_back(prepare_send(std::move(answer_it), session));
                 if ((answer_it.do_disconnect || answer_it.do_disconnect_after_send) && answer.size())
                     break;
 
@@ -274,10 +276,10 @@ namespace copper_server::build_in_plugins::network::tcp {
                     break;
             } catch (const std::exception& ex) {
                 answer_it = exception(ex);
-                answer.push_back(prepare_send(answer_it));
+                answer.push_back(prepare_send(std::move(answer_it), session));
             } catch (...) {
                 answer_it = unexpected_exception();
-                answer.push_back(prepare_send(answer_it));
+                answer.push_back(prepare_send(std::move(answer_it), session));
             }
             if ((answer_it.do_disconnect || answer_it.do_disconnect_after_send) && answer.size())
                 return base_objects::network::response::disconnect(std::move(answer));
@@ -285,9 +287,6 @@ namespace copper_server::build_in_plugins::network::tcp {
             if (answer_it.do_disconnect)
                 return base_objects::network::response::disconnect();
         }
-        if (answer.empty() && next_handler == nullptr)
-            if (_keep_alive_solution)
-                answer.push_back(prepare_send(_keep_alive_solution->no_response()));
         return base_objects::network::response::answer(std::move(answer), valid_till);
     }
 
@@ -316,7 +315,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         }
         list_array<list_array<uint8_t>> answer;
         for (auto& resp : res.data)
-            answer.push_back(prepare_send(std::move(resp)));
+            answer.push_back(prepare_send(std::move(resp), session));
         res.data = answer.take().convert<base_objects::network::response::item>([](list_array<uint8_t>&& item) { return base_objects::network::response::item(std::move(item)); });
         return res;
     }

@@ -18,18 +18,22 @@ namespace copper_server::build_in_plugins::network::tcp {
         static bool do_log_connection_errors;
         encryption::aes encryption;
 
-        session(fast_task::networking::TcpNetworkStream& s, base_objects::network::tcp::client* client_handler, uint64_t& set_timeout);
+        session(fast_task::networking::TcpNetworkStream& s, base_objects::network::tcp::client* client_handler, float& set_timeout);
         ~session();
 
-        base_objects::client_data_holder& shared_data_ref();
-        base_objects::SharedClientData& shared_data();
-        void disconnect();
-        bool is_active();
-        bool start_symmetric_encryption(const list_array<uint8_t>& encryption_key, const list_array<uint8_t>& encryption_iv);
+        bool is_active() override;
+        void disconnect() override;
+        base_objects::client_data_holder& shared_data_ref() override;
+        base_objects::SharedClientData& shared_data() override;
+        bool start_symmetric_encryption(const list_array<uint8_t>& encryption_key, const list_array<uint8_t>& encryption_iv) override;
 
         base_objects::network::tcp::client& handler();
 
         void received(std::span<char> read_data);
+
+        void request_buffer(size_t new_size) override;
+
+        void send_indirect(base_objects::network::response&&) override;
 
     private:
         void send(base_objects::network::response&& resp);
@@ -38,7 +42,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         std::vector<uint8_t> read_data;
         list_array<uint8_t> read_data_cached;
         base_objects::client_data_holder _sharedData;
-        uint64_t& timeout;
+        float& timeout;
         base_objects::network::tcp::client* chandler = nullptr;
         bool encryption_enabled : 1 = false;
     };

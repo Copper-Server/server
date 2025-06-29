@@ -65,11 +65,22 @@ namespace copper_server::api::configuration {
 
         struct Protocol {
             int32_t compression_threshold = -1;
-            uint32_t rate_limit = 0;
+            uint32_t rate_limit = 0; //0 for unlimited, in bytes per second
+            bool handle_legacy = false;
+            uint16_t new_client_buffer = 100;       //buffer for new connections, in bytes, used to prevent DoS attacks
+            uint16_t buffer = 8192;                 //buffer for connections, in bytes
+            uint16_t max_accept_packet_size = 8192; //8192 bytes, maximum packet size, compressed, if packet is too large then client will be disconnected
+            uint16_t max_send_packet_size = 8192;   //8192 bytes, maximum packet size, if packet is too large then client will be disconnected
+            float timeout_seconds = 30;
+            float keep_alive_send_each_seconds = 20;
+            float all_connections_timeout_seconds = 30000; //30 sec
+
+
             list_array<std::string> allowed_versions; //if not empty, then all supported by internal implementation, can be defined by version name or number
 
             bool prevent_proxy_connections = false; //	If the ISP/AS sent from the server is different from the one from Mojang Studios' authentication server, the player is kicked.
             bool enable_encryption = true;
+            bool send_nbt_data_in_chunk = true; //enabled by default to be same as vanilla server, this option exists to allow 'fix' chunk ban and reduce network consumption, should not affect gameplay for regular players
 
             enum class connection_conflict_t {
                 kick_connected,
@@ -151,14 +162,11 @@ namespace copper_server::api::configuration {
             uint32_t max_players = 0; //0 for unlimited
             bool offline_mode = false;
             bool prevent_chat_reports = false; //if true then chat reports will be prevented despite `mojang.enforce_secure_profile` setting
+            bool world_debug_mode = false;     //disables disk usage for worlds
 
             size_t network_threads = 0;   //0 == auto, optional
             size_t working_threads = 0;   //0 == auto, optional
             size_t ssl_key_length = 1024; //1024, 2048, 4096, optional
-            bool handle_legacy = false;
-            uint16_t timeout_seconds = 30;
-            uint16_t max_accept_buffer = 100;
-            uint64_t all_connections_timeout = 30000; //30 sec
 
             std::filesystem::path get_storage_path() const {
                 return (base_path / storage_folder).lexically_normal();

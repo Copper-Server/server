@@ -40,6 +40,10 @@ namespace copper_server::base_objects {
             uint32_t get_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z);
             void set_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z, uint32_t id);
             void for_each_block(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block& block)> func);
+            void for_each_block_entity(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block& block, enbt::value& entity_data)> func);
+
+            void for_each_block(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block block)> func) const;
+            void for_each_block_entity(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block block, const enbt::value& entity_data)> func) const;
         };
     }
 }

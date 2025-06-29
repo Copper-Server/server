@@ -6,28 +6,13 @@
 #include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
+#include <src/registers.hpp>
 
 namespace copper_server::build_in_plugins {
     //handles clients with play state, allows players to access world and other things through api
     class PlayEngine : public PluginAutoRegister<"play_engine", PlayEngine> {
         fast_task::task_mutex messages_order;
         list_array<std::array<uint8_t, 256>> lastset_messages;
-
-        static list_array<base_objects::chunk::chunk_biomes> build_biomes_chunk(storage::chunk_data& chunk) {
-            base_objects::chunk::chunk_biomes biomes;
-            biomes.x = chunk.chunk_x;
-            biomes.z = chunk.chunk_z;
-            biomes.biomes.reserve(chunk.sub_chunks.size());
-            for (auto& it : chunk.sub_chunks) {
-                base_objects::chunk::pelleted_container_direct_biomes current;
-                for (auto& x : it.biomes)
-                    for (auto& y : x)
-                        for (auto& z : y)
-                            current.data.add(z);
-                biomes.biomes.push_back(current);
-            }
-            return {std::move(biomes)};
-        }
 
         static std::shared_ptr<base_objects::entity_data::world_processor> make_processor() {
             base_objects::entity_data::world_processor proc;
@@ -153,24 +138,23 @@ namespace copper_server::build_in_plugins {
             proc.notify_biome_change = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, uint32_t biome_id) {
                 if (self.assigned_player) {
                     if (self.current_world()) {
-                        if (self.assigned_player->chunk_loaded_at(x, z))
+                        if (self.get_syncing_data().chunk_processed(x, z))
                             self.current_world()->get_chunk_at(x, z, [&self](storage::chunk_data& chunk) {
-                                auto res = build_biomes_chunk(chunk);
-                                api::packets::play::chunkBiomes(*self.assigned_player, res);
+                                api::packets::play::chunkBiomes(*self.assigned_player, {&chunk});
                             });
                     }
                 }
             };
             proc.notify_block_change = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, const base_objects::block& block) {
                 if (self.assigned_player) {
-                    if (self.assigned_player->chunk_loaded_at(x, z))
+                    if (self.get_syncing_data().chunk_processed(x, z))
                         api::packets::play::blockUpdate(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, block);
                 }
             };
             proc.notify_block_destroy_change = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, const base_objects::block& block) {
                 if (self.assigned_player)
                     if (self.current_world()) {
-                        if (self.assigned_player->chunk_loaded_at(x, z)) {
+                        if (self.get_syncing_data().chunk_processed(x, z)) {
                             self.current_world()->get_block(
                                 x,
                                 y,
@@ -188,7 +172,7 @@ namespace copper_server::build_in_plugins {
             };
             proc.notify_block_entity_change = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block_entity) {
                 if (self.assigned_player) {
-                    if (self.assigned_player->chunk_loaded_at(x, z)) {
+                    if (self.get_syncing_data().chunk_processed(x, z)) {
                         api::packets::play::blockUpdate(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, block_entity.block);
                         api::packets::play::blockEntityData(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, block_entity.block, block_entity.data);
                     }
@@ -197,7 +181,7 @@ namespace copper_server::build_in_plugins {
             proc.notify_block_entity_destroy_change = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block_entity) {
                 if (self.assigned_player)
                     if (self.current_world()) {
-                        if (self.assigned_player->chunk_loaded_at(x, z)) {
+                        if (self.get_syncing_data().chunk_processed(x, z)) {
                             self.current_world()->get_block(
                                 x,
                                 y,
@@ -216,7 +200,7 @@ namespace copper_server::build_in_plugins {
             };
             proc.notify_block_event = [](base_objects::entity& self, const base_objects::world::block_action& action, int64_t x, int64_t y, int64_t z) {
                 if (self.assigned_player) {
-                    if (self.assigned_player->chunk_loaded_at(x, z)) {
+                    if (self.get_syncing_data().chunk_processed(x, z)) {
                         std::visit(
                             [x, y, z, &self](auto& it) mutable {
                                 using T = std::decay_t<decltype(it)>;
@@ -253,11 +237,107 @@ namespace copper_server::build_in_plugins {
             };
             proc.notify_chunk = [](base_objects::entity& self, int64_t x, int64_t z, const storage::chunk_data& chunk) {
                 if (self.assigned_player) {
-                    if (self.assigned_player->chunk_in_bounds(x, z)) {
+                    if (self.get_syncing_data().chunk_in_bounds(x, z)) {
+                        //TODO implement batching
+                        api::packets::play::updateChunkDataWLights(*self.assigned_player, chunk);
+                        self.get_syncing_data().mark_chunk(x, z, true);
+                    }
+                }
+            };
+            proc.notify_chunk_blocks = [](base_objects::entity& self, int64_t x, int64_t z, const storage::chunk_data& chunk) {
+                if (self.assigned_player) {
+                    if (self.get_syncing_data().chunk_in_bounds(x, z)) {
+                        //TODO implement batching
+                        api::packets::play::updateChunkDataWLights(*self.assigned_player, chunk);
+                        self.get_syncing_data().mark_chunk(x, z, true);
+                    }
+                }
+            };
+            proc.notify_chunk_light = [](base_objects::entity& self, int64_t x, int64_t z, const storage::chunk_data& chunk) {
+                if (self.assigned_player) {
+                    if (self.get_syncing_data().chunk_in_bounds(x, z)) {
+                        api::packets::play::updateLight(*self.assigned_player, chunk);
+                    }
+                }
+            };
+            proc.notify_sub_chunk = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, const base_objects::world::sub_chunk_data& chunk) {
+                if (self.assigned_player) {
+                    if (self.get_syncing_data().chunk_in_bounds(x, z)) {
+                        if (self.current_world()) {
+                            self.current_world()->get_chunk_at(x, z, [&](auto& chunk) {
+                                //TODO implement batching
+                                api::packets::play::updateChunkDataWLights(*self.assigned_player, chunk);
+                                self.get_syncing_data().mark_chunk(x, z, true);
+                            });
+                        }
+                    }
+                }
+            };
+            proc.notify_sub_chunk_blocks = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, const base_objects::world::sub_chunk_data& chunk) {
+                if (self.assigned_player) {
+                    if (self.get_syncing_data().chunk_in_bounds(x, z)) {
+                        if (self.current_world()) {
+                            self.current_world()->get_chunk_at(x, z, [&](auto& chunk) {
+                                //TODO implement batching
+                                api::packets::play::updateChunkDataWLights(*self.assigned_player, chunk);
+                                self.get_syncing_data().mark_chunk(x, z, true);
+                            });
+                        }
+                    }
+                }
+            };
+            proc.notify_sub_chunk_light = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, const base_objects::world::sub_chunk_data& chunk) {
+                if (self.assigned_player) {
+                    if (self.get_syncing_data().chunk_in_bounds(x, z)) {
+                        if (self.current_world()) {
+                            self.current_world()->get_chunk_at(x, z, [&](auto& chunk) {
+                                api::packets::play::updateLight(*self.assigned_player, chunk);
+                            });
+                        }
+                    }
+                }
+            };
+            proc.on_change_world = [](base_objects::entity& self, storage::world_data& new_world) {
+                if (self.assigned_player) {
+                    if (self.current_world()) {
+                        auto& player_data = self.assigned_player->player_data;
+                        api::packets::play::respawn(
+                            *self.assigned_player,
+                            registers::dimensionTypes.at(new_world.world_type).id,
+                            new_world.world_name,
+                            0,
+                            player_data.gamemode,
+                            player_data.prev_gamemode,
+                            new_world.world_generator_data.contains("debug") ? (bool)new_world.world_generator_data["debug"] : false,
+                            new_world.world_generator_data.contains("flat") ? (bool)new_world.world_generator_data["flat"] : false,
+                            player_data.last_death_location ? std::optional(base_objects::packets::death_location_data(player_data.last_death_location->world_id, {(int32_t)player_data.last_death_location->x, (int32_t)player_data.last_death_location->y, (int32_t)player_data.last_death_location->z})) : std::nullopt,
+                            0,
+                            true,
+                            true
+                        );
+                        self.get_syncing_data().flush_processing();
                     }
                 }
             };
 
+            proc.on_tick = [](base_objects::entity& self) {
+                if (self.assigned_player) {
+                    if (self.current_world()) {
+                        //TODO implement batching
+                        self.get_syncing_data().for_each_processing([&](int32_t chunk_x, int32_t chunk_z, bool loaded) {
+                            if (!loaded) {
+                                auto chunk = self.current_world()->request_chunk_data_weak(chunk_x, chunk_z);
+                                if (chunk) {
+                                    if ((*chunk)->generator_stage == 0xFF) {
+                                        api::packets::play::updateChunkDataWLights(*self.assigned_player, **chunk);
+                                        self.get_syncing_data().mark_chunk(chunk_x, chunk_z, true);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            };
             return std::make_shared<base_objects::entity_data::world_processor>(std::move(proc));
         }
 

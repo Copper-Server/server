@@ -195,6 +195,8 @@ namespace copper_server::storage {
     class worlds_data;
 
     bool chunk_data::load(const std::filesystem::path& chunk_z, uint64_t tick_counter, world_data& world) {
+        if (api::configuration::get().server.world_debug_mode)
+            return false;
         if (!std::filesystem::exists(chunk_z))
             return false;
         fast_task::files::async_iofstream file(chunk_z, std::ios::binary);
@@ -481,6 +483,8 @@ namespace copper_server::storage {
     }
 
     bool chunk_data::save(const std::filesystem::path& chunk_z, uint64_t tick_counter, world_data& world) {
+        if (api::configuration::get().server.world_debug_mode)
+            return false;
         std::filesystem::create_directories(chunk_z.parent_path());
         fast_task::files::async_iofstream file(chunk_z, std::ios::binary);
         if (!file.is_open())
@@ -996,7 +1000,15 @@ namespace copper_server::storage {
 
     void world_data::entity_init(base_objects::entity& self) {
         std::unique_lock lock(mutex);
-        ENTITY_NOTIFY_CHANGE(entity_init)
+        auto chunk_x = convert_chunk_global_pos(self.position.x);
+        auto chunk_z = convert_chunk_global_pos(self.position.z);
+        for (auto& [id, entity] : entities) {
+            auto processor = entity->const_data().processor;
+            if (entity->world_syncing_data && processor) {
+                if (entity->world_syncing_data->processing_region.in_bounds(chunk_z, chunk_z))
+                    processor->entity_init(*entity, self);
+            }
+        }
     }
 
     void world_data::entity_teleport(base_objects::entity& self, util::VECTOR new_pos) {
@@ -1117,7 +1129,7 @@ namespace copper_server::storage {
                 auto processor = entity->const_data().processor;
                 if (entity->world_syncing_data && processor) {
                     if (entity->world_syncing_data->processing_region.in_bounds(convert_chunk_global_pos(x), convert_chunk_global_pos(z)))
-                        processor->entity_place_block_entity(*entity, is_main_hand, self, x, y, z, block);
+                        processor->entity_place_block_entity(self, *entity, is_main_hand, x, y, z, block);
                 }
             }
     }
@@ -2390,13 +2402,17 @@ namespace copper_server::storage {
         base_objects::cubic_bounds_chunk_radius processing_region(entity->position.x, entity->position.z, entity->const_data().max_track_distance);
 
         entity->world_syncing_data = std::make_optional<base_objects::entity::world_syncing>(
-            bit_list_array(processing_region.count()),
+            bit_list_array(),
             processing_region,
             id,
             this
         );
+        entity->world_syncing_data->flush_processing();
         entities[id] = entity;
+        to_load_entities[id] = entity;
         entity_init(*entity);
+        if (auto loading_level = entity->const_data().loading_ticket_level; loading_level <= 44)
+            add_loading_ticket({base_objects::world::loading_point_ticket::entity_bound_ticket{id}, processing_region, "entity ticket", loading_level});
     }
 
     void world_data::unregister_entity(base_objects::entity_ref& entity) {
@@ -2404,6 +2420,7 @@ namespace copper_server::storage {
         if (entity->world_syncing_data) {
             entity_deinit(*entity);
             entities.erase(entity->world_syncing_data->assigned_world_id);
+            to_load_entities.erase(entity->world_syncing_data->assigned_world_id);
             entity->world_syncing_data = std::nullopt;
         }
     }
@@ -2452,8 +2469,10 @@ namespace copper_server::storage {
                             expired = true;
                     } else if constexpr (std::is_same_v<T, base_objects::world::loading_point_ticket::entity_bound_ticket>) {
                         if (auto it = entities.find(expr.id); it != entities.end()) {
-                            ticket.point.center_x = convert_chunk_global_pos(it->second->position.x);
-                            ticket.point.center_z = convert_chunk_global_pos(it->second->position.z);
+                            if (it->second->world_syncing_data)
+                                ticket.point = it->second->world_syncing_data->processing_region;
+                            else
+                                expired = true;
                         } else
                             expired = true;
                     }
@@ -2504,6 +2523,17 @@ namespace copper_server::storage {
         expired_tickets.for_each([&](size_t id) {
             loading_tickets.erase(id);
         });
+
+        for (auto& [id, entity] : to_load_entities) {
+            auto chunk = request_chunk_data_weak_gen(convert_chunk_global_pos(entity->position.x), convert_chunk_global_pos(entity->position.z));
+            if (chunk) {
+                if ((*chunk)->generator_stage == 0xFF) {
+                    TO_WORLD_POS_GLOBAL(y_level, entity->position.y);
+                    (*chunk)->sub_chunks[convert_chunk_global_pos(y_level)].stored_entities.insert({id, entity});
+                }
+            }
+        }
+        to_load_entities.clear();
         lock.unlock();
         tick_counter++;
         if (!profiling.enable_world_profiling) {

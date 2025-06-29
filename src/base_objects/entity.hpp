@@ -62,7 +62,7 @@ namespace copper_server {
             bool is_fire_immune = false;
             bool is_saveable = false;
             bool is_spawnable_far_from_player = false;
-            uint8_t loading_ticket_level = 50; //read about loading tickets, if loading ticket level is higher than 44 then ticket would not be created for this entity
+            int8_t loading_ticket_level = 50; //read about loading tickets, if loading ticket level is higher than 44 then ticket would not be created for this entity
 
             struct living_entity_data_t {
                 int32_t inventory_size = 0;
@@ -110,7 +110,6 @@ namespace copper_server {
             //}
 
 
-            std::function<void(entity& target_entity)> tick_callback;
             std::function<bool(entity& target_entity, bool force)> pre_death_callback;
             std::function<void(entity& target_entity)> create_callback;
             std::function<void(entity& target_entity, const enbt::compound_const_ref&)> create_callback_with_nbt;
@@ -174,7 +173,9 @@ namespace copper_server {
                 void (*notify_sub_chunk_blocks)(entity& self, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const world::sub_chunk_data&) = nullptr; //used after multiply changes
                 void (*notify_chunk_blocks)(entity& self, int64_t chunk_x, int64_t chunk_z, const storage::chunk_data&) = nullptr;                        //used after multiply changes
 
-                void (*on_transfer)(entity& self, storage::world_data& old_world, storage::world_data& new_world) = nullptr;
+                void (*on_change_world)(entity& self, storage::world_data& new_world) = nullptr;
+
+                void (*on_tick)(entity& self) = nullptr;
             };
 
             std::shared_ptr<world_processor> processor;
@@ -266,6 +267,84 @@ namespace copper_server {
                 bool is_sleeping : 1 = false;
                 bool is_sneaking : 1 = false;
                 bool is_sprinting : 1 = false;
+
+                bool mark_chunk(int64_t pos_x, int64_t pos_z, bool loaded) {
+                    if (pos_x > INT32_MAX || pos_x < INT32_MIN || pos_z > INT32_MAX || pos_z < INT32_MIN)
+                        return false;
+                    if (!processing_region.in_bounds(pos_x, pos_z))
+                        return false;
+
+                    int32_t offset_x = pos_x - (processing_region.center_x - processing_region.radius);
+                    int32_t offset_z = pos_z - (processing_region.center_z - processing_region.radius);
+                    size_t index = offset_z * (processing_region.radius + processing_region.radius + 1) + offset_x;
+                    processed_chunks.set(index, loaded);
+                    return true;
+                }
+
+                bool chunk_in_bounds(int64_t pos_x, int64_t pos_z) {
+                    if (pos_x > INT32_MAX || pos_x < INT32_MIN || pos_z > INT32_MAX || pos_z < INT32_MIN)
+                        return false;
+                    return processing_region.in_bounds(pos_x, pos_z);
+                }
+
+                bool chunk_processed(int64_t pos_x, int64_t pos_z) const {
+                    if (pos_x > INT32_MAX || pos_x < INT32_MIN || pos_z > INT32_MAX || pos_z < INT32_MIN)
+                        return false;
+
+                    if (!processing_region.in_bounds(pos_x, pos_z))
+                        return false;
+                    int32_t offset_x = pos_x - (processing_region.center_x - processing_region.radius);
+                    int32_t offset_z = pos_z - (processing_region.center_z - processing_region.radius);
+
+
+                    size_t index = offset_z * (processing_region.radius + processing_region.radius + 1) + offset_x;
+                    return processed_chunks.at(index);
+                }
+
+                void update_processing(int32_t center_x, int32_t center_z, uint8_t render_distance) {
+                    auto new_processing_diameter = 2 * render_distance + 7;
+                    bit_list_array<> new_processing_data(new_processing_diameter * new_processing_diameter);
+
+                    auto processing_diameter = (processing_region.radius + processing_region.radius + 1);
+                    int32_t new_radius = new_processing_diameter / 2;
+
+                    for (int32_t dz = 0; dz < new_processing_diameter; ++dz) {
+                        for (int32_t dx = 0; dx < new_processing_diameter; ++dx) {
+                            // World coordinates for this chunk in the new area
+                            int32_t chunk_x = center_x - new_radius + dx;
+                            int32_t chunk_z = center_z - new_radius + dz;
+
+                            // Map to old area offsets
+                            int32_t old_offset_x = chunk_x - (processing_region.center_x - processing_region.radius);
+                            int32_t old_offset_z = chunk_z - (processing_region.center_z - processing_region.radius);
+
+                            // If the chunk was loaded in the old area, copy its bit
+                            if (old_offset_x >= 0 && old_offset_x < processing_diameter && old_offset_z >= 0 && old_offset_z < processing_diameter) {
+                                size_t old_index = old_offset_z * processing_diameter + old_offset_x;
+                                size_t new_index = dz * new_processing_diameter + dx;
+                                if (processed_chunks[old_index])
+                                    new_processing_data.set(new_index, true);
+                            }
+                        }
+                    }
+                    processing_region = {center_x, center_z, new_radius};
+                    processed_chunks = std::move(new_processing_data);
+                }
+
+                void flush_processing() {
+                    auto diameter = processing_region.radius + processing_region.radius + 1;
+                    processed_chunks = bit_list_array<>(diameter * diameter);
+                }
+
+                template <class FN>
+                void for_each_processing(FN&& fn) {
+                    auto diameter = processing_region.radius + processing_region.radius + 1;
+                    auto x_offset_pre = processing_region.center_x - processing_region.radius;
+                    auto z_offset_pre = processing_region.center_z - processing_region.radius;
+                    processing_region.enum_points_from_center([&](auto x, auto z) {
+                        fn(x, z, processed_chunks.at((z - z_offset_pre) * diameter + (x - x_offset_pre)));
+                    });
+                }
             };
 
             enbt::raw_uuid id;
@@ -294,6 +373,12 @@ namespace copper_server {
             uint32_t protocol_id;
 
             storage::world_data* current_world() const;
+
+            world_syncing& get_syncing_data() {
+                if (!world_syncing_data)
+                    throw std::runtime_error("World syncing data is not initialized for entity " + id.to_string());
+                return *world_syncing_data;
+            }
 
             //nbt {
             //  float health = 20;

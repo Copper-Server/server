@@ -41,7 +41,6 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
         base_objects::network::response response;
         for (auto& packet : session->shared_data().getPendingPackets())
             response += std::move(packet);
-        response += _keep_alive_solution->send_keep_alive();
         return response;
     }
 
@@ -77,7 +76,9 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
         }
         session->shared_data().setSwitchToHandlerCallback([this](base_objects::network::tcp::client* cl) {
             next_handler = cl;
+            _keep_alive_solution = nullptr;
         });
+        _keep_alive_solution->start();
         return IdleActions();
     }
 

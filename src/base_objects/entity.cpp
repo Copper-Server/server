@@ -98,6 +98,10 @@ namespace copper_server {
             });
         }
 
+        storage::world_data* entity::current_world() const {
+            return world_syncing_data ? world_syncing_data->world : nullptr;
+        }
+
         entity_ref entity::copy() const {
             entity_ref res = new entity();
             res->died = died;
@@ -268,7 +272,10 @@ namespace copper_server {
                 for (auto& it : attached)
                     resolve_entity(it);
 
-                const_data().tick_callback(*this);
+                auto proc = const_data().processor;
+                if (proc)
+                    if (proc->on_tick)
+                        proc->on_tick(*this);
                 reduce_effects(hidden_effects, active_effects);
             }
         }

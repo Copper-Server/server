@@ -49,70 +49,70 @@ namespace copper_server::base_objects::network {
         : data(std::move(data)), compression_threshold(compression_threshold), apply_compression(apply_compression) {}
 
     template <class T>
-    static void _write_value_tem(T val, list_array<uint8_t>& data) {
+    static void _write_value_tem(T val, list_array<uint8_t>& data, std::endian endian) {
         if constexpr (sizeof(T) == 1) {
             data.push_back(reinterpret_cast<uint8_t*>(&val)[0]);
         } else {
-            val = enbt::endian_helpers::convert_endian(std::endian::big, val);
+            val = enbt::endian_helpers::convert_endian(endian, val);
             for (size_t i = 0; i < sizeof(T); i++)
                 data.push_back(reinterpret_cast<uint8_t*>(&val)[i]);
         }
     }
 
     void response::item::write_id(uint8_t id) {
-        _write_value_tem(id, data);
+        _write_value_tem(id, data, std::endian::little);
     }
 
     void response::item::write_value(const enbt::raw_uuid& val) {
-        _write_value_tem(val, data);
+        _write_value_tem(val, data, std::endian::little);
     }
 
     void response::item::write_value(int8_t val) {
-        _write_value_tem(val, data);
+        _write_value_tem(val, data, std::endian::little);
     }
 
-    void response::item::write_value(int16_t val) {
-        _write_value_tem(val, data);
+    void response::item::write_value(int16_t val, std::endian endian) {
+        _write_value_tem(val, data, endian);
     }
 
-    void response::item::write_value(int32_t val) {
-        _write_value_tem(val, data);
+    void response::item::write_value(int32_t val, std::endian endian) {
+        _write_value_tem(val, data, endian);
     }
 
-    void response::item::write_value(int64_t val) {
-        _write_value_tem(val, data);
+    void response::item::write_value(int64_t val, std::endian endian) {
+        _write_value_tem(val, data, endian);
     }
 
     void response::item::write_value(uint8_t val) {
-        _write_value_tem(val, data);
+        _write_value_tem(val, data, std::endian::little);
     }
 
-    void response::item::write_value(uint16_t val) {
-        _write_value_tem(val, data);
+    void response::item::write_value(uint16_t val, std::endian endian) {
+        _write_value_tem(val, data, endian);
     }
 
-    void response::item::write_value(uint32_t val) {
-        _write_value_tem(val, data);
+    void response::item::write_value(uint32_t val, std::endian endian) {
+        _write_value_tem(val, data, endian);
     }
 
-    void response::item::write_value(uint64_t val) {
-        _write_value_tem(val, data);
+    void response::item::write_value(uint64_t val, std::endian endian) {
+        _write_value_tem(val, data, endian);
     }
 
-    void response::item::write_value(float val) {
-        _write_value_tem(val, data);
+    void response::item::write_value(float val, std::endian endian) {
+        _write_value_tem(val, data, endian);
     }
 
-    void response::item::write_value(double val) {
-        _write_value_tem(val, data);
+    void response::item::write_value(double val, std::endian endian) {
+        _write_value_tem(val, data, endian);
     }
 
     void response::item::write_value(char val) {
-        _write_value_tem(val, data);
+        _write_value_tem(val, data, std::endian::little);
     }
 
     void response::item::write_value(bool val) {
-        _write_value_tem(val, data);
+        _write_value_tem(val, data, std::endian::little);
     }
 
     void response::item::write_var32(int32_t value) {
@@ -155,6 +155,41 @@ namespace copper_server::base_objects::network {
 
     void response::item::write_direct(list_array<uint8_t>&& data) {
         this->data.push_back(std::move(data));
+    }
+
+    void response::item::write_direct(const list_array<uint16_t>& data, std::endian endian) {
+        for (auto& it : data)
+            write_value(it, endian);
+    }
+
+    void response::item::write_direct(const list_array<uint32_t>& data, std::endian endian) {
+        for (auto& it : data)
+            write_value(it, endian);
+    }
+
+    void response::item::write_direct(const list_array<uint64_t>& data, std::endian endian) {
+        for (auto& it : data)
+            write_value(it, endian);
+    }
+
+    void response::item::write_direct(const list_array<int8_t>& data) {
+        for (auto& it : data)
+            write_value(it);
+    }
+
+    void response::item::write_direct(const list_array<int16_t>& data, std::endian endian) {
+        for (auto& it : data)
+            write_value(it, endian);
+    }
+
+    void response::item::write_direct(const list_array<int32_t>& data, std::endian endian) {
+        for (auto& it : data)
+            write_value(it, endian);
+    }
+
+    void response::item::write_direct(const list_array<int64_t>& data, std::endian endian) {
+        for (auto& it : data)
+            write_value(it, endian);
     }
 
     void response::item::write_direct(const uint8_t* data, size_t size) {

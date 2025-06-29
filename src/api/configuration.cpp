@@ -124,8 +124,21 @@ namespace copper_server::api::configuration {
             auto protocol = js_object::get_object(data["protocol"]);
             cfg.protocol.compression_threshold = protocol["compression_threshold"].or_apply(cfg.protocol.compression_threshold);
             cfg.protocol.rate_limit = protocol["rate_limit"].or_apply(cfg.protocol.rate_limit);
+            cfg.protocol.handle_legacy = protocol["handle_legacy"].or_apply(cfg.protocol.handle_legacy);
+            cfg.protocol.new_client_buffer = protocol["new_client_buffer"].or_apply(cfg.protocol.new_client_buffer);
+            cfg.protocol.buffer = protocol["buffer"].or_apply(cfg.protocol.buffer);
+            cfg.protocol.max_accept_packet_size = protocol["max_accept_packet_size"].or_apply(cfg.protocol.max_accept_packet_size);
+            cfg.protocol.max_send_packet_size = protocol["max_send_packet_size"].or_apply(cfg.protocol.max_send_packet_size);
+            cfg.protocol.max_send_packet_size = protocol["max_send_packet_size"].or_apply(cfg.protocol.max_send_packet_size);
+            cfg.protocol.timeout_seconds = protocol["timeout_seconds"].or_apply(cfg.protocol.timeout_seconds);
+            cfg.protocol.keep_alive_send_each_seconds = protocol["keep_alive_send_each_seconds"].or_apply(cfg.protocol.keep_alive_send_each_seconds);
+            cfg.protocol.all_connections_timeout_seconds = protocol["all_connections_timeout_seconds"].or_apply(cfg.protocol.all_connections_timeout_seconds);
+
             cfg.protocol.prevent_proxy_connections = protocol["prevent_proxy_connections"].or_apply(cfg.protocol.prevent_proxy_connections);
             cfg.protocol.enable_encryption = protocol["enable_encryption"].or_apply(cfg.protocol.enable_encryption);
+            cfg.protocol.send_nbt_data_in_chunk = protocol["send_nbt_data_in_chunk"].or_apply(cfg.protocol.send_nbt_data_in_chunk);
+
+
             if (protocol.contains("allowed_versions")) {
                 auto allowed_versions = js_array::get_array(protocol["allowed_versions"]);
                 cfg.protocol.allowed_versions.clear();
@@ -236,17 +249,15 @@ namespace copper_server::api::configuration {
             cfg.server.port = server["port"].or_apply(cfg.server.port);
             cfg.server.offline_mode = server["offline_mode"].or_apply(cfg.server.offline_mode);
             cfg.server.max_players = server["max_players"].or_apply(cfg.server.max_players);
+            cfg.server.world_debug_mode = server["world_debug_mode"].or_apply(cfg.server.world_debug_mode);
             if (server.contains("network_threads"))
-                cfg.server.network_threads = server["network_threads"];
+                cfg.server.network_threads
+                    = server["network_threads"];
             if (server.contains("working_threads"))
                 cfg.server.working_threads = server["working_threads"];
             if (server.contains("ssl_key_length"))
                 cfg.server.ssl_key_length = server["ssl_key_length"];
 
-
-            cfg.server.timeout_seconds = server["timeout_seconds"].or_apply(cfg.server.timeout_seconds);
-            cfg.server.max_accept_buffer = server["max_accept_buffer"].or_apply(cfg.server.max_accept_buffer);
-            cfg.server.all_connections_timeout = server["all_connections_timeout"].or_apply(cfg.server.all_connections_timeout);
 
             size_t total_threads_ = std::thread::hardware_concurrency();
             if (cfg.server.network_threads == 0)

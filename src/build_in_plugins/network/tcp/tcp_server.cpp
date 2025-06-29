@@ -34,7 +34,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         if (api::network::ip_filter(stream.remote_address()))
             return;
 
-        auto session = std::make_shared<tcp::session>(stream, get_first_handler(), api::configuration::get().server.all_connections_timeout);
+        auto session = std::make_shared<tcp::session>(stream, get_first_handler(), api::configuration::get().protocol.all_connections_timeout_seconds);
         while (!stream.is_closed()) {
             auto input = stream.read_available_ref();
             if (stream.error() == TcpError::none)
@@ -74,10 +74,15 @@ namespace copper_server::build_in_plugins::network::tcp {
         void OnPostLoad(const PluginRegistrationPtr&) override {
             if (!tcp_server) {
                 tcp_server = std::make_shared<fast_task::networking::TcpNetworkServer>(handler, api::configuration::get().server.ip + ":" + std::to_string(api::configuration::get().server.port));
-                tcp_server->set_configuration(fast_task::networking::TcpConfiguration{.allow_ip4 = true});
+                tcp_server->set_configuration(fast_task::networking::TcpConfiguration{.buffer_size = api::configuration::get().protocol.new_client_buffer, .allow_ip4 = true});
             }
             if (!tcp_server->is_running())
                 start();
+        }
+
+        void OnConfigReload(const PluginRegistrationPtr&) override {
+            if (tcp_server)
+                tcp_server->set_configuration(fast_task::networking::TcpConfiguration{.buffer_size = api::configuration::get().protocol.new_client_buffer, .allow_ip4 = true});
         }
 
         void OnUnregister(const PluginRegistrationPtr&) override {

@@ -361,6 +361,8 @@ namespace copper_server {
                 return st.internal_block_aliases.at(st.default_state).at(protocol);
             }
 
+            static size_t block_states_size();
+
         private:
             static std::unordered_map<std::string, std::shared_ptr<static_block_data>> named_full_block_data;
             static list_array<std::shared_ptr<static_block_data>> full_block_data_;

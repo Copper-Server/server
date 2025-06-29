@@ -173,6 +173,7 @@ namespace copper_server::resources {
             data.drag_horizontal = 0.09;
             data.terminal_velocity = 3.92;
             data.drag_applied_after_acceleration = true;
+            data.loading_ticket_level = 31;
         } else {
             if (data.name == "experience_bottle") {
                 data.acceleration = 0.07;

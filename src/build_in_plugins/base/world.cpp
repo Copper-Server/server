@@ -332,6 +332,43 @@ namespace copper_server::build_in_plugins {
         {
             auto worlds = browser.add_child("worlds");
             {
+                auto pre_gen = worlds.add_child("pre_gen");
+                auto world_id = pre_gen.add_child("world_id", cmd_pred_long());
+                auto world_name = pre_gen.add_child("world_name", cmd_pred_string());
+
+                auto x0 = world_id.add_child("x0", cmd_pred_long());
+                world_name.add_child(x0);
+                auto z0 = x0.add_child("z0", cmd_pred_long());
+                auto x1 = z0.add_child("x1", cmd_pred_long());
+                auto z1 = x1.add_child("z1", cmd_pred_long());
+
+                z1.set_callback("command.world.pre_gen", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                    base_objects::cubic_bounds_chunk bound(
+                        std::get<pred_long>(args[1]).value,
+                        std::get<pred_long>(args[2]).value,
+                        std::get<pred_long>(args[3]).value,
+                        std::get<pred_long>(args[4]).value
+                    );
+
+                    std::visit(
+                        [&](auto&& arg) {
+                            using T = std::decay_t<decltype(arg)>;
+                            if constexpr (std::is_same_v<T, pred_long> || std::is_same_v<T, pred_string>) {
+                                api::world::get(arg.value, [&](storage::world_data& world) {
+                                    bound.enum_points([&](auto x, auto z) {
+                                        world.request_chunk_gen(x, z);
+                                    });
+                                });
+                            }
+                        },
+                        args[0]
+                    );
+                });
+
+                add_world_id_suggestion(world_id);
+                add_world_name_suggestion(world_name);
+            }
+            {
                 auto create = worlds.add_child("create");
                 auto world_name = create.add_child("world_name", cmd_pred_string());
                 auto settings = world_name.add_child("settings", cmd_pred_nbt_compound_tag());
@@ -724,25 +761,26 @@ namespace copper_server::build_in_plugins {
                     {
                         auto chunk_tick_speed = world_id.add_child("chunk_tick_speed");
                         chunk_tick_speed.set_callback("command.world.profile.report.chunk_tick_speed", [&](const list_array<predicate>& args, base_objects::command_context& context) {
-                            std::visit([&](auto&& arg) {
-                                using T = std::decay_t<decltype(arg)>;
-                                if constexpr (std::is_same_v<T, pred_long> || std::is_same_v<T, pred_string>) {
-
-                                    api::world::get(arg.value, [&](storage::world_data& world) {
-                                        if (world.profiling.chunk_speedometer_callback) {
-                                            Chat message("Failed to report chunks tick speed, chunk speed profiling already enabled for world: " + world.world_name);
-                                            message.SetColor("red");
-                                            api::players::calls::on_system_message({context.executor, message});
-                                        } else {
-                                            start_chunk_speed_report_collecting(world, context);
-                                            Chat message("Collecting chunks tick speed report for world: " + world.world_name);
-                                            message.SetColor("green");
-                                            api::players::calls::on_system_message({context.executor, message});
-                                        }
-                                    });
-                                }
-                            },
-                                       args[0]);
+                            std::visit(
+                                [&](auto&& arg) {
+                                    using T = std::decay_t<decltype(arg)>;
+                                    if constexpr (std::is_same_v<T, pred_long> || std::is_same_v<T, pred_string>) {
+                                        api::world::get(arg.value, [&](storage::world_data& world) {
+                                            if (world.profiling.chunk_speedometer_callback) {
+                                                Chat message("Failed to report chunks tick speed, chunk speed profiling already enabled for world: " + world.world_name);
+                                                message.SetColor("red");
+                                                api::players::calls::on_system_message({context.executor, message});
+                                            } else {
+                                                start_chunk_speed_report_collecting(world, context);
+                                                Chat message("Collecting chunks tick speed report for world: " + world.world_name);
+                                                message.SetColor("green");
+                                                api::players::calls::on_system_message({context.executor, message});
+                                            }
+                                        });
+                                    }
+                                },
+                                args[0]
+                            );
                         });
                     }
                 }

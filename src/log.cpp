@@ -1,6 +1,7 @@
 #include <commandline.h>
 #include <iostream>
 #include <library/fast_task.hpp>
+#include <library/fast_task/src/files/files.hpp>
 #include <library/list_array.hpp>
 #include <mutex>
 #include <src/base_objects/events/event.hpp>
@@ -10,6 +11,94 @@
 namespace copper_server::log {
     namespace commands {
         base_objects::events::event<std::string> on_command;
+    }
+
+    std::string log_levels_names[(int)level::__max] = {
+        "info",
+        "warn",
+        "error",
+        "fatal",
+        "debug_error",
+        "debug",
+    };
+
+    namespace file {
+        fast_task::protected_value<std::shared_ptr<fast_task::files::async_iofstream>> handle;
+
+        void set_handle(std::filesystem::path path) {
+            handle.set(
+                [&path](auto& value) {
+                    value = std::make_shared<fast_task::files::async_iofstream>(
+                        path,
+                        fast_task::files::open_mode::append,
+                        fast_task::files::on_open_action::open,
+                        fast_task::files::_sync_flags{}
+                    );
+                }
+            );
+        }
+
+        void clear_handle() {
+            handle.set([](auto& value) { value = nullptr; });
+        }
+
+        std::atomic_bool log_levels_switch[(int)level::__max]{
+            true, //info
+            true, //warn
+            true, //error
+            true, //fatal
+            true, //debug_error
+            true, //debug
+        };
+
+        void print(log::level level, std::string_view source, std::string_view message) {
+            auto duration = std::chrono::steady_clock::now().time_since_epoch();
+
+            auto years = std::chrono::duration_cast<std::chrono::months>(duration);
+            duration -= years;
+
+            auto months = std::chrono::duration_cast<std::chrono::months>(duration);
+            duration -= months;
+
+            auto days = std::chrono::duration_cast<std::chrono::days>(duration);
+            duration -= days;
+
+            auto hours = std::chrono::duration_cast<std::chrono::hours>(duration);
+            duration -= hours;
+
+            auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
+            duration -= minutes;
+
+            auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration);
+            duration -= seconds;
+
+            auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(duration);
+            duration -= milliseconds;
+
+            auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(duration);
+            duration -= microseconds;
+
+            auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration);
+
+            handle.get([&](auto& handle) {
+                if (!log_levels_switch[(int)level] || !handle)
+                    return;
+                auto line = "[" + std::to_string(days.count()) + "/" + std::to_string(months.count()) + "/" + std::to_string(years.count()) + "] ["
+                            + std::to_string(hours.count()) + ":" + std::to_string(minutes.count()) + ":" + std::to_string(seconds.count()) + " " + std::to_string(milliseconds.count()) + "." + std::to_string(microseconds.count()) + "." + std::to_string(nanoseconds.count()) + "] ["
+                            + log_levels_names[(int)level] + "] ["
+                            + std::string(source) + "] ";
+                std::string alignment(line.size(), ' ');
+                alignment[0] = '\n';
+                auto aligned_message = list_array<char>(message)
+                                           .replace('\t', "    ", 4)
+                                           .replace('\n', alignment.data(), line.size())
+                                           .push_front(list_array<char>(line))
+                                           .push_back('\n')
+                                           .to_container<std::string>();
+
+                *handle << aligned_message << std::flush;
+            });
+        }
     }
 
     namespace console {
@@ -30,14 +119,7 @@ namespace copper_server::log {
             {170, 128, 0},   //debug_error
             {0, 128, 0},     //debug
         };
-        std::string log_levels_names[(int)level::__max] = {
-            "info",
-            "warn",
-            "error",
-            "fatal",
-            "debug_error",
-            "debug",
-        };
+
 
         fast_task::task_rw_mutex console_mutex;
 
@@ -70,26 +152,32 @@ namespace copper_server::log {
 
     void info(std::string_view source, std::string_view message) {
         console::print(level::info, source, message);
+        file::print(level::info, source, message);
     }
 
     void error(std::string_view source, std::string_view message) {
         console::print(level::error, source, message);
+        file::print(level::error, source, message);
     }
 
     void warn(std::string_view source, std::string_view message) {
         console::print(level::warn, source, message);
+        file::print(level::warn, source, message);
     }
 
     void debug(std::string_view source, std::string_view message) {
         console::print(level::debug, source, message);
+        file::print(level::debug, source, message);
     }
 
     void debug_error(std::string_view source, std::string_view message) {
         console::print(level::debug_error, source, message);
+        file::print(level::debug_error, source, message);
     }
 
     void fatal(std::string_view source, std::string_view message) {
         console::print(level::fatal, source, message);
+        file::print(level::fatal, source, message);
     }
 
     void clear() {
@@ -106,6 +194,26 @@ namespace copper_server::log {
 
     bool is_enabled(level level) {
         return console::log_levels_switch[(int)level];
+    }
+
+    void disable_log_file_level(level level) {
+        file::log_levels_switch[(int)level] = false;
+    }
+
+    void enable_log_file_level(level level) {
+        file::log_levels_switch[(int)level] = true;
+    }
+
+    bool is_enabled_file(level level) {
+        return file::log_levels_switch[(int)level];
+    }
+
+    void set_log_file(std::filesystem::path path) {
+        file::set_handle(path);
+    }
+
+    void disable_log_file() {
+        file::clear_handle();
     }
 
     namespace commands {

@@ -19,8 +19,179 @@
 #include <src/build_in_plugins/network/tcp/util.hpp>
 
 #include <src/registers.hpp>
+#include <src/storage/world_data.hpp>
 
 namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
+
+    namespace structs {
+        struct pallete_data {
+            bit_list_array<> data;
+            uint64_t bits_per_entry : 6;
+
+            pallete_data(uint8_t bits_per_entry)
+                : bits_per_entry(bits_per_entry) {
+                assert(bits_per_entry < 32);
+                data.reserve_back((16 * 16 * 16) * (bits_per_entry / 64 + bool(bits_per_entry)));
+            }
+
+            static uint8_t bits_for_max(size_t items) {
+                return (uint8_t)std::ceil(std::log2(items + 1));
+            }
+
+            static pallete_data create_from_max(size_t items) {
+                return {bits_for_max(items)};
+            }
+
+            constexpr void add(size_t value) {
+                if (value >= (1 << bits_per_entry))
+                    throw std::out_of_range("value is too large for the given bits_per_entry");
+                for (size_t i = 0; i < bits_per_entry; i++)
+                    data.push_back((value >> i) & 1);
+            }
+
+            constexpr const list_array<uint8_t>& get() {
+                data.commit();
+                return data.data();
+            }
+
+            constexpr void clear() {
+                return data.clear();
+            }
+        };
+
+        struct paletted_container_single {
+            // uint8_t bits_per_entry; always 0
+            int32_t id_of_palette;
+        };
+
+        struct paletted_container_indirect {
+            uint8_t bits_per_entry; // 4-8 for blocks and 1-3 for biomes
+            list_array<int32_t> palette;
+            pallete_data data;
+
+            paletted_container_indirect(uint8_t bits_per_entry) : bits_per_entry(bits_per_entry), data(bits_per_entry) {}
+        };
+
+        class paletted_container {
+            uint8_t bits_per_entry;
+            std::unordered_set<int32_t> unique_pallete;
+            list_array<int32_t> data;
+            bool is_biomes_mode;
+            static inline constexpr auto max_indirect_biomes = 0x7;
+            static inline constexpr auto max_indirect_blocks = 0xFF;
+
+        public:
+            paletted_container(size_t max_items, bool is_biomes) : bits_per_entry(pallete_data::bits_for_max(max_items)), is_biomes_mode(is_biomes) {}
+
+            constexpr void add(size_t value) {
+                if (value >= (1 << bits_per_entry))
+                    throw std::out_of_range("value is too large for the given bits_per_entry");
+
+                data.push_back(value);
+
+                if (is_biomes_mode) {
+                    if (unique_pallete.size() <= max_indirect_biomes)
+                        unique_pallete.insert(value);
+                } else if (unique_pallete.size() <= max_indirect_blocks)
+                    unique_pallete.insert(value);
+            }
+
+            std::variant<paletted_container_single, paletted_container_indirect, pallete_data> compile() {
+                if (unique_pallete.size() == 1) {
+                    paletted_container_single res;
+                    res.id_of_palette = *unique_pallete.begin();
+                    data.clear();
+                    unique_pallete.clear();
+                    return res;
+                } else if ((is_biomes_mode && unique_pallete.size() <= max_indirect_biomes) || (!is_biomes_mode && unique_pallete.size() <= max_indirect_blocks)) {
+                    paletted_container_indirect res(pallete_data::bits_for_max(unique_pallete.size()));
+                    std::unordered_map<int32_t, size_t> map;
+                    res.palette = to_list_array(unique_pallete);
+                    res.palette.for_each([&map](auto it, size_t index) {
+                        map[it] = index;
+                    });
+                    for (auto it : data)
+                        res.data.add(map[it]);
+                    data.clear();
+                    unique_pallete.clear();
+                    return res;
+                } else {
+                    pallete_data res(bits_per_entry);
+                    for (auto it : data)
+                        res.add(it);
+                    data.clear();
+                    unique_pallete.clear();
+                    return res;
+                }
+            }
+
+            static list_array<uint8_t> serialize(std::variant<paletted_container_single, paletted_container_indirect, pallete_data>&& data) {
+                list_array<uint8_t> result;
+                std::visit(
+                    [&result](auto&& arg) {
+                        using T = std::decay_t<decltype(arg)>;
+                        if constexpr (std::is_same_v<T, paletted_container_single>) {
+                            result.push_back(0);
+                            WriteVar<int32_t>(arg.id_of_palette, result);
+                        } else if constexpr (std::is_same_v<T, paletted_container_indirect>) {
+                            result.push_back(arg.bits_per_entry);
+                            WriteVar<int32_t>(arg.palette.size(), result);
+                            for (auto& i : arg.palette)
+                                WriteVar<int32_t>(i, result);
+                            auto data = arg.data.get();
+                            result.push_back(std::move(data));
+                            if (uint8_t padding = data.size() % 8)
+                                while (padding--)
+                                    result.push_back(0);
+                        } else if constexpr (std::is_same_v<T, pallete_data>) {
+                            result.push_back(arg.bits_per_entry);
+                            auto data = arg.get();
+                            result.push_back(std::move(data));
+                            if (uint8_t padding = data.size() % 8)
+                                while (padding--)
+                                    result.push_back(0);
+                        }
+                    },
+                    data
+                );
+                return result;
+            }
+
+            list_array<uint8_t> serialize() {
+                return serialize(compile());
+            }
+        };
+
+        struct chunk_biomes {
+            int32_t x;
+            int32_t z;
+            list_array<paletted_container> biomes;
+        };
+
+        struct chunk_section {
+            uint16_t block_count;
+            uint16_t palette_index;
+            paletted_container biomes;
+        };
+
+        struct height_map {
+            enum class type_t {
+                world_surface = 1,
+                motion_blocking = 4,
+                motion_blocking_no_leaves = 5,
+            } type;
+            pallete_data data; //as long
+
+            height_map(type_t type, size_t world_height)
+                : type(type), data(pallete_data::create_from_max(world_height)) {}
+        };
+
+        struct chunk {
+            list_array<height_map> height_map;
+            list_array<chunk_section> sections;
+        };
+    }
+
     namespace encoding {
         class login_functions : public api::packets::registry::login_functions {
             base_objects::network::response login(int32_t plugin_message_id, const std::string& chanel, const list_array<uint8_t>& data) override {
@@ -874,16 +1045,25 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 return packet;
             }
 
-            base_objects::network::response chunkBiomes(list_array<base_objects::chunk::chunk_biomes>& chunk) override {
+            base_objects::network::response chunkBiomes(const list_array<storage::chunk_data*>& chunks) override {
                 base_objects::network::response::item packet;
                 packet.write_id(0x0D);
-                packet.write_var32_check(chunk.size());
-                for (auto& section : chunk) {
-                    packet.write_var32(section.z);
-                    packet.write_var32(section.x);
-                    packet.write_var32_check(section.biomes.size());
-                    for (auto& biome : section.biomes)
-                        packet.write_direct(biome.serialize());
+                packet.write_var32_check(chunks.size());
+                for (auto& chunk : chunks) {
+                    packet.write_value((uint32_t)chunk->chunk_z);
+                    packet.write_value((uint32_t)chunk->chunk_z);
+
+                    list_array<uint8_t> array;
+                    for (auto& sub : chunk->sub_chunks) {
+                        structs::paletted_container res(registers::biomes.size(), true);
+                        for (auto& x : sub.biomes)
+                            for (auto& y : x)
+                                for (auto& z : y)
+                                    res.add(z);
+                        array.push_back(res.serialize());
+                    }
+                    packet.write_var32_check(array.size());
+                    packet.write_direct(array);
                 }
                 return packet;
             }
@@ -1249,113 +1429,190 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
-            base_objects::network::response updateChunkDataWLights(
-                int32_t chunk_x,
-                int32_t chunk_z,
-                const util::NBT& heightmaps,
-                const std::vector<uint8_t>& data,
-                //block_entries not implemented, this is legal to send later by blockEntityData,
-                const bit_list_array<>& sky_light_mask,
-                const bit_list_array<>& block_light_mask,
-                const bit_list_array<>& empty_skylight_mask,
-                const bit_list_array<>& empty_block_light_mask,
-                const list_array<std::vector<uint8_t>>& sky_light_arrays,
-                const list_array<std::vector<uint8_t>>& block_light_arrays
-            ) {
-                if (
-                    sky_light_mask.need_commit() | block_light_mask.need_commit() | empty_skylight_mask.need_commit() | empty_block_light_mask.need_commit()
-                )
-                    throw std::runtime_error("bit_list_array not commited");
+            static void build_hmap(base_objects::network::response::item& packet, uint8_t type, const uint64_t (&hmap)[16][16], size_t world_height) {
+                packet.write_var32(type);
+                auto data = structs::pallete_data::create_from_max(world_height);
+                for (uint_fast8_t x = 0; x < 16; x++)
+                    for (uint_fast8_t z = 0; z < 16; z++)
+                        data.add(hmap[x][z]);
 
-                list_array<uint8_t> packet;
-                packet.reserve(1 + 4 * 2 + sky_light_mask.data().size() + block_light_mask.data().size() + empty_skylight_mask.data().size() + empty_block_light_mask.data().size());
-                packet.push_back(0x27);
-                WriteVar<int32_t>(chunk_x, packet);
-                WriteVar<int32_t>(chunk_z, packet);
-                packet.push_back(heightmaps.get_as_normal());
-                packet.push_back(list_array<uint8_t>(data));
-                packet.push_back(0); //ignore Block Entity
-                packet.push_back(sky_light_mask.data());
-                packet.push_back(block_light_mask.data());
-                packet.push_back(empty_skylight_mask.data());
-                packet.push_back(empty_block_light_mask.data());
-                WriteVar<int32_t>(sky_light_arrays.size(), packet);
-                for (auto& it : sky_light_arrays) {
-                    WriteVar<int32_t>(it.size(), packet);
-                    packet.push_back(list_array<uint8_t>(it));
+                auto res = data.get();
+                auto siz = res.size();
+                packet.write_direct(std::move(res));
+                if (uint8_t padding = siz % 8)
+                    while (padding--)
+                        packet.write_value(0ui8);
+            }
+
+            static void build_lights(base_objects::network::response::item& packet, const storage::chunk_data& chunk) {
+                bit_list_array<uint64_t> sky_light_mask;
+                bit_list_array<uint64_t> block_light_mask;
+                bit_list_array<uint64_t> empty_sky_light_mask;
+                bit_list_array<uint64_t> empty_block_light_mask;
+                list_array<list_array<uint8_t>> sky_light;
+                list_array<list_array<uint8_t>> block_light;
+                {
+                    //light below world is unset
+                    sky_light_mask.push_back(false);
+                    block_light_mask.push_back(false);
+                    empty_sky_light_mask.push_back(true);
+                    empty_block_light_mask.push_back(true);
+                    for (auto& section : chunk.sub_chunks) {
+                        sky_light_mask.push_back(section.sky_lighted);
+                        block_light_mask.push_back(section.block_lighted);
+                        empty_sky_light_mask.push_back(section.sky_lighted);
+                        empty_block_light_mask.push_back(section.block_lighted);
+
+                        if (section.sky_lighted) {
+                            bit_list_array<> section_sky_light;
+                            for (auto& x : section.sky_light.light_map)
+                                for (auto& y : x)
+                                    for (auto z : y) {
+                                        section_sky_light.push_back(z.light_point & 1);
+                                        section_sky_light.push_back(z.light_point & 2);
+                                        section_sky_light.push_back(z.light_point & 4);
+                                        section_sky_light.push_back(z.light_point & 8);
+                                    }
+                            sky_light.push_back(section_sky_light.take());
+                        }
+                        if (section.block_lighted) {
+                            bit_list_array<> section_block_light;
+                            for (auto& x : section.block_light.light_map)
+                                for (auto& y : x)
+                                    for (auto z : y) {
+                                        section_block_light.push_back(z.light_point & 1);
+                                        section_block_light.push_back(z.light_point & 2);
+                                        section_block_light.push_back(z.light_point & 4);
+                                        section_block_light.push_back(z.light_point & 8);
+                                    }
+                            block_light.push_back(section_block_light.take());
+                        }
+                    }
+                    //light above world is unset
+                    sky_light_mask.push_back(false);
+                    block_light_mask.push_back(false);
+                    empty_sky_light_mask.push_back(true);
+                    empty_block_light_mask.push_back(true);
                 }
-                WriteVar<int32_t>(block_light_arrays.size(), packet);
-                for (auto& it : block_light_arrays) {
-                    WriteVar<int32_t>(it.size(), packet);
-                    packet.push_back(list_array<uint8_t>(it));
+
+                packet.write_var32_check(sky_light_mask.commit().size());
+                packet.write_direct(sky_light_mask.take());
+                packet.write_var32_check(block_light_mask.commit().size());
+                packet.write_direct(block_light_mask.take());
+                packet.write_var32_check(empty_sky_light_mask.commit().size());
+                packet.write_direct(empty_sky_light_mask.take());
+                packet.write_var32_check(empty_block_light_mask.commit().size());
+                packet.write_direct(empty_block_light_mask.take());
+                packet.write_var32_check(sky_light.size());
+                for (auto& arr : sky_light) {
+                    if (arr.size() != 2024)
+                        throw std::runtime_error("Invalid encoding");
+                    packet.write_var32(2024);
+                    packet.write_direct(arr);
                 }
-                return base_objects::network::response::answer({std::move(packet)});
+                packet.write_var32_check(block_light.size());
+                for (auto& arr : block_light) {
+                    if (arr.size() != 2024)
+                        throw std::runtime_error("Invalid encoding");
+                    packet.write_var32(2024);
+                    packet.write_direct(arr);
+                }
+            }
+
+            base_objects::network::response updateChunkDataWLights(const storage::chunk_data& chunk) {
+                base_objects::network::response::item packet;
+                packet.write_id(0x27);
+                packet.write_value((int32_t)chunk.chunk_x);
+                packet.write_value((int32_t)chunk.chunk_z);
+                {
+                    packet.write_var32(4);
+                    size_t world_height = chunk.sub_chunks.size() * 16;
+                    build_hmap(packet, 1, chunk.height_maps.surface, world_height);
+                    build_hmap(packet, 3, chunk.height_maps.ocean_floor, world_height);
+                    build_hmap(packet, 4, chunk.height_maps.motion_blocking, world_height);
+                    build_hmap(packet, 5, chunk.height_maps.motion_blocking_no_leaves, world_height);
+                }
+                {
+                    list_array<uint8_t> data;
+                    for (auto& section : chunk.sub_chunks) {
+                        uint16_t block_count = 0;
+                        structs::paletted_container blocks(base_objects::block::block_states_size(), false);
+                        structs::paletted_container biomes(registers::biomes.size(), true);
+                        for (auto& x : section.blocks)
+                            for (auto& y : x)
+                                for (auto z : y) {
+                                    block_count += !z.is_air();
+                                    blocks.add(z.id);
+                                }
+                        for (auto& x : section.biomes)
+                            for (auto& y : x)
+                                for (auto& z : y)
+                                    biomes.add(z);
+
+                        WriteValue(block_count, data);
+                        data.push_back(blocks.serialize());
+                        data.push_back(biomes.serialize());
+                    }
+                    packet.write_var32_check(data.size());
+                    packet.write_direct(std::move(data));
+                }
+                if (api::configuration::get().protocol.send_nbt_data_in_chunk) {
+                    size_t block_entities = 0;
+                    for (auto& section : chunk.sub_chunks)
+                        block_entities += section.block_entities.size();
+                    packet.write_var32_check(block_entities);
+                    size_t sub_chunk_pos = 0;
+                    for (auto& section : chunk.sub_chunks) {
+                        section.for_each_block_entity(
+                            [&packet, sub_chunk_pos](uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block block, const enbt::value& entity_data) {
+                                packet.write_value(uint8_t((local_x << 4) | local_z));
+                                packet.write_value(uint16_t(sub_chunk_pos * 16 + local_y));
+                                packet.write_var32(block.block_entity_id());
+                                packet.write_direct(util::NBT::build(entity_data).get_as_network());
+                            }
+                        );
+                        ++sub_chunk_pos;
+                    }
+                } else
+                    packet.write_var32(0);
+                build_lights(packet, chunk);
+                return packet;
             }
 
             base_objects::network::response worldEvent(base_objects::packets::world_event_id event, base_objects::position pos, int32_t data, bool global) override {
-                list_array<uint8_t> packet;
-                packet.reserve(1 + 4 + 8 + 4 + 1);
-                packet.push_back(0x28);
-                WriteVar<int32_t>((int32_t)event, packet);
-                WriteValue<uint64_t>(pos.raw, packet);
-                WriteVar<int32_t>(data, packet);
-                packet.push_back(global);
+                base_objects::network::response::item packet;
+                packet.write_id(0x28);
+                packet.write_var32((int32_t)event);
+                packet.write_value(pos.raw);
+                packet.write_var32(data);
+                packet.write_value(global);
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
             base_objects::network::response particle(int32_t particle_id, bool long_distance, util::VECTOR pos, util::XYZ<float> offset, float max_speed, int32_t count, const list_array<uint8_t>& data) override {
-                list_array<uint8_t> packet;
-                packet.reserve(1 + 4 + 1 + 4 * 3 + 4 * 3 + 4 + 4 + 4 * data.size());
-                packet.push_back(0x29);
-                WriteVar<int32_t>(particle_id, packet);
-                packet.push_back(long_distance);
-                WriteValue<double>(pos.x, packet);
-                WriteValue<double>(pos.y, packet);
-                WriteValue<double>(pos.z, packet);
-                WriteValue<float>(offset.x, packet);
-                WriteValue<float>(offset.y, packet);
-                WriteValue<float>(offset.z, packet);
-                WriteValue<float>(max_speed, packet);
-                WriteVar<int32_t>(count, packet);
-                packet.push_back(data);
-                return base_objects::network::response::answer({std::move(packet)});
+                base_objects::network::response::item packet;
+                packet.write_id(0x29);
+                packet.write_var32(particle_id);
+                packet.write_value(long_distance);
+                packet.write_value(pos.x);
+                packet.write_value(pos.y);
+                packet.write_value(pos.z);
+                packet.write_value(offset.x);
+                packet.write_value(offset.y);
+                packet.write_value(offset.z);
+                packet.write_value(max_speed);
+                packet.write_var32(count);
+                packet.write_direct(data);
+                return packet;
             }
 
-            base_objects::network::response updateLight(
-                int32_t chunk_x,
-                int32_t chunk_z,
-                const bit_list_array<>& sky_light_mask,
-                const bit_list_array<>& block_light_mask,
-                const bit_list_array<>& empty_skylight_mask,
-                const bit_list_array<>& empty_block_light_mask,
-                const list_array<std::vector<uint8_t>>& sky_light_arrays,
-                const list_array<std::vector<uint8_t>>& block_light_arrays
-            ) {
-                if (
-                    sky_light_mask.need_commit() | block_light_mask.need_commit() | empty_skylight_mask.need_commit() | empty_block_light_mask.need_commit()
-                )
-                    throw std::runtime_error("bit_list_array not commited");
-
-                list_array<uint8_t> packet;
-                packet.reserve(1 + 4 * 2 + sky_light_mask.data().size() + block_light_mask.data().size() + empty_skylight_mask.data().size() + empty_block_light_mask.data().size());
-                packet.push_back(0x2A);
-                WriteVar<int32_t>(chunk_x, packet);
-                WriteVar<int32_t>(chunk_z, packet);
-                packet.push_back(sky_light_mask.data());
-                packet.push_back(block_light_mask.data());
-                packet.push_back(empty_skylight_mask.data());
-                packet.push_back(empty_block_light_mask.data());
-                WriteVar<int32_t>(sky_light_arrays.size(), packet);
-                for (auto& it : sky_light_arrays) {
-                    WriteVar<int32_t>(it.size(), packet);
-                    packet.push_back(list_array<uint8_t>(it));
-                }
-                WriteVar<int32_t>(block_light_arrays.size(), packet);
-                for (auto& it : block_light_arrays) {
-                    WriteVar<int32_t>(it.size(), packet);
-                    packet.push_back(list_array<uint8_t>(it));
-                }
-                return base_objects::network::response::answer({std::move(packet)});
+            base_objects::network::response updateLight(const storage::chunk_data& chunk) {
+                base_objects::network::response::item packet;
+                packet.write_id(0x2A);
+                packet.write_value((int32_t)chunk.chunk_x);
+                packet.write_value((int32_t)chunk.chunk_z);
+                build_lights(packet, chunk);
+                return packet;
             }
 
             base_objects::network::response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, int32_t sea_level, bool enforces_secure_chat) override {

@@ -186,15 +186,15 @@ namespace copper_server {
                 return call_function_selector(play, setBlockDestroyStage, entity, block, stage)
             }
 
-            base_objects::network::response blockEntityData(base_objects::SharedClientData& client, base_objects::position block, int32_t type, const enbt::value& data){
+            base_objects::network::response blockEntityData(base_objects::SharedClientData& client, base_objects::position block, const base_objects::block& type, const enbt::value& data){
                 return call_function_selector(play, blockEntityData, block, type, data)
             }
 
-            base_objects::network::response blockAction(base_objects::SharedClientData& client, base_objects::position block, int32_t action_id, int32_t param, int32_t block_type){
+            base_objects::network::response blockAction(base_objects::SharedClientData& client, base_objects::position block, int32_t action_id, int32_t param, const base_objects::block& block_type){
                 return call_function_selector(play, blockAction, block, action_id, param, block_type)
             }
 
-            base_objects::network::response blockUpdate(base_objects::SharedClientData& client, base_objects::position block, int32_t block_type){
+            base_objects::network::response blockUpdate(base_objects::SharedClientData& client, base_objects::position block, const base_objects::block& block_type){
                 return call_function_selector(play, blockUpdate, block, block_type)
             }
 
@@ -234,7 +234,7 @@ namespace copper_server {
                 return call_function_selector(play, chunkBatchStart)
             }
 
-            base_objects::network::response chunkBiomes(base_objects::SharedClientData& client, list_array<base_objects::chunk::chunk_biomes>& chunk){
+            base_objects::network::response chunkBiomes(base_objects::SharedClientData& client, const list_array<storage::chunk_data*>& chunk){
                 return call_function_selector(play, chunkBiomes, chunk)
             }
 
@@ -338,8 +338,8 @@ namespace copper_server {
                 return call_function_selector(play, keepAlive, id)
             }
 
-            base_objects::network::response updateChunkDataWLights(base_objects::SharedClientData& client, int32_t chunk_x, int32_t chunk_z, const util::NBT& heightmaps, const std::vector<uint8_t> data, const bit_list_array<>& sky_light_mask, const bit_list_array<>& block_light_mask, const bit_list_array<>& empty_skylight_mask, const bit_list_array<>& empty_block_light_mask, const list_array<std::vector<uint8_t>> sky_light_arrays, const list_array<std::vector<uint8_t>> block_light_arrays){
-                return call_function_selector(play, updateChunkDataWLights, chunk_x, chunk_z, heightmaps, data, sky_light_mask, block_light_mask, block_light_mask, empty_skylight_mask, sky_light_arrays, block_light_arrays)
+            base_objects::network::response updateChunkDataWLights(base_objects::SharedClientData& client, const storage::chunk_data& chunk){
+                return call_function_selector(play, updateChunkDataWLights, chunk)
             }
 
             base_objects::network::response worldEvent(base_objects::SharedClientData& client, base_objects::packets::world_event_id event, base_objects::position pos, int32_t data, bool global){
@@ -350,8 +350,8 @@ namespace copper_server {
                 return call_function_selector(play, particle, particle_id, long_distance, pos, offset, max_speed, count, data)
             }
 
-            base_objects::network::response updateLight(base_objects::SharedClientData& client, int32_t chunk_x, int32_t chunk_z, const bit_list_array<>& sky_light_mask, const bit_list_array<>& block_light_mask, const bit_list_array<>& empty_skylight_mask, const bit_list_array<>& empty_block_light_mask, const list_array<std::vector<uint8_t>> sky_light_arrays, const list_array<std::vector<uint8_t>> block_light_arrays){
-                return call_function_selector(play, updateLight, chunk_x, chunk_z, sky_light_mask, block_light_mask, empty_skylight_mask, empty_block_light_mask, sky_light_arrays, block_light_arrays)
+            base_objects::network::response updateLight(base_objects::SharedClientData& client, const storage::chunk_data& chunk){
+                return call_function_selector(play, updateLight, chunk)
             }
 
             base_objects::network::response joinGame(base_objects::SharedClientData& client, int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, std::optional<base_objects::packets::death_location_data> death_location, int32_t portal_cooldown, int32_t sea_level, bool enforces_secure_chat){

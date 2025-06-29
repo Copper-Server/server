@@ -1,6 +1,7 @@
 #include <src/api/players.hpp>
 #include <src/base_objects/network/tcp/client.hpp>
 #include <src/build_in_plugins/network/tcp/session.hpp>
+#include <src/build_in_plugins/network/tcp/util.hpp>
 #include <src/log.hpp>
 
 namespace copper_server::build_in_plugins::network::tcp {
@@ -10,7 +11,7 @@ namespace copper_server::build_in_plugins::network::tcp {
     std::atomic_uint64_t id_gen(0);
     bool session::do_log_connection_errors = true;
 
-    session::session(fast_task::networking::TcpNetworkStream& s, client* client_handler, uint64_t& set_timeout)
+    session::session(fast_task::networking::TcpNetworkStream& s, client* client_handler, float& set_timeout)
         : stream(&s), timeout(set_timeout), api::network::tcp::session(id_gen++) {
         chandler = client_handler->define_ourself(this);
         read_data.resize(1024);
@@ -53,6 +54,23 @@ namespace copper_server::build_in_plugins::network::tcp {
         return true;
     }
 
+    void session::request_buffer(size_t new_size) {
+        std::lock_guard guard(tc);
+        if (stream) {
+            if (INT32_MAX < new_size)
+                new_size = INT32_MAX;
+            stream->rebuffer(static_cast<int32_t>(new_size));
+        }
+    }
+
+    void session::send_indirect(base_objects::network::response&& resp) {
+        if ((resp.do_disconnect || resp.do_disconnect_after_send) && resp.data.size())
+            send(base_objects::network::response::disconnect(tcp_client_handle::prepare_send(std::move(resp), this)));
+        if (resp.do_disconnect)
+            send(base_objects::network::response::disconnect());
+        send(base_objects::network::response::answer(tcp_client_handle::prepare_send(std::move(resp), this)));
+    }
+
     void session::send(base_objects::network::response&& resp) {
         //<for debug, set CONSTEXPR_DEBUG_DATA_TRANSPORT to false to disable this block>
         if constexpr (CONSTEXPR_DEBUG_DATA_TRANSPORT)
@@ -67,11 +85,9 @@ namespace copper_server::build_in_plugins::network::tcp {
                 response_data.push_back(std::move(it.data));
 
 
+            std::lock_guard guard(tc);
             if (encryption_enabled)
                 encryption.encrypt(response_data, response_data);
-
-
-            std::lock_guard guard(tc);
             if (stream) {
                 std::shared_ptr<std::vector<uint8_t>> send_data = std::make_shared<std::vector<uint8_t>>(response_data.begin(), response_data.end());
                 stream->write((char*)response_data.data(), response_data.size());
@@ -80,7 +96,8 @@ namespace copper_server::build_in_plugins::network::tcp {
                     stream->close();
                 }
             }
-        }
+        } else if (resp.do_disconnect_after_send)
+            disconnect();
     }
 
     void session::received(std::span<char> read_data) {

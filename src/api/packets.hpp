@@ -13,12 +13,15 @@
 #include <src/base_objects/particle_data.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/recipe.hpp>
-#include <src/base_objects/world/chunk.hpp>
 
 namespace copper_server {
     namespace base_objects {
         struct SharedClientData;
         class command_manager;
+    }
+
+    namespace storage {
+        class chunk_data;
     }
 
     namespace api::packets {
@@ -73,7 +76,7 @@ namespace copper_server {
             base_objects::network::response changeDifficulty(base_objects::SharedClientData& client, uint8_t difficulty, bool locked);
             base_objects::network::response chunkBatchFinished(base_objects::SharedClientData& client, int32_t count);
             base_objects::network::response chunkBatchStart(base_objects::SharedClientData& client);
-            base_objects::network::response chunkBiomes(base_objects::SharedClientData& client, list_array<base_objects::chunk::chunk_biomes>& chunk);
+            base_objects::network::response chunkBiomes(base_objects::SharedClientData& client, const list_array<storage::chunk_data*>& chunk);
             base_objects::network::response clearTitles(base_objects::SharedClientData& client, bool reset);
             base_objects::network::response commandSuggestionsResponse(base_objects::SharedClientData& client, int32_t transaction_id, int32_t start_pos, int32_t length, const list_array<base_objects::packets::command_suggestion>& suggestions);
             base_objects::network::response commands(base_objects::SharedClientData& client, const base_objects::command_manager& compiled_graph);
@@ -99,10 +102,10 @@ namespace copper_server {
             base_objects::network::response hurtAnimation(base_objects::SharedClientData& client, int32_t entity_id, float yaw);
             base_objects::network::response initializeWorldBorder(base_objects::SharedClientData& client, double x, double z, double old_diameter, double new_diameter, int64_t speed_ms, int32_t portal_teleport_boundary, int32_t warning_blocks, int32_t warning_time);
             base_objects::network::response keepAlive(base_objects::SharedClientData& client, int64_t id);
-            base_objects::network::response updateChunkDataWLights(base_objects::SharedClientData& client, int32_t chunk_x, int32_t chunk_z, const util::NBT& heightmaps, const std::vector<uint8_t> data, const bit_list_array<>& sky_light_mask, const bit_list_array<>& block_light_mask, const bit_list_array<>& empty_skylight_mask, const bit_list_array<>& empty_block_light_mask, const list_array<std::vector<uint8_t>> sky_light_arrays, const list_array<std::vector<uint8_t>> block_light_arrays);
+            base_objects::network::response updateChunkDataWLights(base_objects::SharedClientData& client, const storage::chunk_data& chunk);
             base_objects::network::response worldEvent(base_objects::SharedClientData& client, base_objects::packets::world_event_id event, base_objects::position pos, int32_t data, bool global);
             base_objects::network::response particle(base_objects::SharedClientData& client, int32_t particle_id, bool long_distance, util::VECTOR pos, util::XYZ<float> offset, float max_speed, int32_t count, const list_array<uint8_t>& data);
-            base_objects::network::response updateLight(base_objects::SharedClientData& client, int32_t chunk_x, int32_t chunk_z, const bit_list_array<>& sky_light_mask, const bit_list_array<>& block_light_mask, const bit_list_array<>& empty_skylight_mask, const bit_list_array<>& empty_block_light_mask, const list_array<std::vector<uint8_t>> sky_light_arrays, const list_array<std::vector<uint8_t>> block_light_arrays);
+            base_objects::network::response updateLight(base_objects::SharedClientData& client, const storage::chunk_data& chunk);
             base_objects::network::response joinGame(base_objects::SharedClientData& client, int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, std::optional<base_objects::packets::death_location_data> death_location, int32_t portal_cooldown, int32_t sea_level, bool enforces_secure_chat);
             base_objects::network::response mapData(base_objects::SharedClientData& client, int32_t map_id, uint8_t scale, bool locked, const list_array<base_objects::packets::map_icon>& icons, uint8_t column, uint8_t rows, uint8_t x, uint8_t z, const list_array<uint8_t>& data);
             base_objects::network::response merchantOffers(base_objects::SharedClientData& client, int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade> trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock);
@@ -277,7 +280,7 @@ namespace copper_server {
                 virtual base_objects::network::response changeDifficulty(uint8_t difficulty, bool locked) = 0;
                 virtual base_objects::network::response chunkBatchFinished(int32_t count) = 0;
                 virtual base_objects::network::response chunkBatchStart() = 0;
-                virtual base_objects::network::response chunkBiomes(list_array<base_objects::chunk::chunk_biomes>& chunk) = 0;
+                virtual base_objects::network::response chunkBiomes(const list_array<storage::chunk_data*>& chunk) = 0;
                 virtual base_objects::network::response clearTitles(bool reset) = 0;
                 virtual base_objects::network::response commandSuggestionsResponse(int32_t transaction_id, int32_t start_pos, int32_t length, const list_array<base_objects::packets::command_suggestion>& suggestions) = 0;
                 virtual base_objects::network::response commands(const base_objects::command_manager& compiled_graph) = 0;
@@ -316,30 +319,10 @@ namespace copper_server {
                 virtual base_objects::network::response hurtAnimation(int32_t entity_id, float yaw) = 0;
                 virtual base_objects::network::response initializeWorldBorder(double x, double z, double old_diameter, double new_diameter, int64_t speed_ms, int32_t portal_teleport_boundary, int32_t warning_blocks, int32_t warning_time) = 0;
                 virtual base_objects::network::response keepAlive(int64_t id) = 0;
-                virtual base_objects::network::response updateChunkDataWLights(
-                    int32_t chunk_x,
-                    int32_t chunk_z,
-                    const util::NBT& heightmaps,
-                    const std::vector<uint8_t>& data,
-                    const bit_list_array<>& sky_light_mask,
-                    const bit_list_array<>& block_light_mask,
-                    const bit_list_array<>& empty_skylight_mask,
-                    const bit_list_array<>& empty_block_light_mask,
-                    const list_array<std::vector<uint8_t>>& sky_light_arrays,
-                    const list_array<std::vector<uint8_t>>& block_light_arrays
-                ) = 0;
+                virtual base_objects::network::response updateChunkDataWLights(const storage::chunk_data& chunk) = 0;
                 virtual base_objects::network::response worldEvent(base_objects::packets::world_event_id event, base_objects::position pos, int32_t data, bool global) = 0;
                 virtual base_objects::network::response particle(int32_t particle_id, bool long_distance, util::VECTOR pos, util::XYZ<float> offset, float max_speed, int32_t count, const list_array<uint8_t>& data) = 0;
-                virtual base_objects::network::response updateLight(
-                    int32_t chunk_x,
-                    int32_t chunk_z,
-                    const bit_list_array<>& sky_light_mask,
-                    const bit_list_array<>& block_light_mask,
-                    const bit_list_array<>& empty_skylight_mask,
-                    const bit_list_array<>& empty_block_light_mask,
-                    const list_array<std::vector<uint8_t>>& sky_light_arrays,
-                    const list_array<std::vector<uint8_t>>& block_light_arrays
-                ) = 0;
+                virtual base_objects::network::response updateLight(const storage::chunk_data& chunk) = 0;
                 virtual base_objects::network::response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, int32_t sea_level, bool enforces_secure_chat) = 0;
                 virtual base_objects::network::response mapData(int32_t map_id, uint8_t scale, bool locked, const list_array<base_objects::packets::map_icon>& icons = {}, uint8_t columns = 0, uint8_t rows = 0, uint8_t x = 0, uint8_t z = 0, const list_array<uint8_t>& data = {}) = 0;
                 virtual base_objects::network::response merchantOffers(int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade>& trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock) = 0;

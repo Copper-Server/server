@@ -1,5 +1,6 @@
 #ifndef SRC_BASE_OBJECTS_NETWORK_RESPONSE
 #define SRC_BASE_OBJECTS_NETWORK_RESPONSE
+#include <bit>
 #include <library/list_array.hpp>
 #include <optional>
 
@@ -24,15 +25,15 @@ namespace copper_server::base_objects::network {
 
             void write_value(const enbt::raw_uuid& val);
             void write_value(int8_t flo);
-            void write_value(int16_t flo);
-            void write_value(int32_t flo);
-            void write_value(int64_t flo);
+            void write_value(int16_t flo, std::endian = std::endian::big);
+            void write_value(int32_t flo, std::endian = std::endian::big);
+            void write_value(int64_t flo, std::endian = std::endian::big);
             void write_value(uint8_t flo);
-            void write_value(uint16_t flo);
-            void write_value(uint32_t flo);
-            void write_value(uint64_t flo);
-            void write_value(float flo);
-            void write_value(double flo);
+            void write_value(uint16_t flo, std::endian = std::endian::big);
+            void write_value(uint32_t flo, std::endian = std::endian::big);
+            void write_value(uint64_t flo, std::endian = std::endian::big);
+            void write_value(float flo, std::endian = std::endian::big);
+            void write_value(double flo, std::endian = std::endian::big);
             void write_value(char flo);
             void write_value(bool flo);
             void write_var32(int32_t value);
@@ -42,6 +43,13 @@ namespace copper_server::base_objects::network {
             void write_json_component(const std::string& str);
             void write_direct(const list_array<uint8_t>& data);
             void write_direct(list_array<uint8_t>&& data);
+            void write_direct(const list_array<uint16_t>& data, std::endian = std::endian::big);
+            void write_direct(const list_array<uint32_t>& data, std::endian = std::endian::big);
+            void write_direct(const list_array<uint64_t>& data, std::endian = std::endian::big);
+            void write_direct(const list_array<int8_t>& data);
+            void write_direct(const list_array<int16_t>& data, std::endian = std::endian::big);
+            void write_direct(const list_array<int32_t>& data, std::endian = std::endian::big);
+            void write_direct(const list_array<int64_t>& data, std::endian = std::endian::big);
             void write_direct(const uint8_t* data, size_t size);
             //appends item data to current item, but does not affect the flags
             void write_in(item&& data);

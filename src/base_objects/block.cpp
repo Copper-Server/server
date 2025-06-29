@@ -185,6 +185,10 @@ namespace copper_server::base_objects {
         auto& air = full_block_data_.emplace_back();
     }
 
+    size_t block::block_states_size() {
+        return full_block_data_.size();
+    }
+
     void static_block_data::reset_blocks() {
         block::access_full_block_data([](auto& i0, auto& i1) {
             i0.clear();
@@ -219,6 +223,4 @@ namespace copper_server::base_objects {
             }
         });
     }
-
-
 }

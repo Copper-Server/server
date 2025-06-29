@@ -89,98 +89,11 @@ namespace copper_server::base_objects {
             };
 
             struct state_play {
-                bit_list_array<> loaded_chunks{0};
                 std::list<int32_t> pending_teleport_ids;
                 int32_t teleport_id_sequence = 0;
                 int32_t windows_id = 0;
                 int32_t current_block_sequence_id = 0;
                 int32_t container_state_id = 0;
-
-                int32_t loading_center_x = 0;
-                int32_t loading_center_z = 0;
-                int32_t loading_diameter = 1;
-
-                bool mark_chunk(int64_t pos_x, int64_t pos_z, bool loaded) {
-                    if (pos_x > INT32_MAX || pos_x < INT32_MIN || pos_z > INT32_MAX || pos_z < INT32_MIN)
-                        return false;
-
-                    int32_t radius = loading_diameter / 2;
-                    int32_t offset_x = pos_x - (loading_center_x - radius);
-                    int32_t offset_z = pos_z - (loading_center_z - radius);
-
-                    if (offset_x < 0 || offset_x >= loading_diameter || offset_z < 0 || offset_z >= loading_diameter)
-                        return false;
-
-                    size_t index = offset_z * loading_diameter + offset_x;
-                    loaded_chunks.set(index, loaded);
-                    return true;
-                }
-
-                bool in_bounds(int64_t pos_x, int64_t pos_z) {
-                    if (pos_x > INT32_MAX || pos_x < INT32_MIN || pos_z > INT32_MAX || pos_z < INT32_MIN)
-                        return false;
-
-                    int32_t radius = loading_diameter / 2;
-                    int32_t offset_x = pos_x - (loading_center_x - radius);
-                    int32_t offset_z = pos_z - (loading_center_z - radius);
-
-                    return offset_x < 0 || offset_x >= loading_diameter || offset_z < 0 || offset_z >= loading_diameter;
-                }
-
-                bool chunk_loaded(int64_t pos_x, int64_t pos_z) const {
-                    if (pos_x > INT32_MAX || pos_x < INT32_MIN || pos_z > INT32_MAX || pos_z < INT32_MIN)
-                        return false;
-
-                    int32_t radius = loading_diameter / 2;
-                    int32_t offset_x = pos_x - (loading_center_x - radius);
-                    int32_t offset_z = pos_z - (loading_center_z - radius);
-
-                    if (offset_x < 0 || offset_x >= loading_diameter || offset_z < 0 || offset_z >= loading_diameter)
-                        return false;
-
-                    size_t index = offset_z * loading_diameter + offset_x;
-                    return loaded_chunks.at(index);
-                }
-
-                void update_loading(int32_t center_x, int32_t center_z, uint8_t render_distance) {
-                    auto new_loading_diameter = 2 * render_distance + 7;
-                    bit_list_array<> new_loading_data(new_loading_diameter * new_loading_diameter);
-
-                    int32_t old_radius = loading_diameter / 2;
-                    int32_t new_radius = new_loading_diameter / 2;
-
-                    // For each position in the new loading area
-                    for (int32_t dz = 0; dz < new_loading_diameter; ++dz) {
-                        for (int32_t dx = 0; dx < new_loading_diameter; ++dx) {
-                            // World coordinates for this chunk in the new area
-                            int32_t chunk_x = center_x - new_radius + dx;
-                            int32_t chunk_z = center_z - new_radius + dz;
-
-                            // Map to old area offsets
-                            int32_t old_offset_x = chunk_x - (loading_center_x - old_radius);
-                            int32_t old_offset_z = chunk_z - (loading_center_z - old_radius);
-
-                            // If the chunk was loaded in the old area, copy its bit
-                            if (old_offset_x >= 0 && old_offset_x < loading_diameter && old_offset_z >= 0 && old_offset_z < loading_diameter) {
-                                size_t old_index = old_offset_z * loading_diameter + old_offset_x;
-                                size_t new_index = dz * new_loading_diameter + dx;
-                                if (loaded_chunks[old_index]) {
-                                    new_loading_data.set(new_index, true);
-                                }
-                            }
-                        }
-                    }
-
-                    // Update center and diameter
-                    loading_center_x = center_x;
-                    loading_center_z = center_z;
-                    loading_diameter = new_loading_diameter;
-                    loaded_chunks = std::move(new_loading_data);
-                }
-
-                void flush_loading() {
-                    loaded_chunks = bit_list_array<>(loading_diameter * loading_diameter);
-                }
             };
 
             std::unordered_set<enbt::raw_uuid> active_resource_packs;
@@ -209,24 +122,6 @@ namespace copper_server::base_objects {
         } packets_state;
 
         std::chrono::milliseconds ping = std::chrono::milliseconds(0);
-
-        bool mark_chunk(int64_t pos_x, int64_t pos_z, bool loaded) {
-            if (packets_state.play_data)
-                return packets_state.play_data->mark_chunk(pos_x, pos_z, loaded);
-            return false;
-        }
-
-        bool chunk_in_bounds(int64_t pos_x, int64_t pos_z) {
-            if (packets_state.play_data)
-                return packets_state.play_data->in_bounds(pos_x, pos_z);
-            return false;
-        }
-
-        bool chunk_loaded_at(int64_t pos_x, int64_t pos_z) const {
-            if (packets_state.play_data)
-                return packets_state.play_data->chunk_loaded(pos_x, pos_z);
-            return false;
-        }
 
         void registerPlugin(std::string& plugin) {
             compatible_plugins.insert(plugin);
