@@ -83,7 +83,7 @@ namespace copper_server::build_in_plugins {
             };
             proc.entity_init = [](base_objects::entity& self, base_objects::entity& target) {
                 if (self.assigned_player)
-                    api::packets::play::spawnEntity(*self.assigned_player, target, target.protocol_id);
+                    api::packets::play::spawnEntity(*self.assigned_player, target);
             };
             proc.entity_iteract = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_ref& other) {
                 if (self.assigned_player)
@@ -343,6 +343,8 @@ namespace copper_server::build_in_plugins {
 
     public:
         PlayEngine() {}
+
+        ~PlayEngine() noexcept {}
 
         void OnLoad(const PluginRegistrationPtr& self) override {
             register_event(api::protocol::on_chat_command, [this](const auto& event) {

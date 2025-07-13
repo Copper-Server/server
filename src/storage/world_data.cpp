@@ -199,9 +199,14 @@ namespace copper_server::storage {
             return false;
         if (!std::filesystem::exists(chunk_z))
             return false;
-        fast_task::files::async_iofstream file(chunk_z, std::ios::binary);
         if (std::filesystem::file_size(chunk_z) == 0)
             return false;
+        fast_task::files::async_iofstream file(
+            chunk_z,
+            fast_task::files::open_mode::read,
+            fast_task::files::on_open_action::open,
+            fast_task::files::_sync_flags{}
+        );
         if (!file.is_open())
             return false;
         std::string mode = enbt::io_helper::read_token(file);
@@ -486,7 +491,12 @@ namespace copper_server::storage {
         if (api::configuration::get().server.world_debug_mode)
             return false;
         std::filesystem::create_directories(chunk_z.parent_path());
-        fast_task::files::async_iofstream file(chunk_z, std::ios::binary);
+        fast_task::files::async_iofstream file(
+            chunk_z,
+            fast_task::files::open_mode::write,
+            fast_task::files::on_open_action::truncate_exists,
+            fast_task::files::_sync_flags{}
+        );
         if (!file.is_open())
             return false;
         auto mode = api::configuration::get().world.saving_mode;
@@ -1419,7 +1429,12 @@ namespace copper_server::storage {
 
     void world_data::load() {
         std::unique_lock lock(mutex);
-        fast_task::files::async_iofstream file(path / "world.senbt", std::ios::binary);
+        fast_task::files::async_iofstream file(
+            path / "world.senbt",
+            fast_task::files::open_mode::read,
+            fast_task::files::on_open_action::open,
+            fast_task::files::_sync_flags{}
+        );
         if (!file.is_open())
             throw std::runtime_error("Can't open world file");
         std::string res((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
@@ -1429,9 +1444,6 @@ namespace copper_server::storage {
     void world_data::save() {
         std::unique_lock lock(mutex);
         std::filesystem::create_directories(path);
-        fast_task::files::async_iofstream file(path / "world.senbt", std::ios::binary);
-        if (!file.is_open())
-            throw std::runtime_error("Can't open world file");
         enbt::compound world_data_file;
 
         world_data_file["general_world_data"] = general_world_data;
@@ -1492,12 +1504,25 @@ namespace copper_server::storage {
         world_data_file["increase_time"] = increase_time;
 
         auto stringized = senbt::serialize(world_data_file, false, true);
+        fast_task::files::async_iofstream file(
+            path / "world.senbt",
+            fast_task::files::open_mode::write,
+            fast_task::files::on_open_action::truncate_exists,
+            fast_task::files::_sync_flags{}
+        );
+        if (!file.is_open())
+            throw std::runtime_error("Can't open world file");
         file.write(stringized.data(), stringized.size());
     }
 
     std::string world_data::preview_world_name() {
         std::unique_lock lock(mutex);
-        fast_task::files::async_iofstream file(path / "world.senbt", std::ios::binary);
+        fast_task::files::async_iofstream file(
+            path / "world.senbt",
+            fast_task::files::open_mode::read,
+            fast_task::files::on_open_action::open,
+            fast_task::files::_sync_flags{}
+        );
         if (!file.is_open())
             throw std::runtime_error("Can't open world file");
         std::string res((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());

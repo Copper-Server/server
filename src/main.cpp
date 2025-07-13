@@ -24,12 +24,12 @@ int main() {
             log::error("Initializer thread", "An error occurred while unregistering plugins");
         }
         log::commands::deinit();
-        fast_task::task::shutDown();
+        fast_task::scheduler::shut_down();
     });
     try {
         size_t working_threads = api::configuration::get().server.working_threads;
-        fast_task::task::reduce_executor(fast_task::task::total_executors());
-        fast_task::task::create_executor(working_threads);
+        fast_task::scheduler::reduce_executor(fast_task::scheduler::total_executors());
+        fast_task::scheduler::create_executor(working_threads);
         fast_task::task::task::enable_task_naming = false;
 
 
@@ -80,6 +80,6 @@ int main() {
         pluginManagement.callFaultUnload();
         return 1;
     }
-    fast_task::task::await_end_tasks(true);
+    fast_task::scheduler::await_end_tasks(true);
     return 0;
 }

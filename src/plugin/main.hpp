@@ -210,13 +210,13 @@ namespace copper_server {
             });
             using ret_t = std::invoke_result_t<FN, std::pair<std::string, PluginRegistrationPtr>>;
             using fut = Future<ret_t>;
-            list_array<std::shared_ptr<fut>> futs;
+            list_array<std::shared_ptr<fut>> futures;
             for (auto& it : plugins) {
-                futs.push_back(fut::start([fn = fn, it]() {
+                futures.push_back(fut::start([fn = fn, it]() {
                     return fn(it);
                 }));
             }
-            return future::accumulate<ret_t>(futs);
+            return future::accumulate<ret_t>(futures);
         }
 
         template <class FN>
@@ -274,6 +274,8 @@ namespace copper_server {
             __internal__::register_value<Self, name>();
             return name.data;
         }();
+
+        virtual ~PluginAutoRegister() noexcept {}
     };
 
     extern PluginManagement pluginManagement;

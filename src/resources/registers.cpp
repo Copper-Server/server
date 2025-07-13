@@ -13,7 +13,6 @@
 #include <src/util/json_helpers.hpp>
 
 namespace copper_server::resources {
-    std::unordered_map<uint32_t, boost::json::object> internal_compatibility_versions;
     list_array<base_objects::data_packs::known_pack> loaded_packs_;
     int32_t latest_protocol_version = -1;
 
@@ -163,6 +162,7 @@ namespace copper_server::resources {
         id_assigner(bannerPatterns, bannerPatterns_cache);
         id_assigner(paintingVariants, paintingVariants_cache);
         id_assigner(instruments, instruments_cache);
+        id_assigner(jukebox_songs, jukebox_songs_cache);
         api::tags::loading_stage_end();
     }
 
@@ -1166,7 +1166,7 @@ namespace copper_server::resources {
             type.sound_event = (std::string)type_js.at("sound_event");
         } else {
             auto sound_event = js_object::get_object(type_js.at("sound_event"));
-            type.sound_event = base_objects::slot_component::inner::sound_extended{.sound_name = sound_event.at("sound_name"), .fixed_range = sound_event.contains("fixed_range") ? std::optional<float>(sound_event.at("fixed_range")) : std::nullopt};
+            type.sound_event = base_objects::component::inner::sound_extended{.sound_name = sound_event.at("sound_name"), .fixed_range = sound_event.contains("fixed_range") ? std::optional<float>(sound_event.at("fixed_range")) : std::nullopt};
         }
         instruments[id] = std::move(type);
     }
@@ -1634,74 +1634,74 @@ namespace copper_server::resources {
                             item.iterate(
                                 [&](auto size) { init_states.reserve(size); },
                                 [&](enbt::io_helper::value_read_stream& decl) {
-                                std::shared_ptr<base_objects::static_block_data> block_data = std::make_shared<base_objects::static_block_data>();
-                                base_objects::block_id_t block_data_id = 0;
-                                block_data->opacity = 255;
+                                    std::shared_ptr<base_objects::static_block_data> block_data = std::make_shared<base_objects::static_block_data>();
+                                    base_objects::block_id_t block_data_id = 0;
+                                    block_data->opacity = 255;
 #define ARGS__d base_objects::block_id_t &default_state, bool &has_default_state, list_array<std::shared_ptr<base_objects::static_block_data>>&full_block_data_, std::shared_ptr<base_objects::static_block_data>&block_data, base_objects::block_id_t &block_data_id, enbt::io_helper::value_read_stream &item
 #define ARGS__pass default_state, has_default_state, full_block_data_, block_data, block_data_id, item
 
-                                static std::unordered_map<std::string, void (*)(ARGS__d)> map{
-                                    {"id", [](ARGS__d) {
-                                         base_objects::block_id_t id = block_data_id = item.read();
-                                         if (id >= full_block_data_.size()) {
-                                             if (full_block_data_.reserved() == 0)
-                                                 full_block_data_.reserve(id);
-                                             full_block_data_.resize(id + 1);
-                                         }
-                                         auto& ref = full_block_data_.at(id);
-                                         if (ref)
-                                             throw std::runtime_error("Duplicate block id: " + std::to_string(id));
-                                         ref = block_data;
-                                         if (!has_default_state) {
-                                             default_state = id;
+                                    static std::unordered_map<std::string, void (*)(ARGS__d)> map{
+                                        {"id", [](ARGS__d) {
+                                             base_objects::block_id_t id = block_data_id = item.read();
+                                             block_data->current_state = id;
+                                             if (id >= full_block_data_.size()) {
+                                                 if (full_block_data_.reserved() == 0)
+                                                     full_block_data_.reserve(id);
+                                                 full_block_data_.resize(id + 1);
+                                             }
+                                             auto& ref = full_block_data_.at(id);
+                                             if (ref)
+                                                 throw std::runtime_error("Duplicate block id: " + std::to_string(id));
+                                             ref = block_data;
+                                             if (!has_default_state) {
+                                                 default_state = id;
+                                                 has_default_state = true;
+                                             }
+                                         }},
+                                        {"air", [](ARGS__d) { block_data->is_air = item.read(); }},
+                                        {"is_solid", [](ARGS__d) { block_data->is_solid = item.read(); }},
+                                        {"opacity", [](ARGS__d) { block_data->opacity = item.read(); }},
+                                        {"instrument", [](ARGS__d) { block_data->instrument = item.read().as_string(); }},
+                                        {"is_liquid", [](ARGS__d) { block_data->is_liquid = item.read(); }},
+                                        {"luminance", [](ARGS__d) { block_data->luminance = item.read(); }},
+                                        {"burnable", [](ARGS__d) { block_data->is_burnable = item.read(); }},
+                                        {"emits_redstone", [](ARGS__d) { block_data->is_emits_redstone = item.read(); }},
+                                        {"is_full_cube", [](ARGS__d) { block_data->is_full_cube = item.read(); }},
+                                        {"tool_required", [](ARGS__d) { block_data->is_tool_required = item.read(); }},
+                                        {"piston_behavior", [](ARGS__d) { block_data->piston_behavior = item.read().as_string(); }},
+                                        {"replaceable", [](ARGS__d) { block_data->is_replaceable = item.read(); }},
+                                        {"hardness", [](ARGS__d) { block_data->hardness = item.read(); }},
+                                        {"sided_transparency", [](ARGS__d) { block_data->is_sided_transparency = item.read(); }},
+                                        {"default_state_id", [](ARGS__d) {
+                                             default_state = item.read();
+                                             block_data->is_default_state = true;
                                              has_default_state = true;
-                                         }
-                                     }},
-                                    {"air", [](ARGS__d) { block_data->is_air = item.read(); }},
-                                    {"is_solid", [](ARGS__d) { block_data->is_solid = item.read(); }},
-                                    {"opacity", [](ARGS__d) { block_data->opacity = item.read(); }},
-                                    {"instrument", [](ARGS__d) { block_data->instrument = item.read().as_string(); }},
-                                    {"is_liquid", [](ARGS__d) { block_data->is_liquid = item.read(); }},
-                                    {"luminance", [](ARGS__d) { block_data->luminance = item.read(); }},
-                                    {"burnable", [](ARGS__d) { block_data->is_burnable = item.read(); }},
-                                    {"emits_redstone", [](ARGS__d) { block_data->is_emits_redstone = item.read(); }},
-                                    {"is_full_cube", [](ARGS__d) { block_data->is_full_cube = item.read(); }},
-                                    {"tool_required", [](ARGS__d) { block_data->is_tool_required = item.read(); }},
-                                    {"piston_behavior", [](ARGS__d) { block_data->piston_behavior = item.read().as_string(); }},
-                                    {"replaceable", [](ARGS__d) { block_data->is_replaceable = item.read(); }},
-                                    {"hardness", [](ARGS__d) { block_data->hardness = item.read(); }},
-                                    {"sided_transparency", [](ARGS__d) { block_data->is_sided_transparency = item.read(); }},
-                                    {"default_state_id", [](ARGS__d) {
-                                         default_state = item.read();
-                                         block_data->is_default_state = true;
-                                         has_default_state = true;
-                                     }},
-                                    {"properties", [](ARGS__d) {
-                                         std::unordered_map<std::string, std::string> properties;
-                                         item.iterate([&](auto size) { properties.reserve(size); }, [&](const std::string& name, enbt::io_helper::value_read_stream& item) {
-                                             properties[name] = item.read().as_string();
-                                         });
-                                         block_data->current_properties = std::move(properties);
-                                     }},
-                                    {"collision_shapes", [](ARGS__d) {
-                                         item.iterate(
-                                             [&](auto size) { block_data->collision_shapes.reserve(size); },
-                                             [&](enbt::io_helper::value_read_stream& item) { block_data->collision_shapes.push_back(&base_objects::static_block_data::all_shapes.at(item.read())); }
-                                         );
-                                     }},
-                                    {"block_entity_type", [](ARGS__d) {
-                                         block_data->is_block_entity = true;
-                                         block_data->block_entity_id = item.read();
-                                     }},
-                                };
+                                         }},
+                                        {"properties", [](ARGS__d) {
+                                             std::unordered_map<std::string, std::string> properties;
+                                             item.iterate([&](auto size) { properties.reserve(size); }, [&](const std::string& name, enbt::io_helper::value_read_stream& item) { properties[name] = item.read().as_string(); });
+                                             block_data->current_properties = std::move(properties);
+                                         }},
+                                        {"collision_shapes", [](ARGS__d) {
+                                             item.iterate(
+                                                 [&](auto size) { block_data->collision_shapes.reserve(size); },
+                                                 [&](enbt::io_helper::value_read_stream& item) { block_data->collision_shapes.push_back(&base_objects::static_block_data::all_shapes.at(item.read())); }
+                                             );
+                                         }},
+                                        {"block_entity_type", [](ARGS__d) {
+                                             block_data->is_block_entity = true;
+                                             block_data->block_entity_id = item.read();
+                                         }},
+                                    };
 
-                                decl.iterate([&](const std::string& name, enbt::io_helper::value_read_stream& item) {
-                                    map.at(name)(ARGS__pass);
-                                });
-                                init_states.push_back(block_data_id);
+                                    decl.iterate([&](const std::string& name, enbt::io_helper::value_read_stream& item) {
+                                        map.at(name)(ARGS__pass);
+                                    });
+                                    init_states.push_back(block_data_id);
 #undef ARGS__d
 #undef ARGS__pass
-                            });
+                                }
+                            );
                         }
                     });
 
@@ -1737,46 +1737,32 @@ namespace copper_server::resources {
 
     void load_items() {
         auto parsed = boost::json::parse(resources::registry::items);
-        std::unordered_set<std::string> filter;
-        auto& to_filter = internal_compatibility_versions.at(api::configuration::get().protocol.allowed_versions_processed.min()).at("disabled_items").as_array();
-        filter.reserve(to_filter.size());
-        for (auto&& item : to_filter)
-            filter.insert((std::string)item.as_string());
 
         for (auto&& [name, decl] : parsed.as_object()) {
-            if (filter.contains(name))
-                continue;
             base_objects::static_slot_data slot_data;
             slot_data.id = name;
-            std::unordered_map<std::string, base_objects::slot_component::unified> components;
+            std::unordered_map<std::string, base_objects::component::unified> components;
             for (auto& [name, value] : decl.as_object().at("components").as_object())
-                components[name] = base_objects::slot_component::parse_component(name, conversions::json::from_json(value));
+                components[name] = base_objects::component::parse_component(name, conversions::json::from_json(value));
             slot_data.default_components = std::move(components);
             base_objects::slot_data::add_slot_data(std::move(slot_data));
         }
     }
 
     void prepare_versions() {
-        std::unordered_map<uint32_t, std::string_view> internal_protocol_aliases = {
-            {770, resources::registry::protocol::_770},
-        };
-        latest_protocol_version
-            = api::configuration::get().protocol.allowed_versions_processed.for_each(
-                                                                               [&](uint32_t version) {
-                                                                                   auto res = util::conversions::json::from_json(boost::json::parse(internal_protocol_aliases.at(version)));
-                                                                                   for (auto& it : res.as_compound()) {
-                                                                                       auto entries = it.second.at("entries").as_compound();
-                                                                                       enbt::fixed_array invert(entries.size());
 
-                                                                                       for (auto& [key, value] : it.second.at("entries").as_compound())
-                                                                                           invert.set(value.at("protocol_id"), key);
+        auto res = util::conversions::json::from_json(boost::json::parse(resources::registry::protocol));
+        for (auto& it : res.as_compound()) {
+            auto entries = it.second.at("entries").as_compound();
+            enbt::fixed_array invert(entries.size());
 
-                                                                                       it.second["proto_invert"] = std::move(invert);
-                                                                                   }
-                                                                                   registers::individual_registers[version] = std::move(res);
-                                                                               }
-            ).max();
-        registers::use_registry_latest = latest_protocol_version;
+            for (auto& [key, value] : it.second.at("entries").as_compound())
+                invert.set(value.at("protocol_id"), key);
+
+            it.second["proto_invert"] = std::move(invert);
+        }
+        registers::current_protocol_id = 770;
+        registers::current_protocol_registers = std::move(res);
     }
 
     void __prepare_tags(boost::json::object& parsed, const std::string& type, const std::string& namespace_, const std::string& tag) {
@@ -2034,9 +2020,8 @@ namespace copper_server::resources {
     }
 
     void __initialization__versions_inital() { //skips items assignation
-        auto& latest_version = registers::individual_registers.at(latest_protocol_version);
         {
-            auto current_effect = latest_version.at("minecraft:mob_effect").at("entries").as_compound();
+            auto current_effect = registers::current_protocol_registers.at("minecraft:mob_effect").at("entries").as_compound();
             for (auto& [name, decl] : current_effect)
                 registers::effects[name] = effect{name, (uint32_t)decl.at("protocol_id")};
             {
@@ -2050,7 +2035,7 @@ namespace copper_server::resources {
             }
         }
         {
-            auto current_potion = latest_version.at("minecraft:potion").at("entries").as_compound();
+            auto current_potion = registers::current_protocol_registers.at("minecraft:potion").at("entries").as_compound();
             for (auto& [name, decl] : current_potion)
                 registers::potions[name] = potion{name, (uint32_t)decl.at("protocol_id")};
             {
@@ -2064,9 +2049,10 @@ namespace copper_server::resources {
             }
         }
         {
-            auto attribute = latest_version.at("minecraft:attribute").at("entries").as_compound();
-            for (auto& [name, decl] : attribute)
-                registers::attributes[name] = item_attribute{name, (uint32_t)decl.at("protocol_id")};
+            auto attributes = boost::json::parse(resources::registry::attributes);
+            auto current_attribute = registers::current_protocol_registers.at("minecraft:attribute").at("entries").as_compound();
+            for (auto& [name, decl] : current_attribute)
+                registers::attributes[name] = attribute{name, (uint32_t)decl.at("protocol_id"), attributes.at(name).to_number<double>()};
             {
                 registers::attributes_cache.resize(registers::attributes.size());
                 auto it = registers::attributes.begin();
@@ -2077,129 +2063,18 @@ namespace copper_server::resources {
                 }
             }
         }
-
-        for (auto& [proto_id, decl] : registers::individual_registers) {
-            for (auto& [name, decl] : decl.at("minecraft:mob_effect").at("entries").as_compound()) {
-                auto it = registers::effects.find(name);
-                if (it != registers::effects.end()) {
-                    it->second.protocol[proto_id] = (uint32_t)decl.at("protocol_id");
-                    effect::protocol_aliases[proto_id][it->second.id] = it->second.id;
-                }
-            }
-            for (auto& [name, decl] : decl.at("minecraft:potion").at("entries").as_compound()) {
-                auto it = registers::potions.find(name);
-                if (it != registers::potions.end()) {
-                    it->second.protocol[proto_id] = (uint32_t)decl.at("protocol_id");
-                    potion::protocol_aliases[proto_id][it->second.id] = it->second.id;
-                }
-            }
-            for (auto& [name, decl] : decl.at("minecraft:attribute").at("entries").as_compound()) {
-                auto it = registers::attributes.find(name);
-                if (it != registers::attributes.end()) {
-                    it->second.protocol[proto_id] = (uint32_t)decl.at("protocol_id");
-                    item_attribute::protocol_aliases[proto_id][it->second.id] = it->second.id;
-                }
-            }
-            {
-                auto current_registry_blocks = decl.at("minecraft:block").at("entries").as_compound();
-                auto& proto_data = base_objects::static_block_data::internal_block_aliases_protocol[proto_id];
-                for (auto& [name, decl] : current_registry_blocks)
-                    proto_data[name] = (uint32_t)decl.at("protocol_id");
-            }
-            {
-                auto& proto_data = base_objects::entity_data::internal_entity_aliases_protocol[proto_id];
-                for (auto& [name, decl] : decl.at("minecraft:entity_type").at("entries").as_compound())
-                    proto_data[name] = (uint32_t)decl.at("protocol_id");
-            }
-        }
-        //set aliases
-
-        for (auto& [proto_id, decl] : internal_compatibility_versions) {
-            auto it = base_objects::entity_data::internal_entity_aliases_protocol.find(proto_id);
-            if (it == base_objects::entity_data::internal_entity_aliases_protocol.end())
-                continue;
-            auto& proto_data = it->second;
-            for (auto& [name, id] : decl.at("protocol_entity_aliases").as_object())
-                proto_data[name] = proto_data.at(std::string(id.as_string()));
-        }
-
-        {
-            std::unordered_map<std::string, std::string> filter;
-            {
-                auto tmp = boost::json::parse(resources::registry::compatibility::block_aliases).as_object();
-                filter.reserve(tmp.size());
-                for (auto& [match, replace] : tmp)
-                    filter[match] = std::string(replace.as_string());
-            }
-
-            base_objects::block::access_full_block_data(
-                [&](auto& arr, auto& ignore) {
-                    for (auto& block : arr) {
-                        for (auto& [match, replace] : filter) {
-                            auto res = processor::process_match(block->name, match, replace);
-                            if (res)
-                                block->block_aliases.push_back(std::move(*res));
-                        }
-                    }
-                }
-            );
-        }
-        base_objects::static_block_data::initialize_blocks();
         base_objects::entity_data::initialize_entities();
     }
 
     void __initialization__versions_post() {
-        for (auto& [proto_id, decl] : registers::individual_registers)
-            for (auto& [name, decl] : decl.at("minecraft:item").at("entries").as_compound())
-                base_objects::static_slot_data::internal_item_aliases_protocol[proto_id][name] = (uint32_t)decl.at("protocol_id");
-        //set aliases
-
-        {
-            std::unordered_map<std::string, std::string> filter;
-            {
-                auto tmp = boost::json::parse(resources::registry::compatibility::item_aliases).as_object();
-                filter.reserve(tmp.size());
-                for (auto& [match, replace] : tmp)
-                    filter[match] = std::string(replace.as_string());
-            }
-
-            base_objects::slot_data::enumerate_slot_data(
-                [&](auto& item) {
-                    auto& name = item.id;
-                    auto& item_aliases = item.item_aliases;
-
-                    for (auto& [match, replace] : filter) {
-                        auto res = processor::process_match(name, match, replace);
-                        if (res)
-                            item_aliases.push_back(std::move(*res));
-                    }
-                }
-            );
-        }
-
-        for (auto&& item : internal_compatibility_versions.at(api::configuration::get().protocol.allowed_versions_processed.min()).at("disabled_armor_trim_patterns").as_array())
-            registers::armorTrimPatterns.erase((std::string)item.as_string());
-
-        base_objects::static_slot_data::initialize_items();
     }
 
     void initialize() {
-        internal_compatibility_versions = {
-            {770, boost::json::parse(resources::registry::compatibility::versions::_770).as_object()},
-        };
         initialize_entities();
         load_blocks();
         auto parsed_items = boost::json::parse(resources::registry::items);
-        std::unordered_set<std::string> items_filter;
         {
-            auto& to_filter = internal_compatibility_versions.at(api::configuration::get().protocol.allowed_versions_processed.min()).at("disabled_items").as_array();
-            items_filter.reserve(to_filter.size());
-            for (auto&& item : to_filter)
-                items_filter.insert((std::string)item.as_string());
-
             for (auto&& [name, decl] : parsed_items.as_object()) {
-                if (items_filter.contains(name))
-                    continue;
                 base_objects::static_slot_data slot_data;
                 slot_data.id = name;
                 base_objects::slot_data::add_slot_data(std::move(slot_data));
@@ -2211,16 +2086,13 @@ namespace copper_server::resources {
         {
             //complete initialization
             for (auto&& [name, decl] : parsed_items.as_object()) {
-                if (items_filter.contains(name))
-                    continue;
-                std::unordered_map<std::string, base_objects::slot_component::unified> components;
+                std::unordered_map<std::string, base_objects::component::unified> components;
                 for (auto& [name, value] : decl.as_object().at("components").as_object())
-                    components[name] = base_objects::slot_component::parse_component(name, conversions::json::from_json(value));
+                    components[name] = base_objects::component::parse_component(name, conversions::json::from_json(value));
                 base_objects::slot_data::get_slot_data(name).default_components = std::move(components);
             }
         }
         __initialization__versions_post();
         load_registers_complete();
-        internal_compatibility_versions.clear();
     }
 }

@@ -59,7 +59,7 @@ namespace copper_server {
 
         namespace play {
             base_objects::network::response bundleResponse(base_objects::SharedClientData& client, base_objects::network::response&& response);
-            base_objects::network::response spawnEntity(base_objects::SharedClientData& client, const base_objects::entity& entity, uint16_t protocol);
+            base_objects::network::response spawnEntity(base_objects::SharedClientData& client, const base_objects::entity& entity);
             base_objects::network::response entityAnimation(base_objects::SharedClientData& client, const base_objects::entity& entity, base_objects::entity_animation animation);
             base_objects::network::response awardStatistics(base_objects::SharedClientData& client, const list_array<base_objects::packets::statistics>& statistics);
             base_objects::network::response acknowledgeBlockChange(base_objects::SharedClientData& client);
@@ -263,7 +263,7 @@ namespace copper_server {
                 virtual ~play_functions() {}
 
                 virtual base_objects::network::response bundleResponse(base_objects::network::response&& response) = 0;
-                virtual base_objects::network::response spawnEntity(const base_objects::entity& entity, uint16_t protocol = -1) = 0;
+                virtual base_objects::network::response spawnEntity(const base_objects::entity& entity) = 0;
                 virtual base_objects::network::response entityAnimation(const base_objects::entity& entity, base_objects::entity_animation animation) = 0;
                 virtual base_objects::network::response awardStatistics(const list_array<base_objects::packets::statistics>& statistics) = 0;
                 virtual base_objects::network::response acknowledgeBlockChange(base_objects::SharedClientData& client) = 0;

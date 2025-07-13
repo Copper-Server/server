@@ -180,8 +180,6 @@ namespace copper_server {
 
             std::shared_ptr<world_processor> processor;
 
-            std::unordered_map<uint32_t, uint32_t> internal_entity_aliases; //protocol id -> entity id
-
             struct metadata_sync {
                 uint8_t index;
 
@@ -238,10 +236,9 @@ namespace copper_server {
 
             //USED ONLY DURING FULL SERVER RELOAD!  DO NOT ALLOW CALL FROM THE USER CODE
             static void reset_entities();      //INTERNAL
-            static void initialize_entities(); //INTERNAL, used to assign internal_entity_aliases ids from entity_aliases
+            static void initialize_entities(); //INTERNAL, used to assign processors
 
 
-            static std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> internal_entity_aliases_protocol;
             static uint16_t player_entity_id;
         };
 

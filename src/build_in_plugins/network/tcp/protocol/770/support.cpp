@@ -871,15 +871,13 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 }
             }
 
-            base_objects::network::response spawnEntity(const base_objects::entity& entity, uint16_t protocol) override {
-                if (protocol == UINT16_MAX)
-                    protocol = 770;
+            base_objects::network::response spawnEntity(const base_objects::entity& entity) override {
                 base_objects::network::response::item packet;
                 packet.write_id(0x01);
                 auto view = base_objects::entity_data::view(entity);
                 packet.write_var32(api::entity_id_map::get_id(entity.id));
                 packet.write_value(entity.id);
-                packet.write_var32(view.internal_entity_aliases.at(protocol));
+                packet.write_var32(view.entity_id);
                 packet.write_value(entity.position.x);
                 packet.write_value(entity.position.y);
                 packet.write_value(entity.position.z);
@@ -2071,7 +2069,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         packet += tmp.take();
                     }
                     WriteVar<int32_t>((int32_t)std::hash<std::string>()(recipe.group), packet);
-                    WriteVar<int32_t>(registers::view_reg_pro_id("minecraft:recipe_book_category", recipe.category, 770), packet);
+                    WriteVar<int32_t>(registers::view_reg_pro_id("minecraft:recipe_book_category", recipe.category), packet);
                     packet.push_back((bool)recipe.ingredients.size());
                     if (recipe.ingredients.size()) {
                         WriteVar<int32_t>(recipe.ingredients.size(), packet);
@@ -2083,7 +2081,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                                         WriteIdentifier(packet, item);
                                     } else {
                                         WriteVar<int32_t>(item.size() + 1, packet);
-                                        for (auto& i : registers::convert_reg_pro_id("minecraft:item", item, 770)) {
+                                        for (auto& i : registers::convert_reg_pro_id("minecraft:item", item)) {
                                             WriteVar<int32_t>(i, packet);
                                         }
                                     }
@@ -2142,7 +2140,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                     if (!reader::WriteRecipeDisplay(packet, recipe))
                         throw std::runtime_error("Recipe must to have the must_display property set to true");
                     WriteVar<int32_t>((int32_t)std::hash<std::string>()(recipe.group), packet);
-                    WriteVar<int32_t>(registers::view_reg_pro_id("minecraft:recipe_book_category", recipe.category, 770), packet);
+                    WriteVar<int32_t>(registers::view_reg_pro_id("minecraft:recipe_book_category", recipe.category), packet);
                     packet.push_back((bool)recipe.ingredients.size());
                     if (recipe.ingredients.size()) {
                         WriteVar<int32_t>(recipe.ingredients.size(), packet);
@@ -2154,7 +2152,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                                         WriteIdentifier(packet, item);
                                     } else {
                                         WriteVar<int32_t>(item.size() + 1, packet);
-                                        for (auto& i : registers::convert_reg_pro_id("minecraft:item", item, 770)) {
+                                        for (auto& i : registers::convert_reg_pro_id("minecraft:item", item)) {
                                             WriteVar<int32_t>(i, packet);
                                         }
                                     }
@@ -2961,7 +2959,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             }
 
             base_objects::network::response updateAttributes(int32_t entity_id, const list_array<base_objects::packets::attributes>& properties) override {
-                auto res = protocol::play::updateAttributes__(entity_id, properties, 770);
+                auto res = protocol::play::updateAttributes__(entity_id, properties);
                 res.data[0].data[0] = 0x7C;
                 return res;
             }
@@ -2986,10 +2984,10 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         [&](auto&& item) {
                             using type = std::decay_t<decltype(item)>;
                             WriteIdentifier(packet, recipe.full_id);
-                            WriteVar<int32_t>(registers::view_reg_pro_id("minecraft:recipe_serializer", base_objects::recipes::variant_data<type>::name, 770), packet);
+                            WriteVar<int32_t>(registers::view_reg_pro_id("minecraft:recipe_serializer", base_objects::recipes::variant_data<type>::name), packet);
                             if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::crafting_shaped>) {
                                 WriteString(packet, recipe.group, 32767);
-                                WriteVar<int32_t>((int32_t)registers::view_reg_pro_id("minecraft:recipe_book_category", recipe.category, 770), packet);
+                                WriteVar<int32_t>((int32_t)registers::view_reg_pro_id("minecraft:recipe_book_category", recipe.category), packet);
                                 WriteVar<int32_t>(item.width, packet);
                                 WriteVar<int32_t>(item.height, packet);
                                 for (auto& item : item.ingredients)
@@ -2998,7 +2996,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                                 packet.push_back(item.show_notification);
                             } else if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::crafting_shapeless>) {
                                 WriteString(packet, recipe.group, 32767);
-                                WriteVar<int32_t>((int32_t)registers::view_reg_pro_id("minecraft:recipe_book_category", recipe.category, 770), packet);
+                                WriteVar<int32_t>((int32_t)registers::view_reg_pro_id("minecraft:recipe_book_category", recipe.category), packet);
                                 WriteVar<int32_t>(item.ingredients.size(), packet);
                                 for (auto& item : item.ingredients)
                                     reader::WriteIngredient(packet, item);
@@ -3018,7 +3016,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                                 | std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_repairitem>
                                 | std::is_same_v<type, base_objects::recipes::minecraft::crafting_decorated_pot>
                             ) {
-                                WriteVar<int32_t>((int32_t)registers::view_reg_pro_id("minecraft:recipe_book_category", recipe.category, 770), packet);
+                                WriteVar<int32_t>((int32_t)registers::view_reg_pro_id("minecraft:recipe_book_category", recipe.category), packet);
                             } else if constexpr (
                                 std::is_same_v<type, base_objects::recipes::minecraft::smelting>
                                 | std::is_same_v<type, base_objects::recipes::minecraft::blasting>
@@ -3026,7 +3024,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                                 | std::is_same_v<type, base_objects::recipes::minecraft::campfire_cooking>
                             ) {
                                 WriteString(packet, recipe.group, 32767);
-                                WriteVar<int32_t>((int32_t)registers::view_reg_pro_id("minecraft:recipe_book_category", recipe.category, 770), packet);
+                                WriteVar<int32_t>((int32_t)registers::view_reg_pro_id("minecraft:recipe_book_category", recipe.category), packet);
                                 reader::WriteIngredient(packet, item.ingredient);
                                 reader::WriteIngredient(packet, item.result);
                                 WriteValue<float>(item.experience, packet);

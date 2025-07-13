@@ -78,6 +78,7 @@ namespace copper_server {
             int32_t comparator_output;
             int32_t length_in_seconds;
             Chat description;
+            uint32_t id;
             bool send_via_network_body = true;
         };
 
@@ -93,10 +94,10 @@ namespace copper_server {
             std::string asset_id;
             base_objects::item_id_t template_item;
             std::variant<std::string, Chat> description;
+            uint32_t id;
             bool decal;
             bool allow_override = false;
             bool send_via_network_body = true;
-            uint32_t id;
         };
 
         struct Biome {
@@ -322,7 +323,7 @@ namespace copper_server {
         };
 
         struct Instrument {
-            std::variant<std::string, base_objects::slot_component::inner::sound_extended> sound_event;
+            std::variant<std::string, base_objects::component::inner::sound_extended> sound_event;
             float use_duration;
             float range;
             Chat description;
@@ -363,18 +364,12 @@ namespace copper_server {
         struct effect {
             std::string name;
             uint32_t id;
-
-            std::unordered_map<int32_t, int32_t> protocol;                                              //protocol -> protocol effect id
-            static std::unordered_map<int32_t, std::unordered_map<int32_t, uint32_t>> protocol_aliases; //protocol -> protocol effect id -> internal id
         };
 
         struct potion {
             std::string name;
             uint32_t id;
             std::vector<uint32_t> effects;
-
-            std::unordered_map<int32_t, int32_t> protocol;                                              //protocol -> protocol effect id
-            static std::unordered_map<int32_t, std::unordered_map<int32_t, uint32_t>> protocol_aliases; //protocol -> protocol effect id -> internal id
         };
 
         struct item_modifier {
@@ -590,12 +585,10 @@ namespace copper_server {
             };
         }
 
-        struct item_attribute {
+        struct attribute {
             std::string name;
             uint32_t id;
-
-            std::unordered_map<int32_t, int32_t> protocol;                                              //protocol -> protocol effect id, can be undefined
-            static std::unordered_map<int32_t, std::unordered_map<int32_t, uint32_t>> protocol_aliases; //protocol -> protocol effect id -> internal id, can be undefined
+            double default_value;
         };
 
 #pragma endregion
@@ -639,22 +632,24 @@ namespace copper_server {
         extern std::unordered_map<std::string, Advancement> advancements;
 
 
-        extern std::unordered_map<std::string, item_attribute> attributes;
+        extern std::unordered_map<std::string, attribute> attributes;
         extern list_array<decltype(attributes)::iterator> attributes_cache;
 
         extern std::unordered_map<std::string, JukeboxSong> jukebox_songs;
+        extern list_array<decltype(jukebox_songs)::iterator> jukebox_songs_cache;
 
 
-        extern std::unordered_map<uint32_t, enbt::compound> individual_registers;
-        extern uint32_t use_registry_latest;
-        enbt::compound& default_registry();
-        enbt::value& default_registry_entries(const std::string& registry);
-        int32_t view_reg_pro_id(const std::string& registry, const std::string& item, int32_t protocol = -1);
-        std::string view_reg_pro_name(const std::string& registry, int32_t id, int32_t protocol = -1);
-        list_array<int32_t> convert_reg_pro_id(const std::string& registry, const list_array<std::string>& item, int32_t protocol = -1);
-        list_array<int32_t> convert_reg_pro_id(const std::string& registry, const std::vector<std::string>& item, int32_t protocol = -1);
-        list_array<std::string> convert_reg_pro_name(const std::string& registry, const list_array<int32_t>& item, int32_t protocol = -1);
-        list_array<std::string> convert_reg_pro_name(const std::string& registry, const std::vector<int32_t>& item, int32_t protocol = -1);
+        extern enbt::compound current_protocol_registers;
+        extern uint32_t current_protocol_id;
+
+        enbt::value& view_registry_entries(const std::string& registry);
+        enbt::value& view_registry_proto_invert(const std::string& registry);
+        int32_t view_reg_pro_id(const std::string& registry, const std::string& item);
+        std::string view_reg_pro_name(const std::string& registry, int32_t id);
+        list_array<int32_t> convert_reg_pro_id(const std::string& registry, const list_array<std::string>& item);
+        list_array<int32_t> convert_reg_pro_id(const std::string& registry, const std::vector<std::string>& item);
+        list_array<std::string> convert_reg_pro_name(const std::string& registry, const list_array<int32_t>& item);
+        list_array<std::string> convert_reg_pro_name(const std::string& registry, const std::vector<int32_t>& item);
 
 
         extern std::unordered_map<std::string, potion> potions;

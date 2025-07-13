@@ -20,7 +20,12 @@ namespace copper_server::storage {
         : path(path) {}
 
     void player_data::load() {
-        fast_task::files::async_iofstream file(path, std::ios::binary);
+        fast_task::files::async_iofstream file(
+            path,
+            fast_task::files::open_mode::read,
+            fast_task::files::on_open_action::open,
+            fast_task::files::_sync_flags{}
+        );
         if (!file.is_open()) {
             if (std::filesystem::exists(path))
                 throw std::runtime_error("Failed to open file: " + path.string());
@@ -153,7 +158,12 @@ namespace copper_server::storage {
         if (player.assigned_entity)
             as_file_data["assigned_entity"] = player.assigned_entity->copy_to_enbt();
 
-        fast_task::files::async_iofstream file(path, std::ios::binary);
+        fast_task::files::async_iofstream file(
+            path,
+            fast_task::files::open_mode::write,
+            fast_task::files::on_open_action::truncate_exists,
+            fast_task::files::_sync_flags{}
+        );
         if (!file.is_open())
             throw std::runtime_error("Failed to open file: " + path.string());
         enbt::io_helper::write_token(file, as_file_data);

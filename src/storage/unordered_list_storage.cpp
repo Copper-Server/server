@@ -5,11 +5,21 @@ namespace copper_server::storage {
     unordered_list_storage::unordered_list_storage(const std::filesystem::path& path) {
         if (!std::filesystem::exists(path)) {
             std::filesystem::create_directories(path.parent_path());
-            fast_task::files::async_iofstream file(path, std::ios::out);
+            fast_task::files::async_iofstream file(
+                path,
+                fast_task::files::open_mode::write,
+                fast_task::files::on_open_action::open,
+                fast_task::files::_sync_flags{}
+            );
             _is_loaded = true;
             return;
         }
-        fast_task::files::async_iofstream file(path, std::ios::in);
+        fast_task::files::async_iofstream file(
+            path,
+            fast_task::files::open_mode::read,
+            fast_task::files::on_open_action::open,
+            fast_task::files::_sync_flags{}
+        );
         if (!file.is_open())
             return;
         data.set([&](auto& value) {
@@ -28,7 +38,12 @@ namespace copper_server::storage {
             }
         });
         if (save) {
-            fast_task::files::async_iofstream file(path, std::ios::out | std::ios::app);
+            fast_task::files::async_iofstream file(
+                path,
+                fast_task::files::open_mode::append,
+                fast_task::files::on_open_action::open,
+                fast_task::files::_sync_flags{}
+            );
             file << set_value << std::endl;
             file.flush();
         }
@@ -51,7 +66,12 @@ namespace copper_server::storage {
         });
 
         if (save) {
-            fast_task::files::async_iofstream file(path, std::ios::out | std::ios::trunc);
+            fast_task::files::async_iofstream file(
+                path,
+                fast_task::files::open_mode::write,
+                fast_task::files::on_open_action::truncate_exists,
+                fast_task::files::_sync_flags{}
+            );
             data.get([&](auto& value) {
                 for (const auto& line : value)
                     file << line << '\n';
@@ -82,7 +102,12 @@ namespace copper_server::storage {
         data.set([&](auto& value) {
             value.clear();
         });
-        fast_task::files::async_iofstream file(path, std::ios::out | std::ios::trunc);
+        fast_task::files::async_iofstream file(
+            path,
+            fast_task::files::open_mode::write,
+            fast_task::files::on_open_action::truncate_exists,
+            fast_task::files::_sync_flags{}
+        );
         file.flush();
     }
 }

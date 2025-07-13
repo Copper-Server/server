@@ -29,7 +29,10 @@ namespace copper_server::build_in_plugins::network::tcp {
     public:
         SpecialPluginHandshakeRegistration();
 
-        void register_handle(std::unique_ptr<SpecialPluginHandshake>&& self);
+        ~SpecialPluginHandshakeRegistration() noexcept {}
+
+        void
+        register_handle(std::unique_ptr<SpecialPluginHandshake>&& self);
         void unregister_handle(SpecialPluginHandshake* self);
 
         //return true to break

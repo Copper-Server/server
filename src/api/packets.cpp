@@ -166,8 +166,8 @@ namespace copper_server {
                 return call_function_selector(play, bundleResponse, std::move(response))
             }
 
-            base_objects::network::response spawnEntity(base_objects::SharedClientData& client, const base_objects::entity& entity, uint16_t protocol){
-                return call_function_selector(play, spawnEntity, entity, 1)
+            base_objects::network::response spawnEntity(base_objects::SharedClientData& client, const base_objects::entity& entity){
+                return call_function_selector(play, spawnEntity, entity)
             }
 
             base_objects::network::response entityAnimation(base_objects::SharedClientData& client, const base_objects::entity& entity, base_objects::entity_animation animation){

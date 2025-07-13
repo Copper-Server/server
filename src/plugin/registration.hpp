@@ -55,7 +55,7 @@ namespace copper_server {
             });
         }
 
-        virtual ~PluginRegistration() {
+        virtual ~PluginRegistration() noexcept {
             clean_up_registered_events();
         }
 

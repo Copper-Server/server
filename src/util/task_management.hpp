@@ -6,7 +6,7 @@
 
 struct Task {
     static void start(const std::function<void()>& fn) {
-        fast_task::task::start(std::make_shared<fast_task::task>(fn));
+        fast_task::scheduler::start(std::make_shared<fast_task::task>(fn));
     }
 };
 

@@ -61,7 +61,7 @@ include_directories(${Boost_INCLUDE_DIRS} ${CC_INCLUDE_DIR} ${ZLIB_INCLUDE_DIRS}
 
 
 IF(MSVC)
-  SET(CMAKE_CXX_FLAGS "/EHsc")
+  SET(CMAKE_CXX_FLAGS "/EHa")
 ENDIF(MSVC)
 add_executable(CopperServer ${SRCFILES} ${RESOURCE_FILES_build})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

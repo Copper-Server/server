@@ -53,7 +53,14 @@ namespace copper_server::build_in_plugins {
                                   + "_" + std::to_string(timeinfo->tm_sec)
                                   + ".senbt");
             std::filesystem::create_directories(report_path.parent_path());
-            fast_task::files::async_iofstream report_file(report_path, std::ios::out | std::ios::binary);
+            fast_task::files::async_iofstream report_file(
+                report_path,
+                fast_task::files::open_mode::write,
+                fast_task::files::on_open_action::create_new,
+                fast_task::files::_sync_flags{}
+            );
+
+            (report_path, std::ios::out | std::ios::binary);
             if (!report_file.is_open()) {
                 Chat message("Failed to save chunk tick speed report for world: " + world_name + " to: " + report_path.string());
                 message.SetColor("red");
@@ -142,6 +149,8 @@ namespace copper_server::build_in_plugins {
         WorldManagementPlugin()
             : worlds_storage(api::configuration::get().server.get_worlds_path()) {}
 
+        ~WorldManagementPlugin() noexcept {}
+
         void OnInitialization(const PluginRegistrationPtr& self) {
             api::world::register_worlds_data(worlds_storage);
         }
@@ -194,7 +203,7 @@ namespace copper_server::build_in_plugins {
                             complete = true;
                         } else {
                             log::info("World", "world " + it + " loading... " + std::to_string(loaded) + " / " + std::to_string(target));
-                            fast_task::task::sleep(500);
+                            fast_task::this_task::sleep_for(std::chrono::milliseconds(500));
                         }
                     }
                 }));
@@ -206,46 +215,42 @@ namespace copper_server::build_in_plugins {
                 } else
                     worlds_storage.base_world_id = worlds_storage.get_list()[0];
             }
-            log::info("World", "installing ticking task...");
+            log::debug("World", "installing ticking task...");
             world_ticking = std::make_shared<fast_task::task>([this]() {
-                log::info("World", "load complete.");
+                log::debug("World", "ticking task installed");
                 std::chrono::high_resolution_clock::time_point last_tick = std::chrono::high_resolution_clock::now();
                 std::chrono::high_resolution_clock::time_point tick_next_awoke = std::chrono::high_resolution_clock::now();
+                while (!worlds_storage.ticks_per_second)
+                    fast_task::this_task::sleep_for(std::chrono::milliseconds(1000));
+                constexpr auto second = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1));
+
+                auto sleep_time = std::chrono::high_resolution_clock::now() - tick_next_awoke;
                 while (true) {
-                    if (!worlds_storage.ticks_per_second)
-                        return std::chrono::milliseconds(1000);
-                    constexpr auto second = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1));
+                    if (fast_task::this_task::is_cancellation_requested())
+                        break;
+                    auto current_time = std::chrono::high_resolution_clock::now();
+                    auto elapsed = current_time - last_tick;
+                    try {
+                        worlds_storage.apply_tick(current_time, elapsed);
+                    } catch (const std::exception& e) {
+                        log::error("World", "Error ticking world: " + std::string(e.what()));
+                    } catch (...) {
+                        log::error("World", "Error ticking world. Undefined exception.");
+                    }
+                    tick_next_awoke = std::chrono::high_resolution_clock::now();
+                    auto to_tick = tick_next_awoke - current_time;
                     const auto tick_time = second / worlds_storage.ticks_per_second;
 
-                    auto sleep_time = std::chrono::high_resolution_clock::now() - tick_next_awoke;
-                    while (true) {
-                        try {
-                            fast_task::task::check_cancellation();
-                            auto current_time = std::chrono::high_resolution_clock::now();
-                            auto elapsed = current_time - last_tick;
-                            worlds_storage.apply_tick(current_time, elapsed);
-                            tick_next_awoke = std::chrono::high_resolution_clock::now();
-                            auto to_tick = tick_next_awoke - current_time;
-
-                            if (to_tick < tick_time + sleep_time) {
-                                tick_next_awoke += tick_time - to_tick - sleep_time;
-                                fast_task::task::sleep_until(std::chrono::high_resolution_clock::now() + (tick_time - to_tick - sleep_time));
-                                sleep_time = std::chrono::high_resolution_clock::now() - tick_next_awoke;
-                            }
-                            last_tick = current_time;
-                        } catch (const std::exception& e) {
-                            log::error("World", "Error ticking world: " + std::string(e.what()));
-                        } catch (const fast_task::task_cancellation&) {
-                            log::debug("World", "ticking task canceled.");
-                            throw; //DO not remove, handled by lib!
-                        } catch (...) {
-                            log::error("World", "Error ticking world. Undefined exception.");
-                        }
+                    if (to_tick < tick_time + sleep_time) {
+                        tick_next_awoke += tick_time - to_tick - sleep_time;
+                        fast_task::this_task::sleep_for(tick_time - to_tick - sleep_time);
+                        sleep_time = std::chrono::high_resolution_clock::now() - tick_next_awoke;
                     }
+                    last_tick = current_time;
                 }
             });
-            fast_task::task::start(world_ticking);
-            fast_task::task::await_multiple(tasks);
+            fast_task::scheduler::start(world_ticking);
+            fast_task::task::await_multiple(tasks, false, true);
         }
 
         void OnUnload(const PluginRegistrationPtr& self) override {

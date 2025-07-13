@@ -2,8 +2,6 @@
 #include <src/storage/world_data.hpp>
 
 namespace copper_server::base_objects {
-    std::unordered_map<block_id_t, std::unordered_map<uint32_t, block_id_t>> static_block_data::internal_block_aliases; //local id -> protocol id -> block id
-    std::unordered_map<block_id_t, std::unordered_map<std::string, uint32_t>> static_block_data::internal_block_aliases_protocol;
     list_array<shape_data> static_block_data::all_shapes;
     list_array<std::string> static_block_data::block_entity_types;
     std::unordered_map<int32_t, std::unordered_set<std::string>> static_block_data::all_properties;
@@ -14,6 +12,7 @@ namespace copper_server::base_objects {
 
     std::unordered_map<std::string, std::shared_ptr<static_block_data>> block::named_full_block_data;
     list_array<std::shared_ptr<static_block_data>> block::full_block_data_;
+    list_array<std::shared_ptr<static_block_data>> block::general_block_data_;
 
     void block::tick(storage::world_data& world, base_objects::world::sub_chunk_data& sub_chunk, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked) {
     retry:
@@ -177,12 +176,16 @@ namespace copper_server::base_objects {
         return getStaticData().is_block_entity;
     }
 
-    void block::initialize() {
-        static bool inited = false;
-        if (inited)
-            return;
-        inited = true;
-        auto& air = full_block_data_.emplace_back();
+    void block::initialize(){
+        list_array<std::shared_ptr<static_block_data>> data;
+        size_t max_ids = 0;
+        data.resize(full_block_data_.size());
+        for(auto& it : full_block_data_){
+            data[it->general_block_id] = it;
+            max_ids = std::max<size_t>(it->general_block_id, max_ids);
+        }
+        data.resize(max_ids);
+        general_block_data_ = data;
     }
 
     size_t block::block_states_size() {
@@ -193,34 +196,6 @@ namespace copper_server::base_objects {
         block::access_full_block_data([](auto& i0, auto& i1) {
             i0.clear();
             i1.clear();
-        });
-    }
-
-    void static_block_data::initialize_blocks() {
-        block::access_full_block_data([&](list_array<std::shared_ptr<static_block_data>>& arr, auto& ignored) {
-            block_id_t id;
-            internal_block_aliases.clear();
-            for (auto& _block : arr) {
-                auto& block = *_block;
-                auto& local_aliases = internal_block_aliases[id];
-                for (auto& [protocol, assignations] : internal_block_aliases_protocol) {
-                    if (assignations.find(block.name) != assignations.end()) {
-                        local_aliases[protocol] = assignations[block.name];
-                    } else {
-                        bool found = false;
-                        for (auto& alias : block.block_aliases) {
-                            if (assignations.find(alias) != assignations.end()) {
-                                local_aliases[protocol] = assignations[alias];
-                                found = true;
-                                break;
-                            }
-                        }
-                        if (!found)
-                            throw std::runtime_error("Block alias for " + block.name + '[' + std::to_string(id) + " not found in protocol " + std::to_string(protocol));
-                    }
-                }
-                ++id;
-            }
         });
     }
 }

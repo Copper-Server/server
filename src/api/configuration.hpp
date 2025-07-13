@@ -76,8 +76,6 @@ namespace copper_server::api::configuration {
             float all_connections_timeout_seconds = 30000; //30 sec
 
 
-            list_array<std::string> allowed_versions; //if not empty, then all supported by internal implementation, can be defined by version name or number
-
             bool prevent_proxy_connections = false; //	If the ISP/AS sent from the server is different from the one from Mojang Studios' authentication server, the player is kicked.
             bool enable_encryption = true;
             bool send_nbt_data_in_chunk = true; //enabled by default to be same as vanilla server, this option exists to allow 'fix' chunk ban and reduce network consumption, should not affect gameplay for regular players
@@ -87,8 +85,6 @@ namespace copper_server::api::configuration {
                 prevent_join
             } connection_conflict
                 = connection_conflict_t::kick_connected;
-
-            /*[[computed_from(allowed_versions)]] [runtime]*/ list_array<int32_t> allowed_versions_processed;
         } protocol;
 
         //in this struct everything can be disabled by setting to zero

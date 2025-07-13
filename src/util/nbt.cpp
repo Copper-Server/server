@@ -172,6 +172,7 @@ namespace copper_server::util {
                 throw std::exception("Unsupported tag");
             }
             break;
+        case enbt::type::uuid:
         case enbt::type::string:
             nbt_data.push_back(8);
             break;
@@ -316,6 +317,11 @@ namespace copper_server::util {
             insertString(str.data(), str.size());
             break;
         }
+        case enbt::type::uuid: {
+            enbt::value uid = ((enbt::raw_uuid)enbt).to_string();
+            RecursiveBuilder(uid, insert_type, name, compress, insert_name);
+            break;
+        }
         case enbt::type::sarray:
         case enbt::type::array:
         case enbt::type::darray:
@@ -357,6 +363,15 @@ namespace copper_server::util {
             if (i + length >= max_size)
                 throw std::out_of_range("Out of bounds");
             i += length;
+            if (length <= 32 && length >= 16) {
+                try {
+                    enbt::raw_uuid res;
+                    auto check_view = enbt::raw_uuid::from_uuid_string(res, std::string_view((const char*)data + i - length, length));
+                    if (check_view.size() == length)
+                        return enbt::value(res);
+                } catch (...) {
+                }
+            }
             return enbt::value((const char*)data + i - length, length);
         }
         case 9: { //list

@@ -137,27 +137,6 @@ namespace copper_server::api::configuration {
             cfg.protocol.prevent_proxy_connections = protocol["prevent_proxy_connections"].or_apply(cfg.protocol.prevent_proxy_connections);
             cfg.protocol.enable_encryption = protocol["enable_encryption"].or_apply(cfg.protocol.enable_encryption);
             cfg.protocol.send_nbt_data_in_chunk = protocol["send_nbt_data_in_chunk"].or_apply(cfg.protocol.send_nbt_data_in_chunk);
-
-
-            if (protocol.contains("allowed_versions")) {
-                auto allowed_versions = js_array::get_array(protocol["allowed_versions"]);
-                cfg.protocol.allowed_versions.clear();
-                cfg.protocol.allowed_versions.reserve(allowed_versions.size());
-                cfg.protocol.allowed_versions_processed.clear();
-                cfg.protocol.allowed_versions_processed.reserve(allowed_versions.size());
-                for (auto&& it : allowed_versions) {
-                    std::string version = it;
-                    cfg.protocol.allowed_versions.push_back(version);
-                    cfg.protocol.allowed_versions_processed.push_back(packets::java_name_to_protocol(version));
-                }
-                cfg.protocol.allowed_versions_processed.unify();
-                if (cfg.protocol.allowed_versions.empty())
-                    cfg.protocol.allowed_versions_processed = {770};
-            } else {
-                auto allowed_versions = js_array::get_array(protocol["allowed_versions"] = boost::json::array());
-                for (const auto& it : cfg.protocol.allowed_versions)
-                    allowed_versions.push_back(it);
-            }
             set_from_string(cfg.protocol.connection_conflict, protocol["connection_conflict"].or_apply(to_string(cfg.protocol.connection_conflict)));
         }
         {
@@ -278,7 +257,12 @@ namespace copper_server::api::configuration {
         }
 
         if (cfg.status.favicon_path != "" && calculate_favicon) {
-            fast_task::files::async_iofstream file(cfg.status.favicon_path, std::istream::in | std::istream::binary);
+            fast_task::files::async_iofstream file(
+                cfg.status.favicon_path,
+                fast_task::files::open_mode::read,
+                fast_task::files::on_open_action::open,
+                fast_task::files::_sync_flags{}
+            );
             if (file.is_open()) {
                 file.seekg(0, std::istream::end);
                 size_t file_size = file.tellg();
@@ -305,7 +289,13 @@ namespace copper_server::api::configuration {
     }
 
     void save_config(const std::filesystem::path& config_file_path, boost::json::object& config_data) {
-        fast_task::files::async_iofstream file(config_file_path / "config.json", std::iostream::trunc);
+        fast_task::files::async_iofstream file(
+            config_file_path / "config.json",
+            fast_task::files::open_mode::write,
+            fast_task::files::on_open_action::truncate_exists,
+            fast_task::files::_sync_flags{}
+        );
+
         if (!file.is_open()) {
             log::warn("server", "Failed to save config file. Can not open file.");
             return;

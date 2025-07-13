@@ -1,0 +1,411 @@
+{
+  "water": {
+    "id": 0,
+    "effects": [],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "mundane": {
+    "id": 1,
+    "effects": [],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "thick": {
+    "id": 2,
+    "effects": [],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "awkward": {
+    "id": 3,
+    "effects": [],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "night_vision": {
+    "id": 4,
+    "effects": [
+      15
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "long_night_vision": {
+    "id": 5,
+    "effects": [
+      15
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "invisibility": {
+    "id": 6,
+    "effects": [
+      13
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "long_invisibility": {
+    "id": 7,
+    "effects": [
+      13
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "leaping": {
+    "id": 8,
+    "effects": [
+      7
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "long_leaping": {
+    "id": 9,
+    "effects": [
+      7
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "strong_leaping": {
+    "id": 10,
+    "effects": [
+      7
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "fire_resistance": {
+    "id": 11,
+    "effects": [
+      11
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "long_fire_resistance": {
+    "id": 12,
+    "effects": [
+      11
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "swiftness": {
+    "id": 13,
+    "effects": [
+      0
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "long_swiftness": {
+    "id": 14,
+    "effects": [
+      0
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "strong_swiftness": {
+    "id": 15,
+    "effects": [
+      0
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "slowness": {
+    "id": 16,
+    "effects": [
+      1
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "long_slowness": {
+    "id": 17,
+    "effects": [
+      1
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "strong_slowness": {
+    "id": 18,
+    "effects": [
+      1
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "turtle_master": {
+    "id": 19,
+    "effects": [
+      1,
+      10
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "long_turtle_master": {
+    "id": 20,
+    "effects": [
+      1,
+      10
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "strong_turtle_master": {
+    "id": 21,
+    "effects": [
+      1,
+      10
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "water_breathing": {
+    "id": 22,
+    "effects": [
+      12
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "long_water_breathing": {
+    "id": 23,
+    "effects": [
+      12
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "healing": {
+    "id": 24,
+    "effects": [
+      5
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "strong_healing": {
+    "id": 25,
+    "effects": [
+      5
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "harming": {
+    "id": 26,
+    "effects": [
+      6
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "strong_harming": {
+    "id": 27,
+    "effects": [
+      6
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "poison": {
+    "id": 28,
+    "effects": [
+      18
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "long_poison": {
+    "id": 29,
+    "effects": [
+      18
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "strong_poison": {
+    "id": 30,
+    "effects": [
+      18
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "regeneration": {
+    "id": 31,
+    "effects": [
+      9
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "long_regeneration": {
+    "id": 32,
+    "effects": [
+      9
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "strong_regeneration": {
+    "id": 33,
+    "effects": [
+      9
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "strength": {
+    "id": 34,
+    "effects": [
+      4
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "long_strength": {
+    "id": 35,
+    "effects": [
+      4
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "strong_strength": {
+    "id": 36,
+    "effects": [
+      4
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "weakness": {
+    "id": 37,
+    "effects": [
+      17
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "long_weakness": {
+    "id": 38,
+    "effects": [
+      17
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "luck": {
+    "id": 39,
+    "effects": [
+      25
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "slow_falling": {
+    "id": 40,
+    "effects": [
+      27
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "long_slow_falling": {
+    "id": 41,
+    "effects": [
+      27
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "wind_charged": {
+    "id": 42,
+    "effects": [
+      35
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "weaving": {
+    "id": 43,
+    "effects": [
+      36
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "oozing": {
+    "id": 44,
+    "effects": [
+      37
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  },
+  "infested": {
+    "id": 45,
+    "effects": [
+      38
+    ],
+    "required_features": [
+      "minecraft:vanilla"
+    ]
+  }
+}

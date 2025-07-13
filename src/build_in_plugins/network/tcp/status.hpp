@@ -4,6 +4,7 @@
 #include <src/api/configuration.hpp>
 #include <src/api/players.hpp>
 #include <src/plugin/special.hpp>
+#include <src/registers.hpp>
 #include <src/storage/memory/online_player.hpp>
 #include <src/util/conversions.hpp>
 
@@ -17,6 +18,8 @@ namespace copper_server::build_in_plugins::network::tcp {
 
     public:
         Status() {}
+
+        ~Status() noexcept {}
 
         std::string StatusResponseVersionName() override {
             return api::configuration::get().status.server_name;
@@ -66,7 +69,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         }
 
         bool ConnectionAvailable(int32_t protocol_version) override {
-            return api::configuration::get().protocol.allowed_versions_processed.contains(protocol_version);
+            return protocol_version == registers::current_protocol_id;
         }
 
         //return empty string if no icon, icon must be 64x64 and png format in base64
@@ -86,4 +89,4 @@ namespace copper_server::build_in_plugins::network::tcp {
         }
     };
 }
-#endif /* SRC_BUILD_IN_PLUGINS_SPECIAL_STATIS */
+#endif /* SRC_BUILD_IN_PLUGINS_SPECIAL_STATUS */

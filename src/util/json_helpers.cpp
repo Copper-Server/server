@@ -8,7 +8,12 @@ namespace copper_server::util {
     std::optional<boost::json::object> try_read_json_file(const std::filesystem::path& file_path) {
         boost::json::object data;
         {
-            fast_task::files::async_iofstream file(file_path);
+            fast_task::files::async_iofstream file(
+                file_path,
+                fast_task::files::open_mode::read,
+                fast_task::files::on_open_action::open,
+                fast_task::files::_sync_flags{}
+            );
             if (file.is_open()) {
                 if (!std::filesystem::file_size(file_path))
                     return data;

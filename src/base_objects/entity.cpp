@@ -16,7 +16,6 @@ namespace copper_server {
         };
 
         fast_task::protected_value<entities_storage> data_for_entities;
-        std::unordered_map<uint32_t, std::unordered_map<std::string, uint32_t>> entity_data::internal_entity_aliases_protocol;
 
         const entity_data& entity_data::get_entity(uint16_t id) {
             return data_for_entities.get([&](auto& data) -> const entity_data& {
@@ -73,27 +72,8 @@ namespace copper_server {
         void entity_data::initialize_entities() {
             data_for_entities.set([&](auto& data) {
                 for (auto& [id, entity] : data._registry) {
-                    entity.internal_entity_aliases.clear();
-
                     if (auto it = data.entity_processors.find(entity.id); it != data.entity_processors.end())
                         entity.processor = it->second;
-
-                    for (auto& [protocol, assignations] : internal_entity_aliases_protocol) {
-                        if (assignations.find(entity.id) != assignations.end()) {
-                            entity.internal_entity_aliases[protocol] = assignations[entity.id];
-                        } else {
-                            bool found = false;
-                            for (auto& alias : entity.entity_aliases) {
-                                if (assignations.find(alias) != assignations.end()) {
-                                    entity.internal_entity_aliases[protocol] = assignations[alias];
-                                    found = true;
-                                    break;
-                                }
-                            }
-                            if (!found)
-                                throw std::runtime_error("Entity alias for " + entity.id + " not found in protocol " + std::to_string(protocol));
-                        }
-                    }
                 }
             });
         }

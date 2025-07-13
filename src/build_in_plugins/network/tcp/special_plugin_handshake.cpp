@@ -1,6 +1,8 @@
 #include <src/build_in_plugins/network/tcp/special_plugin_handshake.hpp>
 
 namespace copper_server::build_in_plugins::network::tcp {
+
+
     SpecialPluginHandshakeRegistration::SpecialPluginHandshakeRegistration() {}
 
     void SpecialPluginHandshakeRegistration::register_handle(std::unique_ptr<SpecialPluginHandshake>&& self) {

@@ -310,5 +310,12 @@ namespace copper_server {
         data.range_read(readed);
         return res;
     }
+
+    static util::NBT ReadNetworkNBT(ArrayStream& data) {
+        size_t readed = 0;
+        util::NBT res(util::NBT::readNBT(data.data_read(), data.size_read(), readed));
+        data.range_read(readed);
+        return res;
+    }
 }
 #endif /* SRC_UTIL_READERS */

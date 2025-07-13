@@ -1,6 +1,7 @@
 
 #include <src/api/configuration.hpp>
 #include <src/api/packets.hpp>
+#include <src/base_objects/network/tcp/accept_packet_registry.hpp>
 #include <src/build_in_plugins/network/tcp/client_handler/abstract.hpp>
 #include <src/build_in_plugins/network/tcp/special_plugin_handshake.hpp>
 #include <src/build_in_plugins/network/tcp/state_handshaking.hpp>
@@ -58,7 +59,7 @@ namespace copper_server::build_in_plugins::network::tcp {
             next_handler = new tcp_client_handle_status(session);
             return base_objects::network::response::empty();
         case 2: //login
-            if (!api::configuration::get().protocol.allowed_versions_processed.contains(protocol_version))
+            if (!base_objects::network::tcp::packet_registry.serverbound.play.registry.contains(protocol_version))
                 return base_objects::network::response::disconnect();
             log::debug("Handshaking", "Switch to login");
             next_handler = client_handler::abstract::createhandle_login(session);

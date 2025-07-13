@@ -185,7 +185,7 @@ namespace copper_server::base_objects::events {
             auto task = std::make_shared<fast_task::task>(
                 [this, args]() { notify(args); }
             );
-            fast_task::task::start(task);
+            fast_task::scheduler::start(task);
             return task;
         }
 
@@ -257,7 +257,7 @@ namespace copper_server::base_objects::events {
                     }
                 );
                 tasks.push_back(task);
-                fast_task::task::start(task);
+                fast_task::scheduler::start(task);
             }
             lock.unlock();
             fast_task::task::await_multiple(tasks, true, true);
@@ -454,7 +454,7 @@ namespace copper_server::base_objects::events {
             auto task = std::make_shared<fast_task::task>(
                 [this]() { notify(); }
             );
-            fast_task::task::start(task);
+            fast_task::scheduler::start(task);
             return task;
         }
 
@@ -526,7 +526,7 @@ namespace copper_server::base_objects::events {
                     }
                 );
                 tasks.push_back(task);
-                fast_task::task::start(task);
+                fast_task::scheduler::start(task);
             }
             lock.unlock();
             fast_task::task::await_multiple(tasks, true, true);

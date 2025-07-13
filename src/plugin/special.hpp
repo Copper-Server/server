@@ -10,7 +10,6 @@ namespace copper_server {
     public:
         SpecialPluginStatus() {}
 
-
         virtual std::string StatusResponseVersionName() {
             return "Copper Server";
         }
@@ -53,7 +52,7 @@ namespace copper_server {
             return "";
         }
 
-        virtual ~SpecialPluginStatus() {}
+        virtual ~SpecialPluginStatus() noexcept {}
     };
 
     extern SpecialPluginStatus* special_status;

@@ -40,53 +40,37 @@ namespace copper_server {
         //SERVER
         std::unordered_map<std::string, Advancement> advancements;
 
-        std::unordered_map<int32_t, std::unordered_map<int32_t, uint32_t>> item_attribute::protocol_aliases;
-        std::unordered_map<std::string, item_attribute> attributes;
+        std::unordered_map<std::string, attribute> attributes;
         list_array<decltype(attributes)::iterator> attributes_cache;
 
         std::unordered_map<std::string, JukeboxSong> jukebox_songs;
+        list_array<decltype(jukebox_songs)::iterator> jukebox_songs_cache;
 
 
-        std::unordered_map<uint32_t, enbt::compound> individual_registers;
-        uint32_t use_registry_latest = -1;
+        enbt::compound current_protocol_registers;
+        uint32_t current_protocol_id;
 
-        enbt::compound& default_registry() {
-            if (use_registry_latest == -1)
-                throw std::runtime_error("No registry selected");
-            return individual_registers.at(use_registry_latest);
+        enbt::value& view_registry_entries(const std::string& registry) {
+            return current_protocol_registers.at(registry).at("entries");
         }
 
-        enbt::value& default_registry_entries(const std::string& registry) {
-            return default_registry().at(registry).at("entries");
+        enbt::value& view_registry_proto_invert(const std::string& registry) {
+            return current_protocol_registers.at(registry).at("proto_invert");
         }
 
-        enbt::compound& view_registry(int32_t protocol) {
-            if (protocol == -1)
-                return default_registry();
-            return individual_registers.at(protocol);
-        }
-
-        enbt::value& view_registry_entries(const std::string& registry, int32_t protocol) {
-            return view_registry(protocol).at(registry).at("entries");
-        }
-
-        enbt::value& view_registry_proto_invert(const std::string& registry, int32_t protocol) {
-            return view_registry(protocol).at(registry).at("proto_invert");
-        }
-
-        int32_t view_reg_pro_id(const std::string& registry, const std::string& item, int32_t protocol) {
+        int32_t view_reg_pro_id(const std::string& registry, const std::string& item) {
             if (item.contains(":"))
-                return view_registry_entries(registry, protocol).at(item).at("protocol_id");
+                return view_registry_entries(registry).at(item).at("protocol_id");
             else
-                return view_registry_entries(registry, protocol).at("minecraft:" + item).at("protocol_id");
+                return view_registry_entries(registry).at("minecraft:" + item).at("protocol_id");
         }
 
-        std::string view_reg_pro_name(const std::string& registry, int32_t id, int32_t protocol) {
-            return view_registry_proto_invert(registry, protocol).at(id);
+        std::string view_reg_pro_name(const std::string& registry, int32_t id) {
+            return view_registry_proto_invert(registry).at(id);
         }
 
-        list_array<int32_t> convert_reg_pro_id(const std::string& registry, const list_array<std::string>& item, int32_t protocol) {
-            auto& entries = view_registry_entries(registry, protocol);
+        list_array<int32_t> convert_reg_pro_id(const std::string& registry, const list_array<std::string>& item) {
+            auto& entries = view_registry_entries(registry);
             return item.convert<int32_t>([&entries](const auto& item) {
                 if (item.contains(":"))
                     return entries.at(item).at("protocol_id");
@@ -95,13 +79,13 @@ namespace copper_server {
             });
         }
 
-        list_array<std::string> convert_reg_pro_name(const std::string& registry, const list_array<int32_t>& item, int32_t protocol) {
-            auto& entries = view_registry_proto_invert(registry, protocol);
+        list_array<std::string> convert_reg_pro_name(const std::string& registry, const list_array<int32_t>& item) {
+            auto& entries = view_registry_proto_invert(registry);
             return item.convert<std::string>([&entries](const auto& item) { return entries.at(item); });
         }
 
-        list_array<int32_t> convert_reg_pro_id(const std::string& registry, const std::vector<std::string>& item, int32_t protocol) {
-            auto& entries = view_registry_entries(registry, protocol);
+        list_array<int32_t> convert_reg_pro_id(const std::string& registry, const std::vector<std::string>& item) {
+            auto& entries = view_registry_entries(registry);
             list_array<int32_t> result;
             result.reserve(item.size());
             for (const auto& i : item) {
@@ -113,8 +97,8 @@ namespace copper_server {
             return result;
         }
 
-        list_array<std::string> convert_reg_pro_name(const std::string& registry, const std::vector<int32_t>& item, int32_t protocol) {
-            auto& entries = view_registry_proto_invert(registry, protocol);
+        list_array<std::string> convert_reg_pro_name(const std::string& registry, const std::vector<int32_t>& item) {
+            auto& entries = view_registry_proto_invert(registry);
             list_array<std::string> result;
             result.reserve(item.size());
             for (const auto& i : item)
@@ -123,11 +107,9 @@ namespace copper_server {
         }
 
 
-        std::unordered_map<int32_t, std::unordered_map<int32_t, uint32_t>> potion::protocol_aliases;
         std::unordered_map<std::string, potion> potions;
         list_array<decltype(potions)::iterator> potions_cache;
 
-        std::unordered_map<int32_t, std::unordered_map<int32_t, uint32_t>> effect::protocol_aliases;
         std::unordered_map<std::string, effect> effects;
         list_array<decltype(effects)::iterator> effects_cache;
 

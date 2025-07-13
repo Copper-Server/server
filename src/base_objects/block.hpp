@@ -49,7 +49,6 @@ namespace copper_server {
             std::string piston_behavior;
             std::string name;
             std::string translation_key;
-            block_id_t general_block_id = 0; //does not represent state
             float slipperiness = 0;
             float velocity_multiplier = 0;
             float jump_velocity_multiplier = 0;
@@ -59,7 +58,9 @@ namespace copper_server {
             int32_t block_entity_id = 0; //used only when is_block_entity == true, like interact and storage
             int32_t default_drop_item_id = 0;
             int32_t experience = 0;
+            block_id_t general_block_id = 0; //does not represent state
             block_id_t default_state = 0;
+            block_id_t current_state = 0;
             uint8_t luminance = 0;
             uint8_t opacity = 0; //255 not opaque
             bool is_air : 1 = true;
@@ -192,12 +193,8 @@ namespace copper_server {
                   block_aliases(copy.block_aliases) {}
 
             //USED ONLY DURING FULL SERVER RELOAD!  DO NOT ALLOW CALL FROM THE USER CODE
-            static void reset_blocks();      //INTERNAL
-            static void initialize_blocks(); //INTERNAL, used to assign internal_block_aliases ids from block_aliases
+            static void reset_blocks(); //INTERNAL
 
-
-            static std::unordered_map<block_id_t, std::unordered_map<uint32_t, block_id_t>> internal_block_aliases; //local id -> protocol id -> block id
-            static std::unordered_map<block_id_t, std::unordered_map<std::string, uint32_t>> internal_block_aliases_protocol;
             static list_array<shape_data> all_shapes;
             static list_array<std::string> block_entity_types;
             static std::unordered_map<int32_t, std::unordered_set<std::string>> all_properties;
@@ -336,12 +333,17 @@ namespace copper_server {
             bool is_replaceable() const;
             bool is_block_entity() const;
 
+
             static static_block_data& get_block(const std::string& name) {
                 return *named_full_block_data.at(name);
             }
 
-            static static_block_data& get_block(block_id_t id) {
-                return *full_block_data_.at(id);
+            static static_block_data& get_block(block_id_t block_state_id) {
+                return *full_block_data_.at(block_state_id);
+            }
+
+            static static_block_data& get_general_block(block_id_t general_id) {
+                return *general_block_data_.at(general_id);
             }
 
             static block make_block(const std::string& name){
@@ -351,21 +353,12 @@ namespace copper_server {
                 return block(id);
             }
 
-            static block_id_t get_protocol_block_id(const std::string& name, int32_t protocol) {
-                auto& st = get_block(name);
-                return st.internal_block_aliases.at(st.default_state).at(protocol);
-            }
-
-            static block_id_t get_protocol_block_id(block_id_t id, int32_t protocol) {
-                auto& st = get_block(id);
-                return st.internal_block_aliases.at(st.default_state).at(protocol);
-            }
-
             static size_t block_states_size();
 
         private:
             static std::unordered_map<std::string, std::shared_ptr<static_block_data>> named_full_block_data;
             static list_array<std::shared_ptr<static_block_data>> full_block_data_;
+            static list_array<std::shared_ptr<static_block_data>> general_block_data_;
         };
 
         // clang-format off
