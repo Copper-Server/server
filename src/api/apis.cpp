@@ -9,7 +9,7 @@
 namespace copper_server::api {
     namespace allowlist {
         base_objects::events::event<allowlist_mode> on_mode_change;
-        base_objects::events::event<std::string> on_kick;
+        base_objects::events::event<base_objects::client_data_holder> on_kick;
         base_objects::events::event<std::string> on_add;
         base_objects::events::event<std::string> on_remove;
     }

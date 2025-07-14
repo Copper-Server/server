@@ -7,6 +7,7 @@
 #include <src/base_objects/events/event.hpp>
 #include <src/base_objects/packets.hpp>
 #include <src/log.hpp>
+#include <src/util/conversions.hpp>
 #include <src/util/json_helpers.hpp>
 #include <thread>
 
@@ -184,6 +185,7 @@ namespace copper_server::api::configuration {
                 cfg.anti_cheat.scaffold.enable_all = scaffold["enable_all"].or_apply(cfg.anti_cheat.scaffold.enable_all);
             }
             {
+
                 auto fastplace = js_object::get_object(anti_cheat["fastplace"]);
                 cfg.anti_cheat.fastplace.max_clicks = fastplace["max_clicks"].or_apply(cfg.anti_cheat.fastplace.max_clicks);
             }
@@ -288,6 +290,17 @@ namespace copper_server::api::configuration {
             }
         } else if (calculate_favicon)
             cfg.status.favicon.clear();
+
+        cfg.plugins = std::move(cfg.plugins).merge(util::conversions::json::from_json(js_object::get_object(data["plugins"]).get()));
+        data["plugins"] = util::conversions::json::to_json(cfg.plugins);
+
+        if (data.contains("disabled_plugins")) {
+            auto& disabled_plugins = (data["disabled_plugins"]).get().get_array();
+            disabled_plugins.clear();
+            disabled_plugins.reserve(cfg.disabled_plugins.size());
+            for (auto& it : cfg.disabled_plugins)
+                disabled_plugins.push_back((boost::json::string)it);
+        }
     }
 
     void save_config(const std::filesystem::path& config_file_path, boost::json::object& config_data) {
@@ -393,6 +406,40 @@ namespace copper_server::api::configuration {
 
 
     base_objects::events::event<void> updated;
+
+    ServerConfiguration::plugin_actions::plugin_actions(enbt::value& it) : it(it) {}
+
+    auto ServerConfiguration::plugin_actions::operator^(std::string_view name) -> plugin_actions {
+        if (it.is_none())
+            operator^=(enbt::compound());
+        return it[std::string(name)];
+    }
+
+    auto ServerConfiguration::plugin_actions::operator^=(const enbt::value& value) -> plugin_actions& {
+        it = value;
+        updated();
+        if (config.server.frozen_config)
+            return *this;
+        boost::json::value config_data = boost::json::object();
+        auto config_js = js_object::get_object(config_data.get_object());
+        merge_configs(config, config_js);
+        save_config(std::filesystem::current_path(), config_data.get_object());
+        return *this;
+    }
+
+    auto ServerConfiguration::plugin_actions::operator|=(const enbt::value& value) -> plugin_actions& {
+        if (it.is_none())
+            return operator^=(value);
+        return *this;
+    }
+
+    ServerConfiguration::plugin_actions::operator const enbt::value&() const {
+        return it;
+    }
+
+    auto ServerConfiguration::operator^(std::string_view name) -> plugin_actions {
+        return plugins[std::string(name)];
+    }
 
     void load(bool fill_default_values) {
         if (config.server.frozen_config)

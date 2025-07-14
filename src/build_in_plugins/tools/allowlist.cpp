@@ -1,5 +1,6 @@
 #include <src/api/allowlist.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/packets.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/log.hpp>
@@ -17,13 +18,26 @@ namespace copper_server::build_in_plugins {
 
         ~AllowListPlugin() noexcept {};
 
+        void OnInitialization(const PluginRegistrationPtr& self) {
+            api::configuration::get() ^ "allow_list" ^ "on_kick_message" |= enbt::compound{{"text", "You are not in allowlist."}, {"color", "red"}};
+        }
+
         void OnPostLoad(const PluginRegistrationPtr& self) override {
             register_event(api::allowlist::on_mode_change, base_objects::events::priority::heigh, [this](api::allowlist::allowlist_mode mode) {
-                if (mode == api::allowlist::allowlist_mode::block)
-                    allow_list.for_each(-1, [&](const auto& entry) {
-                        api::allowlist::on_kick(entry);
+                if (mode == api::allowlist::allowlist_mode::block) {
+                    bool reached = false;
+                    auto set = allow_list.entrys((size_t)-1, reached);
+                    api::players::get_players().for_each([&set](auto& client) {
+                        if (set.contains(client->name))
+                            api::allowlist::on_kick(client);
+                        return false;
                     });
+                }
                 this->mode = mode;
+                return false;
+            });
+            register_event(api::allowlist::on_kick, base_objects::events::priority::low, true, [this](const base_objects::client_data_holder& client) {
+                client->sendPacket(api::packets::play::kick(*client, Chat::fromEnbt(api::configuration::get() ^ "allow_list" ^ "on_kick_message")));
                 return false;
             });
         }
@@ -105,11 +119,11 @@ namespace copper_server::build_in_plugins {
             switch (mode) {
             case api::allowlist::allowlist_mode::block:
                 if (allow_list.contains(client->name))
-                    api::allowlist::on_kick(client->name);
+                    api::allowlist::on_kick(client);
                 break;
             case api::allowlist::allowlist_mode::allow:
                 if (!allow_list.contains(client->name))
-                    api::allowlist::on_kick(client->name);
+                    api::allowlist::on_kick(client);
                 break;
             default:
                 break;

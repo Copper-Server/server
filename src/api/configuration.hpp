@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <string>
 #include <unordered_map>
@@ -174,10 +175,28 @@ namespace copper_server::api::configuration {
             }
         } server;
 
+        //allows custom plugin settings
+        enbt::compound plugins;
+
+        list_array<std::string> disabled_plugins;
+
         //allowed dimensions to visit to player without the `action.world.transfer.disallowed` permission
         //if empty then this setting ignored
         std::unordered_set<std::string> allowed_dimensions = {"overworld"};
 
+        class plugin_actions {
+            enbt::value& it;
+            plugin_actions(enbt::value& it);
+            friend struct ServerConfiguration;
+
+        public:
+            plugin_actions operator^(std::string_view name);
+            plugin_actions& operator^=(const enbt::value& value);
+            plugin_actions& operator|=(const enbt::value& value);
+            operator const enbt::value&() const;
+        };
+
+        plugin_actions operator^(std::string_view name);
 
         std::string get(const std::string& config_item_path);
     };

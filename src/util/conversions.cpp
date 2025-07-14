@@ -688,6 +688,30 @@ namespace copper_server::util::conversions {
             }
         }
 
+        boost::json::object to_json(const enbt::compound& enbt) {
+            boost::json::object result;
+            result.reserve(enbt.size());
+            for (auto& [key, value] : enbt)
+                result[key] = to_json(value);
+            return result;
+        }
+
+        boost::json::array to_json(const enbt::dynamic_array& enbt) {
+            boost::json::array result;
+            result.reserve(enbt.size());
+            for (auto& item : enbt)
+                result.push_back(to_json(item));
+            return result;
+        }
+
+        boost::json::array to_json(const enbt::fixed_array& enbt) {
+            boost::json::array result;
+            result.reserve(enbt.size());
+            for (auto& item : enbt)
+                result.push_back(to_json(item));
+            return result;
+        }
+
         enbt::value from_json(const boost::json::value& json) {
             switch (json.kind()) {
             case boost::json::kind::null:
@@ -723,7 +747,7 @@ namespace copper_server::util::conversions {
             }
         }
 
-        enbt::value from_json(const boost::json::object& obj) {
+        enbt::compound from_json(const boost::json::object& obj) {
             enbt::compound result;
             result.reserve(obj.size());
             for (auto& [key, value] : obj)
@@ -731,7 +755,7 @@ namespace copper_server::util::conversions {
             return result;
         }
 
-        enbt::value from_json(const boost::json::array& arr) {
+        enbt::dynamic_array from_json(const boost::json::array& arr) {
             std::vector<enbt::value> result;
             result.reserve(arr.size());
             for (auto& item : arr)
