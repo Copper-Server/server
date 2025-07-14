@@ -79,7 +79,7 @@ namespace copper_server::build_in_plugins {
 
             console_data.client->player_data.permission_groups = {"console", "operator"};
 
-            register_event(log::commands::on_command, base_objects::events::priority::heigh, [&](const std::string& command) {
+            register_event(api::console::on_command, base_objects::events::priority::heigh, [&](const std::string& command) {
                 if (command.empty())
                     return false;
                 log::info("command", command);

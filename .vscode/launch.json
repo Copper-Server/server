@@ -49,10 +49,7 @@
                 },
             ],
             "visualizerFile": [
-                "${workspaceFolder}/src/util/link_garbage_remover.natvis",
-                "${workspaceFolder}/src/run_time/attacha_abi_structs.natvis",
-                "${workspaceFolder}/src/run_time/asm/FuncEnvironment.natvis",
-                "${workspaceFolder}/src/library/list_array/list_array.natvis"
+                "${workspaceFolder}/library/list_array/list_array.natvis"
             ]
         },
     ]

@@ -34,7 +34,7 @@ int main() {
 
 
         log::commands::init();
-        log::set_log_file(std::filesystem::current_path() / "log.txt");
+        log::set_log_folder(api::configuration::get().server.get_storage_path() / "logs");
         log::info("Initializer thread", "Initializing server...");
         pluginManagement.autoRegister();
         pluginManagement.callInitialization();

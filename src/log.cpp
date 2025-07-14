@@ -7,11 +7,9 @@
 #include <src/base_objects/events/event.hpp>
 #include <src/log.hpp>
 #include <src/util/task_management.hpp>
+#include <src/api/console.hpp>
 
 namespace copper_server::log {
-    namespace commands {
-        base_objects::events::event<std::string> on_command;
-    }
 
     std::string log_levels_names[(int)level::__max] = {
         "info",
@@ -52,32 +50,24 @@ namespace copper_server::log {
         };
 
         void print(log::level level, std::string_view source, std::string_view message) {
-            auto duration = std::chrono::steady_clock::now().time_since_epoch();
+            auto duration = std::chrono::system_clock::now().time_since_epoch();
 
-            auto years = std::chrono::duration_cast<std::chrono::months>(duration);
+            auto years = std::chrono::duration_cast<std::chrono::years>(duration);
             duration -= years;
-
             auto months = std::chrono::duration_cast<std::chrono::months>(duration);
             duration -= months;
-
             auto days = std::chrono::duration_cast<std::chrono::days>(duration);
             duration -= days;
-
             auto hours = std::chrono::duration_cast<std::chrono::hours>(duration);
             duration -= hours;
-
             auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
             duration -= minutes;
-
             auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration);
             duration -= seconds;
-
             auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(duration);
             duration -= milliseconds;
-
             auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(duration);
             duration -= microseconds;
-
             auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration);
 
             handle.get([&](auto& handle) {
@@ -208,11 +198,38 @@ namespace copper_server::log {
         return file::log_levels_switch[(int)level];
     }
 
-    void set_log_file(std::filesystem::path path) {
-        file::set_handle(path);
+    void set_log_folder(std::filesystem::path path) {
+        std::filesystem::create_directories(path);
+        auto duration = std::chrono::system_clock::now().time_since_epoch();
+        auto years = std::chrono::duration_cast<std::chrono::years>(duration);
+        duration -= years;
+        auto months = std::chrono::duration_cast<std::chrono::months>(duration);
+        duration -= months;
+        auto days = std::chrono::duration_cast<std::chrono::days>(duration);
+        duration -= days;
+        auto hours = std::chrono::duration_cast<std::chrono::hours>(duration);
+        duration -= hours;
+        auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
+        duration -= minutes;
+        auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration);
+        duration -= seconds;
+        std::filesystem::path file;
+        do {
+            file = path
+                   / ("log_"
+                      + std::to_string(years.count())
+                      + "_" + std::to_string(months.count())
+                      + "_" + std::to_string(days.count())
+                      + "_" + std::to_string(hours.count())
+                      + "_" + std::to_string(minutes.count())
+                      + "_" + std::to_string(seconds.count())
+                      + ".txt");
+        } while (std::filesystem::exists(file));
+
+        file::set_handle(file);
     }
 
-    void disable_log_file() {
+    void disable_log_folder() {
         file::clear_handle();
     }
 
@@ -232,7 +249,7 @@ namespace copper_server::log {
                 auto command = cmd.get_command();
                 if (command.ends_with('\r'))
                     command = command.substr(0, command.size() - 1);
-                on_command.async_notify(command);
+                api::console::on_command.async_notify(command);
             };
         }
 

@@ -29,6 +29,8 @@ namespace copper_server {
         };
 
         list_array<event_auto_cleanup_t> cleanup_list;
+        bool is_loaded = false;
+        friend class PluginManagement;
 
     public:
         virtual void initializer(const std::shared_ptr<PluginRegistration>&) {};

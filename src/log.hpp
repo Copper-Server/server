@@ -37,11 +37,10 @@ namespace copper_server::log {
     void enable_log_file_level(level);
     bool is_enabled_file(level);
 
-    void set_log_file(std::filesystem::path);
-    void disable_log_file();
+    void set_log_folder(std::filesystem::path);
+    void disable_log_folder();
 
     namespace commands {
-        extern base_objects::events::event<std::string> on_command;
         bool is_inited();
         void init();
         void deinit();

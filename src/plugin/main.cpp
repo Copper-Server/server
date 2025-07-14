@@ -172,9 +172,12 @@ namespace copper_server {
                 vals.registration.unregister(plugin);
             }
         );
+        if (!plugin->is_loaded)
+            return;
         plugin->OnUnload(plugin);
         plugin->OnPostUnload(plugin);
         plugin->OnUnloadComplete(plugin);
+        plugin->is_loaded = false;
         plugin->clean_up_registered_events();
         plugin->OnUnregister(plugin);
     }
@@ -218,15 +221,19 @@ namespace copper_server {
         );
 
         future::forEach(plugins, [](auto& plugin) {
-            plugin.second->OnLoad(plugin.second);
+            if (!plugin.second->is_loaded)
+                plugin.second->OnLoad(plugin.second);
         })->wait();
 
         future::forEach(plugins, [](auto& plugin) {
-            plugin.second->OnPostLoad(plugin.second);
+            if (!plugin.second->is_loaded)
+                plugin.second->OnPostLoad(plugin.second);
         })->wait();
 
         future::forEach(plugins, [](auto& plugin) {
-            plugin.second->OnLoadComplete(plugin.second);
+            if (!plugin.second->is_loaded)
+                plugin.second->OnLoadComplete(plugin.second);
+            plugin.second->is_loaded = true;
         })->wait();
     }
 
@@ -238,14 +245,19 @@ namespace copper_server {
             }
         );
         for (auto& [name, plugin] : plugins)
-            plugin->OnUnload(plugin);
+            if (plugin->is_loaded)
+                plugin->OnUnload(plugin);
 
         for (auto& [name, plugin] : plugins)
-            plugin->OnPostUnload(plugin);
+            if (plugin->is_loaded)
+                plugin->OnPostUnload(plugin);
 
         for (auto& [name, plugin] : plugins) {
-            plugin->OnUnloadComplete(plugin);
-            plugin->clean_up_registered_events();
+            if (plugin->is_loaded) {
+                plugin->OnUnloadComplete(plugin);
+                plugin->clean_up_registered_events();
+                plugin->is_loaded = false;
+            }
         }
     }
 
@@ -257,8 +269,11 @@ namespace copper_server {
             }
         );
         for (auto& [name, plugin] : plugins) {
-            plugin->OnFaultUnload(plugin);
-            plugin->clean_up_registered_events();
+            if (plugin->is_loaded) {
+                plugin->is_loaded = false;
+                plugin->OnFaultUnload(plugin);
+                plugin->clean_up_registered_events();
+            }
         }
     }
 

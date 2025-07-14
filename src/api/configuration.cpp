@@ -11,9 +11,11 @@
 #include <thread>
 
 namespace copper_server::api::configuration {
-
     using namespace base_objects;
     using namespace util;
+
+    ServerConfiguration config;
+    bool loaded = false;
 
     std::string to_string(ServerConfiguration::Protocol::connection_conflict_t conflict_type) {
         switch (conflict_type) {
@@ -289,6 +291,8 @@ namespace copper_server::api::configuration {
     }
 
     void save_config(const std::filesystem::path& config_file_path, boost::json::object& config_data) {
+        if (config.server.frozen_config)
+            return;
         fast_task::files::async_iofstream file(
             config_file_path / "config.json",
             fast_task::files::open_mode::write,
@@ -387,13 +391,12 @@ namespace copper_server::api::configuration {
         return util::pretty_print(get_value_by_path_(config_data, config_item_path));
     }
 
-    ServerConfiguration config;
-    bool loaded = false;
-
 
     base_objects::events::event<void> updated;
 
     void load(bool fill_default_values) {
+        if (config.server.frozen_config)
+            return;
         {
             auto config_file_path = std::filesystem::current_path();
             auto config_data = try_read_json_file(config_file_path / "config.json");

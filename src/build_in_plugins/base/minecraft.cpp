@@ -8,7 +8,6 @@ namespace copper_server::build_in_plugins {
     public:
         void OnLoad(const PluginRegistrationPtr& self) override {
             pluginManagement.bindPluginOn("minecraft:brand", self, PluginManagement::registration_on::configuration);
-            //pluginManagement.bindPluginCookiesOn("minecraft:vanilla", self, PluginManagement::registration_on::configuration);
             log::info("Minecraft", "Minecraft plugin loaded!");
         }
 
@@ -31,13 +30,6 @@ namespace copper_server::build_in_plugins {
                 stream.r += len;
                 client->client_brand = brand;
             }
-            return std::nullopt;
-        }
-
-        plugin_response OnConfigurationCookie(const PluginRegistrationPtr& self, const std::string& chanel, const list_array<uint8_t>& data, base_objects::client_data_holder& client) override {
-            //if (chanel == "minecraft:vanilla") {
-            //
-            //}
             return std::nullopt;
         }
     };

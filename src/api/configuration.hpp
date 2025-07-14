@@ -149,6 +149,7 @@ namespace copper_server::api::configuration {
         } status;
 
         struct Server {
+            bool frozen_config = false; //disables file and uses default values
             /*[runtime]*/ const std::filesystem::path base_path = std::filesystem::current_path();
 
             std::string storage_folder = "storage";
@@ -169,7 +170,6 @@ namespace copper_server::api::configuration {
             }
 
             std::filesystem::path get_worlds_path() const {
-
                 return (base_path / worlds_folder).lexically_normal();
             }
         } server;

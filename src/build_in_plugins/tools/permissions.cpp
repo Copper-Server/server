@@ -52,8 +52,8 @@ namespace copper_server::build_in_plugins {
 
     public:
         PermissionsPlugin()
-            : op_list(api::configuration::get().server.base_path / "op_list.txt"),
-              manager(std::filesystem::current_path()) {
+            : op_list(api::configuration::get().server.get_storage_path() / "op_list.txt"),
+              manager(api::configuration::get().server.get_storage_path() / "permissions.json") {
         }
 
         ~PermissionsPlugin() noexcept {}

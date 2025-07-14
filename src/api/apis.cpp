@@ -115,6 +115,7 @@ namespace copper_server::api {
 
     namespace console {
         base_objects::virtual_client* console_data;
+        base_objects::events::event<std::string> on_command;
 
         void register_virtual_client(base_objects::virtual_client& client) {
             if (!console_data)

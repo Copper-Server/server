@@ -45,7 +45,7 @@ namespace copper_server::build_in_plugins {
 
         void OnPostLoad(const std::shared_ptr<PluginRegistration>&) override {
             if (api::console::console_enabled())
-                api::console::execute_as_console("version");
+                api::console::on_command("version");
         }
 
         void OnUnload(const PluginRegistrationPtr& self) override {

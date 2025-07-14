@@ -9,5 +9,5 @@
         [ ] Implement chunk encoding and send to player
 
 
-[ ] Fix file corruption for async streams
-[ ] Get rid of multiple protocols support, lend it to plugins
+[x] Fix file corruption for async streams
+[x] Get rid of multiple protocols support, lend it to plugins

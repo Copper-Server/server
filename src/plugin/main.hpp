@@ -31,6 +31,7 @@ namespace copper_server {
             virtual PluginRegistrationPtr construct() = 0;
         };
 
+
         void register_configuration(const PluginRegistrationPtr& self);
         void register_play(const PluginRegistrationPtr& self);
 

@@ -9,7 +9,7 @@
 
 namespace copper_server::storage {
     permissions_manager::permissions_manager(const std::filesystem::path& base_path)
-        : base_path(base_path / "permissions.json") {}
+        : base_path(base_path) {}
 
     bool permissions_manager::has_rights(const std::string& action_name, const base_objects::client_data_holder& client) {
         return protected_values.get([&](const protected_values_t& values) {
