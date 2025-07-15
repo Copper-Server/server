@@ -9,10 +9,10 @@ namespace copper_server::base_objects {
 
     bool item_potion_effect::effect_data::operator==(const effect_data& other) const {
         if (ambient != other.ambient
-            | duration != other.duration
-            | show_icon != other.show_icon
-            | show_particles != other.show_particles
-            | (!hidden_effect != !other.hidden_effect))
+            || duration != other.duration
+            || show_icon != other.show_icon
+            || show_particles != other.show_particles
+            || (!hidden_effect != !other.hidden_effect))
             return false;
 
         if (hidden_effect) {
@@ -315,7 +315,7 @@ namespace copper_server::base_objects::component {
     int32_t container::add(const slot_data& item) {
         if (!item.count)
             return 0;
-        int64_t to_add = item.count;
+        int32_t to_add = item.count;
         auto max_count = item.get_component<max_stack_size>().value;
         if (max_count == 0)
             return 0;
@@ -327,7 +327,7 @@ namespace copper_server::base_objects::component {
                 auto& to_insert = *items[slot];
                 if (to_insert.id == item.id) {
                     if (to_insert.is_same_def(item)) {
-                        int64_t add_res = int64_t(max_count) - to_insert.count;
+                        int32_t add_res = int32_t(max_count) - to_insert.count;
                         if (add_res > 0) {
                             add_res = std::min(add_res, to_add);
                             to_insert.count += add_res;
@@ -401,7 +401,7 @@ namespace copper_server::base_objects::component {
         for_each([&res, real_id, &count](const slot_data& check, size_t index) {
             if (count) {
                 if (check.id == real_id) {
-                    res.push_back(index);
+                    res.push_back((uint8_t)index);
                     if (count > check.count)
                         count -= check.count;
                     else
@@ -426,16 +426,16 @@ namespace copper_server::base_objects::component {
         if (count == (size_t)-1) {
             for_each([&](auto& item, auto slot) {
                 if (item.id == id)
-                    remove_slots.push_back(slot);
+                    remove_slots.push_back((uint8_t)slot);
             });
         } else {
             for_each([&](auto& item, auto slot) {
                 if (item.id == id && count) {
                     if (item.count <= count) {
                         count -= item.count;
-                        remove_slots.push_back(slot);
+                        remove_slots.push_back((uint8_t)slot);
                     } else {
-                        item.count -= count;
+                        item.count -= (int32_t)count;
                         count = 0;
                     }
                 }
@@ -659,12 +659,12 @@ namespace copper_server::base_objects::component {
         if (item.contains("state")) {
             std::vector<inner::block_predicate::property> props;
             props.reserve(item["state"].size());
-            for (auto& [name, item] : item["state"].as_compound()) {
+            for (auto& [name, current_item] : item["state"].as_compound()) {
                 inner::block_predicate::property it{.name = name};
-                if (item.is_compound())
-                    it.match = inner::block_predicate::property::ranged{.min = item["min"].as_string(), .max = item["max"].as_string()};
+                if (current_item.is_compound())
+                    it.match = inner::block_predicate::property::ranged{.min = current_item["min"].as_string(), .max = current_item["max"].as_string()};
                 else
-                    it.match = inner::block_predicate::property::exact{item.as_string()};
+                    it.match = inner::block_predicate::property::exact{current_item.as_string()};
                 props.push_back(std::move(it));
             }
             pred.properties = std::move(props);
@@ -687,7 +687,7 @@ namespace copper_server::base_objects::component {
                         enbt::fixed_array arr;
                         arr.reserve(it.size());
                         for (auto& i : it)
-                            arr.push_back(base_objects::block::get_general_block(i).name);
+                            arr.push_back(base_objects::block::get_general_block((base_objects::block_id_t)i).name);
                         res["blocks"] = std::move(arr);
                     }
                 },
@@ -824,8 +824,8 @@ namespace copper_server::base_objects::component {
                     res["type"] = "minecraft:apply_effects";
                     enbt::fixed_array arr;
                     arr.reserve(it.effects.size());
-                    for (auto& it : it.effects)
-                        arr.push_back(encode_item_potion_effect(it));
+                    for (auto& effect : it.effects)
+                        arr.push_back(encode_item_potion_effect(effect));
                     res["effects"] = std::move(arr);
                     if (it.probability)
                         res["probability"] = it.probability;
@@ -1041,8 +1041,8 @@ namespace copper_server::base_objects::component {
              auto comp = it.as_compound();
              can_place_on can_place_on;
              if (it.is_array()) {
-                 for (auto& it : it.as_array())
-                     can_place_on.value.push_back(parse_block_predicate(it.as_compound()));
+                 for (auto& pred : it.as_array())
+                     can_place_on.value.push_back(parse_block_predicate(pred.as_compound()));
              } else
                  can_place_on.value.push_back(parse_block_predicate(it.as_compound()));
              can_place_on.value.commit();
@@ -1162,11 +1162,11 @@ namespace copper_server::base_objects::component {
                  throw std::runtime_error("Unrecognized firework shape");
              res.trail = has_trail;
              res.twinkle = has_twinkle;
-             for (auto& it : colors)
-                 res.colors.push_back(it);
+             for (auto& color : colors)
+                 res.colors.push_back(color);
              res.colors.commit();
-             for (auto& it : fade_colors)
-                 res.fade_colors.push_back(it);
+             for (auto& color : fade_colors)
+                 res.fade_colors.push_back(color);
              res.fade_colors.commit();
 
              return firework_explosion{.value = std::move(res)};
@@ -1180,9 +1180,9 @@ namespace copper_server::base_objects::component {
              if (comp.contains("explosions")) {
                  auto arr = comp.at("explosions").as_array();
                  fireworks.explosions.reserve(arr.size());
-                 for (auto& it : arr) {
+                 for (auto& fire_expl : arr) {
                      auto pre_res = std::get<firework_explosion>(
-                         firework_explosion_parser(it)
+                         firework_explosion_parser(fire_expl)
                      );
                      fireworks.explosions.push_back(std::move(pre_res.value));
                  }
@@ -1232,8 +1232,8 @@ namespace copper_server::base_objects::component {
                 }};
             }else{
                 auto& str = it.as_string();
-                if(auto it = registers::jukebox_songs.find(str); it != registers::jukebox_songs.end())
-                    return jukebox_playable{jukebox_playable::jukebox_compact{(int32_t)it->second.id}};
+                if (auto song = registers::jukebox_songs.find(str); song != registers::jukebox_songs.end())
+                    return jukebox_playable{jukebox_playable::jukebox_compact{(int32_t)song->second.id}};
                 else
                     return jukebox_playable{str};
             }
@@ -1341,8 +1341,8 @@ namespace copper_server::base_objects::component {
                  if (comp.contains("custom_name"))
                      potion_contents.set_custom_name(comp["custom_name"]);
                  if (comp.contains("custom_effects")) {
-                     for (auto& it : comp["custom_effects"].as_array())
-                         potion_contents.add_custom_effect(parse_item_potion_effect(it.as_compound()));
+                     for (auto& effect : comp["custom_effects"].as_array())
+                         potion_contents.add_custom_effect(parse_item_potion_effect(effect.as_compound()));
                  }
              }
              return potion_contents;
@@ -1358,13 +1358,13 @@ namespace copper_server::base_objects::component {
              if (comp.contains("properties")) {
                  auto props = comp["properties"].as_array();
                  profile.properties.reserve(props.size());
-                 for (auto& it : props) {
-                     auto prop = it.as_compound();
+                 for (auto& prop : props) {
+                     auto prop_c = prop.as_compound();
                      profile::property_t p;
-                     p.name = prop.at("name").as_string();
-                     p.value = prop.at("value").as_string();
-                     if (prop.contains("signature"))
-                         p.signature = prop["signature"].as_string();
+                     p.name = prop_c.at("name").as_string();
+                     p.value = prop_c.at("value").as_string();
+                     if (prop_c.contains("signature"))
+                         p.signature = prop_c["signature"].as_string();
                      profile.properties.push_back(std::move(p));
                  }
              }
@@ -1379,8 +1379,8 @@ namespace copper_server::base_objects::component {
              auto arr = it.as_array();
              recipes recipes;
              recipes.value.reserve(arr.size());
-             for (auto& it : arr)
-                 recipes.value.push_back(it.as_string());
+             for (auto& recipe : arr)
+                 recipes.value.push_back(recipe.as_string());
              return recipes;
          }},
         {"minecraft:repairable",
@@ -1389,8 +1389,8 @@ namespace copper_server::base_objects::component {
                  auto arr = it.at("items").as_array();
                  std::vector<std::string> res;
                  res.reserve(arr.size());
-                 for (auto& it : arr)
-                     res.push_back(it.as_string());
+                 for (auto& item : arr)
+                     res.push_back(item.as_string());
                  return repairable{.items = std::move(res)};
              } else
                  return repairable{.items = it.at("items").as_string()};
@@ -1415,8 +1415,8 @@ namespace copper_server::base_objects::component {
              auto arr = it.as_array();
              suspicious_stew_effects suspicious_stew_effects;
              suspicious_stew_effects.effects.reserve(arr.size());
-             for (auto& it : arr) {
-                 auto comp = it.as_compound();
+             for (auto& effect : arr) {
+                 auto comp = effect.as_compound();
                  auto id = registers::effects.at(comp.at("id")).id;
                  int32_t dur = 160;
                  if (comp.contains("duration"))
@@ -1436,18 +1436,19 @@ namespace copper_server::base_objects::component {
              if (comp.contains("rules")) {
                  auto arr = comp["rules"].as_array();
                  tool.rules.reserve(arr.size());
-                 for (auto& it : arr) {
+                 for (auto& rule_it : arr) {
                      base_objects::item_rule rule;
-                     auto rule_c = it.as_compound();
-                     auto& it = rule_c.at("blocks");
-                     if (it.is_string())
-                         rule.value = it.as_string();
+                     auto rule_c = rule_it.as_compound();
+                     auto& blocks = rule_c.at("blocks");
+                     if (blocks.is_string())
+                         rule.value = blocks.as_string();
                      else {
-                         auto arr_ref = it.as_array();
-                         list_array<std::string> arr;
-                         arr.reserve(arr_ref.size());
-                         for (auto& it : arr_ref)
-                             arr.push_back(it.as_string());
+                         auto arr_ref = blocks.as_array();
+                         list_array<std::string> blocks_arr;
+                         blocks_arr.reserve(arr_ref.size());
+                         for (auto& block : arr_ref)
+                             blocks_arr.push_back(block.as_string());
+                         rule.value = blocks_arr;
                      }
                      if (rule_c.contains("speed"))
                          rule.speed = (float)rule_c["speed"];
@@ -1498,11 +1499,11 @@ namespace copper_server::base_objects::component {
              if (comp.contains("pages")) {
                  auto pages = comp.at("pages").as_array();
                  writable_book_content.pages.reserve(pages.size());
-                 for (auto& it : pages) {
-                     if (it.is_string())
-                         writable_book_content.pages.push_back({.text = it.as_string()});
+                 for (auto& page : pages) {
+                     if (page.is_string())
+                         writable_book_content.pages.push_back({.text = page.as_string()});
                      else {
-                         auto com = it.as_compound();
+                         auto com = page.as_compound();
                          auto raw = com.at("raw").as_string();
                          std::optional<std::string> filtered;
                          if (com.contains("filtered"))
@@ -1530,11 +1531,11 @@ namespace copper_server::base_objects::component {
                  written_book_content.resolved = comp.at("resolved");
              auto pages = comp.at("pages").as_array();
              written_book_content.pages.reserve(pages.size());
-             for (auto& it : pages) {
-                 if (it.is_string())
-                     written_book_content.pages.push_back({.text = Chat::fromEnbt(it)});
+             for (auto& page : pages) {
+                 if (page.is_string())
+                     written_book_content.pages.push_back({.text = Chat::fromEnbt(page)});
                  else {
-                     auto com = it.as_compound();
+                     auto com = page.as_compound();
                      auto raw = Chat::fromEnbt(com.at("raw"));
                      std::optional<Chat> filtered;
                      if (com.contains("filtered"))
@@ -1592,8 +1593,8 @@ namespace copper_server::base_objects::component {
                      auto allowed_entities_arr = allowed_entities.as_array();
                      std::vector<std::string> res;
                      res.reserve(allowed_entities_arr.size());
-                     for (auto& it : allowed_entities_arr)
-                         res.push_back(it.as_string());
+                     for (auto& entity : allowed_entities_arr)
+                         res.push_back(entity.as_string());
                      equippable.allowed_entities = res;
                  }
              } else
@@ -1611,8 +1612,8 @@ namespace copper_server::base_objects::component {
              if (comp.contains("death_effects")) {
                  list_array<inner::application_effect> res;
                  res.reserve(comp.at("death_effects").size());
-                 for (auto& it : comp.at("death_effects").as_array())
-                     res.push_back(parse_application_effect(it.as_compound()));
+                 for (auto& effect : comp.at("death_effects").as_array())
+                     res.push_back(parse_application_effect(effect.as_compound()));
                  res.commit();
                  death_protection.death_effects = std::move(res);
              }
@@ -1636,8 +1637,8 @@ namespace copper_server::base_objects::component {
              if (comp.contains("on_consume_effects")) {
                  list_array<inner::application_effect> res;
                  res.reserve(comp.at("on_consume_effects").size());
-                 for (auto& it : comp.at("on_consume_effects").as_array())
-                     res.push_back(parse_application_effect(it.as_compound()));
+                 for (auto& effect : comp.at("on_consume_effects").as_array())
+                     res.push_back(parse_application_effect(effect.as_compound()));
                  res.commit();
                  consumable.on_consume_effects = std::move(res);
              }
@@ -1764,8 +1765,8 @@ namespace copper_server::base_objects::component {
              if (it.contains("hidden_components")) {
                  auto hidden_components = it.at("hidden_components").as_array();
                  res.hidden_components.reserve(hidden_components.size());
-                 for (auto& it : hidden_components)
-                     res.hidden_components.push_back(it.as_string());
+                 for (auto& component : hidden_components)
+                     res.hidden_components.push_back(component.as_string());
              }
              return res;
          }},
@@ -1931,8 +1932,8 @@ namespace copper_server::base_objects::component {
              else {
                  enbt::fixed_array arr;
                  arr.reserve(tmp.value.size());
-                 for (auto& it : tmp.value)
-                     arr.push_back(encode_block_predicate(it));
+                 for (auto& pred : tmp.value)
+                     arr.push_back(encode_block_predicate(pred));
                  return arr;
              }
          }},
@@ -1944,8 +1945,8 @@ namespace copper_server::base_objects::component {
              else {
                  enbt::fixed_array arr;
                  arr.reserve(tmp.value.size());
-                 for (auto& it : tmp.value)
-                     arr.push_back(encode_block_predicate(it));
+                 for (auto& pred : tmp.value)
+                     arr.push_back(encode_block_predicate(pred));
                  return arr;
              }
          }},
@@ -2109,8 +2110,8 @@ namespace copper_server::base_objects::component {
              auto& tmp = std::get<lore>(it);
              enbt::dynamic_array res;
              res.reserve(tmp.value.size());
-             for (auto& it : tmp.value)
-                 res.push_back(it.ToENBT());
+             for (auto& lore_item : tmp.value)
+                 res.push_back(lore_item.ToENBT());
              return res;
          }},
         {"minecraft:map_color",
@@ -2185,10 +2186,10 @@ namespace copper_server::base_objects::component {
              if (tmp.properties.size()){
                  enbt::fixed_array props;
                  props.reserve(tmp.properties.size());
-                 for (auto& it : tmp.properties){
-                     enbt::compound item{{"name", it.name}, {"value", it.value}};
-                     if (it.signature)
-                         item["signature"] = *it.signature;
+                 for (auto& prop : tmp.properties) {
+                     enbt::compound item{{"name", prop.name}, {"value", prop.value}};
+                     if (prop.signature)
+                         item["signature"] = *prop.signature;
                      props.push_back(std::move(item));
                  }
                  res["properties"] = std::move(props);
@@ -2204,8 +2205,8 @@ namespace copper_server::base_objects::component {
              auto& tmp = std::get<recipes>(it).value;
              enbt::fixed_array res;
              res.reserve(tmp.size());
-             for (auto& it : tmp)
-                 res.push_back(it);
+             for (auto& recipe : tmp)
+                 res.push_back(recipe);
              return res;
          }},
         {"minecraft:repairable",
@@ -2257,12 +2258,12 @@ namespace copper_server::base_objects::component {
              if (tmp.rules.size()) {
                  enbt::fixed_array arr;
                  arr.reserve(tmp.rules.size());
-                 for (auto& it : tmp.rules) {
+                 for (auto& rule_c : tmp.rules) {
                      enbt::compound rule;
-                     if (it.speed)
-                         rule["speed"] = *it.speed;
-                     if (it.correct_for_drops)
-                         rule["correct_for_drops"] = *it.correct_for_drops;
+                     if (rule_c.speed)
+                         rule["speed"] = *rule_c.speed;
+                     if (rule_c.correct_for_drops)
+                         rule["correct_for_drops"] = *rule_c.correct_for_drops;
                      std::visit(
                          [&rule](auto& it) {
                              if constexpr (std::is_same_v<std::decay_t<decltype(it)>, std::string>)
@@ -2275,7 +2276,7 @@ namespace copper_server::base_objects::component {
                                  rule["blocks"] = std::move(arr);
                              }
                          },
-                         it.value
+                         rule_c.value
                      );
                      arr.push_back(std::move(rule));
                  }
@@ -2326,11 +2327,11 @@ namespace copper_server::base_objects::component {
              if(tmp.pages.size()) {
                  enbt::dynamic_array arr;
                  arr.reserve(tmp.pages.size());
-                 for (auto& it : tmp.pages) {
-                     if (it.filtered)
-                         arr.push_back(enbt::compound{{"text", it.text}, {"filtered", *it.filtered}});
+                 for (auto& page : tmp.pages) {
+                     if (page.filtered)
+                         arr.push_back(enbt::compound{{"text", page.text}, {"filtered", *page.filtered}});
                      else
-                         arr.push_back(it.text);
+                         arr.push_back(page.text);
                  }
                  res["pages"] = std::move(arr);
              }
@@ -2350,11 +2351,11 @@ namespace copper_server::base_objects::component {
              if(tmp.pages.size()) {
                  enbt::dynamic_array arr;
                  arr.reserve(tmp.pages.size());
-                 for (auto& it : tmp.pages) {
-                     if (it.filtered)
-                         arr.push_back(enbt::compound{{"text", it.text.ToENBT()}, {"filtered", it.filtered->ToENBT()}});
+                 for (auto& page : tmp.pages) {
+                     if (page.filtered)
+                         arr.push_back(enbt::compound{{"text", page.text.ToENBT()}, {"filtered", page.filtered->ToENBT()}});
                      else
-                         arr.push_back(it.text.ToENBT());
+                         arr.push_back(page.text.ToENBT());
                  }
                  res["pages"] = std::move(arr);
              }
@@ -2425,8 +2426,8 @@ namespace copper_server::base_objects::component {
              if (tmp.death_effects.size()) {
                  enbt::fixed_array arr;
                  arr.reserve(tmp.death_effects.size());
-                 for (auto& it : tmp.death_effects)
-                     arr.push_back(encode_application_effect(it));
+                 for (auto& effect : tmp.death_effects)
+                     arr.push_back(encode_application_effect(effect));
                  res["death_effects"] = std::move(arr);
              }
              return res;
@@ -2445,8 +2446,8 @@ namespace copper_server::base_objects::component {
              if (tmp.on_consume_effects.size()) {
                  enbt::fixed_array arr;
                  arr.reserve(tmp.on_consume_effects.size());
-                 for (auto& it : tmp.on_consume_effects)
-                     arr.push_back(encode_application_effect(it));
+                 for (auto& effect : tmp.on_consume_effects)
+                     arr.push_back(encode_application_effect(effect));
                  res["animation"] = std::move(arr);
              }
              return res;
@@ -2554,8 +2555,8 @@ namespace copper_server::base_objects::component {
              if (tmp.hidden_components.size()) {
                  enbt::fixed_array array;
                  array.reserve(tmp.hidden_components.size());
-                 for (auto& it : tmp.hidden_components)
-                     array.push_back(it);
+                 for (auto& component : tmp.hidden_components)
+                     array.push_back(component);
                  res["hidden_components"] = std::move(array);
              }
              return std::move(res);

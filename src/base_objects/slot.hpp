@@ -139,7 +139,7 @@ namespace copper_server::base_objects {
         static void enumerate_slot_data(const std::function<void(static_slot_data&)>& fn);
 
     private:
-        friend class static_slot_data;
+        friend struct static_slot_data;
         static std::unordered_map<std::string, std::shared_ptr<static_slot_data>> named_full_item_data;
         static std::vector<std::shared_ptr<static_slot_data>> full_item_data_;
 

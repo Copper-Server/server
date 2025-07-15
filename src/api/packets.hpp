@@ -81,9 +81,9 @@ namespace copper_server {
             base_objects::network::response commandSuggestionsResponse(base_objects::SharedClientData& client, int32_t transaction_id, int32_t start_pos, int32_t length, const list_array<base_objects::packets::command_suggestion>& suggestions);
             base_objects::network::response commands(base_objects::SharedClientData& client, const base_objects::command_manager& compiled_graph);
             base_objects::network::response closeContainer(base_objects::SharedClientData& client, uint8_t container_id);
-            base_objects::network::response setContainerContent(base_objects::SharedClientData& client, uint8_t windows_id, int32_t state_id, const list_array<base_objects::slot>& slots, const base_objects::slot& carried_item);
-            base_objects::network::response setContainerProperty(base_objects::SharedClientData& client, uint8_t windows_id, uint16_t property, uint16_t value);
-            base_objects::network::response setContainerSlot(base_objects::SharedClientData& client, uint8_t windows_id, int32_t state_id, int16_t slot, const base_objects::slot& item);
+            base_objects::network::response setContainerContent(base_objects::SharedClientData& client, int32_t windows_id, int32_t state_id, const list_array<base_objects::slot>& slots, const base_objects::slot& carried_item);
+            base_objects::network::response setContainerProperty(base_objects::SharedClientData& client, int32_t windows_id, uint16_t property, uint16_t value);
+            base_objects::network::response setContainerSlot(base_objects::SharedClientData& client, int32_t windows_id, int32_t state_id, int16_t slot, const base_objects::slot& item);
             base_objects::network::response cookieRequest(base_objects::SharedClientData& client, const std::string& key);
             base_objects::network::response setCooldown(base_objects::SharedClientData& client, int32_t item_id, int32_t cooldown);
             base_objects::network::response chatSuggestionsResponse(base_objects::SharedClientData& client, int32_t action, int32_t count, const list_array<std::string>& suggestions);
@@ -108,7 +108,7 @@ namespace copper_server {
             base_objects::network::response updateLight(base_objects::SharedClientData& client, const storage::chunk_data& chunk);
             base_objects::network::response joinGame(base_objects::SharedClientData& client, int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, std::optional<base_objects::packets::death_location_data> death_location, int32_t portal_cooldown, int32_t sea_level, bool enforces_secure_chat);
             base_objects::network::response mapData(base_objects::SharedClientData& client, int32_t map_id, uint8_t scale, bool locked, const list_array<base_objects::packets::map_icon>& icons, uint8_t column, uint8_t rows, uint8_t x, uint8_t z, const list_array<uint8_t>& data);
-            base_objects::network::response merchantOffers(base_objects::SharedClientData& client, int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade> trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock);
+            base_objects::network::response merchantOffers(base_objects::SharedClientData& client, int32_t window_id, const list_array<base_objects::packets::trade> trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock);
             base_objects::network::response updateEntityPosition(base_objects::SharedClientData& client, int32_t entity_id, util::XYZ<float> pos, bool on_ground);
             base_objects::network::response updateEntityPositionAndRotation(base_objects::SharedClientData& client, int32_t entity_id, util::XYZ<float> pos, util::ANGLE_DEG rot, bool on_ground);
             base_objects::network::response updateEntityRotation(base_objects::SharedClientData& client, int32_t entity_id, util::ANGLE_DEG rot, bool on_ground);
@@ -285,9 +285,9 @@ namespace copper_server {
                 virtual base_objects::network::response commandSuggestionsResponse(int32_t transaction_id, int32_t start_pos, int32_t length, const list_array<base_objects::packets::command_suggestion>& suggestions) = 0;
                 virtual base_objects::network::response commands(const base_objects::command_manager& compiled_graph) = 0;
                 virtual base_objects::network::response closeContainer(uint8_t container_id) = 0;
-                virtual base_objects::network::response setContainerContent(uint8_t windows_id, int32_t state_id, const list_array<base_objects::slot>& slots, const base_objects::slot& carried_item) = 0;
-                virtual base_objects::network::response setContainerProperty(uint8_t windows_id, uint16_t property, uint16_t value) = 0;
-                virtual base_objects::network::response setContainerSlot(uint8_t windows_id, int32_t state_id, int16_t slot, const base_objects::slot& item) = 0;
+                virtual base_objects::network::response setContainerContent(int32_t windows_id, int32_t state_id, const list_array<base_objects::slot>& slots, const base_objects::slot& carried_item) = 0;
+                virtual base_objects::network::response setContainerProperty(int32_t windows_id, uint16_t property, uint16_t value) = 0;
+                virtual base_objects::network::response setContainerSlot(int32_t windows_id, int32_t state_id, int16_t slot, const base_objects::slot& item) = 0;
                 virtual base_objects::network::response cookieRequest(const std::string& key) = 0;
                 virtual base_objects::network::response setCooldown(int32_t item_id, int32_t cooldown) = 0;
                 virtual base_objects::network::response chatSuggestionsResponse(int32_t action, int32_t count, const list_array<std::string>& suggestions) = 0;
@@ -325,7 +325,7 @@ namespace copper_server {
                 virtual base_objects::network::response updateLight(const storage::chunk_data& chunk) = 0;
                 virtual base_objects::network::response joinGame(int32_t entity_id, bool is_hardcore, const list_array<std::string>& dimension_names, int32_t max_players, int32_t view_distance, int32_t simulation_distance, bool reduced_debug_info, bool enable_respawn_screen, bool do_limited_crafting, int32_t current_dimension_type, const std::string& dimension_name, int64_t hashed_seed, uint8_t gamemode, int8_t prev_gamemode, bool is_debug, bool is_flat, const std::optional<base_objects::packets::death_location_data>& death_location, int32_t portal_cooldown, int32_t sea_level, bool enforces_secure_chat) = 0;
                 virtual base_objects::network::response mapData(int32_t map_id, uint8_t scale, bool locked, const list_array<base_objects::packets::map_icon>& icons = {}, uint8_t columns = 0, uint8_t rows = 0, uint8_t x = 0, uint8_t z = 0, const list_array<uint8_t>& data = {}) = 0;
-                virtual base_objects::network::response merchantOffers(int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade>& trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock) = 0;
+                virtual base_objects::network::response merchantOffers(int32_t window_id, const list_array<base_objects::packets::trade>& trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock) = 0;
                 virtual base_objects::network::response updateEntityPosition(int32_t entity_id, util::XYZ<float> pos, bool on_ground) = 0;
                 virtual base_objects::network::response updateEntityPositionAndRotation(int32_t entity_id, util::XYZ<float> pos, util::ANGLE_DEG rot, bool on_ground) = 0;
                 virtual base_objects::network::response moveMinecartAlongTrack(int32_t entity_id, list_array<base_objects::packets::minecart_state>& states) = 0;

@@ -71,9 +71,9 @@ namespace copper_server::base_objects::world {
 
     void sub_chunk_data::for_each_block_entity(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block block, const enbt::value& entity_data)> func) const {
         for (auto& [pos, data] : block_entities) {
-            auto local_z = pos & 0xF;
-            auto local_y = (pos >> 4) & 0xF;
-            auto local_x = (pos >> 8) & 0xF;
+            auto local_z = uint8_t(pos & 0xF);
+            auto local_y = uint8_t((pos >> 4) & 0xF);
+            auto local_x = uint8_t((pos >> 8) & 0xF);
             func(local_x, local_y, local_z, blocks[local_x][local_y][local_z], data);
         }
     }
@@ -87,9 +87,9 @@ namespace copper_server::base_objects::world {
 
     void sub_chunk_data::for_each_block_entity(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block& block, enbt::value& entity_data)> func) {
         for (auto& [pos, data] : block_entities) {
-            auto local_z = pos & 0xF;
-            auto local_y = (pos >> 4) & 0xF;
-            auto local_x = (pos >> 8) & 0xF;
+            auto local_z = uint8_t(pos & 0xF);
+            auto local_y = uint8_t((pos >> 4) & 0xF);
+            auto local_x = uint8_t((pos >> 8) & 0xF);
             func(local_x, local_y, local_z, blocks[local_x][local_y][local_z], data);
         }
     }

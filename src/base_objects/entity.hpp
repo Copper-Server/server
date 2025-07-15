@@ -32,7 +32,7 @@ namespace copper_server {
         }
 
 
-        union block;
+        struct block;
         struct block_entity;
         struct block_entity_ref;
         struct const_block_entity_ref;
@@ -256,7 +256,7 @@ namespace copper_server {
             struct world_syncing {
                 bit_list_array<> processed_chunks;
                 base_objects::cubic_bounds_chunk_radius processing_region;
-                uint64_t assigned_world_id = -1;
+                uint64_t assigned_world_id = (uint64_t)-1;
                 storage::world_data* world = nullptr;
                 uint32_t attached_to_distance = 0;
                 uint16_t keep_alive_ticks = 0; //used for handling entity animation
@@ -271,8 +271,8 @@ namespace copper_server {
                     if (!processing_region.in_bounds(pos_x, pos_z))
                         return false;
 
-                    int32_t offset_x = pos_x - (processing_region.center_x - processing_region.radius);
-                    int32_t offset_z = pos_z - (processing_region.center_z - processing_region.radius);
+                    int64_t offset_x = pos_x - (processing_region.center_x - processing_region.radius);
+                    int64_t offset_z = pos_z - (processing_region.center_z - processing_region.radius);
                     size_t index = offset_z * (processing_region.radius + processing_region.radius + 1) + offset_x;
                     processed_chunks.set(index, loaded);
                     return true;
@@ -290,8 +290,8 @@ namespace copper_server {
 
                     if (!processing_region.in_bounds(pos_x, pos_z))
                         return false;
-                    int32_t offset_x = pos_x - (processing_region.center_x - processing_region.radius);
-                    int32_t offset_z = pos_z - (processing_region.center_z - processing_region.radius);
+                    uint64_t offset_x = pos_x - (processing_region.center_x - processing_region.radius);
+                    uint64_t offset_z = pos_z - (processing_region.center_z - processing_region.radius);
 
 
                     size_t index = offset_z * (processing_region.radius + processing_region.radius + 1) + offset_x;
@@ -312,8 +312,8 @@ namespace copper_server {
                             int32_t chunk_z = center_z - new_radius + dz;
 
                             // Map to old area offsets
-                            int32_t old_offset_x = chunk_x - (processing_region.center_x - processing_region.radius);
-                            int32_t old_offset_z = chunk_z - (processing_region.center_z - processing_region.radius);
+                            int64_t old_offset_x = chunk_x - (processing_region.center_x - processing_region.radius);
+                            int64_t old_offset_z = chunk_z - (processing_region.center_z - processing_region.radius);
 
                             // If the chunk was loaded in the old area, copy its bit
                             if (old_offset_x >= 0 && old_offset_x < processing_diameter && old_offset_z >= 0 && old_offset_z < processing_diameter) {
@@ -520,7 +520,8 @@ namespace copper_server {
             static entity_ref create(const std::string& id, const enbt::compound_const_ref& nbt);
             static entity_ref load_from_enbt(const enbt::compound_const_ref& file_nbt);
 
-            entity() {}
+            entity();
+            ~entity();
 
             entity(const entity& other) = delete;
             entity& operator=(const entity& other) = delete;

@@ -26,20 +26,20 @@ namespace mojang::api {
                 request_stream << "Accept: */*\r\n";
                 request_stream << "Connection: close\r\n\r\n";
                 std::string str = request_stream.str();
-                client->send((uint8_t*)str.data(), str.size());
+                client->send((uint8_t*)str.data(), (int32_t)str.size());
             }
 
             {
                 boost::beast::http::parser<false, boost::beast::http::string_body> parser;
                 list_array<uint8_t> answer;
                 uint8_t recv_buf[1024];
-                while (auto res = client->recv(recv_buf, 1024))
-                    answer.push_back((uint8_t*)recv_buf, res);
+                while (auto received = client->recv(recv_buf, 1024))
+                    answer.push_back((uint8_t*)recv_buf, received);
 
                 try {
                     boost::beast::error_code ec;
-                    boost::asio::const_buffer buf(answer.data(), answer.size());
-                    parser.put(buf, ec);
+                    boost::asio::const_buffer buffer(answer.data(), answer.size());
+                    parser.put(buffer, ec);
                     parser.put_eof(ec);
                     res = parser.get();
                 } catch (const std::exception& ex) {
@@ -68,7 +68,7 @@ namespace mojang::api {
                     }
                     pos = new_address.find(':');
                     if (pos != std::string::npos) {
-                        new_port = std::stoi(new_address.substr(pos + 1));
+                        new_port = (uint16_t)std::stoi(new_address.substr(pos + 1));
                         new_address = new_address.substr(0, pos);
                     }
                 }

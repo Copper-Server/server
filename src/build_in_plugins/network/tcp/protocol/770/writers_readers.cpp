@@ -37,7 +37,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
                         } else {
                             WriteVar<int32_t>(it.size() + 1, data);
                             for (auto& i : it)
-                                WriteVar<int32_t>(base_objects::block::get_block(i).general_block_id, data);
+                                WriteVar<int32_t>(base_objects::block::get_block((base_objects::block_id_t)i).general_block_id, data);
                         }
                     },
                     *predicate.blocks
@@ -772,7 +772,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
             data.push_back((bool)value.global_pos);
             if (value.global_pos) {
                 WriteIdentifier(data, value.global_pos->dimension);
-                WriteValue(value.global_pos->position.raw, data);
+                WriteValue(value.global_pos->position.get(), data);
             }
             data.push_back(value.tracked);
         }
@@ -816,7 +816,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
         void encode(const slot_data& slot, list_array<uint8_t>& data, const component::banner_patterns& value) {
             //TODO check real implementation, is component::banner_patterns should be array or single item
             throw std::runtime_error("Not implemented");
-            WriteVar<int32_t>(63, data);
+            //WriteVar<int32_t>(63, data);
         }
 
         void encode(const slot_data& slot, list_array<uint8_t>& data, const component::base_color& value) {
@@ -1155,9 +1155,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
                 return res;
             }
             case 9:
-                return component::rarity{
-                    (component::rarity)data.read_var<int32_t>()
-                };
+                return component::rarity{(component::rarity)(uint8_t)data.read_var<int32_t>()};
             case 10: {
                 component::enchantments res;
                 int32_t count = data.read_var<int32_t>();
@@ -1295,7 +1293,6 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
         WriteVar<int32_t>(slot.id, data);
         WriteVar<int32_t>(slot.count, data);
         WriteVar<int32_t>(slot.components.size(), data);
-        WriteVar<int32_t>(removed_components.size(), data);
         for (auto& [ignored, it] : slot.components) {
             std::visit(
                 [&data, &slot](auto& it) {
@@ -1304,8 +1301,6 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
                 it
             );
         }
-        for (auto& it : removed_components)
-            WriteString(data, it);
     }
 
     void WriteTradeItem(list_array<uint8_t>& data, const base_objects::slot& slot) {
@@ -1359,8 +1354,8 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
                     if constexpr (std::is_same_v<T, base_objects::recipes::minecraft::crafting_shapeless>) {
                         WriteVar<int32_t>(registers::view_reg_pro_id("minecraft:recipe_display", T_info::name), data);
                         WriteVar<int32_t>(it.ingredients.size(), data);
-                        for (auto& it : it.ingredients)
-                            WriteIngredient(data, it);
+                        for (auto& ingredient : it.ingredients)
+                            WriteIngredient(data, ingredient);
                         WriteIngredient(data, it.result);
                         WriteIngredient(data, it.crafting_station);
                     } else if constexpr (std::is_same_v<T, base_objects::recipes::minecraft::crafting_shaped>) {
@@ -1368,8 +1363,8 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770::rea
                         WriteVar<int32_t>(it.width, data);
                         WriteVar<int32_t>(it.height, data);
                         WriteVar<int32_t>(it.ingredients.size(), data);
-                        for (auto& it : it.ingredients)
-                            WriteIngredient(data, it);
+                        for (auto& ingredient : it.ingredients)
+                            WriteIngredient(data, ingredient);
                         WriteIngredient(data, it.result);
                         WriteIngredient(data, it.crafting_station);
                     } else if constexpr (

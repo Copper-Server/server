@@ -26,9 +26,9 @@ namespace copper_server::base_objects::world {
 
         loading_point_ticket(callback&& callback, const cubic_bounds_chunk_radius& point, const std::string& name, int8_t level) : expiration(std::move(callback)), point(point), name(name), level(level) {}
 
-        loading_point_ticket(entity_bound_ticket bound, const cubic_bounds_chunk_radius& point, const std::string& name, int8_t level) : expiration(expiration), point(point), name(name), level(level) {}
+        loading_point_ticket(entity_bound_ticket bound, const cubic_bounds_chunk_radius& point, const std::string& name, int8_t level) : expiration(bound), point(point), name(name), level(level) {}
 
-        loading_point_ticket(uint16_t ticks, const cubic_bounds_chunk_radius& point, const std::string& name, int8_t level) : expiration(expiration), point(point), name(name), level(level) {}
+        loading_point_ticket(uint16_t ticks, const cubic_bounds_chunk_radius& point, const std::string& name, int8_t level) : expiration(ticks), point(point), name(name), level(level) {}
 
 
         //sets the whole cubic point to specified level and propagates to neighbors by default

@@ -8,7 +8,6 @@ namespace copper_server {
     Chat Chat::parseToChat(const std::string& string) {
         list_array<Chat> result;
 
-        constexpr const uint32_t format_symbol = U'§';
         constexpr const unsigned char format_symbol_parts[2] = {0xC2, 0xA7};
         Chat current_chat;
 
@@ -18,7 +17,6 @@ namespace copper_server {
         bool got_slash_except_part_format = false;
         bool got_utf_code_point = false;
         bool got_big_utf_code_point = false;
-        bool got_variable_utf_code_point = false;
 
         std::string current_string;
         current_string.reserve(string.size());
@@ -104,7 +102,7 @@ namespace copper_server {
             } else if (got_utf_code_point) {
                 utf_code_point += c;
                 if (utf_code_point.size() == 4) {
-                    utf8::utfchar16_t code_point = std::stoi(utf_code_point, nullptr, 16);
+                    utf8::utfchar16_t code_point = (utf8::utfchar16_t)std::stoi(utf_code_point, nullptr, 16);
                     char utf8_code_point[4];
                     current_string += std::string(utf8_code_point, utf8::utf16to8(&code_point, &code_point + 1, utf8_code_point));
                     got_utf_code_point = false;
@@ -113,7 +111,7 @@ namespace copper_server {
             } else if (got_big_utf_code_point) {
                 utf_code_point += c;
                 if (utf_code_point.size() == 8) {
-                    utf8::utfchar32_t code_point = std::stoi(utf_code_point, nullptr, 16);
+                    utf8::utfchar32_t code_point = (utf8::utfchar32_t)std::stoi(utf_code_point, nullptr, 16);
                     char utf8_code_point[4];
                     current_string += std::string(utf8_code_point, utf8::utf32to8(&code_point, &code_point + 1, utf8_code_point));
                     got_big_utf_code_point = false;
@@ -352,6 +350,37 @@ namespace copper_server {
                 extra_arr.push_back(Chat::fromEnbt(it));
         }
         return result;
+    }
+
+    void formater(list_array<enbt::value>& items, Chat& it) {
+        if (it.GetText() && items.size()) {
+            std::string_view str(*it.GetText());
+            if (auto res = str.find("%"); res != str.npos) {
+                Chat insert[3]{it, {}, it};
+                insert[1] = Chat::fromEnbt(items.take_back());
+                insert[0].SetText(std::string(str.substr(0, res)));
+                for (auto& i : insert[1].GetExtra())
+                    formater(items, i);
+
+                if (res + 1 < str.size()) {
+                    insert[2].SetText(std::string(str.substr(res + 1)));
+                    it.GetExtra().push_back(insert[0]);
+                    it.GetExtra().push_back(insert[1]);
+                    it.GetExtra().push_back(insert[2]);
+                } else {
+                    it.GetExtra().push_back(insert[0]);
+                    it.GetExtra().push_back(insert[1]);
+                }
+            }
+        }
+        for (auto& i : it.GetExtra())
+            formater(items, i);
+    };
+
+    Chat Chat::from_enbt_with_format(const enbt::value& enbt, list_array<enbt::value>&& items) {
+        auto res = fromEnbt(enbt);
+        formater(items, res);
+        return res;
     }
 
     std::string Chat::ToStr() const {
@@ -753,20 +782,20 @@ namespace copper_server {
     bool Chat::operator==(const Chat& other) const {
         if (
             defined_bold != other.defined_bold
-            | defined_italic != other.defined_italic
-            | defined_underlined != other.defined_underlined
-            | defined_strikethrough != other.defined_strikethrough
-            | defined_obfuscated != other.defined_obfuscated
+            || defined_italic != other.defined_italic
+            || defined_underlined != other.defined_underlined
+            || defined_strikethrough != other.defined_strikethrough
+            || defined_obfuscated != other.defined_obfuscated
         )
             return false;
 
         if (
             (!text != !other.text)
-            | (!color != !other.color)
-            | (!insertion != !other.insertion)
-            | (!font != !other.font)
-            | (!clickEvent != !other.clickEvent)
-            | (!hoverEvent != !other.hoverEvent)
+            || (!color != !other.color)
+            || (!insertion != !other.insertion)
+            || (!font != !other.font)
+            || (!clickEvent != !other.clickEvent)
+            || (!hoverEvent != !other.hoverEvent)
         )
             return false;
 

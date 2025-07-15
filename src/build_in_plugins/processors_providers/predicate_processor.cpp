@@ -94,7 +94,7 @@ namespace copper_server::build_in_plugins::processors_providers {
                 return false;
             for (auto& [key, value] : equipment) {
                 auto item = value.as_compound();
-                uint32_t slot_;
+                uint32_t slot_ = 0;
                 if (key == "mainhand") {
                     slot_ = entity_const_data.data.at("slots")["mainhand"];
                 } else if (key == "offhand") {
@@ -108,23 +108,25 @@ namespace copper_server::build_in_plugins::processors_providers {
                 } else if (key == "feet") {
                     slot_ = entity_const_data.data.at("slots")["feet"];
                 } else if (key == "body") {
-                    for (uint32_t slot_ : entity_const_data.data.at("slots")["body"].as_ui32_array()) {
+                    for (uint32_t body_slot_ : entity_const_data.data.at("slots")["body"].as_ui32_array()) {
                         auto inventory = entity->nbt.at("inventory").as_dyn_array();
-                        if (!inventory.at(slot_).is_compound())
+                        if (!inventory.at(body_slot_).is_compound())
                             return false;
-                        auto item_ = inventory.at(slot_).as_compound();
+                        auto item_ = inventory.at(body_slot_).as_compound();
                         if (__item_check(item, item_))
                             return false;
                     }
+                    continue;
                 } else if (key == "hand") {
-                    for (uint32_t slot_ : entity_const_data.data.at("slots")["hand"].as_ui32_array()) {
+                    for (uint32_t hand_slot_ : entity_const_data.data.at("slots")["hand"].as_ui32_array()) {
                         auto inventory = entity->nbt.at("inventory").as_dyn_array();
-                        if (!inventory.at(slot_).is_compound())
+                        if (!inventory.at(hand_slot_).is_compound())
                             return false;
-                        auto item_ = inventory.at(slot_).as_compound();
+                        auto item_ = inventory.at(hand_slot_).as_compound();
                         if (__item_check(item, item_))
                             return false;
                     }
+                    continue;
                 } else {
                     return false;
                 }
@@ -355,8 +357,8 @@ namespace copper_server::build_in_plugins::processors_providers {
                     auto range = value.as_compound();
                     if (!range.contains("min") || !range.contains("max"))
                         return false;
-                    auto value = std::stoll(states_.at(key));
-                    if (value < (int64_t)range.at("min") || value > (int64_t)range.at("max"))
+                    auto key_ll = std::stoll(states_.at(key));
+                    if (key_ll < (int64_t)range.at("min") || key_ll > (int64_t)range.at("max"))
                         return false;
                 }
             }
@@ -367,7 +369,7 @@ namespace copper_server::build_in_plugins::processors_providers {
             if (!predicate["nbt"].size())
                 return true;
             api::world::get(world_id, [&](storage::world_data& data) {
-                data.get_block(pos.x, pos.y, pos.z, [](auto) {}, [&](auto, const enbt::value& ex_data) { pass = ex_data != predicate["nbt"]; });
+                data.get_block((int64_t)pos.x, (int64_t)pos.y, (int64_t)pos.z, [](auto) {}, [&](auto, const enbt::value& ex_data) { pass = ex_data != predicate["nbt"]; });
             });
             return pass;
         }
@@ -401,8 +403,8 @@ namespace copper_server::build_in_plugins::processors_providers {
                     auto range = value.as_compound();
                     if (!range.contains("min") || !range.contains("max"))
                         return false;
-                    auto value = std::stoll(states_.at(key));
-                    if (value < (int64_t)range.at("min") || value > (int64_t)range.at("max"))
+                    auto key_ll = std::stoll(states_.at(key));
+                    if (key_ll < (int64_t)range.at("min") || key_ll > (int64_t)range.at("max"))
                         return false;
                 }
             }
@@ -420,7 +422,7 @@ namespace copper_server::build_in_plugins::processors_providers {
         if (!loot_context.contains("origin"))
             return false;
         auto& damage_source = loot_context.at("damage_source");
-        auto& origin = loot_context.at("origin");
+        //auto& origin = loot_context.at("origin");
 
         return __entity_check(predicate.at("predicate").as_compound(), damage_source);
     }
@@ -513,7 +515,7 @@ namespace copper_server::build_in_plugins::processors_providers {
     }
 
     bool random_chance_with_enchanted_bonus(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
-        int32_t enchantment_level = 0;
+        //int32_t enchantment_level = 0;
         if (context.other_data.contains("loot_context")) {
             auto loot_context = context.other_data.at("loot_context").as_compound();
             if (loot_context.contains("attacker")) {

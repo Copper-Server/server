@@ -263,7 +263,7 @@ namespace copper_server::storage {
                 auto old_stage = chunks_next_blocking_stage;
                 for (uint16_t i = chunks_next_blocking_stage + 1; i < 255; i++)
                     if (sync_modes[i])
-                        chunks_next_blocking_stage = i;
+                        chunks_next_blocking_stage = (uint8_t)i;
                 if (old_stage == chunks_next_blocking_stage)
                     chunks_next_blocking_stage = 0xFF;
                 sync_mode = chunks_next_blocking_stage == 0xFF;
@@ -632,10 +632,10 @@ namespace copper_server::storage {
         base_objects::events::event<uint64_t> on_world_unloaded;
         base_objects::events::event<double> on_tps_changed;
         uint64_t ticks_per_second = 20;
-        uint64_t base_world_id = -1;
+        uint64_t base_world_id = (uint64_t)-1;
 
         //calculated
-        double tps = ticks_per_second;
+        double tps = (double)ticks_per_second;
 
 
         worlds_data(const std::filesystem::path& base_path);

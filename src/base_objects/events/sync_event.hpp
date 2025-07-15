@@ -53,7 +53,7 @@ namespace copper_server::base_objects::events {
             return false;
         }
 
-        bool leave(event_register_id func, priority priority, bool _ignored0) override {
+        bool leave(event_register_id func, priority priority, bool) override {
             return leave(func, priority);
         }
 

@@ -14,8 +14,22 @@ namespace copper_server::util {
     template <class Target, class T>
     void NBT::insertValue(T val, size_t max) {
         Target tmp = (Target)val;
-        if (tmp != val)
-            throw std::exception("Unsupported tag");
+        if constexpr (!std::is_same<Target, T>::value) {
+            if constexpr (std::is_unsigned_v<Target> == std::is_unsigned_v<T>) {
+                if (tmp != val)
+                    throw std::exception("Unsupported tag");
+            } else if constexpr (std::is_unsigned_v<Target>) {
+                if (val < 0)
+                    throw std::exception("Unsupported tag");
+                if (tmp != (std::make_unsigned_t<T>)val)
+                    throw std::exception("Unsupported tag");
+            } else if constexpr (std::is_unsigned_v<T>) {
+                if (tmp < 0)
+                    throw std::exception("Unsupported tag");
+                if ((std::make_unsigned_t<Target>)val != (T)val)
+                    throw std::exception("Unsupported tag");
+            }
+        }
         insertValue(tmp, max);
     }
 
@@ -243,6 +257,8 @@ namespace copper_server::util {
             insertValue(0);
             return;
         }
+        if (((int32_t)enbt.size()) != enbt.size())
+            throw std::exception("Unsupported array len");
         auto base_type = enbt.is_sarray() ? enbt.get_index(0).type_id() : enbt[0].type_id();
         if ((base_type.type == enbt::type::integer || base_type.type == enbt::type::var_integer) && compress) {
             switch (base_type.length) {
@@ -250,9 +266,7 @@ namespace copper_server::util {
                 if (base_type.is_signed) {
                     if (insert_type)
                         nbt_data.push_back(7);
-                    if (((int32_t)enbt.size()) != enbt.size())
-                        throw std::exception("Unsupported array len");
-                    BuildBaseIntArray(enbt.size(), enbt, base_type);
+                    BuildBaseIntArray((int32_t)enbt.size(), enbt, base_type);
                     return;
                 }
                 break;
@@ -262,9 +276,7 @@ namespace copper_server::util {
                 if (enbt[0].get_type_sign()) {
                     if (insert_type)
                         nbt_data.push_back(11);
-                    if (((int32_t)enbt.size()) != enbt.size())
-                        throw std::exception("Unsupported array len");
-                    BuildBaseIntArray(enbt.size(), enbt, base_type);
+                    BuildBaseIntArray((int32_t)enbt.size(), enbt, base_type);
                     return;
                 }
                 break;
@@ -272,9 +284,7 @@ namespace copper_server::util {
                 if (enbt[0].get_type_sign()) {
                     if (insert_type)
                         nbt_data.push_back(12);
-                    if (((int32_t)enbt.size()) != enbt.size())
-                        throw std::exception("Unsupported array len");
-                    BuildBaseIntArray(enbt.size(), enbt, base_type);
+                    BuildBaseIntArray((int32_t)enbt.size(), enbt, base_type);
                     return;
                 }
                 break;
@@ -285,7 +295,7 @@ namespace copper_server::util {
         if (insert_type)
             nbt_data.push_back(9);
         InsertType(base_type);
-        BuildArray(enbt.size(), enbt, base_type, compress);
+        BuildArray((int32_t)enbt.size(), enbt, base_type, compress);
     }
 
     void NBT::RecursiveBuilder(enbt::value& enbt, bool insert_type, const std::string& name, bool compress, bool insert_name) {
@@ -375,28 +385,28 @@ namespace copper_server::util {
             return enbt::value((const char*)data + i - length, length);
         }
         case 9: { //list
-            uint8_t type = data[i++];
+            uint8_t list_type = data[i++];
             int32_t length = extractValue<int32_t>(data, i, max_size);
             if (length < 0)
                 length = 0;
             std::vector<enbt::value> res;
             res.reserve(length);
             for (int32_t iterate = 0; iterate < length; iterate++)
-                res.push_back(RecursiveExtractor_1(type, data, i, max_size, false));
+                res.push_back(RecursiveExtractor_1(list_type, data, i, max_size, false));
             return enbt::value(res, enbt::type_id(enbt::type::array, enbt::type_len::Default));
         }
         case 10: { //compound
             std::unordered_map<std::string, enbt::value> compound;
             while (true) {
-                uint8_t type = data[i++];
-                if (!type)
+                uint8_t compound_type = data[i++];
+                if (!compound_type)
                     break;
                 uint16_t length = extractValue<uint16_t>(data, i, max_size);
                 if (i + length >= max_size)
                     throw std::out_of_range("Out of bounds");
                 std::string res(data + i, data + i + length);
                 i += length;
-                compound[res] = RecursiveExtractor_1(type, data, i, max_size, true);
+                compound[res] = RecursiveExtractor_1(compound_type, data, i, max_size, true);
             }
             return compound;
         }

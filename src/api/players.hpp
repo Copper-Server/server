@@ -41,17 +41,17 @@ namespace copper_server::api::players {
         std::string message;
 
         std::optional<std::array<uint8_t, 256>> signature;
+        int32_t chat_type_id; //get id from registry
         uint64_t salt;
         list_array<std::array<uint8_t, 256>> previous_messages;
-        int32_t chat_type_id; //get id from registry
 
         Chat sender_decorated_name;
     };
 
     struct player_personal_chat : public player_chat {
         base_objects::client_data_holder receiver;
-        int32_t receiver_chat_type_id; //get id from registry
         Chat receiver_decorated_name;
+        int32_t receiver_chat_type_id; //get id from registry
     };
 
     namespace calls {

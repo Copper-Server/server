@@ -127,10 +127,13 @@ namespace copper_server::base_objects {
     void slot_data::add_slot_data(static_slot_data&& move) {
         if (named_full_item_data.contains(move.id))
             throw std::runtime_error("Slot data already registered, \"" + move.id + '"');
+        if (full_item_data_.size() >= INT32_MAX)
+            throw std::runtime_error("Too many slot data already registered");
+
         auto moved = std::make_shared<static_slot_data>(std::move(move));
         named_full_item_data[moved->id] = moved;
         full_item_data_.push_back(moved);
-        moved->internal_id = full_item_data_.size() - 1;
+        moved->internal_id = int32_t(full_item_data_.size() - 1);
     }
 
     void slot_data::enumerate_slot_data(const std::function<void(static_slot_data&)>& fn) {

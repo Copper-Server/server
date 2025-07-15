@@ -100,21 +100,21 @@ namespace copper_server::build_in_plugins::network::tcp {
             disconnect();
     }
 
-    void session::received(std::span<char> read_data) {
-        list_array<uint8_t> convert_data((uint8_t*)read_data.data(), read_data.size());
+    void session::received(std::span<char> readed_data) {
+        list_array<uint8_t> convert_data((uint8_t*)readed_data.data(), readed_data.size());
         //<for debug, set CONSTEXPR_DEBUG_DATA_TRANSPORT to false to disable this block>
         if constexpr (CONSTEXPR_DEBUG_DATA_TRANSPORT)
-            client::log_console("P (" + std::to_string(id) + ")", convert_data, read_data.size());
+            client::log_console("P (" + std::to_string(id) + ")", convert_data, convert_data.size());
         //</for debug, set CONSTEXPR_DEBUG_DATA_TRANSPORT to false to disable this block>
         if (encryption_enabled) {
             encryption.decrypt(convert_data, convert_data);
             //<for debug, set CONSTEXPR_DEBUG_DATA_TRANSPORT to false to disable this block>
             if constexpr (CONSTEXPR_DEBUG_DATA_TRANSPORT)
-                client::log_console("PD (" + std::to_string(id) + ")", convert_data, read_data.size());
+                client::log_console("PD (" + std::to_string(id) + ")", convert_data, convert_data.size());
             //</for debug, set CONSTEXPR_DEBUG_DATA_TRANSPORT to false to disable this block>
             read_data_cached.push_back(std::move(convert_data));
         } else
-            read_data_cached.push_back(list_array<uint8_t>(convert_data.data(), read_data.size()));
+            read_data_cached.push_back(list_array<uint8_t>(convert_data.data(), convert_data.size()));
 
         send(proceed_data());
     }

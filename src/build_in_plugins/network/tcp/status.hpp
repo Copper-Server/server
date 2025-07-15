@@ -13,7 +13,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         fast_task::task_mutex cached_mutex;
         std::string cached_icon;
         list_array<std::pair<std::string, enbt::raw_uuid>> sample_cache;
-        size_t sample_cache_check_size = -1;
+        size_t sample_cache_check_size = size_t(-1);
         const uint8_t* icon_data = nullptr;
 
     public:
@@ -61,7 +61,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         }
 
         std::optional<bool> PreventsChatReports() override {
-            return api::configuration::get().server.prevent_chat_reports;
+            return std::make_optional<bool>(api::configuration::get().server.prevent_chat_reports);
         }
 
         Chat Description() override {
@@ -69,7 +69,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         }
 
         bool ConnectionAvailable(int32_t protocol_version) override {
-            return protocol_version == registers::current_protocol_id;
+            return protocol_version == (int32_t)registers::current_protocol_id;
         }
 
         //return empty string if no icon, icon must be 64x64 and png format in base64

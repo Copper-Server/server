@@ -13,8 +13,7 @@ int main() {
         try {
             pluginManagement.callUnload();
         } catch (const std::exception& e) {
-            log::error("Initializer thread", "An error occurred while unloading plugins");
-            log::error("Initializer thread", e.what());
+            log::error("Initializer thread", "An error occurred while unloading plugins\n" + std::string(e.what()));
         } catch (...) {
             log::error("Initializer thread", "An error occurred while unloading plugins");
         }
@@ -41,8 +40,7 @@ int main() {
 
         resources::initialize();
     } catch (const std::exception& e) {
-        log::fatal("Initializer thread", "An error occurred while initializing the server, shutting down...");
-        log::fatal("Initializer thread", e.what());
+        log::fatal("Initializer thread", "An error occurred while initializing the server, shutting down...\n" + std::string(e.what()));
         return 1;
     } catch (...) {
         log::fatal("Initializer thread", "An error occurred while initializing the server, shutting down...");
@@ -54,32 +52,19 @@ int main() {
     if (api::server::is_shutting_down())
         return 0;
 
+    log::info("Initializer thread", "Loading plugins");
     try {
-        //log::disable_log_level(log::level::debug);
-        log::info("Initializer thread", "Loading plugins");
-        try {
-            pluginManagement.callLoad();
-        } catch (const std::exception& e) {
-            log::fatal("Initializer thread", "An error occurred while loading plugins, shutting down...");
-            log::fatal("Initializer thread", e.what());
-            pluginManagement.callFaultUnload();
-            return 1;
-        } catch (...) {
-            log::fatal("Initializer thread", "An error occurred while loading plugins, shutting down...");
-            pluginManagement.callFaultUnload();
-            return 1;
-        }
-        log::info("Initializer thread", "Loading complete.");
+        pluginManagement.callLoad();
     } catch (const std::exception& e) {
-        log::fatal("Initializer thread", "An error occurred while initializing the server, shutting down...");
-        log::fatal("Initializer thread", e.what());
+        log::fatal("Initializer thread", "An error occurred while loading plugins, shutting down...\n" + std::string(e.what()));
         pluginManagement.callFaultUnload();
         return 1;
     } catch (...) {
-        log::fatal("Initializer thread", "An error occurred while initializing the server, shutting down...");
+        log::fatal("Initializer thread", "An error occurred while loading plugins, shutting down...");
         pluginManagement.callFaultUnload();
         return 1;
     }
+    log::info("Initializer thread", "Loading complete.");
     fast_task::scheduler::await_end_tasks(true);
     return 0;
 }

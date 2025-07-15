@@ -303,12 +303,12 @@ namespace copper_server::base_objects {
                         fn(i, j, k);
         }
 
-        bool in_bounds(int64_t x, int64_t y, int64_t z) const {
-            return ((x - this->x) * (x - this->x) + (y - this->y) * (y - this->y) + (z - this->z) * (z - this->z)) <= radius * radius;
+        bool in_bounds(int64_t _x, int64_t _y, int64_t _z) const {
+            return ((_x - this->x) * (_x - this->x) + (_y - this->y) * (_y - this->y) + (_z - this->z) * (_z - this->z)) <= radius * radius;
         }
 
-        bool out_of_bounds(int64_t x, int64_t y, int64_t z) const {
-            return !in_bounds(x, y, z);
+        bool out_of_bounds(int64_t _x, int64_t _y, int64_t _z) const {
+            return !in_bounds(_x, _y, _z);
         }
 
         size_t count() const {
@@ -343,12 +343,12 @@ namespace copper_server::base_objects {
         template <class _FN>
         void enum_points(_FN fn) const {
             double radius2 = radius * radius;
-            int64_t start_x = x - radius;
-            int64_t end_x = x + radius;
+            int64_t start_x = int64_t(x - radius);
+            int64_t end_x = int64_t(x + radius);
 
 
-            int64_t start_z = x - radius;
-            int64_t end_z = x + radius;
+            int64_t start_z = int64_t(x - radius);
+            int64_t end_z = int64_t(x + radius);
 
             for (int64_t i = start_x; i <= end_x; i++)
                 for (int64_t j = start_z; j <= end_z; j++)
@@ -356,16 +356,16 @@ namespace copper_server::base_objects {
                         fn(i, j);
         }
 
-        bool in_bounds(int64_t x, int64_t z) const {
-            return ((x - this->x) * (x - this->x) + (z - this->z) * (z - this->z)) <= radius * radius;
+        bool in_bounds(int64_t _x, int64_t _z) const {
+            return ((_x - this->x) * (_x - this->x) + (_z - this->z) * (_z - this->z)) <= radius * radius;
         }
 
-        bool out_of_bounds(int64_t x, int64_t z) const {
-            return !in_bounds(x, z);
+        bool out_of_bounds(int64_t _x, int64_t _z) const {
+            return !in_bounds(_x, _z);
         }
 
         size_t count() const {
-            return (radius * 2 + 1) * (radius * 2 + 1);
+            return size_t(std::ceil((radius * 2 + 1) * (radius * 2 + 1)));
         }
 
         std::tuple<double, double> random_point() const {
@@ -386,14 +386,14 @@ namespace copper_server::base_objects {
         template <class _FN>
         void enum_points(_FN fn) const {
             double radius2 = radius * radius;
-            int64_t start_x = x - radius;
-            int64_t end_x = x + radius;
+            int64_t start_x = int64_t(x - radius);
+            int64_t end_x = int64_t(x + radius);
 
-            int64_t start_y = y - radius;
-            int64_t end_y = y + radius;
+            int64_t start_y = int64_t(y - radius);
+            int64_t end_y = int64_t(y + radius);
 
-            int64_t start_z = z - radius;
-            int64_t end_z = z + radius;
+            int64_t start_z = int64_t(z - radius);
+            int64_t end_z = int64_t(z + radius);
 
             for (int64_t i = start_x; i <= end_x; i++)
                 for (int64_t j = start_y; j <= end_y; j++)
@@ -402,16 +402,16 @@ namespace copper_server::base_objects {
                             fn(i, j, k);
         }
 
-        bool in_bounds(int64_t x, int64_t y, int64_t z) const {
-            return ((x - this->x) * (x - this->x) + (y - this->y) * (y - this->y) + (z - this->z) * (z - this->z)) <= radius * radius;
+        bool in_bounds(int64_t _x, int64_t _y, int64_t _z) const {
+            return ((_x - this->x) * (_x - this->x) + (_y - this->y) * (_y - this->y) + (_z - this->z) * (_z - this->z)) <= radius * radius;
         }
 
-        bool out_of_bounds(int64_t x, int64_t y, int64_t z) const {
-            return !in_bounds(x, y, z);
+        bool out_of_bounds(int64_t _x, int64_t _y, int64_t _z) const {
+            return !in_bounds(_x, _y, _z);
         }
 
         size_t count() const {
-            return (radius * 2 + 1) * (radius * 2 + 1) * (radius * 2 + 1);
+            return size_t(std::ceil(radius * 2 + 1) * (radius * 2 + 1) * (radius * 2 + 1));
         }
 
         std::tuple<double, double, double> random_point() const {

@@ -26,7 +26,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
     namespace structs {
         struct pallete_data {
             bit_list_array<> data;
-            uint64_t bits_per_entry : 6;
+            size_t bits_per_entry : 6;
 
             pallete_data(uint8_t bits_per_entry)
                 : bits_per_entry(bits_per_entry) {
@@ -43,7 +43,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             }
 
             constexpr void add(size_t value) {
-                if (value >= (1 << bits_per_entry))
+                if (value >= (size_t(1) << bits_per_entry))
                     throw std::out_of_range("value is too large for the given bits_per_entry");
                 for (size_t i = 0; i < bits_per_entry; i++)
                     data.push_back((value >> i) & 1);
@@ -59,20 +59,20 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             }
         };
 
-        struct paletted_container_single {
+        struct pallete_container_single {
             // uint8_t bits_per_entry; always 0
             int32_t id_of_palette;
         };
 
-        struct paletted_container_indirect {
+        struct pallete_container_indirect {
             uint8_t bits_per_entry; // 4-8 for blocks and 1-3 for biomes
             list_array<int32_t> palette;
             pallete_data data;
 
-            paletted_container_indirect(uint8_t bits_per_entry) : bits_per_entry(bits_per_entry), data(bits_per_entry) {}
+            pallete_container_indirect(uint8_t bits_per_entry) : bits_per_entry(bits_per_entry), data(bits_per_entry) {}
         };
 
-        class paletted_container {
+        class pallete_container {
             uint8_t bits_per_entry;
             std::unordered_set<int32_t> unique_pallete;
             list_array<int32_t> data;
@@ -81,34 +81,34 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             static inline constexpr auto max_indirect_blocks = 0xFF;
 
         public:
-            paletted_container(size_t max_items, bool is_biomes) : bits_per_entry(pallete_data::bits_for_max(max_items)), is_biomes_mode(is_biomes) {}
+            pallete_container(size_t max_items, bool is_biomes) : bits_per_entry(pallete_data::bits_for_max(max_items)), is_biomes_mode(is_biomes) {}
 
             constexpr void add(size_t value) {
-                if (value >= (1 << bits_per_entry))
+                if (value >= (size_t(1) << bits_per_entry))
                     throw std::out_of_range("value is too large for the given bits_per_entry");
 
-                data.push_back(value);
+                data.push_back((int32_t)value);
 
                 if (is_biomes_mode) {
                     if (unique_pallete.size() <= max_indirect_biomes)
-                        unique_pallete.insert(value);
+                        unique_pallete.insert((int32_t)value);
                 } else if (unique_pallete.size() <= max_indirect_blocks)
-                    unique_pallete.insert(value);
+                    unique_pallete.insert((int32_t)value);
             }
 
-            std::variant<paletted_container_single, paletted_container_indirect, pallete_data> compile() {
+            std::variant<pallete_container_single, pallete_container_indirect, pallete_data> compile() {
                 if (unique_pallete.size() == 1) {
-                    paletted_container_single res;
+                    pallete_container_single res;
                     res.id_of_palette = *unique_pallete.begin();
                     data.clear();
                     unique_pallete.clear();
                     return res;
                 } else if ((is_biomes_mode && unique_pallete.size() <= max_indirect_biomes) || (!is_biomes_mode && unique_pallete.size() <= max_indirect_blocks)) {
-                    paletted_container_indirect res(pallete_data::bits_for_max(unique_pallete.size()));
+                    pallete_container_indirect res(pallete_data::bits_for_max(unique_pallete.size()));
                     std::unordered_map<int32_t, size_t> map;
                     res.palette = to_list_array(unique_pallete);
                     res.palette.for_each([&map](auto it, size_t index) {
-                        map[it] = index;
+                        map[(int32_t)it] = index;
                     });
                     for (auto it : data)
                         res.data.add(map[it]);
@@ -125,15 +125,15 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 }
             }
 
-            static list_array<uint8_t> serialize(std::variant<paletted_container_single, paletted_container_indirect, pallete_data>&& data) {
+            static list_array<uint8_t> serialize(std::variant<pallete_container_single, pallete_container_indirect, pallete_data>&& data) {
                 list_array<uint8_t> result;
                 std::visit(
                     [&result](auto&& arg) {
                         using T = std::decay_t<decltype(arg)>;
-                        if constexpr (std::is_same_v<T, paletted_container_single>) {
+                        if constexpr (std::is_same_v<T, pallete_container_single>) {
                             result.push_back(0);
                             WriteVar<int32_t>(arg.id_of_palette, result);
-                        } else if constexpr (std::is_same_v<T, paletted_container_indirect>) {
+                        } else if constexpr (std::is_same_v<T, pallete_container_indirect>) {
                             result.push_back(arg.bits_per_entry);
                             WriteVar<int32_t>(arg.palette.size(), result);
                             for (auto& i : arg.palette)
@@ -165,13 +165,13 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
         struct chunk_biomes {
             int32_t x;
             int32_t z;
-            list_array<paletted_container> biomes;
+            list_array<pallete_container> biomes;
         };
 
         struct chunk_section {
             uint16_t block_count;
             uint16_t palette_index;
-            paletted_container biomes;
+            pallete_container biomes;
         };
 
         struct height_map {
@@ -211,7 +211,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             }
 
             base_objects::network::response disableCompression() override {
-                return base_objects::network::response::enable_compress_answer(list_array<uint8_t>::concat(0x03, 0), 0);
+                return base_objects::network::response::enable_compress_answer(list_array<uint8_t>::concat((uint8_t)0x03, (uint8_t)0), 0);
             }
 
             base_objects::network::response setCompression(int32_t threshold) override {
@@ -238,7 +238,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.write_value(client.data->uuid);
                 packet.write_string(client.name, 16);
                 auto& properties = client.data->properties;
-                packet.write_var32(properties.size());
+                packet.write_var32_check(properties.size());
                 for (auto& it : properties) {
                     packet.write_string(it.name, 32767);
                     packet.write_string(it.value, 32767);
@@ -267,8 +267,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response requestCookie(const std::string& key) override {
                 base_objects::network::response::item packet;
                 packet.write_id(0x00);
-                packet.write_var32(key.size());
-                packet.write_direct(key);
+                packet.write_identifier(key);
                 return packet;
             }
 
@@ -336,11 +335,10 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             }
 
             base_objects::network::response registry_data() override {
-                using namespace registers;
                 static list_array<base_objects::network::response::item> data;
                 if (data.empty()) {
                     { // minecraft:trim_material
-                        data.push_back(registry_data_serialize_entry<ArmorTrimMaterial>("minecraft:trim_material", registers::armorTrimMaterials_cache, [](registers::ArmorTrimMaterial& it) -> enbt::value {
+                        data.push_back(registry_data_serialize_entry<registers::ArmorTrimMaterial>("minecraft:trim_material", registers::armorTrimMaterials_cache, [](registers::ArmorTrimMaterial& it) -> enbt::value {
                             if (!it.send_via_network_body)
                                 return enbt::value{};
                             enbt::compound element;
@@ -353,7 +351,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         }));
                     }
                     { // minecraft:trim_pattern
-                        data.push_back(registry_data_serialize_entry<ArmorTrimPattern>("minecraft:trim_pattern", registers::armorTrimPatterns_cache, [](registers::ArmorTrimPattern& it) -> enbt::value {
+                        data.push_back(registry_data_serialize_entry<registers::ArmorTrimPattern>("minecraft:trim_pattern", registers::armorTrimPatterns_cache, [](registers::ArmorTrimPattern& it) -> enbt::value {
                             if (!it.send_via_network_body)
                                 return enbt::value{};
                             enbt::compound element;
@@ -367,7 +365,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         }));
                     }
                     { // minecraft:worldgen/biome
-                        data.push_back(registry_data_serialize_entry<Biome>("minecraft:worldgen/biome", registers::biomes_cache, [](registers::Biome& it) -> enbt::value {
+                        data.push_back(registry_data_serialize_entry<registers::Biome>("minecraft:worldgen/biome", registers::biomes_cache, [](registers::Biome& it) -> enbt::value {
                             if (!it.send_via_network_body)
                                 return enbt::value{};
                             enbt::compound element;
@@ -397,10 +395,10 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                                 if (it.effects.ambient_sound) {
                                     if (std::holds_alternative<std::string>(*it.effects.ambient_sound))
                                         effects["ambient_sound"] = std::get<std::string>(*it.effects.ambient_sound);
-                                    else if (std::holds_alternative<Biome::AmbientSound>(*it.effects.ambient_sound)) {
+                                    else if (std::holds_alternative<registers::Biome::AmbientSound>(*it.effects.ambient_sound)) {
                                         enbt::compound ambient_sound;
-                                        ambient_sound["sound"] = std::get<Biome::AmbientSound>(*it.effects.ambient_sound).sound;
-                                        ambient_sound["range"] = std::get<Biome::AmbientSound>(*it.effects.ambient_sound).range;
+                                        ambient_sound["sound"] = std::get<registers::Biome::AmbientSound>(*it.effects.ambient_sound).sound;
+                                        ambient_sound["range"] = std::get<registers::Biome::AmbientSound>(*it.effects.ambient_sound).range;
                                         effects["ambient_sound"] = std::move(ambient_sound);
                                     }
                                 }
@@ -436,7 +434,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         }));
                     }
                     { // minecraft:chat_type
-                        data.push_back(registry_data_serialize_entry<ChatType>("minecraft:chat_type", registers::chatTypes_cache, [](registers::ChatType& it) -> enbt::value {
+                        data.push_back(registry_data_serialize_entry<registers::ChatType>("minecraft:chat_type", registers::chatTypes_cache, [](registers::ChatType& it) -> enbt::value {
                             if (!it.send_via_network_body)
                                 return enbt::value{};
                             enbt::compound element;
@@ -469,7 +467,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         }));
                     }
                     { // minecraft:damage_type
-                        data.push_back(registry_data_serialize_entry<DamageType>("minecraft:damage_type", registers::damageTypes_cache, [](registers::DamageType& it) -> enbt::value {
+                        data.push_back(registry_data_serialize_entry<registers::DamageType>("minecraft:damage_type", registers::damageTypes_cache, [](registers::DamageType& it) -> enbt::value {
                             if (!it.send_via_network_body)
                                 return enbt::value{};
                             enbt::compound element;
@@ -477,13 +475,13 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                             {
                                 const char* scaling = nullptr;
                                 switch (it.scaling) {
-                                case DamageType::ScalingType::never:
+                                case registers::DamageType::ScalingType::never:
                                     scaling = "never";
                                     break;
-                                case DamageType::ScalingType::when_caused_by_living_non_player:
+                                case registers::DamageType::ScalingType::when_caused_by_living_non_player:
                                     scaling = "when_caused_by_living_non_player";
                                     break;
-                                case DamageType::ScalingType::always:
+                                case registers::DamageType::ScalingType::always:
                                     scaling = "always";
                                     break;
                                 }
@@ -494,22 +492,22 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                             if (it.effects) {
                                 const char* effect = nullptr;
                                 switch (*it.effects) {
-                                case DamageType::EffectsType::hurt:
+                                case registers::DamageType::EffectsType::hurt:
                                     effect = "hurt";
                                     break;
-                                case DamageType::EffectsType::thorns:
+                                case registers::DamageType::EffectsType::thorns:
                                     effect = "thorns";
                                     break;
-                                case DamageType::EffectsType::drowning:
+                                case registers::DamageType::EffectsType::drowning:
                                     effect = "drowning";
                                     break;
-                                case DamageType::EffectsType::burning:
+                                case registers::DamageType::EffectsType::burning:
                                     effect = "burning";
                                     break;
-                                case DamageType::EffectsType::poking:
+                                case registers::DamageType::EffectsType::poking:
                                     effect = "poking";
                                     break;
-                                case DamageType::EffectsType::freezing:
+                                case registers::DamageType::EffectsType::freezing:
                                     effect = "freezing";
                                     break;
                                 default:
@@ -521,13 +519,13 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                             if (it.death_message_type) {
                                 const char* death_message_type = nullptr;
                                 switch (*it.death_message_type) {
-                                case DamageType::DeathMessageType::_default:
+                                case registers::DamageType::DeathMessageType::_default:
                                     death_message_type = "default";
                                     break;
-                                case DamageType::DeathMessageType::fall_variants:
+                                case registers::DamageType::DeathMessageType::fall_variants:
                                     death_message_type = "fall_variants";
                                     break;
-                                case DamageType::DeathMessageType::intentional_game_design:
+                                case registers::DamageType::DeathMessageType::intentional_game_design:
                                     death_message_type = "intentional_game_design";
                                     break;
                                 default:
@@ -540,14 +538,14 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         }));
                     }
                     { // minecraft:dimension_type
-                        data.push_back(registry_data_serialize_entry<DimensionType>("minecraft:dimension_type", registers::dimensionTypes_cache, [](registers::DimensionType& it) -> enbt::value {
+                        data.push_back(registry_data_serialize_entry<registers::DimensionType>("minecraft:dimension_type", registers::dimensionTypes_cache, [](registers::DimensionType& it) -> enbt::value {
                             if (!it.send_via_network_body)
                                 return enbt::value{};
                             enbt::compound element;
                             if (std::holds_alternative<int32_t>(it.monster_spawn_light_level))
                                 element["monster_spawn_light_level"] = std::get<int32_t>(it.monster_spawn_light_level);
                             else
-                                element["monster_spawn_light_level"] = std::get<IntegerDistribution>(it.monster_spawn_light_level).get_enbt();
+                                element["monster_spawn_light_level"] = std::get<registers::IntegerDistribution>(it.monster_spawn_light_level).get_enbt();
                             if (it.fixed_time)
                                 element["fixed_time"] = it.fixed_time.value();
                             element["infiniburn"] = it.infiniburn;
@@ -570,7 +568,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         }));
                     }
                     { // minecraft:wolf_variant
-                        data.push_back(registry_data_serialize_entry<WolfVariant>("minecraft:wolf_variant", registers::wolfVariants_cache, [](registers::WolfVariant& it) -> enbt::value {
+                        data.push_back(registry_data_serialize_entry<registers::WolfVariant>("minecraft:wolf_variant", registers::wolfVariants_cache, [](registers::WolfVariant& it) -> enbt::value {
                             if (!it.send_via_network_body)
                                 return enbt::value{};
                             enbt::compound element;
@@ -580,7 +578,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         }));
                     }
                     { // minecraft:painting_variant
-                        data.push_back(registry_data_serialize_entry<PaintingVariant>("minecraft:painting_variant", registers::paintingVariants_cache, [](registers::PaintingVariant& it) -> enbt::value {
+                        data.push_back(registry_data_serialize_entry<registers::PaintingVariant>("minecraft:painting_variant", registers::paintingVariants_cache, [](registers::PaintingVariant& it) -> enbt::value {
                             if (!it.send_via_network_body)
                                 return enbt::value{};
                             enbt::compound element;
@@ -593,7 +591,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         }));
                     }
                     { // minecraft:instrument
-                        data.push_back(registry_data_serialize_entry<Instrument>("minecraft:instrument", registers::instruments_cache, [](registers::Instrument& it) -> enbt::value {
+                        data.push_back(registry_data_serialize_entry<registers::Instrument>("minecraft:instrument", registers::instruments_cache, [](registers::Instrument& it) -> enbt::value {
                             if (!it.send_via_network_body)
                                 return enbt::value{};
                             enbt::compound element;
@@ -619,7 +617,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         }));
                     }
                     { // minecraft:cat_variant
-                        data.push_back(registry_data_serialize_entry<EntityVariant>("minecraft:cat_variant", registers::catVariants_cache, [](registers::EntityVariant& it) -> enbt::value {
+                        data.push_back(registry_data_serialize_entry<registers::EntityVariant>("minecraft:cat_variant", registers::catVariants_cache, [](registers::EntityVariant& it) -> enbt::value {
                             if (!it.send_via_network_body)
                                 return enbt::value{};
                             enbt::compound element;
@@ -631,7 +629,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         }));
                     }
                     { // minecraft:chicken_variant
-                        data.push_back(registry_data_serialize_entry<EntityVariant>("minecraft:chicken_variant", registers::chickenVariants_cache, [](registers::EntityVariant& it) -> enbt::value {
+                        data.push_back(registry_data_serialize_entry<registers::EntityVariant>("minecraft:chicken_variant", registers::chickenVariants_cache, [](registers::EntityVariant& it) -> enbt::value {
                             if (!it.send_via_network_body)
                                 return enbt::value{};
                             enbt::compound element;
@@ -643,7 +641,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         }));
                     }
                     { // minecraft:cow_variant
-                        data.push_back(registry_data_serialize_entry<EntityVariant>("minecraft:cow_variant", registers::cowVariants_cache, [](registers::EntityVariant& it) -> enbt::value {
+                        data.push_back(registry_data_serialize_entry<registers::EntityVariant>("minecraft:cow_variant", registers::cowVariants_cache, [](registers::EntityVariant& it) -> enbt::value {
                             if (!it.send_via_network_body)
                                 return enbt::value{};
                             enbt::compound element;
@@ -655,7 +653,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         }));
                     }
                     { // minecraft:frog_variant
-                        data.push_back(registry_data_serialize_entry<EntityVariant>("minecraft:frog_variant", registers::frogVariants_cache, [](registers::EntityVariant& it) -> enbt::value {
+                        data.push_back(registry_data_serialize_entry<registers::EntityVariant>("minecraft:frog_variant", registers::frogVariants_cache, [](registers::EntityVariant& it) -> enbt::value {
                             if (!it.send_via_network_body)
                                 return enbt::value{};
                             enbt::compound element;
@@ -667,7 +665,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         }));
                     }
                     { // minecraft:pig_variant
-                        data.push_back(registry_data_serialize_entry<EntityVariant>("minecraft:pig_variant", registers::pigVariants_cache, [](registers::EntityVariant& it) -> enbt::value {
+                        data.push_back(registry_data_serialize_entry<registers::EntityVariant>("minecraft:pig_variant", registers::pigVariants_cache, [](registers::EntityVariant& it) -> enbt::value {
                             if (!it.send_via_network_body)
                                 return enbt::value{};
                             enbt::compound element;
@@ -679,7 +677,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         }));
                     }
                     { // minecraft:wolf_sound_variant
-                        data.push_back(registry_data_serialize_entry<WolfSoundVariant>("minecraft:wolf_sound_variant", registers::wolfSoundVariants_cache, [](registers::WolfSoundVariant& it) -> enbt::value {
+                        data.push_back(registry_data_serialize_entry<registers::WolfSoundVariant>("minecraft:wolf_sound_variant", registers::wolfSoundVariants_cache, [](registers::WolfSoundVariant& it) -> enbt::value {
                             if (!it.send_via_network_body)
                                 return enbt::value{};
                             enbt::compound element;
@@ -817,7 +815,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                     throw std::invalid_argument("Report cannot contain more than 32 entry's.");
                 base_objects::network::response::item packet;
                 packet.write_id(0x0F);
-                packet.write_var32(values.size());
+                packet.write_var32_check(values.size());
                 for (auto&& [title, desc] : values) {
                     packet.write_string(title, 128);
                     packet.write_string(desc, 4096);
@@ -864,7 +862,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                         return base_objects::network::response::empty();
                     else if (response.data.size() == 1)
                         return std::move(response);
-                    base_objects::network::response answer(base_objects::network::response::answer({list_array<uint8_t>::concat(0x00)}));
+                    base_objects::network::response answer(base_objects::network::response::answer({list_array<uint8_t>::concat((uint8_t)0x00)}));
                     answer.data.push_back(response.data);
                     answer.data.push_back({0x00});
                     return answer;
@@ -930,7 +928,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 base_objects::network::response::item packet;
                 packet.write_id(0x05);
                 packet.write_var32(api::entity_id_map::get_id(entity.id));
-                packet.write_value(block.raw);
+                packet.write_value(block.get());
                 packet.write_value(stage);
                 return packet;
             }
@@ -939,7 +937,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response blockEntityData(base_objects::position pos, const base_objects::block& block_type, const enbt::value& data) override {
                 base_objects::network::response::item packet;
                 packet.write_id(0x06);
-                packet.write_value(pos.raw);
+                packet.write_value(pos.get());
                 packet.write_var32(block_type.getStaticData().block_entity_id);
                 packet.write_direct(util::NBT::build(data).get_as_network());
                 return packet;
@@ -949,7 +947,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response blockAction(base_objects::position pos, int32_t action_id, int32_t param, const base_objects::block& block_type) override {
                 base_objects::network::response::item packet;
                 packet.write_id(0x07);
-                packet.write_value(pos.raw);
+                packet.write_value(pos.get());
                 packet.write_var32(action_id);
                 packet.write_var32(param);
                 packet.write_var32(block_type.getStaticData().general_block_id);
@@ -959,7 +957,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response blockUpdate(base_objects::position pos, const base_objects::block& block_type) override {
                 base_objects::network::response::item packet;
                 packet.write_id(0x08);
-                packet.write_value(pos.raw);
+                packet.write_value(pos.get());
                 packet.write_var32(block_type.id);
                 return packet;
             }
@@ -1053,7 +1051,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
 
                     list_array<uint8_t> array;
                     for (auto& sub : chunk->sub_chunks) {
-                        structs::paletted_container res(registers::biomes.size(), true);
+                        structs::pallete_container res(registers::biomes.size(), true);
                         for (auto& x : sub.biomes)
                             for (auto& y : x)
                                 for (auto& z : y)
@@ -1098,7 +1096,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 for (auto& command : command_nodes) {
                     auto node = command.build_node(is_root);
                     is_root = false;
-                    res.write_value((uint8_t)node.flags.raw);
+                    res.write_value((uint8_t)node.flags.get());
                     res.write_var32_check(command.childs.size());
                     for (auto& child : command.childs)
                         res.write_var32(child);
@@ -1128,7 +1126,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
 
             base_objects::network::response commands(const base_objects::command_manager& compiled_graph) override {
                 static std::pair<base_objects::network::response::item, int32_t> res;
-                static size_t changes_id = -1;
+                static size_t changes_id = size_t(-1);
                 if (auto current_changes_id = compiled_graph.get_changes_id(); changes_id != current_changes_id) {
                     res = build_commands(compiled_graph);
                     changes_id = current_changes_id;
@@ -1148,10 +1146,10 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 return packet;
             }
 
-            base_objects::network::response setContainerContent(uint8_t windows_id, int32_t state_id, const list_array<base_objects::slot>& slots, const base_objects::slot& carried_item) override {
+            base_objects::network::response setContainerContent(int32_t windows_id, int32_t state_id, const list_array<base_objects::slot>& slots, const base_objects::slot& carried_item) override {
                 list_array<uint8_t> packet;
                 packet.push_back(0x12);
-                packet.push_back(windows_id);
+                WriteVar<int32_t>(windows_id, packet);
                 WriteVar<int32_t>(state_id, packet);
                 WriteVar<int32_t>(slots.size(), packet);
                 for (auto& it : slots)
@@ -1160,20 +1158,20 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
-            base_objects::network::response setContainerProperty(uint8_t windows_id, uint16_t property, uint16_t value) override {
+            base_objects::network::response setContainerProperty(int32_t windows_id, uint16_t property, uint16_t value) override {
                 base_objects::network::response::item packet;
                 packet.write_id(0x13);
-                packet.write_value(windows_id);
+                packet.write_var32(windows_id);
                 packet.write_value(property);
                 packet.write_value(value);
                 return packet;
             }
 
-            base_objects::network::response setContainerSlot(uint8_t windows_id, int32_t state_id, int16_t slot, const base_objects::slot& item) override {
+            base_objects::network::response setContainerSlot(int32_t windows_id, int32_t state_id, int16_t slot, const base_objects::slot& item) override {
                 list_array<uint8_t> packet;
                 packet.reserve(1 + 1 + 4 + 2 + (bool)item);
                 packet.push_back(0x14);
-                packet.push_back(windows_id);
+                WriteVar<int32_t>(windows_id, packet);
                 WriteVar<int32_t>(state_id, packet);
                 WriteValue<int16_t>(slot, packet);
                 reader::WriteSlot(packet, item);
@@ -1257,7 +1255,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             }
 
             base_objects::network::response kick(const Chat& reason) override {
-                return base_objects::network::response::disconnect({list_array<uint8_t>::concat(0x1C, reader::toTextComponent(reason))});
+                return base_objects::network::response::disconnect({list_array<uint8_t>::concat((uint8_t)0x1C, reader::toTextComponent(reason))});
             }
 
             base_objects::network::response disguisedChatMessage(const Chat& message, int32_t chat_type, const Chat& sender, const std::optional<Chat>& target_name) override {
@@ -1323,9 +1321,9 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 list_array<uint8_t> packet;
                 packet.reserve(1 + 4 * 4 + 4 + 4 * 3 * affected_blocks.size() + 4 * 3);
                 packet.push_back(0x20);
-                WriteValue<float>(pos.x, packet);
-                WriteValue<float>(pos.y, packet);
-                WriteValue<float>(pos.z, packet);
+                WriteValue<float>((float)pos.x, packet);
+                WriteValue<float>((float)pos.y, packet);
+                WriteValue<float>((float)pos.z, packet);
                 WriteValue<float>(strength, packet);
                 WriteVar<int32_t>(affected_blocks.size(), packet);
                 for (auto& it : affected_blocks) {
@@ -1333,9 +1331,9 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                     WriteValue<int8_t>(it.y, packet);
                     WriteValue<int8_t>(it.z, packet);
                 }
-                WriteValue<float>(player_motion.x, packet);
-                WriteValue<float>(player_motion.y, packet);
-                WriteValue<float>(player_motion.z, packet);
+                WriteValue<float>((float)player_motion.x, packet);
+                WriteValue<float>((float)player_motion.y, packet);
+                WriteValue<float>((float)player_motion.z, packet);
                 WriteVar<int32_t>(block_interaction, packet);
                 WriteVar<int32_t>(small_explosion_particle_id, packet);
                 for (auto& it : small_explosion_particle_data.data)
@@ -1534,8 +1532,8 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                     list_array<uint8_t> data;
                     for (auto& section : chunk.sub_chunks) {
                         uint16_t block_count = 0;
-                        structs::paletted_container blocks(base_objects::block::block_states_size(), false);
-                        structs::paletted_container biomes(registers::biomes.size(), true);
+                        structs::pallete_container blocks(base_objects::block::block_states_size(), false);
+                        structs::pallete_container biomes(registers::biomes.size(), true);
                         for (auto& x : section.blocks)
                             for (auto& y : x)
                                 for (auto z : y) {
@@ -1581,7 +1579,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 base_objects::network::response::item packet;
                 packet.write_id(0x28);
                 packet.write_var32((int32_t)event);
-                packet.write_value(pos.raw);
+                packet.write_value(pos.get());
                 packet.write_var32(data);
                 packet.write_value(global);
                 return base_objects::network::response::answer({std::move(packet)});
@@ -1637,7 +1635,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.write_value((bool)death_location);
                 if (death_location) {
                     packet.write_identifier(death_location->dimension);
-                    packet.write_value(death_location->position.raw);
+                    packet.write_value(death_location->position.get());
                 }
                 packet.write_var32(portal_cooldown);
                 packet.write_var32(sea_level);
@@ -1655,10 +1653,10 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.push_back(!icons.empty());
                 if (!icons.empty()) {
                     WriteVar<int32_t>(icons.size(), packet);
-                    for (auto& [name, type, x, z, direction] : icons) {
+                    for (auto& [name, type, loc_x, loc_z, direction] : icons) {
                         WriteVar<int32_t>(type, packet);
-                        packet.push_back(x);
-                        packet.push_back(z);
+                        packet.push_back(loc_x);
+                        packet.push_back(loc_z);
                         packet.push_back(direction);
                         packet.push_back((bool)name);
                         if (name)
@@ -1676,25 +1674,25 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
-            base_objects::network::response merchantOffers(int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade>& trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock) override {
+            base_objects::network::response merchantOffers(int32_t window_id, const list_array<base_objects::packets::trade>& trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock) override {
                 list_array<uint8_t> packet;
                 packet.push_back(0x2D);
-                packet.push_back(window_id);
-                packet.push_back(trade_id);
+                WriteVar<int32_t>(window_id, packet);
                 WriteVar<int32_t>(trades.size(), packet);
                 for (auto& [input1, output, input2, number_of_trade_uses, max_number_of_trades, xp, spec_price, price_multiplier, demand, trade_disabled] : trades) {
                     //TODO check
                     reader::WriteTradeItem(packet, input1);
                     reader::WriteSlot(packet, output);
                     reader::WriteTradeItem(packet, input2);
+                    packet.push_back(trade_disabled);
                     WriteValue<int32_t>(number_of_trade_uses, packet);
                     WriteValue<int32_t>(max_number_of_trades, packet);
                     WriteValue<int32_t>(xp, packet);
                     WriteValue<int32_t>(spec_price, packet);
-                    WriteValue<int32_t>(price_multiplier, packet);
+                    WriteValue<float>(price_multiplier, packet);
                     WriteValue<int32_t>(demand, packet);
                 }
-                packet.push_back(level);
+                WriteVar<int32_t>(level, packet);
                 WriteVar<int32_t>(experience, packet);
                 packet.push_back(regular_villager);
                 packet.push_back(can_restock);
@@ -1770,8 +1768,8 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 WriteValue<double>(pos.y, packet);
                 WriteValue<double>(pos.z, packet);
                 auto res = util::to_yaw_pitch(rot);
-                WriteValue<float>(res.x, packet);
-                WriteValue<float>(res.y, packet);
+                WriteValue<float>((float)res.x, packet);
+                WriteValue<float>((float)res.y, packet);
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -1787,7 +1785,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 list_array<uint8_t> packet;
                 packet.reserve(1 + 4 * 2);
                 packet.push_back(0x34);
-                packet.push_back(window_id);
+                WriteVar<int32_t>(window_id, packet);
                 WriteVar<int32_t>(type, packet);
                 packet.push_back(reader::toTextComponent(title));
                 return base_objects::network::response::answer({std::move(packet)});
@@ -1797,7 +1795,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 list_array<uint8_t> packet;
                 packet.reserve(1 + 8 + 1);
                 packet.push_back(0x35);
-                WriteValue<uint64_t>(pos.raw, packet);
+                WriteValue<uint64_t>(pos.get(), packet);
                 packet.push_back(is_front_text);
                 return base_objects::network::response::answer({std::move(packet)});
             }
@@ -1824,7 +1822,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 list_array<uint8_t> packet;
                 packet.reserve(1 + 4 + recipe_id.size());
                 packet.push_back(0x38);
-                packet.push_back(windows_id);
+                WriteVar<int32_t>(windows_id, packet);
                 WriteIdentifier(packet, recipe_id);
                 return base_objects::network::response::answer({std::move(packet)});
             }
@@ -1885,7 +1883,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             }
 
             base_objects::network::response enterCombat() override {
-                return base_objects::network::response::answer({list_array<uint8_t>::concat(0x3C)});
+                return base_objects::network::response::answer({list_array<uint8_t>::concat((uint8_t)0x3C)});
             }
 
             base_objects::network::response combatDeath(int32_t player_id, const Chat& message) override {
@@ -1916,8 +1914,8 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                     WriteUUID(uuid, packet);
                     WriteString(packet, name, 16);
                     WriteVar<int32_t>(properties.size(), packet);
-                    for (auto& [name, value, signature] : properties) {
-                        WriteString(packet, name, 32767);
+                    for (auto& [prop_name, value, signature] : properties) {
+                        WriteString(packet, prop_name, 32767);
                         WriteString(packet, value, 32767);
                         packet.push_back((bool)signature);
                         if (signature)
@@ -1957,7 +1955,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 WriteVar<int32_t>(update_game_mode.size(), packet);
                 for (auto& [uuid, game_mode] : update_game_mode) {
                     WriteUUID(uuid, packet);
-                    packet.push_back(game_mode);
+                    WriteVar<int32_t>(game_mode, packet);
                 }
                 return base_objects::network::response::answer({std::move(packet)});
             }
@@ -2006,9 +2004,9 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.reserve(1 + 1 + 4 * 3 + (bool)entity_id * 4 * 2);
                 packet.push_back(0x30);
                 packet.push_back(from_feet_or_eyes);
-                WriteValue<float>(target.x, packet);
-                WriteValue<float>(target.y, packet);
-                WriteValue<float>(target.z, packet);
+                WriteValue<float>((float)target.x, packet);
+                WriteValue<float>((float)target.y, packet);
+                WriteValue<float>((float)target.z, packet);
                 packet.push_back((bool)entity_id);
                 if (entity_id) {
                     WriteVar<int32_t>(entity_id->first, packet); //entity id
@@ -2215,7 +2213,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             }
 
             base_objects::network::response removeResourcePacks() override {
-                return base_objects::network::response::answer({list_array<uint8_t>::concat(0x49, false)});
+                return base_objects::network::response::answer({list_array<uint8_t>::concat((uint8_t)0x49, false)});
             }
 
             base_objects::network::response removeResourcePack(enbt::raw_uuid id) override {
@@ -2251,7 +2249,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 packet.push_back(is_flat);
                 packet.push_back((bool)death_location);
                 if (death_location) {
-                    WriteValue(death_location->position.raw, packet);
+                    WriteValue(death_location->position.get(), packet);
                     WriteIdentifier(packet, death_location->dimension);
                 }
                 WriteVar<int32_t>(portal_cooldown, packet);
@@ -2278,7 +2276,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 WriteValue<int64_t>(section_pos, packet);
                 WriteVar<int32_t>(blocks.size(), packet);
                 for (auto& it : blocks)
-                    WriteVar<int64_t>(it.value, packet);
+                    WriteVar<int64_t>(it.get(), packet);
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -2380,7 +2378,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response setDefaultSpawnPosition(base_objects::position pos, float angle) override {
                 list_array<uint8_t> packet;
                 packet.push_back(0x5A);
-                WriteValue(pos.raw, packet);
+                WriteValue(pos.get(), packet);
                 WriteValue<float>(angle, packet);
                 return base_objects::network::response::answer({std::move(packet)});
             }
@@ -2388,7 +2386,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             base_objects::network::response displayObjective(int32_t position, const std::string& objective_name) override {
                 list_array<uint8_t> packet;
                 packet.push_back(0x5B);
-                packet.push_back(position);
+                WriteVar<int32_t>(position, packet);
                 WriteString(packet, objective_name, 32767);
                 return base_objects::network::response::answer({std::move(packet)});
             }
@@ -2460,7 +2458,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 WriteString(packet, objective_name, 32767);
                 packet.push_back(0);
                 packet.push_back(reader::toTextComponent(display_name));
-                packet.push_back(render_type);
+                    WriteVar<int32_t>(render_type, packet);
                 packet.push_back(0);
                 return base_objects::network::response::answer({std::move(packet)});
             }
@@ -2471,7 +2469,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 WriteString(packet, objective_name, 32767);
                 packet.push_back(0);
                 packet.push_back(reader::toTextComponent(display_name));
-                packet.push_back(render_type);
+                WriteVar<int32_t>(render_type, packet);
                 packet.push_back(true);
                 packet.push_back(1);
                 packet.push_back(util::NBT::build(style).get_as_network());
@@ -2484,7 +2482,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 WriteString(packet, objective_name, 32767);
                 packet.push_back(0);
                 packet.push_back(reader::toTextComponent(display_name));
-                packet.push_back(render_type);
+                    WriteVar<int32_t>(render_type, packet);
                 packet.push_back(true);
                 packet.push_back(2);
                 packet.push_back(reader::toTextComponent(content));
@@ -2505,7 +2503,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 WriteString(packet, objective_name, 32767);
                 packet.push_back(2);
                 packet.push_back(reader::toTextComponent(display_name));
-                packet.push_back(render_type);
+                WriteVar<int32_t>(render_type, packet);
                 packet.push_back(false);
                 return base_objects::network::response::answer({std::move(packet)});
             }
@@ -2516,7 +2514,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 WriteString(packet, objective_name, 32767);
                 packet.push_back(2);
                 packet.push_back(reader::toTextComponent(display_name));
-                packet.push_back(render_type);
+                    WriteVar<int32_t>(render_type, packet);
                 packet.push_back(true);
                 packet.push_back(1);
                 packet.push_back(util::NBT::build(style).get_as_network());
@@ -2529,7 +2527,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 WriteString(packet, objective_name, 32767);
                 packet.push_back(2);
                 packet.push_back(reader::toTextComponent(display_name));
-                packet.push_back(render_type);
+                WriteVar<int32_t>(render_type, packet);
                 packet.push_back(true);
                 packet.push_back(2);
                 packet.push_back(reader::toTextComponent(content));
@@ -2875,7 +2873,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 WriteValue<double>(velocity.z, packet);
                 WriteValue<float>(yaw, packet);
                 WriteValue<float>(pitch, packet);
-                WriteValue<int32_t>((int32_t)flags.raw, packet);
+                WriteValue<int32_t>(flags.get(), packet);
                 packet.push_back(on_ground);
                 return base_objects::network::response::answer({std::move(packet)});
             }
@@ -2971,7 +2969,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                 WriteVar<int32_t>(effect_id, packet);
                 WriteVar<int32_t>(amplifier, packet);
                 WriteVar<int32_t>(duration, packet);
-                packet.push_back(flags.raw);
+                packet.push_back(flags.get());
                 return base_objects::network::response::answer({std::move(packet)});
             }
 
@@ -2990,17 +2988,16 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
                                 WriteVar<int32_t>((int32_t)registers::view_reg_pro_id("minecraft:recipe_book_category", recipe.category), packet);
                                 WriteVar<int32_t>(item.width, packet);
                                 WriteVar<int32_t>(item.height, packet);
-                                for (auto& item : item.ingredients)
-                                    reader::WriteIngredient(packet, item);
+                                for (auto& ingredient : item.ingredients)
+                                    reader::WriteIngredient(packet, ingredient);
                                 reader::WriteIngredient(packet, item.result);
                                 packet.push_back(item.show_notification);
                             } else if constexpr (std::is_same_v<type, base_objects::recipes::minecraft::crafting_shapeless>) {
                                 WriteString(packet, recipe.group, 32767);
                                 WriteVar<int32_t>((int32_t)registers::view_reg_pro_id("minecraft:recipe_book_category", recipe.category), packet);
                                 WriteVar<int32_t>(item.ingredients.size(), packet);
-                                for (auto& item : item.ingredients)
-                                    reader::WriteIngredient(packet, item);
-
+                                for (auto& ingredient : item.ingredients)
+                                    reader::WriteIngredient(packet, ingredient);
                                 reader::WriteIngredient(packet, item.result);
                             } else if constexpr (
                                 std::is_same_v<type, base_objects::recipes::minecraft::crafting_special_armordye>
@@ -3137,7 +3134,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
         void query_block_nbt(api::network::tcp::session* session, ArrayStream& packet) {
             api::protocol::data::block_nbt_request data;
             data.transaction_id = packet.read_var<int32_t>();
-            data.position.raw = packet.read_value<int64_t>();
+            data.position.set(packet.read_value<int64_t>());
             api::protocol::on_block_nbt_request.async_notify({data, *session, session->shared_data_ref()});
         }
 
@@ -3170,8 +3167,8 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
             for (int32_t i = 0; i < arguments_count; i++) {
                 api::protocol::data::signed_chat_command::argument_signature arg;
                 arg.argument_name = packet.read_string(16);
-                for (int i = 0; i < 256; i++)
-                    arg.signature[i] = packet.read();
+                for (int j = 0; j < 256; j++)
+                    arg.signature[j] = packet.read();
                 data.arguments_signature.push_back(arg);
             }
             data.message_count = packet.read_var<int32_t>();
@@ -3375,7 +3372,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
 
         void jigsaw_generate(api::network::tcp::session* session, ArrayStream& packet) {
             api::protocol::data::jigsaw_generate data;
-            data.location.raw = packet.read_value<int64_t>();
+            data.location.set(packet.read_value<int64_t>());
             data.levels = packet.read_var<int32_t>();
             data.keep_jigsaws = packet.read();
             api::protocol::on_jigsaw_generate.async_notify({data, *session, session->shared_data_ref()});
@@ -3439,7 +3436,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
 
         void pick_item_from_block(api::network::tcp::session* session, ArrayStream& packet) {
             base_objects::position pos;
-            pos.raw = packet.read_value<uint64_t>();
+            pos.set(packet.read_value<uint64_t>());
             api::protocol::on_pick_item_from_block.async_notify({{pos, (bool)packet.read()}, *session, session->shared_data_ref()});
         }
 
@@ -3490,7 +3487,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
         void player_action(api::network::tcp::session* session, ArrayStream& packet) {
             api::protocol::data::player_action data;
             data.status = packet.read_var<int32_t>();
-            data.location.raw = packet.read_value<int64_t>();
+            data.location.set(packet.read_value<int64_t>());
             data.face = packet.read_value<int8_t>();
             data.sequence_id = packet.read_var<int32_t>();
             api::protocol::on_player_action.async_notify({data, *session, session->shared_data_ref()});
@@ -3571,7 +3568,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
 
         void program_command_block(api::network::tcp::session* session, ArrayStream& packet) {
             api::protocol::data::program_command_block data;
-            data.location.raw = packet.read_value<int64_t>();
+            data.location.set(packet.read_value<int64_t>());
             data.command = packet.read_identifier();
             data.mode = packet.read_var<int32_t>();
             data.flags = packet.read_value<int8_t>();
@@ -3595,7 +3592,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
 
         void program_jigsaw_block(api::network::tcp::session* session, ArrayStream& packet) {
             api::protocol::data::program_jigsaw_block data;
-            data.location.raw = packet.read_value<int64_t>();
+            data.location.set( packet.read_value<int64_t>());
             data.name = packet.read_identifier();
             data.target = packet.read_identifier();
             data.pool = packet.read_identifier();
@@ -3608,7 +3605,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
 
         void program_structure_block(api::network::tcp::session* session, ArrayStream& packet) {
             api::protocol::data::program_structure_block data;
-            data.location.raw = packet.read_value<int64_t>();
+            data.location.set( packet.read_value<int64_t>());
             data.action = packet.read_var<int32_t>();
             data.mode = packet.read_var<int32_t>();
             data.name = packet.read_identifier();
@@ -3629,7 +3626,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
 
         void update_sign(api::network::tcp::session* session, ArrayStream& packet) {
             api::protocol::data::update_sign data;
-            data.location.raw = packet.read_value<int64_t>();
+            data.location.set( packet.read_value<int64_t>());
             data.is_front_text = packet.read_value<bool>();
             data.line1 = packet.read_string(384);
             data.line2 = packet.read_string(384);
@@ -3649,7 +3646,7 @@ namespace copper_server::build_in_plugins::network::tcp::protocol::play_770 {
         void use_item_on(api::network::tcp::session* session, ArrayStream& packet) {
             api::protocol::data::use_item_on data;
             data.hand = packet.read_var<int32_t>();
-            data.location.raw = packet.read_value<int64_t>();
+            data.location.set(packet.read_value<int64_t>());
             data.face = packet.read_var<int32_t>();
             data.cursor_x = packet.read_value<float>();
             data.cursor_y = packet.read_value<float>();

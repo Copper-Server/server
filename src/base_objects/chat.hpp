@@ -452,6 +452,7 @@ namespace copper_server {
         static Chat parseToChat(const std::string& string);
         static Chat fromTextComponent(const list_array<uint8_t>& enbt);
         static Chat fromEnbt(const enbt::value& enbt);
+        static Chat from_enbt_with_format(const enbt::value& enbt, list_array<enbt::value>&&);
         std::string to_ansi_console() const;
 
 

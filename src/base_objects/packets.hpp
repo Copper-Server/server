@@ -203,15 +203,29 @@ namespace copper_server::base_objects::packets {
             std::optional<std::string> registry;
         };
 
-        union {
-            struct {
-                node_type node_type : 2;
-                bool is_executable : 1;
-                bool has_redirect : 1;
-                bool has_suggestion : 1;
-            };
+        struct flag_t {
+            node_type node_type : 2;
+            bool is_executable : 1;
+            bool has_redirect : 1;
+            bool has_suggestion : 1;
 
-            uint8_t raw = 0;
+            inline void set(uint8_t raw) {
+                union u_t {
+                    flag_t flag;
+                    uint8_t r;
+                } u{.r = raw};
+
+                *this = u.flag;
+            }
+
+            inline uint8_t get() const {
+                union u_t {
+                    flag_t flag;
+                    uint8_t r;
+                } u{.flag = *this};
+
+                return u.r;
+            }
         } flags;
 
         list_array<int32_t> children;
@@ -357,7 +371,6 @@ namespace copper_server::base_objects::packets {
         list_array<entry> tags;
     };
 
-
     struct server_link {
         enum class label_type {
             bug_report,
@@ -377,19 +390,33 @@ namespace copper_server::base_objects::packets {
     };
 
     union teleport_flags {
-        struct {
-            bool x_relative : 1;
-            bool y_relative : 1;
-            bool z_relative : 1;
-            bool yaw_relative : 1;
-            bool pitch_relative : 1;
-            bool velocity_x_relative : 1;
-            bool velocity_y_relative : 1;
-            bool velocity_z_relative : 1;
-            bool rotate_by_yaw_pitch : 1;
-        };
+        bool x_relative : 1;
+        bool y_relative : 1;
+        bool z_relative : 1;
+        bool yaw_relative : 1;
+        bool pitch_relative : 1;
+        bool velocity_x_relative : 1;
+        bool velocity_y_relative : 1;
+        bool velocity_z_relative : 1;
+        bool rotate_by_yaw_pitch : 1;
 
-        int32_t raw = 0;
+        inline void set(int32_t raw) {
+            union u_t {
+                teleport_flags flag;
+                int32_t r;
+            } u{.r = raw};
+
+            *this = u.flag;
+        }
+
+        inline int32_t get() const {
+            union u_t {
+                teleport_flags flag;
+                int32_t r;
+            } u{.flag = *this};
+
+            return u.r;
+        }
     };
 
     struct minecart_state {
@@ -398,7 +425,6 @@ namespace copper_server::base_objects::packets {
         float yaw, pitch;
         float weight;
     };
-
 
     int32_t java_name_to_protocol(const std::string& name_or_number);
     const char* protocol_to_java_name(int32_t id);

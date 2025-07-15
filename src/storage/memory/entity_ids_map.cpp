@@ -1,7 +1,13 @@
 #include <random>
+#include <src/base_objects/entity.hpp>
 #include <src/storage/memory/entity_ids_map.hpp>
 
 namespace copper_server::storage::memory {
+    entity_ids_map_storage::entity_ids_map_storage() {
+        id_allocator = 0;
+    }
+
+    entity_ids_map_storage::~entity_ids_map_storage() {}
     int32_t entity_ids_map_storage::id_increment(){
         auto res = id_allocator++;
         if (id_allocator == INT32_MAX)
@@ -98,8 +104,8 @@ namespace copper_server::storage::memory {
             auto id_ptr = it->second;
             ids_l.erase(it);
             ids_r.erase(id_ptr->uuid);
-            for (auto& id : id_ptr->id)
-                ids_l.erase(id);
+            for (auto& rem_id : id_ptr->id)
+                ids_l.erase(rem_id);
         }
     }
 

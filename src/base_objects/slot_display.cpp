@@ -61,8 +61,8 @@ namespace copper_server::base_objects {
                     return it.ingredient->to_slots();
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::composite, T>) {
                     list_array<slot> res;
-                    for (auto& it : it.options)
-                        res.push_back(it->to_slots());
+                    for (auto& option : it.options)
+                        res.push_back(option->to_slots());
                     return res;
                 } else if constexpr (std::is_same_v<slot_displays::custom, T>) {
                     if (it.to_slots)

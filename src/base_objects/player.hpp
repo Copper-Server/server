@@ -13,17 +13,31 @@ namespace copper_server::base_objects {
     class player {
     public:
         struct Abilities {
-            union Flags {
-                struct {
-                    bool invulnerable : 1;
-                    bool flying : 1;
-                    bool allow_flying : 1;
-                    bool creative_mode : 1;
-                    bool flying_speed : 1;
-                    bool walking_speed : 1;
-                };
+            struct Flags {
+                bool invulnerable : 1;
+                bool flying : 1;
+                bool allow_flying : 1;
+                bool creative_mode : 1;
+                bool flying_speed : 1;
+                bool walking_speed : 1;
 
-                uint8_t mask = 0;
+                inline void set(uint8_t raw) {
+                    union u_t {
+                        Flags flag;
+                        uint8_t r;
+                    } u{.r = raw};
+
+                    *this = u.flag;
+                }
+
+                inline uint8_t get() const {
+                    union u_t {
+                        Flags flag;
+                        uint8_t r;
+                    } u{.flag = *this};
+
+                    return u.r;
+                }
             } flags;
 
             float flying_speed = 0.05f;

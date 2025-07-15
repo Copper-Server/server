@@ -45,11 +45,11 @@ namespace copper_server::base_objects {
             other.ref_count = nullptr;
         }
 
-        atomic_holder& operator=(T* data) {
-            if (this->data == data)
+        atomic_holder& operator=(T* value) {
+            if (data == value)
                 return *this;
             decrease_counter();
-            this->data = data;
+            data = value;
             ref_count = data ? new std::atomic_size_t(1) : nullptr;
             return *this;
         }

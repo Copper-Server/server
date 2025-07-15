@@ -149,59 +149,59 @@ namespace copper_server::base_objects::network {
         write_string(str, 262144);
     }
 
-    void response::item::write_direct(const list_array<uint8_t>& data) {
-        this->data.push_back(data);
+    void response::item::write_direct(const list_array<uint8_t>& value) {
+        data.push_back(value);
     }
 
-    void response::item::write_direct(list_array<uint8_t>&& data) {
-        this->data.push_back(std::move(data));
+    void response::item::write_direct(list_array<uint8_t>&& value) {
+        data.push_back(std::move(value));
     }
 
-    void response::item::write_direct(const list_array<uint16_t>& data, std::endian endian) {
-        for (auto& it : data)
+    void response::item::write_direct(const list_array<uint16_t>& value, std::endian endian) {
+        for (auto& it : value)
             write_value(it, endian);
     }
 
-    void response::item::write_direct(const list_array<uint32_t>& data, std::endian endian) {
-        for (auto& it : data)
+    void response::item::write_direct(const list_array<uint32_t>& value, std::endian endian) {
+        for (auto& it : value)
             write_value(it, endian);
     }
 
-    void response::item::write_direct(const list_array<uint64_t>& data, std::endian endian) {
-        for (auto& it : data)
+    void response::item::write_direct(const list_array<uint64_t>& value, std::endian endian) {
+        for (auto& it : value)
             write_value(it, endian);
     }
 
-    void response::item::write_direct(const list_array<int8_t>& data) {
-        for (auto& it : data)
+    void response::item::write_direct(const list_array<int8_t>& value) {
+        for (auto& it : value)
             write_value(it);
     }
 
-    void response::item::write_direct(const list_array<int16_t>& data, std::endian endian) {
-        for (auto& it : data)
+    void response::item::write_direct(const list_array<int16_t>& value, std::endian endian) {
+        for (auto& it : value)
             write_value(it, endian);
     }
 
-    void response::item::write_direct(const list_array<int32_t>& data, std::endian endian) {
-        for (auto& it : data)
+    void response::item::write_direct(const list_array<int32_t>& value, std::endian endian) {
+        for (auto& it : value)
             write_value(it, endian);
     }
 
-    void response::item::write_direct(const list_array<int64_t>& data, std::endian endian) {
-        for (auto& it : data)
+    void response::item::write_direct(const list_array<int64_t>& value, std::endian endian) {
+        for (auto& it : value)
             write_value(it, endian);
     }
 
-    void response::item::write_direct(const uint8_t* data, size_t size) {
-        this->data.push_back(data, size);
+    void response::item::write_direct(const uint8_t* value, size_t size) {
+        data.push_back(value, size);
     }
 
-    void response::item::write_in(item&& data) {
-        this->data.push_back(std::move(data.data));
+    void response::item::write_in(item&& value) {
+        data.push_back(std::move(value.data));
     }
 
-    void response::item::write_in(const item& data) {
-        this->data.push_back(data.data);
+    void response::item::write_in(const item& value) {
+        data.push_back(value.data);
     }
 
     response::response() = default;

@@ -5,7 +5,7 @@
 #include <optional>
 
 namespace enbt {
-    class raw_uuid;
+    struct raw_uuid;
 }
 
 namespace copper_server::base_objects::network {
@@ -60,7 +60,7 @@ namespace copper_server::base_objects::network {
                 if constexpr (!std::is_same<T, int32_t>::value)
                     if ((int32_t)value != value)
                         throw std::out_of_range("Value out of range");
-                write_var32(value);
+                write_var32((int32_t)value);
             }
 
             template <class T>
@@ -68,7 +68,7 @@ namespace copper_server::base_objects::network {
                 if constexpr (!std::is_same<T, int64_t>::value)
                     if ((int64_t)value != value)
                         throw std::out_of_range("Value out of range");
-                write_var64(value);
+                write_var64((int64_t)value);
             }
 
             template <class ArrayT>

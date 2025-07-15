@@ -161,7 +161,7 @@ namespace copper_server::util {
         operator boost::json::string&() {
             try {
                 return obj.as_string();
-            } catch (const boost::system::system_error& err) {
+            } catch (const boost::system::system_error&) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::string), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
             }
@@ -171,7 +171,7 @@ namespace copper_server::util {
 
             try {
                 return obj.as_object();
-            } catch (const boost::system::system_error& err) {
+            } catch (const boost::system::system_error&) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::object), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
             }
@@ -189,7 +189,7 @@ namespace copper_server::util {
         operator bool() const {
             try {
                 return obj.as_bool();
-            } catch (const boost::system::system_error& err) {
+            } catch (const boost::system::system_error&) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::bool_), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
             }
@@ -198,7 +198,7 @@ namespace copper_server::util {
         operator int64_t() const {
             try {
                 return obj.to_number<int64_t>();
-            } catch (const boost::system::system_error& err) {
+            } catch (const boost::system::system_error&) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::int64), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
             }
@@ -207,7 +207,7 @@ namespace copper_server::util {
         operator uint64_t() const {
             try {
                 return obj.to_number<uint64_t>();
-            } catch (const boost::system::system_error& err) {
+            } catch (const boost::system::system_error&) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::uint64), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
             }
@@ -215,7 +215,7 @@ namespace copper_server::util {
 
         operator int32_t() const {
             int64_t val = operator int64_t();
-            if (int32_t check_overflow = val; val == check_overflow)
+            if (int32_t check_overflow = (int32_t)val; val == check_overflow)
                 return check_overflow;
             else {
                 auto text = std::format("Value at {} is too big for int32", path);
@@ -225,7 +225,7 @@ namespace copper_server::util {
 
         operator int16_t() const {
             int64_t val = operator int64_t();
-            if (int16_t check_overflow = val; val == check_overflow)
+            if (int16_t check_overflow = (int16_t)val; val == check_overflow)
                 return check_overflow;
             else {
                 auto text = std::format("Value at {} is too big for int16", path);
@@ -235,7 +235,7 @@ namespace copper_server::util {
 
         operator int8_t() const {
             int64_t val = operator int64_t();
-            if (int8_t check_overflow = val; val == check_overflow)
+            if (int8_t check_overflow = (int8_t)val; val == check_overflow)
                 return check_overflow;
             else {
                 auto text = std::format("Value at {} is too big for int8", path);
@@ -245,7 +245,7 @@ namespace copper_server::util {
 
         operator uint32_t() const {
             uint64_t val = operator uint64_t();
-            if (uint32_t check_overflow = val; val == check_overflow)
+            if (uint32_t check_overflow = (uint32_t)val; val == check_overflow)
                 return check_overflow;
             else {
                 auto text = std::format("Value at {} is too big for uint32", path);
@@ -255,7 +255,7 @@ namespace copper_server::util {
 
         operator uint16_t() const {
             uint64_t val = operator uint64_t();
-            if (uint16_t check_overflow = val; val == check_overflow)
+            if (uint16_t check_overflow = (uint16_t)val; val == check_overflow)
                 return check_overflow;
             else {
                 auto text = std::format("Value at {} is too big for uint16", path);
@@ -265,7 +265,7 @@ namespace copper_server::util {
 
         operator uint8_t() const {
             uint64_t val = operator uint64_t();
-            if (uint8_t check_overflow = val; val == check_overflow)
+            if (uint8_t check_overflow = (uint8_t)val; val == check_overflow)
                 return check_overflow;
             else {
                 auto text = std::format("Value at {} is too big for uint8", path);
@@ -276,7 +276,7 @@ namespace copper_server::util {
         operator float() const {
             try {
                 return obj.to_number<float>();
-            } catch (const boost::system::system_error& err) {
+            } catch (const boost::system::system_error&) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::double_), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
             }
@@ -285,7 +285,7 @@ namespace copper_server::util {
         operator double() const {
             try {
                 return obj.to_number<float>();
-            } catch (const boost::system::system_error& err) {
+            } catch (const boost::system::system_error&) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::double_), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
             }

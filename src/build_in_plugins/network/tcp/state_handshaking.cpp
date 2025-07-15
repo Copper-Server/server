@@ -69,7 +69,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         default: {
             base_objects::network::response result;
             pluginManagement.requestPlugin<SpecialPluginHandshakeRegistration>()->enum_handles([&](SpecialPluginHandshake& special_handshake) -> bool {
-                auto [handler, response] = special_handshake.InvalidNextOperation(next_state, data);
+                auto [handler, response] = special_handshake.InvalidNextOperation((uint8_t)next_state, data);
                 if (handler) {
                     next_handler = handler;
                     result = base_objects::network::response::answer({std::move(response)});

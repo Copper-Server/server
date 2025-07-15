@@ -18,7 +18,7 @@ namespace copper_server::build_in_plugins {
             base_objects::entity_data::world_processor proc;
             proc.entity_add_effect = [](base_objects::entity& self, base_objects::entity& target, uint32_t id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) {
                 if (self.assigned_player) {
-                    base_objects::packets::effect_flags flags{.raw = 0};
+                    base_objects::packets::effect_flags flags;
                     flags.is_ambient = ambient;
                     flags.show_icon = show_icon;
                     flags.show_particles = show_particles;
@@ -131,7 +131,7 @@ namespace copper_server::build_in_plugins {
             };
             proc.entity_teleport = [](base_objects::entity& self, base_objects::entity& target, util::VECTOR pos) {
                 if (self.assigned_player)
-                    api::packets::play::teleportEntity(*self.assigned_player, target.protocol_id, pos, target.rotation.x, target.rotation.y, target.is_on_ground());
+                    api::packets::play::teleportEntity(*self.assigned_player, target.protocol_id, pos, (float)target.rotation.x, (float)target.rotation.y, target.is_on_ground());
             };
 
 
@@ -324,7 +324,7 @@ namespace copper_server::build_in_plugins {
                 if (self.assigned_player) {
                     if (self.current_world()) {
                         //TODO implement batching
-                        self.get_syncing_data().for_each_processing([&](int32_t chunk_x, int32_t chunk_z, bool loaded) {
+                        self.get_syncing_data().for_each_processing([&](int64_t chunk_x, int64_t chunk_z, bool loaded) {
                             if (!loaded) {
                                 auto chunk = self.current_world()->request_chunk_data_weak(chunk_x, chunk_z);
                                 if (chunk) {

@@ -83,7 +83,7 @@ namespace copper_server::api::world {
 
     uint64_t pre_load_world(const std::string& name, std::function<void(storage::world_data& world)> initialization) {
         auto id = get_worlds().get_id(name);
-        if (id == -1) {
+        if (id == (uint64_t)-1) {
             if (initialization)
                 get_worlds().create(name, initialization);
             else
@@ -108,7 +108,7 @@ namespace copper_server::api::world {
     std::pair<uint64_t, std::string> prepare_world(base_objects::client_data_holder& client_ref) {
         auto id = get_worlds().get_id(client_ref->player_data.world_id);
         bool set_new_data = false;
-        if (id == -1) {
+        if (id == (uint64_t)-1) {
             id = get_worlds().base_world_id;
             set_new_data = true;
         }
@@ -127,9 +127,9 @@ namespace copper_server::api::world {
 
             client_ref->player_data.world_id = get_worlds().get(id)->world_name;
 
-            client_ref->player_data.assigned_entity->position.x = x;
-            client_ref->player_data.assigned_entity->position.y = pos_y;
-            client_ref->player_data.assigned_entity->position.z = z;
+            client_ref->player_data.assigned_entity->position.x = 0.5 + (double)x;
+            client_ref->player_data.assigned_entity->position.y = (double)pos_y;
+            client_ref->player_data.assigned_entity->position.z = 0.5 + (double)z;
             client_ref->player_data.assigned_entity->rotation = {0, 0};
         }
 
@@ -162,12 +162,12 @@ namespace copper_server::api::world {
                 world->border_size,
                 world->border_lerp_time,
                 world->portal_teleport_boundary,
-                world->border_warning_blocks,
-                world->border_warning_time
+                (int32_t)world->border_warning_blocks,
+                (int32_t)world->border_warning_time
             )
             += api::packets::play::setTickingState(
                 *client_ref,
-                world->ticks_per_second,
+                (float)world->ticks_per_second,
                 world->ticking_frozen
             )
             += api::packets::play::stepTick(
@@ -230,7 +230,7 @@ namespace copper_server::api::world {
 
     std::pair<uint64_t, std::string> prepare_world(const std::string& name) {
         auto id = get_worlds().get_id(name);
-        if (id == -1)
+        if (id == (uint64_t)-1)
             id = get_worlds().base_world_id;
         return {id, get_worlds().get(id)->world_name};
     }

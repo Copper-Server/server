@@ -3,6 +3,7 @@
 #include <src/api/packets.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/entity.hpp>
+#include <src/base_objects/shared_client_data.hpp>
 #include <src/storage/world_data.hpp>
 #include <src/util/calculations.hpp>
 
@@ -78,6 +79,9 @@ namespace copper_server {
             });
         }
 
+        entity::entity() {}
+
+        entity::~entity() {}
         storage::world_data* entity::current_world() const {
             return world_syncing_data ? world_syncing_data->world : nullptr;
         }
@@ -108,8 +112,8 @@ namespace copper_server {
             if (inventory.size()) {
                 enbt::compound inventory_enbt;
                 inventory_enbt.reserve(inventory.size());
-                for (auto& [id, value] : inventory)
-                    inventory_enbt[std::to_string(id)] = value.to_enbt();
+                for (auto& [slot_id, value] : inventory)
+                    inventory_enbt[std::to_string(slot_id)] = value.to_enbt();
                 res["inventory"] = std::move(inventory_enbt);
             }
 
@@ -117,12 +121,12 @@ namespace copper_server {
             if (custom_inventory.size()) {
                 enbt::compound custom_inventory_enbt;
                 custom_inventory_enbt.reserve(custom_inventory.size());
-                for (auto& [id, inventory] : custom_inventory) {
+                for (auto& [inventory_id, inventory_data] : custom_inventory) {
                     enbt::compound inventory_enbt;
-                    inventory_enbt.reserve(inventory.size());
-                    for (auto& [id, value] : inventory)
-                        inventory_enbt[std::to_string(id)] = value.to_enbt();
-                    custom_inventory_enbt[id] = std::move(inventory_enbt);
+                    inventory_enbt.reserve(inventory_data.size());
+                    for (auto& [slot_id, value] : inventory_data)
+                        inventory_enbt[std::to_string(slot_id)] = value.to_enbt();
+                    custom_inventory_enbt[inventory_id] = std::move(inventory_enbt);
                 }
 
                 res["custom_inventory"] = std::move(custom_inventory_enbt);
@@ -131,7 +135,7 @@ namespace copper_server {
             if (hidden_effects.size()) {
                 enbt::compound hidden_effects_enbt;
                 hidden_effects_enbt.reserve(hidden_effects.size());
-                for (auto& [id, effects] : hidden_effects) {
+                for (auto& [effect_id, effects] : hidden_effects) {
                     enbt::fixed_array effects_enbt;
                     effects_enbt.reserve(effects.size());
                     for (auto& effect : effects) {
@@ -143,15 +147,15 @@ namespace copper_server {
                             {"particles", effect.particles},
                         });
                     }
-                    hidden_effects_enbt[std::to_string(id)] = std::move(effects_enbt);
+                    hidden_effects_enbt[std::to_string(effect_id)] = std::move(effects_enbt);
                 }
                 res["hidden_effects"] = std::move(hidden_effects_enbt);
             }
             if (active_effects.size()) {
                 enbt::compound active_effects_enbt;
                 active_effects_enbt.reserve(active_effects.size());
-                for (auto& [id, effect] : active_effects)
-                    active_effects_enbt[std::to_string(id)] = enbt::compound{
+                for (auto& [effect_id, effect] : active_effects)
+                    active_effects_enbt[std::to_string(effect_id)] = enbt::compound{
                         {"is_ambient", effect.ambient},
                         {"amplifier", effect.amplifier},
                         {"duration", effect.duration},
@@ -346,11 +350,11 @@ namespace copper_server {
                 for (auto& [id, value] : custom_inventory_enbt) {
                     decltype(res->inventory) custom_inventory;
                     res->inventory.reserve(value.size());
-                    for (auto& [id, value] : value.as_compound()) {
+                    for (auto& [inventory_id, inventory_data] : value.as_compound()) {
                         uint32_t id_ = 0;
-                        auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
+                        auto parsing_res = std::from_chars(inventory_id.data(), inventory_id.data() + inventory_id.size(), id_);
                         if (parsing_res.ec == std::errc{})
-                            custom_inventory[id_] = slot_data::from_enbt(value.as_compound());
+                            custom_inventory[id_] = slot_data::from_enbt(inventory_data.as_compound());
                     }
                     res->custom_inventory[id] = std::move(custom_inventory);
                 }
@@ -359,15 +363,15 @@ namespace copper_server {
             if (nbt.contains("hidden_effects")) {
                 auto hidden_effects_enbt = nbt["hidden_effects"].as_compound();
                 res->hidden_effects.reserve(hidden_effects_enbt.size());
-                for (auto& [id, value] : hidden_effects_enbt) {
+                for (auto& [id, effects] : hidden_effects_enbt) {
                     uint32_t id_ = 0;
                     auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
                     if (parsing_res.ec == std::errc{}) {
-                        list_array<entity::effect> effects;
-                        res->inventory.reserve(value.size());
-                        for (auto& value : value.as_array()) {
-                            auto effect = value.as_compound();
-                            effects.push_back(entity::effect{
+                        list_array<entity::effect> set_effects;
+                        res->inventory.reserve(effects.size());
+                        for (auto& effect_item : effects.as_array()) {
+                            auto effect = effect_item.as_compound();
+                            set_effects.push_back(entity::effect{
                                 .duration = effect.at("duration"),
                                 .id = effect.at("id"),
                                 .amplifier = effect.at("amplifier"),
@@ -375,7 +379,7 @@ namespace copper_server {
                                 .particles = effect.at("particles"),
                             });
                         }
-                        res->hidden_effects[id_] = std::move(effects);
+                        res->hidden_effects[id_] = std::move(set_effects);
                     }
                 }
             }
@@ -463,50 +467,50 @@ namespace copper_server {
             if (ride_entity && world_syncing_data) {
                 if ((*ride_entity)->world_syncing_data->world == world_syncing_data->world) {
                     world_syncing_data->world->entity_leaves_ride(*this, (*ride_entity)->world_syncing_data->assigned_world_id);
-                    ride_entity = nullptr;
+                    ride_entity = std::nullopt;
                     return;
                 }
             }
             ride_entity = std::nullopt;
         }
 
-        void entity::add_effect(uint32_t id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) {
+        void entity::add_effect(uint32_t id_, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) {
             entity::effect to_add_effect{
                 .duration = duration,
-                .id = id,
+                .id = id_,
                 .amplifier = amplifier,
                 .ambient = ambient,
                 .particles = show_particles,
                 .show_icon = show_icon,
                 .use_blend = use_blend,
             };
-            if (auto it = active_effects.find(id); it != active_effects.end()) {
+            if (auto it = active_effects.find(id_); it != active_effects.end()) {
                 auto& effect = it->second;
                 if (effect.amplifier >= amplifier) {
                     if (effect.duration < duration)
-                        hidden_effects[id].push_back(to_add_effect);
+                        hidden_effects[id_].push_back(to_add_effect);
                     if (world_syncing_data)
-                        world_syncing_data->world->entity_add_effect(*this, id, duration, amplifier, ambient, show_particles, show_icon, use_blend);
+                        world_syncing_data->world->entity_add_effect(*this, id_, duration, amplifier, ambient, show_particles, show_icon, use_blend);
                     return;
                 } else
-                    hidden_effects[id].push_back(effect);
+                    hidden_effects[id_].push_back(effect);
             }
-            active_effects[id] = to_add_effect;
+            active_effects[id_] = to_add_effect;
             if (world_syncing_data)
-                world_syncing_data->world->entity_add_effect(*this, id, duration, amplifier, ambient, show_particles, show_icon, use_blend);
+                world_syncing_data->world->entity_add_effect(*this, id_, duration, amplifier, ambient, show_particles, show_icon, use_blend);
         }
 
-        void entity::remove_effect(uint32_t id) {
-            active_effects.erase(id);
-            hidden_effects.erase(id);
+        void entity::remove_effect(uint32_t id_) {
+            active_effects.erase(id_);
+            hidden_effects.erase(id_);
             if (world_syncing_data)
-                world_syncing_data->world->entity_remove_effect(*this, id);
+                world_syncing_data->world->entity_remove_effect(*this, id_);
         }
 
         void entity::remove_all_effects() {
             if (world_syncing_data)
-                for (auto& [id, effect] : active_effects)
-                    world_syncing_data->world->entity_remove_effect(*this, id);
+                for (auto& [id_, effect] : active_effects)
+                    world_syncing_data->world->entity_remove_effect(*this, id_);
             active_effects.clear();
             hidden_effects.clear();
         }
@@ -605,11 +609,11 @@ namespace copper_server {
         }
 
         void entity::add_food(uint8_t food) {
-            set_food(get_health() + food);
+            set_food(get_food() + food);
         }
 
         void entity::reduce_food(uint8_t food) {
-            set_food(get_health() - food);
+            set_food(get_food() - food);
         }
 
         float entity::get_saturation() const {
@@ -691,10 +695,10 @@ namespace copper_server {
                     break;
                 case 16:case 17:case 18:case 19:case 20:case 21:case 22:case 23:
                 case 24:case 25:case 26:case 27:case 28:case 29:case 30:case 31:
-                    required_exp = 2.5 * required_exp * required_exp - 40.5 * required_exp + 360;
+                    required_exp = int32_t(2.5 * required_exp * required_exp - 40.5 * required_exp + 360);
                     break;
                 default:
-                    required_exp = 4.5 * required_exp * required_exp - 162.5 * required_exp + 2220;
+                    required_exp = int32_t(4.5 * required_exp * required_exp - 162.5 * required_exp + 2220);
                 break;
             }
             // clang-format on
@@ -704,8 +708,8 @@ namespace copper_server {
         void entity::set_level(int32_t level) {
             int32_t old_lvl = nbt["level"];
             nbt["level"] = level;
-            float progress_old = 1.0 / calculate_required_experience(old_lvl) * get_experience();
-            set_experience(progress_old * calculate_required_experience(level));
+            double progress_old = 1.0 / calculate_required_experience(old_lvl) * get_experience();
+            set_experience(int32_t(progress_old * calculate_required_experience(level)));
         }
 
         void entity::add_level(int32_t level) {
@@ -742,7 +746,7 @@ namespace copper_server {
             nbt["experience"] = experience;
             nbt["level"] = levels;
 
-            float progress = 1.0 / required_exp * experience;
+            float progress = float(1.0 / required_exp * experience);
             int32_t total = calculate_experience_from_level(levels) + experience;
 
             if (assigned_player)

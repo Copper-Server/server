@@ -10,8 +10,6 @@
 
 #include <boost/bimap.hpp>
 #include <boost/bimap/unordered_set_of.hpp>
-#pragma pack(push)
-#pragma pack(1)
 
 namespace copper_server {
     namespace storage {
@@ -22,7 +20,7 @@ namespace copper_server {
         namespace world {
             struct sub_chunk_data;
         }
-        union block;
+        struct block;
         typedef uint16_t block_id_t;
 
         struct shape_data {
@@ -35,8 +33,8 @@ namespace copper_server {
                 size_t operator()(const std::unordered_map<std::string, std::string>& value) const noexcept {
                     size_t result = 0;
                     std::hash<std::string> string_hasher;
-                    for (auto& [key, value] : value) {
-                        result ^= string_hasher(key) & string_hasher(value);
+                    for (auto& [key, val] : value) {
+                        result ^= string_hasher(key) & string_hasher(val);
                     }
                     return result;
                 }
@@ -224,7 +222,7 @@ namespace copper_server {
             }
         };
 
-        union block {
+        struct block {
             using tick_opt = static_block_data::tick_opt;
 
             static void initialize();
@@ -254,13 +252,27 @@ namespace copper_server {
                 return addNewStatelessBlock(static_block_data(new_block));
             }
 
-            struct {
-                base_objects::block_id_t id : 15;
-                uint16_t block_state_data : 15;
-                tick_opt tickable : 2;
-            };
+            base_objects::block_id_t id : 15;
+            uint16_t block_state_data : 15;
+            tick_opt tickable : 2;
 
-            uint32_t raw;
+            inline void set_raw(uint32_t raw) {
+                union u_t {
+                    block b;
+                    uint32_t r;
+                } u{.r = raw};
+
+                *this = u.b;
+            }
+
+            inline uint32_t get_raw() const {
+                union u_t {
+                    block b;
+                    uint32_t r;
+                } u{.b = *this};
+
+                return u.r;
+            }
 
             block(block_id_t block_id = 0, uint16_t block_state_data = 0)
                 : id(block_id), block_state_data(block_state_data), tickable(tick_opt::undefined) {}
@@ -333,7 +345,6 @@ namespace copper_server {
             bool is_replaceable() const;
             bool is_block_entity() const;
 
-
             static static_block_data& get_block(const std::string& name) {
                 return *named_full_block_data.at(name);
             }
@@ -346,10 +357,11 @@ namespace copper_server {
                 return *general_block_data_.at(general_id);
             }
 
-            static block make_block(const std::string& name){
+            static block make_block(const std::string& name) {
                 return block(get_block(name).default_state);
             }
-            static block make_block(block_id_t id){
+
+            static block make_block(block_id_t id) {
                 return block(id);
             }
 
@@ -480,7 +492,6 @@ namespace copper_server {
         using full_block_data = std::variant<block, block_entity>;
         using full_block_data_ref = std::variant<std::reference_wrapper<block>, block_entity_ref>;
 
-
         struct local_block_pos {
             uint8_t x : 4;
             uint8_t y : 4;
@@ -493,15 +504,29 @@ namespace copper_server {
             uint8_t z : 4;
         };
 
-        union compressed_block_state {
-            struct {
-                uint64_t blockStateId : 52;
-                uint64_t blockLocalX : 4;
-                uint64_t blockLocalZ : 4;
-                uint64_t blockLocalY : 4;
-            };
+        struct compressed_block_state {
+            uint64_t blockStateId : 52;
+            uint64_t blockLocalX : 4;
+            uint64_t blockLocalZ : 4;
+            uint64_t blockLocalY : 4;
 
-            uint64_t value;
+            inline void set(uint64_t raw) {
+                union u_t {
+                    compressed_block_state state;
+                    uint64_t r;
+                } u{.r = raw};
+
+                *this = u.state;
+            }
+
+            inline uint64_t get() const {
+                union u_t {
+                    compressed_block_state state;
+                    uint64_t r;
+                } u{.state = *this};
+
+                return u.r;
+            }
         };
 
         struct block_hash {
@@ -512,5 +537,3 @@ namespace copper_server {
         };
     }
 }
-
-#pragma pack(pop)

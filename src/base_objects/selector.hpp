@@ -25,30 +25,26 @@ namespace copper_server::base_objects {
         arbitrary
     };
 
-    union selector_flags {
-        struct {
-            //@p == only_players & nearest & only_one & except_self
-            //@r == only_players & random
-            //@a == only_players
-            //@e == 0
-            //@s == self
-            //@R == random
-            //@E == only_entities
-            //@n == nearest & except_self
-            //@o == random & only_one
-            //@t == only_entities & random
-            //@<only_players, only_entities, random, nearest, only_one, self, except_self> custom
+    struct selector_flags {
+        //@p == only_players & nearest & only_one & except_self
+        //@r == only_players & random
+        //@a == only_players
+        //@e == 0
+        //@s == self
+        //@R == random
+        //@E == only_entities
+        //@n == nearest & except_self
+        //@o == random & only_one
+        //@t == only_entities & random
+        //@<only_players, only_entities, random, nearest, only_one, self, except_self> custom
 
-            bool only_players : 1;
-            bool only_entities : 1;
-            bool random : 1;
-            bool nearest : 1;
-            bool only_one : 1;
-            bool self : 1;
-            bool except_self : 1;
-        };
-
-        uint64_t raw = 0;
+        bool only_players : 1 = false;
+        bool only_entities : 1 = false;
+        bool random : 1 = false;
+        bool nearest : 1 = false;
+        bool only_one : 1 = false;
+        bool self : 1 = false;
+        bool except_self : 1 = false;
     };
 
     struct selector {

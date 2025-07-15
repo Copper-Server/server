@@ -15,7 +15,6 @@ namespace copper_server::storage::memory {
     //
     //this means the theoretical maximum of entities is INT32_MAX
     class entity_ids_map_storage {
-
         struct id_s {
             std::vector<int32_t> id;
             enbt::raw_uuid uuid;
@@ -27,12 +26,14 @@ namespace copper_server::storage::memory {
         std::unordered_map<int32_t, id_sp> ids_l;
         std::unordered_map<enbt::raw_uuid, id_sp> ids_r;
         fast_task::task_mutex mutex;
-        int32_t id_allocator = 0;
+        int32_t id_allocator;
 
         int32_t id_increment();
         uint8_t allocate_special(uint8_t required_ids);
 
     public:
+        entity_ids_map_storage();
+        ~entity_ids_map_storage();
         //generates random UUID allocates, guarantees uniqueness
         [[nodiscard]] std::pair<int32_t, enbt::raw_uuid> allocate_id();
         [[nodiscard]] std::pair<int32_t, enbt::raw_uuid> allocate_special_sequence(uint8_t required_ids);

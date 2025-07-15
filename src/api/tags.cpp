@@ -33,13 +33,13 @@ namespace copper_server::api::tags {
 
         switch (entry) {
         case builtin_entry::banner_pattern:
-            safety(return registers::bannerPatterns.at(value).id;);
+            safety(return (int32_t)registers::bannerPatterns.at(value).id;);
         case builtin_entry::block:
             safety(return base_objects::block::get_block(value).general_block_id;);
         case builtin_entry::damage_type:
-            safety(return registers::damageTypes.at(value).id;);
+            safety(return (int32_t)registers::damageTypes.at(value).id;);
         case builtin_entry::enchantment:
-            safety(return registers::enchantments.at(value).id;);
+            safety(return (int32_t)registers::enchantments.at(value).id;);
         case builtin_entry::entity_type:
             safety(return base_objects::entity_data::get_entity(value).entity_id;);
         //case builtin_entry::fluid:;
@@ -47,11 +47,11 @@ namespace copper_server::api::tags {
         //case builtin_entry::game_event:
         //  safety(return registers::.at(value).game;);
         case builtin_entry::instrument:
-            safety(return registers::instruments.at(value).id;);
+            safety(return (int32_t)registers::instruments.at(value).id;);
         case builtin_entry::item:
             safety(return base_objects::slot_data::get_slot_data(value).internal_id;);
         case builtin_entry::painting_variant:
-            safety(return registers::paintingVariants.at(value).id;);
+            safety(return (int32_t)registers::paintingVariants.at(value).id;);
         //case builtin_entry::point_of_interest:
         //  safety(return registers::.at(value).poi;);
         default:
@@ -256,8 +256,8 @@ namespace copper_server::api::tags {
         std::unordered_map<std::string, std::unordered_map<std::string, list_array<int32_t>>> res;
         res.reserve(ns->second.size());
         for (auto&& [namespace_, decl] : ns->second)
-            for (auto&& [tag, decl] : decl)
-                res[namespace_][tag] = decl.as_ids(entry);
+            for (auto&& [tag, dec] : decl)
+                res[namespace_][tag] = dec.as_ids(entry);
         return res;
     }
 
@@ -268,18 +268,18 @@ namespace copper_server::api::tags {
         std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>> res;
         res.reserve(ns->second.size());
         for (auto&& [namespace_, decl] : ns->second)
-            for (auto&& [tag, decl] : decl)
-                res[namespace_][tag] = decl.items;
+            for (auto&& [tag, dec] : decl)
+                res[namespace_][tag] = dec.items;
         return res;
     }
 
     void resolve_cross_references(bool secold_preset) {
         decltype(tags) tmp_obj = tags;
         for (auto&& [entry, decl] : tmp_obj) {
-            for (auto&& [namespace_, decl] : decl) {
-                for (auto&& [tag, decl] : decl) {
+            for (auto&& [namespace_, dec] : decl) {
+                for (auto&& [tag, de] : dec) {
                     list_array<std::string> resolved_items;
-                    for (auto& item : decl.items) {
+                    for (auto& item : de.items) {
                         if (item.starts_with("#")) {
                             if (secold_preset)
                                 resolved_items.push_back(unfold_tag(entry, item).where([](const std::string& tag) {
@@ -289,7 +289,7 @@ namespace copper_server::api::tags {
                                 resolved_items.push_back(unfold_tag(entry, item));
                         }
                     }
-                    decl = tags_entry{.items = std::move(resolved_items)};
+                    de = tags_entry{.items = std::move(resolved_items)};
                 }
             }
         }

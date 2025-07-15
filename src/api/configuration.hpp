@@ -13,10 +13,6 @@
 
 namespace copper_server::api::configuration {
     struct ServerConfiguration {
-        struct Query {
-            uint16_t port = 25545;
-            bool enabled = false;
-        } query;
 
         struct World {
             std::string name = "overworld";
@@ -97,7 +93,7 @@ namespace copper_server::api::configuration {
 
             struct Speed {
                 bool prevent_illegal_speed = true;
-                float max_speed = 0.3; //overspeed treeshold
+                float max_speed = 0.3f; //overspeed threshold
             } speed;
 
             struct XRay {
@@ -109,7 +105,7 @@ namespace copper_server::api::configuration {
 
             bool check_block_breaking_time = true;
 
-            float reach_threshold = 0.2;
+            float reach_threshold = 0.2f;
 
             struct KillAura {
                 float angle_threshold = 5.0f;
@@ -134,8 +130,13 @@ namespace copper_server::api::configuration {
         } anti_cheat;
 
         struct Mojang {
-            bool enforce_secure_profile = true; //enables signature signing for chat messages using mojangs service
+            bool enforce_secure_profile = true; //enables signature signing for chat messages using mojang's service
         } mojang;
+
+        struct Query {
+            uint16_t port = 25545;
+            bool enabled = false;
+        } query;
 
         struct Status {
             std::string server_name = "Copper Server";
@@ -150,21 +151,20 @@ namespace copper_server::api::configuration {
         } status;
 
         struct Server {
-            bool frozen_config = false; //disables file and uses default values
             /*[runtime]*/ const std::filesystem::path base_path = std::filesystem::current_path();
 
             std::string storage_folder = "storage";
             std::string worlds_folder = "storage/worlds";
             std::string ip = "localhost";
-            uint16_t port = 25565;
-            uint32_t max_players = 0; //0 for unlimited
-            bool offline_mode = false;
-            bool prevent_chat_reports = false; //if true then chat reports will be prevented despite `mojang.enforce_secure_profile` setting
-            bool world_debug_mode = false;     //disables disk usage for worlds
-
-            size_t network_threads = 0;   //0 == auto, optional
             size_t working_threads = 0;   //0 == auto, optional
             size_t ssl_key_length = 1024; //1024, 2048, 4096, optional
+            uint32_t max_players = 0;     //0 for unlimited
+            uint16_t port = 25565;
+            bool offline_mode : 1 = false;
+            bool prevent_chat_reports : 1 = false; //if true then chat reports will be prevented despite `mojang.enforce_secure_profile` setting
+            bool world_debug_mode : 1 = false;     //disables disk usage for worlds
+            bool frozen_config : 1 = false;        //disables file and uses default values
+
 
             std::filesystem::path get_storage_path() const {
                 return (base_path / storage_folder).lexically_normal();

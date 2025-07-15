@@ -212,7 +212,7 @@ namespace copper_server::build_in_plugins {
                 reduced_debug_info,
                 enable_respawn_screen,
                 do_limited_crafting,
-                world_id,
+                (int32_t)world_id,
                 world_name,
                 0,
                 client.player_data.gamemode,
@@ -229,7 +229,7 @@ namespace copper_server::build_in_plugins {
                 difficulty,
                 difficulty_locked
             );
-            response += api::packets::play::playerAbilities(client, client.player_data.abilities.flags.mask, client.player_data.abilities.flying_speed, client.player_data.abilities.field_of_view_modifier);
+            response += api::packets::play::playerAbilities(client, client.player_data.abilities.flags.get(), client.player_data.abilities.flying_speed, client.player_data.abilities.field_of_view_modifier);
             response += api::packets::play::setHeldSlot(client, client.player_data.assigned_entity->get_selected_item());
             response += api::packets::play::setExperience(client, client.player_data.experience.progress, client.player_data.experience.level, client.player_data.experience.total);
             //response += api::packets::play::commands(client, manager);
@@ -239,8 +239,8 @@ namespace copper_server::build_in_plugins {
                 *client_ref,
                 client_ref->player_data.assigned_entity->position,
                 client_ref->player_data.assigned_entity->motion,
-                yaw,
-                pitch,
+                (float)yaw,
+                (float)pitch,
                 0
             );
             //api::world::sync_settings(client_ref);
@@ -270,7 +270,6 @@ namespace copper_server::build_in_plugins {
                 data.player = std::move(client_ref->player_data);
                 data.save();
             }
-            /*auto removed_entity = */ api::entity_id_map::remove_id(client_ref->data->uuid);
             return response;
         }
     };

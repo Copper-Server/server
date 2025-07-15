@@ -31,7 +31,7 @@ namespace copper_server::api::network::tcp {
         virtual base_objects::SharedClientData& shared_data() = 0;
         virtual bool start_symmetric_encryption(const list_array<uint8_t>& encryption_key, const list_array<uint8_t>& encryption_iv) = 0;
 
-        virtual void request_buffer(size_t new_size) {}
+        virtual void request_buffer(size_t) {}
 
         virtual void send_indirect(base_objects::network::response&&) = 0;
     };

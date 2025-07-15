@@ -1,6 +1,5 @@
 #include <src/api/allowlist.hpp>
 #include <src/api/configuration.hpp>
-#include <src/api/packets.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/log.hpp>
@@ -36,8 +35,23 @@ namespace copper_server::build_in_plugins {
                 this->mode = mode;
                 return false;
             });
-            register_event(api::allowlist::on_kick, base_objects::events::priority::low, true, [this](const base_objects::client_data_holder& client) {
-                client->sendPacket(api::packets::play::kick(*client, Chat::fromEnbt(api::configuration::get() ^ "allow_list" ^ "on_kick_message")));
+            register_event(api::allowlist::on_kick, base_objects::events::priority::low, [this](const base_objects::client_data_holder& client) {
+                api::players::calls::on_player_kick({client, Chat::fromEnbt(api::configuration::get() ^ "allow_list" ^ "on_kick_message")});
+                return false;
+            });
+            register_event(api::allowlist::on_add, base_objects::events::priority::low, [this](const std::string name) {
+                switch (mode) {
+                case api::allowlist::allowlist_mode::block:
+                    if (allow_list.contains(name))
+                        api::allowlist::on_kick(api::players::get_player(base_objects::SharedClientData::packets_state_t::protocol_state::play, name));
+                    break;
+                case api::allowlist::allowlist_mode::allow:
+                    if (!allow_list.contains(name))
+                        api::allowlist::on_kick(api::players::get_player(base_objects::SharedClientData::packets_state_t::protocol_state::play, name));
+                    break;
+                default:
+                    break;
+                }
                 return false;
             });
         }
@@ -54,8 +68,10 @@ namespace copper_server::build_in_plugins {
                         auto& player_name = std::get<pred_string>(args[0]).value;
                         if (player_name.contains("\n"))
                             throw std::runtime_error("Player name contains newline character");
-                        if (api::allowlist::on_add(player_name))
+                        if (api::allowlist::on_add(player_name)) {
+                            api::players::calls::on_system_message({context.executor, {"Player " + player_name + " is not added to allowlist"}});
                             return;
+                        }
 
                         allow_list.add(player_name);
                         api::players::calls::on_system_message({context.executor, {"Player " + player_name + " added to allowlist"}});
@@ -66,8 +82,10 @@ namespace copper_server::build_in_plugins {
                         auto& player_name = std::get<pred_string>(args[0]).value;
                         if (player_name.contains("\n"))
                             throw std::runtime_error("Player name contains newline character");
-                        if (api::allowlist::on_remove(player_name))
+                        if (api::allowlist::on_remove(player_name)) {
+                            api::players::calls::on_system_message({context.executor, {"Player " + player_name + " is not removed from allowlist"}});
                             return;
+                        }
                         allow_list.remove(player_name);
                         api::players::calls::on_system_message({context.executor, {"Player " + player_name + " removed from allowlist"}});
                     });

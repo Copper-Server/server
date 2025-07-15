@@ -36,9 +36,9 @@ namespace copper_server::base_objects {
         return pos;
     }
 
-    void selector::build_selector(const std::string& full_string) {
-        this->full_string = full_string;
-        std::string_view view(full_string);
+    void selector::build_selector(const std::string& to_parse_full_string) {
+        full_string = to_parse_full_string;
+        std::string_view view(to_parse_full_string);
         if (view[0] != '@')
             throw std::runtime_error("Expected '@' at the start of selector");
         switch (view[1]) {
@@ -84,7 +84,7 @@ namespace copper_server::base_objects {
             std::string_view selected = view.substr(2, close - 1);
             view = view.substr(close + 1);
             list_array<char>(selected)
-                .where([](char ch) { return ch != ' ' | ch != '\n' | ch != '\t' | ch != '\r'; })
+                .where([](char ch) { return ch != ' ' || ch != '\n' || ch != '\t' || ch != '\r'; })
                 .split_by(',')
                 .for_each([&](list_array<char>&& str) {
                     std::string converted = str.to_container<std::string>();

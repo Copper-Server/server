@@ -46,17 +46,17 @@ namespace copper_server {
         }
     }
     struct ArrayStream {
-        uint8_t* arrau;
+        uint8_t* arr_;
         size_t mi;
 
         ArrayStream(uint8_t* arr, size_t size) {
-            arrau = arr;
+            arr_ = arr;
             mi = size;
             read_only = false;
         }
 
         ArrayStream(const uint8_t* arr, size_t size) {
-            arrau = const_cast<uint8_t*>(arr);
+            arr_ = const_cast<uint8_t*>(arr);
             mi = size;
             read_only = true;
         }
@@ -69,19 +69,19 @@ namespace copper_server {
                 throw std::out_of_range("array max size is: " + std::to_string(mi) + "byt try write in: " + std::to_string(w));
             if (read_only)
                 throw std::exception("Readonly Mode");
-            arrau[w++] = value;
+            arr_[w++] = value;
         }
 
         uint8_t read() {
             if (mi <= r)
                 throw std::out_of_range("array max size is: " + std::to_string(mi) + "byt try read in: " + std::to_string(r));
-            return arrau[r++];
+            return arr_[r++];
         }
 
         uint8_t peek() {
             if (mi <= r)
                 throw std::out_of_range("array max size is: " + std::to_string(mi) + "byt try read in: " + std::to_string(r));
-            return arrau[r];
+            return arr_[r];
         }
 
         bool empty() {
@@ -93,14 +93,14 @@ namespace copper_server {
                 throw std::out_of_range("start > end");
             if (end > mi)
                 throw std::out_of_range("end > max_index");
-            return ArrayStream(arrau + start, end - start);
+            return ArrayStream(arr_ + start, end - start);
         }
 
         ArrayStream range_read(size_t size) {
             if (r + size > mi)
                 throw std::out_of_range("r + size > max_index");
 
-            ArrayStream tmp(arrau + r, size);
+            ArrayStream tmp(arr_ + r, size);
             r += size;
             return tmp;
         }
@@ -110,7 +110,7 @@ namespace copper_server {
             if (left > max_size)
                 throw std::out_of_range("array len out of range");
 
-            ArrayStream tmp(arrau + r, left);
+            ArrayStream tmp(arr_ + r, left);
             r = mi;
             return tmp;
         }
@@ -120,7 +120,7 @@ namespace copper_server {
         }
 
         uint8_t* data_read() {
-            return arrau + r;
+            return arr_ + r;
         }
 
         size_t size_write() {
@@ -128,7 +128,7 @@ namespace copper_server {
         }
 
         uint8_t* data_write() {
-            return arrau + w;
+            return arr_ + w;
         }
 
         bool can_read(size_t size) {
@@ -144,13 +144,13 @@ namespace copper_server {
         }
 
         list_array<uint8_t> to_vector() {
-            return list_array<uint8_t>(arrau + r, arrau + mi + r);
+            return list_array<uint8_t>(arr_ + r, arr_ + mi + r);
         }
 
         template <class Res>
         Res read_var() {
             size_t len = sizeof(Res);
-            Res res = util::fromVar<Res>(arrau + r, len);
+            Res res = util::fromVar<Res>(arr_ + r, len);
             r += len;
             enbt::endian_helpers::convert_endian(std::endian::little, res);
             return res;
@@ -224,9 +224,23 @@ namespace copper_server {
 
     template <class ResultT, class T>
     static void WriteVar(T val, list_array<uint8_t>& data) {
-        if (!std::is_same<ResultT, T>::value)
-            if ((ResultT)val != val)
-                throw std::out_of_range("Value out of range");
+        if constexpr (!std::is_same<ResultT, T>::value) {
+            if constexpr (std::is_unsigned_v<ResultT> == std::is_unsigned_v<T>) {
+                if ((ResultT)val != val)
+                    throw std::out_of_range("Value out of range");
+            } else if constexpr (std::is_unsigned_v<ResultT>) {
+                if (val < 0)
+                    throw std::out_of_range("Value out of range");
+                if ((ResultT)val != (std::make_unsigned_t<T>)val)
+                    throw std::out_of_range("Value out of range");
+            } else if constexpr (std::is_unsigned_v<T>) {
+                auto chk = (ResultT)val;
+                if (chk < 0)
+                    throw std::out_of_range("Value out of range");
+                if ((std::make_unsigned_t<ResultT>)val != (T)val)
+                    throw std::out_of_range("Value out of range");
+            }
+        }
 
         constexpr size_t buf_len = sizeof(ResultT) + (sizeof(ResultT) / 7) + 1;
         uint8_t buf[buf_len];
@@ -237,9 +251,23 @@ namespace copper_server {
 
     template <class ResultT, class T>
     static void WriteVar(T val, ArrayStream& data) {
-        if (!std::is_same<ResultT, T>::value)
-            if ((ResultT)val != val)
-                throw std::out_of_range("Value out of range");
+        if constexpr (!std::is_same<ResultT, T>::value) {
+            if constexpr (std::is_unsigned_v<ResultT> == std::is_unsigned_v<T>) {
+                if ((ResultT)val != val)
+                    throw std::out_of_range("Value out of range");
+            } else if constexpr (std::is_unsigned_v<ResultT>) {
+                if (val < 0)
+                    throw std::out_of_range("Value out of range");
+                if ((ResultT)val != (std::make_unsigned_t<T>)val)
+                    throw std::out_of_range("Value out of range");
+            } else if constexpr (std::is_unsigned_v<T>) {
+                auto chk = (ResultT)val;
+                if (chk < 0)
+                    throw std::out_of_range("Value out of range");
+                if ((std::make_unsigned_t<ResultT>)val != (T)val)
+                    throw std::out_of_range("Value out of range");
+            }
+        }
 
         constexpr size_t buf_len = sizeof(T) + (sizeof(T) / 7) + 1;
         uint8_t buf[buf_len];
@@ -264,12 +292,9 @@ namespace copper_server {
     }
 
     static void WriteString(list_array<uint8_t>& data, const std::string& str, int32_t max_string_len = INT32_MAX) {
-        int32_t actual_len = str.size();
-        if (actual_len != str.size())
+        if (str.size() > max_string_len)
             throw std::out_of_range("actual string len out of range");
-        if (actual_len > max_string_len)
-            throw std::out_of_range("actual string len out of range");
-        WriteVar<int32_t>(actual_len, data);
+        WriteVar<int32_t>(str.size(), data);
         data.push_back((uint8_t*)str.data(), str.size());
     }
 

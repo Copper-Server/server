@@ -59,7 +59,7 @@ namespace copper_server::base_objects {
             auto id = part;
             next_token(part, path);
             try {
-                auto& block_data = base_objects::block::get_block(id);
+                //auto& block_data = base_objects::block::get_block(id);
                 if (part.starts_with('[')) {
                     //TODO
                 }
@@ -119,26 +119,26 @@ namespace copper_server::base_objects {
             parsers::block_pos res;
             if (part.starts_with('~')) {
                 res.x_relative = true;
-                res.x = part.empty() ? 0 : std::stof(part.substr(1));
+                res.x = part.empty() ? 0 : std::stoll(part.substr(1));
             } else if (part.size())
-                res.x = std::stof(part);
+                res.x = std::stoll(part);
             else
                 return std::nullopt;
 
             next_token(part, path);
             if (part.starts_with('~')) {
                 res.y_relative = true;
-                res.y = part.empty() ? 0 : std::stof(part.substr(1));
+                res.y = part.empty() ? 0 : std::stoll(part.substr(1));
             } else if (part.size())
-                res.y = std::stof(part);
+                res.y = std::stoll(part);
             else
                 return std::nullopt;
             next_token(part, path);
             if (part.starts_with('~')) {
                 res.z_relative = true;
-                res.z = part.empty() ? 0 : std::stof(part.substr(1));
+                res.z = part.empty() ? 0 : std::stoll(part.substr(1));
             } else if (part.size())
-                res.z = std::stof(part);
+                res.z = std::stoll(part);
             else
                 return std::nullopt;
             return res;
@@ -583,7 +583,7 @@ namespace copper_server::base_objects {
 
         std::optional<parsers::_long> parse(command_manager& manager, parsers::command::_long& cfg, std::string& part, std::string& path) {
             try {
-                int32_t value = std::stoll(part);
+                int64_t value = std::stoll(part);
                 if (cfg.min)
                     if (value < *cfg.min)
                         return std::nullopt;
@@ -622,14 +622,14 @@ namespace copper_server::base_objects {
     action_provider::action_provider(std::string&& tag, list_array<std::string>&& requirement)
         : action_tag(std::move(tag)), required_permissions_tag(std::move(requirement)) {}
 
-    int32_t command::get_child(list_array<command>& command_nodes, const std::string& name) {
+    int32_t command::get_child(list_array<command>& command_nodes, const std::string& child_name) {
         if (childs_cache.size() == childs.size()) {
-            auto it = childs_cache.find(name);
+            auto it = childs_cache.find(child_name);
             if (it == childs_cache.end())
                 return -1;
-            if (command_nodes[it->second].name != name) {
+            if (command_nodes[it->second].name != child_name) {
                 childs_cache.clear();
-                return get_child(command_nodes, name);
+                return get_child(command_nodes, child_name);
             } else
                 return it->second;
         } else {
@@ -638,9 +638,9 @@ namespace copper_server::base_objects {
                 auto& check_name = command_nodes[childs[i]].name;
                 if (childs_cache.find(check_name) != childs_cache.end())
                     throw std::invalid_argument("invalid command children tree, duplicate name found");
-                childs_cache[check_name] = i;
+                childs_cache[check_name] = (int32_t)i;
             }
-            return get_child(command_nodes, name);
+            return get_child(command_nodes, child_name);
         }
     }
 
@@ -1185,8 +1185,8 @@ namespace copper_server::base_objects {
         if (root.childs_cache.find(command.name) != root.childs_cache.end())
             throw std::invalid_argument("This command already defined");
 
-        root.childs.push_back(manager.command_nodes.size());
-        root.childs_cache[command.name] = manager.command_nodes.size();
+        root.childs.push_back((int32_t)manager.command_nodes.size());
+        root.childs_cache[command.name] = (int32_t)manager.command_nodes.size();
         manager.command_nodes.push_back(command);
         manager.changes_id++;
         return command_browser(manager, int32_t(manager.command_nodes.size() - 1));
@@ -1293,8 +1293,8 @@ namespace copper_server::base_objects {
         if (current_command.childs_cache.find(command.name) != current_command.childs_cache.end())
             throw std::invalid_argument("This command already defined");
 
-        current_command.childs.push_back(manager.command_nodes.size());
-        current_command.childs_cache[command.name] = manager.command_nodes.size();
+        current_command.childs.push_back((int32_t)manager.command_nodes.size());
+        current_command.childs_cache[command.name] = (int32_t)manager.command_nodes.size();
         manager.command_nodes.push_back(command);
         manager.changes_id++;
 

@@ -27,7 +27,7 @@ namespace copper_server::resources {
         auto end = map.end();
         cache.reserve(map.size());
         for (; it != end; ++it) {
-            it->second.id = i++;
+            it->second.id = (decltype(it->second.id))i++;
             cache.push_back(it);
         }
     }
@@ -166,94 +166,94 @@ namespace copper_server::resources {
         api::tags::loading_stage_end();
     }
 
-    void hardcoded_values_for_entity(base_objects::entity_data& data) {
-        if (data.living_entity_data || data.name == "player") {
-            data.acceleration = 0.08;
-            data.drag_vertical = 0.02;
-            data.drag_horizontal = 0.09;
-            data.terminal_velocity = 3.92;
-            data.drag_applied_after_acceleration = true;
-            data.loading_ticket_level = 31;
+    void hardcoded_values_for_entity(base_objects::entity_data& entity_data) {
+        if (entity_data.living_entity_data || entity_data.name == "player") {
+            entity_data.acceleration = 0.08f;
+            entity_data.drag_vertical = 0.02f;
+            entity_data.drag_horizontal = 0.09f;
+            entity_data.terminal_velocity = 3.92f;
+            entity_data.drag_applied_after_acceleration = true;
+            entity_data.loading_ticket_level = 31;
         } else {
-            if (data.name == "experience_bottle") {
-                data.acceleration = 0.07;
-                data.drag_vertical = 0.01;
-                data.drag_horizontal = 0.01;
-                data.terminal_velocity = 7.0;
-                data.drag_applied_after_acceleration = false;
-            } else if (data.name == "llama_spit") {
-                data.acceleration = 0.06;
-                data.drag_vertical = 0.01;
-                data.drag_horizontal = 0.01;
-                data.terminal_velocity = 6.0;
-                data.drag_applied_after_acceleration = false;
-            } else if (data.name == "splash_potion" || data.name == "lingering_potion" || data.name == "arrow" || data.name == "trident") {
-                data.acceleration = 0.05;
-                data.drag_vertical = 0.01;
-                data.drag_horizontal = 0.01;
-                data.terminal_velocity = 5.0;
-                data.drag_applied_after_acceleration = false;
-            } else if (data.name == "egg" || data.name == "snowball" || data.name == "ender_pearl") {
-                data.acceleration = 0.03;
-                data.drag_vertical = 0.01;
-                data.drag_horizontal = 0.01;
-                data.terminal_velocity = 3.0;
-                data.drag_applied_after_acceleration = false;
-            } else if (data.name == "tnt" || data.name == "falling_block" || data.name == "item") {
-                data.acceleration = 0.04;
-                data.drag_vertical = 0.02;
-                data.drag_horizontal = 0.02;
-                data.terminal_velocity = 1.96;
-                data.drag_applied_after_acceleration = true;
-            } else if (data.name == "fireball" || data.name == "small_fireball" || data.name == "dragon_fireball" || data.name == "wither_skull") {
-                data.acceleration = 0.10;
-                data.drag_vertical = 0.05;
-                data.drag_horizontal = 0.05;
-                data.terminal_velocity = 1.9;
-                data.drag_applied_after_acceleration = true;
-            } else if (data.name == "experience_orb") {
-                data.acceleration = 0.03;
-                data.drag_vertical = 0.02;
-                data.drag_horizontal = 0.02;
-                data.terminal_velocity = 1.47;
-                data.drag_applied_after_acceleration = true;
-            } else if (data.name == "fishing_bobber") {
-                data.acceleration = 0.03;
-                data.drag_vertical = 0.08;
-                data.drag_horizontal = 0.08;
-                data.terminal_velocity = 0.345;
-                data.drag_applied_after_acceleration = true;
-            } else if (data.name.contains("minecart")) {
-                data.acceleration = 0.04;
-                data.drag_vertical = 0.05;
-                data.drag_horizontal = 0.05;
-                data.terminal_velocity = 0.76;
-                data.drag_applied_after_acceleration = true;
-            } else if (data.name.contains("boat") || data.name == "bamboo_chest_raft" || data.name == "bamboo_raft") {
-                data.acceleration = 0.04;
-                data.drag_vertical = 0.00;
-                data.drag_horizontal = 0.00;
-                data.terminal_velocity = 3400000.0f;
-                data.drag_applied_after_acceleration = true;
-            } else if (data.name.contains("boat")) {
-                data.acceleration = 0.04;
-                data.drag_vertical = 0.00;
-                data.drag_horizontal = 0.00;
-                data.terminal_velocity = 3400000.0f;
-                data.drag_applied_after_acceleration = true;
-            } else if (data.name.contains("wind_charge")) {
-                data.acceleration = 0.04;
-                data.drag_vertical = 0.00;
-                data.drag_horizontal = 0.00;
-                data.terminal_velocity = 3400000.0f;
-                data.drag_applied_after_acceleration = true;
+            if (entity_data.name == "experience_bottle") {
+                entity_data.acceleration = 0.07f;
+                entity_data.drag_vertical = 0.01f;
+                entity_data.drag_horizontal = 0.01f;
+                entity_data.terminal_velocity = 7.0f;
+                entity_data.drag_applied_after_acceleration = false;
+            } else if (entity_data.name == "llama_spit") {
+                entity_data.acceleration = 0.06f;
+                entity_data.drag_vertical = 0.01f;
+                entity_data.drag_horizontal = 0.01f;
+                entity_data.terminal_velocity = 6.0f;
+                entity_data.drag_applied_after_acceleration = false;
+            } else if (entity_data.name == "splash_potion" || entity_data.name == "lingering_potion" || entity_data.name == "arrow" || entity_data.name == "trident") {
+                entity_data.acceleration = 0.05f;
+                entity_data.drag_vertical = 0.01f;
+                entity_data.drag_horizontal = 0.01f;
+                entity_data.terminal_velocity = 5.0f;
+                entity_data.drag_applied_after_acceleration = false;
+            } else if (entity_data.name == "egg" || entity_data.name == "snowball" || entity_data.name == "ender_pearl") {
+                entity_data.acceleration = 0.03f;
+                entity_data.drag_vertical = 0.01f;
+                entity_data.drag_horizontal = 0.01f;
+                entity_data.terminal_velocity = 3.0f;
+                entity_data.drag_applied_after_acceleration = false;
+            } else if (entity_data.name == "tnt" || entity_data.name == "falling_block" || entity_data.name == "item") {
+                entity_data.acceleration = 0.04f;
+                entity_data.drag_vertical = 0.02f;
+                entity_data.drag_horizontal = 0.02f;
+                entity_data.terminal_velocity = 1.96f;
+                entity_data.drag_applied_after_acceleration = true;
+            } else if (entity_data.name == "fireball" || entity_data.name == "small_fireball" || entity_data.name == "dragon_fireball" || entity_data.name == "wither_skull") {
+                entity_data.acceleration = 0.10f;
+                entity_data.drag_vertical = 0.05f;
+                entity_data.drag_horizontal = 0.05f;
+                entity_data.terminal_velocity = 1.9f;
+                entity_data.drag_applied_after_acceleration = true;
+            } else if (entity_data.name == "experience_orb") {
+                entity_data.acceleration = 0.03f;
+                entity_data.drag_vertical = 0.02f;
+                entity_data.drag_horizontal = 0.02f;
+                entity_data.terminal_velocity = 1.47f;
+                entity_data.drag_applied_after_acceleration = true;
+            } else if (entity_data.name == "fishing_bobber") {
+                entity_data.acceleration = 0.03f;
+                entity_data.drag_vertical = 0.08f;
+                entity_data.drag_horizontal = 0.08f;
+                entity_data.terminal_velocity = 0.345f;
+                entity_data.drag_applied_after_acceleration = true;
+            } else if (entity_data.name.contains("minecart")) {
+                entity_data.acceleration = 0.04f;
+                entity_data.drag_vertical = 0.05f;
+                entity_data.drag_horizontal = 0.05f;
+                entity_data.terminal_velocity = 0.76f;
+                entity_data.drag_applied_after_acceleration = true;
+            } else if (entity_data.name.contains("boat") || entity_data.name == "bamboo_chest_raft" || entity_data.name == "bamboo_raft") {
+                entity_data.acceleration = 0.04f;
+                entity_data.drag_vertical = 0.00f;
+                entity_data.drag_horizontal = 0.00f;
+                entity_data.terminal_velocity = 3400000.0f;
+                entity_data.drag_applied_after_acceleration = true;
+            } else if (entity_data.name.contains("boat")) {
+                entity_data.acceleration = 0.04f;
+                entity_data.drag_vertical = 0.00f;
+                entity_data.drag_horizontal = 0.00f;
+                entity_data.terminal_velocity = 3400000.0f;
+                entity_data.drag_applied_after_acceleration = true;
+            } else if (entity_data.name.contains("wind_charge")) {
+                entity_data.acceleration = 0.04f;
+                entity_data.drag_vertical = 0.00f;
+                entity_data.drag_horizontal = 0.00f;
+                entity_data.terminal_velocity = 3400000.0f;
+                entity_data.drag_applied_after_acceleration = true;
             } else {
-                data.acceleration = 0.00;
-                data.drag_vertical = 0.00;
-                data.drag_horizontal = 0.00;
-                data.terminal_velocity = 0.0;
-                data.drag_applied_after_acceleration = true;
-                log::debug("resource_load", "Entity " + data.name + " has no hardcoded values");
+                entity_data.acceleration = 0.00f;
+                entity_data.drag_vertical = 0.00f;
+                entity_data.drag_horizontal = 0.00f;
+                entity_data.terminal_velocity = 0.0f;
+                entity_data.drag_applied_after_acceleration = true;
+                log::debug("resource_load", "Entity " + entity_data.name + " has no hardcoded values");
             }
         }
     }
@@ -262,8 +262,8 @@ namespace copper_server::resources {
         auto parsed = boost::json::parse(resources::registry::entities);
         for (auto& [id, obj_] : parsed.as_object()) {
             auto& obj = obj_.as_object();
-            base_objects::entity_data data;
-            data.id = "minecraft:" + std::string(id);
+            base_objects::entity_data entity_data;
+            entity_data.id = "minecraft:" + std::string(id);
             if (obj.contains("max_health")) {
                 base_objects::entity_data::living_entity_data_t living_data;
                 living_data.base_health = obj.at("max_health").to_number<float>();
@@ -295,23 +295,23 @@ namespace copper_server::resources {
                     for (auto& memory : memories)
                         living_data.brain_memories.push_back((std::string)memory.as_string());
                 }
-                data.living_entity_data = std::move(living_data);
+                entity_data.living_entity_data = std::move(living_data);
             }
 
-            data.is_summonable = obj.at("summonable").as_bool();
-            data.is_fire_immune = obj.at("fire_immune").as_bool();
-            data.is_saveable = obj.at("saveable").as_bool();
-            data.is_spawnable_far_from_player = obj.at("spawnable_far_from_player").as_bool();
-            data.max_track_distance = obj.at("max_track_distance").to_number<int32_t>();
-            data.track_tick_interval = obj.at("track_tick_interval").to_number<int32_t>();
-            data.spawn_group = obj.at("spawn_group").as_string();
+            entity_data.is_summonable = obj.at("summonable").as_bool();
+            entity_data.is_fire_immune = obj.at("fire_immune").as_bool();
+            entity_data.is_saveable = obj.at("saveable").as_bool();
+            entity_data.is_spawnable_far_from_player = obj.at("spawnable_far_from_player").as_bool();
+            entity_data.max_track_distance = obj.at("max_track_distance").to_number<int32_t>();
+            entity_data.track_tick_interval = obj.at("track_tick_interval").to_number<int32_t>();
+            entity_data.spawn_group = obj.at("spawn_group").as_string();
             {
                 auto dimension = obj.at("dimension").as_array();
-                data.base_bounds.xz = dimension.at(0).to_number<double>();
-                data.base_bounds.y = dimension.at(1).to_number<double>();
+                entity_data.base_bounds.xz = dimension.at(0).to_number<double>();
+                entity_data.base_bounds.y = dimension.at(1).to_number<double>();
             }
             if (obj.contains("loot_table"))
-                data.data["loot_table"] = util::conversions::json::from_json(obj.at("loot_table"));
+                entity_data.data["loot_table"] = util::conversions::json::from_json(obj.at("loot_table"));
 
             {
                 using type = base_objects::entity_data::metadata_sync::type_t;
@@ -363,22 +363,22 @@ namespace copper_server::resources {
                     {"Optional<LazyEntityReference<LivingEntity>>", type::entity_refrence},
                 };
                 auto metadata = obj.at("metadata").as_array();
-                data.metadata.reserve(metadata.size());
+                entity_data.metadata.reserve(metadata.size());
                 for (auto& meta : obj.at("metadata").as_array()) {
                     base_objects::entity_data::metadata_sync metadata_sync;
                     metadata_sync.index = meta.at("network_id").to_number<uint8_t>();
                     std::string name = (std::string)meta.at("field_name").as_string();
                     metadata_sync.type = types.at((std::string)meta.at("type_name").as_string());
-                    data.metadata[name] = std::move(metadata_sync);
+                    entity_data.metadata[name] = std::move(metadata_sync);
                 }
             }
 
-            data.name = (std::string)id;
-            data.translation_resource_key = obj.at("translation_key").as_string();
-            data.eye_height = obj.at("eye_height").to_number<float>();
+            entity_data.name = (std::string)id;
+            entity_data.translation_resource_key = obj.at("translation_key").as_string();
+            entity_data.eye_height = obj.at("eye_height").to_number<float>();
 
-            hardcoded_values_for_entity(data);
-            base_objects::entity_data::register_entity(std::move(data));
+            hardcoded_values_for_entity(entity_data);
+            base_objects::entity_data::register_entity(std::move(entity_data));
         }
     }
 
@@ -394,18 +394,18 @@ namespace copper_server::resources {
             bio.temperature_modifier = (std::string)bio_js["temperature_modifier"];
 
         {
-            Biome::Effects effects;
+            Biome::Effects biom_effects;
             js_object effects_js = js_object::get_object(bio_js["effects"]);
-            effects.sky_color = effects_js["sky_color"];
-            effects.water_fog_color = effects_js["water_fog_color"];
-            effects.fog_color = effects_js["fog_color"];
-            effects.water_color = effects_js["water_color"];
+            biom_effects.sky_color = effects_js["sky_color"];
+            biom_effects.water_fog_color = effects_js["water_fog_color"];
+            biom_effects.fog_color = effects_js["fog_color"];
+            biom_effects.water_color = effects_js["water_color"];
             if (effects_js.contains("foliage_color"))
-                effects.foliage_color = effects_js["foliage_color"];
+                biom_effects.foliage_color = effects_js["foliage_color"];
             if (effects_js.contains("grass_color"))
-                effects.grass_color = effects_js["grass_color"];
+                biom_effects.grass_color = effects_js["grass_color"];
             if (effects_js.contains("grass_color_modifier"))
-                effects.grass_color_modifier = (std::string)effects_js["grass_color_modifier"];
+                biom_effects.grass_color_modifier = (std::string)effects_js["grass_color_modifier"];
             if (effects_js.contains("particle")) {
                 js_object particle_js = js_object::get_object(effects_js["particle"]);
                 Biome::Particle particle;
@@ -413,18 +413,18 @@ namespace copper_server::resources {
                 auto options = js_object::get_object(particle_js["options"]);
                 particle.options.type = (std::string)options["type"];
                 particle.options.options = conversions::json::from_json(options.get());
-                effects.particle = std::move(particle);
+                biom_effects.particle = std::move(particle);
             }
             if (effects_js.contains("ambient_sound")) {
                 auto eff = effects_js["ambient_sound"];
                 if (eff.is_string())
-                    effects.ambient_sound = (std::string)eff;
+                    biom_effects.ambient_sound = (std::string)eff;
                 else {
                     js_object ambient_sound_js = js_object::get_object(effects_js["ambient_sound"]);
                     Biome::AmbientSound ambient_sound;
                     ambient_sound.sound = (std::string)ambient_sound_js["sound"];
                     ambient_sound.range = ambient_sound_js["range"];
-                    effects.ambient_sound = std::move(ambient_sound);
+                    biom_effects.ambient_sound = std::move(ambient_sound);
                 }
             }
             if (effects_js.contains("mood_sound")) {
@@ -434,14 +434,14 @@ namespace copper_server::resources {
                 mood_sound.offset = mood_sound_js["offset"].or_apply(2.0);
                 mood_sound.block_search_extent = mood_sound_js["block_search_extent"].or_apply(8);
                 mood_sound.tick_delay = mood_sound_js["tick_delay"].or_apply(6000);
-                effects.mood_sound = std::move(mood_sound);
+                biom_effects.mood_sound = std::move(mood_sound);
             }
             if (effects_js.contains("additions_sound")) {
                 js_object additions_sound_js = js_object::get_object(effects_js["additions_sound"]);
                 Biome::AdditionsSound additions_sound;
                 additions_sound.sound = (std::string)additions_sound_js["sound"];
                 additions_sound.tick_chance = additions_sound_js["tick_chance"];
-                effects.additions_sound = std::move(additions_sound);
+                biom_effects.additions_sound = std::move(additions_sound);
             }
             if (effects_js.contains("music")) {
                 std::vector<Biome::Music> music_arr;
@@ -451,11 +451,11 @@ namespace copper_server::resources {
                     js_object music_js = js_object::get_object(it);
                     Biome::Music music;
                     if (music_js.contains("data")) {
-                        auto data = js_object::get_object(music_js["data"]);
-                        music.sound = (std::string)data["sound"];
-                        music.min_delay = data["min_delay"].or_apply(12000);
-                        music.max_delay = data["max_delay"].or_apply(24000);
-                        music.replace_current_music = data["replace_current_music"].or_apply(true);
+                        auto music_data = js_object::get_object(music_js["data"]);
+                        music.sound = (std::string)music_data["sound"];
+                        music.min_delay = music_data["min_delay"].or_apply(12000);
+                        music.max_delay = music_data["max_delay"].or_apply(24000);
+                        music.replace_current_music = music_data["replace_current_music"].or_apply(true);
                     } else {
                         music.sound = (std::string)music_js["sound"];
                         music.min_delay = music_js["min_delay"].or_apply(12000);
@@ -465,9 +465,9 @@ namespace copper_server::resources {
                     music.music_weight = music_js["weight"].or_apply(1.0);
                     music_arr.emplace_back(std::move(music));
                 }
-                effects.music = std::move(music_arr);
+                biom_effects.music = std::move(music_arr);
             }
-            bio.effects = std::move(effects);
+            bio.effects = std::move(biom_effects);
         }
         {
             js_object cavers_js = js_object::get_object(bio_js["cavers"]);
@@ -564,8 +564,8 @@ namespace copper_server::resources {
                 std::string type = obj["type"];
 
                 if (type == "constant") {
-                    auto value = obj.at("value");
-                    return value.is_integral() ? base_objects::number_provider_constant((int32_t)value) : base_objects::number_provider_constant((float)value);
+                    auto val = obj.at("value");
+                    return val.is_integral() ? base_objects::number_provider_constant((int32_t)val) : base_objects::number_provider_constant((float)val);
                 } else if (type == "uniform") {
                     std::variant<int32_t, float> min;
                     std::variant<int32_t, float> max;
@@ -651,8 +651,8 @@ namespace copper_server::resources {
                     std::vector<std::pair<base_objects::number_provider, double>> values;
                     auto values_js = js_array::get_array(obj.at("values"));
                     values.reserve(values_js.size());
-                    for (auto&& value : values_js) {
-                        auto value_js = js_object::get_object(value);
+                    for (auto&& val : values_js) {
+                        auto value_js = js_object::get_object(val);
                         auto weight = value_js.contains("weight") ? value_js["weight"] : 1.0;
                         values.push_back({read_number_provider(value_js.at("data")), weight});
                     }
@@ -685,13 +685,13 @@ namespace copper_server::resources {
                     res.score = obj.at("score");
                     res.scale = obj.contains("scale") ? std::optional<float>((float)obj["scale"]) : std::nullopt;
                     auto target = js_object::get_object(obj.at("target"));
-                    std::string type = target.at("type");
-                    if (type == "fixed")
+                    std::string score_type = target.at("type");
+                    if (score_type == "fixed")
                         res.target.value = target.at("name");
-                    else if (type == "context")
+                    else if (score_type == "context")
                         res.target.value = target.at("target");
                     else
-                        target.parsing_error("Invalid target type: " + type);
+                        target.parsing_error("Invalid target type: " + score_type);
                     return res;
                 } else if (type == "storage") {
                     base_objects::number_provider_storage res;
@@ -1134,9 +1134,9 @@ namespace copper_server::resources {
         type.max_cost.per_level_above_first = max_cost.at("per_level_above_first");
 
         if (type_js.contains("effects")) {
-            auto effects = js_object::get_object(type_js.at("effects"));
-            type.effects.reserve(effects.size());
-            for (auto&& [component_id, effect] : effects)
+            auto ench_effects = js_object::get_object(type_js.at("effects"));
+            type.effects.reserve(ench_effects.size());
+            for (auto&& [component_id, effect] : ench_effects)
                 type.effects[component_id] = util::conversions::json::from_json(effect.get());
         }
         enchantments[id] = std::move(type);
@@ -1203,21 +1203,21 @@ namespace copper_server::resources {
             type_js["scaling"].parsing_error("Unknown scaling type: " + scaling);
 
         if (type_js.contains("effects")) {
-            std::string effects = type_js["effects"];
-            if (effects == "hurt")
+            std::string damage_effects = type_js["effects"];
+            if (damage_effects == "hurt")
                 type.effects = DamageType::EffectsType::hurt;
-            else if (effects == "thorns")
+            else if (damage_effects == "thorns")
                 type.effects = DamageType::EffectsType::thorns;
-            else if (effects == "drowning")
+            else if (damage_effects == "drowning")
                 type.effects = DamageType::EffectsType::drowning;
-            else if (effects == "burning")
+            else if (damage_effects == "burning")
                 type.effects = DamageType::EffectsType::burning;
-            else if (effects == "poking")
+            else if (damage_effects == "poking")
                 type.effects = DamageType::EffectsType::poking;
-            else if (effects == "freezing")
+            else if (damage_effects == "freezing")
                 type.effects = DamageType::EffectsType::freezing;
             else
-                type_js["effects"].parsing_error("Unknown effects type: " + effects);
+                type_js["effects"].parsing_error("Unknown damage effects type: " + damage_effects);
         }
 
         if (type_js.contains("death_message_type")) {
@@ -1742,8 +1742,8 @@ namespace copper_server::resources {
             base_objects::static_slot_data slot_data;
             slot_data.id = name;
             std::unordered_map<std::string, base_objects::component::unified> components;
-            for (auto& [name, value] : decl.as_object().at("components").as_object())
-                components[name] = base_objects::component::parse_component(name, conversions::json::from_json(value));
+            for (auto& [component_name, value] : decl.as_object().at("components").as_object())
+                components[component_name] = base_objects::component::parse_component(component_name, conversions::json::from_json(value));
             slot_data.default_components = std::move(components);
             base_objects::slot_data::add_slot_data(std::move(slot_data));
         }
@@ -1780,7 +1780,7 @@ namespace copper_server::resources {
                         list_array<std::string> res;
                         for (auto&& value : values.get_array())
                             res.push_back((std::string)value.as_string());
-                        api::tags::add_tag(type, namespace_ + ":" + tag, res);
+                        api::tags::add_tag(type, namespace_ + ":" + tag, res, !replace);
                         continue;
                     }
                 }
@@ -1823,10 +1823,10 @@ namespace copper_server::resources {
     }
 
     void process_pack(boost::json::object& parsed, const std::string& namespace_, const std::string& id, bool allowed_pack_nest, bool send_via_network_body) {
-        auto data = js_object::get_object(parsed);
-        if (data.contains("tags"))
-            prepare_tags(data["tags"].get().as_object(), namespace_);
-        for (auto&& [name, decl] : data) {
+        auto pack_data = js_object::get_object(parsed);
+        if (pack_data.contains("tags"))
+            prepare_tags(pack_data["tags"].get().as_object(), namespace_);
+        for (auto&& [name, decl] : pack_data) {
             if (name == "banner_pattern")
                 process_item(decl, namespace_, load_file_bannerPattern, send_via_network_body);
             else if (name == "chat_type")
@@ -1872,16 +1872,16 @@ namespace copper_server::resources {
             else if (name == "wolf_sound_variant")
                 process_item(decl, namespace_, load_file_wolfSoundVariant, send_via_network_body);
             else if (name == "worldgen") {
-                for (auto&& [name, decl] : js_object::get_object(decl)) {
-                    if (name == "biome")
-                        process_item(decl, namespace_, load_file_biomes, send_via_network_body);
+                for (auto&& [wg_name, wg_decl] : js_object::get_object(decl)) {
+                    if (wg_name == "biome")
+                        process_item(wg_decl, namespace_, load_file_biomes, send_via_network_body);
                 }
             } else if (allowed_pack_nest) {
                 if (name == "datapacks") {
                     auto& enabled_features = api::configuration::get().game_play.enabled_features;
-                    for (auto&& [name, decl] : js_object::get_object(decl)) {
-                        auto id = std::string(name);
-                        auto decl_obj = js_object::get_object(decl);
+                    for (auto&& [dp_name, dp_decl] : js_object::get_object(decl)) {
+                        auto pack_id = std::string(dp_name);
+                        auto decl_obj = js_object::get_object(dp_decl);
                         if (decl_obj.contains("pack.mcmeta")) {
                             auto pack_meta = js_object::get_object(decl_obj["pack.mcmeta"]);
                             if (pack_meta.contains("features")) {
@@ -1905,18 +1905,18 @@ namespace copper_server::resources {
                                 if (pack.contains("pack_format")) {
                                     auto pack_format = (int64_t)pack["pack_format"];
                                     if (pack_format != 61) {
-                                        log::error("resource_load", "Unsupported pack format: " + std::to_string(pack_format) + " for child datapack: " + namespace_ + "->" + id);
+                                        log::error("resource_load", "Unsupported pack format: " + std::to_string(pack_format) + " for child datapack: " + namespace_ + "->" + pack_id);
                                         continue;
                                     }
                                 }
                             }
 
                             if (pack_meta.contains("data")) {
-                                auto data = js_object::get_object(pack_meta["data"]);
-                                for (auto&& [name, decl] : data)
-                                    process_pack(decl, name, id, false, send_via_network_body);
+                                auto in_pack_data = js_object::get_object(pack_meta["data"]);
+                                for (auto&& [in_pack_name, in_pack_decl] : in_pack_data)
+                                    process_pack(in_pack_decl, in_pack_name, pack_id, false, send_via_network_body);
                             } else
-                                loaded_packs_.push_back({.namespace_ = "minecraft", .id = id});
+                                loaded_packs_.push_back({.namespace_ = "minecraft", .id = pack_id});
                         }
                     }
                 }
@@ -2000,11 +2000,11 @@ namespace copper_server::resources {
                 }
 
                 if (std::filesystem::exists(path / "data")) {
-                    for (auto& entry : std::filesystem::directory_iterator(path / "data")) {
-                        if (entry.is_directory()) {
-                            auto& path = entry.path();
-                            std::string namespace_ = path.stem().string();
-                            process_pack(path, namespace_, id);
+                    for (auto& data_entry : std::filesystem::directory_iterator(path / "data")) {
+                        if (data_entry.is_directory()) {
+                            auto& data_path = data_entry.path();
+                            std::string namespace_ = data_path.stem().string();
+                            process_pack(data_path, namespace_, id);
                         }
                     }
                 }
@@ -2049,10 +2049,10 @@ namespace copper_server::resources {
             }
         }
         {
-            auto attributes = boost::json::parse(resources::registry::attributes);
+            auto reg_attributes = boost::json::parse(resources::registry::attributes);
             auto current_attribute = registers::current_protocol_registers.at("minecraft:attribute").at("entries").as_compound();
             for (auto& [name, decl] : current_attribute)
-                registers::attributes[name] = attribute{name, (uint32_t)decl.at("protocol_id"), attributes.at(name).to_number<double>()};
+                registers::attributes[name] = attribute{name, (uint32_t)decl.at("protocol_id"), reg_attributes.at(name).to_number<double>()};
             {
                 registers::attributes_cache.resize(registers::attributes.size());
                 auto it = registers::attributes.begin();
@@ -2087,8 +2087,8 @@ namespace copper_server::resources {
             //complete initialization
             for (auto&& [name, decl] : parsed_items.as_object()) {
                 std::unordered_map<std::string, base_objects::component::unified> components;
-                for (auto& [name, value] : decl.as_object().at("components").as_object())
-                    components[name] = base_objects::component::parse_component(name, conversions::json::from_json(value));
+                for (auto& [component_name, value] : decl.as_object().at("components").as_object())
+                    components[name] = base_objects::component::parse_component(component_name, conversions::json::from_json(value));
                 base_objects::slot_data::get_slot_data(name).default_components = std::move(components);
             }
         }

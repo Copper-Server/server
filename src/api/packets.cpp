@@ -362,8 +362,8 @@ namespace copper_server {
                 return call_function_selector(play, mapData, map_id, scale, locked, icons, column, rows, x, z, data)
             }
 
-            base_objects::network::response merchantOffers(base_objects::SharedClientData& client, int32_t window_id, int32_t trade_id, const list_array<base_objects::packets::trade> trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock){
-                return call_function_selector(play, merchantOffers, window_id, trade_id, trades, level, experience, regular_villager, can_restock)
+            base_objects::network::response merchantOffers(base_objects::SharedClientData& client, int32_t window_id, const list_array<base_objects::packets::trade> trades, int32_t level, int32_t experience, bool regular_villager, bool can_restock){
+                return call_function_selector(play, merchantOffers, window_id, trades, level, experience, regular_villager, can_restock)
             }
 
             base_objects::network::response updateEntityPosition(base_objects::SharedClientData& client, int32_t entity_id, util::XYZ<float> pos, bool on_ground){

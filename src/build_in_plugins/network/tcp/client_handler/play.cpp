@@ -94,7 +94,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
         );
         session->shared_data().setKeepAliveCallback([this](int64_t keep_alive_packet) {
             auto delay = _keep_alive_solution->got_valid_keep_alive(keep_alive_packet);
-            this->session->shared_data().packets_state.keep_alive_ping_ms = std::min<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(delay).count(), INT32_MAX);
+            this->session->shared_data().packets_state.keep_alive_ping_ms = (int32_t)std::min<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(delay).count(), INT32_MAX);
             api::protocol::on_keep_alive.async_notify({keep_alive_packet, *this->session, this->session->shared_data_ref()});
         });
     }

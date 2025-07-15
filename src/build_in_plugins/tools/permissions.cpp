@@ -136,8 +136,7 @@ namespace copper_server::build_in_plugins {
                         std::string buf;
                         buf.reserve(enumerate.sum([](const std::string& val) {
                             return val.size() + 1;
-                        }) + 30);
-                        size_t calculate_reserve;
+                        }) + 38);
 
                         buf += "There are " + std::to_string(enumerate.size()) + " permissions\n";
                         for (auto& it : enumerate)

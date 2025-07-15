@@ -287,7 +287,7 @@ namespace copper_server::build_in_plugins {
         }
 
         plugin_response PlayerJoined(base_objects::client_data_holder& client_ref) override {
-            auto& client = *client_ref;
+            //auto& client = *client_ref;
             base_objects::network::response response;
 
 

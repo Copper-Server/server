@@ -33,12 +33,12 @@ namespace copper_server::base_objects {
             other.data = nullptr;
         }
 
-        ptr_optional& operator=(T* data) {
-            if (this->data == data)
+        ptr_optional& operator=(T* value) {
+            if (data == value)
                 return *this;
-            if (this->data)
-                delete this->data;
-            this->data = data;
+            if (data)
+                delete data;
+            data = value;
             return *this;
         }
 

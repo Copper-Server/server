@@ -7,43 +7,59 @@
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
 #include <span>
-#define OPENSSL_CHECK(OPERATION, console_output) \
-    if ((OPERATION) <= 0) {                      \
-        log::fatal("OpenSSL", console_output);   \
+#define OPENSSL_CHECK(OPERATION, console_output)  \
+    if ((OPERATION) <= 0) {                       \
+        log::error("OpenSSL", console_output);    \
+        throw std::runtime_error(console_output); \
     }
-#define NOT_NULL(X, console_output)            \
-    if (!(X)) {                                \
-        log::fatal("OpenSSL", console_output); \
+#define NOT_NULL(X, console_output)               \
+    if (!(X)) {                                   \
+        log::error("OpenSSL", console_output);    \
+        throw std::runtime_error(console_output); \
+    }
+#define IS_CORRECT(X, console_output)             \
+    if (!(X)) {                                   \
+        log::error("OpenSSL", console_output);    \
+        throw std::runtime_error(console_output); \
     }
 
 namespace copper_server::api::network {
     base_objects::events::sync_event<const fast_task::networking::address&> ip_filter;
 
     namespace tcp {
-        RSA* server_rsa_key = nullptr;
+        EVP_PKEY* server_key = nullptr;
         list_array<uint8_t> server_private_key; //PEM
-        list_array<uint8_t> server_public_key;  //PEM
+        list_array<uint8_t> server_public_key;  //DER
 
         void init_ssl() {
             auto ssl_key_length = api::configuration::get().server.ssl_key_length;
-            if (!server_rsa_key) {
-                server_rsa_key = RSA_generate_key(ssl_key_length, RSA_F4, nullptr, nullptr);
-                NOT_NULL(server_rsa_key, "Failed to generate RSA key");
+            IS_CORRECT(ssl_key_length <= INT32_MAX, "Invalid configuration, server.ssl_key_length is too large. int32_t max");
+            IS_CORRECT(ssl_key_length && !(ssl_key_length & (ssl_key_length - 1)), "Invalid configuration, server.ssl_key_length is too large. int32_t max");
+            IS_CORRECT(ssl_key_length >= 1024, "Invalid configuration, server.ssl_key_length is too large. int32_t max");
+
+            if (!server_key) {
+                EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nullptr);
+                NOT_NULL(ctx, "Failed to create EVP_PKEY_CTX");
+                OPENSSL_CHECK(EVP_PKEY_keygen_init(ctx), "Failed to init keygen");
+                OPENSSL_CHECK(EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, (int)ssl_key_length), "Failed to set key bits");
+                EVP_PKEY* pkey = nullptr;
+                OPENSSL_CHECK(EVP_PKEY_keygen(ctx, &pkey), "Failed to generate key");
+                NOT_NULL(pkey, "Failed to generate key");
+                server_key = pkey;
+                EVP_PKEY_CTX_free(ctx);
+                // Write private key (PEM)
                 BIO* bio = BIO_new(BIO_s_mem());
                 NOT_NULL(bio, "Failed to create BIO");
-                OPENSSL_CHECK(PEM_write_bio_RSAPrivateKey(bio, server_rsa_key, nullptr, nullptr, 0, nullptr, nullptr), "Failed to write RSA private key");
+                OPENSSL_CHECK(PEM_write_bio_PrivateKey(bio, server_key, nullptr, nullptr, 0, nullptr, nullptr), "Failed to write private key");
                 server_private_key.resize(BIO_pending(bio));
-                OPENSSL_CHECK(BIO_read(bio, server_private_key.data(), server_private_key.size()), "Failed to read RSA private key");
+                OPENSSL_CHECK(BIO_read(bio, server_private_key.data(), (int)server_private_key.size()), "Failed to read private key");
                 OPENSSL_CHECK(BIO_free(bio), "Failed to free BIO");
-                { //public key in DEM format
-                    uint8_t* der = nullptr;
-                    int32_t len = i2d_RSA_PUBKEY(server_rsa_key, &der);
-                    if (len < 0)
-                        throw std::runtime_error("Failed to convert RSA key to DER format");
-                    NOT_NULL(der, "Failed to convert RSA key to DER format");
-                    server_public_key = list_array<uint8_t>(der, len);
-                    OPENSSL_free(der);
-                }
+                // Write public key (DER)
+                int len = i2d_PUBKEY(server_key, nullptr);
+                IS_CORRECT(len > 0, "Failed to get DER public key length");
+                server_public_key.resize(len);
+                unsigned char* pubkey_ptr = server_public_key.data();
+                OPENSSL_CHECK(i2d_PUBKEY(server_key, &pubkey_ptr), "Failed to write DER public key");
             }
         }
 
@@ -51,24 +67,59 @@ namespace copper_server::api::network {
             init_ssl();
             if (data.size() > INT32_MAX)
                 return false;
-            if (!server_rsa_key)
+            if (!server_key)
                 return false;
-            int result = RSA_private_decrypt(data.size(), data.data(), data.data(), server_rsa_key, RSA_PKCS1_PADDING);
-            if (result < 0)
+            EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(server_key, nullptr);
+            if (!ctx)
                 return false;
-            data.resize(result);
+            if (EVP_PKEY_decrypt_init(ctx) <= 0) {
+                EVP_PKEY_CTX_free(ctx);
+                return false;
+            }
+            size_t outlen = 0;
+            if (EVP_PKEY_decrypt(ctx, nullptr, &outlen, data.data(), data.size()) <= 0) {
+                EVP_PKEY_CTX_free(ctx);
+                return false;
+            }
+            list_array<uint8_t> out;
+            out.resize(outlen);
+            if (EVP_PKEY_decrypt(ctx, out.data(), &outlen, data.data(), data.size()) <= 0) {
+                EVP_PKEY_CTX_free(ctx);
+                return false;
+            }
+            out.resize(outlen);
+            data = std::move(out);
+            EVP_PKEY_CTX_free(ctx);
             return true;
         }
 
         bool encrypt_data(list_array<uint8_t>& data) {
+            init_ssl();
             if (data.size() > INT32_MAX)
                 return false;
-            if (!server_rsa_key)
+            if (!server_key)
                 return false;
-            int result = RSA_public_encrypt(data.size(), data.data(), data.data(), server_rsa_key, RSA_PKCS1_PADDING);
-            if (result < 0)
+            EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(server_key, nullptr);
+            if (!ctx)
                 return false;
-            data.resize(result);
+            if (EVP_PKEY_encrypt_init(ctx) <= 0) {
+                EVP_PKEY_CTX_free(ctx);
+                return false;
+            }
+            size_t outlen = 0;
+            if (EVP_PKEY_encrypt(ctx, nullptr, &outlen, data.data(), data.size()) <= 0) {
+                EVP_PKEY_CTX_free(ctx);
+                return false;
+            }
+            list_array<uint8_t> out;
+            out.resize(outlen);
+            if (EVP_PKEY_encrypt(ctx, out.data(), &outlen, data.data(), data.size()) <= 0) {
+                EVP_PKEY_CTX_free(ctx);
+                return false;
+            }
+            out.resize(outlen);
+            data = std::move(out);
+            EVP_PKEY_CTX_free(ctx);
             return true;
         }
 

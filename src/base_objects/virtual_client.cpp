@@ -13,7 +13,7 @@ namespace copper_server::base_objects {
         client->data = {};
 
         client->player_data.local_data["virtual_client"] = name;
-        client->player_data.gamemode = -1;
+        client->player_data.gamemode = (uint8_t)-1;
         client->player_data.op_level = 4;
         client->player_data.world_id = "virtual_client astral space";
         client->is_virtual = true;

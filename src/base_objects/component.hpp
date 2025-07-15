@@ -366,7 +366,7 @@ namespace copper_server::base_objects {
             list_array<inner::application_effect> on_consume_effects; //optional
             std::variant<std::string, inner::sound_extended> sound = "entity.generic.eat";
             std::string animation = "eat";
-            float consume_seconds = 1.6;
+            float consume_seconds = 1.6f;
             bool has_consume_particles = true;
 
             auto operator<=>(const consumable& other) const = default;

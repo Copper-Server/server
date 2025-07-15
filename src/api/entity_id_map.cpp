@@ -1,3 +1,4 @@
+#include <src/base_objects/entity.hpp>
 #include <src/storage/memory/entity_ids_map.hpp>
 
 namespace copper_server::api::entity_id_map {

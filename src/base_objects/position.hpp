@@ -2,21 +2,35 @@
 #define SRC_BASE_OBJECTS_POSITION
 
 namespace copper_server::base_objects {
-    union position {
-        struct {
-            int x : 26;
-            int z : 26;
-            int y : 12;
-        };
+    struct position {
+        int x : 26;
+        int z : 26;
+        int y : 12;
 
-        unsigned long long raw;
+        inline void set(unsigned long long raw) {
+            union u_t {
+                position flag;
+                unsigned long long r;
+            } u{.r = raw};
+
+            *this = u.flag;
+        }
+
+        inline unsigned long long get() const {
+            union u_t {
+                position flag;
+                unsigned long long r;
+            } u{.flag = *this};
+
+            return u.r;
+        }
 
         bool operator==(const position& other) const {
-            return raw == other.raw;
+            return get() == other.get();
         }
 
         bool operator!=(const position& other) const {
-            return raw != other.raw;
+            return get() != other.get();
         }
     };
 }

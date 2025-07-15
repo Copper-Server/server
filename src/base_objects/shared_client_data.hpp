@@ -51,7 +51,7 @@ namespace copper_server::base_objects {
                 bool right_pants_leg_enabled : 1;
                 bool hat_enabled : 1;
                 bool _unused : 1;
-            };
+            } data;
 
             uint8_t mask = UINT8_MAX - 1;
         } skin_parts;
@@ -187,7 +187,7 @@ namespace copper_server::base_objects {
         }
 
     private:
-        friend class virtual_client;
+        friend struct virtual_client;
         void* assigned_data;
         std::function<void(base_objects::SharedClientData& self)> special_callback;
         std::function<void(int64_t)> keep_alive_callback;

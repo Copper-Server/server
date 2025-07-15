@@ -223,11 +223,11 @@ namespace copper_server::util::conversions {
                 uint8_t hex_map_index[256]{0};
 
                 construct_() {
-                    for (int i = 0; i < 10; i++)
+                    for (uint8_t i = 0; i < 10; i++)
                         hex_map_index['0' + i] = i;
-                    for (int i = 0; i < 6; i++)
+                    for (uint8_t i = 0; i < 6; i++)
                         hex_map_index['a' + i] = 10 + i;
-                    for (int i = 0; i < 6; i++)
+                    for (uint8_t i = 0; i < 6; i++)
                         hex_map_index['A' + i] = 10 + i;
                 }
             } static const map;
@@ -364,7 +364,7 @@ namespace copper_server::util::conversions {
                 if (got_utf_code_point) {
                     utf_code_pint += c;
                     if (utf_code_pint.size() == 4) {
-                        utf8::utfchar16_t code_point = std::stoi(utf_code_pint, nullptr, 16);
+                        utf8::utfchar16_t code_point = (utf8::utfchar16_t)std::stoi(utf_code_pint, nullptr, 16);
                         char utf8_code_point[4];
                         result += std::string(utf8_code_point, utf8::utf16to8(&code_point, &code_point + 1, utf8_code_point));
                         got_utf_code_point = false;
@@ -373,7 +373,7 @@ namespace copper_server::util::conversions {
                 } else if (got_big_utf_code_point) {
                     utf_code_pint += c;
                     if (utf_code_pint.size() == 8) {
-                        utf8::utfchar32_t code_point = std::stoi(utf_code_pint, nullptr, 16);
+                        utf8::utfchar32_t code_point = (utf8::utfchar32_t)std::stoi(utf_code_pint, nullptr, 16);
                         char utf8_code_point[4];
                         result += std::string(utf8_code_point, utf8::utf32to8(&code_point, &code_point + 1, utf8_code_point));
                         got_big_utf_code_point = false;

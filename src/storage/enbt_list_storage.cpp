@@ -73,8 +73,8 @@ namespace copper_server::storage {
                 fast_task::files::on_open_action::truncate_exists,
                 fast_task::files::_sync_flags{}
             );
-            data.get([&](auto& value) {
-                for (const auto& [key, value] : value) {
+            data.get([&](auto& list) {
+                for (const auto& [key, value] : list) {
                     enbt::io_helper::write_string(file, key);
                     enbt::io_helper::write_token(file, value);
                 }
@@ -115,8 +115,8 @@ namespace copper_server::storage {
                 fast_task::files::on_open_action::truncate_exists,
                 fast_task::files::_sync_flags{}
             );
-            data.get([&](auto& value) {
-                for (const auto& [key, value] : value) {
+            data.get([&](auto& list) {
+                for (const auto& [key, value] : list) {
                     enbt::io_helper::write_string(file, key);
                     enbt::io_helper::write_token(file, value);
                 }

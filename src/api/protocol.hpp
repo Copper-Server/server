@@ -65,14 +65,14 @@ namespace copper_server::api::protocol {
 
         struct client_information {
             std::string locale;
-            uint8_t view_distance;
-            bool chat_colors;
-            uint8_t displayed_skin_parts;
-            bool enable_text_filtering;
-            bool allow_server_listings;
             int32_t chat_mode;
             int32_t main_hand;
             int32_t particle_status = 0;
+            uint8_t displayed_skin_parts;
+            uint8_t view_distance;
+            bool enable_text_filtering : 1;
+            bool allow_server_listings : 1;
+            bool chat_colors : 1;
         };
 
         struct command_suggestion {
@@ -91,11 +91,11 @@ namespace copper_server::api::protocol {
                 base_objects::slot item;
             };
 
-            uint8_t window_id;
             int32_t state_id;
+            int32_t mode;
             int16_t slot;
             int8_t button;
-            int32_t mode;
+            uint8_t window_id;
             list_array<changed_slot> changed_slots;
             base_objects::slot carried_item;
         };
@@ -205,10 +205,10 @@ namespace copper_server::api::protocol {
         };
 
         struct player_action {
-            int32_t status;
             base_objects::position location;
-            int8_t face;
+            int32_t status;
             int32_t sequence_id;
+            int8_t face;
         };
 
         struct player_command {
@@ -218,27 +218,41 @@ namespace copper_server::api::protocol {
         };
 
         struct player_input {
-            union input_flags {
-                struct {
-                    bool forward : 1;
-                    bool backward : 1;
-                    bool left : 1;
-                    bool right : 1;
-                    bool jump : 1;
-                    bool sneaking : 1;
-                    bool sprint : 1;
-                };
+            struct input_flags {
+                bool forward : 1;
+                bool backward : 1;
+                bool left : 1;
+                bool right : 1;
+                bool jump : 1;
+                bool sneaking : 1;
+                bool sprint : 1;
 
-                uint8_t raw = 0;
+                inline void set(uint8_t raw) {
+                    union u_t {
+                        input_flags flags;
+                        uint8_t r;
+                    } u{.r = raw};
+
+                    *this = u.flags;
+                }
+
+                inline uint8_t get() const {
+                    union u_t {
+                        input_flags flags;
+                        uint8_t r;
+                    } u{.flags = *this};
+
+                    return u.r;
+                }
             } flags;
         };
 
         struct pong {
-            //body
-            int32_t id;
-
             //calculated
             std::chrono::system_clock::duration elapsed;
+
+            //body
+            int32_t id;
         };
 
         struct change_recipe_book_settings {
@@ -253,8 +267,8 @@ namespace copper_server::api::protocol {
         };
 
         struct seen_advancements {
-            int32_t action;
             std::optional<std::string> tab_id;
+            int32_t action;
         };
 
         struct set_beacon_effect {
@@ -270,14 +284,14 @@ namespace copper_server::api::protocol {
         };
 
         struct program_command_cart {
-            int32_t entity_id;
             std::string command;
+            int32_t entity_id;
             bool track_output;
         };
 
         struct set_creative_slot {
-            int16_t slot;
             base_objects::slot item;
+            int16_t slot;
         };
 
         struct program_jigsaw_block {
@@ -296,27 +310,27 @@ namespace copper_server::api::protocol {
             int32_t action;
             int32_t mode;
             std::string name;
+            int32_t mirror;
+            int32_t rotation;
+            std::string metadata;
+            int64_t seed;
+            float integrity;
             int8_t offset_x;
             int8_t offset_y;
             int8_t offset_z;
             int8_t size_x;
             int8_t size_y;
             int8_t size_z;
-            int32_t mirror;
-            int32_t rotation;
-            std::string metadata;
-            float integrity;
-            int64_t seed;
             int8_t flags;
         };
 
         struct update_sign {
             base_objects::position location;
-            bool is_front_text;
             std::string line1;
             std::string line2;
             std::string line3;
             std::string line4;
+            bool is_front_text;
         };
 
         struct swing_arm {
@@ -328,15 +342,15 @@ namespace copper_server::api::protocol {
         };
 
         struct use_item_on {
-            int32_t hand;
             base_objects::position location;
             int32_t face;
             float cursor_x;
             float cursor_y;
             float cursor_z;
+            int32_t hand;
+            int32_t sequence;
             bool inside_block;
             bool world_border_hit = false;
-            int32_t sequence;
         };
 
         struct use_item {

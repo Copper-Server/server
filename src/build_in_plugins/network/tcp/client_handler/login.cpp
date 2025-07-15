@@ -9,10 +9,11 @@
 
 namespace copper_server::build_in_plugins::network::tcp::client_handler {
     base_objects::network::response handle_login::IdleActions() {
-        base_objects::network::response response;
         if (auto packets = session->shared_data().getPendingPackets(); packets.size()) {
+            base_objects::network::response response;
             for (auto& packet : packets)
                 response += std::move(packet);
+            return response;
         } else {
             auto& login_data = *session->shared_data().packets_state.login_data;
             if (
@@ -53,25 +54,23 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         if constexpr (std::is_same_v<T, PluginRegistration::PluginResponse>) {
                             login_data.plugin_sequence_id++;
                             return api::packets::login::login(session->shared_data(), login_data.plugin_sequence_id, it.plugin_chanel, it.data);
-                        } else if constexpr (std::is_same_v<T, base_objects::network::response>) {
+                        } else if constexpr (std::is_same_v<T, base_objects::network::response>)
                             return std::move(it);
-                        } else if (!it) {
-                            login_data.plugins_query.pop_front();
-                        }
-                        return base_objects::network::response::empty();
+                        else
+                            return base_objects::network::response::empty();
                     },
                     plugin_response
                 );
+                login_data.plugins_query.pop_front();
                 if (res.is_disconnect() || res.data.size())
                     return res;
             }
 
             login_data.login_check = 3;
-            response += api::packets::login::loginSuccess(session->shared_data());
+            auto response = api::packets::login::loginSuccess(session->shared_data());
             login_data.excepted_packet = 3;
+            return response;
         }
-
-        return response;
     }
 
     base_objects::network::response handle_login::work_packet(ArrayStream& packet) {

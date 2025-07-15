@@ -122,7 +122,9 @@ namespace copper_server::build_in_plugins::network::tcp {
                 it = enbt::endian_helpers::convert_endian(std::endian::big, it);
         list_array<uint8_t> response;
         response.push_back(0xFF); //KICK packet
-        uint16_t len = legacy_motd.size();
+        if (legacy_motd.size() > INT16_MAX)
+            throw std::invalid_argument("motd too long");
+        uint16_t len = (uint16_t)legacy_motd.size();
         if constexpr (std::endian::native != std::endian::big)
             len = enbt::endian_helpers::convert_endian(std::endian::big, len);
         response.push_back(uint8_t(len >> 8));
@@ -148,7 +150,9 @@ namespace copper_server::build_in_plugins::network::tcp {
             stream.zalloc = Z_NULL;
             stream.zfree = Z_NULL;
             stream.opaque = Z_NULL;
-            stream.avail_in = packet.size_read();
+            if ((decltype(stream.avail_in)(-1)) < packet.size_read())
+                throw std::overflow_error("packet size is too large for zlib");
+            stream.avail_in = (decltype(stream.avail_in))packet.size_read();
             stream.next_in = packet.data_read();
             int ret = inflateInit(&stream);
             if (ret != Z_OK)
@@ -185,12 +189,17 @@ namespace copper_server::build_in_plugins::network::tcp {
                 stream.zalloc = Z_NULL;
                 stream.zfree = Z_NULL;
                 stream.opaque = Z_NULL;
-                stream.avail_in = compressed_packet.size();
+                if ((decltype(stream.avail_in)(-1)) < compressed_packet.size())
+                    throw std::overflow_error("compressed packet size is too large for zlib");
+                stream.avail_in = (decltype(stream.avail_in))compressed_packet.size();
                 stream.next_in = compressed_packet.data();
                 int ret = deflateInit(&stream, Z_DEFAULT_COMPRESSION);
                 if (ret != Z_OK)
                     throw std::exception("deflateInit failed");
-                stream.avail_out = compressed_packet.size() + compressed_packet.size() / 1000 + 12 + 1;
+                auto to_decompress = compressed_packet.size() + compressed_packet.size() / 1000 + 12 + 1;
+                if ((decltype(stream.avail_in)(-1)) < to_decompress)
+                    throw std::overflow_error("packet size is too large for zlib");
+                stream.avail_in = (decltype(stream.avail_in))to_decompress;
                 stream.next_out = (uint8_t*)malloc(stream.avail_out);
                 ret = deflate(&stream, Z_FINISH);
                 if (ret != Z_STREAM_END)
