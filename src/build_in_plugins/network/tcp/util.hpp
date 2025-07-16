@@ -3,7 +3,7 @@
 #include <exception>
 #include <functional>
 #include <library/fast_task.hpp>
-#include <library/fast_task/src/networking/networking.hpp>
+#include <library/fast_task/include/networking.hpp>
 #include <src/api/network/tcp.hpp>
 #include <src/base_objects/network/response.hpp>
 #include <src/base_objects/network/tcp/client.hpp>

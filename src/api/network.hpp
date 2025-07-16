@@ -1,6 +1,6 @@
 #ifndef SRC_API_NETWORK
 #define SRC_API_NETWORK
-#include <library/fast_task/src/networking/networking.hpp>
+#include <library/fast_task/include/networking.hpp>
 #include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/events/sync_event.hpp>
 

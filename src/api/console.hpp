@@ -1,5 +1,6 @@
 #ifndef SRC_API_CONSOLE
 #define SRC_API_CONSOLE
+#include <src/base_objects/events/event.hpp>
 #include <string>
 
 namespace copper_server::api::console {

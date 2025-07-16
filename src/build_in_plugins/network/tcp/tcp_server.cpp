@@ -6,7 +6,7 @@
 #include <src/plugin/main.hpp>
 #include <src/plugin/special.hpp>
 
-#include <library/fast_task/src/networking/networking.hpp>
+#include <library/fast_task/include/networking.hpp>
 #include <src/build_in_plugins/network/tcp/session.hpp>
 #include <src/build_in_plugins/network/tcp/state_handshaking.hpp>
 #include <src/build_in_plugins/network/tcp/state_status.hpp>

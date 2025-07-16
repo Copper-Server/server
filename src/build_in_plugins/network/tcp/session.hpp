@@ -1,6 +1,6 @@
 #ifndef SRC_BUILD_IN_PLUGINS_NETWORK_TCP_SESSION
 #define SRC_BUILD_IN_PLUGINS_NETWORK_TCP_SESSION
-#include <library/fast_task/src/networking/networking.hpp>
+#include <library/fast_task/include/networking.hpp>
 #include <src/api/network/tcp.hpp>
 #include <src/base_objects/encryption/aes.hpp>
 #include <src/base_objects/network/response.hpp>

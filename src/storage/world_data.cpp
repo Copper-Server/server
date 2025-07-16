@@ -3,7 +3,7 @@
 #include <library/enbt/io.hpp>
 #include <library/enbt/io_tools.hpp>
 #include <library/enbt/senbt.hpp>
-#include <library/fast_task/src/files/files.hpp>
+#include <library/fast_task/include/files.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/tags.hpp>
 #include <src/api/world.hpp>

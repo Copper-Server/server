@@ -5,7 +5,7 @@
 #include <boost/beast/http/parser.hpp>
 #include <string>
 
-#include <library/fast_task/src/networking/networking.hpp>
+#include <library/fast_task/include/networking.hpp>
 #include <library/list_array.hpp>
 
 namespace mojang::api {

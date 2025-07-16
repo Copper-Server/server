@@ -1,5 +1,5 @@
 #include <library/enbt/senbt.hpp>
-#include <library/fast_task/src/files/files.hpp>
+#include <library/fast_task/include/files.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/entity_id_map.hpp>
 #include <src/api/internal/world.hpp>
