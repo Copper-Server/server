@@ -68,10 +68,22 @@ namespace copper_server {
             bool is_emits_redstone : 1 = false;
             bool is_full_cube : 1 = false;
             bool is_tool_required : 1 = false;
-            bool is_sided_transparency : 1 = false;
             bool is_replaceable : 1 = false;
             bool is_block_entity : 1 = false;
             bool is_default_state : 1 = false;
+            bool has_random_ticks : 1 = false;
+            bool has_comparator_output : 1 = false;
+
+            struct transparent_sides_t {
+                bool down_side_solid : 1 = false;
+                bool up_side_solid : 1 = false;
+                bool north_side_solid : 1 = false;
+                bool south_side_solid : 1 = false;
+                bool west_side_solid : 1 = false;
+                bool east_side_solid : 1 = false;
+                bool down_center_solid : 1 = false;
+                bool up_center_solid : 1 = false;
+            } transparent_sides;
 
             bool can_explode(float explode_strength) const {
                 return blast_resistance < explode_strength;
@@ -179,7 +191,7 @@ namespace copper_server {
                   is_emits_redstone(copy.is_emits_redstone),
                   is_full_cube(copy.is_full_cube),
                   is_tool_required(copy.is_tool_required),
-                  is_sided_transparency(copy.is_sided_transparency),
+                  transparent_sides(copy.transparent_sides),
                   is_replaceable(copy.is_replaceable),
                   is_block_entity(copy.is_block_entity),
                   is_default_state(copy.is_default_state),

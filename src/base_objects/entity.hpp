@@ -67,6 +67,7 @@ namespace copper_server {
             struct living_entity_data_t {
                 int32_t inventory_size = 0;
                 float base_health;
+                float step_height;
                 uint16_t max_air = 300;
                 bool can_avoid_traps = false;
                 bool can_be_hit_by_projectile = true;
@@ -84,6 +85,23 @@ namespace copper_server {
                 std::vector<std::string> brain_sensors;
                 std::vector<std::string> brain_memories;
             };
+
+            struct spawn_restriction_t {
+                enum class location_e {
+                    in_lava,
+                    in_water,
+                    on_ground,
+                    unrestricted,
+                } location
+                    = location_e::unrestricted;
+                enum class heightmap_e {
+                    surface,
+                    ocean_floor,
+                    motion_blocking,
+                    motion_blocking_no_leaves,
+                } heightmap
+                    = heightmap_e::motion_blocking_no_leaves;
+            } spawn_restriction;
 
             std::optional<living_entity_data_t> living_entity_data;
 

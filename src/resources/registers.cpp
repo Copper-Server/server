@@ -267,6 +267,7 @@ namespace copper_server::resources {
             if (obj.contains("max_health")) {
                 base_objects::entity_data::living_entity_data_t living_data;
                 living_data.base_health = obj.at("max_health").to_number<float>();
+                living_data.step_height = obj.at("step_height").to_number<float>();
                 living_data.can_freeze = obj.at("can_freeze").as_bool();
                 living_data.can_hit = obj.at("can_hit").as_bool();
                 living_data.is_collidable = obj.at("is_collidable").as_bool();
@@ -373,6 +374,31 @@ namespace copper_server::resources {
                 }
             }
 
+            if (obj.contains("spawn_restriction")) {
+                auto& spawn_restriction_js = obj.at("spawn_restriction").as_object();
+
+                auto& location = spawn_restriction_js.at("location").as_string();
+                auto& heightmap = spawn_restriction_js.at("heightmap").as_string();
+                using enum base_objects::entity_data::spawn_restriction_t::location_e;
+                using enum base_objects::entity_data::spawn_restriction_t::heightmap_e;
+                if (heightmap == "SURFACE")
+                    entity_data.spawn_restriction.heightmap = surface;
+                else if (heightmap == "OCEAN_FLOOR")
+                    entity_data.spawn_restriction.heightmap = ocean_floor;
+                else if (heightmap == "MOTION_BLOCKING")
+                    entity_data.spawn_restriction.heightmap = motion_blocking;
+                else if (heightmap == "MOTION_BLOCKING_NO_LEAVES")
+                    entity_data.spawn_restriction.heightmap = motion_blocking_no_leaves;
+
+                if (location == "IN_LAVA")
+                    entity_data.spawn_restriction.location = in_lava;
+                else if (location == "IN_WATER")
+                    entity_data.spawn_restriction.location = in_water;
+                else if (location == "ON_GROUND")
+                    entity_data.spawn_restriction.location = on_ground;
+                else if (location == "UNRESTRICTED")
+                    entity_data.spawn_restriction.location = unrestricted;
+            }
             entity_data.name = (std::string)id;
             entity_data.translation_resource_key = obj.at("translation_key").as_string();
             entity_data.eye_height = obj.at("eye_height").to_number<float>();
@@ -1658,20 +1684,51 @@ namespace copper_server::resources {
                                                  has_default_state = true;
                                              }
                                          }},
-                                        {"air", [](ARGS__d) { block_data->is_air = item.read(); }},
-                                        {"is_solid", [](ARGS__d) { block_data->is_solid = item.read(); }},
+                                        {"state_flags", [](ARGS__d) {
+                                             // AIR = 0b00000001
+                                             // BURNABLE = 0b00000010
+                                             // TOOL_REQUIRED = 0b00000100
+                                             // SIDED_TRANSPARENCY = 0b00001000
+                                             // REPLACEABLE = 0b00010000
+                                             // IS_LIQUID = 0b00100000
+                                             // IS_SOLID = 0b01000000
+                                             // IS_FULL_CUBE = 0b10000000
+                                             int32_t states = item.read();
+                                             block_data->is_air = states & 0b00000001;
+                                             block_data->is_burnable = states & 0b00000010;
+                                             block_data->is_tool_required = states & 0b00000100;
+                                             block_data->is_replaceable = states & 0b00010000;
+                                             block_data->is_liquid = states & 0b00100000;
+                                             block_data->is_solid = states & 0b01000000;
+                                             block_data->is_full_cube = states & 0b10000000;
+                                         }},
+                                        {"side_flags", [](ARGS__d) {
+                                             //DOWN_SIDE_SOLID = 0b00000001;
+                                             //UP_SIDE_SOLID = 0b00000010;
+                                             //NORTH_SIDE_SOLID = 0b00000100;
+                                             //SOUTH_SIDE_SOLID = 0b00001000;
+                                             //WEST_SIDE_SOLID = 0b00010000;
+                                             //EAST_SIDE_SOLID = 0b00100000;
+                                             //DOWN_CENTER_SOLID = 0b01000000;
+                                             //UP_CENTER_SOLID = 0b10000000;
+                                             int32_t states = item.read();
+                                             block_data->transparent_sides.down_side_solid = states & 0b00000001;
+                                             block_data->transparent_sides.up_side_solid = states & 0b00000010;
+                                             block_data->transparent_sides.north_side_solid = states & 0b00000100;
+                                             block_data->transparent_sides.south_side_solid = states & 0b00001000;
+                                             block_data->transparent_sides.west_side_solid = states & 0b00010000;
+                                             block_data->transparent_sides.east_side_solid = states & 0b00100000;
+                                             block_data->transparent_sides.down_center_solid = states & 0b01000000;
+                                             block_data->transparent_sides.up_center_solid = states & 0b10000000;
+                                         }},
                                         {"opacity", [](ARGS__d) { block_data->opacity = item.read(); }},
                                         {"instrument", [](ARGS__d) { block_data->instrument = item.read().as_string(); }},
-                                        {"is_liquid", [](ARGS__d) { block_data->is_liquid = item.read(); }},
                                         {"luminance", [](ARGS__d) { block_data->luminance = item.read(); }},
-                                        {"burnable", [](ARGS__d) { block_data->is_burnable = item.read(); }},
                                         {"emits_redstone", [](ARGS__d) { block_data->is_emits_redstone = item.read(); }},
-                                        {"is_full_cube", [](ARGS__d) { block_data->is_full_cube = item.read(); }},
-                                        {"tool_required", [](ARGS__d) { block_data->is_tool_required = item.read(); }},
                                         {"piston_behavior", [](ARGS__d) { block_data->piston_behavior = item.read().as_string(); }},
-                                        {"replaceable", [](ARGS__d) { block_data->is_replaceable = item.read(); }},
                                         {"hardness", [](ARGS__d) { block_data->hardness = item.read(); }},
-                                        {"sided_transparency", [](ARGS__d) { block_data->is_sided_transparency = item.read(); }},
+                                        {"has_random_ticks", [](ARGS__d) { block_data->has_random_ticks = item.read(); }},
+                                        {"has_comparator_output", [](ARGS__d) { block_data->has_comparator_output = item.read(); }},
                                         {"default_state_id", [](ARGS__d) {
                                              default_state = item.read();
                                              block_data->is_default_state = true;
@@ -1692,6 +1749,7 @@ namespace copper_server::resources {
                                              block_data->is_block_entity = true;
                                              block_data->block_entity_id = item.read();
                                          }},
+                                        {"outline_shapes", [](ARGS__d) { item.skip(); }},
                                     };
 
                                     decl.iterate([&](const std::string& name, enbt::io_helper::value_read_stream& item) {

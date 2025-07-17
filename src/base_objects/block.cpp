@@ -165,7 +165,15 @@ namespace copper_server::base_objects {
     }
 
     bool block::is_sided_transparency() const {
-        return getStaticData().is_sided_transparency;
+        auto sides = getStaticData().transparent_sides;
+        return sides.down_side_solid
+               && sides.up_side_solid
+               && sides.north_side_solid
+               && sides.south_side_solid
+               && sides.west_side_solid
+               && sides.east_side_solid
+               && sides.down_center_solid
+               && sides.up_center_solid;
     }
 
     bool block::is_replaceable() const {
@@ -176,11 +184,11 @@ namespace copper_server::base_objects {
         return getStaticData().is_block_entity;
     }
 
-    void block::initialize(){
+    void block::initialize() {
         list_array<std::shared_ptr<static_block_data>> data;
         size_t max_ids = 0;
         data.resize(full_block_data_.size());
-        for(auto& it : full_block_data_){
+        for (auto& it : full_block_data_) {
             data[it->general_block_id] = it;
             max_ids = std::max<size_t>(it->general_block_id, max_ids);
         }
