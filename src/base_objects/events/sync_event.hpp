@@ -1,5 +1,5 @@
-#ifndef SRC_BASE_OBJECTS_SYNC_EVENT
-#define SRC_BASE_OBJECTS_SYNC_EVENT
+#ifndef SRC_BASE_OBJECTS_EVENTS_SYNC_EVENT
+#define SRC_BASE_OBJECTS_EVENTS_SYNC_EVENT
 #include <functional>
 #include <random>
 #include <src/base_objects/events/base_event.hpp>
@@ -118,4 +118,4 @@ namespace copper_server::base_objects::events {
         }
     };
 }
-#endif /* SRC_BASE_OBJECTS_SYNC_EVENT */
+#endif /* SRC_BASE_OBJECTS_EVENTS_SYNC_EVENT */

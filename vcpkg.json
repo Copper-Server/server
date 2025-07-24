@@ -20,6 +20,7 @@
         "utfcpp",
         "gtest",
         "zlib",
+        "reflectcpp",
         "lionkor-commandline"
     ]
 }

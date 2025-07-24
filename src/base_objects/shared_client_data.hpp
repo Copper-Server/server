@@ -144,6 +144,15 @@ namespace copper_server::base_objects {
                 special_callback(*this);
         }
 
+        void sendPacket(base_objects::network::response&& packet) {
+            {
+                fast_task::write_lock lock(pending_packets_lock);
+                pending_packets.push_back(std::move(packet));
+            }
+            if (special_callback)
+                special_callback(*this);
+        }
+
         list_array<network::response> getPendingPackets() {
             fast_task::read_lock lock(pending_packets_lock);
             return pending_packets.take();

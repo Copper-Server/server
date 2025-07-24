@@ -11,3 +11,4 @@
 
 [x] Fix file corruption for async streams
 [x] Get rid of multiple protocols support, lend it to plugins
+   [ ] fully implement comfortable packets api which would use only one protocol

@@ -2588,6 +2588,10 @@ namespace copper_server::base_objects::component {
          }},
     };
 
+
+    
+
+
     unified parse_component(const std::string& name, const enbt::value& item) {
         return load_items_parser.at(name)(item);
     }

@@ -1,4 +1,5 @@
 #include <library/list_array.hpp>
+#include <src/api/new_packets.hpp>
 #include <src/api/packets.hpp>
 #include <src/api/players.hpp>
 #include <src/api/protocol.hpp>
@@ -16,6 +17,9 @@ namespace copper_server::build_in_plugins {
         void OnLoad(const PluginRegistrationPtr& self) override {
             register_event(api::players::calls::on_player_chat, [this](const api::players::player_chat& chat) {
                 api::players::iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state::play, [&chat](base_objects::SharedClientData& client) {
+                    //client << api::new_packets::client_bound::play::player_chat{
+                    //    .
+                    //};
                     client.sendPacket(
                         api::packets::play::playerChatMessage(
                             client,
@@ -83,36 +87,51 @@ namespace copper_server::build_in_plugins {
 
             register_event(api::players::calls::on_system_message_broadcast, [this](const Chat& message) {
                 api::players::iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state::play, [&message](base_objects::SharedClientData& client) {
-                    client.sendPacket(api::packets::play::systemChatMessage(client, message));
+                    client << api::new_packets::client_bound::play::system_chat{
+                        .content = message,
+                        .is_overlay = false
+                    };
                     return false;
                 });
                 return false;
             });
             register_event(api::players::calls::on_system_message, [this](const api::players::personal<Chat>& message) {
-                message.player->sendPacket(api::packets::play::systemChatMessage(*message.player, message.data));
+                *message.player << api::new_packets::client_bound::play::system_chat{
+                    .content = message.data,
+                    .is_overlay = false
+                };
                 return false;
             });
 
             register_event(api::players::calls::on_system_message_overlay_broadcast, [this](const Chat& message) {
                 api::players::iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state::play, [&message](base_objects::SharedClientData& client) {
-                    client.sendPacket(api::packets::play::systemChatMessageOverlay(client, message));
+                    client << api::new_packets::client_bound::play::system_chat{
+                        .content = message,
+                        .is_overlay = true
+                    };
                     return false;
                 });
                 return false;
             });
             register_event(api::players::calls::on_system_message_overlay, [this](const api::players::personal<Chat>& message) {
-                message.player->sendPacket(api::packets::play::systemChatMessageOverlay(*message.player, message.data));
+                *message.player << api::new_packets::client_bound::play::system_chat{
+                    .content = message.data,
+                    .is_overlay = true
+                };
                 return false;
             });
 
             register_event(api::players::calls::on_player_kick, [this](const api::players::personal<Chat>& message) {
-                message.player->sendPacket(api::packets::play::kick(*message.player, message.data));
-                api::players::remove_player(message.player);
+                *message.player << api::new_packets::client_bound::play::disconnect{
+                    .reason = message.data
+                };
                 return false;
             });
 
             register_event(api::players::calls::on_player_ban, [this](const api::players::personal<Chat>& message) {
-                message.player->sendPacket(api::packets::play::kick(*message.player, message.data));
+                *message.player << api::new_packets::client_bound::play::disconnect{
+                    .reason = message.data
+                };
                 api::players::remove_player(message.player);
                 return false;
             });
@@ -180,19 +199,29 @@ namespace copper_server::build_in_plugins {
 
             register_event(api::players::calls::on_unsigned_message_broadcast, [this](const api::players::unsigned_chat& message) {
                 api::players::iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state::play, [&message](base_objects::SharedClientData& client) {
-                    client.sendPacket(api::packets::play::disguisedChatMessage(client, message.message, message.chat_type_id, message.sender_name, message.receiver_name));
+                    client << api::new_packets::client_bound::play::disguised_chat{
+                        .message = message.message,
+                        .type = message.chat_type_id,
+                        .sender = message.sender_name,
+                        .target_name = message.receiver_name
+                    };
                     return false;
                 });
                 return false;
             });
             register_event(api::players::calls::on_unsigned_message, [this](const api::players::personal<api::players::unsigned_chat>& message) {
-                message.player->sendPacket(api::packets::play::disguisedChatMessage(*message.player, message.data.message, message.data.chat_type_id, message.data.sender_name, message.data.receiver_name));
+                *message.player << api::new_packets::client_bound::play::disguised_chat{
+                    .message = message.data.message,
+                    .type = message.data.chat_type_id,
+                    .sender = message.data.sender_name,
+                    .target_name = message.data.receiver_name
+                };
                 return false;
             });
             log::info("Communication Core", "chat handlers registered.");
         }
 
-        void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override{
+        void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override {
             using predicate = base_objects::parser;
             using pred_string = base_objects::parsers::string;
             using cmd_pred_string = base_objects::parsers::command::string;
@@ -242,6 +271,5 @@ namespace copper_server::build_in_plugins {
                     });
             }
         }
-    
     };
 }

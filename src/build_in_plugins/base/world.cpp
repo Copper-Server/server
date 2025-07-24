@@ -256,7 +256,7 @@ namespace copper_server::build_in_plugins {
         void OnUnload(const PluginRegistrationPtr& self) override {
             log::info("World", "saving worlds...");
             if (world_ticking) {
-                fast_task::task::await_notify_cancel(world_ticking);
+                world_ticking->await_notify_cancel();
                 world_ticking = nullptr;
             }
 
@@ -275,7 +275,7 @@ namespace copper_server::build_in_plugins {
         void OnFaultUnload(const PluginRegistrationPtr& self) override {
             log::info("World", "saving worlds...");
             worlds_storage.locked([&](storage::worlds_data& worlds) {
-                fast_task::task::notify_cancel(world_ticking);
+                world_ticking->notify_cancel();
                 worlds.for_each_world([&](uint64_t id, storage::world_data& world) {
                     log::info("World", "saving world " + world.world_name + "...");
                     world.save();

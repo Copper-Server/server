@@ -191,6 +191,11 @@ namespace copper_server {
             return read_string(32767);
         }
 
+        std::string read_json_component() {
+            return read_string(262144);
+        }
+
+
         template <class T>
         list_array<T> read_array(int32_t max_len = INT32_MAX) {
             int32_t len = read_var<int32_t>();
@@ -336,9 +341,23 @@ namespace copper_server {
         return res;
     }
 
+    static enbt::value ReadNBT_enbt(ArrayStream& data) {
+        size_t readed = 0;
+        auto res = util::NBT::readNBT_asENBT(data.data_read(), data.size_read(), readed);
+        data.range_read(readed);
+        return res;
+    }
+
     static util::NBT ReadNetworkNBT(ArrayStream& data) {
         size_t readed = 0;
-        util::NBT res(util::NBT::readNBT(data.data_read(), data.size_read(), readed));
+        util::NBT res(util::NBT::readNetworkNBT(data.data_read(), data.size_read(), readed));
+        data.range_read(readed);
+        return res;
+    }
+
+    static enbt::value ReadNetworkNBT_enbt(ArrayStream& data) {
+        size_t readed = 0;
+        auto res = util::NBT::readNetworkNBT_asENBT(data.data_read(), data.size_read(), readed);
         data.range_read(readed);
         return res;
     }

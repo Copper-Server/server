@@ -1,20 +1,12 @@
 #ifndef SRC_PLUGIN_MAIN
 #define SRC_PLUGIN_MAIN
 #include <src/plugin/registration.hpp>
+#include <src/util/cts.hpp>
 #include <src/util/task_management.hpp>
 
 namespace copper_server {
     namespace __internal__ {
-        template <std::size_t N>
-        struct CTS {
-            char data[N]{};
-
-            consteval CTS(const char (&str)[N]) {
-                std::copy_n(str, N, data);
-            }
-        };
-
-        template <class T, CTS name>
+        template <class T, util::CTS name>
         struct static_registry {
             struct proxy {
                 inline proxy();
@@ -23,7 +15,7 @@ namespace copper_server {
             static proxy p;
         };
 
-        template <class T, CTS name>
+        template <class T, util::CTS name>
         typename static_registry<T, name>::proxy static_registry<T, name>::p;
 
         class delayed_construct_base {
@@ -61,12 +53,12 @@ namespace copper_server {
 
         std::vector<std::pair<std::string, std::shared_ptr<delayed_construct_base>>>& registration_list();
 
-        template <class T, CTS name>
+        template <class T, util::CTS name>
         static_registry<T, name>::proxy::proxy() {
             registration_list().push_back({name.data, std::make_shared<delayed_construct<T>>()});
         }
 
-        template <class T, CTS name>
+        template <class T, util::CTS name>
         static void register_value() {
             static_registry<T, name>::p;
         }
@@ -268,7 +260,7 @@ namespace copper_server {
         void unregisterAll();
     };
 
-    template <__internal__::CTS name, class Self>
+    template <util::CTS name, class Self>
     class PluginAutoRegister : public PluginRegistration {
     public:
         static inline const std::string registered_name = []() {

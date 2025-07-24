@@ -370,7 +370,7 @@ namespace copper_server::util {
             return extractArray<int8_t>(data, i, max_size);
         case 8: { //string
             uint16_t length = extractValue<uint16_t>(data, i, max_size);
-            if (i + length >= max_size)
+            if (i + length > max_size)
                 throw std::out_of_range("Out of bounds");
             i += length;
             if (length <= 32 && length >= 16) {

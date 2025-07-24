@@ -39,6 +39,7 @@ find_package(Boost REQUIRED COMPONENTS context json bimap iostreams)
 find_package(ZLIB REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(utf8cpp CONFIG REQUIRED)
+find_package(reflectcpp CONFIG REQUIRED)
 
 add_subdirectory("library/fast_task")
 add_subdirectory("library/commandline")
@@ -69,6 +70,7 @@ IF(MSVC)
   target_compile_options(CopperServer PRIVATE /utf-8)
   target_compile_options(CopperServer PUBLIC /wd4100)
   target_compile_options(CopperServer PUBLIC /wd4505)
+  target_compile_options(CopperServer PUBLIC /wd4324)
   target_compile_options(CopperServer PUBLIC /sdl)
   target_compile_options(CopperServer PUBLIC /bigobj)
   target_compile_options(CopperServer PRIVATE /utf-8)
@@ -92,6 +94,7 @@ target_link_libraries(CopperServer PRIVATE
   ZLIB::ZLIB
   OpenSSL::SSL
   utf8::cpp
+  reflectcpp::reflectcpp
   commandline
   fast_task
 )

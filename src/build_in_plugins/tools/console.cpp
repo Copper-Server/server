@@ -64,17 +64,25 @@ namespace copper_server::build_in_plugins {
                     .sort()
                     .to_container<std::vector<std::string>>();
             });
-            console_data.systemChatMessage = [this](const Chat& message) {
-                log::info("system", message.to_ansi_console());
-            };
-            console_data.systemChatMessageOverlay = [this](const Chat& message) {
-                log::info("overlay", message.to_ansi_console());
-            };
-            console_data.disguisedChatMessage = [this](const Chat& message, int32_t chat_type, const Chat& sender, std::optional<Chat> target_name) {
-                if (!target_name)
-                    log::info("message", "[" + sender.to_ansi_console() + "] " + message.to_ansi_console());
-                else
-                    log::info("message", "[" + sender.to_ansi_console() + " -> " + target_name->to_ansi_console() + "] " + message.to_ansi_console());
+
+            console_data.packet_processor = [this](const api::new_packets::client_bound::play_packet& packet) {
+                std::visit(
+                    [this](auto& it) {
+                        using T = std::decay_t<decltype(it)>;
+                        if constexpr (std::is_same_v<T, api::new_packets::client_bound::play::disguised_chat>) {
+                            if (!it.target_name)
+                                log::info("message", "[" + it.sender.to_ansi_console() + "] " + it.message.to_ansi_console());
+                            else
+                                log::info("message", "[" + it.sender.to_ansi_console() + " -> " + it.target_name->to_ansi_console() + "] " + it.message.to_ansi_console());
+                        } else if constexpr (std::is_same_v<T, api::new_packets::client_bound::play::system_chat>) {
+                            if (!it.is_overlay)
+                                log::info("system", it.content.to_ansi_console());
+                            else
+                                log::info("overlay", it.content.to_ansi_console());
+                        }
+                    },
+                    packet
+                );
             };
 
             console_data.client->player_data.permission_groups = {"console", "operator"};
