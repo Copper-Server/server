@@ -1,6 +1,7 @@
 #include <functional>
 #include <src/api/configuration.hpp>
-#include <src/api/packets.hpp>
+#include <src/api/new_packets.hpp>
+#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/storage/world_data.hpp>
@@ -33,11 +34,11 @@ namespace copper_server::api::world {
             throw std::runtime_error("Worlds not yet registered");
     }
 
-    void unload(uint64_t world_id) {
+    void unload(int32_t world_id) {
         get_worlds().save_and_unload(world_id);
     }
 
-    void save(uint64_t world_id) {
+    void save(int32_t world_id) {
         get_worlds().save(world_id);
     }
 
@@ -49,7 +50,7 @@ namespace copper_server::api::world {
         return get_worlds().loaded_chunks_count();
     }
 
-    size_t loaded_chunks_count(uint64_t world_id) {
+    size_t loaded_chunks_count(int32_t world_id) {
         return get_worlds().loaded_chunks_count(world_id);
     }
 
@@ -57,11 +58,11 @@ namespace copper_server::api::world {
         return get_worlds().loaded_chunks_count(get_worlds().get_id(name));
     }
 
-    void iterate(std::function<void(uint64_t world, storage::world_data& data)> callback) {
+    void iterate(std::function<void(int32_t world, storage::world_data& data)> callback) {
         get_worlds().for_each_world(callback);
     }
 
-    void get(uint64_t world_id, std::function<void(storage::world_data& data)> callback) {
+    void get(int32_t world_id, std::function<void(storage::world_data& data)> callback) {
         callback(*get_worlds().get(world_id));
     }
 
@@ -69,21 +70,33 @@ namespace copper_server::api::world {
         callback(*get_worlds().get(get_worlds().get_id(name)));
     }
 
-    uint64_t resolve_id(const std::string& name) {
+    int32_t resolve_id(const std::string& name) {
         return get_worlds().get_id(name);
     }
 
-    uint64_t get_default_world_id() {
+    std::string resolve_name(int32_t id) {
+        return get_worlds().get_name(id);
+    }
+
+    list_array<std::string> request_names() {
+        return get_worlds().get_all_ids().convert_fn([](auto id) { return get_worlds().get_name(id); });
+    }
+
+    list_array<int32_t> request_ids() {
+        return get_worlds().get_all_ids();
+    }
+
+    int32_t get_default_world_id() {
         return get_worlds().base_world_id;
     }
 
-    void pre_load_world(uint64_t world_id) {
+    void pre_load_world(int32_t world_id) {
         get_worlds().get(world_id);
     }
 
-    uint64_t pre_load_world(const std::string& name, std::function<void(storage::world_data& world)> initialization) {
+    int32_t pre_load_world(const std::string& name, std::function<void(storage::world_data& world)> initialization) {
         auto id = get_worlds().get_id(name);
-        if (id == (uint64_t)-1) {
+        if (id == (int32_t)-1) {
             if (initialization)
                 get_worlds().create(name, initialization);
             else
@@ -93,11 +106,11 @@ namespace copper_server::api::world {
         return id;
     }
 
-    uint64_t create(const std::string& name) {
+    int32_t create(const std::string& name) {
         return get_worlds().create(name);
     }
 
-    uint64_t create(
+    int32_t create(
         const std::string& name,
         std::function<void(storage::world_data& world)> callback
     ) {
@@ -105,10 +118,10 @@ namespace copper_server::api::world {
     }
 
     //gets client world, checks if world exists, returns pair of id and name, if world does not exists then returns default world and sets default position for player in new world
-    std::pair<uint64_t, std::string> prepare_world(base_objects::client_data_holder& client_ref) {
-        auto id = get_worlds().get_id(client_ref->player_data.world_id);
+    std::pair<int32_t, std::string> prepare_world(base_objects::SharedClientData& client_ref) {
+        auto id = get_worlds().get_id(client_ref.player_data.world_id);
         bool set_new_data = false;
-        if (id == (uint64_t)-1) {
+        if (id == (int32_t)-1) {
             id = get_worlds().base_world_id;
             set_new_data = true;
         }
@@ -125,74 +138,63 @@ namespace copper_server::api::world {
                 pos_y = std::max(mt, std::max(oc_flor, oc));
             });
 
-            client_ref->player_data.world_id = get_worlds().get(id)->world_name;
+            client_ref.player_data.world_id = get_worlds().get(id)->world_name;
 
-            client_ref->player_data.assigned_entity->position.x = 0.5 + (double)x;
-            client_ref->player_data.assigned_entity->position.y = (double)pos_y;
-            client_ref->player_data.assigned_entity->position.z = 0.5 + (double)z;
-            client_ref->player_data.assigned_entity->rotation = {0, 0};
+            client_ref.player_data.assigned_entity->position.x = 0.5 + (double)x;
+            client_ref.player_data.assigned_entity->position.y = (double)pos_y;
+            client_ref.player_data.assigned_entity->position.z = 0.5 + (double)z;
+            client_ref.player_data.assigned_entity->rotation = {0, 0};
         }
 
-        return {id, client_ref->player_data.world_id};
+        return {id, client_ref.player_data.world_id};
     }
 
-    void sync_settings(base_objects::client_data_holder& client_ref) {
-        auto id = get_worlds().get_id(client_ref->player_data.world_id);
+    void sync_settings(base_objects::SharedClientData& client_ref) {
+        auto id = get_worlds().get_id(client_ref.player_data.world_id);
         if (id == -1) {
             using enum_ = api::configuration::ServerConfiguration::World::world_not_found_for_client_e;
             switch (api::configuration::get().world.world_not_found_for_client) {
             case enum_::kick:
-                throw std::runtime_error("World with id " + client_ref->player_data.world_id + " does not exists.");
+                throw std::runtime_error("World with id " + client_ref.player_data.world_id + " does not exists.");
             case enum_::transfer_to_default:
             case enum_::request_plugin_or_default:
             default:
                 id = get_default_world_id();
-                client_ref->player_data.world_id = get_worlds().get_name(id);
+                client_ref.player_data.world_id = get_worlds().get_name(id);
                 break;
             }
         }
         auto world = get_worlds().get(id);
 
-        client_ref->sendPacket(
-            api::packets::play::initializeWorldBorder(
-                *client_ref,
-                world->border_center_x,
-                world->border_center_z,
-                world->border_size,
-                world->border_size,
-                world->border_lerp_time,
-                world->portal_teleport_boundary,
-                (int32_t)world->border_warning_blocks,
-                (int32_t)world->border_warning_time
-            )
-            += api::packets::play::setTickingState(
-                *client_ref,
-                (float)world->ticks_per_second,
-                world->ticking_frozen
-            )
-            += api::packets::play::stepTick(
-                *client_ref,
-                1
-            )
-            += api::packets::play::updateTime(
-                *client_ref,
-                world->time,
-                world->day_time,
-                world->increase_time
-            )
-            += api::packets::play::setDefaultSpawnPosition(
-                *client_ref,
-                {(int32_t)world->spawn_data.x,
-                 (int32_t)world->spawn_data.y,
-                 (int32_t)world->spawn_data.z},
-                world->spawn_data.angle
-            )
-        );
+        client_ref << api::new_packets::client_bound::play::initialize_border{
+            .x = world->border_center_x,
+            .z = world->border_center_z,
+            .old_diameter = world->border_size,
+            .new_diameter = world->border_size,
+            .speed_ms = (int64_t)world->border_lerp_time,
+            .portal_teleport_boundary = world->portal_teleport_boundary,
+            .warning_blocks = (int32_t)world->border_warning_blocks,
+            .warning_time = (int32_t)world->border_warning_time,
+        } << api::new_packets::client_bound::play::ticking_state{
+            .tick_rate = (float)world->ticks_per_second,
+            .is_frozen = world->ticking_frozen,
+        } << api::new_packets::client_bound::play::ticking_step{
+            .steps = 1,
+        } << api::new_packets::client_bound::play::set_time{
+            .world_age = (uint64_t)world->time,
+            .time_of_day = (uint64_t)world->day_time,
+            .time_of_day_increment = world->increase_time,
+        } << api::new_packets::client_bound::play::set_default_spawn_position{
+            .location = {(int32_t)world->spawn_data.x, (int32_t)world->spawn_data.y, (int32_t)world->spawn_data.z},
+            .angle = world->spawn_data.angle,
+        } << api::new_packets::client_bound::play::game_event{
+            .event = api::new_packets::client_bound::play::game_event::wait_for_level_chunks{},
+        };
     }
 
     void transfer(
         base_objects::client_data_holder& client_ref,
-        uint64_t world_id,
+        int32_t world_id,
         util::VECTOR position,
         util::ANGLE_DEG rotation,
         util::VECTOR velocity,
@@ -203,7 +205,7 @@ namespace copper_server::api::world {
 
     void transfer(
         base_objects::client_data_holder& client_ref,
-        uint64_t world_id,
+        int32_t world_id,
         util::VECTOR position,
         util::ANGLE_DEG rotation,
         std::function<void(storage::world_data& world)> callback = nullptr
@@ -213,33 +215,33 @@ namespace copper_server::api::world {
 
     void transfer(
         base_objects::client_data_holder& client_ref,
-        uint64_t world_id,
+        int32_t world_id,
         util::VECTOR position,
         std::function<void(storage::world_data& world)> callback = nullptr
     ) {
         //TODO
     }
 
-    void register_entity(uint64_t world_id, base_objects::entity_ref& entity_ref) {
+    void register_entity(int32_t world_id, base_objects::entity_ref& entity_ref) {
         get_worlds().get(world_id)->register_entity(entity_ref);
     }
 
-    void unregister_entity(uint64_t world_id, base_objects::entity_ref& entity_ref) {
+    void unregister_entity(int32_t world_id, base_objects::entity_ref& entity_ref) {
         get_worlds().get(world_id)->unregister_entity(entity_ref);
     }
 
-    std::pair<uint64_t, std::string> prepare_world(const std::string& name) {
+    std::pair<int32_t, std::string> prepare_world(const std::string& name) {
         auto id = get_worlds().get_id(name);
-        if (id == (uint64_t)-1)
+        if (id == (int32_t)-1)
             id = get_worlds().base_world_id;
         return {id, get_worlds().get(id)->world_name};
     }
 
-    base_objects::events::event<uint64_t>& on_world_loaded() {
+    base_objects::events::event<int32_t>& on_world_loaded() {
         return get_worlds().on_world_loaded;
     }
 
-    base_objects::events::event<uint64_t>& on_world_unloaded() {
+    base_objects::events::event<int32_t>& on_world_unloaded() {
         return get_worlds().on_world_unloaded;
     }
 

@@ -9,6 +9,7 @@
 #include <src/api/world.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/log.hpp>
+#include <src/mojang/api/hash256.hpp>
 #include <src/storage/world_data.hpp>
 #include <src/util/task_management.hpp>
 
@@ -1366,14 +1367,20 @@ namespace copper_server::storage {
         return res;
     }
 
-    void world_data::load(const enbt::compound_const_ref& load_from_nbt) {
+    void world_data::set_seed(int32_t seed) {
+        world_seed = seed;
+        mojang::api::hash256 hash;
+        hash.update(&seed, sizeof(int32_t));
+        hashed_seed_value = hash.to_part_hash();
+    }
 
+    void world_data::load(const enbt::compound_const_ref& load_from_nbt) {
         general_world_data = load_from_nbt.at("general_world_data");
         world_game_rules = load_from_nbt.at("world_game_rules");
         world_generator_data = load_from_nbt.at("world_generator_data");
         world_records = load_from_nbt.at("world_records");
 
-        world_seed = load_from_nbt.at("world_seed");
+        set_seed(load_from_nbt.at("world_seed"));
         wandering_trader_id = load_from_nbt.at("wandering_trader_id");
 
 
@@ -1529,7 +1536,7 @@ namespace copper_server::storage {
         return (std::string)(std::string)senbt::parse(res)["world_name"];
     }
 
-    world_data::world_data(uint64_t world_id, const std::filesystem::path& path)
+    world_data::world_data(int32_t world_id, const std::filesystem::path& path)
         : path(path), world_id(world_id) {
         world_game_rules["reducedDebugInfo"] = api::configuration::get().game_play.reduced_debug_screen;
         if (!std::filesystem::exists(path))
@@ -2636,7 +2643,7 @@ namespace copper_server::storage {
 
 #pragma region worlds_data
 
-    base_objects::atomic_holder<world_data> worlds_data::load(uint64_t world_id) {
+    base_objects::atomic_holder<world_data> worlds_data::load(int32_t world_id) {
         std::unique_lock lock(mutex);
         if (cached_worlds.find(world_id) == cached_worlds.end()) {
             auto path = base_path / std::to_string(world_id);
@@ -2658,11 +2665,11 @@ namespace copper_server::storage {
             std::filesystem::create_directories(base_path);
     }
 
-    const list_array<uint64_t>& worlds_data::get_ids() {
+    const list_array<int32_t>& worlds_data::get_ids() {
         std::unique_lock lock(mutex);
         if (!cached_ids.empty())
             return cached_ids;
-        list_array<uint64_t> result;
+        list_array<int32_t> result;
         for (auto& entry : std::filesystem::directory_iterator{base_path}) {
             if (entry.is_directory()) {
                 auto& path = entry.path();
@@ -2685,14 +2692,14 @@ namespace copper_server::storage {
         return res;
     }
 
-    size_t worlds_data::loaded_chunks_count(uint64_t world_id) {
+    size_t worlds_data::loaded_chunks_count(int32_t world_id) {
         std::unique_lock lock(mutex);
         if (auto on_load = cached_worlds.find(world_id); on_load != cached_worlds.end())
             return on_load->second->loaded_chunks_count();
         return 0;
     }
 
-    bool worlds_data::exists(uint64_t world_id) {
+    bool worlds_data::exists(int32_t world_id) {
         std::unique_lock lock(mutex);
         if (cached_ids.empty()) {
             lock.unlock();
@@ -2706,12 +2713,12 @@ namespace copper_server::storage {
         return get_id(name) != -1;
     }
 
-    const list_array<uint64_t>& worlds_data::get_list() {
+    const list_array<int32_t>& worlds_data::get_list() {
         std::unique_lock lock(mutex);
         return get_ids();
     }
 
-    std::string worlds_data::get_name(uint64_t world_id) {
+    std::string worlds_data::get_name(int32_t world_id) {
         std::unique_lock lock(mutex);
         if (auto on_load = cached_worlds.find(world_id); on_load != cached_worlds.end())
             return on_load->second->world_name;
@@ -2723,7 +2730,7 @@ namespace copper_server::storage {
             throw std::runtime_error("World with id " + std::to_string(world_id) + " not found.");
     }
 
-    uint64_t worlds_data::get_id(const std::string& name) {
+    int32_t worlds_data::get_id(const std::string& name) {
         std::unique_lock lock(mutex);
         for (auto& world : cached_worlds)
             if (world.second->world_name == name)
@@ -2731,13 +2738,17 @@ namespace copper_server::storage {
 
         if (cached_ids.empty())
             get_ids();
-        size_t found = cached_ids.find_if([this, &name](uint64_t id) {
+        size_t found = cached_ids.find_if([this, &name](int32_t id) {
             return world_data(id, base_path / std::to_string(id)).preview_world_name() == name;
         });
-        return found == list_array<uint64_t>::npos ? -1 : cached_ids[found];
+        return found == list_array<int32_t>::npos ? -1 : cached_ids[found];
     }
 
-    base_objects::atomic_holder<world_data> worlds_data::get(uint64_t world_id) {
+    list_array<int32_t> worlds_data::get_all_ids() {
+        return get_ids();
+    }
+
+    base_objects::atomic_holder<world_data> worlds_data::get(int32_t world_id) {
         std::unique_lock lock(mutex);
         if (auto world = cached_worlds.find(world_id); world == cached_worlds.end())
             return load(world_id);
@@ -2745,7 +2756,7 @@ namespace copper_server::storage {
             return world->second;
     }
 
-    void worlds_data::save(uint64_t world_id) {
+    void worlds_data::save(int32_t world_id) {
         std::unique_lock lock(mutex);
         if (auto item = cached_worlds.find(world_id); item == cached_worlds.end())
             throw std::runtime_error("World not found");
@@ -2763,7 +2774,7 @@ namespace copper_server::storage {
         }
     }
 
-    void worlds_data::save_and_unload(uint64_t world_id) {
+    void worlds_data::save_and_unload(int32_t world_id) {
         std::unique_lock lock(mutex);
         if (auto item = cached_worlds.find(world_id); item == cached_worlds.end())
             throw std::runtime_error("World not found");
@@ -2789,7 +2800,7 @@ namespace copper_server::storage {
     }
 
     //be sure that world is not used by anything, otherwise will throw exception
-    void worlds_data::unload(uint64_t world_id) {
+    void worlds_data::unload(int32_t world_id) {
         std::unique_lock lock(mutex);
         on_world_unloaded(world_id);
         cached_worlds.erase(world_id);
@@ -2802,18 +2813,19 @@ namespace copper_server::storage {
         cached_worlds.clear();
     }
 
-    void worlds_data::erase(uint64_t world_id) {
+    void worlds_data::erase(int32_t world_id) {
         std::unique_lock lock(mutex);
         std::filesystem::remove_all(std::filesystem::path(base_path) / std::to_string(world_id));
         cached_worlds.erase(world_id);
+        cached_ids.remove(world_id);
         on_world_unloaded(world_id);
     }
 
-    uint64_t worlds_data::create(const std::string& name) {
+    int32_t worlds_data::create(const std::string& name) {
         std::unique_lock lock(mutex);
         if (get_id(name) != -1)
             throw std::runtime_error("World with name " + name + " already exists.");
-        uint64_t id = 0;
+        int32_t id = 0;
         while (exists(id))
             id++;
         cached_ids.push_back(id);
@@ -2824,11 +2836,11 @@ namespace copper_server::storage {
         return id;
     }
 
-    uint64_t worlds_data::create(const std::string& name, std::function<void(world_data& world)> init) {
+    int32_t worlds_data::create(const std::string& name, std::function<void(world_data& world)> init) {
         std::unique_lock lock(mutex);
         if (get_id(name) != -1)
             throw std::runtime_error("World with name " + name + " already exists.");
-        uint64_t id = 0;
+        int32_t id = 0;
         while (exists(id))
             id++;
         base_objects::atomic_holder<world_data> world = new world_data(id, base_path / std::to_string(id));
@@ -2869,7 +2881,7 @@ namespace copper_server::storage {
             world->for_each_entity(chunk_x, chunk_y, chunk_z, func);
     }
 
-    void worlds_data::for_each_entity(uint64_t world_id, std::function<void(const base_objects::entity_ref& entity)> func) {
+    void worlds_data::for_each_entity(int32_t world_id, std::function<void(const base_objects::entity_ref& entity)> func) {
         std::unique_lock lock(mutex);
         if (auto world = cached_worlds.find(world_id); world == cached_worlds.end())
             load(world_id)->for_each_entity(func);
@@ -2877,7 +2889,7 @@ namespace copper_server::storage {
             world->second->for_each_entity(func);
     }
 
-    void worlds_data::for_each_entity(uint64_t world_id, int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func) {
+    void worlds_data::for_each_entity(int32_t world_id, int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func) {
         std::unique_lock lock(mutex);
         if (auto world = cached_worlds.find(world_id); world == cached_worlds.end())
             load(world_id)->for_each_entity(chunk_x, chunk_z, func);
@@ -2885,7 +2897,7 @@ namespace copper_server::storage {
             world->second->for_each_entity(chunk_x, chunk_z, func);
     }
 
-    void worlds_data::for_each_entity(uint64_t world_id, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func) {
+    void worlds_data::for_each_entity(int32_t world_id, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func) {
         std::unique_lock lock(mutex);
         if (auto world = cached_worlds.find(world_id); world == cached_worlds.end())
             load(world_id)->for_each_entity(chunk_x, chunk_y, chunk_z, func);
@@ -2893,7 +2905,7 @@ namespace copper_server::storage {
             world->second->for_each_entity(chunk_x, chunk_y, chunk_z, func);
     }
 
-    void worlds_data::for_each_world(std::function<void(uint64_t id, world_data& world)> func) {
+    void worlds_data::for_each_world(std::function<void(int32_t id, world_data& world)> func) {
         std::unique_lock lock(mutex);
         for (auto& [id, world] : cached_worlds)
             func(id, *world);
@@ -2901,7 +2913,7 @@ namespace copper_server::storage {
 
     void worlds_data::apply_tick(std::chrono::high_resolution_clock::time_point current_time, std::chrono::nanoseconds ns) {
         std::unique_lock lock(mutex);
-        list_array<std::pair<uint64_t, base_objects::atomic_holder<world_data>>> worlds_to_tick;
+        list_array<std::pair<int32_t, base_objects::atomic_holder<world_data>>> worlds_to_tick;
         for (auto& [id, world] : cached_worlds) {
             if (!world->last_usage.time_since_epoch().count())
                 world->last_usage = current_time;
@@ -2919,11 +2931,11 @@ namespace copper_server::storage {
         lock.unlock();
         size_t unload_speed = api::configuration::get().world.unload_speed;
         future::forEachMove(
-            future::process<std::optional<uint64_t>>(
+            future::process<std::optional<int32_t>>(
                 worlds_to_tick,
-                [this, current_time, unload_speed](const auto& it) mutable -> std::optional<uint64_t> {
-                    auto& world = it.second;
+                [this, current_time, unload_speed](const auto& it) mutable -> std::optional<int32_t> {
                     auto id = it.first;
+                    auto& world = it.second;
                     std::random_device rd;
                     std::mt19937 gen(rd());
                     world->tick(gen, current_time);

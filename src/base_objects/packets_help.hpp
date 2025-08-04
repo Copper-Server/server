@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <library/list_array.hpp>
+#include <src/base_objects/id_registry.hpp>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -13,6 +14,12 @@ namespace copper_server::base_objects {
         template <template <class...> class Base, class... Ts>
         void test(Base<Ts...>&);
     }
+
+    template <class type>
+    concept is_packet = requires(type& d) {
+        type::packet_id::value;
+    };
+
     struct SharedClientData;
     template <auto value>
     using ic = std::integral_constant<decltype(value), value>;
@@ -25,6 +32,15 @@ namespace copper_server::base_objects {
 
     template <template <class...> class Base, class Derived>
     constexpr bool is_template_base_of<Base, Derived, std::void_t<decltype(internal::test<Base>(std::declval<Derived&>()))>> = true;
+
+    template <class type>
+    concept is_convertible_to_packet_form = requires(type& d) {
+        d.to_packet();
+        type::from_packet(decltype(d.to_packet()){});
+    };
+
+    template <is_convertible_to_packet_form type>
+    using convertible_to_packet_type = decltype(std::declval<type>().to_packet());
 
     template <class A>
     struct for_each_type {
@@ -46,16 +62,20 @@ namespace copper_server::base_objects {
     };
 
     template <size_t id>
-    struct alignas(8) packet {
+    struct alignas(2) packet {
         using packet_id = ic<id>;
     };
 
-    struct alignas(8) compound_packet {};
+    struct alignas(2) disconnect_after {}; //used only with packet<>
+
+    struct alignas(2) compound_packet {};
 
     //flag to preprocess packet, used for some types that affects other type by current state. Like flags_list_from
-    struct alignas(8) packet_preprocess {};
+    struct alignas(2) packet_preprocess {};
 
     namespace switches_to {
+        struct status {};
+
         struct login {};
 
         struct configuration {};
@@ -64,12 +84,12 @@ namespace copper_server::base_objects {
     }
 
     template <class T, class R>
-    static constexpr bool could_be_preprocessed = (requires(R& it) { T::preprocess(it); });
+    static constexpr bool could_be_preprocessed = requires(R& it) { T::preprocess(it); };
 
     struct identifier {
         std::string value;
 
-        constexpr identifier() {}
+        explicit constexpr identifier() {}
 
         constexpr identifier(std::string&& value) : value(std::move(value)) {}
 
@@ -79,15 +99,10 @@ namespace copper_server::base_objects {
 
         constexpr identifier(const identifier& value) : value(value.value) {}
 
-        constexpr identifier& operator=(std::string&& other) {
-            value = std::move(other);
-            return *this;
-        }
+        constexpr identifier(std::string_view value) : value(value) {}
 
-        constexpr identifier& operator=(const std::string& other) {
-            value = other;
-            return *this;
-        }
+        template <size_t siz>
+        constexpr identifier(const char (&value)[siz]) : value(value) {}
 
         constexpr identifier& operator=(identifier&& other) {
             value = std::move(other.value);
@@ -110,6 +125,8 @@ namespace copper_server::base_objects {
         constexpr operator const std::string&() const {
             return value;
         }
+
+        auto operator<=>(const identifier& other) const = default;
     };
 
     template <size_t size>
@@ -117,7 +134,7 @@ namespace copper_server::base_objects {
         std::string value;
         static constexpr inline size_t max_size = size;
 
-        constexpr string_sized() {}
+        explicit constexpr string_sized() {}
 
         constexpr string_sized(std::string&& value) : value(std::move(value)) {}
 
@@ -132,6 +149,9 @@ namespace copper_server::base_objects {
 
         template <size_t other_size>
         constexpr string_sized(const string_sized<other_size>& value) : value(value.value) {}
+
+        template <size_t siz>
+        constexpr string_sized(const char (&value)[siz]) : value(value) {}
 
         constexpr string_sized& operator=(std::string&& other) {
             value = std::move(other);
@@ -176,12 +196,14 @@ namespace copper_server::base_objects {
         constexpr operator const std::string&() const {
             return value;
         }
+
+        auto operator<=>(const string_sized& other) const = default;
     };
 
     struct json_text_component {
         std::string value;
 
-        constexpr json_text_component() {}
+        explicit constexpr json_text_component() {}
 
         constexpr json_text_component(std::string&& value) : value(std::move(value)) {}
 
@@ -202,6 +224,8 @@ namespace copper_server::base_objects {
         constexpr operator const std::string&() const {
             return value;
         }
+
+        auto operator<=>(const json_text_component& other) const = default;
     };
 
     template <class T, T min, T max>
@@ -213,9 +237,57 @@ namespace copper_server::base_objects {
 
     struct var_int32 {
         using underlying_type = int32_t;
+        using banner_pattern = id_source<var_int32, registry_source::banner_pattern>;
+        using cat_variant = id_source<var_int32, registry_source::cat_variant>;
+        using chat_type = id_source<var_int32, registry_source::chat_type>;
+        using chicken_variant = id_source<var_int32, registry_source::chicken_variant>;
+        using cow_variant = id_source<var_int32, registry_source::cow_variant>;
+        using damage_type = id_source<var_int32, registry_source::damage_type>;
+        using dialog = id_source<var_int32, registry_source::dialog>;
+        using dimension_type = id_source<var_int32, registry_source::dimension_type>;
+        using enchantment = id_source<var_int32, registry_source::enchantment>;
+        using enchantment_provider = id_source<var_int32, registry_source::enchantment_provider>;
+        using frog_variant = id_source<var_int32, registry_source::frog_variant>;
+        using instrument = id_source<var_int32, registry_source::instrument>;
+        using jukebox_song = id_source<var_int32, registry_source::jukebox_song>;
+        using loot_table = id_source<var_int32, registry_source::loot_table>;
+        using painting_variant = id_source<var_int32, registry_source::painting_variant>;
+        using pig_variant = id_source<var_int32, registry_source::pig_variant>;
+        using recipe = id_source<var_int32, registry_source::recipe>;
+        using test_environment = id_source<var_int32, registry_source::test_environment>;
+        using test_instance = id_source<var_int32, registry_source::test_instance>;
+        using trim_material = id_source<var_int32, registry_source::trim_material>;
+        using trim_pattern = id_source<var_int32, registry_source::trim_pattern>;
+        using wolf_sound_variant = id_source<var_int32, registry_source::wolf_sound_variant>;
+        using wolf_variant = id_source<var_int32, registry_source::wolf_variant>;
+        using worldgen__biome = id_source<var_int32, registry_source::worldgen__biome>;
+
+        using attribute = id_source<var_int32, registry_source::attribute>;
+        using block_state = id_source<var_int32, registry_source::block_state>;
+        using block_type = id_source<var_int32, registry_source::block_type>;
+        using block_entity_type = id_source<var_int32, registry_source::block_entity_type>;
+        using entity_type = id_source<var_int32, registry_source::entity_type>;
+        using item = id_source<var_int32, registry_source::item>;
+        using menu = id_source<var_int32, registry_source::menu>;
+        using mob_effect = id_source<var_int32, registry_source::mob_effect>;
+        using sound_event = id_source<var_int32, registry_source::sound_event>;
+        using command_argument_type = id_source<var_int32, registry_source::command_argument_type>;
+        using particle_type = id_source<var_int32, registry_source::particle_type>;
+        using potion = id_source<var_int32, registry_source::potion>;
+        using data_component_type = id_source<var_int32, registry_source::data_component_type>;
+        using villager_variant = id_source<var_int32, registry_source::villager_variant>;
+        using fox_variant = id_source<var_int32, registry_source::fox_variant>;
+        using parrot_variant = id_source<var_int32, registry_source::parrot_variant>;
+        using tropical_fish_pattern = id_source<var_int32, registry_source::tropical_fish_pattern>;
+        using mooshroom_variant = id_source<var_int32, registry_source::mooshroom_variant>;
+        using rabbit_variant = id_source<var_int32, registry_source::rabbit_variant>;
+        using horse_variant = id_source<var_int32, registry_source::horse_variant>;
+        using llama_variant = id_source<var_int32, registry_source::llama_variant>;
+        using axolotl_variant = id_source<var_int32, registry_source::axolotl_variant>;
+
         int32_t value;
 
-        constexpr var_int32() {}
+        explicit constexpr var_int32() {}
 
         template <enum_concept T>
         constexpr var_int32(T value) : value((int32_t)value) {}
@@ -236,13 +308,15 @@ namespace copper_server::base_objects {
         constexpr operator T() const {
             return (T)value;
         }
+
+        auto operator<=>(const var_int32& other) const = default;
     };
 
     struct var_int64 {
         using underlying_type = int64_t;
         int64_t value;
 
-        constexpr var_int64() {}
+        explicit constexpr var_int64() {}
 
         template <enum_concept T>
         constexpr var_int64(T value) : value((int64_t)value) {}
@@ -263,6 +337,8 @@ namespace copper_server::base_objects {
         constexpr operator T() const {
             return (T)value;
         }
+
+        auto operator<=>(const var_int64& other) const = default;
     };
 
     struct optional_var_int32 : public std::optional<int32_t> { //encoded same as var_int32 but if set the value incremented and checked for overflow, if not set encoded as 0
@@ -273,10 +349,12 @@ namespace copper_server::base_objects {
         using std::optional<int64_t>::optional;
     };
 
+
     template <class Value, class T>
     struct value_optional {
         Value v;
         std::optional<T> rest;
+        auto operator<=>(const value_optional& other) const = default;
     };
 
     //if value would be zero, next fields ignored
@@ -285,20 +363,45 @@ namespace copper_server::base_objects {
         using underlying_type = Value;
         Value value;
 
-        operator Value&() {
+        explicit constexpr depends_next() {}
+
+        template <class T>
+        constexpr depends_next(T value)
+            requires(std::is_convertible_v<T, Value>)
+            : value((Value)value) {}
+
+        constexpr depends_next(Value value) : value(value) {}
+
+        constexpr depends_next(const depends_next& value) : value(value.value) {}
+
+        constexpr depends_next(depends_next&& value) : value(std::move(value.value)) {}
+
+        constexpr depends_next& operator=(const depends_next& other) {
+            value = other.value;
+            return *this;
+        }
+
+        constexpr depends_next& operator=(depends_next&& other) {
+            value = std::move(other.value);
+            return *this;
+        }
+
+        constexpr operator Value&() {
             return value;
         }
 
-        operator const Value&() const {
+        constexpr operator const Value&() const {
             return value;
         }
 
         template <class T>
-        operator T() const
+        constexpr operator T() const
             requires(std::is_convertible_v<Value, T>)
         {
             return (T)value;
         }
+
+        auto operator<=>(const depends_next& other) const = default;
     };
 
 
@@ -343,28 +446,45 @@ namespace copper_server::base_objects {
     struct vector_sized : public std::vector<T> {
         using std::vector<T>::vector;
         static constexpr inline size_t max_size = size;
+
+        vector_sized(const std::vector<T>& copy) : std::vector<T>(copy) {}
+
+        vector_sized(std::vector<T>&& mov) : std::vector<T>(std::move(mov)) {}
     };
 
     template <class T, size_t size, auto... DependedValues>
     struct vector_sized_no_size : public no_size<DependedValues...>, vector_sized<T, size> {
         using vector_sized<T, size>::vector_sized;
         static constexpr inline size_t max_size = size;
+
+        vector_sized_no_size(const std::vector<T>& copy) : vector_sized<T, size>(copy) {}
+
+        vector_sized_no_size(std::vector<T>&& mov) : vector_sized<T, size>(std::move(mov)) {}
     };
 
     template <class T, auto... DependedValues>
     struct vector_no_size : public no_size<DependedValues...>, std::vector<T> {
         using std::vector<T>::vector;
+
+        vector_no_size(const std::vector<T>& copy) : std::vector<T>(copy) {}
+
+        vector_no_size(std::vector<T>&& mov) : std::vector<T>(std::move(mov)) {}
     };
 
     template <class T, size_t size>
     struct vector_sized_siz_from_packet : public size_from_packet, vector_sized<T, size> {
         using vector_sized<T, size>::vector_sized;
+
+        vector_sized_siz_from_packet(const std::vector<T>& copy) : vector_sized<T, size>(copy) {}
+
+        vector_sized_siz_from_packet(std::vector<T>&& mov) : vector_sized<T, size>(std::move(mov)) {}
     };
 
     template <class T, class T_size>
     struct sized_entry {
         using size_type = T_size;
         T value;
+        auto operator<=>(const sized_entry& other) const = default;
     };
 
     template <class T, size_t size>
@@ -387,16 +507,20 @@ namespace copper_server::base_objects {
         void preprocess(R&) {
             value.resize(size);
         }
+
+        auto operator<=>(const bitset_fixed& other) const = default;
     };
 
     template <class T>
     struct unordered_id {
         T value;
+        auto operator<=>(const unordered_id& other) const = default;
     };
 
     template <class T>
     struct ordered_id {
         T value;
+        auto operator<=>(const ordered_id& other) const = default;
     };
 
     template <class Variant0, class Variant1>
@@ -404,6 +528,12 @@ namespace copper_server::base_objects {
         using var_0 = Variant0;
         using var_1 = Variant1;
         using std::variant<Variant0, Variant1>::variant;
+    };
+
+    template <class T>
+    struct id_set : public std::variant<identifier, std::vector<T>> {
+        using std::variant<identifier, std::vector<T>>::variant;
+        using id_type = T;
     };
 
     struct Angle {
@@ -419,6 +549,8 @@ namespace copper_server::base_objects {
         operator double() {
             return (value * 360) / (pi::value * 2);
         }
+
+        auto operator<=>(const Angle& other) const = default;
     };
 
     template <class Enum, class T>
@@ -426,7 +558,7 @@ namespace copper_server::base_objects {
         using encode_t = T;
         Enum value;
 
-        enum_as() : value() {}
+        explicit enum_as() : value() {}
 
         enum_as(Enum e) : value(e) {}
 
@@ -438,20 +570,21 @@ namespace copper_server::base_objects {
             else
                 return (T)value;
         }
+
+        auto operator<=>(const enum_as& other) const = default;
     };
 
     template <size_t id>
-    struct alignas(8) enum_item {
+    struct alignas(2) enum_item {
         using item_id = ic<id>;
     };
 
     template <class T>
-    static constexpr bool is_enum_item = (requires() {
-        []<template <auto> class Base, auto v>(Base<v>&) {}.template operator()<enum_item>(std::declval<T&>());
-    });
+    static constexpr bool is_enum_item = requires(T& t) {
+        []<template <auto> class Base, auto v>(Base<v>&) {}.template operator()<enum_item>(t);
+    };
 
     template <class ValueType, class... Ty>
-        requires(is_enum_item<Ty> && ...)
     struct enum_switch : public std::variant<Ty...> {
         using std::variant<Ty...>::variant;
         using encode_type = ValueType;
@@ -470,19 +603,18 @@ namespace copper_server::base_objects {
 
     //to exclude from packet use negative order, the order used as id for flags
     template <size_t value, size_t mask, ptrdiff_t order>
-    struct alignas(8) flags_item {
+    struct alignas(2) flags_item {
         using flag_value = ic<value>;
         using flag_mask = ic<mask>;
         using flag_order = ic<order>;
     };
 
     template <class T>
-    static constexpr bool is_flag_item = (requires() {
+    static constexpr bool is_flag_item = requires() {
         []<template <auto, auto, auto> class Base, auto v0, auto v1, auto v2>(Base<v0, v1, v2>&) {}.template operator()<flags_item>(std::declval<T&>());
-    });
+    };
 
     template <class flag_type, class... Ty>
-        requires(is_flag_item<Ty> && ...)
     struct flags_list {
         using max_orders = ic<std::max<ptrdiff_t>({Ty::flag_order::value...})>;
         using base = std::variant<Ty...>;
@@ -497,7 +629,6 @@ namespace copper_server::base_objects {
         }
 
         template <class T>
-            requires(is_flag_item<T>)
         bool is_set() const {
             return (values.find(T::flag_order::value) != values.end());
         }
@@ -561,18 +692,21 @@ namespace copper_server::base_objects {
         }
 
         template <class T>
-            requires(is_flag_item<T>)
         void set(T&& item) {
-            values[T::flag_order::value] = std::forward<T>(item);
+            values[T::flag_order::value] = std::move(item);
             update_flag();
         }
 
         template <class T>
-            requires(is_flag_item<T>)
+        void set(const T&& item) = delete;
+
+        template <class T>
         void set() {
             values[T::flag_order::value] = T();
             update_flag();
         }
+
+        auto operator<=>(const flags_list& other) const = default;
 
     private:
         void update_flag() {
@@ -590,7 +724,6 @@ namespace copper_server::base_objects {
     };
 
     template <class Source, class SourceType, SourceType Source::* source_name, class... Ty>
-        requires(is_flag_item<Ty> && ...)
     struct flags_list_from {
         using max_orders = ic<std::max<ptrdiff_t>({Ty::flag_order::value...})>;
         using preprocess_source_name = ic<source_name>;
@@ -607,7 +740,6 @@ namespace copper_server::base_objects {
         }
 
         template <class T>
-            requires(is_flag_item<T>)
         bool is_set() const {
             return (values.find(T::flag_order::value) != values.end());
         }
@@ -670,16 +802,19 @@ namespace copper_server::base_objects {
         }
 
         template <class T>
-            requires(is_flag_item<T>)
         void set(T&& item) {
-            values[T::flag_order::value] = std::forward<T>(item);
+            values[T::flag_order::value] = base(std::move(item));
         }
 
         template <class T>
-            requires(is_flag_item<T>)
+        void set(const T&& item) = delete;
+
+        template <class T>
         void set() {
-            values[T::flag_order::value] = T();
+            values[T::flag_order::value] = base(T());
         }
+
+        auto operator<=>(const flags_list_from& other) const = default;
     };
 
     template <class Enum, class T>
@@ -687,7 +822,7 @@ namespace copper_server::base_objects {
         using encode_t = T;
         Enum value;
 
-        enum_as_flag() : value() {}
+        explicit enum_as_flag() : value() {}
 
         enum_as_flag(Enum e) : value(e) {}
 
@@ -696,6 +831,8 @@ namespace copper_server::base_objects {
         T get() const {
             return (T)value;
         }
+
+        auto operator<=>(const enum_as_flag& other) const = default;
     };
 
     template <class base_type, class... Ty>
@@ -703,30 +840,28 @@ namespace copper_server::base_objects {
         base_type value;
 
         template <class T>
-            requires(std::is_constructible_v<std::variant<Ty...>, T>)
         T& cast() {
             return reinterpret_cast<T&>(value);
         }
 
         template <class T>
-            requires(std::is_constructible_v<std::variant<Ty...>, T>)
         const T& cast() const {
             return reinterpret_cast<const T&>(value);
         }
 
         template <class T>
-            requires(std::is_constructible_v<std::variant<Ty...>, T>)
         any_of& operator=(T&& val) {
             value = reinterpret_cast<base_type&&>(val);
             return *this;
         }
 
         template <class T>
-            requires(std::is_constructible_v<std::variant<Ty...>, T>)
         any_of& operator=(const T& val) {
             value = reinterpret_cast<const base_type&>(val);
             return *this;
         }
+
+        auto operator<=>(const any_of& other) const = default;
     };
 
     template <class T>
@@ -740,6 +875,8 @@ namespace copper_server::base_objects {
         operator const T&() const {
             return value;
         }
+
+        auto operator<=>(const ignored& other) const = default;
     };
 }
 

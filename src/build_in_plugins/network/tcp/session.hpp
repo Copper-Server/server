@@ -34,7 +34,6 @@ namespace copper_server::build_in_plugins::network::tcp {
         void request_buffer(size_t new_size) override;
 
         void send_indirect(base_objects::network::response&&) override;
-
     private:
         void send(base_objects::network::response&& resp);
         base_objects::network::response proceed_data();
@@ -45,6 +44,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         float& timeout;
         base_objects::network::tcp::client* chandler = nullptr;
         bool encryption_enabled : 1 = false;
+        bool packet_sent : 1 = false;
     };
 }
 

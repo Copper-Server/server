@@ -19,8 +19,7 @@ namespace copper_server::build_in_plugins::network::tcp {
 
     session::~session() {
         if (_sharedData) {
-            if (_sharedData->packets_state.state != base_objects::SharedClientData::packets_state_t::protocol_state::initialization)
-                api::players::handlers::on_player_leave(shared_data_ref());
+            api::players::handlers::on_disconnect.await_notify(shared_data_ref());
             api::players::remove_player(shared_data_ref());
         }
         if (chandler)

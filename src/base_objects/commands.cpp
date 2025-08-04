@@ -12,11 +12,11 @@
 
 namespace copper_server::base_objects {
     void command_context::apply_executor_data() {
-        if (!executor->player_data.assigned_entity)
+        if (!executor.player_data.assigned_entity)
             return;
-        auto pos = executor->player_data.assigned_entity->position;
-        auto rot = util::to_yaw_pitch_256(executor->player_data.assigned_entity->rotation);
-        auto mot = executor->player_data.assigned_entity->motion;
+        auto pos = executor.player_data.assigned_entity->position;
+        auto rot = util::to_yaw_pitch_256(executor.player_data.assigned_entity->rotation);
+        auto mot = executor.player_data.assigned_entity->motion;
 
         other_data["x"] = pos.x;
         other_data["y"] = pos.y;

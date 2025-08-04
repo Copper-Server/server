@@ -13,7 +13,7 @@
 namespace copper_server::build_in_plugins::network::tcp {
 
     struct keep_alive_solution::handle_t {
-        std::function<base_objects::network::response(int64_t)> callback;
+        std::function<void(int64_t, base_objects::SharedClientData&)> callback;
         fast_task::deadline_timer timeout_timer;
         fast_task::deadline_timer next_keep_alive;
         api::network::tcp::session* session;
@@ -50,31 +50,29 @@ namespace copper_server::build_in_plugins::network::tcp {
         void start() {
             if (callback) {
                 _keep_alive_sended();
-                session->send_indirect(callback(last_keep_alive.time_since_epoch().count()));
+                callback(last_keep_alive.time_since_epoch().count(), session->shared_data());
             }
         }
 
-        base_objects::network::response make_keep_alive_packet() {
+        void make_keep_alive_packet() {
             if (timeout_timer.timed_out() && !next_keep_alive.timed_out()) {
                 if (next_keep_alive.cancel()) {
                     _keep_alive_sended();
-                    return callback(last_keep_alive.time_since_epoch().count());
+                    callback(last_keep_alive.time_since_epoch().count(), session->shared_data());
                 }
             }
-            return base_objects::network::response::empty();
         }
     };
 
     keep_alive_solution::keep_alive_solution(api::network::tcp::session* session)
-        : handle(std::make_shared<handle_t>(session)) {
-    }
+        : handle(std::make_shared<handle_t>(session)) {}
 
     keep_alive_solution::~keep_alive_solution() {
         handle->next_keep_alive.cancel();
         handle->timeout_timer.cancel();
     }
 
-    void keep_alive_solution::set_callback(const std::function<base_objects::network::response(int64_t)>& fun) {
+    void keep_alive_solution::set_callback(const std::function<void(int64_t, base_objects::SharedClientData&)>& fun) {
         handle->callback = fun;
     }
 
@@ -82,11 +80,8 @@ namespace copper_server::build_in_plugins::network::tcp {
         return handle->got_valid_keep_alive(check);
     }
 
-    base_objects::network::response keep_alive_solution::make_keep_alive_packet() {
-        if (!handle)
-            return base_objects::network::response::empty();
-
-        return handle->make_keep_alive_packet();
+    void keep_alive_solution::make_keep_alive_packet() {
+        handle->make_keep_alive_packet();
     }
 
     void keep_alive_solution::start() {

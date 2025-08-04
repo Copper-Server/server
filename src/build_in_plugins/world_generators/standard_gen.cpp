@@ -2,9 +2,8 @@
 #include <src/storage/world_data.hpp>
 
 namespace copper_server::build_in_plugins::world_generators {
-    class StandardGeneratorImpl : public storage::chunk_generator {
-        public:
-        StandardGeneratorImpl() {
+    struct standard_generator : public storage::chunk_generator {
+        standard_generator() {
             config = {
                 {0, preset_mode::parallel},  //empty
                 {1, preset_mode::parallel},  //structures_starts
@@ -72,12 +71,9 @@ namespace copper_server::build_in_plugins::world_generators {
         }
     };
 
-    class StandardGen : public PluginAutoRegister<"standard_world_generator", StandardGen> {
-    public:
-        StandardGen() {}
-
+    struct standard_gen : public PluginAutoRegister<"world_generators/standard", standard_gen> {
         void OnRegister(const PluginRegistrationPtr& self) override {
-            storage::chunk_generator::register_it("standard", new StandardGeneratorImpl());
+            storage::chunk_generator::register_it("standard", new standard_generator());
         }
     };
 }

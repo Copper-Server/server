@@ -17,7 +17,7 @@
       {
         "name": "movement_speed",
         "operation": "ADD_MULTIPLIED_TOTAL",
-        "value": 0.4000000059604645
+        "value": 0.20000000298023224
       }
     ]
   },
@@ -39,7 +39,7 @@
       {
         "name": "movement_speed",
         "operation": "ADD_MULTIPLIED_TOTAL",
-        "value": -0.30000001192092896
+        "value": -0.15000000596046448
       }
     ]
   },
@@ -61,7 +61,7 @@
       {
         "name": "attack_speed",
         "operation": "ADD_MULTIPLIED_TOTAL",
-        "value": 0.20000000298023224
+        "value": 0.10000000149011612
       }
     ]
   },
@@ -83,7 +83,7 @@
       {
         "name": "attack_speed",
         "operation": "ADD_MULTIPLIED_TOTAL",
-        "value": -0.20000000298023224
+        "value": -0.10000000149011612
       }
     ]
   },
@@ -105,7 +105,7 @@
       {
         "name": "attack_damage",
         "operation": "ADD_VALUE",
-        "value": 6.0
+        "value": 3.0
       }
     ]
   },
@@ -159,7 +159,7 @@
       {
         "name": "safe_fall_distance",
         "operation": "ADD_VALUE",
-        "value": 2.0
+        "value": 1.0
       }
     ]
   },
@@ -257,7 +257,13 @@
     "required_features": [
       "minecraft:vanilla"
     ],
-    "attribute_modifiers": []
+    "attribute_modifiers": [
+      {
+        "name": "waypoint_transmit_range",
+        "operation": "ADD_MULTIPLIED_TOTAL",
+        "value": -1.0
+      }
+    ]
   },
   "blindness": {
     "id": 14,
@@ -325,7 +331,7 @@
       {
         "name": "attack_damage",
         "operation": "ADD_VALUE",
-        "value": -8.0
+        "value": -4.0
       }
     ]
   },
@@ -379,7 +385,7 @@
       {
         "name": "max_health",
         "operation": "ADD_VALUE",
-        "value": 8.0
+        "value": 4.0
       }
     ]
   },
@@ -401,7 +407,7 @@
       {
         "name": "max_absorption",
         "operation": "ADD_VALUE",
-        "value": 8.0
+        "value": 4.0
       }
     ]
   },
@@ -471,7 +477,7 @@
       {
         "name": "luck",
         "operation": "ADD_VALUE",
-        "value": 2.0
+        "value": 1.0
       }
     ]
   },
@@ -493,7 +499,7 @@
       {
         "name": "luck",
         "operation": "ADD_VALUE",
-        "value": -2.0
+        "value": -1.0
       }
     ]
   },

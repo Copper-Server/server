@@ -1,10 +1,8 @@
-#include <src/build_in_plugins/light_processors/default_proc.hpp>
+#include <src/plugin/main.hpp>
 #include <src/storage/world_data.hpp>
 
 namespace copper_server::build_in_plugins::light_processors {
-
-    class DefaultLightProcessor : public storage::chunk_light_processor {
-    public:
+    struct default_light_processor : public storage::chunk_light_processor {
         void process_chunk(storage::world_data& world, int64_t chunk_x, int64_t chunk_z) override {
             world.get_chunk(chunk_x, chunk_z, [&](storage::chunk_data& chunk) {
                 chunk.for_each_sub_chunk([&](base_objects::world::sub_chunk_data& sub_chunk) {
@@ -19,14 +17,14 @@ namespace copper_server::build_in_plugins::light_processors {
             world.notify_chunk_light(chunk_x, chunk_z);
         }
 
-        void process_sub_chunk(storage::world_data& world, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z) override {
-        }
+        void process_sub_chunk(storage::world_data& world, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z) override {}
 
-        void block_changed(storage::world_data& world, int64_t global_x, int64_t global_y, int64_t global_z) override {
-        }
+        void block_changed(storage::world_data& world, int64_t global_x, int64_t global_y, int64_t global_z) override {}
     };
 
-    void DefaultProc::OnRegister(const PluginRegistrationPtr& self) {
-        storage::chunk_light_processor::register_it("default", new DefaultLightProcessor());
-    }
+    struct default_processor : public PluginAutoRegister<"light_processors/default_processor", default_processor> {
+        void OnRegister(const PluginRegistrationPtr& self) {
+            storage::chunk_light_processor::register_it("default", new default_light_processor());
+        }
+    };
 }

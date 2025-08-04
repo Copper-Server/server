@@ -238,6 +238,7 @@ namespace copper_server::storage {
     class world_data {
         using chunk_row = std::unordered_map<uint64_t, base_objects::atomic_holder<chunk_data>>;
         using chunk_column = std::unordered_map<uint64_t, chunk_row>;
+        uint64_t hashed_seed_value = 0;
 
         fast_task::task_recursive_mutex mutex;
         chunk_column chunks;
@@ -326,6 +327,12 @@ namespace copper_server::storage {
             return world_y_offset;
         }
 
+        uint64_t get_hashed_seed() const {
+            return hashed_seed_value;
+        }
+
+        void set_seed(int32_t seed);
+
         //metadata
         void load(const enbt::compound_const_ref& load_from_nbt);
         //metadata
@@ -338,10 +345,10 @@ namespace copper_server::storage {
         enbt::compound world_light_processor_data; //not saved
         enbt::compound world_records;
 
-        enbt::raw_uuid world_seed = enbt::raw_uuid::generate_v4();
         enbt::raw_uuid wandering_trader_id = enbt::raw_uuid::as_null();
         float wandering_trader_spawn_chance = 0;
         int32_t wandering_trader_spawn_delay = 0;
+        int32_t world_seed = 0;
         std::string world_name;
         std::string world_type;
         std::string light_processor_id;
@@ -391,9 +398,9 @@ namespace copper_server::storage {
         bool enable_entity_light_source_updates : 1 = false; //calculated from light processor
         bool enable_entity_light_source_updates_include_rot : 1 = false;
 
-        const uint64_t world_id;
+        const int32_t world_id;
 
-        world_data(uint64_t world_id, const std::filesystem::path& path);
+        world_data(int32_t world_id, const std::filesystem::path& path);
 
         std::filesystem::path get_path() const {
             return path;
@@ -617,22 +624,22 @@ namespace copper_server::storage {
     class worlds_data {
         fast_task::task_recursive_mutex mutex;
         std::filesystem::path base_path;
-        std::unordered_map<uint64_t, base_objects::atomic_holder<world_data>> cached_worlds;
+        std::unordered_map<int32_t, base_objects::atomic_holder<world_data>> cached_worlds;
         std::chrono::high_resolution_clock::time_point last_tps_calculated = std::chrono::high_resolution_clock::now();
         uint64_t got_ticks = 0;
 
-        base_objects::atomic_holder<world_data> load(uint64_t world_id);
+        base_objects::atomic_holder<world_data> load(int32_t world_id);
 
-        list_array<uint64_t> cached_ids;
-        const list_array<uint64_t>& get_ids();
+        list_array<int32_t> cached_ids;
+        const list_array<int32_t>& get_ids();
 
 
     public:
-        base_objects::events::event<uint64_t> on_world_loaded;
-        base_objects::events::event<uint64_t> on_world_unloaded;
+        base_objects::events::event<int32_t> on_world_loaded;
+        base_objects::events::event<int32_t> on_world_unloaded;
         base_objects::events::event<double> on_tps_changed;
         uint64_t ticks_per_second = 20;
-        uint64_t base_world_id = (uint64_t)-1;
+        int32_t base_world_id = -1;
 
         //calculated
         double tps = (double)ticks_per_second;
@@ -641,41 +648,41 @@ namespace copper_server::storage {
         worlds_data(const std::filesystem::path& base_path);
 
         size_t loaded_chunks_count();
-        size_t loaded_chunks_count(uint64_t world_id);
-        bool exists(uint64_t world_id);
+        size_t loaded_chunks_count(int32_t world_id);
+        bool exists(int32_t world_id);
         bool exists(const std::string& name);
-        const list_array<uint64_t>& get_list();
-        std::string get_name(uint64_t world_id);
-        uint64_t get_id(const std::string& name);
+        const list_array<int32_t>& get_list();
+        std::string get_name(int32_t world_id);
+        int32_t get_id(const std::string& name);
+        list_array<int32_t> get_all_ids();
 
-
-        base_objects::atomic_holder<world_data> get(uint64_t world_id);
-        void save(uint64_t world_id);
+        base_objects::atomic_holder<world_data> get(int32_t world_id);
+        void save(int32_t world_id);
         void save_all();
 
-        void save_and_unload(uint64_t world_id);
+        void save_and_unload(int32_t world_id);
         void save_and_unload_all();
 
         //be sure that world is not used by anything, otherwise will throw exception
-        void unload(uint64_t world_id);
+        void unload(int32_t world_id);
         void unload_all();
-        void erase(uint64_t world_id);
+        void erase(int32_t world_id);
 
         void locked(std::function<void()> func);
         void locked(std::function<void(worlds_data& self)> func);
 
-        uint64_t create(const std::string& name);
-        uint64_t create(const std::string& name, std::function<void(world_data& world)> init);
+        int32_t create(const std::string& name);
+        int32_t create(const std::string& name, std::function<void(world_data& world)> init);
 
         void for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func);
         void for_each_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
         void for_each_entity(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
 
-        void for_each_entity(uint64_t world_id, std::function<void(const base_objects::entity_ref& entity)> func);
-        void for_each_entity(uint64_t world_id, int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
-        void for_each_entity(uint64_t world_id, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
+        void for_each_entity(int32_t world_id, std::function<void(const base_objects::entity_ref& entity)> func);
+        void for_each_entity(int32_t world_id, int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
+        void for_each_entity(int32_t world_id, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
 
-        void for_each_world(std::function<void(uint64_t id, world_data& world)> func);
+        void for_each_world(std::function<void(int32_t id, world_data& world)> func);
 
         void apply_tick(std::chrono::high_resolution_clock::time_point current_time, std::chrono::nanoseconds elapsed);
     };

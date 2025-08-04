@@ -14,8 +14,8 @@ namespace copper_server::api::tags {
         "minecraft:damage_type",
         "minecraft:enchantment",
         "minecraft:entity_type",
-        //"minecraft:fluid",
-        //"minecraft:game_event",
+        "minecraft:fluid",
+        "minecraft:game_event",
         "minecraft:instrument",
         "minecraft:item",
         "minecraft:painting_variant",
@@ -42,10 +42,10 @@ namespace copper_server::api::tags {
             safety(return (int32_t)registers::enchantments.at(value).id;);
         case builtin_entry::entity_type:
             safety(return base_objects::entity_data::get_entity(value).entity_id;);
-        //case builtin_entry::fluid:;
-        //  safety(return registers::.at(value).fluids;);
-        //case builtin_entry::game_event:
-        //  safety(return registers::.at(value).game;);
+        case builtin_entry::fluid:;
+            safety(return registers::view_reg_pro_id("minecraft:fluid", value););
+        case builtin_entry::game_event:
+            safety(return registers::view_reg_pro_id("minecraft:game_event", value););
         case builtin_entry::instrument:
             safety(return (int32_t)registers::instruments.at(value).id;);
         case builtin_entry::item:
@@ -92,12 +92,13 @@ namespace copper_server::api::tags {
                 case builtin_entry::entity_type:
                     ids_cache = items.convert_fn([entry](auto& it) { safety(return base_objects::entity_data::get_entity(it).entity_id;) });
                     break;
-                //case builtin_entry::fluid:
-                //    ids_cache = items.convert_fn([entry](auto& it) { safety(return registers::.at(it).fluids;) });
-                //    break;
-                //case builtin_entry::game_event:
-                //    ids_cache = items.convert_fn([entry](auto& it) { safety(return registers::.at(it).game;) });
-                //    break;
+                case builtin_entry::fluid:
+                    ids_cache = items.convert_fn([entry](auto& it) { safety(return registers::view_reg_pro_id("minecraft:fluid", it);) });
+                    break;
+                case builtin_entry::game_event: {
+                    ids_cache = items.convert_fn([entry](auto& it) { safety(return registers::view_reg_pro_id("minecraft:game_event", it);) });
+                    break;
+                }
                 case builtin_entry::instrument:
                     ids_cache = items.convert_fn([entry](auto& it) { safety(return registers::instruments.at(it).id;) });
                     break;

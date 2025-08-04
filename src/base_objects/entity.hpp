@@ -552,6 +552,11 @@ namespace copper_server {
 
 
             bool is_player(); //returns true if entity_id belongs to player
+
+            uint16_t get_entity_type_id() const {
+                return entity_id;
+            }
+
         private:
             friend struct entity_data;
             uint16_t entity_id;

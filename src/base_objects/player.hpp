@@ -44,11 +44,6 @@ namespace copper_server::base_objects {
             float field_of_view_modifier = 0.1f;
         } abilities;
 
-        struct ExperienceData {
-            float progress = 0;
-            int32_t level = 0, total = 0;
-        } experience;
-
         std::string world_id;
         std::string player_name;
 

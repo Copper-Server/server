@@ -30,14 +30,8 @@ namespace copper_server::build_in_plugins {
         });
     }
 
-    class ConsolePlugin : public PluginAutoRegister<"console_interface", ConsolePlugin> {
-        base_objects::virtual_client console_data;
-
-    public:
-        ConsolePlugin()
-            : console_data(api::players::allocate_player(), "Console", "Console") {}
-
-        ~ConsolePlugin() {}
+    struct console : public PluginAutoRegister<"tools/console", console> {
+        base_objects::virtual_client console_data{api::players::allocate_player(), "Console", "Console"};
 
         void OnLoad(const PluginRegistrationPtr& self) override {
             api::console::register_virtual_client(console_data);
@@ -62,7 +56,7 @@ namespace copper_server::build_in_plugins {
                     .request_suggestions(tmp, context)
                     .transform([&insertion_](auto&& suggestion) { return insertion_ + suggestion; })
                     .sort()
-                    .to_container<std::vector<std::string>>();
+                    .to_container<std::vector>();
             });
 
             console_data.packet_processor = [this](const api::new_packets::client_bound::play_packet& packet) {
@@ -87,7 +81,7 @@ namespace copper_server::build_in_plugins {
 
             console_data.client->player_data.permission_groups = {"console", "operator"};
 
-            register_event(api::console::on_command, base_objects::events::priority::heigh, [&](const std::string& command) {
+            register_event(api::console::on_command, base_objects::events::priority::high, [&](const std::string& command) {
                 if (command.empty())
                     return false;
                 log::info("command", command);
@@ -118,6 +112,7 @@ namespace copper_server::build_in_plugins {
         }
 
         void OnUnload(const PluginRegistrationPtr& self) override {
+            log::commands::unloadCommandSuggestion();
             clean_up_registered_events();
             api::console::unregister_virtual_client();
         }

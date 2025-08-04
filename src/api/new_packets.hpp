@@ -2,18 +2,20 @@
 #define SRC_API_NEW_PACKETS
 #include <array>
 #include <library/enbt/enbt.hpp>
+#include <src/base_objects/box.hpp>
 #include <src/base_objects/chat.hpp>
+#include <src/base_objects/component.hpp>
 #include <src/base_objects/events/sync_event.hpp>
 #include <src/base_objects/network/response.hpp>
 #include <src/base_objects/packets_help.hpp>
 #include <src/base_objects/pallete_container.hpp>
 #include <src/base_objects/position.hpp>
-#include <src/base_objects/slot.hpp>
+#include <src/util/calculations.hpp>
 
 #define decl_variant(name, ...)                      \
     struct name : public std::variant<__VA_ARGS__> { \
-        using std::variant<__VA_ARGS__>::variant;    \
         using base = std::variant<__VA_ARGS__>;      \
+        using base::variant;                         \
     }
 
 namespace copper_server {
@@ -26,14 +28,20 @@ namespace copper_server {
 
     namespace base_objects {
         struct SharedClientData;
+        struct slot;
+        class command_manager;
     }
 
+    //this api allows users to handle clients and simulate them if needed, also supports serialization to string for debug purposes
+    // note: because this api uses reflection under the hood, recommended to enable build cache to reduce the build time
+    // the api implements the latest protocol implementation: 772(1.21.8)
     namespace api::new_packets {
         using base_objects::Angle;
         using base_objects::any_of;
         using base_objects::bitset_fixed;
         using base_objects::compound_packet;
         using base_objects::depends_next;
+        using base_objects::disconnect_after;
         using base_objects::enum_as;
         using base_objects::enum_as_flag;
         using base_objects::enum_item;
@@ -42,6 +50,7 @@ namespace copper_server {
         using base_objects::flags_list;
         using base_objects::flags_list_from;
         using base_objects::for_each_type;
+        using base_objects::id_set;
         using base_objects::identifier;
         using base_objects::ignored;
         using base_objects::json_text_component;
@@ -69,7 +78,7 @@ namespace copper_server {
         using base_objects::vector_sized_no_size;
         using base_objects::vector_sized_siz_from_packet;
 
-        //std::unique_ptr should always hold value
+        //base_objects::box should always hold value
 
         struct chat_type {
             struct decoration {
@@ -86,11 +95,6 @@ namespace copper_server {
 
             decoration chat;
             decoration narration;
-        };
-
-        struct sound_event {
-            base_objects::identifier sound_id;
-            std::optional<float> fixed_range;
         };
 
         enum class gamemode_e : uint8_t {
@@ -114,6 +118,17 @@ namespace copper_server {
             hard = 3,
         };
 
+        struct slot : public packet_preprocess {
+            depends_next<var_int32> count;
+            var_int32::item id;
+            var_int32 components_to_add;
+            var_int32 components_to_remove;
+            vector_no_size<base_objects::component, &slot::components_to_add> to_add;
+            vector_no_size<var_int32::data_component_type, &slot::components_to_remove> to_remove;
+
+            slot create(const base_objects::slot&);
+        };
+
         struct slot_display {
             struct empty : public enum_item<0> {
             };
@@ -122,11 +137,11 @@ namespace copper_server {
             };
 
             struct item : public enum_item<2> {
-                var_int32 type;
+                var_int32::item type;
             };
 
             struct item_stack : public enum_item<3> {
-                base_objects::slot item_stack;
+                slot item_stack;
             };
 
             struct tag : public enum_item<4> {
@@ -134,18 +149,18 @@ namespace copper_server {
             };
 
             struct smithing_trim : public enum_item<5> {
-                std::unique_ptr<slot_display> base;
-                std::unique_ptr<slot_display> material;
-                std::unique_ptr<slot_display> pattern;
+                base_objects::box<slot_display> base;
+                base_objects::box<slot_display> material;
+                base_objects::box<slot_display> pattern;
             };
 
             struct with_remainder : public enum_item<6> {
-                std::unique_ptr<slot_display> ingredient;
-                std::unique_ptr<slot_display> remainder;
+                base_objects::box<slot_display> ingredient;
+                base_objects::box<slot_display> remainder;
             };
 
             struct composite : public enum_item<7> {
-                std::vector<std::unique_ptr<slot_display>> ingredient;
+                std::vector<base_objects::box<slot_display>> ingredient;
             };
 
             enum_switch<
@@ -231,8 +246,24 @@ namespace copper_server {
         }
 
         namespace client_bound {
+            namespace status {
+                struct status_response : public packet<0x00> {
+                    string_sized<32767> json_response;
+                };
+
+                struct pong_response : public packet<0x01> {
+                    uint64_t timestamp;
+                };
+            }
+
+            decl_variant(
+                status_packet,
+                status::status_response,
+                status::pong_response
+            );
+
             namespace login {
-                struct login_disconnect : public packet<0x00> {
+                struct login_disconnect : public packet<0x00>, disconnect_after {
                     json_text_component reason;
                 };
 
@@ -256,13 +287,13 @@ namespace copper_server {
                 };
 
                 struct login_compression : public packet<0x03> {
-                    var_int32 threshold;
+                    var_int32 threshold;//TODO add way to let encoder know where to get compression value
                 };
 
                 struct custom_query : public packet<0x04>, packet_preprocess {
                     ordered_id<var_int32> message_id;
                     identifier channel;
-                    vector_sized_siz_from_packet<uint8_t, 1048576> user_name;
+                    vector_sized_siz_from_packet<uint8_t, 1048576> payload;
                 };
 
                 struct cookie_request : public packet<0x05> {
@@ -287,14 +318,14 @@ namespace copper_server {
 
                 struct custom_payload : public packet<0x01>, packet_preprocess {
                     identifier channel;
-                    vector_sized_siz_from_packet<uint8_t, 1048576> user_name;
+                    vector_sized_siz_from_packet<uint8_t, 1048576> payload;
                 };
 
-                struct disconnect : public packet<0x02> {
+                struct disconnect : public packet<0x02>, disconnect_after {
                     Chat reason;
                 };
 
-                struct finish_configuration : public packet<0x03>, base_objects::switches_to::play {};
+                struct finish_configuration : public packet<0x03> {};
 
                 struct keep_alive : public packet<0x04> {
                     uint64_t keep_alive_id;
@@ -321,7 +352,7 @@ namespace copper_server {
                 };
 
                 struct resource_pack_push : public packet<0x09>, packet_preprocess {
-                    std::optional<enbt::raw_uuid> uuid;
+                    enbt::raw_uuid uuid;
                     string_sized<32767> url;
                     string_sized<40> hash;
                     bool forced;
@@ -347,9 +378,11 @@ namespace copper_server {
                         identifier tag_name;
                         std::vector<var_int32> values;
                     };
-
-                    identifier registry_id;
-                    std::vector<tag> tags;
+                    struct entry {
+                        identifier registry_id;
+                        std::vector<tag> tags;
+                    };
+                    std::vector<entry> entries;
                 };
 
                 struct select_known_packs : public packet<0x0E>, packet_preprocess {
@@ -430,14 +463,14 @@ namespace copper_server {
             namespace play {
                 struct bundle_delimiter : public compound_packet {
                     packet<0x00> begin;
-                    std::vector<play_packet> packets;
+                    std::vector<play_packet> packets; //do not include here packet that switches to other state, it would not be called
                     packet<0x00> end;
                 };
 
                 struct add_entity : public packet<0x01> {
                     var_int32 entity_id;
                     enbt::raw_uuid uuid;
-                    var_int32 type;
+                    var_int32::entity_type type;
                     double x;
                     double y;
                     double z;
@@ -487,7 +520,7 @@ namespace copper_server {
 
                 struct block_entity_data : public packet<0x06> {
                     position location;
-                    var_int32 type;
+                    var_int32::block_entity_type type;
                     enbt::value data;
                 };
 
@@ -495,12 +528,12 @@ namespace copper_server {
                     position location;
                     uint8_t action_id;
                     uint8_t action_param;
-                    var_int32 block_type;
+                    var_int32::block_type block;
                 };
 
                 struct block_update : public packet<0x08> {
                     position location;
-                    var_int32 block_state_id;
+                    var_int32::block_state block;
                 };
 
                 struct boss_event : public packet<0x09> {
@@ -588,11 +621,13 @@ namespace copper_server {
                             var_int32 node;
                         };
 
-                        struct literal_node : public flags_item<2, 0x3, 1>, packet_preprocess {
+                        struct root_node : public flags_item<0, 0x3, 1>, packet_preprocess {};
+
+                        struct literal_node : public flags_item<1, 0x3, 1>, packet_preprocess {
                             string_sized<32767> name;
                         };
 
-                        struct argument_node : public flags_item<3, 0x3, 1>, packet_preprocess {
+                        struct argument_node : public flags_item<2, 0x3, 1>, packet_preprocess {
                             string_sized<32767> name;
 
                             template <class T>
@@ -750,7 +785,7 @@ namespace copper_server {
                             struct minecraft__uuid : public enum_item<56> {};
 
                             enum_switch<
-                                var_int32,
+                                var_int32::command_argument_type,
                                 brigadier__bool,
                                 brigadier__float,
                                 brigadier__double,
@@ -824,6 +859,7 @@ namespace copper_server {
                             uint8_t,
                             &node::flags,
                             literal_node,
+                            root_node,
                             argument_node,
                             is_executable,
                             redirect_node,
@@ -834,6 +870,8 @@ namespace copper_server {
 
                     std::vector<node> nodes;
                     var_int32 root_index;
+
+                    static commands create(const base_objects::command_manager& manager);
                 };
 
                 struct container_close : public packet<0x11> {
@@ -843,8 +881,8 @@ namespace copper_server {
                 struct container_set_content : public packet<0x12> {
                     var_int32 windows_id;
                     var_int32 state_id;
-                    std::vector<base_objects::slot> inventory_data;
-                    base_objects::slot carried_item;
+                    std::vector<slot> inventory_data;
+                    slot carried_item;
                 };
 
                 struct container_set_data : public packet<0x13> {
@@ -969,7 +1007,7 @@ namespace copper_server {
                     var_int32 windows_id;
                     var_int32 state_id;
                     short slot;
-                    base_objects::slot carried_item;
+                    struct slot carried_item;
                 };
 
                 struct cookie_request : public packet<0x15> {
@@ -994,21 +1032,15 @@ namespace copper_server {
 
                 struct custom_payload : public packet<0x18>, packet_preprocess {
                     identifier channel;
-                    vector_sized_siz_from_packet<uint8_t, 1048576> user_name;
+                    vector_sized_siz_from_packet<uint8_t, 1048576> payload;
                 };
 
                 struct damage_event : public packet<0x19> {
-                    struct position_double {
-                        double x;
-                        double y;
-                        double z;
-                    };
-
                     var_int32 entity_id;
                     optional_var_int32 source_damage_type_id;
                     optional_var_int32 source_entity_id;
                     optional_var_int32 source_direct_entity_id;
-                    std::optional<position_double> source_pos;
+                    std::optional<util::VECTOR> source_pos;
                 };
 
                 struct debug_sample : public packet<0x1A> {
@@ -1021,13 +1053,13 @@ namespace copper_server {
                     std::optional<std::array<uint8_t, 256>> signature;
                 };
 
-                struct disconnect : public packet<0x1C> {
+                struct disconnect : public packet<0x1C>, disconnect_after {
                     Chat reason;
                 };
 
                 struct disguised_chat : public packet<0x1D> {
                     Chat message;
-                    or_<var_int32, chat_type> type;
+                    or_<var_int32::chat_type, chat_type> type;
                     Chat sender;
                     std::optional<Chat> target_name;
                 };
@@ -1061,9 +1093,9 @@ namespace copper_server {
                     double y;
                     double z;
                     std::optional<player_delta_velocity_t> player_delta_velocity;
-                    var_int32 particle_id;
+                    var_int32::particle_type particle_id;
                     vector_no_size<uint8_t> particle_data; //redef
-                    or_<var_int32, sound_event> sound;
+                    or_<var_int32, base_objects::sound_event> sound;
                 };
 
                 struct forget_level_chunk : public packet<0x21> {
@@ -1073,15 +1105,15 @@ namespace copper_server {
 
                 struct game_event : public packet<0x22> {
                     struct no_respawn_block_available : public enum_item<0> {
-                        float _ignored;
+                        float _ignored = 0;
                     };
 
                     struct raining_begin : public enum_item<1> {
-                        float _ignored;
+                        float _ignored = 0;
                     };
 
                     struct raining_end : public enum_item<2> {
-                        float _ignored;
+                        float _ignored = 0;
                     };
 
                     struct gamemode_change : public enum_item<3> {
@@ -1105,7 +1137,7 @@ namespace copper_server {
                     };
 
                     struct arrow_hit_player : public enum_item<6> {
-                        float _ignored;
+                        float _ignored = 0;
                     };
 
                     struct rain_level_change : public enum_item<7> {
@@ -1117,11 +1149,11 @@ namespace copper_server {
                     };
 
                     struct puffer_fish_sting_sound : public enum_item<9> {
-                        float _ignored;
+                        float _ignored = 0;
                     };
 
                     struct guardian_appear_animation : public enum_item<10> {
-                        float _ignored;
+                        float _ignored = 0;
                     };
 
                     struct respawn_screen_mode : public enum_item<11> {
@@ -1133,7 +1165,7 @@ namespace copper_server {
                     };
 
                     struct wait_for_level_chunks : public enum_item<13> {
-                        float _ignored;
+                        float _ignored= 0;
                     };
 
                     enum_switch<
@@ -1202,7 +1234,7 @@ namespace copper_server {
                     struct block_entity {
                         uint8_t xz;
                         short y;
-                        var_int32 type;
+                        var_int32::block_entity_type type;
                         enbt::value data;
                     };
 
@@ -1324,7 +1356,7 @@ namespace copper_server {
                     float offset_z;
                     float max_speed;
                     int32_t particle_count;
-                    var_int32 particle_id;
+                    var_int32::particle_type particle_id;
                     vector_no_size<uint8_t> particle_data; //TODO
                 };
 
@@ -1357,7 +1389,7 @@ namespace copper_server {
                     bool reduced_debug_info;
                     bool respawn_screen;
                     bool limited_crafting_enabled;
-                    var_int32 dimension_type;
+                    var_int32::dimension_type dimension_type;
                     identifier dimension_name;
                     int64_t seed_hashed;
                     enum_as<gamemode_e, uint8_t> gamemode;
@@ -1434,13 +1466,13 @@ namespace copper_server {
                 struct merchant_offers : public packet<0x2D> {
                     struct trade {
                         struct trade_item {
-                            var_int32 item_id;
+                            var_int32::item item_id;
                             var_int32 item_count;
                             std::vector<int32_t> components; //TODO add real components
                         };
 
                         trade_item input_0;
-                        base_objects::slot output;
+                        slot output;
                         std::optional<trade_item> input_1;
                         bool trade_disabled;
                         int trade_uses;
@@ -1519,7 +1551,7 @@ namespace copper_server {
 
                 struct open_screen : public packet<0x34> {
                     var_int32 window_id;
-                    var_int32 window_type;
+                    var_int32::menu window_type;
                     Chat window_title;
                 };
 
@@ -1568,7 +1600,7 @@ namespace copper_server {
 
                     struct fully_filtered : public enum_item<1> {};
 
-                    struct parially_filtered : public enum_item<2> {
+                    struct partially_filtered : public enum_item<2> {
                         bit_list_array<uint64_t> filtered_characters;
                     };
 
@@ -1581,7 +1613,7 @@ namespace copper_server {
                     uint64_t salt;
                     vector_sized<previous_message, 20> previous_messages;
                     std::optional<Chat> unsigned_content;
-                    enum_switch<var_int32, no_filter, fully_filtered, parially_filtered> filter;
+                    enum_switch<var_int32, no_filter, fully_filtered, partially_filtered> filter;
                     Chat sender_name;
                     std::optional<Chat> target_name;
                 };
@@ -1611,7 +1643,7 @@ namespace copper_server {
                             std::optional<string_sized<1024>> signature;
                         };
 
-                        vector_sized<property, 16> properies;
+                        vector_sized<property, 16> properties;
                     };
 
                     struct initialize_chat : public flags_item<0x2, 0x2, 2> {
@@ -1679,7 +1711,7 @@ namespace copper_server {
                 };
 
                 struct player_position : public packet<0x41> {
-                    var_int32 teleport_id;
+                    ordered_id<var_int32> teleport_id;
                     double x;
                     double y;
                     double z;
@@ -1704,11 +1736,11 @@ namespace copper_server {
                         };
                         using enum flags_f;
 
-                        var_int32 recipe_id;
+                        var_int32::recipe recipe_id;
                         recipe_display display;
                         var_int32 group_id;
                         var_int32 category_id;
-                        //TODO add id set type
+                        std::optional<std::vector<id_set<var_int32::item>>> ingredients;
                         enum_as_flag<flags_f, int8_t> flags;
                     };
 
@@ -1721,7 +1753,7 @@ namespace copper_server {
                 }
 
                 struct recipe_book_remove : public packet<0x44> {
-                    std::vector<var_int32> recipe_ids;
+                    std::vector<var_int32::recipe> recipe_ids;
                 };
 
                 struct alignas(64) recipe_book_settings : public packet<0x45> {
@@ -1741,7 +1773,7 @@ namespace copper_server {
 
                 struct remove_mob_effect : public packet<0x47> {
                     var_int32 entity_id;
-                    var_int32 effect_id;
+                    var_int32::mob_effect effect_id;
                 };
 
                 struct reset_score : public packet<0x48> {
@@ -1756,7 +1788,7 @@ namespace copper_server {
                 struct resource_pack_push : public packet<0x4A> {
                     enbt::raw_uuid uuid;
                     string_sized<32767> url;
-                    string_sized<40> hash; //0 or 40, other values waste bandwitch
+                    string_sized<40> hash; //0 or 40, other values waste bandwidth
                     bool forced;
                     std::optional<Chat> prompt_message;
                 };
@@ -1767,7 +1799,7 @@ namespace copper_server {
                         position location;
                     };
 
-                    var_int32 dimension_type;
+                    var_int32::dimension_type dimension_type;
                     identifier dimension_name;
                     uint64_t seed_hashed;
                     enum_as<gamemode_e, uint8_t> gamemode;
@@ -1796,7 +1828,61 @@ namespace copper_server {
                 };
 
                 struct section_blocks_update : public packet<0x4D> {
-                    //TODO
+                    struct position_t {
+                        uint64_t x : 22;
+                        uint64_t z : 22;
+                        uint64_t y : 20;
+
+                        uint64_t to_packet() const {
+                            union {
+                                uint64_t r;
+                                position_t v;
+                            } tmp;
+
+                            tmp.v = *this;
+                            return tmp.r;
+                        }
+
+                        static position_t from_packet(uint64_t value) {
+                            union {
+                                uint64_t v;
+                                position_t r;
+                            } tmp;
+
+                            tmp.v = value;
+                            return tmp.r;
+                        }
+                    };
+
+                    struct block_entry {
+                        uint32_t block_state : 20;
+                        uint32_t local_x : 4;
+                        uint32_t local_z : 4;
+                        uint32_t local_y : 4;
+
+                        var_int64 to_packet() const {
+                            union {
+                                int64_t r;
+                                block_entry v;
+                            } tmp;
+
+                            tmp.v = *this;
+                            return tmp.r;
+                        }
+
+                        static block_entry from_packet(var_int64 value) {
+                            union {
+                                int64_t v;
+                                block_entry r;
+                            } tmp;
+
+                            tmp.v = value;
+                            return tmp.r;
+                        }
+                    };
+
+                    position_t position;
+                    std::vector<block_entry> block;
                 };
 
                 struct select_advancements_tab : public packet<0x4E> {
@@ -1849,7 +1935,7 @@ namespace copper_server {
                 };
 
                 struct set_cursor_item : public packet<0x59> {
-                    base_objects::slot item;
+                    slot item;
                 };
 
                 struct set_default_spawn_position : public packet<0x5A> {
@@ -1890,15 +1976,15 @@ namespace copper_server {
                 };
 
                 struct set_entity_link : public packet<0x5D> {
-                    int attached_entity_id;
-                    int holding_entity_id;
+                    int32_t attached_entity_id;
+                    int32_t holding_entity_id;
                 };
 
                 struct set_entity_motion : public packet<0x5E> {
                     var_int32 entity_id;
-                    short velocity_x;
-                    short velocity_y;
-                    short velocity_z;
+                    int16_t velocity_x;
+                    int16_t velocity_y;
+                    int16_t velocity_z;
                 };
 
                 struct set_equipment : public packet<0x5F> {
@@ -1934,7 +2020,7 @@ namespace copper_server {
 
                 struct set_player_inventory : public packet<0x65> {
                     var_int32 slot;
-                    base_objects::slot data;
+                    struct slot data;
                 };
 
                 struct set_player_team : public packet<0x66> {
@@ -1964,9 +2050,9 @@ namespace copper_server {
                 };
 
                 struct set_titles_animation : public packet<0x6C> {
-                    int fade_in;
-                    int stay;
-                    int fadeout;
+                    int32_t fade_in;
+                    int32_t stay;
+                    int32_t fadeout;
                 };
 
                 struct sound_entity : public packet<0x6D> {
@@ -1990,7 +2076,7 @@ namespace copper_server {
 
                 struct system_chat : public packet<0x72> {
                     Chat content;
-                    bool is_overlay;
+                    bool is_overlay = false;
                 };
 
                 struct tab_list : public packet<0x73> {
@@ -2093,7 +2179,7 @@ namespace copper_server {
                 struct clear_dialog : public packet<0x84> {};
 
                 struct show_dialog : public packet<0x85> {
-                    or_<var_int32, enbt::value> dialog;
+                    or_<var_int32::dialog, enbt::value> dialog;
                 };
             }
 
@@ -2238,12 +2324,39 @@ namespace copper_server {
 
         decl_variant(
             client_bound_packet,
+            client_bound::status_packet,
             client_bound::login_packet,
             client_bound::configuration_packet,
             client_bound::play_packet
         );
 
         namespace server_bound {
+            namespace handshake {
+                struct intention : public packet<0x00> {
+                    enum class intent_e : uint8_t {
+                        status = 1,
+                        login = 2,
+                        transfer = 3
+                    };
+                    var_int32 protocol_version;
+                    string_sized<255> server_address;
+                    uint16_t server_port;
+                    enum_as<intent_e, var_int32> intent;
+                };
+            }
+
+            decl_variant(handshake_packet, handshake::intention);
+
+            namespace status {
+                struct status_request : public packet<0x00> {};
+
+                struct ping_response : public packet<0x01> {
+                    uint64_t timestamp;
+                };
+            }
+
+            decl_variant(status_packet, status::status_request, status::ping_response);
+
             namespace login {
                 struct hello : public packet<0x00>, packet_preprocess {
                     string_sized<16> name;
@@ -2257,10 +2370,10 @@ namespace copper_server {
 
                 struct custom_query_answer : public packet<0x02>, packet_preprocess {
                     ordered_id<var_int32> message_id;
-                    vector_sized_siz_from_packet<uint8_t, 32767> user_name;
+                    vector_sized_siz_from_packet<uint8_t, 32767> payload;
                 };
 
-                struct login_acknowledged : public packet<0x03> {};
+                struct login_acknowledged : public packet<0x03>, base_objects::switches_to::configuration {};
 
                 struct cookie_response : public packet<0x04>, packet_preprocess {
                     identifier key;
@@ -2307,7 +2420,7 @@ namespace copper_server {
                     uint8_t view_distance;
                     enum_as<chat_mode_e, var_int32> chat_mode;
                     bool enable_chat_colors;
-                    enum_as_flag<displayer_skin_parts_f, uint8_t> displayer_skin_parts;
+                    enum_as_flag<displayer_skin_parts_f, uint8_t> displayed_skin_parts;
                     enum_as<main_hand_e, var_int32> main_hand;
                     bool enable_text_filtering;
                     bool allow_server_listings;
@@ -2325,10 +2438,10 @@ namespace copper_server {
 
                 struct custom_payload : public packet<0x02>, packet_preprocess {
                     identifier channel;
-                    vector_sized_siz_from_packet<uint8_t, 32767> user_name;
+                    vector_sized_siz_from_packet<uint8_t, 32767> payload;
                 };
 
-                struct finish_configuration : public packet<0x03> {};
+                struct finish_configuration : public packet<0x03>, base_objects::switches_to::play {};
 
                 struct keep_alive : public packet<0x04> {
                     uint64_t keep_alive_id;
@@ -2515,16 +2628,16 @@ namespace copper_server {
 
                 struct container_click : public packet<0x11>, packet_preprocess {
                     struct hashed_slot_data {
-                        var_int32 item_id;
+                        var_int32::item item_id;
                         var_int32 count;
 
                         struct component {
-                            var_int32 type;
+                            var_int32::data_component_type type;
                             int32_t crc32_hash;
                         };
 
                         std::vector<component> add_components;
-                        std::vector<var_int32> remove_components;
+                        std::vector<var_int32::data_component_type> remove_components;
                     };
 
                     struct hashed_slot : public std::optional<hashed_slot_data> {
@@ -2562,7 +2675,7 @@ namespace copper_server {
 
                 struct custom_payload : public packet<0x15>, packet_preprocess {
                     identifier channel;
-                    vector_sized_siz_from_packet<uint8_t, 32767> user_name;
+                    vector_sized_siz_from_packet<uint8_t, 32767> payload;
                 };
 
                 struct debug_sample_subscription : public packet<0x16> {
@@ -2715,7 +2828,7 @@ namespace copper_server {
 
                 struct place_recipe : public packet<0x26> {
                     var_int32 windows_id;
-                    var_int32 recipe_id;
+                    var_int32::recipe recipe_id;
                     bool make_all;
                 };
 
@@ -2807,7 +2920,7 @@ namespace copper_server {
                 };
 
                 struct recipe_book_seen_recipe : public packet<0x2E> {
-                    var_int32 recipe_id;
+                    var_int32::recipe recipe_id;
                 };
 
                 struct rename_item : public packet<0x2F>, packet_preprocess {
@@ -2845,8 +2958,8 @@ namespace copper_server {
                 };
 
                 struct set_beacon : public packet<0x33> {
-                    std::optional<var_int32> primary_effect;
-                    std::optional<var_int32> secondary_effect;
+                    std::optional<var_int32::mob_effect> primary_effect;
+                    std::optional<var_int32::mob_effect> secondary_effect;
                 };
 
                 struct set_carried_item : public packet<0x34> {
@@ -2885,7 +2998,7 @@ namespace copper_server {
 
                 struct set_creative_mode_slot : public packet<0x37> {
                     short slot;
-                    base_objects::slot item;
+                    struct slot item;
                 };
 
                 struct set_jigsaw_block : public packet<0x38>, packet_preprocess {
@@ -2997,7 +3110,7 @@ namespace copper_server {
                     };
                     position location;
                     enum_as<action_e, var_int32> action;
-                    std::optional<var_int32> test_id;
+                    std::optional<var_int32::test_instance> test_id;
                     var_int32 size_x;
                     var_int32 size_y;
                     var_int32 size_z;
@@ -3045,6 +3158,8 @@ namespace copper_server {
 
         decl_variant(
             server_bound_packet,
+            server_bound::handshake_packet,
+            server_bound::status_packet,
             server_bound::login_packet,
             server_bound::configuration_packet,
             server_bound::play_packet
@@ -3052,108 +3167,209 @@ namespace copper_server {
 
 
         bool send(base_objects::SharedClientData& client, client_bound_packet&&);
+        base_objects::network::response internal_encode(base_objects::SharedClientData& client, client_bound_packet&&);
         base_objects::network::response encode(client_bound_packet&& packet);
+        base_objects::network::response encode(server_bound_packet&& packet);
 
         bool decode(base_objects::SharedClientData& context, ArrayStream&);
+        bool make_process(base_objects::SharedClientData& context, server_bound_packet&&);
+
+        client_bound::status_packet decode_client_status(ArrayStream&);
         client_bound::login_packet decode_client_login(ArrayStream&);
         client_bound::configuration_packet decode_client_configuration(ArrayStream&);
         client_bound::play_packet decode_client_play(ArrayStream&);
 
+        server_bound::handshake_packet decode_server_handshake(ArrayStream&);
+        server_bound::status_packet decode_server_status(ArrayStream&);
         server_bound::login_packet decode_server_login(ArrayStream&);
         server_bound::configuration_packet decode_server_configuration(ArrayStream&);
         server_bound::play_packet decode_server_play(ArrayStream&);
 
 
+        client_bound::status_packet decode_client_status(base_objects::SharedClientData& context, ArrayStream&);
         client_bound::login_packet decode_client_login(base_objects::SharedClientData& context, ArrayStream&);
         client_bound::configuration_packet decode_client_configuration(base_objects::SharedClientData& context, ArrayStream&);
         client_bound::play_packet decode_client_play(base_objects::SharedClientData& context, ArrayStream&);
 
+        server_bound::handshake_packet decode_server_handshake(base_objects::SharedClientData& context, ArrayStream&);
+        server_bound::status_packet decode_server_status(base_objects::SharedClientData& context, ArrayStream&);
         server_bound::login_packet decode_server_login(base_objects::SharedClientData& context, ArrayStream&);
         server_bound::configuration_packet decode_server_configuration(base_objects::SharedClientData& context, ArrayStream&);
         server_bound::play_packet decode_server_play(base_objects::SharedClientData& context, ArrayStream&);
 
 
+        std::string stringize_packet(const client_bound::status_packet&);
         std::string stringize_packet(const client_bound::login_packet&);
         std::string stringize_packet(const client_bound::configuration_packet&);
         std::string stringize_packet(const client_bound::play_packet&);
+        std::string stringize_packet(const server_bound::handshake_packet&);
+        std::string stringize_packet(const server_bound::status_packet&);
         std::string stringize_packet(const server_bound::login_packet&);
         std::string stringize_packet(const server_bound::configuration_packet&);
         std::string stringize_packet(const server_bound::play_packet&);
         std::string stringize_packet(const client_bound_packet&);
         std::string stringize_packet(const server_bound_packet&);
 
+        void set_debug_mode(bool enabled);
+
         namespace __internal {
-            base_objects::events::event_register_id register_client_viewer(uint8_t mode, size_t id, base_objects::events::sync_event<client_bound_packet&>::function&&);
-            base_objects::events::event_register_id register_server_viewer(uint8_t mode, size_t id, base_objects::events::sync_event<server_bound_packet&>::function&&);
+            base_objects::events::event_register_id register_client_viewer(uint8_t mode, size_t id, base_objects::events::sync_event<client_bound_packet&, base_objects::SharedClientData&>::function&&);
+            base_objects::events::event_register_id register_server_viewer(uint8_t mode, size_t id, base_objects::events::sync_event<server_bound_packet&, base_objects::SharedClientData&>::function&&);
+            base_objects::events::event_register_id register_viewer_post_send_client_bound(uint8_t mode, size_t id, std::function<void(client_bound_packet&, base_objects::SharedClientData&)>&&);
+            base_objects::events::event_register_id register_server_processor(uint8_t mode, size_t id, std::function<void(server_bound_packet&&, base_objects::SharedClientData&)>&&);
+
             void unregister_client_viewer(uint8_t mode, size_t id, base_objects::events::event_register_id);
             void unregister_server_viewer(uint8_t mode, size_t id, base_objects::events::event_register_id);
-
-            base_objects::events::event_register_id register_server_processor(uint8_t mode, size_t id, std::function<void(server_bound_packet&)>&&);
+            void unregister_viewer_post_send_client_bound(uint8_t mode, size_t id, base_objects::events::event_register_id);
             void unregister_server_processor(base_objects::events::event_register_id);
         }
 
         template <class Packet>
-            requires(std::is_constructible_v<client_bound::login_packet, Packet> || std::is_constructible_v<client_bound::configuration_packet, Packet> || std::is_constructible_v<client_bound::play_packet, Packet>)
+            requires(
+                std::is_constructible_v<client_bound::status_packet, Packet>
+                || std::is_constructible_v<client_bound::login_packet, Packet>
+                || std::is_constructible_v<client_bound::configuration_packet, Packet>
+                || std::is_constructible_v<client_bound::play_packet, Packet>
+            )
         base_objects::events::event_register_id register_viewer_client_bound(auto&& fn) {
             size_t mode;
-            if constexpr (std::is_constructible_v<client_bound::login_packet, Packet>) {
+            if constexpr (std::is_constructible_v<client_bound::status_packet, Packet>) {
                 mode = 0;
-            } else if constexpr (std::is_constructible_v<client_bound::configuration_packet, Packet>) {
+            } else if constexpr (std::is_constructible_v<client_bound::login_packet, Packet>) {
                 mode = 1;
-            } else
+            } else if constexpr (std::is_constructible_v<client_bound::configuration_packet, Packet>) {
                 mode = 2;
+            } else
+                mode = 3;
 
             return __internal::register_client_viewer(
                 mode,
                 Packet::packet_id::value,
-                [&](auto& packet) {
+                [&](auto& packet, auto& client) {
                     return std::visit(
-                        [&fn](auto& it) -> bool {
+                        [&fn, &client](auto& it) -> bool {
                             if constexpr (std::is_same_v<Packet, std::decay_t<decltype(it)>>)
-                                return fn(it);
+                                return fn(it, client);
                             return true;
-                        }
+                        },
+                        packet
                     );
                 }
             );
         }
 
         template <class Packet>
-            requires(std::is_constructible_v<server_bound::login_packet, Packet> || std::is_constructible_v<server_bound::configuration_packet, Packet> || std::is_constructible_v<server_bound::play_packet, Packet>)
+            requires(
+                std::is_constructible_v<server_bound::handshake_packet, Packet>
+                || std::is_constructible_v<server_bound::status_packet, Packet>
+                || std::is_constructible_v<server_bound::login_packet, Packet>
+                || std::is_constructible_v<server_bound::configuration_packet, Packet>
+                || std::is_constructible_v<server_bound::play_packet, Packet>
+            )
         base_objects::events::event_register_id register_viewer_server_bound(auto&& fn) {
             size_t mode;
-            if constexpr (std::is_constructible_v<server_bound::login_packet, Packet>) {
+            if constexpr (std::is_constructible_v<server_bound::handshake_packet, Packet>) {
                 mode = 0;
-            } else if constexpr (std::is_constructible_v<server_bound::configuration_packet, Packet>) {
+            } else if constexpr (std::is_constructible_v<server_bound::status_packet, Packet>) {
                 mode = 1;
-            } else
+            } else if constexpr (std::is_constructible_v<server_bound::login_packet, Packet>) {
                 mode = 2;
+            } else if constexpr (std::is_constructible_v<server_bound::configuration_packet, Packet>) {
+                mode = 3;
+            } else
+                mode = 4;
 
             return __internal::register_server_viewer(
                 mode,
                 Packet::packet_id::value,
-                [&](auto& packet) {
+                [&](auto& packet, auto& client) {
                     return std::visit(
-                        [&fn](auto& it) -> bool {
+                        [&fn, &client](auto& it) -> bool {
                             if constexpr (std::is_same_v<Packet, std::decay_t<decltype(it)>>)
-                                return fn(it);
+                                return fn(it, client);
                             return true;
-                        }
+                        },
+                        packet
                     );
                 }
             );
         }
 
         template <class Packet>
-            requires(std::is_constructible_v<client_bound::login_packet, Packet> || std::is_constructible_v<client_bound::configuration_packet, Packet> || std::is_constructible_v<client_bound::play_packet, Packet>)
-        base_objects::events::event_register_id register_viewer_client_bound(base_objects::events::event_register_id id) {
+            requires(
+                std::is_constructible_v<server_bound::handshake_packet, Packet> 
+                || std::is_constructible_v<server_bound::status_packet, Packet>
+                || std::is_constructible_v<server_bound::login_packet, Packet> 
+                || std::is_constructible_v<server_bound::configuration_packet, Packet> 
+                || std::is_constructible_v<server_bound::play_packet, Packet>
+            )
+        base_objects::events::event_register_id register_server_bound_processor(auto&& fn) {
             size_t mode;
-            if constexpr (std::is_constructible_v<client_bound::login_packet, Packet>) {
+            if constexpr (std::is_constructible_v<server_bound::handshake_packet, Packet>) {
                 mode = 0;
-            } else if constexpr (std::is_constructible_v<client_bound::configuration_packet, Packet>) {
+            } else if constexpr (std::is_constructible_v<server_bound::status_packet, Packet>) {
                 mode = 1;
-            } else
+            } else if constexpr (std::is_constructible_v<server_bound::login_packet, Packet>) {
                 mode = 2;
+            } else if constexpr (std::is_constructible_v<server_bound::configuration_packet, Packet>) {
+                mode = 3;
+            } else
+                mode = 4;
+
+            return __internal::register_server_processor(
+                mode,
+                Packet::packet_id::value,
+                [&](auto& packet, auto& context) {
+                    return std::visit(
+                        [&fn, &context](auto&& it, auto& context) {
+                            if constexpr (std::is_same_v<Packet, std::decay_t<decltype(it)>>)
+                                return fn(std::move(it), context);
+                            return false;
+                        },
+                        packet
+                    );
+                }
+            );
+        }
+
+        template <class Packet>
+            requires(
+                std::is_constructible_v<client_bound::status_packet, Packet>
+                || std::is_constructible_v<client_bound::login_packet, Packet>
+                || std::is_constructible_v<client_bound::configuration_packet, Packet>
+                || std::is_constructible_v<client_bound::play_packet, Packet>
+            )
+        void unregister_viewer_post_send_client_bound(base_objects::events::event_register_id id) {
+            size_t mode;
+            if constexpr (std::is_constructible_v<client_bound::status_packet, Packet>) {
+                mode = 0;
+            } else if constexpr (std::is_constructible_v<client_bound::login_packet, Packet>) {
+                mode = 1;
+            } else if constexpr (std::is_constructible_v<client_bound::configuration_packet, Packet>) {
+                mode = 2;
+            } else
+                mode = 3;
+
+            return __internal::unregister_viewer_post_send_client_bound(mode,Packet::packet_id::value,id);
+        }
+
+        template <class Packet>
+            requires(
+                std::is_constructible_v<client_bound::status_packet, Packet>
+                || std::is_constructible_v<client_bound::login_packet, Packet>
+                || std::is_constructible_v<client_bound::configuration_packet, Packet>
+                || std::is_constructible_v<client_bound::play_packet, Packet>
+            )
+        void unregister_viewer_client_bound(base_objects::events::event_register_id id) {
+            size_t mode;
+            if constexpr (std::is_constructible_v<client_bound::status_packet, Packet>) {
+                mode = 0;
+            } else if constexpr (std::is_constructible_v<client_bound::login_packet, Packet>) {
+                mode = 1;
+            } else if constexpr (std::is_constructible_v<client_bound::configuration_packet, Packet>) {
+                mode = 2;
+            } else
+                mode = 3;
 
             return __internal::unregister_client_viewer(
                 mode,
@@ -3164,15 +3380,25 @@ namespace copper_server {
 
         //could be registered only once packet
         template <class Packet>
-            requires(std::is_constructible_v<server_bound::login_packet, Packet> || std::is_constructible_v<server_bound::configuration_packet, Packet> || std::is_constructible_v<server_bound::play_packet, Packet>)
-        base_objects::events::event_register_id unregister_viewer_server_bound(base_objects::events::event_register_id id) {
+            requires(
+                std::is_constructible_v<server_bound::handshake_packet, Packet>
+                || std::is_constructible_v<server_bound::status_packet, Packet>
+                || std::is_constructible_v<server_bound::login_packet, Packet>
+                || std::is_constructible_v<server_bound::configuration_packet, Packet>
+                || std::is_constructible_v<server_bound::play_packet, Packet>
+            )
+        void unregister_viewer_server_bound(base_objects::events::event_register_id id) {
             size_t mode;
-            if constexpr (std::is_constructible_v<server_bound::login_packet, Packet>) {
+            if constexpr (std::is_constructible_v<server_bound::handshake_packet, Packet>) {
                 mode = 0;
-            } else if constexpr (std::is_constructible_v<server_bound::configuration_packet, Packet>) {
+            } else if constexpr (std::is_constructible_v<server_bound::status_packet, Packet>) {
                 mode = 1;
-            } else
+            } else if constexpr (std::is_constructible_v<server_bound::login_packet, Packet>) {
                 mode = 2;
+            } else if constexpr (std::is_constructible_v<server_bound::configuration_packet, Packet>) {
+                mode = 3;
+            } else
+                mode = 4;
 
             return __internal::unregister_server_viewer(
                 mode,
@@ -3181,40 +3407,22 @@ namespace copper_server {
             );
         }
 
-        template <class Packet>
-            requires(std::is_constructible_v<server_bound::login_packet, Packet> || std::is_constructible_v<server_bound::configuration_packet, Packet> || std::is_constructible_v<server_bound::play_packet, Packet>)
-        base_objects::events::event_register_id register_server_bound_processor(auto&& fn) {
-            size_t mode;
-            if constexpr (std::is_constructible_v<server_bound::login_packet, Packet>) {
-                mode = 0;
-            } else if constexpr (std::is_constructible_v<server_bound::configuration_packet, Packet>) {
-                mode = 1;
-            } else
-                mode = 2;
-
-            return __internal::register_server_processor(
-                mode,
-                Packet::packet_id::value,
-                [&](auto& packet) {
-                    return std::visit(
-                        [&fn](auto& it) {
-                            if constexpr (std::is_same_v<Packet, std::decay_t<decltype(it)>>)
-                                return fn(it);
-                        }
-                    );
-                }
-            );
-        }
-
         inline void unregister_server_bound_processor(base_objects::events::event_register_id id) {
             __internal::unregister_server_processor(id);
         }
+
+        extern base_objects::events::sync_event<base_objects::SharedClientData&> client_state_changed;
     }
 
     inline base_objects::SharedClientData& operator<<(base_objects::SharedClientData& client, api::new_packets::client_bound_packet&& packet) {
         api::new_packets::send(client, std::move(packet));
         return client;
     }
+
+    base_objects::SharedClientData& operator<<(base_objects::SharedClientData& client, base_objects::switches_to::play);
+    base_objects::SharedClientData& operator<<(base_objects::SharedClientData& client, base_objects::switches_to::configuration);
+    base_objects::SharedClientData& operator<<(base_objects::SharedClientData& client, base_objects::switches_to::login);
+    base_objects::SharedClientData& operator<<(base_objects::SharedClientData& client, base_objects::switches_to::status);
 }
 
 #undef decl_variant

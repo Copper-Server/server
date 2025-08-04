@@ -1,5 +1,6 @@
 #include <library/fast_task.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/new_packets.hpp>
 #include <src/api/server.hpp>
 #include <src/log.hpp>
 #include <src/plugin/main.hpp>
@@ -8,6 +9,8 @@
 using namespace copper_server;
 
 int main() {
+
+
     atexit([]() {
         log::info("Initializer thread", "Shutting down...");
         try {

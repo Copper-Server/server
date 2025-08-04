@@ -23,7 +23,7 @@ namespace copper_server::base_objects::events {
 
         event_register_id join(function func, priority priority = priority::avg) {
             switch (priority) {
-            case priority::heigh:
+            case priority::high:
                 return addOne(heigh_priority, func);
             case priority::upper_avg:
                 return addOne(upper_avg_priority, func);
@@ -39,7 +39,7 @@ namespace copper_server::base_objects::events {
 
         bool leave(event_register_id func, priority priority = priority::avg) {
             switch (priority) {
-            case priority::heigh:
+            case priority::high:
                 return removeOne(heigh_priority, func);
             case priority::upper_avg:
                 return removeOne(upper_avg_priority, func);

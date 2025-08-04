@@ -32,7 +32,7 @@ namespace copper_server::base_objects::packets {
         ghast_shoots = 1016,
         ender_dragon_shoots = 1017,
         blaze_shoots = 1018,
-        zombie_attacks_wooden_door = 1019,
+        ie_attacks_wooden_door = 1019,
         zombie_attacks_iron_door = 1020,
         zombie_breaks_wooden_door = 1021,
         wither_breaks_block = 1022,

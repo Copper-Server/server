@@ -10,6 +10,10 @@
 #include <string>
 #include <src/base_objects/component.hpp>
 
+namespace copper_server::api::new_packets {
+    struct slot;
+}
+
 namespace copper_server::base_objects {
 
 
@@ -20,14 +24,10 @@ namespace copper_server::base_objects {
         };
 
         std::string id;
-        std::unordered_map<std::string, component::unified> default_components;
+        std::unordered_map<int32_t, component> default_components;
         int32_t internal_id;
 
         enbt::compound server_side;
-        //{
-        //  "pot_decoration_aliases": ["...",...]
-        //}
-
 
         //USED ONLY DURING FULL SERVER RELOAD!  DO NOT ALLOW CALL FROM THE USER CODE
         static void reset_items(); //INTERNAL
@@ -46,76 +46,66 @@ namespace copper_server::base_objects {
     };
 
     struct slot_data {
-        std::unordered_map<std::string, component::unified> components;
+        std::unordered_map<int32_t, component> components;
         int32_t count = 0;
         int32_t id = 0;
 
         template <class T>
         T& get_component() {
-            return std::get<T>(components.at(T::component_name));
+            return std::get<T>(components.at(T::item_id::value).type);
         }
 
         template <class T>
         T& access_component() {
-            if (components.contains(T::component_name))
-                return std::get<T>(components[T::component_name]);
+            if (components.contains(T::item_id::value))
+                return std::get<T>(components[T::item_id::value].type);
             else
-                return std::get<T>(components[T::component_name] = T{});
+                return std::get<T>(components[T::item_id::value].type = T{});
         }
 
         template <class T>
         const T& get_component() const {
-            return std::get<T>(components.at(T::component_name));
+            return std::get<T>(components.at(T::item_id::value).type);
         }
 
         template <class T>
         void remove_component() {
-            return components.erase(T::component_name);
+            return components.erase(T::item_id::value);
         }
 
-        void add_component(component::unified&& copy) {
+        void add_component(component&& copy) {
             std::visit(
-                [this](auto& component) {
+                [this, &copy](auto& component) {
                     using T = std::decay_t<decltype(component)>;
-                    components[T::component_name] = std::move(component);
+                    components[T::item_id::value] = std::move(copy);
                 },
-                copy
+                copy.type
             );
         }
 
-        template <class T>
-        void add_component(T&& move) {
-            components[T::component_name] = std::move(move);
-        }
-
-        void add_component(const component::unified& copy) {
+        void add_component(const component& copy) {
             std::visit(
-                [this](auto& component) {
+                [this, &copy](auto& component) {
                     using T = std::decay_t<decltype(component)>;
-                    components[T::component_name] = component;
+                    components[T::item_id::value] = copy;
                 },
-                copy
+                copy.type
             );
         }
 
         template <class T>
         void add_component(const T& copy) {
-            components[T::component_name] = copy;
+            components[T::item_id::value].type = copy;
+        }
+
+        template <class T>
+        void add_component(T&& copy) {
+            components[T::item_id::value].type = std::move(copy);
         }
 
         template <class T>
         bool has_component() const {
-            return components.contains(T::component_name);
-        }
-
-        //any data
-        void remove_component(const std::string& name) {
-            components.erase(name);
-        }
-
-        //any data
-        bool has_component(const std::string& name) const {
-            return components.contains(name);
+            return components.contains(T::item_id::value);
         }
 
         enbt::compound to_enbt() const;
@@ -125,7 +115,6 @@ namespace copper_server::base_objects {
         bool operator!=(const slot_data& other) const;
 
         bool is_same_def(const slot_data& other) const;
-
 
         static slot_data create_item(const std::string& id, int32_t count = 1);
         static slot_data create_item(uint32_t id, int32_t count = 1);
@@ -137,6 +126,9 @@ namespace copper_server::base_objects {
         static_slot_data& get_slot_data();
 
         static void enumerate_slot_data(const std::function<void(static_slot_data&)>& fn);
+
+        copper_server::api::new_packets::slot to_packet() const;
+        static slot_data from_packet(copper_server::api::new_packets::slot&&);
 
     private:
         friend struct static_slot_data;
@@ -150,7 +142,13 @@ namespace copper_server::base_objects {
         struct has_component_name<T, decltype((void)T::component_name, void())> : std::true_type {};
     };
 
-    using slot = std::optional<slot_data>;
+    struct slot : public std::optional<slot_data> {
+        using std::optional<slot_data>::optional;
+
+        slot(std::optional<slot_data>&& opt) : std::optional<slot_data>(opt){}
+        copper_server::api::new_packets::slot to_packet() const;
+        static slot from_packet(copper_server::api::new_packets::slot&&);
+    };
 }
 
 #endif /* SRC_BASE_OBJECTS_SLOT */

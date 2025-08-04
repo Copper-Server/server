@@ -2,44 +2,9 @@
 #include <src/storage/memory/online_player.hpp>
 
 namespace copper_server::api::players {
-    namespace handlers {
-        base_objects::events::event<base_objects::client_data_holder> on_player_join;
-        base_objects::events::event<base_objects::client_data_holder> on_player_leave;
-    }
-
     namespace calls {
-        base_objects::events::event<teleport_request> on_teleport_request;
-
-
-        base_objects::events::event<player_chat> on_player_chat;
-        base_objects::events::event<player_personal_chat> on_player_personal_chat;
-
-        base_objects::events::event<Chat> on_system_message_broadcast;
-        base_objects::events::event<personal<Chat>> on_system_message;
-
-        base_objects::events::event<Chat> on_system_message_overlay_broadcast;
-        base_objects::events::event<personal<Chat>> on_system_message_overlay;
-
         base_objects::events::event<personal<Chat>> on_player_kick;
         base_objects::events::event<personal<Chat>> on_player_ban;
-
-        base_objects::events::event<Chat> on_action_bar_message_broadcast;
-        base_objects::events::event<personal<Chat>> on_action_bar_message;
-
-        base_objects::events::event<Chat> on_title_message_broadcast;
-        base_objects::events::event<personal<Chat>> on_title_message;
-
-        base_objects::events::event<bool> on_title_clear_broadcast;
-        base_objects::events::event<personal<bool>> on_title_clear;
-
-        base_objects::events::event<Chat> on_subtitle_message_broadcast;
-        base_objects::events::event<personal<Chat>> on_subtitle_message;
-
-        base_objects::events::event<titles_times> on_title_times_broadcast;
-        base_objects::events::event<personal<titles_times>> on_title_times;
-
-        base_objects::events::event<unsigned_chat> on_unsigned_message_broadcast;
-        base_objects::events::event<personal<unsigned_chat>> on_unsigned_message;
     }
 
     auto& get_storage() {
@@ -55,12 +20,12 @@ namespace copper_server::api::players {
         return get_storage().online_players();
     }
 
-    base_objects::client_data_holder allocate_special_player(const std::function<void(base_objects::SharedClientData&)>& callback) {
+    base_objects::client_data_holder allocate_special_player(const std::function<void(base_objects::SharedClientData&, base_objects::network::response&&)>& callback) {
         return get_storage().allocate_special_player(callback);
     }
 
-    base_objects::client_data_holder allocate_player() {
-        return get_storage().allocate_player();
+    base_objects::client_data_holder allocate_player(api::network::tcp::session* session) {
+        return get_storage().allocate_player(session);
     }
 
     size_t size() {
@@ -89,6 +54,10 @@ namespace copper_server::api::players {
 
     void remove_player(const std::string& player) {
         get_storage().remove_player(player);
+    }
+
+    base_objects::client_data_holder get_player(base_objects::SharedClientData& player) {
+        return get_storage().get_player(player);
     }
 
     base_objects::client_data_holder get_player(const std::string& player) {

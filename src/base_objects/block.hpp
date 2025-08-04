@@ -369,6 +369,10 @@ namespace copper_server {
                 return *general_block_data_.at(general_id);
             }
 
+            static static_block_data& get_block_entity(int32_t block_entity_id) {
+                return *block_entity_data_.at(block_entity_id);
+            }
+
             static block make_block(const std::string& name) {
                 return block(get_block(name).default_state);
             }
@@ -383,6 +387,7 @@ namespace copper_server {
             static std::unordered_map<std::string, std::shared_ptr<static_block_data>> named_full_block_data;
             static list_array<std::shared_ptr<static_block_data>> full_block_data_;
             static list_array<std::shared_ptr<static_block_data>> general_block_data_;
+            static list_array<std::shared_ptr<static_block_data>> block_entity_data_;
         };
 
         // clang-format off

@@ -5,6 +5,7 @@
 #include <src/base_objects/chat.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/base_objects/float_provider.hpp>
+#include <src/base_objects/id_registry.hpp>
 #include <src/base_objects/number_provider.hpp>
 #include <src/base_objects/particle_data.hpp>
 #include <src/base_objects/position.hpp>
@@ -43,18 +44,18 @@ namespace copper_server {
                 };
 
                 Icon icon;
-                std::string title;
+                Chat title;
                 std::string frame;
                 std::string background;
-                std::string description;
+                Chat description;
                 bool show_toast;
                 bool announce_to_chat;
                 bool hidden;
             };
 
             struct Rewards {
-                std::vector<std::string> recipes;
-                std::vector<std::string> loot;
+                std::vector<base_objects::id_recipe> recipes;
+                std::vector<base_objects::id_loot_table> loot;
                 int32_t experience = 0;
                 std::string function;
             };
@@ -70,14 +71,15 @@ namespace copper_server {
 
         struct JukeboxSong {
             struct custom {
-                std::string sound_id; //resource location
+                base_objects::id_sound_event sound_id;
                 std::optional<float> fixed_range;
             };
 
-            std::variant<std::string, custom> sound_event;
+            std::variant<base_objects::id_sound_event, custom> sound_event;
             int32_t comparator_output;
             int32_t length_in_seconds;
             Chat description;
+
             uint32_t id;
             bool send_via_network_body = true;
         };
@@ -103,7 +105,7 @@ namespace copper_server {
         struct Biome {
             struct Particle {
                 struct {
-                    std::string type;
+                    base_objects::id_particle_type type;
                     enbt::value options;
                 } options;
 
@@ -111,24 +113,24 @@ namespace copper_server {
             };
 
             struct AmbientSound {
-                std::string sound;
+                base_objects::id_sound_event sound;
                 float range;
             };
 
             struct MoodSound {
-                std::string sound;
+                base_objects::id_sound_event sound;
                 int32_t tick_delay = 6000;
                 int32_t block_search_extent = 8;
                 double offset = 2.0;
             };
 
             struct AdditionsSound {
-                std::string sound;
+                base_objects::id_sound_event sound;
                 double tick_chance;
             };
 
             struct Music {
-                std::string sound;
+                base_objects::id_sound_event sound;
                 int32_t min_delay = 12000;
                 int32_t max_delay = 24000;
                 bool replace_current_music = true;
@@ -136,7 +138,7 @@ namespace copper_server {
             };
 
             struct SpawnersValue {
-                std::string type;
+                base_objects::id_sound_event type;
                 uint32_t max_count;
                 uint32_t min_count;
                 uint32_t weight;
@@ -289,12 +291,12 @@ namespace copper_server {
         };
 
         struct WolfSoundVariant {
-            std::string ambient_sound;
-            std::string death_sound;
-            std::string growl_sound;
-            std::string hurt_sound;
-            std::string pant_sound;
-            std::string whine_sound;
+            base_objects::id_sound_event ambient_sound;
+            base_objects::id_sound_event death_sound;
+            base_objects::id_sound_event growl_sound;
+            base_objects::id_sound_event hurt_sound;
+            base_objects::id_sound_event pant_sound;
+            base_objects::id_sound_event whine_sound;
 
             uint32_t id;
             bool allow_override = false;
@@ -323,7 +325,12 @@ namespace copper_server {
         };
 
         struct Instrument {
-            std::variant<std::string, base_objects::component::inner::sound_extended> sound_event;
+            struct custom {
+                base_objects::id_sound_event sound_name;
+                std::optional<float> fixed_range;
+            };
+
+            std::variant<base_objects::id_sound_event, custom> sound_event;
             float use_duration;
             float range;
             Chat description;
@@ -338,8 +345,8 @@ namespace copper_server {
         struct enchantment {
             Chat description;
             std::variant<std::string, std::vector<std::string>, std::nullptr_t> exclusive_set;
-            std::variant<std::string, std::vector<std::string>> supported_items;
-            std::variant<std::string, std::vector<std::string>> primary_items;
+            std::variant<base_objects::id_item, std::vector<base_objects::id_item>> supported_items;
+            std::variant<base_objects::id_item, std::vector<base_objects::id_item>> primary_items;
             std::vector<std::string> slots;
             std::unordered_map<std::string, enbt::value> effects; //TODO create api for custom effects
 
@@ -361,6 +368,13 @@ namespace copper_server {
             bool send_via_network_body = true;
         };
 
+        struct enchantment_provider {
+            enbt::compound data;
+
+            uint32_t id;
+            bool send_via_network_body = true;
+        };
+
         struct effect {
             std::string name;
             uint32_t id;
@@ -369,7 +383,8 @@ namespace copper_server {
         struct potion {
             std::string name;
             uint32_t id;
-            std::vector<uint32_t> effects;
+            std::vector<base_objects::id_mob_effect> effects;
+            std::unordered_map<base_objects::id_item, base_objects::id_potion> recipe;
         };
 
         struct item_modifier {
@@ -389,6 +404,7 @@ namespace copper_server {
             std::string type; //default: generic // used to filter loot context
             std::optional<std::string> random_sequence;
 
+            uint32_t id;
             bool send_via_network_body = true;
         };
 
@@ -661,7 +677,8 @@ namespace copper_server {
 
         extern std::unordered_map<std::string, enchantment> enchantments;
         extern list_array<decltype(enchantments)::iterator> enchantments_cache;
-        extern std::unordered_map<std::string, enbt::compound> enchantment_providers;
+        extern std::unordered_map<std::string, enchantment_provider> enchantment_providers;
+        extern list_array<decltype(enchantment_providers)::iterator> enchantment_providers_cache;
 
         extern std::unordered_map<std::string, loot_table_item> loot_table;
         extern list_array<decltype(loot_table)::iterator> loot_table_cache;

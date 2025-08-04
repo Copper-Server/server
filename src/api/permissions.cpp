@@ -9,7 +9,7 @@ namespace copper_server::api::permissions {
         perm = &manager;
     }
 
-    bool has_rights(const std::string& action_name, const base_objects::client_data_holder& client) {
+    bool has_rights(const std::string& action_name, const base_objects::SharedClientData& client) {
         if (perm == nullptr)
             return true;
         return perm->has_rights(action_name, client);
@@ -19,6 +19,12 @@ namespace copper_server::api::permissions {
         if (perm == nullptr)
             return true;
         return perm->has_action(action_name);
+    }
+
+    bool has_action_limits(const std::string& action_name) {
+        if (perm == nullptr)
+            return true;
+        return perm->has_action_limits(action_name);
     }
 
     bool has_permission(const std::string& permission_name) {

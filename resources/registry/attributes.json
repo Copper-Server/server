@@ -7,6 +7,7 @@
   "minecraft:block_break_speed": 1.0,
   "minecraft:block_interaction_range": 4.5,
   "minecraft:burning_time": 1.0,
+  "minecraft:camera_distance": 4.0,
   "minecraft:explosion_knockback_resistance": 0.0,
   "minecraft:entity_interaction_range": 3.0,
   "minecraft:fall_damage_multiplier": 1.0,
@@ -30,5 +31,7 @@
   "minecraft:submerged_mining_speed": 0.2,
   "minecraft:sweeping_damage_ratio": 0.0,
   "minecraft:tempt_range": 10.0,
-  "minecraft:water_movement_efficiency": 0.0
+  "minecraft:water_movement_efficiency": 0.0,
+  "minecraft:waypoint_transmit_range": 0.0,
+  "minecraft:waypoint_receive_range": 0.0
 }

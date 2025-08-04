@@ -22,7 +22,7 @@ namespace copper_server::base_objects {
     };
 
     struct command_context {
-        client_data_holder executor;
+        SharedClientData& executor;
         enbt::compound other_data;
         //for player, position, rotation, motion, and world_id automatically copied to other_data
         //command result must be set in other_data at "result" value
@@ -30,13 +30,13 @@ namespace copper_server::base_objects {
         void apply_executor_data();
 
         command_context(const client_data_holder& executor, bool apply_data = true)
-            : executor(executor) {
+            : executor(*executor) {
             if (apply_data)
                 apply_executor_data();
         }
 
-        command_context(client_data_holder&& executor, bool apply_data = true)
-            : executor(std::move(executor)) {
+        command_context(SharedClientData& executor, bool apply_data = true)
+            : executor(executor) {
             if (apply_data)
                 apply_executor_data();
         }

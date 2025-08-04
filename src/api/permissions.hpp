@@ -5,14 +5,9 @@
 #include <src/storage/permissions_manager.hpp>
 
 namespace copper_server::api::permissions {
-    template <class T>
-    struct event_data {
-        T data;
-        base_objects::client_data_holder client_data;
-    };
-
-    bool has_rights(const std::string& action_name, const base_objects::client_data_holder& client);
+    bool has_rights(const std::string& action_name, const base_objects::SharedClientData& client);
     bool has_action(const std::string& action_name);
+    bool has_action_limits(const std::string& action_name);
     bool has_permission(const std::string& permission_name);
     bool has_group(const std::string& group_name);
 

@@ -117,7 +117,6 @@ namespace copper_server::base_objects::network {
     };
 
     using plugin_response = std::optional<response>;
-
 }
 
 #endif /* SRC_BASE_OBJECTS_NETWORK_RESPONSE */

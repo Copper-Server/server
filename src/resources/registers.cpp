@@ -124,6 +124,8 @@ namespace copper_server::resources {
         damageTypes.clear();
         bannerPatterns.clear();
         paintingVariants.clear();
+        enchantments.clear();
+        enchantment_providers.clear();
         instruments.clear();
         biomes_cache.clear();
         biomes_cache.clear();
@@ -141,6 +143,8 @@ namespace copper_server::resources {
         damageTypes_cache.clear();
         bannerPatterns_cache.clear();
         paintingVariants_cache.clear();
+        enchantments_cache.clear();
+        enchantment_providers_cache.clear();
         instruments_cache.clear();
         api::tags::loading_stage_begin();
     }
@@ -161,6 +165,8 @@ namespace copper_server::resources {
         id_assigner(damageTypes, damageTypes_cache);
         id_assigner(bannerPatterns, bannerPatterns_cache);
         id_assigner(paintingVariants, paintingVariants_cache);
+        id_assigner(enchantments, enchantments_cache);
+        id_assigner(enchantment_providers, enchantment_providers_cache);
         id_assigner(instruments, instruments_cache);
         id_assigner(jukebox_songs, jukebox_songs_cache);
         api::tags::loading_stage_end();
@@ -813,13 +819,13 @@ namespace copper_server::resources {
                 auto recipes_js = js_array::get_array(rewards_js["recipes"]);
                 advancement.rewards.recipes.reserve(rewards_js.size());
                 for (auto&& req : recipes_js)
-                    advancement.rewards.recipes.push_back(req);
+                    advancement.rewards.recipes.push_back((std::string)req);
             }
             if (rewards_js.contains("loot")) {
                 auto loot_js = js_array::get_array(rewards_js["loot"]);
                 advancement.rewards.loot.reserve(rewards_js.size());
                 for (auto&& req : loot_js)
-                    advancement.rewards.loot.push_back(req);
+                    advancement.rewards.loot.push_back((std::string)req);
             }
             if (rewards_js.contains("experience"))
                 advancement.rewards.experience = rewards_js["experience"];
@@ -1133,10 +1139,10 @@ namespace copper_server::resources {
             type.supported_items = type_js.at("supported_items");
         else {
             auto supported_items_js = js_array::get_array(type_js.at("supported_items"));
-            std::vector<std::string> supported_items;
+            std::vector<base_objects::id_item> supported_items;
             supported_items.reserve(supported_items_js.size());
             for (auto&& set : supported_items_js)
-                supported_items.push_back(set);
+                supported_items.push_back((std::string)set);
             type.supported_items = std::move(supported_items);
         }
         if (type_js.contains("primary_items")) {
@@ -1144,10 +1150,10 @@ namespace copper_server::resources {
                 type.primary_items = type_js.at("primary_items");
             else {
                 auto primary_items_js = js_array::get_array(type_js.at("primary_items"));
-                std::vector<std::string> primary_items;
+                std::vector<base_objects::id_item> primary_items;
                 primary_items.reserve(primary_items_js.size());
                 for (auto&& set : primary_items_js)
-                    primary_items.push_back(set);
+                    primary_items.push_back((std::string)set);
                 type.primary_items = std::move(primary_items);
             }
         }
@@ -1178,7 +1184,7 @@ namespace copper_server::resources {
 
     void load_file_enchantment_provider(boost::json::object& type_js, const std::string& id, bool send_via_network_body = true) {
         check_conflicts(enchantment_providers, id, "enchantment providers");
-        enchantment_providers[id] = util::conversions::json::from_json(type_js);
+        enchantment_providers[id].data = util::conversions::json::from_json(type_js);
     }
 
     void load_file_instrument(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
@@ -1192,7 +1198,7 @@ namespace copper_server::resources {
             type.sound_event = (std::string)type_js.at("sound_event");
         } else {
             auto sound_event = js_object::get_object(type_js.at("sound_event"));
-            type.sound_event = base_objects::component::inner::sound_extended{.sound_name = sound_event.at("sound_name"), .fixed_range = sound_event.contains("fixed_range") ? std::optional<float>(sound_event.at("fixed_range")) : std::nullopt};
+            type.sound_event = Instrument::custom{.sound_name = sound_event.at("sound_name"), .fixed_range = sound_event.contains("fixed_range") ? std::optional<float>(sound_event.at("fixed_range")) : std::nullopt};
         }
         instruments[id] = std::move(type);
     }
@@ -1797,13 +1803,16 @@ namespace copper_server::resources {
         auto parsed = boost::json::parse(resources::registry::items);
 
         for (auto&& [name, decl] : parsed.as_object()) {
-            base_objects::static_slot_data slot_data;
-            slot_data.id = name;
-            std::unordered_map<std::string, base_objects::component::unified> components;
-            for (auto& [component_name, value] : decl.as_object().at("components").as_object())
-                components[component_name] = base_objects::component::parse_component(component_name, conversions::json::from_json(value));
-            slot_data.default_components = std::move(components);
-            base_objects::slot_data::add_slot_data(std::move(slot_data));
+            base_objects::static_slot_data slot;
+            slot.id = name;
+            std::unordered_map<int32_t, base_objects::component> components;
+            for (auto& [component_name, value] : decl.as_object().at("components").as_object()) {
+                auto component = base_objects::component::parse_component(component_name, conversions::json::from_json(value));
+                auto id = component.get_id();
+                components[id] = std::move(component);
+            }
+            slot.default_components = std::move(components);
+            base_objects::slot_data::add_slot_data(std::move(slot));
         }
     }
 
@@ -1819,7 +1828,7 @@ namespace copper_server::resources {
 
             it.second["proto_invert"] = std::move(invert);
         }
-        registers::current_protocol_id = 770;
+        registers::current_protocol_id = 772;
         registers::current_protocol_registers = std::move(res);
     }
 
@@ -2092,10 +2101,24 @@ namespace copper_server::resources {
                 }
             }
         }
+
         {
-            auto current_potion = registers::current_protocol_registers.at("minecraft:potion").at("entries").as_compound();
-            for (auto& [name, decl] : current_potion)
-                registers::potions[name] = potion{name, (uint32_t)decl.at("protocol_id")};
+            {
+                auto parsed = boost::json::parse(resources::registry::potion);
+                for (auto&& [name, decl] : parsed.as_object()) {
+                    auto checked_decl = decl.as_object();
+                    auto full_name = "minecraft:" + (std::string)name;
+                    std::vector<base_objects::id_mob_effect> effects;
+                    for (auto&& item : checked_decl.at("effects").as_array())
+                        effects.push_back(item.to_number<uint32_t>());
+
+                    registers::potions[full_name] = potion{
+                        .name = full_name,
+                        .id = checked_decl.at("id").to_number<uint32_t>(),
+                        .effects = std::move(effects)
+                    };
+                }
+            }
             {
                 registers::potions_cache.resize(registers::potions.size());
                 auto it = registers::potions.begin();
@@ -2103,6 +2126,16 @@ namespace copper_server::resources {
                 while (it != end) {
                     registers::potions_cache.at(it->second.id) = it;
                     ++it;
+                }
+            }
+            {
+                auto parsed = boost::json::parse(resources::registry::potion_recipes);
+                for (auto& decl : parsed.as_array()) {
+                    auto& obj_decl = decl.as_object();
+                    uint32_t input = obj_decl.at("input").to_number<uint32_t>();
+                    uint32_t item = obj_decl.at("item").to_number<uint32_t>();
+                    uint32_t output = obj_decl.at("output").to_number<uint32_t>();
+                    registers::potions_cache.at(input)->second.recipe[item] = output;
                 }
             }
         }
@@ -2121,33 +2154,38 @@ namespace copper_server::resources {
                 }
             }
         }
-        base_objects::entity_data::initialize_entities();
     }
 
     void __initialization__versions_post() {
     }
 
     void initialize() {
-        initialize_entities();
-        load_blocks();
+        prepare_versions();
         auto parsed_items = boost::json::parse(resources::registry::items);
         {
             for (auto&& [name, decl] : parsed_items.as_object()) {
-                base_objects::static_slot_data slot_data;
-                slot_data.id = name;
-                base_objects::slot_data::add_slot_data(std::move(slot_data));
+                base_objects::static_slot_data slot;
+                slot.id = "minecraft:" + std::string(name);
+                base_objects::slot_data::add_slot_data(std::move(slot));
             }
         }
-        prepare_built_in_pack();
-        prepare_versions();
         __initialization__versions_inital();
+        load_blocks();
+        initialize_entities();
+        prepare_built_in_pack();
+        base_objects::entity_data::initialize_entities();
         {
             //complete initialization
+
             for (auto&& [name, decl] : parsed_items.as_object()) {
-                std::unordered_map<std::string, base_objects::component::unified> components;
-                for (auto& [component_name, value] : decl.as_object().at("components").as_object())
-                    components[name] = base_objects::component::parse_component(component_name, conversions::json::from_json(value));
-                base_objects::slot_data::get_slot_data(name).default_components = std::move(components);
+
+                std::unordered_map<int32_t, base_objects::component> components;
+                for (auto& [component_name, value] : decl.as_object().at("components").as_object()) {
+                    auto component = base_objects::component::parse_component(component_name, conversions::json::from_json(value));
+                    auto id = component.get_id();
+                    components[id] = std::move(component);
+                }
+                base_objects::slot_data::get_slot_data("minecraft:" + std::string(name)).default_components = std::move(components);
             }
         }
         __initialization__versions_post();

@@ -1,8 +1,6 @@
 #include <library/list_array.hpp>
-#include <src/api/new_packets.hpp>
-#include <src/api/packets.hpp>
+#include <src/api/client.hpp>
 #include <src/api/players.hpp>
-#include <src/api/protocol.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/log.hpp>
 #include <src/plugin/main.hpp>
@@ -10,212 +8,43 @@
 
 namespace copper_server::build_in_plugins {
     //provides and manages chat system
-    class CommunicationCorePlugin : public PluginAutoRegister<"communication_core", CommunicationCorePlugin> {
-    public:
-        CommunicationCorePlugin() {}
-
+    struct CommunicationCorePlugin : public PluginAutoRegister<"base/communication_core", CommunicationCorePlugin> {
         void OnLoad(const PluginRegistrationPtr& self) override {
-            register_event(api::players::calls::on_player_chat, [this](const api::players::player_chat& chat) {
-                api::players::iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state::play, [&chat](base_objects::SharedClientData& client) {
-                    //client << api::new_packets::client_bound::play::player_chat{
-                    //    .
-                    //};
-                    client.sendPacket(
-                        api::packets::play::playerChatMessage(
-                            client,
-                            chat.sender->data->uuid,
-                            0,
-                            chat.signature,
-                            chat.message,
-                            std::chrono::milliseconds(std::chrono::seconds(std::time(NULL))).count(),
-                            chat.salt,
-                            chat.previous_messages,
-                            std::nullopt,
-                            0,
-                            {},
-                            chat.chat_type_id,
-                            chat.sender_decorated_name.empty() ? chat.sender->name : chat.sender_decorated_name,
-                            std::nullopt
-                        )
-                    );
-                    return false;
-                });
+            register_event(api::players::calls::on_player_kick, base_objects::events::priority::low, [this](const api::players::personal<Chat>& message) {
+                switch (message.player->packets_state.state) {
+                case base_objects::SharedClientData::packets_state_t::protocol_state::handshake:
+                case base_objects::SharedClientData::packets_state_t::protocol_state::status:
+                    message.player->sendPacket(base_objects::network::response::disconnect());
+                    break;
+                case base_objects::SharedClientData::packets_state_t::protocol_state::login:
+                    *message.player << api::client::login::login_disconnect{.reason = message.data.ToStr()};
+                    break;
+                case base_objects::SharedClientData::packets_state_t::protocol_state::configuration:
+                    *message.player << api::client::configuration::disconnect{.reason = message.data};
+                    break;
+                case base_objects::SharedClientData::packets_state_t::protocol_state::play:
+                    *message.player << api::client::configuration::disconnect{.reason = message.data};
+                    break;
+                }
                 return false;
             });
 
-            register_event(api::players::calls::on_player_personal_chat, [this](const api::players::player_personal_chat& chat) {
-                chat.receiver->sendPacket(
-                    api::packets::play::playerChatMessage(
-                        *chat.receiver,
-                        chat.sender->data->uuid,
-                        0,
-                        chat.signature,
-                        chat.message,
-                        std::chrono::milliseconds(std::chrono::seconds(std::time(NULL))).count(),
-                        chat.salt,
-                        chat.previous_messages,
-                        std::nullopt,
-                        0,
-                        {},
-                        chat.receiver_chat_type_id,
-                        chat.sender_decorated_name.empty() ? chat.sender->name : chat.sender_decorated_name,
-                        chat.receiver_decorated_name.empty() ? chat.receiver->name : chat.receiver_decorated_name
-                    )
-                );
-
-                chat.sender->sendPacket(
-                    api::packets::play::playerChatMessage(
-                        *chat.sender,
-                        chat.sender->data->uuid,
-                        0,
-                        chat.signature,
-                        chat.message,
-                        std::chrono::milliseconds(std::chrono::seconds(std::time(NULL))).count(),
-                        chat.salt,
-                        chat.previous_messages,
-                        std::nullopt,
-                        0,
-                        {},
-                        chat.chat_type_id,
-                        chat.sender_decorated_name.empty() ? chat.sender->name : chat.sender_decorated_name,
-                        chat.receiver_decorated_name.empty() ? chat.receiver->name : chat.receiver_decorated_name
-                    )
-                );
-                return false;
-            });
-
-
-            register_event(api::players::calls::on_system_message_broadcast, [this](const Chat& message) {
-                api::players::iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state::play, [&message](base_objects::SharedClientData& client) {
-                    client << api::new_packets::client_bound::play::system_chat{
-                        .content = message,
-                        .is_overlay = false
-                    };
-                    return false;
-                });
-                return false;
-            });
-            register_event(api::players::calls::on_system_message, [this](const api::players::personal<Chat>& message) {
-                *message.player << api::new_packets::client_bound::play::system_chat{
-                    .content = message.data,
-                    .is_overlay = false
-                };
-                return false;
-            });
-
-            register_event(api::players::calls::on_system_message_overlay_broadcast, [this](const Chat& message) {
-                api::players::iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state::play, [&message](base_objects::SharedClientData& client) {
-                    client << api::new_packets::client_bound::play::system_chat{
-                        .content = message,
-                        .is_overlay = true
-                    };
-                    return false;
-                });
-                return false;
-            });
-            register_event(api::players::calls::on_system_message_overlay, [this](const api::players::personal<Chat>& message) {
-                *message.player << api::new_packets::client_bound::play::system_chat{
-                    .content = message.data,
-                    .is_overlay = true
-                };
-                return false;
-            });
-
-            register_event(api::players::calls::on_player_kick, [this](const api::players::personal<Chat>& message) {
-                *message.player << api::new_packets::client_bound::play::disconnect{
-                    .reason = message.data
-                };
-                return false;
-            });
-
-            register_event(api::players::calls::on_player_ban, [this](const api::players::personal<Chat>& message) {
-                *message.player << api::new_packets::client_bound::play::disconnect{
-                    .reason = message.data
-                };
-                api::players::remove_player(message.player);
-                return false;
-            });
-
-            register_event(api::players::calls::on_action_bar_message_broadcast, [this](const Chat& message) {
-                api::players::iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state::play, [&message](base_objects::SharedClientData& client) {
-                    client.sendPacket(api::packets::play::setActionBarText(client, message));
-                    return false;
-                });
-                return false;
-            });
-            register_event(api::players::calls::on_action_bar_message, [this](const api::players::personal<Chat>& message) {
-                message.player->sendPacket(api::packets::play::setActionBarText(*message.player, message.data));
-                return false;
-            });
-
-            register_event(api::players::calls::on_title_message_broadcast, [this](const Chat& message) {
-                api::players::iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state::play, [&message](base_objects::SharedClientData& client) {
-                    client.sendPacket(api::packets::play::setTitleText(client, message));
-                    return false;
-                });
-                return false;
-            });
-            register_event(api::players::calls::on_title_message, [this](const api::players::personal<Chat>& message) {
-                message.player->sendPacket(api::packets::play::setTitleText(*message.player, message.data));
-                return false;
-            });
-
-            register_event(api::players::calls::on_title_clear_broadcast, [this](bool to_reset) {
-                api::players::iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state::play, [&to_reset](base_objects::SharedClientData& client) {
-                    client.sendPacket(api::packets::play::clearTitles(client, to_reset));
-                    return false;
-                });
-                return false;
-            });
-            register_event(api::players::calls::on_title_clear, [this](const api::players::personal<bool>& message) {
-                message.player->sendPacket(api::packets::play::clearTitles(*message.player, message.data));
-                return false;
-            });
-
-
-            register_event(api::players::calls::on_subtitle_message_broadcast, [this](const Chat& message) {
-                api::players::iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state::play, [&message](base_objects::SharedClientData& client) {
-                    client.sendPacket(api::packets::play::setSubtitleText(client, message));
-                    return false;
-                });
-                return false;
-            });
-            register_event(api::players::calls::on_subtitle_message, [this](const api::players::personal<Chat>& message) {
-                message.player->sendPacket(api::packets::play::setSubtitleText(*message.player, message.data));
-                return false;
-            });
-
-            register_event(api::players::calls::on_title_times_broadcast, [this](const api::players::titles_times& times) {
-                api::players::iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state::play, [&times](base_objects::SharedClientData& client) {
-                    client.sendPacket(api::packets::play::setTitleAnimationTimes(client, times.fade_in, times.stay, times.fade_out));
-                    return false;
-                });
-                return false;
-            });
-            register_event(api::players::calls::on_title_times, [this](const api::players::personal<api::players::titles_times>& times) {
-                times.player->sendPacket(api::packets::play::setTitleAnimationTimes(*times.player, times.data.fade_in, times.data.stay, times.data.fade_out));
-                return false;
-            });
-
-            register_event(api::players::calls::on_unsigned_message_broadcast, [this](const api::players::unsigned_chat& message) {
-                api::players::iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state::play, [&message](base_objects::SharedClientData& client) {
-                    client << api::new_packets::client_bound::play::disguised_chat{
-                        .message = message.message,
-                        .type = message.chat_type_id,
-                        .sender = message.sender_name,
-                        .target_name = message.receiver_name
-                    };
-                    return false;
-                });
-                return false;
-            });
-            register_event(api::players::calls::on_unsigned_message, [this](const api::players::personal<api::players::unsigned_chat>& message) {
-                *message.player << api::new_packets::client_bound::play::disguised_chat{
-                    .message = message.data.message,
-                    .type = message.data.chat_type_id,
-                    .sender = message.data.sender_name,
-                    .target_name = message.data.receiver_name
-                };
+            register_event(api::players::calls::on_player_ban, base_objects::events::priority::low, [this](const api::players::personal<Chat>& message) {
+                switch (message.player->packets_state.state) {
+                case base_objects::SharedClientData::packets_state_t::protocol_state::handshake:
+                case base_objects::SharedClientData::packets_state_t::protocol_state::status:
+                    message.player->sendPacket(base_objects::network::response::disconnect());
+                    break;
+                case base_objects::SharedClientData::packets_state_t::protocol_state::login:
+                    *message.player << api::client::login::login_disconnect{.reason = message.data.ToStr()};
+                    break;
+                case base_objects::SharedClientData::packets_state_t::protocol_state::configuration:
+                    *message.player << api::client::configuration::disconnect{.reason = message.data};
+                    break;
+                case base_objects::SharedClientData::packets_state_t::protocol_state::play:
+                    *message.player << api::client::configuration::disconnect{.reason = message.data};
+                    break;
+                }
                 return false;
             });
             log::info("Communication Core", "chat handlers registered.");
@@ -229,7 +58,11 @@ namespace copper_server::build_in_plugins {
             browser.add_child("broadcast")
                 .add_child({"<message>", "broadcast <message>", "Broadcast a message to all players"}, cmd_pred_string::greedy_phrase)
                 .set_callback("command.broadcast", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                    api::players::calls::on_system_message_broadcast(Chat::parseToChat(std::get<pred_string>(args[0]).value));
+                    auto msg = Chat::parseToChat(std::get<pred_string>(args[0]).value);
+                    api::players::iterate_online([&msg](base_objects::SharedClientData& context) {
+                        context << api::client::play::system_chat{.content = msg};
+                        return false;
+                    });
                 });
             browser.add_child("msg")
                 .add_child("<target>", cmd_pred_string::quotable_phrase)
@@ -237,26 +70,34 @@ namespace copper_server::build_in_plugins {
                 .set_callback("command.msg", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                     auto target = api::players::get_player(std::get<pred_string>(args[0]).value);
                     if (!target) {
-                        api::players::calls::on_system_message({context.executor, "Player not found"});
+                        context.executor << api::client::play::system_chat{.content = "Player not found"};
                         return;
                     }
                     Chat message = Chat::parseToChat(std::get<pred_string>(args[1]).value);
-                    api::players::calls::on_system_message({context.executor, {"To " + target->name + ": ", message}});
-                    api::players::calls::on_system_message({target, {"From " + context.executor->name + ": ", message}});
+                    context.executor << api::client::play::system_chat{.content = {"To " + target->name + ": ", message}};
+                    *target << api::client::play::system_chat{.content = {"From " + context.executor.name + ": ", message}};
                 });
             browser.add_child("chat")
                 .add_child({"<message>", "chat <message>", "Send message to chat"}, cmd_pred_string::greedy_phrase)
                 .set_callback("command.chat", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                    api::players::calls::on_system_message_broadcast({"[" + context.executor->name + "] ", Chat::parseToChat(std::get<pred_string>(args[0]).value)});
+                    auto msg = Chat{"[" + context.executor.name + "] ", Chat::parseToChat(std::get<pred_string>(args[0]).value)};
+                    api::players::iterate_online([&msg](base_objects::SharedClientData& context) {
+                        context << api::client::play::system_chat{.content = msg};
+                        return false;
+                    });
                 });
             browser.add_child("whoami")
                 .set_callback("command.whoami", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                    api::players::calls::on_system_message({context.executor, "You are " + context.executor->name});
+                    context.executor << api::client::play::system_chat{.content = "You are " + context.executor.name};
                 });
             browser.add_child("tellraw")
                 .add_child({"<message>", "tellraw <message>", "Broadcast raw message for everyone."}, cmd_pred_string::greedy_phrase)
                 .set_callback("command.tellraw", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                    api::players::calls::on_system_message_broadcast(Chat::fromStr(std::get<pred_string>(args[0]).value));
+                    auto msg = Chat::fromStr(std::get<pred_string>(args[0]).value);
+                    api::players::iterate_online([&msg](base_objects::SharedClientData& context) {
+                        context << api::client::play::system_chat{.content = msg};
+                        return false;
+                    });
                 });
             {
                 auto title = browser

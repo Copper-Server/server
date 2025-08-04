@@ -2,7 +2,7 @@
 #include <src/storage/world_data.hpp>
 
 namespace copper_server::build_in_plugins::world_generators {
-    class DefaultGeneratorImpl : public storage::chunk_generator {
+    struct default_generator : public storage::chunk_generator {
         enbt::compound generate_chunk(storage::world_data& world, int64_t chunk_x, int64_t chunk_z) override {
             enbt::fixed_array subchunks;
             for (size_t i = 0; i < world.get_chunk_y_count(); i++)
@@ -36,12 +36,9 @@ namespace copper_server::build_in_plugins::world_generators {
         }
     };
 
-    class DefaultGen : public PluginAutoRegister<"default_world_generator", DefaultGen> {
-    public:
-        DefaultGen() {}
-
+    struct default_gen : public PluginAutoRegister<"world_generators/default", default_gen> {
         void OnRegister(const PluginRegistrationPtr& self) override {
-            storage::chunk_generator::register_it("default", new DefaultGeneratorImpl());
+            storage::chunk_generator::register_it("default", new default_generator());
         }
     };
 }

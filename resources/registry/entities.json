@@ -209,21 +209,21 @@
         "activity": "idle",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsNearestVisibleWantedItemTask$$Lambda/0x000001c2a9ffe530@390b51ec] * M[Optional[memory=minecraft:look_target]] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:nearest_visible_wanted_item]] * M[Optional[memory=minecraft:item_pickup_cooldown_ticks]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsNearestVisibleWantedItemTask$$Lambda/0x000001d982073b70@51e4f943] * M[Optional[memory=minecraft:look_target]] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:nearest_visible_wanted_item]] * M[Optional[memory=minecraft:item_pickup_cooldown_ticks]])"
         ]
       },
       {
         "activity": "core",
         "priority": 1,
         "tasks": [
-          "FleeTask(MIN_RUN_TIME: 100, MAX_RUN_TIME: 120, HORIZONTAL_RANGE: 5, VERTICAL_RANGE: 4, speed: 2.5, entityToDangerousDamageTypes: net.minecraft.entity.ai.brain.task.FleeTask$$Lambda/0x000001c2a9ffabf0@6a331dd8)"
+          "FleeTask(MIN_RUN_TIME: 100, MAX_RUN_TIME: 120, HORIZONTAL_RANGE: 5, VERTICAL_RANGE: 4, speed: 2.5, entityToDangerousDamageTypes: net.minecraft.entity.ai.brain.task.FleeTask$$Lambda/0x000001d982070000@3301fc1c, pathFinder: net.minecraft.entity.ai.brain.task.FleeTask$$Lambda/0x000001d982070230@6f27f3d2)"
         ]
       },
       {
         "activity": "idle",
         "priority": 1,
         "tasks": [
-          "GiveInventoryToLookTargetTask(COMPLETION_RANGE: 3, ITEM_PICKUP_COOLDOWN_TICKS: 60, lookTargetFunction: net.minecraft.entity.passive.AllayBrain$$Lambda/0x000001c2a9fff078@c240a3a, speed: 2.25)"
+          "GiveInventoryToLookTargetTask(COMPLETION_RANGE: 3, ITEM_PICKUP_COOLDOWN_TICKS: 60, lookTargetFunction: net.minecraft.entity.passive.AllayBrain$$Lambda/0x000001d9820766e8@197f2194, speed: 2.25)"
         ]
       },
       {
@@ -237,7 +237,7 @@
         "activity": "idle",
         "priority": 2,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsLookTargetTask$$Lambda/0x000001c2a9fffb48@6fc3be63] * M[Optional[memory=minecraft:look_target]] * M[Optional[memory=minecraft:walk_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsLookTargetTask$$Lambda/0x000001d9820771b8@7647f457] * M[Optional[memory=minecraft:look_target]] * M[Optional[memory=minecraft:walk_target]])"
         ]
       },
       {
@@ -251,7 +251,7 @@
         "activity": "idle",
         "priority": 3,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001c2aa004a98@47ba63f] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001d98207c228@33cc8371] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
@@ -283,24 +283,24 @@
       "minecraft:nearest_items"
     ],
     "brain_memories": [
-      "minecraft:liked_noteblock",
-      "minecraft:nearest_players",
-      "minecraft:cant_reach_walk_target_since",
-      "minecraft:path",
-      "minecraft:hurt_by",
+      "minecraft:look_target",
       "minecraft:nearest_visible_targetable_players",
       "minecraft:visible_mobs",
-      "minecraft:liked_player",
-      "minecraft:item_pickup_cooldown_ticks",
-      "minecraft:mobs",
-      "minecraft:nearest_visible_player",
-      "minecraft:hurt_by_entity",
-      "minecraft:nearest_visible_wanted_item",
-      "minecraft:walk_target",
-      "minecraft:is_panicking",
-      "minecraft:look_target",
+      "minecraft:nearest_visible_targetable_player",
+      "minecraft:cant_reach_walk_target_since",
       "minecraft:liked_noteblock_cooldown_ticks",
-      "minecraft:nearest_visible_targetable_player"
+      "minecraft:path",
+      "minecraft:nearest_visible_wanted_item",
+      "minecraft:nearest_visible_player",
+      "minecraft:hurt_by",
+      "minecraft:hurt_by_entity",
+      "minecraft:item_pickup_cooldown_ticks",
+      "minecraft:liked_noteblock",
+      "minecraft:walk_target",
+      "minecraft:mobs",
+      "minecraft:liked_player",
+      "minecraft:nearest_players",
+      "minecraft:is_panicking"
     ],
     "inventory_size": 1,
     "attackable": true,
@@ -520,7 +520,7 @@
         "activity": "idle",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001c2aa004a98@149ee95a] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001d98207c228@79254ab3] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
@@ -597,7 +597,7 @@
         "activity": "core",
         "priority": 6,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.passive.ArmadilloBrain$$Lambda/0x000001c2aa011f68@5541c5e5] * M[Absent[memory=minecraft:danger_detected_recently]])"
+          "OneShot(field_40999: C[net.minecraft.entity.passive.ArmadilloBrain$$Lambda/0x000001d98208cf08@20348298] * M[Absent[memory=minecraft:danger_detected_recently]])"
         ]
       }
     ],
@@ -609,22 +609,22 @@
       "minecraft:armadillo_scare_detected"
     ],
     "brain_memories": [
+      "minecraft:look_target",
+      "minecraft:gaze_cooldown_ticks",
+      "minecraft:is_tempted",
+      "minecraft:tempting_player",
+      "minecraft:breed_target",
+      "minecraft:visible_mobs",
+      "minecraft:nearest_visible_adult",
+      "minecraft:danger_detected_recently",
       "minecraft:cant_reach_walk_target_since",
       "minecraft:path",
       "minecraft:hurt_by",
-      "minecraft:nearest_visible_adult",
-      "minecraft:danger_detected_recently",
-      "minecraft:visible_mobs",
-      "minecraft:temptation_cooldown_ticks",
-      "minecraft:mobs",
       "minecraft:hurt_by_entity",
-      "minecraft:breed_target",
+      "minecraft:temptation_cooldown_ticks",
       "minecraft:walk_target",
-      "minecraft:is_panicking",
-      "minecraft:tempting_player",
-      "minecraft:is_tempted",
-      "minecraft:look_target",
-      "minecraft:gaze_cooldown_ticks"
+      "minecraft:mobs",
+      "minecraft:is_panicking"
     ],
     "attackable": true,
     "step_height": 0.6,
@@ -993,14 +993,14 @@
         "activity": "idle",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001c2aa004a98@47e99b1f] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001d98207c228@2f4f00b7] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001c2aa01e638@7c1296b4] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001d982092bc0@32478c1f] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
@@ -1028,21 +1028,21 @@
         "activity": "fight",
         "priority": 1,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RangedApproachTask$$Lambda/0x000001c2aa01eec0@3649ee49] * M[Optional[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RangedApproachTask$$Lambda/0x000001d982093448@7d93a2f6] * M[Optional[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "play_dead",
         "priority": 1,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetTask$$Lambda/0x000001c2aa024238@42f86fa] * M[Value[memory=minecraft:play_dead_ticks]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetTask$$Lambda/0x000001d982096868@57583252] * M[Value[memory=minecraft:play_dead_ticks]])"
         ]
       },
       {
         "activity": "core",
         "priority": 2,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.PlayDeadTimerTask$$Lambda/0x000001c2aa018428@f95c403] * M[Value[memory=minecraft:play_dead_ticks]] * M[Optional[memory=minecraft:hurt_by_entity]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.PlayDeadTimerTask$$Lambda/0x000001d98208b808@c5cab6] * M[Value[memory=minecraft:play_dead_ticks]] * M[Optional[memory=minecraft:hurt_by_entity]])"
         ]
       },
       {
@@ -1056,7 +1056,7 @@
         "activity": "fight",
         "priority": 2,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.MeleeAttackTask$$Lambda/0x000001c2aa01f778@67da5473] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:attack_cooling_down]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.MeleeAttackTask$$Lambda/0x000001d982093d00@e6c89c5] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:attack_cooling_down]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
@@ -1070,22 +1070,22 @@
         "activity": "idle",
         "priority": 3,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001c2aa019910@1e18d567] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.SeekWaterTask$$Lambda/0x000001c2aa01a278@66f89808] * M[Absent[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001d982090000@6e081eec] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.SeekWaterTask$$Lambda/0x000001d982090968@78546bdd] * M[Absent[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 3,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetTask$$Lambda/0x000001c2aa024238@47eced08] * M[Value[memory=minecraft:attack_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetTask$$Lambda/0x000001d982096868@566a8e1b] * M[Value[memory=minecraft:attack_target]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 4,
         "tasks": [
-          "CompositeTask(requiredMemoryState: {minecraft:walk_target=VALUE_ABSENT}, memoriesToForgetWhenStopped: [], order: ORDERED, runMode: TRY_ALL, tasks: ShufflingList[[2:OneShot[C[net.minecraft.entity.ai.brain.task.StrollTask$$Lambda/0x000001c2aa0059f0@2875cda2] * M[Absent[memory=minecraft:walk_target]]], 2:OneShot[C[net.minecraft.entity.ai.brain.task.StrollTask$$Lambda/0x000001c2aa0059f0@5827fae6] * M[Absent[memory=minecraft:walk_target]]], 3:OneShot[C[net.minecraft.entity.ai.brain.task.GoToLookTargetTask$$Lambda/0x000001c2aa006930@2a1a8ed6] * M[Absent[memory=minecraft:walk_target]] * M[Value[memory=minecraft:look_target]]], 5:OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa01b448@2d64ef95]], 5:OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa01b448@2b7a2f46]]]], status: STOPPED)"
+          "CompositeTask(requiredMemoryState: {minecraft:walk_target=VALUE_ABSENT}, memoriesToForgetWhenStopped: [], order: ORDERED, runMode: TRY_ALL, tasks: ShufflingList[[2:OneShot[C[net.minecraft.entity.ai.brain.task.StrollTask$$Lambda/0x000001d98207d180@4b3a5fcd] * M[Absent[memory=minecraft:walk_target]]], 2:OneShot[C[net.minecraft.entity.ai.brain.task.StrollTask$$Lambda/0x000001d98207d180@67094e9f] * M[Absent[memory=minecraft:walk_target]]], 3:OneShot[C[net.minecraft.entity.ai.brain.task.GoToLookTargetTask$$Lambda/0x000001d98207e0c0@69f98d7b] * M[Absent[memory=minecraft:walk_target]] * M[Value[memory=minecraft:look_target]]], 5:OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d982091b38@30d7dd5a]], 5:OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d982091b38@298a38ba]]]], status: STOPPED)"
         ]
       }
     ],
@@ -1097,27 +1097,27 @@
       "minecraft:axolotl_temptations"
     ],
     "brain_memories": [
+      "minecraft:look_target",
+      "minecraft:is_tempted",
+      "minecraft:play_dead_ticks",
+      "minecraft:tempting_player",
+      "minecraft:breed_target",
+      "minecraft:visible_mobs",
+      "minecraft:attack_target",
+      "minecraft:nearest_visible_targetable_player",
+      "minecraft:attack_cooling_down",
+      "minecraft:nearest_visible_adult",
       "minecraft:cant_reach_walk_target_since",
       "minecraft:path",
-      "minecraft:hurt_by",
-      "minecraft:play_dead_ticks",
-      "minecraft:nearest_visible_adult",
-      "minecraft:visible_mobs",
       "minecraft:nearest_attackable",
-      "minecraft:has_hunting_cooldown",
-      "minecraft:attack_cooling_down",
-      "minecraft:mobs",
-      "minecraft:temptation_cooldown_ticks",
       "minecraft:nearest_visible_player",
+      "minecraft:has_hunting_cooldown",
+      "minecraft:hurt_by",
       "minecraft:hurt_by_entity",
-      "minecraft:breed_target",
+      "minecraft:temptation_cooldown_ticks",
+      "minecraft:mobs",
       "minecraft:walk_target",
-      "minecraft:tempting_player",
-      "minecraft:is_tempted",
-      "minecraft:is_panicking",
-      "minecraft:look_target",
-      "minecraft:nearest_visible_targetable_player",
-      "minecraft:attack_target"
+      "minecraft:is_panicking"
     ],
     "max_air": 6000,
     "attackable": true,
@@ -2430,14 +2430,14 @@
         "activity": "idle",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001c2aa019910@26c27975] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001d982090000@5c6659b8] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001c2aa01e638@b7f1d84] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001d982092bc0@52151328] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
@@ -2451,7 +2451,7 @@
         "activity": "idle",
         "priority": 1,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001c2aa019910@607a4b93] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001d982090000@4c8b786f] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
@@ -2504,28 +2504,28 @@
       "minecraft:breeze_attack_entity_sensor"
     ],
     "brain_memories": [
-      "minecraft:nearest_players",
-      "minecraft:cant_reach_walk_target_since",
-      "minecraft:breeze_shoot_recover",
-      "minecraft:path",
-      "minecraft:hurt_by",
-      "minecraft:nearest_visible_targetable_players",
       "minecraft:breeze_jump_target",
-      "minecraft:breeze_leaving_water",
-      "minecraft:visible_mobs",
-      "minecraft:nearest_attackable",
-      "minecraft:breeze_shoot_cooldown",
+      "minecraft:look_target",
       "minecraft:breeze_jump_cooldown",
       "minecraft:breeze_shoot_charging",
-      "minecraft:mobs",
-      "minecraft:hurt_by_entity",
-      "minecraft:nearest_visible_player",
-      "minecraft:walk_target",
-      "minecraft:look_target",
+      "minecraft:breeze_jump_inhaling",
+      "minecraft:nearest_visible_targetable_players",
+      "minecraft:visible_mobs",
       "minecraft:attack_target",
       "minecraft:breeze_shoot",
       "minecraft:nearest_visible_targetable_player",
-      "minecraft:breeze_jump_inhaling"
+      "minecraft:cant_reach_walk_target_since",
+      "minecraft:breeze_shoot_recover",
+      "minecraft:nearest_attackable",
+      "minecraft:path",
+      "minecraft:nearest_visible_player",
+      "minecraft:hurt_by",
+      "minecraft:hurt_by_entity",
+      "minecraft:breeze_leaving_water",
+      "minecraft:breeze_shoot_cooldown",
+      "minecraft:walk_target",
+      "minecraft:mobs",
+      "minecraft:nearest_players"
     ],
     "attackable": true,
     "step_height": 0.6,
@@ -2755,7 +2755,7 @@
         "activity": "idle",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001c2aa004a98@4e1a84a6] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001d98207c228@83168bb] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
@@ -2829,21 +2829,21 @@
       "minecraft:nearest_adult"
     ],
     "brain_memories": [
+      "minecraft:look_target",
+      "minecraft:gaze_cooldown_ticks",
+      "minecraft:is_tempted",
+      "minecraft:tempting_player",
+      "minecraft:breed_target",
+      "minecraft:visible_mobs",
+      "minecraft:nearest_visible_adult",
       "minecraft:cant_reach_walk_target_since",
       "minecraft:path",
       "minecraft:hurt_by",
-      "minecraft:nearest_visible_adult",
-      "minecraft:visible_mobs",
-      "minecraft:temptation_cooldown_ticks",
-      "minecraft:mobs",
       "minecraft:hurt_by_entity",
-      "minecraft:breed_target",
+      "minecraft:temptation_cooldown_ticks",
       "minecraft:walk_target",
-      "minecraft:is_panicking",
-      "minecraft:tempting_player",
-      "minecraft:is_tempted",
-      "minecraft:look_target",
-      "minecraft:gaze_cooldown_ticks"
+      "minecraft:mobs",
+      "minecraft:is_panicking"
     ],
     "attackable": true,
     "step_height": 1.5,
@@ -4374,28 +4374,28 @@
         "activity": "idle",
         "priority": 10,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001c2aa019910@3dfbddd0] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001d982090000@9ee087d] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 10,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RangedApproachTask$$Lambda/0x000001c2aa01eec0@13f7d3bb] * M[Optional[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RangedApproachTask$$Lambda/0x000001d982093448@3326d720] * M[Optional[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 11,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001c2aa004a98@350841f7] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001d98207c228@6152bb46] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 11,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.MeleeAttackTask$$Lambda/0x000001c2aa01f778@4990b225] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:attack_cooling_down]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.MeleeAttackTask$$Lambda/0x000001d982093d00@6638bee8] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:attack_cooling_down]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
@@ -4409,7 +4409,7 @@
         "activity": "fight",
         "priority": 12,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001c2aa01e638@2a66e39a] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001d982092bc0@1fecffb2] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       }
     ],
@@ -4418,18 +4418,18 @@
       "minecraft:nearest_players"
     ],
     "brain_memories": [
-      "minecraft:nearest_players",
-      "minecraft:mobs",
+      "minecraft:look_target",
       "minecraft:cant_reach_walk_target_since",
       "minecraft:path",
       "minecraft:nearest_visible_player",
       "minecraft:nearest_visible_targetable_players",
-      "minecraft:walk_target",
-      "minecraft:look_target",
+      "minecraft:mobs",
       "minecraft:visible_mobs",
-      "minecraft:nearest_visible_targetable_player",
+      "minecraft:walk_target",
       "minecraft:attack_target",
-      "minecraft:attack_cooling_down"
+      "minecraft:nearest_visible_targetable_player",
+      "minecraft:attack_cooling_down",
+      "minecraft:nearest_players"
     ],
     "attackable": true,
     "step_height": 1.0625,
@@ -7333,21 +7333,21 @@
         "activity": "core",
         "priority": 0,
         "tasks": [
-          "FleeTask(MIN_RUN_TIME: 100, MAX_RUN_TIME: 120, HORIZONTAL_RANGE: 5, VERTICAL_RANGE: 4, speed: 2.0, entityToDangerousDamageTypes: net.minecraft.entity.ai.brain.task.FleeTask$$Lambda/0x000001c2a9ffabf0@6a331dd8)"
+          "FleeTask(MIN_RUN_TIME: 100, MAX_RUN_TIME: 120, HORIZONTAL_RANGE: 5, VERTICAL_RANGE: 4, speed: 2.0, entityToDangerousDamageTypes: net.minecraft.entity.ai.brain.task.FleeTask$$Lambda/0x000001d982070000@3301fc1c, pathFinder: net.minecraft.entity.ai.brain.task.FleeTask$$Lambda/0x000001d982070230@6f27f3d2)"
         ]
       },
       {
         "activity": "tongue",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001c2aa01e638@44f9b739] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001d982092bc0@4714900b] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001c2aa004a98@114c15af] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001d98207c228@8142ca8] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])",
           "BreedTask(MAX_RANGE: 3, MIN_BREED_TIME: 60, RUN_TIME: 110, targetType: entity.minecraft.frog, speed: 1.0, approachDistance: 2, DEFAULT_APPROACH_DISTANCE: 2, breedTime: 0)"
         ]
       },
@@ -7355,14 +7355,14 @@
         "activity": "lay_spawn",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001c2aa004a98@6a66c684] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001d98207c228@46c11b8] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "swim",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001c2aa004a98@4921841e] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001d98207c228@6351edcb] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
@@ -7390,21 +7390,21 @@
         "activity": "idle",
         "priority": 1,
         "tasks": [
-          "TemptTask(TEMPTATION_COOLDOWN_TICKS: 100, DEFAULT_STOP_DISTANCE: 2.5, LARGE_ENTITY_STOP_DISTANCE: 3.5, speed: net.minecraft.entity.passive.FrogBrain$$Lambda/0x000001c2aa037960@31f826a3, stopDistanceGetter: net.minecraft.entity.ai.brain.task.TemptTask$$Lambda/0x000001c2aa018880@6d7694fe)"
+          "TemptTask(TEMPTATION_COOLDOWN_TICKS: 100, DEFAULT_STOP_DISTANCE: 2.5, LARGE_ENTITY_STOP_DISTANCE: 3.5, speed: net.minecraft.entity.passive.FrogBrain$$Lambda/0x000001d9820ad560@29fea0b2, stopDistanceGetter: net.minecraft.entity.ai.brain.task.TemptTask$$Lambda/0x000001d98208bc60@4dfb95e4, useEyeHeight: false)"
         ]
       },
       {
         "activity": "lay_spawn",
         "priority": 1,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001c2aa019910@2832fc3a] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001d982090000@21280625] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
         "activity": "swim",
         "priority": 1,
         "tasks": [
-          "TemptTask(TEMPTATION_COOLDOWN_TICKS: 100, DEFAULT_STOP_DISTANCE: 2.5, LARGE_ENTITY_STOP_DISTANCE: 3.5, speed: net.minecraft.entity.passive.FrogBrain$$Lambda/0x000001c2aa038b50@2dccc012, stopDistanceGetter: net.minecraft.entity.ai.brain.task.TemptTask$$Lambda/0x000001c2aa018880@6d7694fe)"
+          "TemptTask(TEMPTATION_COOLDOWN_TICKS: 100, DEFAULT_STOP_DISTANCE: 2.5, LARGE_ENTITY_STOP_DISTANCE: 3.5, speed: net.minecraft.entity.passive.FrogBrain$$Lambda/0x000001d9820ae700@1450e2cf, stopDistanceGetter: net.minecraft.entity.ai.brain.task.TemptTask$$Lambda/0x000001d98208bc60@4dfb95e4, useEyeHeight: false)"
         ]
       },
       {
@@ -7425,21 +7425,21 @@
         "activity": "idle",
         "priority": 2,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001c2aa019910@5df13636] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001d982090000@48772bc7] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
         "activity": "lay_spawn",
         "priority": 2,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsWaterTask$$Lambda/0x000001c2aa039c30@4799812] * M[Absent[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsWaterTask$$Lambda/0x000001d9820af7e0@5932d398] * M[Absent[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]])"
         ]
       },
       {
         "activity": "swim",
         "priority": 2,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001c2aa019910@3b95778b] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001d982090000@384affb5] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
@@ -7453,21 +7453,21 @@
         "activity": "idle",
         "priority": 3,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsLandTask$$Lambda/0x000001c2aa038430@7012fcbb] * M[Absent[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsLandTask$$Lambda/0x000001d9820adfe0@2b9f34e9] * M[Absent[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]])"
         ]
       },
       {
         "activity": "lay_spawn",
         "priority": 3,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LayFrogSpawnTask$$Lambda/0x000001c2aa03a298@24062409] * M[Absent[memory=minecraft:attack_target]] * M[Value[memory=minecraft:walk_target]] * M[Value[memory=minecraft:is_pregnant]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LayFrogSpawnTask$$Lambda/0x000001d9820b0000@5ac70b4e] * M[Absent[memory=minecraft:attack_target]] * M[Value[memory=minecraft:walk_target]] * M[Value[memory=minecraft:is_pregnant]])"
         ]
       },
       {
         "activity": "swim",
         "priority": 3,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsLandTask$$Lambda/0x000001c2aa038430@6cf78193] * M[Absent[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsLandTask$$Lambda/0x000001d9820adfe0@1526bd9d] * M[Absent[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]])"
         ]
       },
       {
@@ -7495,7 +7495,7 @@
         "activity": "swim",
         "priority": 5,
         "tasks": [
-          "CompositeTask(requiredMemoryState: {minecraft:walk_target=VALUE_ABSENT}, memoriesToForgetWhenStopped: [], order: ORDERED, runMode: TRY_ALL, tasks: ShufflingList[[1:OneShot[C[net.minecraft.entity.ai.brain.task.StrollTask$$Lambda/0x000001c2aa0059f0@7cce9aa9] * M[Absent[memory=minecraft:walk_target]]], 1:OneShot[C[net.minecraft.entity.ai.brain.task.StrollTask$$Lambda/0x000001c2aa0059f0@1b5e56af] * M[Absent[memory=minecraft:walk_target]]], 1:OneShot[C[net.minecraft.entity.ai.brain.task.GoToLookTargetTask$$Lambda/0x000001c2aa006930@eed0fa1] * M[Absent[memory=minecraft:walk_target]] * M[Value[memory=minecraft:look_target]]], 5:OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa01b448@5e46ecf6]]]], status: STOPPED)"
+          "CompositeTask(requiredMemoryState: {minecraft:walk_target=VALUE_ABSENT}, memoriesToForgetWhenStopped: [], order: ORDERED, runMode: TRY_ALL, tasks: ShufflingList[[1:OneShot[C[net.minecraft.entity.ai.brain.task.StrollTask$$Lambda/0x000001d98207d180@7a7e5fdb] * M[Absent[memory=minecraft:walk_target]]], 1:OneShot[C[net.minecraft.entity.ai.brain.task.StrollTask$$Lambda/0x000001d98207d180@28940401] * M[Absent[memory=minecraft:walk_target]]], 1:OneShot[C[net.minecraft.entity.ai.brain.task.GoToLookTargetTask$$Lambda/0x000001d98207e0c0@4a6be726] * M[Absent[memory=minecraft:walk_target]] * M[Value[memory=minecraft:look_target]]], 5:OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d982091b38@6a8171a3]]]], status: STOPPED)"
         ]
       }
     ],
@@ -7507,26 +7507,26 @@
       "minecraft:is_in_water"
     ],
     "brain_memories": [
-      "minecraft:cant_reach_walk_target_since",
+      "minecraft:look_target",
+      "minecraft:unreachable_tongue_targets",
       "minecraft:long_jump_mid_jump",
+      "minecraft:is_tempted",
+      "minecraft:tempting_player",
+      "minecraft:breed_target",
+      "minecraft:visible_mobs",
+      "minecraft:attack_target",
+      "minecraft:is_pregnant",
+      "minecraft:is_in_water",
+      "minecraft:cant_reach_walk_target_since",
       "minecraft:path",
+      "minecraft:nearest_attackable",
       "minecraft:long_jump_cooling_down",
       "minecraft:hurt_by",
-      "minecraft:visible_mobs",
-      "minecraft:nearest_attackable",
-      "minecraft:mobs",
-      "minecraft:temptation_cooldown_ticks",
-      "minecraft:is_in_water",
       "minecraft:hurt_by_entity",
-      "minecraft:breed_target",
+      "minecraft:temptation_cooldown_ticks",
+      "minecraft:mobs",
       "minecraft:walk_target",
-      "minecraft:is_pregnant",
-      "minecraft:tempting_player",
-      "minecraft:is_tempted",
-      "minecraft:is_panicking",
-      "minecraft:look_target",
-      "minecraft:attack_target",
-      "minecraft:unreachable_tongue_targets"
+      "minecraft:is_panicking"
     ],
     "attackable": true,
     "step_height": 1.0,
@@ -7922,6 +7922,42 @@
               "type": "minecraft:item"
             }
           ]
+        },
+        {
+          "functions": [
+            {
+              "count": 1.0,
+              "add": false,
+              "function": "minecraft:set_count"
+            }
+          ],
+          "rolls": 1.0,
+          "bonus_rolls": 0.0,
+          "entries": [
+            {
+              "name": "minecraft:music_disc_tears",
+              "type": "minecraft:item"
+            }
+          ],
+          "conditions": [
+            {
+              "predicate": {
+                "tags": [
+                  {
+                    "id": "minecraft:is_projectile",
+                    "expected": true
+                  }
+                ],
+                "direct_entity": {
+                  "type": "minecraft:fireball"
+                }
+              },
+              "condition": "minecraft:damage_source_properties"
+            },
+            {
+              "condition": "minecraft:killed_by_player"
+            }
+          ]
         }
       ]
     },
@@ -7930,8 +7966,227 @@
       "heightmap": "MOTION_BLOCKING_NO_LEAVES"
     }
   },
-  "giant": {
+  "happy_ghast": {
     "id": 56,
+    "translation_key": "entity.minecraft.happy_ghast",
+    "max_health": 20.0,
+    "brain_tasks": [
+      {
+        "activity": "core",
+        "priority": 0,
+        "tasks": [
+          "StayAboveWaterTask(chance: 0.8)"
+        ]
+      },
+      {
+        "activity": "core",
+        "priority": 1,
+        "tasks": [
+          "FleeTask(MIN_RUN_TIME: 100, MAX_RUN_TIME: 120, HORIZONTAL_RANGE: 5, VERTICAL_RANGE: 4, speed: 2.0, entityToDangerousDamageTypes: net.minecraft.entity.ai.brain.task.FleeTask$$Lambda/0x000001d9820b2508@5a02bebd, pathFinder: net.minecraft.entity.ai.brain.task.FleeTask$$Lambda/0x000001d9820b2738@457bf88b)"
+        ]
+      },
+      {
+        "activity": "idle",
+        "priority": 1,
+        "tasks": [
+          "TemptTask(TEMPTATION_COOLDOWN_TICKS: 100, DEFAULT_STOP_DISTANCE: 2.5, LARGE_ENTITY_STOP_DISTANCE: 3.5, speed: net.minecraft.entity.passive.HappyGhastBrain$$Lambda/0x000001d9820b2968@3225e128, stopDistanceGetter: net.minecraft.entity.passive.HappyGhastBrain$$Lambda/0x000001d9820b2b98@49899fa6, useEyeHeight: true)"
+        ]
+      },
+      {
+        "activity": "core",
+        "priority": 2,
+        "tasks": [
+          "UpdateLookControlTask()"
+        ]
+      },
+      {
+        "activity": "idle",
+        "priority": 2,
+        "tasks": [
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsEntityTask$$Lambda/0x000001d98208f638@631377c] * M[Value[memory=minecraft:nearest_visible_player]] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:walk_target]])"
+        ]
+      },
+      {
+        "activity": "core",
+        "priority": 3,
+        "tasks": [
+          "MoveToTargetTask(MAX_UPDATE_COUNTDOWN: 40, pathUpdateCountdownTicks: 0, path: null, lookTargetPos: null, speed: 0.0)"
+        ]
+      },
+      {
+        "activity": "idle",
+        "priority": 3,
+        "tasks": [
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsEntityTask$$Lambda/0x000001d98208f638@1c942891] * M[Value[memory=minecraft:nearest_visible_adult]] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:walk_target]])"
+        ]
+      },
+      {
+        "activity": "core",
+        "priority": 4,
+        "tasks": [
+          "TickCooldownTask(cooldownModule: minecraft:temptation_cooldown_ticks)"
+        ]
+      },
+      {
+        "activity": "idle",
+        "priority": 4,
+        "tasks": [
+          "RandomTask()"
+        ]
+      }
+    ],
+    "brain_sensors": [
+      "minecraft:nearest_living_entities",
+      "minecraft:hurt_by",
+      "minecraft:happy_ghast_temptations",
+      "minecraft:nearest_adult_any_type",
+      "minecraft:nearest_players"
+    ],
+    "brain_memories": [
+      "minecraft:look_target",
+      "minecraft:is_tempted",
+      "minecraft:tempting_player",
+      "minecraft:nearest_visible_targetable_players",
+      "minecraft:breed_target",
+      "minecraft:visible_mobs",
+      "minecraft:nearest_visible_targetable_player",
+      "minecraft:nearest_visible_adult",
+      "minecraft:cant_reach_walk_target_since",
+      "minecraft:path",
+      "minecraft:nearest_visible_player",
+      "minecraft:hurt_by",
+      "minecraft:hurt_by_entity",
+      "minecraft:temptation_cooldown_ticks",
+      "minecraft:walk_target",
+      "minecraft:mobs",
+      "minecraft:nearest_players",
+      "minecraft:is_panicking"
+    ],
+    "attackable": true,
+    "step_height": 0.6,
+    "can_freeze": true,
+    "can_hit": true,
+    "is_collidable": false,
+    "metadata": [
+      {
+        "field_name": "HAS_ROPES",
+        "network_id": 17,
+        "type_name": "Boolean"
+      },
+      {
+        "field_name": "STAYING_STILL",
+        "network_id": 18,
+        "type_name": "Boolean"
+      },
+      {
+        "field_name": "CHILD",
+        "network_id": 16,
+        "type_name": "Boolean"
+      },
+      {
+        "field_name": "MOB_FLAGS",
+        "network_id": 15,
+        "type_name": "Byte"
+      },
+      {
+        "field_name": "LIVING_FLAGS",
+        "network_id": 8,
+        "type_name": "Byte"
+      },
+      {
+        "field_name": "HEALTH",
+        "network_id": 9,
+        "type_name": "Float"
+      },
+      {
+        "field_name": "POTION_SWIRLS",
+        "network_id": 10,
+        "type_name": "List<ParticleEffect>"
+      },
+      {
+        "field_name": "POTION_SWIRLS_AMBIENT",
+        "network_id": 11,
+        "type_name": "Boolean"
+      },
+      {
+        "field_name": "STUCK_ARROW_COUNT",
+        "network_id": 12,
+        "type_name": "Integer"
+      },
+      {
+        "field_name": "STINGER_COUNT",
+        "network_id": 13,
+        "type_name": "Integer"
+      },
+      {
+        "field_name": "SLEEPING_POSITION",
+        "network_id": 14,
+        "type_name": "Optional<BlockPos>"
+      },
+      {
+        "field_name": "FLAGS",
+        "network_id": 0,
+        "type_name": "Byte"
+      },
+      {
+        "field_name": "AIR",
+        "network_id": 1,
+        "type_name": "Integer"
+      },
+      {
+        "field_name": "CUSTOM_NAME",
+        "network_id": 2,
+        "type_name": "Optional<Text>"
+      },
+      {
+        "field_name": "NAME_VISIBLE",
+        "network_id": 3,
+        "type_name": "Boolean"
+      },
+      {
+        "field_name": "SILENT",
+        "network_id": 4,
+        "type_name": "Boolean"
+      },
+      {
+        "field_name": "NO_GRAVITY",
+        "network_id": 5,
+        "type_name": "Boolean"
+      },
+      {
+        "field_name": "POSE",
+        "network_id": 6,
+        "type_name": "EntityPose"
+      },
+      {
+        "field_name": "FROZEN_TICKS",
+        "network_id": 7,
+        "type_name": "Integer"
+      }
+    ],
+    "summonable": true,
+    "fire_immune": false,
+    "saveable": true,
+    "spawnable_far_from_player": true,
+    "max_track_distance": 10,
+    "track_tick_interval": 3,
+    "spawn_group": "CREATURE",
+    "dimension": [
+      4.0,
+      4.0
+    ],
+    "eye_height": 2.6,
+    "loot_table": {
+      "type": "minecraft:entity",
+      "random_sequence": "minecraft:entities/happy_ghast"
+    },
+    "spawn_restriction": {
+      "location": "ON_GROUND",
+      "heightmap": "MOTION_BLOCKING_NO_LEAVES"
+    }
+  },
+  "giant": {
+    "id": 57,
     "translation_key": "entity.minecraft.giant",
     "max_health": 100.0,
     "brain_tasks": [],
@@ -8046,7 +8301,7 @@
     }
   },
   "glow_item_frame": {
-    "id": 57,
+    "id": 58,
     "translation_key": "entity.minecraft.glow_item_frame",
     "attackable": true,
     "step_height": 0.0,
@@ -8056,13 +8311,18 @@
     "metadata": [
       {
         "field_name": "ITEM_STACK",
-        "network_id": 8,
+        "network_id": 9,
         "type_name": "ItemStack"
       },
       {
         "field_name": "ROTATION",
-        "network_id": 9,
+        "network_id": 10,
         "type_name": "Integer"
+      },
+      {
+        "field_name": "FACING",
+        "network_id": 8,
+        "type_name": "Direction"
       },
       {
         "field_name": "FLAGS",
@@ -8123,7 +8383,7 @@
     }
   },
   "glow_squid": {
-    "id": 58,
+    "id": 59,
     "translation_key": "entity.minecraft.glow_squid",
     "max_health": 10.0,
     "brain_tasks": [],
@@ -8280,7 +8540,7 @@
     }
   },
   "goat": {
-    "id": 59,
+    "id": 60,
     "translation_key": "entity.minecraft.goat",
     "max_health": 10.0,
     "brain_tasks": [
@@ -8295,7 +8555,7 @@
         "activity": "idle",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001c2aa004a98@17f1a9ae] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001d98207c228@4adedeef] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])",
           "BreedTask(MAX_RANGE: 3, MIN_BREED_TIME: 60, RUN_TIME: 110, targetType: entity.minecraft.goat, speed: 1.0, approachDistance: 2, DEFAULT_APPROACH_DISTANCE: 2, breedTime: 0)"
         ]
       },
@@ -8303,7 +8563,7 @@
         "activity": "ram",
         "priority": 0,
         "tasks": [
-          "RamImpactTask(RUN_TIME: 200, SPEED_STRENGTH_MULTIPLIER: 1.65, cooldownRangeFactory: net.minecraft.entity.passive.GoatBrain$$Lambda/0x000001c2aa03d570@46e0252f, targetPredicate: net.minecraft.entity.ai.TargetPredicate@49afdc09, speed: 3.0, strengthMultiplierFactory: net.minecraft.entity.passive.GoatBrain$$Lambda/0x000001c2aa03d7a0@60795e9e, direction: (0.0, 0.0, 0.0), impactSoundFactory: net.minecraft.entity.passive.GoatBrain$$Lambda/0x000001c2aa03d9b0@208e429d, hornBreakSoundFactory: net.minecraft.entity.passive.GoatBrain$$Lambda/0x000001c2aa03dbe0@236da16d)"
+          "RamImpactTask(RUN_TIME: 200, SPEED_STRENGTH_MULTIPLIER: 1.65, cooldownRangeFactory: net.minecraft.entity.passive.GoatBrain$$Lambda/0x000001d9820b6950@23618c91, targetPredicate: net.minecraft.entity.ai.TargetPredicate@61d98bfa, speed: 3.0, strengthMultiplierFactory: net.minecraft.entity.passive.GoatBrain$$Lambda/0x000001d9820b6b80@6b9d0f9a, direction: (0.0, 0.0, 0.0), impactSoundFactory: net.minecraft.entity.passive.GoatBrain$$Lambda/0x000001d9820b6d90@566b7085, hornBreakSoundFactory: net.minecraft.entity.passive.GoatBrain$$Lambda/0x000001d9820b6fc0@459d0265)"
         ]
       },
       {
@@ -8317,28 +8577,28 @@
         "activity": "core",
         "priority": 1,
         "tasks": [
-          "FleeTask(MIN_RUN_TIME: 100, MAX_RUN_TIME: 120, HORIZONTAL_RANGE: 5, VERTICAL_RANGE: 4, speed: 2.0, entityToDangerousDamageTypes: net.minecraft.entity.ai.brain.task.FleeTask$$Lambda/0x000001c2a9ffabf0@6a331dd8)"
+          "FleeTask(MIN_RUN_TIME: 100, MAX_RUN_TIME: 120, HORIZONTAL_RANGE: 5, VERTICAL_RANGE: 4, speed: 2.0, entityToDangerousDamageTypes: net.minecraft.entity.ai.brain.task.FleeTask$$Lambda/0x000001d982070000@3301fc1c, pathFinder: net.minecraft.entity.ai.brain.task.FleeTask$$Lambda/0x000001d982070230@6f27f3d2)"
         ]
       },
       {
         "activity": "idle",
         "priority": 1,
         "tasks": [
-          "TemptTask(TEMPTATION_COOLDOWN_TICKS: 100, DEFAULT_STOP_DISTANCE: 2.5, LARGE_ENTITY_STOP_DISTANCE: 3.5, speed: net.minecraft.entity.passive.GoatBrain$$Lambda/0x000001c2aa03cc20@136ad69b, stopDistanceGetter: net.minecraft.entity.ai.brain.task.TemptTask$$Lambda/0x000001c2aa018880@6d7694fe)"
+          "TemptTask(TEMPTATION_COOLDOWN_TICKS: 100, DEFAULT_STOP_DISTANCE: 2.5, LARGE_ENTITY_STOP_DISTANCE: 3.5, speed: net.minecraft.entity.passive.GoatBrain$$Lambda/0x000001d9820b6000@2965a8b4, stopDistanceGetter: net.minecraft.entity.ai.brain.task.TemptTask$$Lambda/0x000001d98208bc60@4dfb95e4, useEyeHeight: false)"
         ]
       },
       {
         "activity": "ram",
         "priority": 1,
         "tasks": [
-          "PrepareRamTask(RUN_TIME: 160, cooldownFactory: net.minecraft.entity.passive.GoatBrain$$Lambda/0x000001c2aa03e0b8@52854abe, minRamDistance: 4, maxRamDistance: 7, speed: 1.25, targetPredicate: net.minecraft.entity.ai.TargetPredicate@49afdc09, prepareTime: 20, soundFactory: net.minecraft.entity.passive.GoatBrain$$Lambda/0x000001c2aa03e2c8@4d60d9, prepareStartTime: Optional.empty, ram: Optional.empty)"
+          "PrepareRamTask(RUN_TIME: 160, cooldownFactory: net.minecraft.entity.passive.GoatBrain$$Lambda/0x000001d9820b7498@3650cbb5, minRamDistance: 4, maxRamDistance: 7, speed: 1.25, targetPredicate: net.minecraft.entity.ai.TargetPredicate@61d98bfa, prepareTime: 20, soundFactory: net.minecraft.entity.passive.GoatBrain$$Lambda/0x000001d9820b76a8@3b327aa2, prepareStartTime: Optional.empty, ram: Optional.empty)"
         ]
       },
       {
         "activity": "long_jump",
         "priority": 1,
         "tasks": [
-          "LongJumpTask(MAX_TARGET_SEARCH_TIME: 20, JUMP_WINDUP_TIME: 40, PATHING_DISTANCE: 8, RUN_TIME: 200, RAM_RANGES: [65, 70, 75, 80], cooldownRange: [600-1200], verticalRange: 5, horizontalRange: 5, maxRange: 3.5714288, potentialTargets: [], startPos: Optional.empty, currentTarget: null, targetSearchTime: 0, targetPickedTime: 0, entityToSound: net.minecraft.entity.passive.GoatBrain$$Lambda/0x000001c2aa03ce50@4e65df74, jumpToPredicate: net.minecraft.entity.ai.brain.task.LongJumpTask$$Lambda/0x000001c2aa03d080@bfe162d)"
+          "LongJumpTask(MAX_TARGET_SEARCH_TIME: 20, JUMP_WINDUP_TIME: 40, PATHING_DISTANCE: 8, RUN_TIME: 200, RAM_RANGES: [65, 70, 75, 80], cooldownRange: [600-1200], verticalRange: 5, horizontalRange: 5, maxRange: 3.5714288, potentialTargets: [], startPos: Optional.empty, currentTarget: null, targetSearchTime: 0, targetPickedTime: 0, entityToSound: net.minecraft.entity.passive.GoatBrain$$Lambda/0x000001d9820b6230@1691c98b, jumpToPredicate: net.minecraft.entity.ai.brain.task.LongJumpTask$$Lambda/0x000001d9820b6460@12b5f3e5)"
         ]
       },
       {
@@ -8352,7 +8612,7 @@
         "activity": "idle",
         "priority": 2,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsClosestAdultTask$$Lambda/0x000001c2aa016468@73d66d56] * M[Value[memory=minecraft:nearest_visible_adult]] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:walk_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsEntityTask$$Lambda/0x000001d98208f638@22088f65] * M[Value[memory=minecraft:nearest_visible_adult]] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:walk_target]])"
         ]
       },
       {
@@ -8400,30 +8660,30 @@
       "minecraft:goat_temptations"
     ],
     "brain_memories": [
-      "minecraft:ram_target",
-      "minecraft:nearest_players",
-      "minecraft:cant_reach_walk_target_since",
+      "minecraft:look_target",
       "minecraft:long_jump_mid_jump",
+      "minecraft:is_tempted",
+      "minecraft:tempting_player",
+      "minecraft:nearest_visible_targetable_players",
+      "minecraft:ate_recently",
+      "minecraft:breed_target",
+      "minecraft:visible_mobs",
+      "minecraft:nearest_visible_targetable_player",
+      "minecraft:ram_target",
+      "minecraft:nearest_visible_adult",
+      "minecraft:cant_reach_walk_target_since",
       "minecraft:path",
-      "minecraft:ram_cooldown_ticks",
+      "minecraft:nearest_visible_wanted_item",
+      "minecraft:nearest_visible_player",
       "minecraft:long_jump_cooling_down",
       "minecraft:hurt_by",
-      "minecraft:nearest_visible_targetable_players",
-      "minecraft:nearest_visible_adult",
-      "minecraft:visible_mobs",
-      "minecraft:ate_recently",
-      "minecraft:temptation_cooldown_ticks",
-      "minecraft:mobs",
-      "minecraft:nearest_visible_player",
       "minecraft:hurt_by_entity",
-      "minecraft:breed_target",
-      "minecraft:nearest_visible_wanted_item",
+      "minecraft:ram_cooldown_ticks",
+      "minecraft:temptation_cooldown_ticks",
       "minecraft:walk_target",
-      "minecraft:tempting_player",
-      "minecraft:is_tempted",
-      "minecraft:is_panicking",
-      "minecraft:look_target",
-      "minecraft:nearest_visible_targetable_player"
+      "minecraft:mobs",
+      "minecraft:nearest_players",
+      "minecraft:is_panicking"
     ],
     "attackable": true,
     "step_height": 0.6,
@@ -8554,7 +8814,7 @@
     }
   },
   "guardian": {
-    "id": 60,
+    "id": 61,
     "translation_key": "entity.minecraft.guardian",
     "max_health": 30.0,
     "brain_tasks": [],
@@ -8851,7 +9111,7 @@
     }
   },
   "hoglin": {
-    "id": 61,
+    "id": 62,
     "translation_key": "entity.minecraft.hoglin",
     "max_health": 40.0,
     "brain_tasks": [
@@ -8880,7 +9140,7 @@
         "activity": "avoid",
         "priority": 10,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.GoToRememberedPositionTask$$Lambda/0x000001c2aa03f5c8@41af3d7b] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:avoid_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.GoToRememberedPositionTask$$Lambda/0x000001d9820b5aa8@5221956e] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:avoid_target]])"
         ]
       },
       {
@@ -8915,84 +9175,84 @@
         "activity": "idle",
         "priority": 12,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.GoToRememberedPositionTask$$Lambda/0x000001c2aa03f5c8@203fbb8a] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:nearest_repellent]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.GoToRememberedPositionTask$$Lambda/0x000001d9820b5aa8@11afc61b] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:nearest_repellent]])"
         ]
       },
       {
         "activity": "avoid",
         "priority": 12,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001c2aa004a98@9cbbe24] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001d98207c228@744e6567] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 12,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RangedApproachTask$$Lambda/0x000001c2aa01eec0@2fcde8f2] * M[Optional[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RangedApproachTask$$Lambda/0x000001d982093448@28898025] * M[Optional[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 13,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001c2aa019910@17315c95] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001d982090000@765deabf] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
         "activity": "avoid",
         "priority": 13,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetTask$$Lambda/0x000001c2aa024238@4a0f5612] * M[Value[memory=minecraft:avoid_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetTask$$Lambda/0x000001d982096868@19ad6571] * M[Value[memory=minecraft:avoid_target]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 13,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa029c78@1e61ebe9] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa01b448@5e2b0aaf]]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d9820a0000@1e4f5e7e] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d982091b38@7aa36d3a]]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 14,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa029c78@4363200b] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa01b448@736c41b3]]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d9820a0000@633268c3] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d982091b38@11c60f39]]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 14,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa029c78@62c3d294] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa01b448@64bbc211]]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d9820a0000@759e1fd1] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d982091b38@14b576e5]]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 15,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001c2aa004a98@3e02c5f5] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001d98207c228@643170c0] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 15,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001c2aa01e638@2f727a5f] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001d982092bc0@45af14b8] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 16,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsClosestAdultTask$$Lambda/0x000001c2aa016468@53d95a57] * M[Value[memory=minecraft:nearest_visible_adult]] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:walk_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsEntityTask$$Lambda/0x000001d98208f638@40cafb4b] * M[Value[memory=minecraft:nearest_visible_adult]] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:walk_target]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 16,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetTask$$Lambda/0x000001c2aa024238@6948a177] * M[Value[memory=minecraft:attack_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetTask$$Lambda/0x000001d982096868@7f77bfe9] * M[Value[memory=minecraft:attack_target]])"
         ]
       },
       {
@@ -9010,28 +9270,28 @@
       "minecraft:hoglin_specific_sensor"
     ],
     "brain_memories": [
-      "minecraft:nearest_players",
-      "minecraft:cant_reach_walk_target_since",
-      "minecraft:nearest_repellent",
-      "minecraft:path",
-      "minecraft:visible_adult_hoglin_count",
+      "minecraft:look_target",
+      "minecraft:avoid_target",
       "minecraft:nearest_visible_adult_hoglins",
       "minecraft:nearest_visible_targetable_players",
-      "minecraft:nearest_visible_adult",
-      "minecraft:visible_mobs",
-      "minecraft:attack_cooling_down",
-      "minecraft:pacified",
-      "minecraft:nearest_visible_adult_piglin",
-      "minecraft:avoid_target",
-      "minecraft:mobs",
-      "minecraft:nearest_visible_player",
       "minecraft:breed_target",
-      "minecraft:visible_adult_piglin_count",
-      "minecraft:walk_target",
-      "minecraft:is_panicking",
-      "minecraft:look_target",
+      "minecraft:visible_mobs",
+      "minecraft:attack_target",
       "minecraft:nearest_visible_targetable_player",
-      "minecraft:attack_target"
+      "minecraft:attack_cooling_down",
+      "minecraft:nearest_visible_adult",
+      "minecraft:cant_reach_walk_target_since",
+      "minecraft:path",
+      "minecraft:nearest_visible_player",
+      "minecraft:visible_adult_hoglin_count",
+      "minecraft:nearest_visible_adult_piglin",
+      "minecraft:visible_adult_piglin_count",
+      "minecraft:nearest_repellent",
+      "minecraft:mobs",
+      "minecraft:walk_target",
+      "minecraft:pacified",
+      "minecraft:nearest_players",
+      "minecraft:is_panicking"
     ],
     "attackable": true,
     "step_height": 0.6,
@@ -9250,7 +9510,7 @@
     }
   },
   "hopper_minecart": {
-    "id": 62,
+    "id": 63,
     "translation_key": "entity.minecraft.hopper_minecart",
     "attackable": true,
     "step_height": 0.0,
@@ -9342,7 +9602,7 @@
     }
   },
   "horse": {
-    "id": 63,
+    "id": 64,
     "translation_key": "entity.minecraft.horse",
     "max_health": 53.0,
     "brain_tasks": [],
@@ -9504,7 +9764,7 @@
     }
   },
   "husk": {
-    "id": 64,
+    "id": 65,
     "translation_key": "entity.minecraft.husk",
     "max_health": 20.0,
     "brain_tasks": [],
@@ -9737,7 +9997,7 @@
     }
   },
   "illusioner": {
-    "id": 65,
+    "id": 66,
     "translation_key": "entity.minecraft.illusioner",
     "max_health": 32.0,
     "brain_tasks": [],
@@ -9862,7 +10122,7 @@
     }
   },
   "interaction": {
-    "id": 66,
+    "id": 67,
     "translation_key": "entity.minecraft.interaction",
     "attackable": true,
     "step_height": 0.0,
@@ -9945,7 +10205,7 @@
     }
   },
   "iron_golem": {
-    "id": 67,
+    "id": 68,
     "translation_key": "entity.minecraft.iron_golem",
     "max_health": 100.0,
     "brain_tasks": [],
@@ -10109,7 +10369,7 @@
     }
   },
   "item": {
-    "id": 68,
+    "id": 69,
     "translation_key": "entity.minecraft.item",
     "attackable": false,
     "step_height": 0.0,
@@ -10182,7 +10442,7 @@
     }
   },
   "item_display": {
-    "id": 69,
+    "id": 70,
     "translation_key": "entity.minecraft.item_display",
     "attackable": true,
     "step_height": 0.0,
@@ -10335,7 +10595,7 @@
     }
   },
   "item_frame": {
-    "id": 70,
+    "id": 71,
     "translation_key": "entity.minecraft.item_frame",
     "attackable": true,
     "step_height": 0.0,
@@ -10345,13 +10605,18 @@
     "metadata": [
       {
         "field_name": "ITEM_STACK",
-        "network_id": 8,
+        "network_id": 9,
         "type_name": "ItemStack"
       },
       {
         "field_name": "ROTATION",
-        "network_id": 9,
+        "network_id": 10,
         "type_name": "Integer"
+      },
+      {
+        "field_name": "FACING",
+        "network_id": 8,
+        "type_name": "Direction"
       },
       {
         "field_name": "FLAGS",
@@ -10412,7 +10677,7 @@
     }
   },
   "jungle_boat": {
-    "id": 71,
+    "id": 72,
     "translation_key": "entity.minecraft.jungle_boat",
     "attackable": true,
     "step_height": 0.0,
@@ -10509,7 +10774,7 @@
     }
   },
   "jungle_chest_boat": {
-    "id": 72,
+    "id": 73,
     "translation_key": "entity.minecraft.jungle_chest_boat",
     "attackable": true,
     "step_height": 0.0,
@@ -10606,7 +10871,7 @@
     }
   },
   "leash_knot": {
-    "id": 73,
+    "id": 74,
     "translation_key": "entity.minecraft.leash_knot",
     "attackable": true,
     "step_height": 0.0,
@@ -10673,7 +10938,7 @@
     }
   },
   "lightning_bolt": {
-    "id": 74,
+    "id": 75,
     "translation_key": "entity.minecraft.lightning_bolt",
     "attackable": true,
     "step_height": 0.0,
@@ -10741,7 +11006,7 @@
     }
   },
   "llama": {
-    "id": 75,
+    "id": 76,
     "translation_key": "entity.minecraft.llama",
     "max_health": 53.0,
     "brain_tasks": [],
@@ -10913,7 +11178,7 @@
     }
   },
   "llama_spit": {
-    "id": 76,
+    "id": 77,
     "translation_key": "entity.minecraft.llama_spit",
     "attackable": true,
     "step_height": 0.0,
@@ -10981,7 +11246,7 @@
     }
   },
   "magma_cube": {
-    "id": 77,
+    "id": 78,
     "translation_key": "entity.minecraft.magma_cube",
     "max_health": 20.0,
     "brain_tasks": [],
@@ -11230,7 +11495,7 @@
     }
   },
   "mangrove_boat": {
-    "id": 78,
+    "id": 79,
     "translation_key": "entity.minecraft.mangrove_boat",
     "attackable": true,
     "step_height": 0.0,
@@ -11327,7 +11592,7 @@
     }
   },
   "mangrove_chest_boat": {
-    "id": 79,
+    "id": 80,
     "translation_key": "entity.minecraft.mangrove_chest_boat",
     "attackable": true,
     "step_height": 0.0,
@@ -11424,7 +11689,7 @@
     }
   },
   "marker": {
-    "id": 80,
+    "id": 81,
     "translation_key": "entity.minecraft.marker",
     "attackable": true,
     "step_height": 0.0,
@@ -11492,7 +11757,7 @@
     }
   },
   "minecart": {
-    "id": 81,
+    "id": 82,
     "translation_key": "entity.minecraft.minecart",
     "attackable": true,
     "step_height": 0.0,
@@ -11584,7 +11849,7 @@
     }
   },
   "mooshroom": {
-    "id": 82,
+    "id": 83,
     "translation_key": "entity.minecraft.mooshroom",
     "max_health": 10.0,
     "brain_tasks": [],
@@ -11807,7 +12072,7 @@
     }
   },
   "mule": {
-    "id": 83,
+    "id": 84,
     "translation_key": "entity.minecraft.mule",
     "max_health": 53.0,
     "brain_tasks": [],
@@ -11969,7 +12234,7 @@
     }
   },
   "oak_boat": {
-    "id": 84,
+    "id": 85,
     "translation_key": "entity.minecraft.oak_boat",
     "attackable": true,
     "step_height": 0.0,
@@ -12066,7 +12331,7 @@
     }
   },
   "oak_chest_boat": {
-    "id": 85,
+    "id": 86,
     "translation_key": "entity.minecraft.oak_chest_boat",
     "attackable": true,
     "step_height": 0.0,
@@ -12163,7 +12428,7 @@
     }
   },
   "ocelot": {
-    "id": 86,
+    "id": 87,
     "translation_key": "entity.minecraft.ocelot",
     "max_health": 10.0,
     "brain_tasks": [],
@@ -12288,7 +12553,7 @@
     }
   },
   "ominous_item_spawner": {
-    "id": 87,
+    "id": 88,
     "translation_key": "entity.minecraft.ominous_item_spawner",
     "attackable": true,
     "step_height": 0.0,
@@ -12361,7 +12626,7 @@
     }
   },
   "painting": {
-    "id": 88,
+    "id": 89,
     "translation_key": "entity.minecraft.painting",
     "attackable": true,
     "step_height": 0.0,
@@ -12371,8 +12636,13 @@
     "metadata": [
       {
         "field_name": "VARIANT",
-        "network_id": 8,
+        "network_id": 9,
         "type_name": "RegistryEntry<PaintingVariant>"
+      },
+      {
+        "field_name": "FACING",
+        "network_id": 8,
+        "type_name": "Direction"
       },
       {
         "field_name": "FLAGS",
@@ -12433,7 +12703,7 @@
     }
   },
   "pale_oak_boat": {
-    "id": 89,
+    "id": 90,
     "translation_key": "entity.minecraft.pale_oak_boat",
     "attackable": true,
     "step_height": 0.0,
@@ -12530,7 +12800,7 @@
     }
   },
   "pale_oak_chest_boat": {
-    "id": 90,
+    "id": 91,
     "translation_key": "entity.minecraft.pale_oak_chest_boat",
     "attackable": true,
     "step_height": 0.0,
@@ -12627,7 +12897,7 @@
     }
   },
   "panda": {
-    "id": 91,
+    "id": 92,
     "translation_key": "entity.minecraft.panda",
     "max_health": 20.0,
     "brain_tasks": [],
@@ -12796,7 +13066,7 @@
     }
   },
   "parrot": {
-    "id": 92,
+    "id": 93,
     "translation_key": "entity.minecraft.parrot",
     "max_health": 6.0,
     "brain_tasks": [],
@@ -12963,7 +13233,7 @@
     }
   },
   "phantom": {
-    "id": 93,
+    "id": 94,
     "translation_key": "entity.minecraft.phantom",
     "max_health": 20.0,
     "brain_tasks": [],
@@ -13120,7 +13390,7 @@
     }
   },
   "pig": {
-    "id": 94,
+    "id": 95,
     "translation_key": "entity.minecraft.pig",
     "max_health": 10.0,
     "brain_tasks": [],
@@ -13318,7 +13588,7 @@
     }
   },
   "piglin": {
-    "id": 95,
+    "id": 96,
     "translation_key": "entity.minecraft.piglin",
     "max_health": 16.0,
     "brain_tasks": [
@@ -13340,112 +13610,112 @@
         "activity": "core",
         "priority": 2,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.OpenDoorsTask$$Lambda/0x000001c2aa048238@1151aa54] * M[Value[memory=minecraft:path]] * M[Optional[memory=minecraft:doors_to_close]] * M[Optional[memory=minecraft:mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.OpenDoorsTask$$Lambda/0x000001d9820bbd68@5f538b75] * M[Value[memory=minecraft:path]] * M[Optional[memory=minecraft:doors_to_close]] * M[Optional[memory=minecraft:mobs]])"
         ]
       },
       {
         "activity": "core",
         "priority": 3,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.MemoryTransferTask$$Lambda/0x000001c2aa048ae0@ec293c] * M[Value[memory=minecraft:nearest_visible_nemesis]] * M[Absent[memory=minecraft:avoid_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.MemoryTransferTask$$Lambda/0x000001d9820b9400@77a1bed7] * M[Value[memory=minecraft:nearest_visible_nemesis]] * M[Absent[memory=minecraft:avoid_target]])"
         ]
       },
       {
         "activity": "core",
         "priority": 4,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.MemoryTransferTask$$Lambda/0x000001c2aa048ae0@7e8efeec] * M[Value[memory=minecraft:nearest_visible_zombified]] * M[Absent[memory=minecraft:avoid_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.MemoryTransferTask$$Lambda/0x000001d9820b9400@7f26f935] * M[Value[memory=minecraft:nearest_visible_zombified]] * M[Absent[memory=minecraft:avoid_target]])"
         ]
       },
       {
         "activity": "core",
         "priority": 5,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RemoveOffHandItemTask$$Lambda/0x000001c2aa049370@76c0cf53] * M[Absent[memory=minecraft:admiring_item]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RemoveOffHandItemTask$$Lambda/0x000001d9820c0668@4ca0df58] * M[Absent[memory=minecraft:admiring_item]])"
         ]
       },
       {
         "activity": "core",
         "priority": 6,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.AdmireItemTask$$Lambda/0x000001c2aa0499c8@6adfd8d5] * M[Value[memory=minecraft:nearest_visible_wanted_item]] * M[Absent[memory=minecraft:admiring_item]] * M[Absent[memory=minecraft:admiring_disabled]] * M[Absent[memory=minecraft:disable_walk_to_admire_item]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.AdmireItemTask$$Lambda/0x000001d9820c0cc0@febed9a] * M[Value[memory=minecraft:nearest_visible_wanted_item]] * M[Absent[memory=minecraft:admiring_item]] * M[Absent[memory=minecraft:admiring_disabled]] * M[Absent[memory=minecraft:disable_walk_to_admire_item]])"
         ]
       },
       {
         "activity": "core",
         "priority": 7,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.DefeatTargetTask$$Lambda/0x000001c2aa04a280@b1ba97b] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:angry_at]] * M[Absent[memory=minecraft:celebrate_location]] * M[Optional[memory=minecraft:dancing]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.DefeatTargetTask$$Lambda/0x000001d9820c1578@75c6adb6] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:angry_at]] * M[Absent[memory=minecraft:celebrate_location]] * M[Optional[memory=minecraft:dancing]])"
         ]
       },
       {
         "activity": "core",
         "priority": 8,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAngryAtTargetTask$$Lambda/0x000001c2aa04a8f0@26b5f6a] * M[Value[memory=minecraft:angry_at]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAngryAtTargetTask$$Lambda/0x000001d9820c1be8@3de10d6a] * M[Value[memory=minecraft:angry_at]])"
         ]
       },
       {
         "activity": "admire_item",
         "priority": 10,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsNearestVisibleWantedItemTask$$Lambda/0x000001c2a9ffe530@7221a223] * M[Optional[memory=minecraft:look_target]] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:nearest_visible_wanted_item]] * M[Optional[memory=minecraft:item_pickup_cooldown_ticks]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsNearestVisibleWantedItemTask$$Lambda/0x000001d982073b70@77714f91] * M[Optional[memory=minecraft:look_target]] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:nearest_visible_wanted_item]] * M[Optional[memory=minecraft:item_pickup_cooldown_ticks]])"
         ]
       },
       {
         "activity": "celebrate",
         "priority": 10,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.GoToRememberedPositionTask$$Lambda/0x000001c2aa03f5c8@662cc5c2] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:nearest_repellent]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.GoToRememberedPositionTask$$Lambda/0x000001d9820b5aa8@2726ebd8] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:nearest_repellent]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 10,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobTask$$Lambda/0x000001c2aa04b198@302ae80d] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobTask$$Lambda/0x000001d9820c2490@674d5997] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "avoid",
         "priority": 10,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.GoToRememberedPositionTask$$Lambda/0x000001c2aa03f5c8@6862716d] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:avoid_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.GoToRememberedPositionTask$$Lambda/0x000001d9820b5aa8@52f29249] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:avoid_target]])"
         ]
       },
       {
         "activity": "ride",
         "priority": 10,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.StartRidingTask$$Lambda/0x000001c2aa056230@172de6f8] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:walk_target]] * M[Value[memory=minecraft:ride_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.StartRidingTask$$Lambda/0x000001d9820cb898@2f824241] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:walk_target]] * M[Value[memory=minecraft:ride_target]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 10,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001c2aa01e638@172f230a] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001d982092bc0@3fea0442] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
         "activity": "admire_item",
         "priority": 11,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WantNewItemTask$$Lambda/0x000001c2aa050428@7022db62] * M[Value[memory=minecraft:admiring_item]] * M[Optional[memory=minecraft:nearest_visible_wanted_item]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WantNewItemTask$$Lambda/0x000001d9820c7818@32e673c9] * M[Value[memory=minecraft:admiring_item]] * M[Optional[memory=minecraft:nearest_visible_wanted_item]])"
         ]
       },
       {
         "activity": "celebrate",
         "priority": 11,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobTask$$Lambda/0x000001c2aa04b198@b303512] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobTask$$Lambda/0x000001d9820c2490@74c0cf06] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 11,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001c2aa019910@73d208aa] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001d982090000@49ed1b95] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
@@ -13459,35 +13729,35 @@
         "activity": "ride",
         "priority": 11,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobTask$$Lambda/0x000001c2aa04b198@1d0b52a9] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobTask$$Lambda/0x000001d9820c2490@26cadefe] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 11,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa029c78@7b1463a1] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa01b448@71064174]]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d9820a0000@27b399d5] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d982091b38@5579dada]]])"
         ]
       },
       {
         "activity": "admire_item",
         "priority": 12,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.AdmireItemTimeLimitTask$$Lambda/0x000001c2aa050a78@12f280a6] * M[Value[memory=minecraft:admiring_item]] * M[Value[memory=minecraft:nearest_visible_wanted_item]] * M[Optional[memory=minecraft:time_trying_to_reach_admire_item]] * M[Optional[memory=minecraft:disable_walk_to_admire_item]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.AdmireItemTimeLimitTask$$Lambda/0x000001d9820c8000@74e95253] * M[Value[memory=minecraft:admiring_item]] * M[Value[memory=minecraft:nearest_visible_wanted_item]] * M[Optional[memory=minecraft:time_trying_to_reach_admire_item]] * M[Optional[memory=minecraft:disable_walk_to_admire_item]])"
         ]
       },
       {
         "activity": "celebrate",
         "priority": 12,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001c2aa019910@552b064b] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001d982090000@4a45f1e] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 12,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa029c78@d7a6e24] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa01b448@4e34831e]]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d9820a0000@3f62036e] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d982091b38@2456a152]]])"
         ]
       },
       {
@@ -13501,63 +13771,63 @@
         "activity": "ride",
         "priority": 12,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa029c78@4845cdce] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa01b448@455193d3]]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d9820a0000@1a930441] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d982091b38@3c69f4a2]]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 12,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RangedApproachTask$$Lambda/0x000001c2aa01eec0@1b84ce13] * M[Optional[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RangedApproachTask$$Lambda/0x000001d982093448@133fe932] * M[Optional[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "celebrate",
         "priority": 13,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa029c78@7142920e] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa01b448@178f1a55]]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d9820a0000@2729636] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d982091b38@413b35]]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 13,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.GoToRememberedPositionTask$$Lambda/0x000001c2aa03f5c8@5e09dc7c] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:nearest_repellent]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.GoToRememberedPositionTask$$Lambda/0x000001d9820b5aa8@737e137b] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:nearest_repellent]])"
         ]
       },
       {
         "activity": "avoid",
         "priority": 13,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetTask$$Lambda/0x000001c2aa024238@63c075f8] * M[Value[memory=minecraft:avoid_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetTask$$Lambda/0x000001d982096868@1f64025f] * M[Value[memory=minecraft:avoid_target]])"
         ]
       },
       {
         "activity": "ride",
         "priority": 13,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RidingTask$$Lambda/0x000001c2aa057a08@6f7496c] * M[Optional[memory=minecraft:ride_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RidingTask$$Lambda/0x000001d9820cf120@9b1f4a3] * M[Optional[memory=minecraft:ride_target]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 13,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.MeleeAttackTask$$Lambda/0x000001c2aa01f778@69c5b655] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:attack_cooling_down]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.MeleeAttackTask$$Lambda/0x000001d982093d00@20ee33] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:attack_cooling_down]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "celebrate",
         "priority": 14,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa029c78@793f7d2d] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa01b448@1930b847]]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d9820a0000@3c6d087] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d982091b38@3c0f4c5a]]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 14,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.MemoryTransferTask$$Lambda/0x000001c2aa048ae0@25b03e24] * M[Value[memory=minecraft:nearest_visible_baby_hoglin]] * M[Absent[memory=minecraft:ride_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.MemoryTransferTask$$Lambda/0x000001d9820b9400@3a1db394] * M[Value[memory=minecraft:nearest_visible_baby_hoglin]] * M[Absent[memory=minecraft:ride_target]])"
         ]
       },
       {
@@ -13585,7 +13855,7 @@
         "activity": "fight",
         "priority": 15,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.HuntFinishTask$$Lambda/0x000001c2aa052090@610343d9] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:hunted_recently]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.HuntFinishTask$$Lambda/0x000001d9820c9800@3dcb9392] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:hunted_recently]])"
         ]
       },
       {
@@ -13599,14 +13869,14 @@
         "activity": "fight",
         "priority": 16,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetTask$$Lambda/0x000001c2aa024238@63d78cc1] * M[Value[memory=minecraft:attack_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetTask$$Lambda/0x000001d982096868@83c2e44] * M[Value[memory=minecraft:attack_target]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 17,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindInteractionTargetTask$$Lambda/0x000001c2aa04fcc8@7f39f27c] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:interaction_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindInteractionTargetTask$$Lambda/0x000001d9820c6f78@4e17de85] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:interaction_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       }
     ],
@@ -13618,47 +13888,47 @@
       "minecraft:piglin_specific_sensor"
     ],
     "brain_memories": [
-      "minecraft:hunted_recently",
-      "minecraft:nearest_players",
-      "minecraft:interaction_target",
-      "minecraft:nearest_repellent",
-      "minecraft:nearest_visible_zombified",
-      "minecraft:hurt_by",
-      "minecraft:visible_adult_hoglin_count",
-      "minecraft:celebrate_location",
-      "minecraft:attack_cooling_down",
-      "minecraft:nearby_adult_piglins",
-      "minecraft:nearest_visible_huntable_hoglin",
-      "minecraft:universal_anger",
-      "minecraft:ate_recently",
-      "minecraft:nearest_visible_player",
-      "minecraft:nearest_visible_wanted_item",
-      "minecraft:disable_walk_to_admire_item",
-      "minecraft:visible_adult_piglin_count",
       "minecraft:look_target",
-      "minecraft:attack_target",
-      "minecraft:nearest_visible_nemesis",
-      "minecraft:cant_reach_walk_target_since",
       "minecraft:admiring_disabled",
+      "minecraft:dancing",
+      "minecraft:hunted_recently",
       "minecraft:nearest_visible_adult_piglins",
-      "minecraft:path",
+      "minecraft:visible_mobs",
+      "minecraft:attack_target",
+      "minecraft:cant_reach_walk_target_since",
+      "minecraft:disable_walk_to_admire_item",
+      "minecraft:nearest_visible_player",
+      "minecraft:visible_adult_hoglin_count",
+      "minecraft:hurt_by_entity",
+      "minecraft:nearest_visible_baby_hoglin",
+      "minecraft:item_pickup_cooldown_ticks",
+      "minecraft:visible_adult_piglin_count",
+      "minecraft:nearest_repellent",
+      "minecraft:nearby_adult_piglins",
+      "minecraft:nearest_visible_zombified",
+      "minecraft:nearest_players",
+      "minecraft:avoid_target",
+      "minecraft:time_trying_to_reach_admire_item",
+      "minecraft:interaction_target",
       "minecraft:nearest_player_holding_wanted_item",
       "minecraft:nearest_targetable_player_not_wearing_gold",
-      "minecraft:time_trying_to_reach_admire_item",
       "minecraft:nearest_visible_targetable_players",
       "minecraft:angry_at",
-      "minecraft:admiring_item",
-      "minecraft:visible_mobs",
-      "minecraft:ride_target",
-      "minecraft:item_pickup_cooldown_ticks",
-      "minecraft:avoid_target",
-      "minecraft:mobs",
+      "minecraft:ate_recently",
+      "minecraft:nearest_visible_targetable_player",
       "minecraft:doors_to_close",
-      "minecraft:hurt_by_entity",
-      "minecraft:dancing",
+      "minecraft:attack_cooling_down",
+      "minecraft:celebrate_location",
+      "minecraft:nearest_visible_huntable_hoglin",
+      "minecraft:nearest_visible_wanted_item",
+      "minecraft:path",
+      "minecraft:ride_target",
+      "minecraft:hurt_by",
+      "minecraft:universal_anger",
+      "minecraft:admiring_item",
+      "minecraft:mobs",
       "minecraft:walk_target",
-      "minecraft:nearest_visible_baby_hoglin",
-      "minecraft:nearest_visible_targetable_player"
+      "minecraft:nearest_visible_nemesis"
     ],
     "inventory_size": 8,
     "attackable": true,
@@ -13790,7 +14060,7 @@
     }
   },
   "piglin_brute": {
-    "id": 96,
+    "id": 97,
     "translation_key": "entity.minecraft.piglin_brute",
     "max_health": 50.0,
     "brain_tasks": [
@@ -13812,28 +14082,28 @@
         "activity": "core",
         "priority": 2,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.OpenDoorsTask$$Lambda/0x000001c2aa048238@65b6827] * M[Value[memory=minecraft:path]] * M[Optional[memory=minecraft:doors_to_close]] * M[Optional[memory=minecraft:mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.OpenDoorsTask$$Lambda/0x000001d9820bbd68@12ef557b] * M[Value[memory=minecraft:path]] * M[Optional[memory=minecraft:doors_to_close]] * M[Optional[memory=minecraft:mobs]])"
         ]
       },
       {
         "activity": "core",
         "priority": 3,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAngryAtTargetTask$$Lambda/0x000001c2aa04a8f0@64bb3602] * M[Value[memory=minecraft:angry_at]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAngryAtTargetTask$$Lambda/0x000001d9820c1be8@479ab015] * M[Value[memory=minecraft:angry_at]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 10,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001c2aa019910@41c5bac4] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001d982090000@aebf531] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 10,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001c2aa01e638@3230918c] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001d982092bc0@44c36617] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
@@ -13847,7 +14117,7 @@
         "activity": "fight",
         "priority": 11,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RangedApproachTask$$Lambda/0x000001c2aa01eec0@6f77cdbd] * M[Optional[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RangedApproachTask$$Lambda/0x000001d982093448@2c6fb779] * M[Optional[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:visible_mobs]])"
         ]
       },
       {
@@ -13861,14 +14131,14 @@
         "activity": "fight",
         "priority": 12,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.MeleeAttackTask$$Lambda/0x000001c2aa01f778@5241fd77] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:attack_cooling_down]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.MeleeAttackTask$$Lambda/0x000001d982093d00@3e67b0f9] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:attack_cooling_down]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 13,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindInteractionTargetTask$$Lambda/0x000001c2aa04fcc8@3ebe6e61] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:interaction_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindInteractionTargetTask$$Lambda/0x000001d9820c6f78@6bf08879] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:interaction_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       }
     ],
@@ -13880,28 +14150,28 @@
       "minecraft:piglin_brute_specific_sensor"
     ],
     "brain_memories": [
-      "minecraft:nearest_players",
+      "minecraft:look_target",
       "minecraft:interaction_target",
-      "minecraft:cant_reach_walk_target_since",
       "minecraft:nearest_visible_adult_piglins",
-      "minecraft:path",
-      "minecraft:hurt_by",
       "minecraft:nearest_visible_targetable_players",
       "minecraft:angry_at",
-      "minecraft:home",
       "minecraft:visible_mobs",
-      "minecraft:attack_cooling_down",
-      "minecraft:nearby_adult_piglins",
-      "minecraft:mobs",
-      "minecraft:doors_to_close",
-      "minecraft:nearest_visible_player",
-      "minecraft:hurt_by_entity",
-      "minecraft:nearest_visible_wanted_item",
-      "minecraft:walk_target",
-      "minecraft:look_target",
-      "minecraft:nearest_visible_targetable_player",
       "minecraft:attack_target",
-      "minecraft:nearest_visible_nemesis"
+      "minecraft:nearest_visible_targetable_player",
+      "minecraft:doors_to_close",
+      "minecraft:attack_cooling_down",
+      "minecraft:home",
+      "minecraft:cant_reach_walk_target_since",
+      "minecraft:path",
+      "minecraft:nearest_visible_wanted_item",
+      "minecraft:nearest_visible_player",
+      "minecraft:hurt_by",
+      "minecraft:hurt_by_entity",
+      "minecraft:mobs",
+      "minecraft:walk_target",
+      "minecraft:nearby_adult_piglins",
+      "minecraft:nearest_visible_nemesis",
+      "minecraft:nearest_players"
     ],
     "attackable": true,
     "step_height": 0.6,
@@ -14017,7 +14287,7 @@
     }
   },
   "pillager": {
-    "id": 97,
+    "id": 98,
     "translation_key": "entity.minecraft.pillager",
     "max_health": 24.0,
     "brain_tasks": [],
@@ -14182,7 +14452,7 @@
     }
   },
   "polar_bear": {
-    "id": 98,
+    "id": 99,
     "translation_key": "entity.minecraft.polar_bear",
     "max_health": 30.0,
     "brain_tasks": [],
@@ -14436,7 +14706,7 @@
     }
   },
   "splash_potion": {
-    "id": 99,
+    "id": 100,
     "translation_key": "entity.minecraft.splash_potion",
     "attackable": true,
     "step_height": 0.0,
@@ -14509,7 +14779,7 @@
     }
   },
   "lingering_potion": {
-    "id": 100,
+    "id": 101,
     "translation_key": "entity.minecraft.lingering_potion",
     "attackable": true,
     "step_height": 0.0,
@@ -14582,7 +14852,7 @@
     }
   },
   "pufferfish": {
-    "id": 101,
+    "id": 102,
     "translation_key": "entity.minecraft.pufferfish",
     "max_health": 3.0,
     "brain_tasks": [],
@@ -14742,7 +15012,7 @@
     }
   },
   "rabbit": {
-    "id": 102,
+    "id": 103,
     "translation_key": "entity.minecraft.rabbit",
     "max_health": 3.0,
     "brain_tasks": [],
@@ -14986,7 +15256,7 @@
     }
   },
   "ravager": {
-    "id": 103,
+    "id": 104,
     "translation_key": "entity.minecraft.ravager",
     "max_health": 100.0,
     "brain_tasks": [],
@@ -15125,7 +15395,7 @@
     }
   },
   "salmon": {
-    "id": 104,
+    "id": 105,
     "translation_key": "entity.minecraft.salmon",
     "max_health": 3.0,
     "brain_tasks": [],
@@ -15316,7 +15586,7 @@
     }
   },
   "sheep": {
-    "id": 105,
+    "id": 106,
     "translation_key": "entity.minecraft.sheep",
     "max_health": 8.0,
     "brain_tasks": [],
@@ -15824,7 +16094,7 @@
     }
   },
   "shulker": {
-    "id": 106,
+    "id": 107,
     "translation_key": "entity.minecraft.shulker",
     "max_health": 30.0,
     "brain_tasks": [],
@@ -15978,7 +16248,7 @@
     }
   },
   "shulker_bullet": {
-    "id": 107,
+    "id": 108,
     "translation_key": "entity.minecraft.shulker_bullet",
     "attackable": true,
     "step_height": 0.0,
@@ -16045,7 +16315,7 @@
     }
   },
   "silverfish": {
-    "id": 108,
+    "id": 109,
     "translation_key": "entity.minecraft.silverfish",
     "max_health": 8.0,
     "brain_tasks": [],
@@ -16160,7 +16430,7 @@
     }
   },
   "skeleton": {
-    "id": 109,
+    "id": 110,
     "translation_key": "entity.minecraft.skeleton",
     "max_health": 20.0,
     "brain_tasks": [],
@@ -16342,7 +16612,7 @@
     }
   },
   "skeleton_horse": {
-    "id": 110,
+    "id": 111,
     "translation_key": "entity.minecraft.skeleton_horse",
     "max_health": 15.0,
     "brain_tasks": [],
@@ -16499,7 +16769,7 @@
     }
   },
   "slime": {
-    "id": 111,
+    "id": 112,
     "translation_key": "entity.minecraft.slime",
     "max_health": 20.0,
     "brain_tasks": [],
@@ -16697,7 +16967,7 @@
     }
   },
   "small_fireball": {
-    "id": 112,
+    "id": 113,
     "translation_key": "entity.minecraft.small_fireball",
     "attackable": true,
     "step_height": 0.0,
@@ -16770,7 +17040,7 @@
     }
   },
   "sniffer": {
-    "id": 113,
+    "id": 114,
     "translation_key": "entity.minecraft.sniffer",
     "max_health": 14.0,
     "brain_tasks": [
@@ -16860,28 +17130,28 @@
       "minecraft:sniffer_temptations"
     ],
     "brain_memories": [
-      "minecraft:nearest_players",
-      "minecraft:cant_reach_walk_target_since",
-      "minecraft:sniffer_explored_positions",
-      "minecraft:path",
-      "minecraft:sniffer_sniffing_target",
-      "minecraft:hurt_by",
+      "minecraft:look_target",
       "minecraft:sniffer_happy",
+      "minecraft:is_tempted",
+      "minecraft:sniffer_explored_positions",
+      "minecraft:sniffer_sniffing_target",
+      "minecraft:tempting_player",
       "minecraft:nearest_visible_targetable_players",
+      "minecraft:breed_target",
       "minecraft:visible_mobs",
+      "minecraft:nearest_visible_targetable_player",
+      "minecraft:cant_reach_walk_target_since",
+      "minecraft:path",
+      "minecraft:nearest_visible_player",
+      "minecraft:sniffer_digging",
+      "minecraft:hurt_by",
+      "minecraft:hurt_by_entity",
       "minecraft:sniff_cooldown",
       "minecraft:temptation_cooldown_ticks",
-      "minecraft:mobs",
-      "minecraft:hurt_by_entity",
-      "minecraft:nearest_visible_player",
-      "minecraft:breed_target",
       "minecraft:walk_target",
-      "minecraft:is_panicking",
-      "minecraft:tempting_player",
-      "minecraft:is_tempted",
-      "minecraft:look_target",
-      "minecraft:nearest_visible_targetable_player",
-      "minecraft:sniffer_digging"
+      "minecraft:mobs",
+      "minecraft:nearest_players",
+      "minecraft:is_panicking"
     ],
     "attackable": true,
     "step_height": 0.6,
@@ -17007,7 +17277,7 @@
     }
   },
   "snowball": {
-    "id": 114,
+    "id": 115,
     "translation_key": "entity.minecraft.snowball",
     "attackable": true,
     "step_height": 0.0,
@@ -17080,7 +17350,7 @@
     }
   },
   "snow_golem": {
-    "id": 115,
+    "id": 116,
     "translation_key": "entity.minecraft.snow_golem",
     "max_health": 4.0,
     "brain_tasks": [],
@@ -17223,7 +17493,7 @@
     }
   },
   "spawner_minecart": {
-    "id": 116,
+    "id": 117,
     "translation_key": "entity.minecraft.spawner_minecart",
     "attackable": true,
     "step_height": 0.0,
@@ -17315,7 +17585,7 @@
     }
   },
   "spectral_arrow": {
-    "id": 117,
+    "id": 118,
     "translation_key": "entity.minecraft.spectral_arrow",
     "attackable": false,
     "step_height": 0.0,
@@ -17398,7 +17668,7 @@
     }
   },
   "spider": {
-    "id": 118,
+    "id": 119,
     "translation_key": "entity.minecraft.spider",
     "max_health": 16.0,
     "brain_tasks": [],
@@ -17585,7 +17855,7 @@
     }
   },
   "spruce_boat": {
-    "id": 119,
+    "id": 120,
     "translation_key": "entity.minecraft.spruce_boat",
     "attackable": true,
     "step_height": 0.0,
@@ -17682,7 +17952,7 @@
     }
   },
   "spruce_chest_boat": {
-    "id": 120,
+    "id": 121,
     "translation_key": "entity.minecraft.spruce_chest_boat",
     "attackable": true,
     "step_height": 0.0,
@@ -17779,7 +18049,7 @@
     }
   },
   "squid": {
-    "id": 121,
+    "id": 122,
     "translation_key": "entity.minecraft.squid",
     "max_health": 10.0,
     "brain_tasks": [],
@@ -17931,7 +18201,7 @@
     }
   },
   "stray": {
-    "id": 122,
+    "id": 123,
     "translation_key": "entity.minecraft.stray",
     "max_health": 20.0,
     "brain_tasks": [],
@@ -18148,7 +18418,7 @@
     }
   },
   "strider": {
-    "id": 123,
+    "id": 124,
     "translation_key": "entity.minecraft.strider",
     "max_health": 20.0,
     "brain_tasks": [],
@@ -18310,7 +18580,7 @@
     }
   },
   "tadpole": {
-    "id": 124,
+    "id": 125,
     "translation_key": "entity.minecraft.tadpole",
     "max_health": 6.0,
     "brain_tasks": [
@@ -18318,14 +18588,14 @@
         "activity": "core",
         "priority": 0,
         "tasks": [
-          "FleeTask(MIN_RUN_TIME: 100, MAX_RUN_TIME: 120, HORIZONTAL_RANGE: 5, VERTICAL_RANGE: 4, speed: 2.0, entityToDangerousDamageTypes: net.minecraft.entity.ai.brain.task.FleeTask$$Lambda/0x000001c2a9ffabf0@6a331dd8)"
+          "FleeTask(MIN_RUN_TIME: 100, MAX_RUN_TIME: 120, HORIZONTAL_RANGE: 5, VERTICAL_RANGE: 4, speed: 2.0, entityToDangerousDamageTypes: net.minecraft.entity.ai.brain.task.FleeTask$$Lambda/0x000001d982070000@3301fc1c, pathFinder: net.minecraft.entity.ai.brain.task.FleeTask$$Lambda/0x000001d982070230@6f27f3d2)"
         ]
       },
       {
         "activity": "idle",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001c2aa004a98@78b73f28] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001d98207c228@5a5b4352] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
@@ -18339,7 +18609,7 @@
         "activity": "idle",
         "priority": 1,
         "tasks": [
-          "TemptTask(TEMPTATION_COOLDOWN_TICKS: 100, DEFAULT_STOP_DISTANCE: 2.5, LARGE_ENTITY_STOP_DISTANCE: 3.5, speed: net.minecraft.entity.passive.TadpoleBrain$$Lambda/0x000001c2aa05fda0@7b5836ff, stopDistanceGetter: net.minecraft.entity.ai.brain.task.TemptTask$$Lambda/0x000001c2aa018880@6d7694fe)"
+          "TemptTask(TEMPTATION_COOLDOWN_TICKS: 100, DEFAULT_STOP_DISTANCE: 2.5, LARGE_ENTITY_STOP_DISTANCE: 3.5, speed: net.minecraft.entity.passive.TadpoleBrain$$Lambda/0x000001d9820d2860@1a7aed6c, stopDistanceGetter: net.minecraft.entity.ai.brain.task.TemptTask$$Lambda/0x000001d98208bc60@4dfb95e4, useEyeHeight: false)"
         ]
       },
       {
@@ -18353,7 +18623,7 @@
         "activity": "idle",
         "priority": 2,
         "tasks": [
-          "CompositeTask(requiredMemoryState: {minecraft:walk_target=VALUE_ABSENT}, memoriesToForgetWhenStopped: [], order: ORDERED, runMode: TRY_ALL, tasks: ShufflingList[[2:OneShot[C[net.minecraft.entity.ai.brain.task.StrollTask$$Lambda/0x000001c2aa0059f0@68a6bbcd] * M[Absent[memory=minecraft:walk_target]]], 3:OneShot[C[net.minecraft.entity.ai.brain.task.GoToLookTargetTask$$Lambda/0x000001c2aa006930@1af22f22] * M[Absent[memory=minecraft:walk_target]] * M[Value[memory=minecraft:look_target]]], 5:OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa01b448@5bfd0d2b]]]], status: STOPPED)"
+          "CompositeTask(requiredMemoryState: {minecraft:walk_target=VALUE_ABSENT}, memoriesToForgetWhenStopped: [], order: ORDERED, runMode: TRY_ALL, tasks: ShufflingList[[2:OneShot[C[net.minecraft.entity.ai.brain.task.StrollTask$$Lambda/0x000001d98207d180@267f70c0] * M[Absent[memory=minecraft:walk_target]]], 3:OneShot[C[net.minecraft.entity.ai.brain.task.GoToLookTargetTask$$Lambda/0x000001d98207e0c0@71ad9cc9] * M[Absent[memory=minecraft:walk_target]] * M[Value[memory=minecraft:look_target]]], 5:OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d982091b38@716c007d]]]], status: STOPPED)"
         ]
       },
       {
@@ -18371,24 +18641,24 @@
       "minecraft:frog_temptations"
     ],
     "brain_memories": [
-      "minecraft:nearest_players",
-      "minecraft:cant_reach_walk_target_since",
-      "minecraft:path",
-      "minecraft:hurt_by",
-      "minecraft:nearest_visible_targetable_players",
-      "minecraft:nearest_visible_adult",
-      "minecraft:visible_mobs",
-      "minecraft:temptation_cooldown_ticks",
-      "minecraft:mobs",
-      "minecraft:nearest_visible_player",
-      "minecraft:hurt_by_entity",
-      "minecraft:breed_target",
-      "minecraft:walk_target",
+      "minecraft:look_target",
       "minecraft:is_tempted",
       "minecraft:tempting_player",
-      "minecraft:is_panicking",
-      "minecraft:look_target",
-      "minecraft:nearest_visible_targetable_player"
+      "minecraft:nearest_visible_targetable_players",
+      "minecraft:breed_target",
+      "minecraft:visible_mobs",
+      "minecraft:nearest_visible_targetable_player",
+      "minecraft:nearest_visible_adult",
+      "minecraft:cant_reach_walk_target_since",
+      "minecraft:path",
+      "minecraft:nearest_visible_player",
+      "minecraft:hurt_by",
+      "minecraft:hurt_by_entity",
+      "minecraft:temptation_cooldown_ticks",
+      "minecraft:walk_target",
+      "minecraft:mobs",
+      "minecraft:nearest_players",
+      "minecraft:is_panicking"
     ],
     "attackable": true,
     "step_height": 0.6,
@@ -18504,7 +18774,7 @@
     }
   },
   "text_display": {
-    "id": 125,
+    "id": 126,
     "translation_key": "entity.minecraft.text_display",
     "attackable": true,
     "step_height": 0.0,
@@ -18672,7 +18942,7 @@
     }
   },
   "tnt": {
-    "id": 126,
+    "id": 127,
     "translation_key": "entity.minecraft.tnt",
     "attackable": true,
     "step_height": 0.0,
@@ -18749,7 +19019,7 @@
     }
   },
   "tnt_minecart": {
-    "id": 127,
+    "id": 128,
     "translation_key": "entity.minecraft.tnt_minecart",
     "attackable": true,
     "step_height": 0.0,
@@ -18841,7 +19111,7 @@
     }
   },
   "trader_llama": {
-    "id": 128,
+    "id": 129,
     "translation_key": "entity.minecraft.trader_llama",
     "max_health": 53.0,
     "brain_tasks": [],
@@ -19013,7 +19283,7 @@
     }
   },
   "trident": {
-    "id": 129,
+    "id": 130,
     "translation_key": "entity.minecraft.trident",
     "attackable": false,
     "step_height": 0.0,
@@ -19106,7 +19376,7 @@
     }
   },
   "tropical_fish": {
-    "id": 130,
+    "id": 131,
     "translation_key": "entity.minecraft.tropical_fish",
     "max_health": 3.0,
     "brain_tasks": [],
@@ -19266,7 +19536,7 @@
     }
   },
   "turtle": {
-    "id": 131,
+    "id": 132,
     "translation_key": "entity.minecraft.turtle",
     "max_health": 30.0,
     "brain_tasks": [],
@@ -19452,7 +19722,7 @@
     }
   },
   "vex": {
-    "id": 132,
+    "id": 133,
     "translation_key": "entity.minecraft.vex",
     "max_health": 14.0,
     "brain_tasks": [],
@@ -19572,7 +19842,7 @@
     }
   },
   "villager": {
-    "id": 133,
+    "id": 134,
     "translation_key": "entity.minecraft.villager",
     "max_health": 20.0,
     "brain_tasks": [
@@ -19581,36 +19851,36 @@
         "priority": 0,
         "tasks": [
           "StayAboveWaterTask(chance: 0.8)",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.OpenDoorsTask$$Lambda/0x000001c2aa048238@631a4400] * M[Value[memory=minecraft:path]] * M[Optional[memory=minecraft:doors_to_close]] * M[Optional[memory=minecraft:mobs]])",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.OpenDoorsTask$$Lambda/0x000001d9820bbd68@5a5b6e0f] * M[Value[memory=minecraft:path]] * M[Optional[memory=minecraft:doors_to_close]] * M[Optional[memory=minecraft:mobs]])",
           "UpdateLookControlTask()",
           "PanicTask()",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WakeUpTask$$Lambda/0x000001c2aa06c230@2d1e370f])",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.HideWhenBellRingsTask$$Lambda/0x000001c2aa06c868@53d9add8] * M[Value[memory=minecraft:heard_bell_time]])",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.StartRaidTask$$Lambda/0x000001c2aa06cec0@ab98d6d])",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetCompletedPointOfInterestTask$$Lambda/0x000001c2aa06d500@3bb2e27e] * M[Value[memory=minecraft:job_site]])",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetCompletedPointOfInterestTask$$Lambda/0x000001c2aa06d500@67c81c48] * M[Value[memory=minecraft:potential_job_site]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WakeUpTask$$Lambda/0x000001d9820df1b0@6e130d4b])",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.HideWhenBellRingsTask$$Lambda/0x000001d9820df7e8@288dbf57] * M[Value[memory=minecraft:heard_bell_time]])",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.StartRaidTask$$Lambda/0x000001d9820e4000@734ecafb])",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetCompletedPointOfInterestTask$$Lambda/0x000001d9820e4640@7264e98b] * M[Value[memory=minecraft:job_site]])",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetCompletedPointOfInterestTask$$Lambda/0x000001d9820e4640@46bdbd9] * M[Value[memory=minecraft:potential_job_site]])"
         ]
       },
       {
         "activity": "hide",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetBellRingTask$$Lambda/0x000001c2aa078fb0@79e1ca04] * M[Value[memory=minecraft:hiding_place]] * M[Value[memory=minecraft:heard_bell_time]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetBellRingTask$$Lambda/0x000001d9820f4430@41d9bb04] * M[Value[memory=minecraft:hiding_place]] * M[Value[memory=minecraft:heard_bell_time]])"
         ]
       },
       {
         "activity": "pre_raid",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RingBellTask$$Lambda/0x000001c2aa076b38@3f75e2b0] * M[Value[memory=minecraft:meeting_point]])",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.Tasks$$Lambda/0x000001c2aa057180@13f84632])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RingBellTask$$Lambda/0x000001d9820ebc08@4445b8d6] * M[Value[memory=minecraft:meeting_point]])",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.Tasks$$Lambda/0x000001d9820ce898@11b83964])"
         ]
       },
       {
         "activity": "raid",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa029c78@34f52259] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa077820@43b36f29]]])",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d9820a0000@4bd79d99] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d9820eeab0@475a1e7c]]])",
           "CelebrateRaidWinTask(raid: null)"
         ]
       },
@@ -19618,7 +19888,7 @@
         "activity": "panic",
         "priority": 0,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.StopPanickingTask$$Lambda/0x000001c2aa0764d8@53c3658d] * M[Optional[memory=minecraft:hurt_by]] * M[Optional[memory=minecraft:hurt_by_entity]] * M[Optional[memory=minecraft:nearest_hostile]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.StopPanickingTask$$Lambda/0x000001d9820eb5a8@2e309d49] * M[Optional[memory=minecraft:hurt_by]] * M[Optional[memory=minecraft:hurt_by_entity]] * M[Optional[memory=minecraft:nearest_hostile]])"
         ]
       },
       {
@@ -19632,37 +19902,37 @@
         "activity": "hide",
         "priority": 1,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.HideInHomeTask$$Lambda/0x000001c2aa078908@25b7011].map[com.mojang.datafixers.kinds.Applicative$$Lambda/0x000001c2a966f1d8@1fa17de9] * M[Absent[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:home]] * M[Optional[memory=minecraft:hiding_place]] * M[Optional[memory=minecraft:path]] * M[Optional[memory=minecraft:look_target]] * M[Optional[memory=minecraft:breed_target]] * M[Optional[memory=minecraft:interaction_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.HideInHomeTask$$Lambda/0x000001d9820efc28@7e93e2f2].map[com.mojang.datafixers.kinds.Applicative$$Lambda/0x000001d98165dcf0@9df83ec] * M[Absent[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:home]] * M[Optional[memory=minecraft:hiding_place]] * M[Optional[memory=minecraft:path]] * M[Optional[memory=minecraft:look_target]] * M[Optional[memory=minecraft:breed_target]] * M[Optional[memory=minecraft:interaction_target]])"
         ]
       },
       {
         "activity": "panic",
         "priority": 1,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.GoToRememberedPositionTask$$Lambda/0x000001c2aa03f5c8@47b39313] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:nearest_hostile]])",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.GoToRememberedPositionTask$$Lambda/0x000001c2aa03f5c8@f146965] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:hurt_by_entity]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.GoToRememberedPositionTask$$Lambda/0x000001d9820b5aa8@1ee1d555] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:nearest_hostile]])",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.GoToRememberedPositionTask$$Lambda/0x000001d9820b5aa8@3411c915] * M[Optional[memory=minecraft:walk_target]] * M[Value[memory=minecraft:hurt_by_entity]])"
         ]
       },
       {
         "activity": "rest",
         "priority": 2,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.VillagerWalkTowardsTask$$Lambda/0x000001c2aa066cb8@56165b6e] * M[Optional[memory=minecraft:cant_reach_walk_target_since]] * M[Absent[memory=minecraft:walk_target]] * M[Value[memory=minecraft:home]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.VillagerWalkTowardsTask$$Lambda/0x000001d9820ddde8@55742917] * M[Optional[memory=minecraft:cant_reach_walk_target_since]] * M[Absent[memory=minecraft:walk_target]] * M[Value[memory=minecraft:home]])"
         ]
       },
       {
         "activity": "core",
         "priority": 2,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WorkStationCompetitionTask$$Lambda/0x000001c2aa06db60@424c2a70] * M[Value[memory=minecraft:job_site]] * M[Value[memory=minecraft:mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WorkStationCompetitionTask$$Lambda/0x000001d9820e4ca0@204100b6] * M[Value[memory=minecraft:job_site]] * M[Value[memory=minecraft:mobs]])"
         ]
       },
       {
         "activity": "meet",
         "priority": 2,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.Tasks$$Lambda/0x000001c2aa057180@193c0221])",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.VillagerWalkTowardsTask$$Lambda/0x000001c2aa066cb8@354f1f22] * M[Optional[memory=minecraft:cant_reach_walk_target_since]] * M[Absent[memory=minecraft:walk_target]] * M[Value[memory=minecraft:meeting_point]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.Tasks$$Lambda/0x000001d9820ce898@309a2296])",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.VillagerWalkTowardsTask$$Lambda/0x000001d9820ddde8@af91cf1] * M[Optional[memory=minecraft:cant_reach_walk_target_since]] * M[Absent[memory=minecraft:walk_target]] * M[Value[memory=minecraft:meeting_point]])"
         ]
       },
       {
@@ -19676,21 +19946,21 @@
         "activity": "work",
         "priority": 2,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.VillagerWalkTowardsTask$$Lambda/0x000001c2aa066cb8@5166ffce] * M[Optional[memory=minecraft:cant_reach_walk_target_since]] * M[Absent[memory=minecraft:walk_target]] * M[Value[memory=minecraft:job_site]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.VillagerWalkTowardsTask$$Lambda/0x000001d9820ddde8@7e31b028] * M[Optional[memory=minecraft:cant_reach_walk_target_since]] * M[Absent[memory=minecraft:walk_target]] * M[Value[memory=minecraft:job_site]])"
         ]
       },
       {
         "activity": "raid",
         "priority": 2,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa029c78@725a5038] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa077820@b8e6958]]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d9820a0000@56dd5be8] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d9820eeab0@37b24d37]]])"
         ]
       },
       {
         "activity": "rest",
         "priority": 3,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetCompletedPointOfInterestTask$$Lambda/0x000001c2aa06d500@4675d104] * M[Value[memory=minecraft:home]])",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetCompletedPointOfInterestTask$$Lambda/0x000001d9820e4640@756ed1a4] * M[Value[memory=minecraft:home]])",
           "SleepTask(RUN_TIME: 100, startTime: 0)"
         ]
       },
@@ -19705,34 +19975,34 @@
         "activity": "meet",
         "priority": 3,
         "tasks": [
-          "GiveGiftsToHeroTask(MAX_DISTANCE: 5, DEFAULT_DURATION: 600, MAX_NEXT_GIFT_DELAY: 6600, RUN_TIME: 20, GIFTS: {ResourceKey[minecraft:villager_profession / minecraft:mason]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/mason_gift], ResourceKey[minecraft:villager_profession / minecraft:leatherworker]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/leatherworker_gift], ResourceKey[minecraft:villager_profession / minecraft:weaponsmith]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/weaponsmith_gift], ResourceKey[minecraft:villager_profession / minecraft:armorer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/armorer_gift], ResourceKey[minecraft:villager_profession / minecraft:shepherd]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/shepherd_gift], ResourceKey[minecraft:villager_profession / minecraft:toolsmith]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/toolsmith_gift], ResourceKey[minecraft:villager_profession / minecraft:fisherman]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/fisherman_gift], ResourceKey[minecraft:villager_profession / minecraft:cleric]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/cleric_gift], ResourceKey[minecraft:villager_profession / minecraft:cartographer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/cartographer_gift], ResourceKey[minecraft:villager_profession / minecraft:butcher]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/butcher_gift], ResourceKey[minecraft:villager_profession / minecraft:librarian]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/librarian_gift], ResourceKey[minecraft:villager_profession / minecraft:farmer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/farmer_gift], ResourceKey[minecraft:villager_profession / minecraft:fletcher]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/fletcher_gift]}, WALK_SPEED: 0.5, ticksLeft: 600, done: false, startTime: 0)",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetCompletedPointOfInterestTask$$Lambda/0x000001c2aa06d500@200bce8b] * M[Value[memory=minecraft:meeting_point]])",
-          "CompositeTask(requiredMemoryState: {}, memoriesToForgetWhenStopped: [minecraft:interaction_target], order: ORDERED, runMode: RUN_ONE, tasks: ShufflingList[[1:net.minecraft.entity.ai.brain.task.GatherItemsVillagerTask@f09122]], status: STOPPED)"
+          "GiveGiftsToHeroTask(MAX_DISTANCE: 5, DEFAULT_DURATION: 600, MAX_NEXT_GIFT_DELAY: 6600, RUN_TIME: 20, GIFTS: {ResourceKey[minecraft:villager_profession / minecraft:leatherworker]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/leatherworker_gift], ResourceKey[minecraft:villager_profession / minecraft:butcher]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/butcher_gift], ResourceKey[minecraft:villager_profession / minecraft:weaponsmith]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/weaponsmith_gift], ResourceKey[minecraft:villager_profession / minecraft:cleric]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/cleric_gift], ResourceKey[minecraft:villager_profession / minecraft:armorer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/armorer_gift], ResourceKey[minecraft:villager_profession / minecraft:toolsmith]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/toolsmith_gift], ResourceKey[minecraft:villager_profession / minecraft:mason]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/mason_gift], ResourceKey[minecraft:villager_profession / minecraft:shepherd]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/shepherd_gift], ResourceKey[minecraft:villager_profession / minecraft:farmer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/farmer_gift], ResourceKey[minecraft:villager_profession / minecraft:fisherman]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/fisherman_gift], ResourceKey[minecraft:villager_profession / minecraft:librarian]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/librarian_gift], ResourceKey[minecraft:villager_profession / minecraft:fletcher]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/fletcher_gift], ResourceKey[minecraft:villager_profession / minecraft:cartographer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/cartographer_gift]}, WALK_SPEED: 0.5, ticksLeft: 600, done: false, startTime: 0)",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetCompletedPointOfInterestTask$$Lambda/0x000001d9820e4640@6ad9fd1] * M[Value[memory=minecraft:meeting_point]])",
+          "CompositeTask(requiredMemoryState: {}, memoriesToForgetWhenStopped: [minecraft:interaction_target], order: ORDERED, runMode: RUN_ONE, tasks: ShufflingList[[1:net.minecraft.entity.ai.brain.task.GatherItemsVillagerTask@3a1386f7]], status: STOPPED)"
         ]
       },
       {
         "activity": "idle",
         "priority": 3,
         "tasks": [
-          "GiveGiftsToHeroTask(MAX_DISTANCE: 5, DEFAULT_DURATION: 600, MAX_NEXT_GIFT_DELAY: 6600, RUN_TIME: 20, GIFTS: {ResourceKey[minecraft:villager_profession / minecraft:mason]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/mason_gift], ResourceKey[minecraft:villager_profession / minecraft:leatherworker]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/leatherworker_gift], ResourceKey[minecraft:villager_profession / minecraft:weaponsmith]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/weaponsmith_gift], ResourceKey[minecraft:villager_profession / minecraft:armorer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/armorer_gift], ResourceKey[minecraft:villager_profession / minecraft:shepherd]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/shepherd_gift], ResourceKey[minecraft:villager_profession / minecraft:toolsmith]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/toolsmith_gift], ResourceKey[minecraft:villager_profession / minecraft:fisherman]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/fisherman_gift], ResourceKey[minecraft:villager_profession / minecraft:cleric]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/cleric_gift], ResourceKey[minecraft:villager_profession / minecraft:cartographer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/cartographer_gift], ResourceKey[minecraft:villager_profession / minecraft:butcher]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/butcher_gift], ResourceKey[minecraft:villager_profession / minecraft:librarian]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/librarian_gift], ResourceKey[minecraft:villager_profession / minecraft:farmer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/farmer_gift], ResourceKey[minecraft:villager_profession / minecraft:fletcher]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/fletcher_gift]}, WALK_SPEED: 0.5, ticksLeft: 600, done: false, startTime: 0)",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindInteractionTargetTask$$Lambda/0x000001c2aa04fcc8@784ceccd] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:interaction_target]] * M[Value[memory=minecraft:visible_mobs]])",
+          "GiveGiftsToHeroTask(MAX_DISTANCE: 5, DEFAULT_DURATION: 600, MAX_NEXT_GIFT_DELAY: 6600, RUN_TIME: 20, GIFTS: {ResourceKey[minecraft:villager_profession / minecraft:leatherworker]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/leatherworker_gift], ResourceKey[minecraft:villager_profession / minecraft:butcher]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/butcher_gift], ResourceKey[minecraft:villager_profession / minecraft:weaponsmith]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/weaponsmith_gift], ResourceKey[minecraft:villager_profession / minecraft:cleric]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/cleric_gift], ResourceKey[minecraft:villager_profession / minecraft:armorer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/armorer_gift], ResourceKey[minecraft:villager_profession / minecraft:toolsmith]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/toolsmith_gift], ResourceKey[minecraft:villager_profession / minecraft:mason]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/mason_gift], ResourceKey[minecraft:villager_profession / minecraft:shepherd]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/shepherd_gift], ResourceKey[minecraft:villager_profession / minecraft:farmer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/farmer_gift], ResourceKey[minecraft:villager_profession / minecraft:fisherman]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/fisherman_gift], ResourceKey[minecraft:villager_profession / minecraft:librarian]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/librarian_gift], ResourceKey[minecraft:villager_profession / minecraft:fletcher]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/fletcher_gift], ResourceKey[minecraft:villager_profession / minecraft:cartographer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/cartographer_gift]}, WALK_SPEED: 0.5, ticksLeft: 600, done: false, startTime: 0)",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindInteractionTargetTask$$Lambda/0x000001d9820c6f78@1fedbf77] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:interaction_target]] * M[Value[memory=minecraft:visible_mobs]])",
           "HoldTradeOffersTask(RUN_INTERVAL: 900, OFFER_SHOWING_INTERVAL: 40, customerHeldStack: null, offers: [], offerShownTicks: 0, offerIndex: 0, ticksLeft: 0)",
-          "CompositeTask(requiredMemoryState: {}, memoriesToForgetWhenStopped: [minecraft:interaction_target], order: ORDERED, runMode: RUN_ONE, tasks: ShufflingList[[1:net.minecraft.entity.ai.brain.task.GatherItemsVillagerTask@1059ff31]], status: STOPPED)",
-          "CompositeTask(requiredMemoryState: {}, memoriesToForgetWhenStopped: [minecraft:breed_target], order: ORDERED, runMode: RUN_ONE, tasks: ShufflingList[[1:net.minecraft.entity.ai.brain.task.VillagerBreedTask@6ed81427]], status: STOPPED)"
+          "CompositeTask(requiredMemoryState: {}, memoriesToForgetWhenStopped: [minecraft:interaction_target], order: ORDERED, runMode: RUN_ONE, tasks: ShufflingList[[1:net.minecraft.entity.ai.brain.task.GatherItemsVillagerTask@1c0dbedf]], status: STOPPED)",
+          "CompositeTask(requiredMemoryState: {}, memoriesToForgetWhenStopped: [minecraft:breed_target], order: ORDERED, runMode: RUN_ONE, tasks: ShufflingList[[1:net.minecraft.entity.ai.brain.task.VillagerBreedTask@7634e998]], status: STOPPED)"
         ]
       },
       {
         "activity": "work",
         "priority": 3,
         "tasks": [
-          "GiveGiftsToHeroTask(MAX_DISTANCE: 5, DEFAULT_DURATION: 600, MAX_NEXT_GIFT_DELAY: 6600, RUN_TIME: 20, GIFTS: {ResourceKey[minecraft:villager_profession / minecraft:mason]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/mason_gift], ResourceKey[minecraft:villager_profession / minecraft:leatherworker]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/leatherworker_gift], ResourceKey[minecraft:villager_profession / minecraft:weaponsmith]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/weaponsmith_gift], ResourceKey[minecraft:villager_profession / minecraft:armorer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/armorer_gift], ResourceKey[minecraft:villager_profession / minecraft:shepherd]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/shepherd_gift], ResourceKey[minecraft:villager_profession / minecraft:toolsmith]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/toolsmith_gift], ResourceKey[minecraft:villager_profession / minecraft:fisherman]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/fisherman_gift], ResourceKey[minecraft:villager_profession / minecraft:cleric]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/cleric_gift], ResourceKey[minecraft:villager_profession / minecraft:cartographer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/cartographer_gift], ResourceKey[minecraft:villager_profession / minecraft:butcher]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/butcher_gift], ResourceKey[minecraft:villager_profession / minecraft:librarian]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/librarian_gift], ResourceKey[minecraft:villager_profession / minecraft:farmer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/farmer_gift], ResourceKey[minecraft:villager_profession / minecraft:fletcher]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/fletcher_gift]}, WALK_SPEED: 0.5, ticksLeft: 600, done: false, startTime: 0)"
+          "GiveGiftsToHeroTask(MAX_DISTANCE: 5, DEFAULT_DURATION: 600, MAX_NEXT_GIFT_DELAY: 6600, RUN_TIME: 20, GIFTS: {ResourceKey[minecraft:villager_profession / minecraft:leatherworker]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/leatherworker_gift], ResourceKey[minecraft:villager_profession / minecraft:butcher]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/butcher_gift], ResourceKey[minecraft:villager_profession / minecraft:weaponsmith]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/weaponsmith_gift], ResourceKey[minecraft:villager_profession / minecraft:cleric]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/cleric_gift], ResourceKey[minecraft:villager_profession / minecraft:armorer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/armorer_gift], ResourceKey[minecraft:villager_profession / minecraft:toolsmith]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/toolsmith_gift], ResourceKey[minecraft:villager_profession / minecraft:mason]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/mason_gift], ResourceKey[minecraft:villager_profession / minecraft:shepherd]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/shepherd_gift], ResourceKey[minecraft:villager_profession / minecraft:farmer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/farmer_gift], ResourceKey[minecraft:villager_profession / minecraft:fisherman]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/fisherman_gift], ResourceKey[minecraft:villager_profession / minecraft:librarian]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/librarian_gift], ResourceKey[minecraft:villager_profession / minecraft:fletcher]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/fletcher_gift], ResourceKey[minecraft:villager_profession / minecraft:cartographer]=ResourceKey[minecraft:loot_table / minecraft:gameplay/hero_of_the_village/cartographer_gift]}, WALK_SPEED: 0.5, ticksLeft: 600, done: false, startTime: 0)"
         ]
       },
       {
         "activity": "panic",
         "priority": 3,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.GoToPointOfInterestTask$$Lambda/0x000001c2aa0738d0@6aa5f15f] * M[Absent[memory=minecraft:walk_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.GoToPointOfInterestTask$$Lambda/0x000001d9820ea9f8@5036ed97] * M[Absent[memory=minecraft:walk_target]])"
         ]
       },
       {
@@ -19747,7 +20017,7 @@
         "activity": "core",
         "priority": 5,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsNearestVisibleWantedItemTask$$Lambda/0x000001c2a9ffe530@75104242] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:walk_target]] * M[Value[memory=minecraft:nearest_visible_wanted_item]] * M[Optional[memory=minecraft:item_pickup_cooldown_ticks]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsNearestVisibleWantedItemTask$$Lambda/0x000001d982073b70@22d2e6e1] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:walk_target]] * M[Value[memory=minecraft:nearest_visible_wanted_item]] * M[Optional[memory=minecraft:item_pickup_cooldown_ticks]])"
         ]
       },
       {
@@ -19804,7 +20074,7 @@
         "activity": "core",
         "priority": 6,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindPointOfInterestTask$$Lambda/0x000001c2aa06ed50@2a6f9ba6] * M[Absent[memory=minecraft:job_site]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindPointOfInterestTask$$Lambda/0x000001d9820e5e90@53d85f22] * M[Absent[memory=minecraft:job_site]])"
         ]
       },
       {
@@ -19818,17 +20088,17 @@
         "activity": "core",
         "priority": 8,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TakeJobSiteTask$$Lambda/0x000001c2aa06f650@438dbe0].map[com.mojang.datafixers.kinds.Applicative$$Lambda/0x000001c2a9654870@41d2ed31] * M[Value[memory=minecraft:potential_job_site]] * M[Absent[memory=minecraft:job_site]] * M[Value[memory=minecraft:mobs]] * M[Optional[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TakeJobSiteTask$$Lambda/0x000001d9820e6790@2f114e8].map[com.mojang.datafixers.kinds.Applicative$$Lambda/0x000001d981647328@65cc0b74] * M[Value[memory=minecraft:potential_job_site]] * M[Absent[memory=minecraft:job_site]] * M[Value[memory=minecraft:mobs]] * M[Optional[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]])"
         ]
       },
       {
         "activity": "core",
         "priority": 10,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindPointOfInterestTask$$Lambda/0x000001c2aa06e8e0@3627b51b] * M[Absent[memory=minecraft:home]])",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindPointOfInterestTask$$Lambda/0x000001c2aa06e8e0@6043bad2] * M[Absent[memory=minecraft:meeting_point]])",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateJobSiteTask$$Lambda/0x000001c2aa070230@22e68ae1] * M[Value[memory=minecraft:potential_job_site]] * M[Optional[memory=minecraft:job_site]])",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LoseJobOnSiteLossTask$$Lambda/0x000001c2aa070880@748b50e9] * M[Absent[memory=minecraft:job_site]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindPointOfInterestTask$$Lambda/0x000001d9820e5a20@509c1cc2] * M[Absent[memory=minecraft:home]])",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindPointOfInterestTask$$Lambda/0x000001d9820e5a20@41ac78bc] * M[Absent[memory=minecraft:meeting_point]])",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateJobSiteTask$$Lambda/0x000001d9820e7940@4bf07235] * M[Value[memory=minecraft:potential_job_site]] * M[Optional[memory=minecraft:job_site]])",
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LoseJobOnSiteLossTask$$Lambda/0x000001d9820e3800@4ee24794] * M[Absent[memory=minecraft:job_site]])"
         ]
       },
       {
@@ -19836,7 +20106,7 @@
         "priority": 10,
         "tasks": [
           "HoldTradeOffersTask(RUN_INTERVAL: 900, OFFER_SHOWING_INTERVAL: 40, customerHeldStack: null, offers: [], offerShownTicks: 0, offerIndex: 0, ticksLeft: 0)",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindInteractionTargetTask$$Lambda/0x000001c2aa04fcc8@7f8fac0e] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:interaction_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindInteractionTargetTask$$Lambda/0x000001d9820c6f78@7e282886] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:interaction_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
@@ -19844,49 +20114,49 @@
         "priority": 10,
         "tasks": [
           "HoldTradeOffersTask(RUN_INTERVAL: 900, OFFER_SHOWING_INTERVAL: 40, customerHeldStack: null, offers: [], offerShownTicks: 0, offerIndex: 0, ticksLeft: 0)",
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindInteractionTargetTask$$Lambda/0x000001c2aa04fcc8@2671c07] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:interaction_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindInteractionTargetTask$$Lambda/0x000001d9820c6f78@5c63d667] * M[Optional[memory=minecraft:look_target]] * M[Absent[memory=minecraft:interaction_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "rest",
         "priority": 99,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ScheduleActivityTask$$Lambda/0x000001c2aa0677b0@14c02f28])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ScheduleActivityTask$$Lambda/0x000001d9820de8e0@48c84dee])"
         ]
       },
       {
         "activity": "meet",
         "priority": 99,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ScheduleActivityTask$$Lambda/0x000001c2aa0677b0@14c02f28])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ScheduleActivityTask$$Lambda/0x000001d9820de8e0@48c84dee])"
         ]
       },
       {
         "activity": "pre_raid",
         "priority": 99,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.EndRaidTask$$Lambda/0x000001c2aa077198@388f1ddf])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.EndRaidTask$$Lambda/0x000001d9820ee428@779b3069])"
         ]
       },
       {
         "activity": "idle",
         "priority": 99,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ScheduleActivityTask$$Lambda/0x000001c2aa0677b0@14c02f28])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ScheduleActivityTask$$Lambda/0x000001d9820de8e0@48c84dee])"
         ]
       },
       {
         "activity": "work",
         "priority": 99,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ScheduleActivityTask$$Lambda/0x000001c2aa0677b0@14c02f28])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ScheduleActivityTask$$Lambda/0x000001d9820de8e0@48c84dee])"
         ]
       },
       {
         "activity": "raid",
         "priority": 99,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.EndRaidTask$$Lambda/0x000001c2aa077198@388f1ddf])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.EndRaidTask$$Lambda/0x000001d9820ee428@779b3069])"
         ]
       }
     ],
@@ -19902,37 +20172,37 @@
       "minecraft:golem_detected"
     ],
     "brain_memories": [
-      "minecraft:nearest_players",
-      "minecraft:interaction_target",
-      "minecraft:hurt_by",
-      "minecraft:heard_bell_time",
-      "minecraft:nearest_bed",
-      "minecraft:golem_detected_recently",
-      "minecraft:nearest_visible_player",
-      "minecraft:breed_target",
-      "minecraft:nearest_visible_wanted_item",
-      "minecraft:potential_job_site",
       "minecraft:look_target",
-      "minecraft:hiding_place",
-      "minecraft:nearest_hostile",
-      "minecraft:cant_reach_walk_target_since",
-      "minecraft:visible_villager_babies",
-      "minecraft:path",
-      "minecraft:last_slept",
-      "minecraft:secondary_job_site",
-      "minecraft:nearest_visible_targetable_players",
       "minecraft:last_woken",
-      "minecraft:home",
       "minecraft:visible_mobs",
-      "minecraft:last_worked_at_poi",
-      "minecraft:item_pickup_cooldown_ticks",
-      "minecraft:mobs",
-      "minecraft:doors_to_close",
-      "minecraft:meeting_point",
+      "minecraft:home",
+      "minecraft:cant_reach_walk_target_since",
+      "minecraft:nearest_visible_player",
+      "minecraft:nearest_hostile",
+      "minecraft:visible_villager_babies",
       "minecraft:hurt_by_entity",
-      "minecraft:walk_target",
+      "minecraft:item_pickup_cooldown_ticks",
+      "minecraft:potential_job_site",
+      "minecraft:meeting_point",
+      "minecraft:nearest_players",
+      "minecraft:last_slept",
+      "minecraft:hiding_place",
+      "minecraft:interaction_target",
+      "minecraft:secondary_job_site",
+      "minecraft:nearest_bed",
+      "minecraft:nearest_visible_targetable_players",
+      "minecraft:breed_target",
+      "minecraft:last_worked_at_poi",
+      "minecraft:job_site",
       "minecraft:nearest_visible_targetable_player",
-      "minecraft:job_site"
+      "minecraft:doors_to_close",
+      "minecraft:nearest_visible_wanted_item",
+      "minecraft:path",
+      "minecraft:hurt_by",
+      "minecraft:golem_detected_recently",
+      "minecraft:mobs",
+      "minecraft:walk_target",
+      "minecraft:heard_bell_time"
     ],
     "inventory_size": 8,
     "attackable": true,
@@ -20059,7 +20329,7 @@
     }
   },
   "vindicator": {
-    "id": 134,
+    "id": 135,
     "translation_key": "entity.minecraft.vindicator",
     "max_health": 24.0,
     "brain_tasks": [],
@@ -20216,7 +20486,7 @@
     }
   },
   "wandering_trader": {
-    "id": 135,
+    "id": 136,
     "translation_key": "entity.minecraft.wandering_trader",
     "max_health": 20.0,
     "brain_tasks": [],
@@ -20342,7 +20612,7 @@
     }
   },
   "warden": {
-    "id": 136,
+    "id": 137,
     "translation_key": "entity.minecraft.warden",
     "max_health": 500.0,
     "brain_tasks": [
@@ -20364,7 +20634,7 @@
         "activity": "core",
         "priority": 1,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtDisturbanceTask$$Lambda/0x000001c2aa07f890@6eecbde8] * M[Optional[memory=minecraft:look_target]] * M[Optional[memory=minecraft:disturbance_location]] * M[Optional[memory=minecraft:roar_target]] * M[Absent[memory=minecraft:attack_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtDisturbanceTask$$Lambda/0x000001d9820f7c18@667a135b] * M[Optional[memory=minecraft:look_target]] * M[Optional[memory=minecraft:disturbance_location]] * M[Optional[memory=minecraft:roar_target]] * M[Absent[memory=minecraft:attack_target]])"
         ]
       },
       {
@@ -20392,7 +20662,7 @@
         "activity": "sniff",
         "priority": 5,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindRoarTargetTask$$Lambda/0x000001c2aa080238@4262bd5c] * M[Absent[memory=minecraft:roar_target]] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindRoarTargetTask$$Lambda/0x000001d9820f2e18@8587883] * M[Absent[memory=minecraft:roar_target]] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
@@ -20406,7 +20676,7 @@
         "activity": "investigate",
         "priority": 5,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindRoarTargetTask$$Lambda/0x000001c2aa080238@56ad4193] * M[Absent[memory=minecraft:roar_target]] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindRoarTargetTask$$Lambda/0x000001d9820f2e18@32400089] * M[Absent[memory=minecraft:roar_target]] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
@@ -20420,14 +20690,14 @@
         "activity": "investigate",
         "priority": 6,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsFuzzyPosTask$$Lambda/0x000001c2aa0531c8@6f795535] * M[Value[memory=minecraft:disturbance_location]] * M[Absent[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.WalkTowardsFuzzyPosTask$$Lambda/0x000001d9820ca938@2cba251f] * M[Value[memory=minecraft:disturbance_location]] * M[Absent[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 10,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindRoarTargetTask$$Lambda/0x000001c2aa080238@6471b6cf] * M[Absent[memory=minecraft:roar_target]] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.FindRoarTargetTask$$Lambda/0x000001d9820f2e18@1aec0b18] * M[Absent[memory=minecraft:roar_target]] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
@@ -20441,21 +20711,21 @@
         "activity": "fight",
         "priority": 10,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.mob.WardenBrain$$Lambda/0x000001c2aa07f230@332e7f40] * M[Optional[memory=minecraft:dig_cooldown]])"
+          "OneShot(field_40999: C[net.minecraft.entity.mob.WardenBrain$$Lambda/0x000001d9820f75b8@513be4a6] * M[Optional[memory=minecraft:dig_cooldown]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 11,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.StartSniffingTask$$Lambda/0x000001c2aa080898@fb3016f].map[com.mojang.datafixers.kinds.Applicative$$Lambda/0x000001c2a9654870@41d2ed31] * M[Optional[memory=minecraft:is_sniffing]] * M[Optional[memory=minecraft:walk_target]] * M[Absent[memory=minecraft:sniff_cooldown]] * M[Value[memory=minecraft:nearest_attackable]] * M[Absent[memory=minecraft:disturbance_location]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.StartSniffingTask$$Lambda/0x000001d9820f3478@63cdf240].map[com.mojang.datafixers.kinds.Applicative$$Lambda/0x000001d981647328@65cc0b74] * M[Optional[memory=minecraft:is_sniffing]] * M[Optional[memory=minecraft:walk_target]] * M[Absent[memory=minecraft:sniff_cooldown]] * M[Value[memory=minecraft:nearest_attackable]] * M[Absent[memory=minecraft:disturbance_location]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 11,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001c2aa01e638@2a462d51] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001d982092bc0@1ea2b1fb] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
@@ -20469,14 +20739,14 @@
         "activity": "fight",
         "priority": 12,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobTask$$Lambda/0x000001c2aa04b198@43e82118] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobTask$$Lambda/0x000001d9820c2490@64ecddfc] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 13,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RangedApproachTask$$Lambda/0x000001c2aa01eec0@37c825a] * M[Optional[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RangedApproachTask$$Lambda/0x000001d982093448@6afc1b13] * M[Optional[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:visible_mobs]])"
         ]
       },
       {
@@ -20490,7 +20760,7 @@
         "activity": "fight",
         "priority": 15,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.MeleeAttackTask$$Lambda/0x000001c2aa01f778@14534323] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:attack_cooling_down]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.MeleeAttackTask$$Lambda/0x000001d982093d00@66afbbfe] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Absent[memory=minecraft:attack_cooling_down]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       }
     ],
@@ -20499,34 +20769,34 @@
       "minecraft:warden_entity_sensor"
     ],
     "brain_memories": [
+      "minecraft:look_target",
+      "minecraft:is_emerging",
+      "minecraft:dig_cooldown",
+      "minecraft:sonic_boom_sound_delay",
+      "minecraft:visible_mobs",
+      "minecraft:attack_target",
+      "minecraft:roar_target",
+      "minecraft:touch_cooldown",
+      "minecraft:recent_projectile",
+      "minecraft:vibration_cooldown",
+      "minecraft:cant_reach_walk_target_since",
+      "minecraft:nearest_visible_player",
+      "minecraft:sonic_boom_cooldown",
+      "minecraft:disturbance_location",
       "minecraft:nearest_players",
+      "minecraft:roar_sound_delay",
+      "minecraft:nearest_visible_targetable_players",
+      "minecraft:roar_sound_cooldown",
+      "minecraft:nearest_visible_targetable_player",
+      "minecraft:attack_cooling_down",
+      "minecraft:path",
+      "minecraft:nearest_attackable",
       "minecraft:sonic_boom_sound_cooldown",
       "minecraft:sniff_cooldown",
-      "minecraft:dig_cooldown",
-      "minecraft:attack_cooling_down",
-      "minecraft:nearest_visible_player",
-      "minecraft:is_sniffing",
-      "minecraft:disturbance_location",
-      "minecraft:sonic_boom_sound_delay",
-      "minecraft:roar_sound_delay",
-      "minecraft:look_target",
-      "minecraft:attack_target",
-      "minecraft:nearest_visible_nemesis",
-      "minecraft:is_emerging",
-      "minecraft:cant_reach_walk_target_since",
-      "minecraft:path",
-      "minecraft:roar_sound_cooldown",
-      "minecraft:nearest_visible_targetable_players",
-      "minecraft:recent_projectile",
-      "minecraft:touch_cooldown",
-      "minecraft:visible_mobs",
-      "minecraft:sonic_boom_cooldown",
-      "minecraft:nearest_attackable",
       "minecraft:mobs",
-      "minecraft:vibration_cooldown",
       "minecraft:walk_target",
-      "minecraft:nearest_visible_targetable_player",
-      "minecraft:roar_target"
+      "minecraft:is_sniffing",
+      "minecraft:nearest_visible_nemesis"
     ],
     "attackable": true,
     "step_height": 0.6,
@@ -20654,7 +20924,7 @@
     }
   },
   "wind_charge": {
-    "id": 137,
+    "id": 138,
     "translation_key": "entity.minecraft.wind_charge",
     "attackable": true,
     "step_height": 0.0,
@@ -20721,7 +20991,7 @@
     }
   },
   "witch": {
-    "id": 138,
+    "id": 139,
     "translation_key": "entity.minecraft.witch",
     "max_health": 26.0,
     "brain_tasks": [],
@@ -21033,7 +21303,7 @@
     }
   },
   "wither": {
-    "id": 139,
+    "id": 140,
     "translation_key": "entity.minecraft.wither",
     "max_health": 300.0,
     "brain_tasks": [],
@@ -21168,7 +21438,7 @@
     }
   },
   "wither_skeleton": {
-    "id": 140,
+    "id": 141,
     "translation_key": "entity.minecraft.wither_skeleton",
     "max_health": 20.0,
     "brain_tasks": [],
@@ -21370,7 +21640,7 @@
     }
   },
   "wither_skull": {
-    "id": 141,
+    "id": 142,
     "translation_key": "entity.minecraft.wither_skull",
     "attackable": true,
     "step_height": 0.0,
@@ -21443,7 +21713,7 @@
     }
   },
   "wolf": {
-    "id": 142,
+    "id": 143,
     "translation_key": "entity.minecraft.wolf",
     "max_health": 8.0,
     "brain_tasks": [],
@@ -21598,7 +21868,7 @@
     }
   },
   "zoglin": {
-    "id": 143,
+    "id": 144,
     "translation_key": "entity.minecraft.zoglin",
     "max_health": 40.0,
     "brain_tasks": [
@@ -21620,28 +21890,28 @@
         "activity": "idle",
         "priority": 10,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001c2aa019910@78e9eae0] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.UpdateAttackTargetTask$$Lambda/0x000001d982090000@70f523ed] * M[Absent[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 10,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RangedApproachTask$$Lambda/0x000001c2aa01eec0@20142122] * M[Optional[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.RangedApproachTask$$Lambda/0x000001d982093448@7e9a386d] * M[Optional[memory=minecraft:walk_target]] * M[Optional[memory=minecraft:look_target]] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "idle",
         "priority": 11,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001c2aa004a98@8e6bcf0] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.LookAtMobWithIntervalTask$$Lambda/0x000001d98207c228@507cfb2d] * M[Absent[memory=minecraft:look_target]] * M[Value[memory=minecraft:visible_mobs]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 11,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa029c78@6d5f918f] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa01b448@5a56c82e]]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d9820a0000@69d37004] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d982091b38@30e0dc98]]])"
         ]
       },
       {
@@ -21655,14 +21925,14 @@
         "activity": "fight",
         "priority": 12,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa029c78@5b4aff77] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001c2aa01b448@66f6d9d2]]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d9820a0000@1f16c3b9] * T[OneShot[C[net.minecraft.entity.ai.brain.task.TaskTriggerer$$Lambda/0x000001d982091b38@2804f6e5]]])"
         ]
       },
       {
         "activity": "fight",
         "priority": 13,
         "tasks": [
-          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001c2aa01e638@77b4ef6a] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
+          "OneShot(field_40999: C[net.minecraft.entity.ai.brain.task.ForgetAttackTargetTask$$Lambda/0x000001d982092bc0@5aa5e0b1] * M[Value[memory=minecraft:attack_target]] * M[Optional[memory=minecraft:cant_reach_walk_target_since]])"
         ]
       }
     ],
@@ -21671,18 +21941,18 @@
       "minecraft:nearest_players"
     ],
     "brain_memories": [
-      "minecraft:nearest_players",
-      "minecraft:mobs",
+      "minecraft:look_target",
       "minecraft:cant_reach_walk_target_since",
       "minecraft:path",
       "minecraft:nearest_visible_player",
       "minecraft:nearest_visible_targetable_players",
-      "minecraft:walk_target",
-      "minecraft:look_target",
+      "minecraft:mobs",
       "minecraft:visible_mobs",
-      "minecraft:nearest_visible_targetable_player",
+      "minecraft:walk_target",
       "minecraft:attack_target",
-      "minecraft:attack_cooling_down"
+      "minecraft:nearest_visible_targetable_player",
+      "minecraft:attack_cooling_down",
+      "minecraft:nearest_players"
     ],
     "attackable": true,
     "step_height": 0.6,
@@ -21830,7 +22100,7 @@
     }
   },
   "zombie": {
-    "id": 144,
+    "id": 145,
     "translation_key": "entity.minecraft.zombie",
     "max_health": 20.0,
     "brain_tasks": [],
@@ -22054,6 +22324,33 @@
               "condition": "minecraft:random_chance_with_enchanted_bonus"
             }
           ]
+        },
+        {
+          "rolls": 1.0,
+          "bonus_rolls": 0.0,
+          "entries": [
+            {
+              "name": "minecraft:music_disc_lava_chicken",
+              "type": "minecraft:item"
+            }
+          ],
+          "conditions": [
+            {
+              "condition": "minecraft:killed_by_player"
+            },
+            {
+              "predicate": {
+                "vehicle": {
+                  "type": "minecraft:chicken"
+                },
+                "flags": {
+                  "is_baby": true
+                }
+              },
+              "entity": "this",
+              "condition": "minecraft:entity_properties"
+            }
+          ]
         }
       ]
     },
@@ -22063,7 +22360,7 @@
     }
   },
   "zombie_horse": {
-    "id": 145,
+    "id": 146,
     "translation_key": "entity.minecraft.zombie_horse",
     "max_health": 15.0,
     "brain_tasks": [],
@@ -22220,7 +22517,7 @@
     }
   },
   "zombie_villager": {
-    "id": 146,
+    "id": 147,
     "translation_key": "entity.minecraft.zombie_villager",
     "max_health": 20.0,
     "brain_tasks": [],
@@ -22463,7 +22760,7 @@
     }
   },
   "zombified_piglin": {
-    "id": 147,
+    "id": 148,
     "translation_key": "entity.minecraft.zombified_piglin",
     "max_health": 20.0,
     "brain_tasks": [],
@@ -22680,7 +22977,7 @@
     }
   },
   "player": {
-    "id": 148,
+    "id": 149,
     "translation_key": "entity.minecraft.player",
     "max_health": 20.0,
     "brain_tasks": [],
@@ -22820,7 +23117,7 @@
     }
   },
   "fishing_bobber": {
-    "id": 149,
+    "id": 150,
     "translation_key": "entity.minecraft.fishing_bobber",
     "attackable": true,
     "step_height": 0.0,

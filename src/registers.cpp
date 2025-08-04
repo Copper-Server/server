@@ -115,7 +115,8 @@ namespace copper_server {
 
         std::unordered_map<std::string, enchantment> enchantments;
         list_array<decltype(enchantments)::iterator> enchantments_cache;
-        std::unordered_map<std::string, enbt::compound> enchantment_providers;
+        std::unordered_map<std::string, enchantment_provider> enchantment_providers;
+        list_array<decltype(enchantment_providers)::iterator> enchantment_providers_cache;
 
         std::unordered_map<std::string, loot_table_item> loot_table;
         list_array<decltype(loot_table)::iterator> loot_table_cache;

@@ -5,6 +5,14 @@
 #include <shared_mutex>
 #include <src/base_objects/shared_client_data.hpp>
 
+namespace copper_server::api::network::tcp {
+    class session;
+}
+
+namespace copper_server::base_objects::network {
+    struct response;
+}
+
 namespace copper_server::storage::memory {
     namespace __internal__ {
         template <typename T>
@@ -29,15 +37,15 @@ namespace copper_server::storage::memory {
             return online;
         }
 
-        base_objects::client_data_holder allocate_special_player(const std::function<void(base_objects::SharedClientData&)>& callback) {
+        base_objects::client_data_holder allocate_special_player(const std::function<void(base_objects::SharedClientData&, base_objects::network::response&&)>& callback) {
             std::unique_lock lock(mutex);
-            players.push_back(new base_objects::SharedClientData(this, callback));
+            players.push_back(new base_objects::SharedClientData((api::network::tcp::session*)nullptr, this, callback));
             return players.back();
         }
 
-        base_objects::client_data_holder allocate_player() {
+        base_objects::client_data_holder allocate_player(api::network::tcp::session* session) {
             std::unique_lock lock(mutex);
-            players.push_back(new base_objects::SharedClientData(this));
+            players.push_back(new base_objects::SharedClientData(session, this));
             return players.back();
         }
 
@@ -49,7 +57,7 @@ namespace copper_server::storage::memory {
             std::unique_lock lock(mutex);
             size_t result = 0;
             for (auto& player : players)
-                if (player->packets_state.state == select_state)
+                if (bool(player->packets_state.state & select_state))
                     ++result;
             return result;
         }
@@ -65,7 +73,7 @@ namespace copper_server::storage::memory {
         bool has_player_status(const std::string& player, base_objects::SharedClientData::packets_state_t::protocol_state select_state) {
             std::unique_lock lock(mutex);
             for (auto& p : players)
-                if (p->name == player && p->packets_state.state == select_state)
+                if (bool(p->packets_state.state & select_state) && p->name == player)
                     return true;
             return false;
         }
@@ -73,7 +81,7 @@ namespace copper_server::storage::memory {
         bool has_player_not_status(const std::string& player, base_objects::SharedClientData::packets_state_t::protocol_state select_state) {
             std::unique_lock lock(mutex);
             for (auto& p : players)
-                if (p->name == player && p->packets_state.state != select_state)
+                if (!bool(p->packets_state.state & select_state) && p->name == player)
                     return true;
             return false;
         }
@@ -90,7 +98,7 @@ namespace copper_server::storage::memory {
             size_t i = 0;
             for (auto& p : players) {
                 if (p == player) {
-                    if (p->packets_state.state != base_objects::SharedClientData::packets_state_t::protocol_state::initialization)
+                    if (bool(p->packets_state.state & base_objects::SharedClientData::packets_state_t::protocol_state::initialization))
                         --online;
                     players.erase(i);
                     return;
@@ -104,13 +112,21 @@ namespace copper_server::storage::memory {
             size_t i = 0;
             for (auto& p : players) {
                 if (p->name == player) {
-                    if (p->packets_state.state != base_objects::SharedClientData::packets_state_t::protocol_state::initialization && p->canBeRemoved())
+                    if (bool(p->packets_state.state & base_objects::SharedClientData::packets_state_t::protocol_state::initialization) && p->canBeRemoved())
                         --online;
                     players.erase(i);
                     return;
                 }
                 i++;
             }
+        }
+
+        base_objects::client_data_holder get_player(base_objects::SharedClientData& player) {
+            std::unique_lock lock(mutex);
+            for (auto& p : players)
+                if (&*p == &player)
+                    return p;
+            return nullptr;
         }
 
         base_objects::client_data_holder get_player(const std::string& player) {
@@ -124,7 +140,7 @@ namespace copper_server::storage::memory {
         base_objects::client_data_holder get_player(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::string& player) {
             std::unique_lock lock(mutex);
             for (auto& p : players)
-                if (p->name == player && p->packets_state.state == select_state)
+                if (bool(p->packets_state.state & select_state) && p->name == player)
                     return p;
             return nullptr;
         }
@@ -132,7 +148,7 @@ namespace copper_server::storage::memory {
         base_objects::client_data_holder get_player_not_state(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::string& player) {
             std::unique_lock lock(mutex);
             for (auto& p : players)
-                if (p->name == player && p->packets_state.state != select_state)
+                if (!bool(p->packets_state.state & select_state) && p->name == player)
                     return p;
             return nullptr;
         }
@@ -153,7 +169,7 @@ namespace copper_server::storage::memory {
         void iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::SharedClientData&)>& callback) {
             std::unique_lock lock(mutex);
             for (auto& player : players)
-                if (player->packets_state.state == select_state)
+                if (bool(player->packets_state.state & select_state))
                     if (callback(*player))
                         break;
         }
@@ -161,7 +177,7 @@ namespace copper_server::storage::memory {
         void iterate_players_not_state(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::SharedClientData&)>& callback) {
             std::unique_lock lock(mutex);
             for (auto& player : players)
-                if (player->packets_state.state != select_state)
+                if (bool(player->packets_state.state & select_state))
                     if (callback(*player))
                         break;
         }
@@ -211,7 +227,7 @@ namespace copper_server::storage::memory {
 
             std::unique_lock lock(mutex);
             for (auto& player : players) {
-                if (player->packets_state.state == select_state)
+                if (bool(player->packets_state.state & select_state))
                     if (__players.contains(player->name))
                         cache.push_back(player);
             }

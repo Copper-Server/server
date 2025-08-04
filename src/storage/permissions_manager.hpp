@@ -32,8 +32,9 @@ namespace copper_server::storage {
 
     public:
         permissions_manager(const std::filesystem::path& base_path);
-        bool has_rights(const std::string& action_name, const base_objects::client_data_holder& client);
+        bool has_rights(const std::string& action_name, const base_objects::SharedClientData& client);
         bool has_action(const std::string& action_name) const;
+        bool has_action_limits(const std::string& action_name) const;
         bool has_permission(const std::string& permission_name) const;
         bool has_group(const std::string& group_name) const;
 

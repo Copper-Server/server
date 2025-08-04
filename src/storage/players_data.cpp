@@ -9,7 +9,7 @@ namespace copper_server::storage {
         if (!data.contains())
             slot = std::nullopt;
         else
-            slot = base_objects::slot_data::from_enbt(data.as_compound());
+            slot = base_objects::slot::from_enbt(data.as_compound());
     }
 
     static enbt::optional compact_slot(base_objects::slot& slot) {

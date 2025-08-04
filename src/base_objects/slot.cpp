@@ -1,16 +1,15 @@
+#include <src/api/new_packets.hpp>
 #include <src/base_objects/slot.hpp>
 
 namespace copper_server::base_objects {
     std::unordered_map<std::string, std::shared_ptr<static_slot_data>> slot_data::named_full_item_data;
     std::vector<std::shared_ptr<static_slot_data>> slot_data::full_item_data_;
 
-
     slot_data slot_data::from_enbt(enbt::compound_const_ref compound) {
         auto& id = compound.at("id").as_string();
         base_objects::slot_data slot_data = base_objects::slot_data::create_item(id);
         if (compound.contains("count"))
             slot_data.count = compound.at("count");
-        std::unordered_map<std::string, base_objects::component::unified> components;
         for (auto& [name, value] : compound.at("components").as_compound())
             slot_data.add_component(component::parse_component(name, value));
         return slot_data;
@@ -22,8 +21,10 @@ namespace copper_server::base_objects {
         compound["count"] = count;
         enbt::compound comp;
         comp.reserve(components.size());
-        for (auto& [name, value] : components)
-            comp[name] = std::move(component::encode_component(value).second);
+        for (auto& [c_id, value] : components) {
+            auto [name, component] = component::encode_component(value);
+            comp[name] = std::move(component);
+        }
         compound["components"] = std::move(comp);
         return compound;
     }
@@ -46,7 +47,7 @@ namespace copper_server::base_objects {
     }
 
     bool slot_data::operator!=(const slot_data& other) const {
-        return operator==(other);
+        return !operator==(other);
     }
 
     bool slot_data::is_same_def(const slot_data& other) const {
@@ -68,7 +69,6 @@ namespace copper_server::base_objects {
         slot_data::named_full_item_data.clear();
         slot_data::full_item_data_.clear();
     }
-
 
     item_id_t::item_id_t(const std::string& id)
         : id(slot_data::get_slot_data(id).internal_id) {}
@@ -139,5 +139,72 @@ namespace copper_server::base_objects {
     void slot_data::enumerate_slot_data(const std::function<void(static_slot_data&)>& fn) {
         for (auto& block : full_item_data_)
             fn(*block);
+    }
+
+    copper_server::api::new_packets::slot slot_data::to_packet() const {
+        api::new_packets::slot result;
+        result.count = count;
+        if (result.count) {
+            result.id = id;
+            list_array<int32_t> removed_components;
+            list_array<base_objects::component> added_components;
+            auto& default_components = base_objects::slot_data::get_slot_data(result.id).default_components;
+            for (auto& [c_id, item] : default_components)
+                if (!components.contains(c_id))
+                    removed_components.push_back(c_id);
+                else if (components.at(c_id) != item)
+                    removed_components.push_back(c_id);
+            for (auto& [c_id, item] : components)
+                if (!default_components.contains(c_id))
+                    added_components.push_back(item);
+                else if (components.at(c_id) != item)
+                    added_components.push_back(item);
+            result.components_to_add = (int32_t)added_components.size();
+            result.components_to_remove = (int32_t)removed_components.size();
+            result.to_add = added_components.take().to_container<std::vector>();
+            result.to_remove = removed_components.take().to_container<decltype(result.to_remove)>();
+        } else {
+            result.id = 0;
+            result.components_to_add = 0;
+            result.components_to_remove = 0;
+        }
+        return result;
+    }
+
+    slot_data slot_data::from_packet(copper_server::api::new_packets::slot&& slot) {
+        if (slot.count) {
+            slot_data res{
+                .components = base_objects::slot_data::get_slot_data(slot.id).default_components,
+                .count = slot.count,
+                .id = slot.id
+            };
+
+            for (auto component : slot.to_remove)
+                res.components.erase(component);
+            for (auto& component : slot.to_add)
+                res.add_component(std::move(component));
+            return res;
+        } else
+            return slot_data{};
+    }
+
+    copper_server::api::new_packets::slot slot::to_packet() const {
+        if (*this)
+            return (*this)->to_packet();
+        else {
+            api::new_packets::slot result;
+            result.count = 0;
+            result.id = 0;
+            result.components_to_add = 0;
+            result.components_to_remove = 0;
+            return result;
+        }
+    }
+
+    slot slot::from_packet(copper_server::api::new_packets::slot&& s) {
+        if (s.count)
+            return slot_data::from_packet(std::move(s));
+        else
+            return std::nullopt;
     }
 }

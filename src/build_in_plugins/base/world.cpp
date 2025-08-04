@@ -1,11 +1,10 @@
 #include <library/enbt/senbt.hpp>
 #include <library/fast_task/include/files.hpp>
+#include <src/api/client.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/entity_id_map.hpp>
 #include <src/api/internal/world.hpp>
-#include <src/api/packets.hpp>
 #include <src/api/players.hpp>
-#include <src/api/protocol.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/entity.hpp>
@@ -64,14 +63,14 @@ namespace copper_server::build_in_plugins {
             if (!report_file.is_open()) {
                 Chat message("Failed to save chunk tick speed report for world: " + world_name + " to: " + report_path.string());
                 message.SetColor("red");
-                api::players::calls::on_system_message({executor, message});
+                *executor << api::client::play::system_chat{.content = message};
             }
             report_file << senbt::serialize(enbt_collected_data);
             //enbt::io_helper::write_token(report_file, enbt_collected_data);
 
             Chat message("Chunk tick speed report for world: " + world_name + " saved to: " + report_path.string());
             message.SetColor("green");
-            api::players::calls::on_system_message({executor, message});
+            *executor << api::client::play::system_chat{.content = message};
         }
 
         catch (const std::exception& e) {
@@ -84,13 +83,13 @@ namespace copper_server::build_in_plugins {
             = [start_time = std::chrono::high_resolution_clock::now(),
                collected_data = list_array<list_array<chunk_speed_data>>(),
                current_tick = list_array<chunk_speed_data>(),
-               executor = context.executor](storage::world_data& world, int64_t chunk_x, int64_t chunk_z, std::chrono::milliseconds tick_time) mutable {
+               executor = api::players::get_player(context.executor)](storage::world_data& world, int64_t chunk_x, int64_t chunk_z, std::chrono::milliseconds tick_time) mutable {
                   if (chunk_x == INT64_MAX && chunk_z == INT64_MAX && tick_time.count() == 0) {
                       collected_data.push_back(std::move(current_tick));
                       if (start_time + std::chrono::milliseconds(10000) < std::chrono::high_resolution_clock::now()) {
                           Chat message("Saving chunk tick speed report for world: " + world.world_name);
                           message.SetColor("green");
-                          api::players::calls::on_system_message({executor, message});
+                          *executor << api::client::play::system_chat{.content = message};
                           Task::start([path = world.get_path(), world_name = world.world_name, collected_data = std::move(collected_data), executor]() mutable {
                               end_chunk_speed_report_collecting(path, world_name, std::move(collected_data), executor);
                           });
@@ -115,7 +114,16 @@ namespace copper_server::build_in_plugins {
         log::warn("World", message);
     }
 
-    class WorldManagementPlugin : public PluginAutoRegister<"world_manager", WorldManagementPlugin> {
+    int32_t java_string_hash(std::string_view view) {
+        int32_t hash = 0, multiplier = 1;
+        for (ptrdiff_t i = view.size() - 1; i >= 0; i--) {
+            hash += view[i] * multiplier;
+            multiplier = (multiplier << 5) - multiplier;
+        }
+        return hash;
+    }
+
+    class WorldManagementPlugin : public PluginAutoRegister<"base/world_manager", WorldManagementPlugin> {
         storage::worlds_data worlds_storage;
         std::shared_ptr<fast_task::task> world_ticking;
 
@@ -175,7 +183,7 @@ namespace copper_server::build_in_plugins {
             for (auto& it : api::configuration::get().allowed_dimensions) {
                 api::world::pre_load_world(it, [&](storage::world_data& world) {
                     world.world_type = api::configuration::get().world.type;
-                    world.world_seed = util::conversions::uuid::from(api::configuration::get().world.seed);
+                    world.set_seed(java_string_hash(api::configuration::get().world.seed));
                     world.light_processor_id = "default";
                     if (world.world_name == "end") {
                         world.generator_id = "end";
@@ -286,12 +294,7 @@ namespace copper_server::build_in_plugins {
             });
         }
 
-        plugin_response PlayerJoined(base_objects::client_data_holder& client_ref) override {
-            //auto& client = *client_ref;
-            base_objects::network::response response;
-
-
-            return response;
+        void PlayerJoined(base_objects::SharedClientData& client_ref) override {
         }
 
         void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override;
@@ -384,14 +387,14 @@ namespace copper_server::build_in_plugins {
                         if (worlds_storage.exists(name)) {
                             Chat message("Failed to create world, world with this name already exists: " + name);
                             message.SetColor("red");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         } else {
                             worlds_storage.create(name, [&](storage::world_data& world) {
                                 world.load(settings.as_compound());
                             });
                             Chat message("World created: " + name);
                             message.SetColor("green");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         }
                     });
                 world_name.set_callback("command.world.create", [this](const list_array<predicate>& args, base_objects::command_context& context) {
@@ -399,12 +402,12 @@ namespace copper_server::build_in_plugins {
                     if (worlds_storage.exists(name)) {
                         Chat message("Failed to create world, world with this name already exists: " + name);
                         message.SetColor("red");
-                        api::players::calls::on_system_message({context.executor, message});
+                        context.executor << api::client::play::system_chat{.content = message};
                     } else {
                         worlds_storage.create(name);
                         Chat message("World created: " + name);
                         message.SetColor("green");
-                        api::players::calls::on_system_message({context.executor, message});
+                        context.executor << api::client::play::system_chat{.content = message};
                     }
                 });
             }
@@ -419,7 +422,7 @@ namespace copper_server::build_in_plugins {
                         if (!worlds_storage.exists(id)) {
                             Chat message("Failed to set world id, world with this id not set: " + std::to_string(id));
                             message.SetColor("red");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         } else
                             worlds_storage.erase(id);
                     });
@@ -430,7 +433,7 @@ namespace copper_server::build_in_plugins {
                         if (!worlds_storage.exists(actual_id)) {
                             Chat message("Failed to set world id, world with this id not set: " + id);
                             message.SetColor("red");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         } else
                             worlds_storage.erase(actual_id);
                     });
@@ -449,7 +452,7 @@ namespace copper_server::build_in_plugins {
                             if (!worlds_storage.exists(id)) {
                                 Chat message("Failed to set world id, world with this id not set: " + std::to_string(id));
                                 message.SetColor("red");
-                                api::players::calls::on_system_message({context.executor, message});
+                                context.executor << api::client::play::system_chat{.content = message};
                             } else
                                 worlds_storage.base_world_id = id;
                         });
@@ -460,7 +463,7 @@ namespace copper_server::build_in_plugins {
                             if (!worlds_storage.exists(actual_id)) {
                                 Chat message("Failed to set world id, world with this id not set: " + id);
                                 message.SetColor("red");
-                                api::players::calls::on_system_message({context.executor, message});
+                                context.executor << api::client::play::system_chat{.content = message};
                             } else
                                 worlds_storage.base_world_id = actual_id;
                         });
@@ -469,9 +472,9 @@ namespace copper_server::build_in_plugins {
                 }
                 base.set_callback("command.world.base", [this](const list_array<predicate>&, base_objects::command_context& context) {
                     if (worlds_storage.base_world_id == -1)
-                        api::players::calls::on_system_message({context.executor, {"Base world not set."}});
+                        context.executor << api::client::play::system_chat{.content = "Base world not set."};
                     else
-                        api::players::calls::on_system_message({context.executor, {"Base world is: " + worlds_storage.get(worlds_storage.base_world_id)->world_name + " (" + std::to_string(worlds_storage.base_world_id) + ")"}});
+                        context.executor << api::client::play::system_chat{.content = "Base world is: " + worlds_storage.get(worlds_storage.base_world_id)->world_name + " (" + std::to_string(worlds_storage.base_world_id) + ")"};
                 });
             }
             {
@@ -484,12 +487,12 @@ namespace copper_server::build_in_plugins {
                         if (!worlds_storage.exists(id)) {
                             Chat message("Failed to load world, world with this id not set: " + std::to_string(id));
                             message.SetColor("red");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         } else {
                             worlds_storage.get(id);
                             Chat message("World loaded: " + worlds_storage.get_name(id));
                             message.SetColor("green");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         }
                     });
                 world_name
@@ -499,12 +502,12 @@ namespace copper_server::build_in_plugins {
                         if (!worlds_storage.exists(actual_id)) {
                             Chat message("Failed to load world, world with this id not set: " + id);
                             message.SetColor("red");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         } else {
                             worlds_storage.get(actual_id);
                             Chat message("World loaded: " + worlds_storage.get_name(actual_id));
                             message.SetColor("green");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         }
                     });
                 add_world_id_suggestion(world_id);
@@ -520,12 +523,12 @@ namespace copper_server::build_in_plugins {
                         if (!worlds_storage.exists(id)) {
                             Chat message("Failed to save world, world with this id not set: " + std::to_string(id));
                             message.SetColor("red");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         } else {
                             worlds_storage.save(id);
                             Chat message("World saved: " + worlds_storage.get_name(id));
                             message.SetColor("green");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         }
                     });
                 world_name
@@ -535,12 +538,12 @@ namespace copper_server::build_in_plugins {
                         if (!worlds_storage.exists(actual_id)) {
                             Chat message("Failed to save world, world with this id not set: " + id);
                             message.SetColor("red");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         } else {
                             worlds_storage.save(actual_id);
                             Chat message("World saved: " + worlds_storage.get_name(actual_id));
                             message.SetColor("green");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         }
                     });
                 add_world_id_suggestion(world_id);
@@ -552,7 +555,7 @@ namespace copper_server::build_in_plugins {
                     worlds_storage.save_all();
                     Chat message("All worlds saved.");
                     message.SetColor("green");
-                    api::players::calls::on_system_message({context.executor, message});
+                    context.executor << api::client::play::system_chat{.content = message};
                 });
             }
             {
@@ -564,7 +567,7 @@ namespace copper_server::build_in_plugins {
                     });
                     message.erase(message.size() - 2);
                     message[message.size() - 1] = '.';
-                    api::players::calls::on_system_message({context.executor, {message}});
+                    context.executor << api::client::play::system_chat{.content = message};
                 });
             }
             {
@@ -577,12 +580,12 @@ namespace copper_server::build_in_plugins {
                         if (!worlds_storage.exists(id)) {
                             Chat message("Failed to unload world, world with this id not set: " + std::to_string(id));
                             message.SetColor("red");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         } else {
                             worlds_storage.save_and_unload(id);
                             Chat message("World unloaded: " + worlds_storage.get_name(id));
                             message.SetColor("green");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         }
                     });
                 world_name
@@ -592,12 +595,12 @@ namespace copper_server::build_in_plugins {
                         if (!worlds_storage.exists(actual_id)) {
                             Chat message("Failed to unload world, world with this id not set: " + id);
                             message.SetColor("red");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         } else {
                             worlds_storage.save_and_unload(actual_id);
                             Chat message("World unloaded: " + worlds_storage.get_name(actual_id));
                             message.SetColor("green");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         }
                     });
                 add_world_id_suggestion(world_id);
@@ -609,7 +612,7 @@ namespace copper_server::build_in_plugins {
                     worlds_storage.save_and_unload_all();
                     Chat message("All worlds unloaded.");
                     message.SetColor("green");
-                    api::players::calls::on_system_message({context.executor, message});
+                    context.executor << api::client::play::system_chat{.content = message};
                 });
             }
             {
@@ -622,11 +625,11 @@ namespace copper_server::build_in_plugins {
                         if (actual_id == -1) {
                             Chat message("Failed to get world id, world with this name not set: " + id);
                             message.SetColor("red");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         } else {
                             Chat message("World id: " + std::to_string(actual_id));
                             message.SetColor("green");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         }
                     });
                 add_world_name_suggestion(world_name);
@@ -640,11 +643,11 @@ namespace copper_server::build_in_plugins {
                         if (!worlds_storage.exists(id)) {
                             Chat message("Failed to get world name, world with this id not set: " + std::to_string(id));
                             message.SetColor("red");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         } else {
                             Chat message("World name: " + worlds_storage.get_name(id));
                             message.SetColor("green");
-                            api::players::calls::on_system_message({context.executor, message});
+                            context.executor << api::client::play::system_chat{.content = message};
                         }
                     });
                 add_world_id_suggestion(world_id);
@@ -774,12 +777,12 @@ namespace copper_server::build_in_plugins {
                                             if (world.profiling.chunk_speedometer_callback) {
                                                 Chat message("Failed to report chunks tick speed, chunk speed profiling already enabled for world: " + world.world_name);
                                                 message.SetColor("red");
-                                                api::players::calls::on_system_message({context.executor, message});
+                                                context.executor << api::client::play::system_chat{.content = message};
                                             } else {
                                                 start_chunk_speed_report_collecting(world, context);
                                                 Chat message("Collecting chunks tick speed report for world: " + world.world_name);
                                                 message.SetColor("green");
-                                                api::players::calls::on_system_message({context.executor, message});
+                                                context.executor << api::client::play::system_chat{.content = message};
                                             }
                                         });
                                     }
@@ -802,13 +805,13 @@ namespace copper_server::build_in_plugins {
                                 if (world.profiling.enable_world_profiling && world.profiling.got_tps_update) {
                                     Chat message("Profiling already enabled for world: " + world.world_name);
                                     message.SetColor("red");
-                                    api::players::calls::on_system_message({context.executor, message});
+                                    context.executor << api::client::play::system_chat{.content = message};
                                 }
                                 world.profiling.enable_world_profiling = true;
                                 world.profiling.got_tps_update = world_tps_profiling;
                                 Chat message("Profiling enabled for world: " + world.world_name);
                                 message.SetColor("green");
-                                api::players::calls::on_system_message({context.executor, message});
+                                context.executor << api::client::play::system_chat{.content = message};
                             });
                         });
 
@@ -821,13 +824,13 @@ namespace copper_server::build_in_plugins {
                                 if (world.profiling.enable_world_profiling && world.profiling.got_tps_update) {
                                     Chat message("TPS profiling already enabled for world: " + world.world_name);
                                     message.SetColor("red");
-                                    api::players::calls::on_system_message({context.executor, message});
+                                    context.executor << api::client::play::system_chat{.content = message};
                                 }
                                 world.profiling.enable_world_profiling = true;
                                 world.profiling.got_tps_update = world_tps_profiling;
                                 Chat message("TPS profiling enabled for world: " + world.world_name);
                                 message.SetColor("green");
-                                api::players::calls::on_system_message({context.executor, message});
+                                context.executor << api::client::play::system_chat{.content = message};
                             });
                         });
 
@@ -840,13 +843,13 @@ namespace copper_server::build_in_plugins {
                                 if (world.profiling.enable_world_profiling && world.profiling.slow_chunk_tick_callback) {
                                     Chat message("Chunk profiling already enabled for world: " + world.world_name);
                                     message.SetColor("red");
-                                    api::players::calls::on_system_message({context.executor, message});
+                                    context.executor << api::client::play::system_chat{.content = message};
                                 }
                                 world.profiling.enable_world_profiling = true;
                                 world.profiling.slow_chunk_tick_callback = world_slow_chunk_notify_profiling;
                                 Chat message("Chunk profiling enabled for world: " + world.world_name);
                                 message.SetColor("green");
-                                api::players::calls::on_system_message({context.executor, message});
+                                context.executor << api::client::play::system_chat{.content = message};
                             });
                         });
 
@@ -859,13 +862,13 @@ namespace copper_server::build_in_plugins {
                                 if (world.profiling.enable_world_profiling && world.profiling.slow_chunk_tick_callback) {
                                     Chat message("Chunk profiling already enabled for world: " + world.world_name);
                                     message.SetColor("red");
-                                    api::players::calls::on_system_message({context.executor, message});
+                                    context.executor << api::client::play::system_chat{.content = message};
                                 }
                                 world.profiling.enable_world_profiling = true;
                                 world.profiling.slow_chunk_tick_callback = world_slow_chunk_notify_profiling;
                                 Chat message("Chunk profiling enabled for world: " + world.world_name);
                                 message.SetColor("green");
-                                api::players::calls::on_system_message({context.executor, message});
+                                context.executor << api::client::play::system_chat{.content = message};
                             });
                         });
 
@@ -878,13 +881,13 @@ namespace copper_server::build_in_plugins {
                                 if (world.profiling.enable_world_profiling && world.profiling.slow_world_tick_callback) {
                                     Chat message("World profiling already enabled for world: " + world.world_name);
                                     message.SetColor("red");
-                                    api::players::calls::on_system_message({context.executor, message});
+                                    context.executor << api::client::play::system_chat{.content = message};
                                 }
                                 world.profiling.enable_world_profiling = true;
                                 world.profiling.slow_world_tick_callback = slow_world_notify_profiling;
                                 Chat message("World profiling enabled for world: " + world.world_name);
                                 message.SetColor("green");
-                                api::players::calls::on_system_message({context.executor, message});
+                                context.executor << api::client::play::system_chat{.content = message};
                             });
                         });
 
@@ -897,13 +900,13 @@ namespace copper_server::build_in_plugins {
                                 if (world.profiling.enable_world_profiling && world.profiling.slow_world_tick_callback) {
                                     Chat message("World profiling already enabled for world: " + world.world_name);
                                     message.SetColor("red");
-                                    api::players::calls::on_system_message({context.executor, message});
+                                    context.executor << api::client::play::system_chat{.content = message};
                                 }
                                 world.profiling.enable_world_profiling = true;
                                 world.profiling.slow_world_tick_callback = slow_world_notify_profiling;
                                 Chat message("World profiling enabled for world: " + world.world_name);
                                 message.SetColor("green");
-                                api::players::calls::on_system_message({context.executor, message});
+                                context.executor << api::client::play::system_chat{.content = message};
                             });
                         });
                 }
@@ -926,11 +929,11 @@ namespace copper_server::build_in_plugins {
 
                                     Chat message("Profiling disabled for world: " + world.world_name);
                                     message.SetColor("green");
-                                    api::players::calls::on_system_message({context.executor, message});
+                                    context.executor << api::client::play::system_chat{.content = message};
                                 } else {
                                     Chat message("TPS profiling already disabled for world: " + world.world_name);
                                     message.SetColor("red");
-                                    api::players::calls::on_system_message({context.executor, message});
+                                    context.executor << api::client::play::system_chat{.content = message};
                                 }
                             });
                         });
@@ -948,11 +951,11 @@ namespace copper_server::build_in_plugins {
 
                                     Chat message("Profiling disabled for world: " + world.world_name);
                                     message.SetColor("green");
-                                    api::players::calls::on_system_message({context.executor, message});
+                                    context.executor << api::client::play::system_chat{.content = message};
                                 } else {
                                     Chat message("TPS profiling already disabled for world: " + world.world_name);
                                     message.SetColor("red");
-                                    api::players::calls::on_system_message({context.executor, message});
+                                    context.executor << api::client::play::system_chat{.content = message};
                                 }
                             });
                         });
@@ -972,16 +975,16 @@ namespace copper_server::build_in_plugins {
 
                                         Chat message("TPS profiling disabled for world: " + world.world_name);
                                         message.SetColor("green");
-                                        api::players::calls::on_system_message({context.executor, message});
+                                        context.executor << api::client::play::system_chat{.content = message};
                                     } else {
                                         Chat message("TPS profiling enabled by another plugin for world: " + world.world_name);
                                         message.SetColor("red");
-                                        api::players::calls::on_system_message({context.executor, message});
+                                        context.executor << api::client::play::system_chat{.content = message};
                                     }
                                 } else {
                                     Chat message("TPS profiling already disabled for world: " + world.world_name);
                                     message.SetColor("red");
-                                    api::players::calls::on_system_message({context.executor, message});
+                                    context.executor << api::client::play::system_chat{.content = message};
                                 }
                             });
                         });
@@ -999,16 +1002,16 @@ namespace copper_server::build_in_plugins {
                                             world.profiling.enable_world_profiling = false;
                                         Chat message("TPS profiling disabled for world: " + world.world_name);
                                         message.SetColor("green");
-                                        api::players::calls::on_system_message({context.executor, message});
+                                        context.executor << api::client::play::system_chat{.content = message};
                                     } else {
                                         Chat message("TPS profiling enabled by another plugin for world: " + world.world_name);
                                         message.SetColor("red");
-                                        api::players::calls::on_system_message({context.executor, message});
+                                        context.executor << api::client::play::system_chat{.content = message};
                                     }
                                 } else {
                                     Chat message("TPS profiling already disabled for world: " + world.world_name);
                                     message.SetColor("red");
-                                    api::players::calls::on_system_message({context.executor, message});
+                                    context.executor << api::client::play::system_chat{.content = message};
                                 }
                             });
                         });
@@ -1024,16 +1027,16 @@ namespace copper_server::build_in_plugins {
                                         world.profiling.slow_chunk_tick_callback = nullptr;
                                         Chat message("Slow chunk profiling enabled for world: " + world.world_name);
                                         message.SetColor("green");
-                                        api::players::calls::on_system_message({context.executor, message});
+                                        context.executor << api::client::play::system_chat{.content = message};
                                     } else {
                                         Chat message("Slow chunk profiling enabled by another plugin for world: " + world.world_name);
                                         message.SetColor("red");
-                                        api::players::calls::on_system_message({context.executor, message});
+                                        context.executor << api::client::play::system_chat{.content = message};
                                     }
                                 } else {
                                     Chat message("Slow chunk profiling already disabled for world: " + world.world_name);
                                     message.SetColor("red");
-                                    api::players::calls::on_system_message({context.executor, message});
+                                    context.executor << api::client::play::system_chat{.content = message};
                                 }
                             });
                         });
@@ -1049,16 +1052,16 @@ namespace copper_server::build_in_plugins {
                                         world.profiling.slow_chunk_tick_callback = nullptr;
                                         Chat message("Slow chunk profiling enabled for world: " + world.world_name);
                                         message.SetColor("green");
-                                        api::players::calls::on_system_message({context.executor, message});
+                                        context.executor << api::client::play::system_chat{.content = message};
                                     } else {
                                         Chat message("Slow chunk profiling enabled by another plugin for world: " + world.world_name);
                                         message.SetColor("red");
-                                        api::players::calls::on_system_message({context.executor, message});
+                                        context.executor << api::client::play::system_chat{.content = message};
                                     }
                                 } else {
                                     Chat message("Slow chunk profiling already disabled for world: " + world.world_name);
                                     message.SetColor("red");
-                                    api::players::calls::on_system_message({context.executor, message});
+                                    context.executor << api::client::play::system_chat{.content = message};
                                 }
                             });
                         });
@@ -1074,16 +1077,16 @@ namespace copper_server::build_in_plugins {
                                         world.profiling.slow_world_tick_callback = nullptr;
                                         Chat message("Slow chunk profiling enabled for world: " + world.world_name);
                                         message.SetColor("green");
-                                        api::players::calls::on_system_message({context.executor, message});
+                                        context.executor << api::client::play::system_chat{.content = message};
                                     } else {
                                         Chat message("Slow chunk profiling enabled by another plugin for world: " + world.world_name);
                                         message.SetColor("red");
-                                        api::players::calls::on_system_message({context.executor, message});
+                                        context.executor << api::client::play::system_chat{.content = message};
                                     }
                                 } else {
                                     Chat message("Slow chunk profiling already disabled for world: " + world.world_name);
                                     message.SetColor("red");
-                                    api::players::calls::on_system_message({context.executor, message});
+                                    context.executor << api::client::play::system_chat{.content = message};
                                 }
                             });
                         });
@@ -1098,16 +1101,16 @@ namespace copper_server::build_in_plugins {
                                         world.profiling.slow_world_tick_callback = nullptr;
                                         Chat message("Slow chunk profiling enabled for world: " + world.world_name);
                                         message.SetColor("green");
-                                        api::players::calls::on_system_message({context.executor, message});
+                                        context.executor << api::client::play::system_chat{.content = message};
                                     } else {
                                         Chat message("Slow chunk profiling enabled by another plugin for world: " + world.world_name);
                                         message.SetColor("red");
-                                        api::players::calls::on_system_message({context.executor, message});
+                                        context.executor << api::client::play::system_chat{.content = message};
                                     }
                                 } else {
                                     Chat message("Slow chunk profiling already disabled for world: " + world.world_name);
                                     message.SetColor("red");
-                                    api::players::calls::on_system_message({context.executor, message});
+                                    context.executor << api::client::play::system_chat{.content = message};
                                 }
                             });
                         });
@@ -1122,7 +1125,7 @@ namespace copper_server::build_in_plugins {
                             auto& world_id = std::get<pred_long>(args[0]);
 
                             api::world::get(world_id.value, [&](storage::world_data& world) {
-                                api::players::calls::on_system_message({context.executor, "Slow world threshold: " + std::to_string(world.profiling.slow_world_tick_callback_threshold)});
+                                context.executor << api::client::play::system_chat{.content = "Slow world threshold: " + std::to_string(world.profiling.slow_world_tick_callback_threshold)};
                             });
                         })
                         .add_child("value", cmd_pred_double())
@@ -1141,7 +1144,7 @@ namespace copper_server::build_in_plugins {
                             auto& world_id = std::get<pred_string>(args[0]);
 
                             api::world::get(world_id.value, [&](storage::world_data& world) {
-                                api::players::calls::on_system_message({context.executor, "Slow world threshold: " + std::to_string(world.profiling.slow_world_tick_callback_threshold)});
+                                context.executor << api::client::play::system_chat{.content = "Slow world threshold: " + std::to_string(world.profiling.slow_world_tick_callback_threshold)};
                             });
                         })
                         .add_child("value", cmd_pred_double())
@@ -1160,7 +1163,7 @@ namespace copper_server::build_in_plugins {
                             auto& world_id = std::get<pred_long>(args[0]);
 
                             api::world::get(world_id.value, [&](storage::world_data& world) {
-                                api::players::calls::on_system_message({context.executor, "Slow chunk threshold: " + std::to_string(world.profiling.slow_chunk_tick_callback_threshold)});
+                                context.executor << api::client::play::system_chat{.content = "Slow chunk threshold: " + std::to_string(world.profiling.slow_chunk_tick_callback_threshold)};
                             });
                         })
                         .add_child("value", cmd_pred_double())
@@ -1179,7 +1182,7 @@ namespace copper_server::build_in_plugins {
                             auto& world_id = std::get<pred_string>(args[0]);
 
                             api::world::get(world_id.value, [&](storage::world_data& world) {
-                                api::players::calls::on_system_message({context.executor, "Slow chunk threshold: " + std::to_string(world.profiling.slow_chunk_tick_callback_threshold)});
+                                context.executor << api::client::play::system_chat{.content = "Slow chunk threshold: " + std::to_string(world.profiling.slow_chunk_tick_callback_threshold)};
                             });
                         })
                         .add_child("value", cmd_pred_double())
@@ -1198,14 +1201,14 @@ namespace copper_server::build_in_plugins {
                 chunks_loaded.set_callback("command.chunks_loaded", [this](const list_array<predicate>&, base_objects::command_context& context) {
                     Chat message("Chunks loaded: " + std::to_string(api::world::loaded_chunks_count()));
                     message.SetColor("green");
-                    api::players::calls::on_system_message({context.executor, message});
+                    context.executor << api::client::play::system_chat{.content = message};
                 });
                 auto world_id = chunks_loaded.add_child("world_id", cmd_pred_long());
                 world_id.set_callback("command.chunks_loaded", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                     auto world_id = std::get<pred_long>(args[0]).value;
                     Chat message("Chunks loaded: " + std::to_string(api::world::loaded_chunks_count(world_id)));
                     message.SetColor("green");
-                    api::players::calls::on_system_message({context.executor, message});
+                    context.executor << api::client::play::system_chat{.content = message};
                 });
 
                 auto world_name = chunks_loaded.add_child("world_name", cmd_pred_string());
@@ -1213,7 +1216,7 @@ namespace copper_server::build_in_plugins {
                     auto& world_name = std::get<pred_string>(args[0]).value;
                     Chat message("Chunks loaded: " + std::to_string(api::world::loaded_chunks_count(world_name)));
                     message.SetColor("green");
-                    api::players::calls::on_system_message({context.executor, message});
+                    context.executor << api::client::play::system_chat{.content = message};
                 });
                 add_world_id_suggestion(world_id);
                 add_world_name_suggestion(world_name);
@@ -1240,7 +1243,7 @@ namespace copper_server::build_in_plugins {
                       if (pos.z_relative)
                           pos.z += (int32_t)context.other_data["z"];
 
-                      api::world::get(context.executor->player_data.world_id, [pos, &block](storage::world_data& world) {
+                      api::world::get(context.executor.player_data.world_id, [pos, &block](storage::world_data& world) {
                           world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::replace);
                       });
                   };
@@ -1258,7 +1261,7 @@ namespace copper_server::build_in_plugins {
                 if (pos.z_relative)
                     pos.z += (int32_t)context.other_data["z"];
 
-                api::world::get(context.executor->player_data.world_id, [pos, &block](storage::world_data& world) {
+                api::world::get(context.executor.player_data.world_id, [pos, &block](storage::world_data& world) {
                     world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::destroy);
                 });
             });
@@ -1274,7 +1277,7 @@ namespace copper_server::build_in_plugins {
                 if (pos.z_relative)
                     pos.z += (int32_t)context.other_data["z"];
 
-                api::world::get(context.executor->player_data.world_id, [pos, &block](storage::world_data& world) {
+                api::world::get(context.executor.player_data.world_id, [pos, &block](storage::world_data& world) {
                     world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::keep);
                 });
             });
@@ -1287,7 +1290,7 @@ namespace copper_server::build_in_plugins {
             getworldspawn.set_callback("command.getworldspawn", [this](const list_array<predicate>&, base_objects::command_context& context) {
                 Chat message("World spawn: x: " + std::to_string(api::configuration::get().world.spawn.x) + " y: " + std::to_string(api::configuration::get().world.spawn.y) + " z: " + std::to_string(api::configuration::get().world.spawn.z) + " yaw: " + std::to_string(api::configuration::get().world.spawn.yaw));
                 message.SetColor("green");
-                api::players::calls::on_system_message({context.executor, message});
+                context.executor << api::client::play::system_chat{.content = message};
             });
         }
     }

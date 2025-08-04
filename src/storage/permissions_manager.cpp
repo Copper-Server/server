@@ -11,9 +11,9 @@ namespace copper_server::storage {
     permissions_manager::permissions_manager(const std::filesystem::path& base_path)
         : base_path(base_path) {}
 
-    bool permissions_manager::has_rights(const std::string& action_name, const base_objects::client_data_holder& client) {
+    bool permissions_manager::has_rights(const std::string& action_name, const base_objects::SharedClientData& client) {
         return protected_values.get([&](const protected_values_t& values) {
-            if (client->player_data.instant_granted_actions.find(action_name) != client->player_data.instant_granted_actions.npos)
+            if (client.player_data.instant_granted_actions.find(action_name) != client.player_data.instant_granted_actions.npos)
                 return true;
 
             bool pass_if_noting = values.check_mode == permission_check_mode::all_or_noting || values.check_mode == permission_check_mode::any_or_noting;
@@ -22,7 +22,7 @@ namespace copper_server::storage {
             if (item == values.actions.end())
                 return pass_if_noting;
 
-            auto& client_data = client->player_data;
+            auto& client_data = client.player_data;
             bool instant_granted = false;
             bool has_not_found = false;
             bool is_incompatible = false;
@@ -94,6 +94,17 @@ namespace copper_server::storage {
     bool permissions_manager::has_action(const std::string& action_name) const {
         return protected_values.get([&](const protected_values_t& values) {
             return values.actions.contains(action_name);
+        });
+    }
+
+    bool permissions_manager::has_action_limits(const std::string& action_name) const {
+        return protected_values.get([&](const protected_values_t& values) {
+            bool pass_if_noting = values.check_mode == permission_check_mode::all_or_noting || values.check_mode == permission_check_mode::any_or_noting;
+            auto item = values.actions.find(action_name);
+            if (item == values.actions.end())
+                return pass_if_noting;
+            else
+                return !item->second.empty();
         });
     }
 

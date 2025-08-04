@@ -13,6 +13,7 @@ namespace copper_server::base_objects {
     std::unordered_map<std::string, std::shared_ptr<static_block_data>> block::named_full_block_data;
     list_array<std::shared_ptr<static_block_data>> block::full_block_data_;
     list_array<std::shared_ptr<static_block_data>> block::general_block_data_;
+    list_array<std::shared_ptr<static_block_data>> block::block_entity_data_;
 
     void block::tick(storage::world_data& world, base_objects::world::sub_chunk_data& sub_chunk, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked) {
     retry:
@@ -185,15 +186,30 @@ namespace copper_server::base_objects {
     }
 
     void block::initialize() {
-        list_array<std::shared_ptr<static_block_data>> data;
-        size_t max_ids = 0;
-        data.resize(full_block_data_.size());
-        for (auto& it : full_block_data_) {
-            data[it->general_block_id] = it;
-            max_ids = std::max<size_t>(it->general_block_id, max_ids);
+        {
+            list_array<std::shared_ptr<static_block_data>> data;
+            size_t max_ids = 0;
+            data.resize(full_block_data_.size());
+            for (auto& it : full_block_data_) {
+                data[it->general_block_id] = it;
+                max_ids = std::max<size_t>(it->general_block_id, max_ids);
+            }
+            data.resize(max_ids);
+            general_block_data_ = data;
         }
-        data.resize(max_ids);
-        general_block_data_ = data;
+        {
+            list_array<std::shared_ptr<static_block_data>> data;
+            size_t max_ids = 0;
+            data.resize(full_block_data_.size());
+            for (auto& it : full_block_data_) {
+                if (!it->is_block_entity)
+                    continue;
+                data[it->block_entity_id] = it;
+                max_ids = std::max<size_t>(it->block_entity_id, max_ids);
+            }
+            data.resize(max_ids);
+            block_entity_data_ = data;
+        }
     }
 
     size_t block::block_states_size() {

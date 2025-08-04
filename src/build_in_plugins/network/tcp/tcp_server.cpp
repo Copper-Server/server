@@ -1,4 +1,3 @@
-
 #include <src/api/configuration.hpp>
 #include <src/api/network.hpp>
 #include <src/api/server.hpp>
@@ -8,42 +7,41 @@
 
 #include <library/fast_task/include/networking.hpp>
 #include <src/build_in_plugins/network/tcp/session.hpp>
-#include <src/build_in_plugins/network/tcp/state_handshaking.hpp>
-#include <src/build_in_plugins/network/tcp/state_status.hpp>
-#include <src/build_in_plugins/network/tcp/status.hpp>
+#include <src/build_in_plugins/network/tcp/universal_client_handle.hpp>
+
+#include <stacktrace>
 
 namespace copper_server::build_in_plugins::network::tcp {
     using fast_task::networking::TcpError;
-    base_objects::network::tcp::client* tcp_handler = nullptr;
-
-    base_objects::network::tcp::client* get_first_handler() {
-        if (!tcp_handler)
-            throw std::runtime_error("tcp::client handler not registered");
-        return tcp_handler;
-    }
-
-    void register_handler(base_objects::network::tcp::client* _handler) {
-        if (tcp_handler) {
-            std::swap(tcp_handler, _handler);
-            delete _handler;
-        } else
-            tcp_handler = _handler;
-    }
+    base_objects::network::tcp::client* tcp_handler = new universal_client_handle();
 
     void handler(fast_task::networking::TcpNetworkStream& stream) {
         if (api::network::ip_filter(stream.remote_address()))
             return;
 
-        auto session = std::make_shared<tcp::session>(stream, get_first_handler(), api::configuration::get().protocol.all_connections_timeout_seconds);
-        while (!stream.is_closed()) {
-            auto input = stream.read_available_ref();
-            if (stream.error() == TcpError::none)
-                session->received(input);
+        auto session = std::make_shared<tcp::session>(stream, tcp_handler, api::configuration::get().protocol.all_connections_timeout_seconds);
+        try {
+            while (!stream.is_closed()) {
+                auto input = stream.read_available_ref();
+                if (stream.error() == TcpError::none)
+                    session->received(input);
+            }
+        } catch (const std::exception& ex) {
+            std::stringstream stack_trace;
+            stack_trace << std::stacktrace::current();
+            log::error("Network", "unhandled exception while processing client. Id: " + std::to_string(session->id) + ". Address: " + stream.remote_address().to_string());
+            log::debug_error("Network", "client id " + std::to_string(session->id) + " stack trace:\n" + stack_trace.str());
+            log::debug_error("Network", "client id " + std::to_string(session->id) + " exceptions data:\n" + ex.what());
+        } catch (...) {
+            std::stringstream stack_trace;
+            stack_trace << std::stacktrace::current();
+            log::error("Network", "unhandled undefined exception while processing client. Id: " + std::to_string(session->id) + ". Address: " + stream.remote_address().to_string());
+            log::debug_error("Network", "client id " + std::to_string(session->id) + " stack trace:\n" + stack_trace.str());
         }
         session->disconnect();
     }
 
-    class TCPServerPlugin : public PluginAutoRegister<"tcp_server", TCPServerPlugin> {
+    class TCPServerPlugin : public PluginAutoRegister<"network/tcp_server", TCPServerPlugin> {
         std::shared_ptr<fast_task::networking::TcpNetworkServer> tcp_server;
 
         void start() {
@@ -66,9 +64,7 @@ namespace copper_server::build_in_plugins::network::tcp {
 
     public:
         TCPServerPlugin() {
-            register_event(api::server::shutdown_event, [this]() { if (tcp_server) stop(); return false; });
-            special_status = new Status();
-            register_handler(new tcp_client_handle_handshaking());
+            register_event(api::server::shutdown_event, base_objects::events::priority::low, [this]() { if (tcp_server) stop(); return false; });
         }
 
         void OnPostLoad(const PluginRegistrationPtr&) override {

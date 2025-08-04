@@ -35,7 +35,7 @@ namespace copper_server::base_objects::events {
             std::lock_guard<fast_task::task_mutex> lock(mutex);
             if (async_mode) {
                 switch (priority) {
-                case priority::heigh:
+                case priority::high:
                     return addOne(async_heigh_priority, func);
                 case priority::upper_avg:
                     return addOne(async_upper_avg_priority, func);
@@ -48,7 +48,7 @@ namespace copper_server::base_objects::events {
                 }
             } else {
                 switch (priority) {
-                case priority::heigh:
+                case priority::high:
                     return addOne(heigh_priority, func);
                 case priority::upper_avg:
                     return addOne(upper_avg_priority, func);
@@ -67,7 +67,7 @@ namespace copper_server::base_objects::events {
             std::lock_guard<fast_task::task_mutex> lock(mutex);
             if (async_mode) {
                 switch (priority) {
-                case priority::heigh:
+                case priority::high:
                     return removeOne(async_heigh_priority, func);
                 case priority::upper_avg:
                     return removeOne(async_upper_avg_priority, func);
@@ -80,7 +80,7 @@ namespace copper_server::base_objects::events {
                 }
             } else {
                 switch (priority) {
-                case priority::heigh:
+                case priority::high:
                     return removeOne(heigh_priority, func);
                 case priority::upper_avg:
                     return removeOne(upper_avg_priority, func);
@@ -304,7 +304,7 @@ namespace copper_server::base_objects::events {
             std::lock_guard<fast_task::task_mutex> lock(mutex);
             if (async_mode) {
                 switch (priority) {
-                case priority::heigh:
+                case priority::high:
                     return addOne(async_heigh_priority, func);
                 case priority::upper_avg:
                     return addOne(async_upper_avg_priority, func);
@@ -317,7 +317,7 @@ namespace copper_server::base_objects::events {
                 }
             } else {
                 switch (priority) {
-                case priority::heigh:
+                case priority::high:
                     return addOne(heigh_priority, func);
                 case priority::upper_avg:
                     return addOne(upper_avg_priority, func);
@@ -336,7 +336,7 @@ namespace copper_server::base_objects::events {
             std::lock_guard<fast_task::task_mutex> lock(mutex);
             if (async_mode) {
                 switch (priority) {
-                case priority::heigh:
+                case priority::high:
                     return removeOne(async_heigh_priority, func);
                 case priority::upper_avg:
                     return removeOne(async_upper_avg_priority, func);
@@ -349,7 +349,7 @@ namespace copper_server::base_objects::events {
                 }
             } else {
                 switch (priority) {
-                case priority::heigh:
+                case priority::high:
                     return removeOne(heigh_priority, func);
                 case priority::upper_avg:
                     return removeOne(upper_avg_priority, func);

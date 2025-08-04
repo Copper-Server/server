@@ -1,7 +1,7 @@
 #include <src/api/command.hpp>
-#include <src/api/packets.hpp>
+#include <src/api/entity_id_map.hpp>
+#include <src/api/client.hpp>
 #include <src/api/players.hpp>
-#include <src/api/protocol.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
@@ -10,7 +10,8 @@
 
 namespace copper_server::build_in_plugins {
     //handles clients with play state, allows players to access world and other things through api
-    class PlayEngine : public PluginAutoRegister<"play_engine", PlayEngine> {
+    class PlayEngine : public PluginAutoRegister<"base/play_engine", PlayEngine> {
+        base_objects::events::event_register_id process_chat_command_id;
         fast_task::task_mutex messages_order;
         list_array<std::array<uint8_t, 256>> lastset_messages;
 
@@ -18,120 +19,247 @@ namespace copper_server::build_in_plugins {
             base_objects::entity_data::world_processor proc;
             proc.entity_add_effect = [](base_objects::entity& self, base_objects::entity& target, uint32_t id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) {
                 if (self.assigned_player) {
-                    base_objects::packets::effect_flags flags;
-                    flags.is_ambient = ambient;
-                    flags.show_icon = show_icon;
-                    flags.show_particles = show_particles;
-                    flags.use_blend = use_blend;
-                    api::packets::play::entityEffect(*self.assigned_player, target.protocol_id, id, duration, amplifier, flags);
+                    //base_objects::packets::effect_flags flags;
+                    //flags.is_ambient = ambient;
+                    //flags.show_icon = show_icon;
+                    //flags.show_particles = show_particles;
+                    //flags.use_blend = use_blend;
+                    *self.assigned_player << api::client::play::update_mob_effect{
+
+                    };
+                    //api::packets::play::entityEffect(*self.assigned_player, target.protocol_id, id, duration, amplifier, flags);
                 }
             };
             proc.entity_animation = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_animation animation) {
-                if (self.assigned_player)
-                    api::packets::play::entityAnimation(*self.assigned_player, target, animation);
+                if (self.assigned_player) {
+                    *self.assigned_player << api::client::play::animate{
+                        .entity_id = target.protocol_id,
+                        .animation = static_cast<api::client::play::animate::animation_e>(animation)
+                    };
+                }
             };
             proc.entity_attach = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_ref& other_entity_id) {
                 if (self.assigned_player && other_entity_id)
-                    api::packets::play::linkEntities(*self.assigned_player, other_entity_id->protocol_id, target.protocol_id);
+                    *self.assigned_player << api::client::play::set_entity_link{
+                        .attached_entity_id = (int32_t)other_entity_id->protocol_id,
+                        .holding_entity_id = (int32_t)target.protocol_id
+                    };
             };
             proc.entity_attack = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_ref& other_entity_id) {
                 if (self.assigned_player)
-                    api::packets::play::entityAnimation(*self.assigned_player, target, base_objects::entity_animation::swing_main_arm); //damage event passed from other entity
+                    *self.assigned_player << api::client::play::animate{
+                        .entity_id = target.protocol_id,
+                        .animation = api::client::play::animate::swing_main_arm
+                    };
             };
             proc.entity_break = [](base_objects::entity& self, base_objects::entity& target, int64_t x, int64_t y, int64_t z, uint8_t state) {
                 if (self.assigned_player)
-                    api::packets::play::setBlockDestroyStage(*self.assigned_player, target, {(int)x, (int)y, (int)z}, state);
+                    *self.assigned_player << api::client::play::block_destruction{
+                        .entity_id = target.protocol_id,
+                        .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                        .destroy_stage = state
+                    };
             };
             proc.entity_cancel_break = [](base_objects::entity& self, base_objects::entity& target, int64_t x, int64_t y, int64_t z) {
                 if (self.assigned_player)
-                    api::packets::play::setBlockDestroyStage(*self.assigned_player, target, {(int)x, (int)y, (int)z}, 10);
+                    *self.assigned_player << api::client::play::block_destruction{
+                        .entity_id = target.protocol_id,
+                        .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                        .destroy_stage = 10
+                    };
             };
             proc.entity_damage = [](base_objects::entity& self, base_objects::entity& target, float health, int32_t type_id, const std::optional<util::VECTOR>& pos) {
                 if (self.assigned_player)
-                    api::packets::play::damageEvent(*self.assigned_player, target.protocol_id, type_id, 0, 0, pos);
+                    *self.assigned_player << api::client::play::damage_event{
+                        .entity_id = target.protocol_id,
+                        .source_damage_type_id = type_id,
+                        .source_pos = pos
+                    };
             };
             proc.entity_damage_with_source = [](base_objects::entity& self, base_objects::entity& target, float health, int32_t type_id, base_objects::entity_ref& source, const std::optional<util::VECTOR>& pos) {
                 if (self.assigned_player && source)
-                    api::packets::play::damageEvent(*self.assigned_player, target.protocol_id, type_id, source->protocol_id, source->protocol_id, pos);
+                    *self.assigned_player << api::client::play::damage_event{
+                        .entity_id = target.protocol_id,
+                        .source_damage_type_id = type_id,
+                        .source_entity_id = source->protocol_id,
+                        .source_direct_entity_id = source->protocol_id,
+                        .source_pos = pos
+                    };
             };
             proc.entity_damage_with_sources = [](base_objects::entity& self, base_objects::entity& target, float health, int32_t type_id, base_objects::entity_ref& source, base_objects::entity_ref& source_direct, const std::optional<util::VECTOR>& pos) {
                 if (self.assigned_player && source && source_direct)
-                    api::packets::play::damageEvent(*self.assigned_player, target.protocol_id, type_id, source->protocol_id, source_direct->protocol_id, pos);
+                    *self.assigned_player << api::client::play::damage_event{
+                        .entity_id = target.protocol_id,
+                        .source_damage_type_id = type_id,
+                        .source_entity_id = source->protocol_id,
+                        .source_direct_entity_id = source_direct->protocol_id,
+                        .source_pos = pos
+                    };
             };
             proc.entity_death = [](base_objects::entity& self, base_objects::entity& target) {
                 if (self.assigned_player) {
-                    api::packets::play::entityEvent(*self.assigned_player, target.protocol_id, base_objects::entity_event::entity_died);
+                    *self.assigned_player << api::client::play::entity_event{
+                        .entity_id = target.protocol_id,
+                        .status = (int8_t)base_objects::entity_event::entity_died
+                    };
                     //TODO add delay
-                    api::packets::play::entityEvent(*self.assigned_player, target.protocol_id, base_objects::entity_event::death_smoke);
+                    *self.assigned_player << api::client::play::entity_event{
+                        .entity_id = target.protocol_id,
+                        .status = (int8_t)base_objects::entity_event::death_smoke
+                    };
                 }
             };
             proc.entity_deinit = [](base_objects::entity& self, base_objects::entity& target) {
-                if (self.assigned_player)
-                    api::packets::play::removeEntities(*self.assigned_player, {target.protocol_id});
+                if (self.assigned_player) {
+                    *self.assigned_player << api::client::play::remove_entities{
+                        .entity_ids{target.protocol_id}
+                    };
+                }
             };
             proc.entity_detach = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_ref& other) {
                 if (self.assigned_player)
-                    api::packets::play::linkEntities(*self.assigned_player, target.protocol_id, -1);
+                    *self.assigned_player << api::client::play::set_entity_link{
+                        .attached_entity_id = (int32_t)target.protocol_id,
+                        .holding_entity_id = -1
+                    };
             };
             proc.entity_event = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_event status) {
                 if (self.assigned_player)
-                    api::packets::play::entityEvent(*self.assigned_player, target.protocol_id, status);
+                    *self.assigned_player << api::client::play::entity_event{
+                        .entity_id = target.protocol_id,
+                        .status = (int8_t)status
+                    };
             };
             proc.entity_finish_break = [](base_objects::entity& self, base_objects::entity& target, int64_t x, int64_t y, int64_t z) {
                 if (self.assigned_player)
-                    api::packets::play::setBlockDestroyStage(*self.assigned_player, target, {(int)x, (int)y, (int)z}, 11);
+                    *self.assigned_player << api::client::play::block_destruction{
+                        .entity_id = target.protocol_id,
+                        .location = {(int)x, (int)y, (int)z},
+                        .destroy_stage = 11
+                    };
             };
             proc.entity_init = [](base_objects::entity& self, base_objects::entity& target) {
-                if (self.assigned_player)
-                    api::packets::play::spawnEntity(*self.assigned_player, target);
+                if (self.assigned_player) {
+                    auto velocity = util::minecraft::packets::velocity(target.motion);
+                    api::client::play::add_entity{
+                        .entity_id = target.protocol_id,
+                        .uuid = api::entity_id_map::get_uuid(target.protocol_id),
+                        .type = target.get_entity_type_id(),
+                        .x = target.position.x,
+                        .y = target.position.y,
+                        .z = target.position.z,
+                        .pitch = target.rotation.y,
+                        .yaw = target.rotation.x,
+                        .head_yaw = target.head_rotation.x,
+                        .data = *target.get_object_field().or_else([]() { return 0; }),
+                        .velocity_x = velocity.x,
+                        .velocity_y = velocity.y,
+                        .velocity_z = velocity.z
+                    };
+                }
             };
             proc.entity_iteract = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_ref& other) {
                 if (self.assigned_player)
-                    api::packets::play::entityAnimation(*self.assigned_player, target, base_objects::entity_animation::swing_main_arm);
+                    *self.assigned_player << api::client::play::animate{
+                        .entity_id = target.protocol_id,
+                        .animation = api::client::play::animate::swing_main_arm
+                    };
             };
             proc.entity_iteract_block = [](base_objects::entity& self, base_objects::entity& target, auto, auto, auto) {
                 if (self.assigned_player)
-                    api::packets::play::entityAnimation(*self.assigned_player, target, base_objects::entity_animation::swing_main_arm);
+                    *self.assigned_player << api::client::play::animate{
+                        .entity_id = target.protocol_id,
+                        .animation = api::client::play::animate::swing_main_arm
+                    };
             };
             proc.entity_leaves_ride = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_ref& other) {
                 if (self.assigned_player && other)
-                    api::packets::play::setPassengers(*self.assigned_player, other->protocol_id, other->ride_by_entity.convert_fn([](auto& entity) { return entity->protocol_id; }));
+                    *self.assigned_player << api::client::play::set_passengers{
+                        .entity_id = target.protocol_id,
+                        .passengers = other->ride_by_entity.convert_fn([](auto& entity) { return entity->protocol_id; }).to_container<std::vector<base_objects::var_int32>>()
+                    };
             };
             proc.entity_look_changes = [](base_objects::entity& self, base_objects::entity& target, util::ANGLE_DEG rot) {
                 if (self.assigned_player)
-                    api::packets::play::setHeadRotation(*self.assigned_player, target.protocol_id, rot);
+                    *self.assigned_player << api::client::play::rotate_head{
+                        .entity_id = target.protocol_id,
+                        .head_yaw = rot.x
+                    };
             };
             proc.entity_motion_changes = [](base_objects::entity& self, base_objects::entity& target, util::VECTOR mot) {
-                if (self.assigned_player)
-                    api::packets::play::setEntityMotion(*self.assigned_player, target.protocol_id, mot);
+                if (self.assigned_player) {
+                    auto velocity = util::minecraft::packets::velocity(target.motion);
+                    *self.assigned_player << api::client::play::set_entity_motion{
+                        .entity_id = target.protocol_id,
+                        .velocity_x = velocity.x,
+                        .velocity_y = velocity.y,
+                        .velocity_z = velocity.z
+                    };
+                }
             };
             proc.entity_move = [](base_objects::entity& self, base_objects::entity& target, util::VECTOR dif) {
-                if (self.assigned_player)
-                    api::packets::play::updateEntityPosition(*self.assigned_player, target.protocol_id, {(float)dif.x, (float)dif.y, (float)dif.z}, target.is_on_ground());
+                if (self.assigned_player) {
+                    auto delta = util::minecraft::packets::delta_move({(float)dif.x, (float)dif.y, (float)dif.z});
+                    *self.assigned_player << api::client::play::move_entity_pos{
+                        .entity_id = target.protocol_id,
+                        .delta_x = delta.x,
+                        .delta_y = delta.y,
+                        .delta_z = delta.z,
+                        .on_ground = target.is_on_ground()
+                    };
+                }
             };
             proc.entity_place_block = [](base_objects::entity& self, base_objects::entity& target, bool is_main_hand, int64_t x, int64_t y, int64_t z, const base_objects::block& block) {
                 if (self.assigned_player)
-                    api::packets::play::entityAnimation(*self.assigned_player, target, is_main_hand ? base_objects::entity_animation::swing_main_arm : base_objects::entity_animation::swing_offhand);
+                    *self.assigned_player << api::client::play::animate{
+                        .entity_id = target.protocol_id,
+                        .animation = is_main_hand ? api::client::play::animate::swing_main_arm : api::client::play::animate::swing_offhand
+                    };
             };
             proc.entity_place_block_entity = [](base_objects::entity& self, base_objects::entity& target, bool is_main_hand, int64_t x, int64_t y, int64_t z, auto) {
                 if (self.assigned_player)
-                    api::packets::play::entityAnimation(*self.assigned_player, target, is_main_hand ? base_objects::entity_animation::swing_main_arm : base_objects::entity_animation::swing_offhand);
+                    *self.assigned_player << api::client::play::animate{
+                        .entity_id = target.protocol_id,
+                        .animation = is_main_hand ? api::client::play::animate::swing_main_arm : api::client::play::animate::swing_offhand
+                    };
             };
             proc.entity_remove_effect = [](base_objects::entity& self, base_objects::entity& target, uint32_t id) {
                 if (self.assigned_player)
-                    api::packets::play::removeEntityEffect(*self.assigned_player, target.protocol_id, id);
+                    *self.assigned_player << api::client::play::remove_mob_effect{
+                        .entity_id = target.protocol_id,
+                        .effect_id = id
+                    };
             };
             proc.entity_rides = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_ref& other_entity) {
                 if (self.assigned_player && other_entity)
-                    api::packets::play::setPassengers(*self.assigned_player, other_entity->protocol_id, other_entity->ride_by_entity.convert_fn([](auto& entity) { return entity->protocol_id; }));
+                    *self.assigned_player << api::client::play::set_passengers{
+                        .entity_id = other_entity->protocol_id,
+                        .passengers = other_entity->ride_by_entity.convert_fn([](auto& entity) { return entity->protocol_id; }).to_container<std::vector<base_objects::var_int32>>()
+                    };
             };
             proc.entity_rotation_changes = [](base_objects::entity& self, base_objects::entity& target, util::ANGLE_DEG rot) {
                 if (self.assigned_player)
-                    api::packets::play::updateEntityRotation(*self.assigned_player, target.protocol_id, rot, target.is_on_ground());
+                    *self.assigned_player << api::client::play::move_entity_rot{
+                        .entity_id = target.protocol_id,
+                        .yaw = rot.x,
+                        .pitch = rot.y,
+                        .on_ground = target.is_on_ground()
+                    };
             };
             proc.entity_teleport = [](base_objects::entity& self, base_objects::entity& target, util::VECTOR pos) {
                 if (self.assigned_player)
-                    api::packets::play::teleportEntity(*self.assigned_player, target.protocol_id, pos, (float)target.rotation.x, (float)target.rotation.y, target.is_on_ground());
+                    *self.assigned_player << api::client::play::entity_position_sync{
+                        .entity_id = target.protocol_id,
+                        .x = pos.x,
+                        .y = pos.y,
+                        .z = pos.z,
+                        .velocity_x = target.motion.x,
+                        .velocity_y = target.motion.y,
+                        .velocity_z = target.motion.z,
+                        .yaw = (float)target.rotation.x,
+                        .pitch = (float)target.rotation.y,
+                        .on_ground = target.is_on_ground()
+                    };
             };
 
 
@@ -140,7 +268,7 @@ namespace copper_server::build_in_plugins {
                     if (self.current_world()) {
                         if (self.get_syncing_data().chunk_processed(x, z))
                             self.current_world()->get_chunk_at(x, z, [&self](storage::chunk_data& chunk) {
-                                api::packets::play::chunkBiomes(*self.assigned_player, {&chunk});
+                                *self.assigned_player << api::client::play::chunks_biomes::create(chunk);
                             });
                     }
                 }
@@ -148,33 +276,53 @@ namespace copper_server::build_in_plugins {
             proc.notify_block_change = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, const base_objects::block& block) {
                 if (self.assigned_player) {
                     if (self.get_syncing_data().chunk_processed(x, z))
-                        api::packets::play::blockUpdate(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, block);
+                        *self.assigned_player << api::client::play::block_update{
+                            .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                            .block = block.id
+                        };
                 }
             };
             proc.notify_block_destroy_change = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, const base_objects::block& block) {
                 if (self.assigned_player)
                     if (self.current_world()) {
                         if (self.get_syncing_data().chunk_processed(x, z)) {
+                            int32_t block_id = 0;
                             self.current_world()->get_block(
                                 x,
                                 y,
                                 z,
-                                [&self, x, y, z](base_objects::block& block) {
-                                    api::packets::play::worldEvent(*self.assigned_player, base_objects::packets::world_event_id::block_break_and_sound, {(int32_t)x, (int32_t)y, (int32_t)z}, block.id, false);
+                                [&block_id](base_objects::block& block) {
+                                    block_id = block.id;
                                 },
-                                [&self, x, y, z](base_objects::block& block, auto) {
-                                    api::packets::play::worldEvent(*self.assigned_player, base_objects::packets::world_event_id::block_break_and_sound, {(int32_t)x, (int32_t)y, (int32_t)z}, block.id, false);
+                                [&block_id](base_objects::block& block, auto) {
+                                    block_id = block.id;
                                 }
                             );
-                            api::packets::play::blockUpdate(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, block);
+                            *self.assigned_player << api::client::play::level_event{
+                                .event = api::client::play::level_event::event_id::block_break_and_sound,
+                                .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                                .data = block_id,
+                                .disable_volume = false
+                            };
+                            *self.assigned_player << api::client::play::block_update{
+                                .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                                .block = block.id
+                            };
                         }
                     }
             };
             proc.notify_block_entity_change = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block_entity) {
                 if (self.assigned_player) {
                     if (self.get_syncing_data().chunk_processed(x, z)) {
-                        api::packets::play::blockUpdate(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, block_entity.block);
-                        api::packets::play::blockEntityData(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, block_entity.block, block_entity.data);
+                        *self.assigned_player << api::client::play::block_update{
+                            .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                            .block = block_entity.block.id
+                        };
+                        *self.assigned_player << api::client::play::block_entity_data{
+                            .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                            .type = block_entity.block.block_entity_id(),
+                            .data = block_entity.data
+                        };
                     }
                 }
             };
@@ -182,19 +330,28 @@ namespace copper_server::build_in_plugins {
                 if (self.assigned_player)
                     if (self.current_world()) {
                         if (self.get_syncing_data().chunk_processed(x, z)) {
+                            int32_t block_id = 0;
                             self.current_world()->get_block(
                                 x,
                                 y,
                                 z,
-                                [&self, x, y, z](base_objects::block& block) {
-                                    api::packets::play::worldEvent(*self.assigned_player, base_objects::packets::world_event_id::block_break_and_sound, {(int32_t)x, (int32_t)y, (int32_t)z}, block.id, false);
+                                [&block_id](base_objects::block& block) {
+                                    block_id = block.id;
                                 },
-                                [&self, x, y, z](base_objects::block& block, auto) {
-                                    api::packets::play::worldEvent(*self.assigned_player, base_objects::packets::world_event_id::block_break_and_sound, {(int32_t)x, (int32_t)y, (int32_t)z}, block.id, false);
+                                [&block_id](base_objects::block& block, auto) {
+                                    block_id = block.id;
                                 }
                             );
-                            api::packets::play::blockUpdate(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, block_entity.block);
-                            api::packets::play::blockEntityData(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, block_entity.block, block_entity.data);
+                            *self.assigned_player << api::client::play::level_event{
+                                .event = api::client::play::level_event::event_id::block_break_and_sound,
+                                .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                                .data = block_id,
+                                .disable_volume = false
+                            };
+                            *self.assigned_player << api::client::play::block_update{
+                                .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                                .block = block_entity.block.id
+                            };
                         }
                     }
             };
@@ -205,29 +362,89 @@ namespace copper_server::build_in_plugins {
                             [x, y, z, &self](auto& it) mutable {
                                 using T = std::decay_t<decltype(it)>;
                                 if constexpr (std::is_same_v<T, base_objects::world::block_action::noteblock_activated>) {
-                                    api::packets::play::blockAction(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, 0, 0, base_objects::block::make_block("minecraft:note_block"));
+                                    *self.assigned_player << api::client::play::block_event{
+                                        .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                                        .action_id = 0,
+                                        .action_param = 0,
+                                        .block = "minecraft:note_block"
+                                    };
                                 } else if constexpr (std::is_same_v<T, base_objects::world::block_action::piston_extend>) {
-                                    api::packets::play::blockAction(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, 0, (uint8_t)it.dir, base_objects::block::make_block("minecraft:piston"));
+                                    *self.assigned_player << api::client::play::block_event{
+                                        .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                                        .action_id = 0,
+                                        .action_param = (uint8_t)it.dir,
+                                        .block = "minecraft:piston"
+                                    };
                                 } else if constexpr (std::is_same_v<T, base_objects::world::block_action::piston_retract>) {
-                                    api::packets::play::blockAction(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, 1, (uint8_t)it.dir, base_objects::block::make_block("minecraft:piston"));
+                                    *self.assigned_player << api::client::play::block_event{
+                                        .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                                        .action_id = 1,
+                                        .action_param = (uint8_t)it.dir,
+                                        .block = "minecraft:piston"
+                                    };
                                 } else if constexpr (std::is_same_v<T, base_objects::world::block_action::piston_canceled>) {
-                                    api::packets::play::blockAction(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, 2, (uint8_t)it.dir, base_objects::block::make_block("minecraft:piston"));
+                                    *self.assigned_player << api::client::play::block_event{
+                                        .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                                        .action_id = 2,
+                                        .action_param = (uint8_t)it.dir,
+                                        .block = "minecraft:piston"
+                                    };
                                 } else if constexpr (std::is_same_v<T, base_objects::world::block_action::chest_opened>) {
-                                    api::packets::play::blockAction(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, 1, it.count, base_objects::block::make_block("minecraft:chest"));
+                                    *self.assigned_player << api::client::play::block_event{
+                                        .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                                        .action_id = 1,
+                                        .action_param = (uint8_t)it.count,
+                                        .block = "minecraft:chest"
+                                    };
                                 } else if constexpr (std::is_same_v<T, base_objects::world::block_action::reset_spawner>) {
-                                    api::packets::play::blockAction(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, 1, 0, base_objects::block::make_block("minecraft:spawner"));
+                                    *self.assigned_player << api::client::play::block_event{
+                                        .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                                        .action_id = 1,
+                                        .action_param = 0,
+                                        .block = "minecraft:spawner"
+                                    };
                                 } else if constexpr (std::is_same_v<T, base_objects::world::block_action::end_gateway_activated>) {
-                                    api::packets::play::blockAction(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, 1, 0, base_objects::block::make_block("minecraft:end_gateway"));
+                                    *self.assigned_player << api::client::play::block_event{
+                                        .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                                        .action_id = 1,
+                                        .action_param = 0,
+                                        .block = "minecraft:end_gateway"
+                                    };
                                 } else if constexpr (std::is_same_v<T, base_objects::world::block_action::shulker_box_closed>) {
-                                    api::packets::play::blockAction(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, 0, 0, base_objects::block::make_block("minecraft:shulker_box"));
+                                    *self.assigned_player << api::client::play::block_event{
+                                        .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                                        .action_id = 0,
+                                        .action_param = 0,
+                                        .block = "minecraft:shulker_box"
+                                    };
                                 } else if constexpr (std::is_same_v<T, base_objects::world::block_action::shulker_box_opened>) {
-                                    api::packets::play::blockAction(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, 0, 1, base_objects::block::make_block("minecraft:shulker_box"));
+                                    *self.assigned_player << api::client::play::block_event{
+                                        .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                                        .action_id = 0,
+                                        .action_param = 1,
+                                        .block = "minecraft:shulker_box"
+                                    };
                                 } else if constexpr (std::is_same_v<T, base_objects::world::block_action::shulker_box_opened_count>) {
-                                    api::packets::play::blockAction(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, 1, it.count, base_objects::block::make_block("minecraft:shulker_box"));
+                                    *self.assigned_player << api::client::play::block_event{
+                                        .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                                        .action_id = 1,
+                                        .action_param = (uint8_t)it.count,
+                                        .block = "minecraft:shulker_box"
+                                    };
                                 } else if constexpr (std::is_same_v<T, base_objects::world::block_action::bell_ring>) {
-                                    api::packets::play::blockAction(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, 1, (uint8_t)it.dir, base_objects::block::make_block("minecraft:bell"));
+                                    *self.assigned_player << api::client::play::block_event{
+                                        .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                                        .action_id = 1,
+                                        .action_param = (uint8_t)it.dir,
+                                        .block = "minecraft:bell"
+                                    };
                                 } else if constexpr (std::is_same_v<T, base_objects::world::block_action::decorated_block_woble>) {
-                                    api::packets::play::blockAction(*self.assigned_player, {(int32_t)x, (int32_t)y, (int32_t)z}, 1, !it.successful, base_objects::block::make_block("minecraft:decorated_pot"));
+                                    *self.assigned_player << api::client::play::block_event{
+                                        .location = {(int32_t)x, (int32_t)y, (int32_t)z},
+                                        .action_id = 1,
+                                        .action_param = !it.successful,
+                                        .block = "minecraft:decorated_pot"
+                                    };
                                 }
                             },
                             action.action
@@ -239,7 +456,7 @@ namespace copper_server::build_in_plugins {
                 if (self.assigned_player) {
                     if (self.get_syncing_data().chunk_in_bounds(x, z)) {
                         //TODO implement batching
-                        api::packets::play::updateChunkDataWLights(*self.assigned_player, chunk);
+                        *self.assigned_player << api::client::play::level_chunk_with_light::create(chunk, *self.current_world());
                         self.get_syncing_data().mark_chunk(x, z, true);
                     }
                 }
@@ -248,17 +465,15 @@ namespace copper_server::build_in_plugins {
                 if (self.assigned_player) {
                     if (self.get_syncing_data().chunk_in_bounds(x, z)) {
                         //TODO implement batching
-                        api::packets::play::updateChunkDataWLights(*self.assigned_player, chunk);
+                        *self.assigned_player << api::client::play::level_chunk_with_light::create(chunk, *self.current_world());
                         self.get_syncing_data().mark_chunk(x, z, true);
                     }
                 }
             };
             proc.notify_chunk_light = [](base_objects::entity& self, int64_t x, int64_t z, const storage::chunk_data& chunk) {
-                if (self.assigned_player) {
-                    if (self.get_syncing_data().chunk_in_bounds(x, z)) {
-                        api::packets::play::updateLight(*self.assigned_player, chunk);
-                    }
-                }
+                if (self.assigned_player)
+                    if (self.get_syncing_data().chunk_in_bounds(x, z))
+                        *self.assigned_player << api::client::play::light_update::create(chunk);
             };
             proc.notify_sub_chunk = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, const base_objects::world::sub_chunk_data& chunk) {
                 if (self.assigned_player) {
@@ -266,20 +481,20 @@ namespace copper_server::build_in_plugins {
                         if (self.current_world()) {
                             self.current_world()->get_chunk_at(x, z, [&](auto& chunk) {
                                 //TODO implement batching
-                                api::packets::play::updateChunkDataWLights(*self.assigned_player, chunk);
+                                *self.assigned_player << api::client::play::level_chunk_with_light::create(chunk, *self.current_world());
                                 self.get_syncing_data().mark_chunk(x, z, true);
                             });
                         }
                     }
                 }
             };
-            proc.notify_sub_chunk_blocks = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, const base_objects::world::sub_chunk_data& chunk) {
+            proc.notify_sub_chunk_blocks = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, const base_objects::world::sub_chunk_data& chunk) { //TODO use api::client::play::section_blocks_update
                 if (self.assigned_player) {
                     if (self.get_syncing_data().chunk_in_bounds(x, z)) {
                         if (self.current_world()) {
                             self.current_world()->get_chunk_at(x, z, [&](auto& chunk) {
                                 //TODO implement batching
-                                api::packets::play::updateChunkDataWLights(*self.assigned_player, chunk);
+                                *self.assigned_player << api::client::play::level_chunk_with_light::create(chunk, *self.current_world());
                                 self.get_syncing_data().mark_chunk(x, z, true);
                             });
                         }
@@ -291,7 +506,7 @@ namespace copper_server::build_in_plugins {
                     if (self.get_syncing_data().chunk_in_bounds(x, z)) {
                         if (self.current_world()) {
                             self.current_world()->get_chunk_at(x, z, [&](auto& chunk) {
-                                api::packets::play::updateLight(*self.assigned_player, chunk);
+                                *self.assigned_player << api::client::play::light_update::create(chunk);
                             });
                         }
                     }
@@ -301,20 +516,18 @@ namespace copper_server::build_in_plugins {
                 if (self.assigned_player) {
                     if (self.current_world()) {
                         auto& player_data = self.assigned_player->player_data;
-                        api::packets::play::respawn(
-                            *self.assigned_player,
-                            registers::dimensionTypes.at(new_world.world_type).id,
-                            new_world.world_name,
-                            0,
-                            player_data.gamemode,
-                            player_data.prev_gamemode,
-                            new_world.world_generator_data.contains("debug") ? (bool)new_world.world_generator_data["debug"] : false,
-                            new_world.world_generator_data.contains("flat") ? (bool)new_world.world_generator_data["flat"] : false,
-                            player_data.last_death_location ? std::optional(base_objects::packets::death_location_data(player_data.last_death_location->world_id, {(int32_t)player_data.last_death_location->x, (int32_t)player_data.last_death_location->y, (int32_t)player_data.last_death_location->z})) : std::nullopt,
-                            0,
-                            true,
-                            true
-                        );
+                        *self.assigned_player << api::client::play::respawn{
+                            .dimension_type = registers::dimensionTypes.at(new_world.world_type).id,
+                            .dimension_name = new_world.world_name,
+                            .seed_hashed = new_world.get_hashed_seed(),
+                            .gamemode = player_data.gamemode,
+                            .previous_gamemode = player_data.gamemode,
+                            .is_debug = new_world.world_generator_data.contains("debug") ? (bool)new_world.world_generator_data["debug"] : false,
+                            .is_flat = new_world.world_generator_data.contains("flat") ? (bool)new_world.world_generator_data["flat"] : false,
+                            .death_location = player_data.last_death_location ? std::make_optional(api::client::play::respawn::death_location_t(player_data.last_death_location->world_id, {(int32_t)player_data.last_death_location->x, (int32_t)player_data.last_death_location->y, (int32_t)player_data.last_death_location->z})) : std::nullopt,
+                            .sea_level = new_world.world_generator_data.contains("sea_level") ? (bool)new_world.world_generator_data["sea_level"] : 60,
+                            .flags = api::client::play::respawn::keep_attributes | api::client::play::respawn::keep_metadata
+                        };
                         self.get_syncing_data().flush_processing();
                     }
                 }
@@ -329,7 +542,7 @@ namespace copper_server::build_in_plugins {
                                 auto chunk = self.current_world()->request_chunk_data_weak(chunk_x, chunk_z);
                                 if (chunk) {
                                     if ((*chunk)->generator_stage == 0xFF) {
-                                        api::packets::play::updateChunkDataWLights(*self.assigned_player, **chunk);
+                                        *self.assigned_player << api::client::play::level_chunk_with_light::create(**chunk, *self.current_world());
                                         self.get_syncing_data().mark_chunk(chunk_x, chunk_z, true);
                                     }
                                 }
@@ -347,103 +560,103 @@ namespace copper_server::build_in_plugins {
         ~PlayEngine() noexcept {}
 
         void OnLoad(const PluginRegistrationPtr& self) override {
-            register_event(api::protocol::on_chat_command, [this](const auto& event) {
-                base_objects::command_context context(event.client_data, true);
+            process_chat_command_id = api::new_packets::register_server_bound_processor<api::new_packets::server_bound::play::chat_command>([](api::new_packets::server_bound::play::chat_command&& packet, base_objects::SharedClientData& client) {
+                base_objects::command_context context(client, true);
                 try {
-                    api::command::get_manager().execute_command(event.data, context);
+                    api::command::get_manager().execute_command(packet.command, context);
                 } catch (base_objects::command_exception& ex) {
                     try {
                         std::rethrow_exception(ex.exception);
                     } catch (const std::exception& inner_ex) {
-                        std::string error_message = event.data;
-                        std::string error_place(event.data.size() + 4, ' ');
+                        std::string error_message = (std::string)packet.command;
+                        std::string error_place(error_message.size() + 4, ' ');
                         error_place[0] = '\n';
                         error_place[error_place.size() - 2] = '\n';
                         error_place[error_place.size() - 1] = '\t';
                         if (ex.pos != -1)
                             error_place[ex.pos] = '^';
-                        api::players::calls::on_system_message({event.client_data, error_message + error_place + inner_ex.what()});
+                        Chat res = error_message + error_place + inner_ex.what();
+                        res.SetColor("red");
+                        client << api::client::play::system_chat{
+                            .content = std::move(res),
+                            .is_overlay = false
+                        };
                     }
                 }
-                return false;
             });
             base_objects::entity_data::register_entity_world_processor(make_processor(), "minecraft:player");
         }
 
-        void OnUnload(const PluginRegistrationPtr& self) override {}
+        void OnUnload(const PluginRegistrationPtr& self) override {
+            api::new_packets::unregister_server_bound_processor(process_chat_command_id);
+        }
 
         void OnCommandsLoadComplete(const std::shared_ptr<PluginRegistration>&, base_objects::command_root_browser& root) override {
             api::players::iterate_online([&manager = root.get_manager()](base_objects::SharedClientData& client) {
                 if (!client.is_virtual)
-                    client.sendPacket(api::packets::play::commands(client, manager));
+                    client << api::client::play::commands::create(manager);
                 return false;
             });
         }
 
-        plugin_response PlayerJoined(base_objects::client_data_holder& client_ref) override {
+        void PlayerJoined(base_objects::SharedClientData& client_ref) override {
+            using piu = api::client::play::player_info_update;
             base_objects::network::response response = base_objects::network::response::empty();
-            list_array<base_objects::packets::player_actions_add> all_players;
-            list_array<base_objects::packets::player_actions_add> new_player;
-            new_player.push_back(
-                base_objects::packets::player_actions_add{
-                    .player_id = client_ref->data->uuid,
-                    .name = client_ref->name,
-                    .properties = to_list_array(client_ref->data->properties).convert_fn([](auto&& mojang) {
-                        return base_objects::packets::player_actions_add::property{
-                            .name = std::move(mojang.name),
-                            .value = std::move(mojang.value),
-                            .signature = std::move(mojang.signature)
-                        };
-                    })
+
+            list_array<piu::action> all_players;
+            piu::action new_player;
+            new_player.set(
+                piu::add_player{
+                    .name = client_ref.name,
+                    .properties
+                    = to_list_array(client_ref.data->properties)
+                          .convert_fn([](auto&& mojang) {
+                              return piu::add_player::property{
+                                  .name = std::move(mojang.name),
+                                  .value = std::move(mojang.value),
+                                  .signature = std::move(mojang.signature)
+                              };
+                          })
+                          .to_container<std::vector>()
                 }
             );
+            all_players.push_back(new_player);
+
             api::players::iterate_online([&new_player, &all_players, &client_ref](base_objects::SharedClientData& client) {
-                if (&client != &*client_ref && !client.is_virtual) {
-                    all_players.push_back(
-                        base_objects::packets::player_actions_add{
-                            .player_id = client.data->uuid,
+                if (&client != &client_ref && !client.is_virtual) {
+                    piu::action act;
+                    act.set(
+                        piu::add_player{
                             .name = client.name,
-                            .properties = to_list_array(client.data->properties).convert_fn([](auto&& mojang) {
-                                return base_objects::packets::player_actions_add::property{
-                                    .name = std::move(mojang.name),
-                                    .value = std::move(mojang.value),
-                                    .signature = std::move(mojang.signature)
-                                };
-                            })
+                            .properties
+                            = to_list_array(client.data->properties)
+                                  .convert_fn([](auto&& mojang) {
+                                      return piu::add_player::property{
+                                          .name = std::move(mojang.name),
+                                          .value = std::move(mojang.value),
+                                          .signature = std::move(mojang.signature)
+                                      };
+                                  })
+                                  .to_container<std::vector>()
                         }
                     );
-                    client.sendPacket(api::packets::play::playerInfoAdd(client, new_player));
+                    all_players.push_back(std::move(act));
+                    client << piu{.actions{new_player}};
                 }
                 return false;
             });
-            response += api::packets::play::playerInfoAdd(*client_ref, all_players);
-            response += api::packets::play::playerInfoAdd(*client_ref, new_player);
-            return response;
+            client_ref << piu{.actions{all_players.take().to_container<std::vector>()}};
+            client_ref << piu{.actions{std::move(new_player)}};
         }
 
-        plugin_response PlayerLeave(base_objects::client_data_holder& client_ref) override {
-            base_objects::network::response response = base_objects::network::response::empty();
-            list_array<base_objects::packets::player_actions_add> all_players;
-            api::players::iterate_online([&all_players, &client_ref](base_objects::SharedClientData& client) {
-                if (&client != &*client_ref && !client.is_virtual) {
-                    all_players.push_back(
-                        base_objects::packets::player_actions_add{
-                            .player_id = client.data->uuid,
-                            .name = client.name,
-                            .properties = to_list_array(client.data->properties).convert_fn([](auto&& mojang) {
-                                return base_objects::packets::player_actions_add::property{
-                                    .name = std::move(mojang.name),
-                                    .value = std::move(mojang.value),
-                                    .signature = std::move(mojang.signature)
-                                };
-                            })
-                        }
-                    );
-                }
+        void PlayerLeave(base_objects::SharedClientData& client_ref) override {
+            api::players::iterate_online([&client_ref](base_objects::SharedClientData& client) {
+                if (&client != &client_ref && !client.is_virtual)
+                    client << api::client::play::player_info_remove{
+                        .uuids = {client_ref.data->uuid}
+                    };
                 return false;
             });
-            response += api::packets::play::playerInfoAdd(*client_ref, all_players);
-            return response;
         }
     };
 }

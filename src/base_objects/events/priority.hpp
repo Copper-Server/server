@@ -3,7 +3,7 @@
 
 namespace copper_server::base_objects::events {
     enum class priority {
-        heigh,
+        high,
         upper_avg,
         avg,
         lower_avg,
