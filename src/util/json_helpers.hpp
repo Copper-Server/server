@@ -146,7 +146,7 @@ namespace copper_server::util {
         }
 
         bool is_integral() const noexcept {
-            return obj.is_int64() | obj.is_uint64();
+            return obj.is_int64() || obj.is_uint64();
         }
 
         operator std::string() {
@@ -438,13 +438,13 @@ namespace copper_server::util {
 
         public:
             js_iterator(boost::json::object::iterator iterator, std::string& inner_path)
-                : iterator(iterator), inner_path(inner_path) {}
+                : inner_path(inner_path), iterator(iterator) {}
 
             js_iterator(const js_iterator& iterator)
-                : iterator(iterator.iterator), inner_path(iterator.inner_path) {}
+                : inner_path(iterator.inner_path), iterator(iterator.iterator) {}
 
             js_iterator(js_iterator&& iterator)
-                : iterator(std::move(iterator.iterator)), inner_path(iterator.inner_path) {}
+                : inner_path(iterator.inner_path), iterator(std::move(iterator.iterator)) {}
 
             std::pair<boost::json::string_view, js_value> operator*() {
                 return {iterator->key(), js_value(inner_path + ":" + iterator->key_c_str(), iterator->value())};
@@ -571,13 +571,13 @@ namespace copper_server::util {
 
         public:
             js_iterator(boost::json::array::iterator iterator, boost::json::array::iterator beginning, std::string& inner_path)
-                : iterator(iterator), beginning(beginning), inner_path(inner_path) {}
+                : inner_path(inner_path), beginning(beginning), iterator(iterator) {}
 
             js_iterator(const js_iterator& iterator)
-                : iterator(iterator.iterator), beginning(iterator.beginning), inner_path(iterator.inner_path) {}
+                : inner_path(iterator.inner_path), beginning(iterator.beginning), iterator(iterator.iterator) {}
 
             js_iterator(js_iterator&& iterator)
-                : iterator(std::move(iterator.iterator)), beginning(iterator.beginning), inner_path(iterator.inner_path) {}
+                : inner_path(iterator.inner_path), beginning(iterator.beginning), iterator(std::move(iterator.iterator)) {}
 
             js_value operator*() {
                 return js_value(inner_path + "[" + std::to_string(iterator - beginning) + "]", *iterator);

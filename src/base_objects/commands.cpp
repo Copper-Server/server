@@ -7,6 +7,7 @@
 #include <src/base_objects/packets.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
+#include <src/storage/world_data.hpp>
 #include <src/util/calculations.hpp>
 #include <src/util/conversions.hpp>
 
@@ -17,6 +18,11 @@ namespace copper_server::base_objects {
         auto pos = executor.player_data.assigned_entity->position;
         auto rot = util::to_yaw_pitch_256(executor.player_data.assigned_entity->rotation);
         auto mot = executor.player_data.assigned_entity->motion;
+
+        if (executor.player_data.assigned_entity->current_world()) {
+            other_data["world_id"] = executor.player_data.assigned_entity->current_world()->world_id;
+            other_data["world_name"] = executor.player_data.assigned_entity->current_world()->world_name;
+        }
 
         other_data["x"] = pos.x;
         other_data["y"] = pos.y;
@@ -1087,6 +1093,9 @@ namespace copper_server::base_objects {
         std::string path = command_string;
         list_array<parser> args;
         command* current = &command_nodes[0];
+
+        if (path.starts_with('/'))
+            path = path.substr(1);
 
         while (path.size() > 0 || !current->redirect) {
             auto split = path.find(' ');

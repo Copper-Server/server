@@ -10,13 +10,11 @@
 #include <string>
 #include <src/base_objects/component.hpp>
 
-namespace copper_server::api::new_packets {
+namespace copper_server::api::packets {
     struct slot;
 }
 
 namespace copper_server::base_objects {
-
-
     struct static_slot_data {
         struct alias_data {
             uint32_t local_id;
@@ -127,8 +125,8 @@ namespace copper_server::base_objects {
 
         static void enumerate_slot_data(const std::function<void(static_slot_data&)>& fn);
 
-        copper_server::api::new_packets::slot to_packet() const;
-        static slot_data from_packet(copper_server::api::new_packets::slot&&);
+        copper_server::api::packets::slot to_packet() const;
+        static slot_data from_packet(copper_server::api::packets::slot&&);
 
     private:
         friend struct static_slot_data;
@@ -145,9 +143,44 @@ namespace copper_server::base_objects {
     struct slot : public std::optional<slot_data> {
         using std::optional<slot_data>::optional;
 
-        slot(std::optional<slot_data>&& opt) : std::optional<slot_data>(opt){}
-        copper_server::api::new_packets::slot to_packet() const;
-        static slot from_packet(copper_server::api::new_packets::slot&&);
+        slot(std::nullopt_t) : std::optional<slot_data>(std::nullopt) {}
+
+        slot(std::optional<slot_data>&& opt) : std::optional<slot_data>(std::move(opt)) {}
+
+        slot(const std::optional<slot_data>& opt) : std::optional<slot_data>(opt) {}
+
+        copper_server::api::packets::slot to_packet() const;
+        static slot from_packet(copper_server::api::packets::slot&&);
+
+        bool operator==(const slot& other) const {
+            if ((bool)*this == (bool)other)
+                if (*this)
+                    return *(*this) == *other;
+            return false;
+        }
+
+        bool operator!=(const slot& other) const {
+            return !operator==(other);
+        }
+
+        bool operator==(const std::optional<slot_data>& other) const {
+            if ((bool)*this == (bool)other)
+                if (*this)
+                    return *(*this) == *other;
+            return false;
+        }
+
+        bool operator!=(const std::optional<slot_data>& other) const {
+            return !operator==(other);
+        }
+
+        bool operator==(std::nullopt_t) const {
+            return ((std::optional<slot_data>&)*this) == std::nullopt;
+        }
+
+        bool operator!=(std::nullopt_t) const {
+            return ((std::optional<slot_data>&)*this) != std::nullopt;
+        }
     };
 }
 

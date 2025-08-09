@@ -87,6 +87,12 @@ namespace copper_server::api::permissions {
         perm->remove_permission(permission_tag);
     }
 
+    bool is_in_group(const std::string& group_name, const base_objects::SharedClientData& client) {
+        if (perm == nullptr)
+            return true;
+        return perm->is_in_group(group_name, client);
+    }
+    
     void add_group(const base_objects::permission_group& group) {
         if (perm == nullptr)
             return;

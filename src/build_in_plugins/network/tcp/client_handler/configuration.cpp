@@ -1,6 +1,7 @@
 #include <src/api/configuration.hpp>
+#include <src/api/dialogs.hpp>
 #include <src/api/network/tcp.hpp>
-#include <src/api/new_packets.hpp>
+#include <src/api/packets.hpp>
 #include <src/api/tags.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/build_in_plugins/network/tcp/util.hpp>
@@ -32,45 +33,45 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
         };
 
         static void send_tags(base_objects::SharedClientData& client) {
-            api::new_packets::client_bound::configuration::update_tags::entry block;
+            api::packets::client_bound::configuration::update_tags::entry block;
             block.registry_id = "minecraft:block";
             for (auto& [id, values] : api::tags::view_tag(api::tags::builtin_entry::block, "minecraft"))
-                block.tags.push_back({.tag_name = id, .values = values.to_container<std::vector<base_objects::var_int32>>()});
+                block.tags.push_back({.tag_name = id, .values = values.convert<base_objects::var_int32>()});
 
-            api::new_packets::client_bound::configuration::update_tags::entry item;
+            api::packets::client_bound::configuration::update_tags::entry item;
             item.registry_id = "minecraft:item";
             for (auto& [id, values] : api::tags::view_tag(api::tags::builtin_entry::item, "minecraft"))
-                item.tags.push_back({.tag_name = id, .values = values.to_container<std::vector<base_objects::var_int32>>()});
+                item.tags.push_back({.tag_name = id, .values = values.convert<base_objects::var_int32>()});
 
-            api::new_packets::client_bound::configuration::update_tags::entry fluid;
+            api::packets::client_bound::configuration::update_tags::entry fluid;
             fluid.registry_id = "minecraft:fluid";
             for (auto& [id, values] : api::tags::view_tag("minecraft:fluid", "minecraft")) {
                 fluid.tags.push_back(
-                    {.tag_name = id, .values = registers::convert_reg_pro_id("minecraft:fluid", values).to_container<std::vector<base_objects::var_int32>>()}
+                    {.tag_name = id, .values = registers::convert_reg_pro_id("minecraft:fluid", values).convert<base_objects::var_int32>()}
                 );
             }
-            api::new_packets::client_bound::configuration::update_tags::entry worldgen_biome;
+            api::packets::client_bound::configuration::update_tags::entry worldgen_biome;
             worldgen_biome.registry_id = "minecraft:worldgen/biome";
             for (auto& [id, values] : api::tags::view_tag("minecraft:worldgen/biome", "minecraft")) {
                 worldgen_biome.tags.push_back(
-                    {.tag_name = id, .values = values.convert_fn([](auto& it) { return (base_objects::var_int32)registers::biomes.at(it).id; }).to_container<std::vector>()}
+                    {.tag_name = id, .values = values.convert_fn([](auto& it) { return (base_objects::var_int32)registers::biomes.at(it).id; })}
                 );
             }
-            api::new_packets::client_bound::configuration::update_tags::entry entity_type;
+            api::packets::client_bound::configuration::update_tags::entry entity_type;
             entity_type.registry_id = "minecraft:entity_type";
             for (auto& [id, values] : api::tags::view_tag(api::tags::builtin_entry::entity_type, "minecraft"))
-                entity_type.tags.push_back({.tag_name = id, .values = values.to_container<std::vector<base_objects::var_int32>>()});
+                entity_type.tags.push_back({.tag_name = id, .values = values.convert<base_objects::var_int32>()});
 
 
-            api::new_packets::client_bound::configuration::update_tags::entry game_event;
+            api::packets::client_bound::configuration::update_tags::entry game_event;
             game_event.registry_id = "minecraft:game_event";
             for (auto& [id, values] : api::tags::view_tag("minecraft:game_event", "minecraft")) {
                 game_event.tags.push_back(
-                    {.tag_name = id, .values = registers::convert_reg_pro_id("minecraft:game_event", values).to_container<std::vector<base_objects::var_int32>>()}
+                    {.tag_name = id, .values = registers::convert_reg_pro_id("minecraft:game_event", values).convert<base_objects::var_int32>()}
                 );
             }
 
-            client << api::new_packets::client_bound::configuration::update_tags{
+            client << api::packets::client_bound::configuration::update_tags{
                 .entries{
                     std::move(block),
                     std::move(item),
@@ -94,18 +95,18 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             }
 
 
-            api::new_packets::client_bound::configuration::registry_data res;
+            api::packets::client_bound::configuration::registry_data res;
             res.registry_id = identifier;
             res.entries.reserve(fixed_data.size());
             fixed_data.for_each([&](const std::string& name, enbt::value& data) {
-                api::new_packets::client_bound::configuration::registry_data::entry entry;
+                api::packets::client_bound::configuration::registry_data::entry entry;
                 entry.entry_id = name;
                 if (data.get_type() != enbt::type::none)
                     if (data.size())
                         entry.data = std::move(data);
                 res.entries.push_back(std::move(entry));
             });
-            return api::new_packets::encode(std::move(res));
+            return api::packets::encode(std::move(res));
         }
 
         static void send_registry_data(base_objects::SharedClientData& client) {
@@ -163,7 +164,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                                 enbt::compound particle;
                                 particle["probability"] = it.effects.particle->probability;
                                 particle["options"] = it.effects.particle->options.options;
-                                particle["options"]["type"] = it.effects.particle->options.type;
+                                particle["options"]["type"] = it.effects.particle->options.type.to_string();
                                 effects["particle"] = std::move(particle);
                             }
                             if (it.effects.ambient_sound) {
@@ -171,14 +172,14 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                                     effects["ambient_sound"] = std::get<std::string>(*it.effects.ambient_sound);
                                 else if (std::holds_alternative<registers::Biome::AmbientSound>(*it.effects.ambient_sound)) {
                                     enbt::compound ambient_sound;
-                                    ambient_sound["sound"] = std::get<registers::Biome::AmbientSound>(*it.effects.ambient_sound).sound;
+                                    ambient_sound["sound"] = std::get<registers::Biome::AmbientSound>(*it.effects.ambient_sound).sound.to_string();
                                     ambient_sound["range"] = std::get<registers::Biome::AmbientSound>(*it.effects.ambient_sound).range;
                                     effects["ambient_sound"] = std::move(ambient_sound);
                                 }
                             }
                             if (it.effects.mood_sound) {
                                 enbt::compound mood_sound;
-                                mood_sound["sound"] = it.effects.mood_sound->sound;
+                                mood_sound["sound"] = it.effects.mood_sound->sound.to_string();
                                 mood_sound["tick_delay"] = it.effects.mood_sound->tick_delay;
                                 mood_sound["block_search_extent"] = it.effects.mood_sound->block_search_extent;
                                 mood_sound["offset"] = it.effects.mood_sound->offset;
@@ -186,7 +187,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                             }
                             if (it.effects.additions_sound) {
                                 enbt::compound additions_sound;
-                                additions_sound["sound"] = it.effects.additions_sound->sound;
+                                additions_sound["sound"] = it.effects.additions_sound->sound.to_string();
                                 additions_sound["tick_chance"] = it.effects.additions_sound->tick_chance;
                                 effects["additions_sound"] = std::move(additions_sound);
                             }
@@ -194,7 +195,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                                 enbt::fixed_array music_arr;
                                 for (auto& music_it : it.effects.music) {
                                     enbt::compound music;
-                                    music["sound"] = music_it.sound;
+                                    music["sound"] = music_it.sound.to_string();
                                     music["min_delay"] = music_it.min_delay;
                                     music["max_delay"] = music_it.max_delay;
                                     music["replace_current_music"] = music_it.replace_current_music;
@@ -379,7 +380,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                                     element["sound_event"] = it.to_string();
                                 } else {
                                     enbt::compound sound_event;
-                                    sound_event["sound_name"] = it.sound_name;
+                                    sound_event["sound_name"] = it.sound_name.to_string();
                                     if (it.fixed_range)
                                         sound_event["fixed_range"] = *it.fixed_range;
                                     element["sound_event"] = sound_event;
@@ -455,12 +456,12 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
-                        element["ambient_sound"] = it.ambient_sound;
-                        element["death_sound"] = it.death_sound;
-                        element["growl_sound"] = it.growl_sound;
-                        element["hurt_sound"] = it.hurt_sound;
-                        element["pant_sound"] = it.pant_sound;
-                        element["whine_sound"] = it.whine_sound;
+                        element["ambient_sound"] = it.ambient_sound.to_string();
+                        element["death_sound"] = it.death_sound.to_string();
+                        element["growl_sound"] = it.growl_sound.to_string();
+                        element["hurt_sound"] = it.hurt_sound.to_string();
+                        element["pant_sound"] = it.pant_sound.to_string();
+                        element["whine_sound"] = it.whine_sound.to_string();
                         return element;
                     });
                 }
@@ -472,29 +473,29 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             if (extra_data_t::get(client).active_plugins.empty()) {
                 if (client.packets_state.pending_resource_packs.empty()) {
                     extra_data_t::get(client).load_state = extra_data_t::load_state_e::done;
-                    client << api::new_packets::client_bound::configuration::finish_configuration{};
+                    client << api::packets::client_bound::configuration::finish_configuration{};
                 }
             }
         }
 
         void OnRegister(const PluginRegistrationPtr&) override {
-            using client_information = api::new_packets::server_bound::configuration::client_information;
-            using cookie_response = api::new_packets::server_bound::configuration::cookie_response;
-            using custom_payload = api::new_packets::server_bound::configuration::custom_payload;
-            using keep_alive = api::new_packets::server_bound::configuration::keep_alive;
-            using pong = api::new_packets::server_bound::configuration::pong;
-            using resource_pack = api::new_packets::server_bound::configuration::resource_pack;
-            using client_bound_resource_pack = api::new_packets::client_bound::configuration::resource_pack_push;
-            using select_known_packs = api::new_packets::server_bound::configuration::select_known_packs;
-            using custom_click_action = api::new_packets::server_bound::configuration::custom_click_action;
+            using client_information = api::packets::server_bound::configuration::client_information;
+            using cookie_response = api::packets::server_bound::configuration::cookie_response;
+            using custom_payload = api::packets::server_bound::configuration::custom_payload;
+            using keep_alive = api::packets::server_bound::configuration::keep_alive;
+            using pong = api::packets::server_bound::configuration::pong;
+            using resource_pack = api::packets::server_bound::configuration::resource_pack;
+            using client_bound_resource_pack = api::packets::client_bound::configuration::resource_pack_push;
+            using select_known_packs = api::packets::server_bound::configuration::select_known_packs;
+            using custom_click_action = api::packets::server_bound::configuration::custom_click_action;
 
-            api::new_packets::register_viewer_client_bound<client_bound_resource_pack>([](client_bound_resource_pack&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_viewer_client_bound<client_bound_resource_pack>([](client_bound_resource_pack&& packet, base_objects::SharedClientData& client) {
                 client.packets_state.pending_resource_packs[packet.uuid] = {.required = packet.forced};
             });
-            api::new_packets::register_server_bound_processor<client_information>([](client_information&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<client_information>([](client_information&& packet, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).load_state == extra_data_t::load_state_e::to_init) {
-                    client.locale = packet.locale;
-                    client.view_distance = packet.view_distance;
+                    client.locale = packet.locale.value;
+                    client.view_distance = (uint8_t)std::min<uint32_t>(packet.view_distance, api::configuration::get().game_play.view_distance);
                     client.chat_mode = (base_objects::SharedClientData::ChatMode)packet.chat_mode.value;
                     client.enable_chat_colors = packet.enable_chat_colors;
                     client.skin_parts.mask = packet.displayed_skin_parts.get();
@@ -506,24 +507,23 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         client.get_session()->request_buffer(api::configuration::get().protocol.buffer);
                     extra_data_t::get(client).load_state = extra_data_t::load_state_e::await_known_packs;
                     extra_data_t::get(client).ka_solution.set_callback([](int64_t res, base_objects::SharedClientData& client) {
-                        client << api::new_packets::client_bound::configuration::keep_alive{.keep_alive_id = (uint64_t)res};
+                        client << api::packets::client_bound::configuration::keep_alive{.keep_alive_id = (uint64_t)res};
                     });
-                    client << api::new_packets::client_bound::configuration::select_known_packs{
+                    client << api::packets::client_bound::configuration::select_known_packs{
                         .packs = resources::loaded_packs()
                                      .convert_fn([](auto& it) {
-                                         return api::new_packets::client_bound::configuration::select_known_packs::pack{
+                                         return api::packets::client_bound::configuration::select_known_packs::pack{
                                              .pack_namespace = it.namespace_,
                                              .id = it.id,
                                              .version = it.version
                                          };
                                      })
-                                     .to_container<std::vector>()
                     };
                     extra_data_t::get(client).ka_solution.make_keep_alive_packet();
                 } else
-                    client << api::new_packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 0"};
+                    client << api::packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 0"};
             });
-            api::new_packets::register_server_bound_processor<cookie_response>([](cookie_response&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<cookie_response>([](cookie_response&& packet, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).load_state == extra_data_t::load_state_e::await_processing) {
                     if (auto plugin = pluginManagement.get_bind_cookies(PluginManagement::registration_on::configuration, packet.key); plugin)
                         if (plugin->OnConfigurationCookie(plugin, packet.key, packet.payload ? *packet.payload : list_array<uint8_t>{}, client)) {
@@ -531,40 +531,41 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                             make_finish(client);
                         }
                 } else
-                    client << api::new_packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 2"};
+                    client << api::packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 2"};
             });
-            api::new_packets::register_server_bound_processor<custom_payload>([](custom_payload&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<custom_payload>([](custom_payload&& packet, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).load_state == extra_data_t::load_state_e::await_processing) {
                     auto it = pluginManagement.get_bind_plugin(PluginManagement::registration_on::configuration, packet.channel);
                     if (it != nullptr)
-                        if (it->OnConfigurationHandle(it, packet.channel, packet.payload, client)) {
-                            extra_data_t::get(client).active_plugins.remove(it);
-                            make_finish(client);
-                        }
+                        packet.payload.commit();
+                    if (it->OnConfigurationHandle(it, packet.channel, packet.payload, client)) {
+                        extra_data_t::get(client).active_plugins.remove(it);
+                        make_finish(client);
+                    }
                 } else
-                    client << api::new_packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 2"};
+                    client << api::packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 2"};
             });
-            api::new_packets::register_viewer_server_bound<api::new_packets::server_bound::configuration::finish_configuration>([](api::new_packets::server_bound::configuration::finish_configuration&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_viewer_server_bound<api::packets::server_bound::configuration::finish_configuration>([](api::packets::server_bound::configuration::finish_configuration&& packet, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).load_state == extra_data_t::load_state_e::done) {
                     if (extra_data_t::get(client).active_plugins.empty()) {
                         if (client.packets_state.pending_resource_packs.empty())
                             return false;
                         else
-                            client << api::new_packets::client_bound::play::disconnect{.reason = "Pending resource packs"};
+                            client << api::packets::client_bound::play::disconnect{.reason = "Pending resource packs"};
                     } else
-                        client << api::new_packets::client_bound::play::disconnect{.reason = "Invalid protocol state, 3"};
+                        client << api::packets::client_bound::play::disconnect{.reason = "Invalid protocol state, 3"};
                 } else
-                    client << api::new_packets::client_bound::play::disconnect{.reason = "Invalid protocol state, 3"};
+                    client << api::packets::client_bound::play::disconnect{.reason = "Invalid protocol state, 3"};
                 return true;
             });
-            api::new_packets::register_server_bound_processor<keep_alive>([](keep_alive&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<keep_alive>([](keep_alive&& packet, base_objects::SharedClientData& client) {
                 auto delay = extra_data_t::get(client).ka_solution.got_valid_keep_alive((int64_t)packet.keep_alive_id);
                 client.packets_state.keep_alive_ping_ms = (int32_t)std::min<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(delay).count(), INT32_MAX);
             });
-            api::new_packets::register_server_bound_processor<pong>([](pong&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<pong>([](pong&& packet, base_objects::SharedClientData& client) {
                 client.ping = std::chrono::duration_cast<std::chrono::milliseconds>(client.packets_state.pong_timer - std::chrono::system_clock::now());
             });
-            api::new_packets::register_server_bound_processor<resource_pack>([](resource_pack&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<resource_pack>([](resource_pack&& packet, base_objects::SharedClientData& client) {
                 auto res = client.packets_state.pending_resource_packs.find(packet.uuid);
                 if (res != client.packets_state.pending_resource_packs.end()) {
                     switch (packet.result.value) {
@@ -577,14 +578,14 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         break;
                     default:
                         if (res->second.required)
-                            client << api::new_packets::client_bound::configuration::disconnect{.reason = "Resource pack is required"};
+                            client << api::packets::client_bound::configuration::disconnect{.reason = "Resource pack is required"};
                         else
                             client.packets_state.pending_resource_packs.erase(res);
                     }
                     make_finish(client);
                 }
             });
-            api::new_packets::register_server_bound_processor<select_known_packs>([](select_known_packs&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<select_known_packs>([](select_known_packs&& packet, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).load_state == extra_data_t::load_state_e::await_known_packs) {
                     send_registry_data(client);
                     send_tags(client);
@@ -597,10 +598,10 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                     make_finish(client);
                 } else
-                    client << api::new_packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 1"};
+                    client << api::packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 1"};
             });
-            api::new_packets::register_server_bound_processor<custom_click_action>([](custom_click_action&& packet, base_objects::SharedClientData& client) {
-                //TODO
+            api::packets::register_server_bound_processor<custom_click_action>([](custom_click_action&& packet, base_objects::SharedClientData& client) {
+                api::dialogs::pass_dialog(packet.id, client, std::move(packet.payload));
             });
         }
     };

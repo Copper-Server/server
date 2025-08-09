@@ -39,7 +39,6 @@ namespace copper_server::build_in_plugins::network::tcp {
     protected:
         base_objects::network::tcp::client* next_handler = nullptr;
         api::network::tcp::session* session;
-        base_objects::ptr_optional<keep_alive_solution> _keep_alive_solution;
 
         static uint64_t generate_random_int();
         list_array<uint8_t> prepare_incoming(ArrayStream& packet);

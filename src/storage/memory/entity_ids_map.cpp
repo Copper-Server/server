@@ -1,5 +1,7 @@
 #include <random>
+#include <src/base_objects/commands.hpp>
 #include <src/base_objects/entity.hpp>
+#include <src/base_objects/selector.hpp>
 #include <src/storage/memory/entity_ids_map.hpp>
 
 namespace copper_server::storage::memory {
@@ -178,5 +180,14 @@ namespace copper_server::storage::memory {
     [[nodiscard]] bool entity_ids_map_storage::has_uuid(const enbt::raw_uuid& uuid) {
         std::unique_lock lock(mutex);
         return ids_r.contains(uuid);
+    }
+
+    void entity_ids_map_storage::apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(base_objects::entity&)>&& callback) {
+        base_objects::selector sel;
+        sel.build_selector(selector);
+        base_objects::command_context context(caller, true);
+        sel.flags.only_players = true;
+        sel.flags.only_entities = false;
+        sel.select(context, std::move(callback));
     }
 }

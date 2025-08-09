@@ -1,6 +1,6 @@
 #include <functional>
 #include <src/api/configuration.hpp>
-#include <src/api/new_packets.hpp>
+#include <src/api/packets.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
@@ -166,7 +166,7 @@ namespace copper_server::api::world {
         }
         auto world = get_worlds().get(id);
 
-        client_ref << api::new_packets::client_bound::play::initialize_border{
+        client_ref << api::packets::client_bound::play::initialize_border{
             .x = world->border_center_x,
             .z = world->border_center_z,
             .old_diameter = world->border_size,
@@ -175,20 +175,20 @@ namespace copper_server::api::world {
             .portal_teleport_boundary = world->portal_teleport_boundary,
             .warning_blocks = (int32_t)world->border_warning_blocks,
             .warning_time = (int32_t)world->border_warning_time,
-        } << api::new_packets::client_bound::play::ticking_state{
+        } << api::packets::client_bound::play::ticking_state{
             .tick_rate = (float)world->ticks_per_second,
             .is_frozen = world->ticking_frozen,
-        } << api::new_packets::client_bound::play::ticking_step{
+        } << api::packets::client_bound::play::ticking_step{
             .steps = 1,
-        } << api::new_packets::client_bound::play::set_time{
+        } << api::packets::client_bound::play::set_time{
             .world_age = (uint64_t)world->time,
             .time_of_day = (uint64_t)world->day_time,
             .time_of_day_increment = world->increase_time,
-        } << api::new_packets::client_bound::play::set_default_spawn_position{
+        } << api::packets::client_bound::play::set_default_spawn_position{
             .location = {(int32_t)world->spawn_data.x, (int32_t)world->spawn_data.y, (int32_t)world->spawn_data.z},
             .angle = world->spawn_data.angle,
-        } << api::new_packets::client_bound::play::game_event{
-            .event = api::new_packets::client_bound::play::game_event::wait_for_level_chunks{},
+        } << api::packets::client_bound::play::game_event{
+            .event = api::packets::client_bound::play::game_event::wait_for_level_chunks{},
         };
     }
 

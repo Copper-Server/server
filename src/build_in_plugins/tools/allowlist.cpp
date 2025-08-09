@@ -8,11 +8,11 @@
 #include <src/storage/unordered_list_storage.hpp>
 
 namespace copper_server::build_in_plugins {
-    struct allow_list : public PluginAutoRegister<"tools/allow_list", allow_list> {
+    struct allow_list_plugin : public PluginAutoRegister<"tools/allow_list", allow_list_plugin> {
         storage::unordered_list_storage allow_list{api::configuration::get().server.get_storage_path() / "allow_list.txt"};
         api::allowlist::allowlist_mode mode = api::allowlist::allowlist_mode::off;
 
-        ~allow_list() noexcept {};
+        ~allow_list_plugin() noexcept {};
 
         void OnInitialization(const PluginRegistrationPtr& self) {
             api::configuration::get() ^ "allow_list" ^ "on_kick_message" |= enbt::compound{{"text", "You are not in allowlist."}, {"color", "red"}};

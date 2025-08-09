@@ -1,11 +1,11 @@
 #include <src/api/network/tcp.hpp>
-#include <src/api/new_packets.hpp>
+#include <src/api/packets.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/util/readers.hpp>
 #include <src/util/reflect.hpp>
 #include <src/log.hpp>
 
-namespace copper_server::api::new_packets {
+namespace copper_server::api::packets {
     extern bool debugging_enabled;
     using namespace base_objects;
 
@@ -57,10 +57,10 @@ namespace copper_server::api::new_packets {
     concept is_bitset_fixed = is_value_template_base_of<bitset_fixed, type>;
 
     template <class type>
-    concept is_vector_sized = is_tvalue_template_base_of<vector_sized, type> || is_tvalue_template_base_of<vector_sized_siz_from_packet, type> || is_tvalue_template_base_of<vector_sized_no_size, type>;
+    concept is_list_array_sized = is_tvalue_template_base_of<list_array_sized, type> || is_tvalue_template_base_of<list_array_sized_siz_from_packet, type> || is_tvalue_template_base_of<list_array_sized_no_size, type>;
 
     template <class type>
-    concept is_vector_fixed = is_tvalue_template_base_of<vector_fixed, type>;
+    concept is_list_array_fixed = is_tvalue_template_base_of<list_array_fixed, type>;
 
     template <class type>
     concept is_std_array = is_tvalue_template_base_of<std::array, type>;
@@ -69,11 +69,8 @@ namespace copper_server::api::new_packets {
     concept is_limited_num = is_tvalue_template_base_of<limited_num, type>;
 
     template <class type>
-    concept requires_check = is_limited_num<type> || is_string_sized<type> || is_vector_sized<type> || is_vector_fixed<type> || is_value_template_base_of<no_size, type>;
+    concept requires_check = is_limited_num<type> || is_string_sized<type> || is_list_array_sized<type> || is_list_array_fixed<type> || is_value_template_base_of<no_size, type>;
 
-
-    template <class type>
-    concept need_preprocess = requires_check<type> || std::is_base_of_v<packet_preprocess, type>;
 
     struct processor_handle_data {
         uint8_t mode;
@@ -127,18 +124,29 @@ namespace copper_server::api::new_packets {
         }
     } handle_server_processor_manager;
 
-    base_objects::events::event_register_id register_server_processor(uint8_t mode, size_t id, std::function<void(server_bound_packet&&, base_objects::SharedClientData&)>&& fn) {
-        return handle_server_processor_manager.register_h(mode, id, std::move(fn));
-    }
+    
+    namespace __internal {
+        base_objects::events::event_register_id register_server_processor(uint8_t mode, size_t id, std::function<void(server_bound_packet&&, base_objects::SharedClientData&)>&& fn) {
+            return handle_server_processor_manager.register_h(mode, id, std::move(fn));
+        }
 
-    void unregister_server_processor(base_objects::events::event_register_id id) {
-        return handle_server_processor_manager.unregister_h(id);
+        void unregister_server_processor(base_objects::events::event_register_id id) {
+            return handle_server_processor_manager.unregister_h(id);
+        }
     }
 
     template <class T, class Prev_T>
     void decode_entry(SharedClientData& context, ArrayStream& stream, T& value, Prev_T* prev) {
+        static_assert(std::is_copy_constructible_v<T>);
+        static_assert(std::is_move_constructible_v<T>);
+        static_assert(std::is_copy_assignable_v<T>);
+        static_assert(std::is_move_assignable_v<T>);
         using Type = std::decay_t<T>;
-        if constexpr (std::is_same_v<identifier, Type>)
+        if constexpr (is_convertible_to_packet_form<Type>) {
+            convertible_to_packet_type<Type> res;
+            decode_entry(context, stream, res, prev);
+            value = Type::from_packet(std::move(res));
+        } else if constexpr (std::is_same_v<identifier, Type>)
             value.value = stream.read_identifier();
         else if constexpr (is_std_array<Type>)
             for (auto& it : value)
@@ -226,20 +234,28 @@ namespace copper_server::api::new_packets {
             size += size % 8;
             auto range = stream.range_read(size);
             value.data.data() = list_array<uint8_t>(range.data_read(), range.size_read());
-        } else if constexpr (is_template_base_of<std::vector, Type>) {
+        } else if constexpr (is_template_base_of<list_array_depend, Type>) {
+            bool has_next = false;
+            do {
+                typename Type::value_type next;
+                decode_entry(context, stream, next, prev);
+                has_next = (bool)next.has_next_item;
+                value.push_back(std::move(next));
+            } while (has_next);
+        } else if constexpr (is_template_base_of<_list_array_impl::list_array, Type>) {
             if constexpr (!is_value_template_base_of<no_size, Type> && !std::is_base_of_v<size_from_packet, Type>) {
-                value.resize(stream.read_var<int32_t>());
+                value.resize(stream.read_var<int32_t>(), typename Type::value_type{});
             } else if constexpr (is_value_template_base_of<no_size, Type>) {
-                value.resize(Type::get_depended_size(context, *prev));
+                value.resize(Type::get_depended_size(context, *prev), typename Type::value_type{});
             } else
-                value.resize(stream.size_read() / sizeof(typename Type::value_type));
+                value.resize(stream.size_read() / sizeof(typename Type::value_type), typename Type::value_type{});
             for (auto&& it : value)
                 decode_entry(context, stream, it, prev);
         } else if constexpr (is_template_base_of<ignored, Type>) {
         } else if constexpr (is_template_base_of<std::optional, Type>) {
             value = std::nullopt;
             if (stream.read_value<bool>()) {
-                value = typename Type::value_type{};
+                value.emplace();
                 decode_entry(context, stream, *value, prev);
             }
         } else if constexpr (is_template_base_of<enum_as, Type> || is_template_base_of<enum_as_flag, Type>) {
@@ -255,18 +271,47 @@ namespace copper_server::api::new_packets {
                 decode_entry(context, stream, in_res, prev);
                 value = std::move(in_res);
             }
+        } else if constexpr (is_template_base_of<bool_or, Type>) {
+            auto res = stream.read_value<bool>();
+            if (res) {
+                typename Type::var_0 in_res;
+                decode_entry(context, stream, in_res, prev);
+                value = std::move(in_res);
+            } else {
+                typename Type::var_1 in_res;
+                decode_entry(context, stream, in_res, prev);
+                value = std::move(in_res);
+            }
         } else if constexpr (is_template_base_of<enum_switch, Type>) {
             typename Type::encode_type id_check;
             decode_entry(context, stream, id_check, prev);
             Type::get_enum(id_check, [&]<class enum_T>() {
-                enum_T make_res;
+                static_assert(std::is_copy_constructible_v<enum_T>);
+                static_assert(std::is_move_constructible_v<enum_T>);
+                static_assert(std::is_copy_assignable_v<enum_T>);
+                static_assert(std::is_move_assignable_v<enum_T>);
+                enum_T make_res{};
                 decode_entry(context, stream, make_res, prev);
                 value = std::move(make_res);
             });
+        } else if constexpr (is_template_base_of<partial_enum_switch, Type>) {
+            typename Type::encode_type id_check;
+            decode_entry(context, stream, id_check, prev);
+            Type::get_enum(id_check, [&]<class enum_T>() {
+                if constexpr (std::is_same_v<enum_T, typename Type::encode_type>) {
+                    value = std::move(id_check);
+                } else {
+                    enum_T make_res;
+                    decode_entry(context, stream, make_res, prev);
+                    value = std::move(make_res);
+                }
+            });
         } else if constexpr (is_template_base_of<base_objects::box, Type>) {
-            Type value(typename T::element_type());
+            value = std::make_shared<typename Type::value_type>();
             decode_entry(context, stream, *value, prev);
-        } else if constexpr (is_template_base_of<any_of, Type>) {
+        } else if constexpr (is_template_base_of<base_objects::depends_next, Type>) {
+            decode_entry(context, stream, value.value, prev);
+        } else if constexpr (is_template_base_of<any_of, Type> || is_template_base_of<packet_compress, Type>) {
             decode_entry(context, stream, value.value, prev);
         } else if constexpr (is_template_base_of<flags_list, Type>) {
             decode_entry(context, stream, value.flag, prev);
@@ -290,19 +335,15 @@ namespace copper_server::api::new_packets {
             var_int32 size = 0;
             decode_entry(context, stream, size, prev);
             if (!size)
-                value = stream.read_identifier();
+                value = (identifier)stream.read_identifier();
             else {
                 int32_t arr_size = size - 1;
-                std::vector<Type::id_type> res;
+                list_array<typename Type::id_type> res;
                 res.resize(arr_size);
                 for (int32_t i = 0; i < arr_size; i++)
                     decode_entry(context, stream, res[i], prev);
                 value = std::move(res);
             }
-        } else if constexpr (is_template_base_of<unordered_id, Type>) {
-            decode_entry(context, stream, value.value, prev); //TODO
-        } else if constexpr (is_template_base_of<ordered_id, Type>) {
-            decode_entry(context, stream, value.value, prev); //TODO
         } else if constexpr (is_template_base_of<value_optional, Type>) {
             decode_entry(context, stream, value.v, prev);
             if (value.v) {
@@ -326,19 +367,22 @@ namespace copper_server::api::new_packets {
             value.value = std::move(res);
         } else if constexpr (std::is_same_v<bit_list_array<uint64_t>, Type>) {
             value.data() = stream.read_array<uint64_t>();
-        } else if constexpr (is_convertible_to_packet_form<Type>) {
-            convertible_to_packet_type<Type> res;
-            decode_entry(context, stream, res, prev);
-            value = Type::from_packet(std::move(res));
         } else if constexpr (is_id_source<Type>) {
             decode_entry(context, stream, value.value, prev);
         } else {
             bool process_next = true;
             reflect::for_each_field(value, [&](auto& item) {
-                if (process_next)
-                    decode_entry(context, stream, item, &value);
-                if constexpr (is_template_base_of<depends_next, std::decay_t<decltype(item)>>)
-                    process_next = (bool)item.value;
+                if (process_next) {
+                    if constexpr (is_item_depend<T>) {
+                        typename T::base_depend tmp = item;
+                        decode_entry(context, stream, tmp, &value);
+                        value.*T::body_depend::value = {bool(tmp & T::depend_value::value)};
+                        tmp = tmp | ~T::depend_value::value;
+                    } else
+                        decode_entry(context, stream, item, &value);
+                    if constexpr (is_template_base_of<depends_next, std::decay_t<decltype(item)>>)
+                        process_next = (bool)item.value;
+                }
             });
         }
     }
@@ -365,6 +409,10 @@ namespace copper_server::api::new_packets {
     bool decode_server_packet_handle(SharedClientData& context, ArrayStream& stream) {
         auto packet = decode_server_packet<T>(context, stream);
         uint8_t mode;
+        static_assert(std::is_copy_constructible_v<T>);
+        static_assert(std::is_move_constructible_v<T>);
+        static_assert(std::is_copy_assignable_v<T>);
+        static_assert(std::is_move_assignable_v<T>);
         if constexpr (std::is_constructible_v<server_bound::handshake_packet, T>) {
             mode = 0;
         } else if constexpr (std::is_constructible_v<server_bound::status_packet, T>) {
@@ -382,16 +430,24 @@ namespace copper_server::api::new_packets {
 
         if (__internal::visit_packet_viewer(packet, context))
             return false;
-
-
-        if constexpr (std::is_base_of_v<switches_to::status, T>)
-            context << switches_to::status{};
-        else if constexpr (std::is_base_of_v<switches_to::login, T>)
-            context << switches_to::login{};
-        else if constexpr (std::is_base_of_v<switches_to::configuration, T>)
-            context << switches_to::configuration{};
-        else if constexpr (std::is_base_of_v<switches_to::play, T>)
-            context << switches_to::play{};
+        std::visit(
+            [&](auto& mode) {
+                return std::visit(
+                    [&]<class P>(P& _) {
+                        if constexpr (std::is_base_of_v<switches_to::status, P>)
+                            context << switches_to::status{};
+                        else if constexpr (std::is_base_of_v<switches_to::login, P>)
+                            context << switches_to::login{};
+                        else if constexpr (std::is_base_of_v<switches_to::configuration, P>)
+                            context << switches_to::configuration{};
+                        else if constexpr (std::is_base_of_v<switches_to::play, P>)
+                            context << switches_to::play{};
+                    },
+                    mode
+                );
+            },
+            packet
+        );
 
         handle_server_processor_manager.handle(mode, T::packet_id::value, std::move(packet), context);
         return true;
@@ -403,10 +459,6 @@ namespace copper_server::api::new_packets {
 
         uint8_t mode;
         size_t id = 0;
-        bool sw_status = false;
-        bool sw_login = false;
-        bool sw_configuration = false;
-        bool sw_play = false;
         std::visit(
             [&]<class T>(const T& it) {
                 if constexpr (std::is_same_v<server_bound::handshake_packet, T>) {
@@ -420,30 +472,16 @@ namespace copper_server::api::new_packets {
                 } else
                     mode = 4;
                 std::visit(
-                    [&]<class U>(const U& pack) {
+                    [&]<class U>(const U& _) {
                         id = (size_t)U::packet_id::value;
-                        if constexpr (std::is_base_of_v<switches_to::status, U>)
-                            sw_status = true;
-                        else if constexpr (std::is_base_of_v<switches_to::login, U>)
-                            sw_login = true;
-                        else if constexpr (std::is_base_of_v<switches_to::configuration, U>)
-                            sw_configuration = true;
-                        else if constexpr (std::is_base_of_v<switches_to::play, U>)
-                            sw_play = true;
+                        if constexpr (requires { U::switches_to::value; })
+                            context << U::switches_to::value;
                     },
                     it
                 );
             },
             packet
         );
-        if (sw_status)
-            context << switches_to::status{};
-        if (sw_login)
-            context << switches_to::login{};
-        if (sw_configuration)
-            context << switches_to::configuration{};
-        if (sw_play)
-            context << switches_to::play{};
 
         handle_server_processor_manager.handle(mode, id, std::move(packet), context);
         return true;
@@ -595,7 +633,7 @@ namespace copper_server::api::new_packets {
     server_bound::status_packet decode_server_status(ArrayStream& stream) {
         SharedClientData client;
         client.packets_state.state = SharedClientData::packets_state_t::protocol_state::status;
-        return std::move(std::get<server_bound::status_packet>(server_login_dec.at(stream.read_var<int32_t>())(client, stream)));
+        return std::move(std::get<server_bound::status_packet>(server_status_dec.at(stream.read_var<int32_t>())(client, stream)));
     }
 
     server_bound::login_packet decode_server_login(ArrayStream& stream) {
@@ -643,13 +681,13 @@ namespace copper_server::api::new_packets {
     server_bound::handshake_packet decode_server_handshake(base_objects::SharedClientData& context, ArrayStream& stream) {
         if (context.packets_state.state != SharedClientData::packets_state_t::protocol_state::handshake)
             throw std::invalid_argument("The client is not in handshake protocol stage");
-        return std::move(std::get<server_bound::handshake_packet>(server_login_dec.at(stream.read_var<int32_t>())(context, stream)));
+        return std::move(std::get<server_bound::handshake_packet>(server_handshake_dec.at(stream.read_var<int32_t>())(context, stream)));
     }
 
     server_bound::status_packet decode_server_status(base_objects::SharedClientData& context, ArrayStream& stream) {
         if (context.packets_state.state != SharedClientData::packets_state_t::protocol_state::status)
             throw std::invalid_argument("The client is not in status protocol stage");
-        return std::move(std::get<server_bound::status_packet>(server_login_dec.at(stream.read_var<int32_t>())(context, stream)));
+        return std::move(std::get<server_bound::status_packet>(server_status_dec.at(stream.read_var<int32_t>())(context, stream)));
     }
 
     server_bound::login_packet decode_server_login(base_objects::SharedClientData& context, ArrayStream& stream) {

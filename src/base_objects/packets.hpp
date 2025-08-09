@@ -1,26 +1,13 @@
 #ifndef SRC_BASE_OBJECTS_PACKETS
 #define SRC_BASE_OBJECTS_PACKETS
-#include <src/base_objects/chat.hpp>
+#include <optional>
 #include <src/base_objects/packets/enums.hpp>
-#include <src/base_objects/position.hpp>
-#include <src/base_objects/slot.hpp>
 #include <string>
 #include <vector>
 
 namespace copper_server::base_objects::packets {
-    struct command_suggestion {
-        std::string suggestion;
-        std::optional<Chat> tooltip;
-    };
-
-    struct statistics {
-        int32_t category_id;
-        int32_t statistic_id;
-        int32_t value;
-    };
-
     struct command_node {
-        enum class parsers : int32_t {
+        enum class parsers : uint32_t {
             brigadier_bool,
             brigadier_float,
             brigadier_double,
@@ -183,8 +170,8 @@ namespace copper_server::base_objects::packets {
                 "minecraft_heightmap",
                 "minecraft_uuid",
             };
-            int index = static_cast<int>(parser);
-            if (index < 0 || index >= sizeof(parser_names) / sizeof(parser_names[0]))
+            size_t index = static_cast<size_t>(parser);
+            if (index >= (sizeof(parser_names) / sizeof(parser_names[0])))
                 throw std::invalid_argument("invalid parser id");
             return parser_names[index];
         }
@@ -239,191 +226,6 @@ namespace copper_server::base_objects::packets {
         //minecraft:available_sounds
         //minecraft:summonable_entities
         std::optional<std::string> suggestion_type;
-    };
-
-    struct death_location_data {
-        std::string dimension;
-        base_objects::position position;
-    };
-
-    struct map_icon {
-        std::optional<Chat> display_name;
-        int32_t type;
-        int8_t x;
-        int8_t z;
-        int8_t direction;
-    };
-
-    struct trade {
-        slot input_item1;
-        slot output_item;
-        slot input_item2;
-        int32_t max_uses;
-        int32_t uses;
-        int32_t experience;
-        int32_t special_price;
-        float price_multiplier;
-        int32_t demand;
-        bool trade_disabled;
-    };
-
-    struct player_actions_add {
-        struct property {
-            std::string name;
-            std::string value;
-            std::optional<std::string> signature;
-        };
-
-        enbt::raw_uuid player_id;
-        std::string name;
-        list_array<property> properties;
-    };
-
-    struct player_actions_initialize_chat {
-        enbt::raw_uuid player_id;
-        std::optional<enbt::raw_uuid> chat_session_id;
-        int64_t public_key_expiry_time;
-        //max 512 bytes
-        list_array<uint8_t> public_key;
-        //max 4096 bytes
-        list_array<uint8_t> public_key_signature;
-    };
-
-    struct player_actions_update_gamemode {
-        enbt::raw_uuid player_id;
-        int32_t gamemode;
-    };
-
-    struct player_actions_update_listed {
-        enbt::raw_uuid player_id;
-        bool listed;
-    };
-
-    struct player_actions_update_latency {
-        enbt::raw_uuid player_id;
-        int32_t latency; //ms
-    };
-
-    struct player_actions_update_display_name {
-        enbt::raw_uuid player_id;
-        std::optional<Chat> display_name;
-    };
-
-    struct advancements_maping {
-        struct advancement_display {
-            Chat title;
-            Chat description;
-            slot icon;
-            int32_t frame_type; //0: task, 1: challenge, 2: goal
-
-            enum flags_t : int32_t {
-                has_background_texture = 0x01,
-                show_toast = 0x02,
-                hidden = 0x04,
-            } flags;
-
-            std::optional<std::string> background_texture;
-            float x;
-            float y;
-        };
-
-        std::string key;
-        std::optional<std::string> parent;
-        std::optional<advancement_display> display;
-        list_array<list_array<std::string>> requirements;
-        bool sends_telemetry_data;
-    };
-
-    struct advancement_progress_item {
-        struct criterion_progress {
-            bool achieved;
-            int64_t date;
-        };
-
-        std::string criterion;
-        criterion_progress progress;
-    };
-
-    struct advancement_progress {
-        std::string advancement;
-        list_array<advancement_progress_item> criteria;
-    };
-
-    struct attributes {
-        struct modifier {
-            enbt::raw_uuid uuid;
-            double amount;
-            int8_t operation; //0:addition/subtraction, 1:addition/subtraction by %, 2:multiplication by %
-        };
-
-        std::string key;
-        double value;
-        list_array<modifier> modifiers;
-    };
-
-    struct tag_mapping {
-        struct entry {
-            std::string tag_name;
-            list_array<int32_t> entires;
-        };
-
-        std::string registry;
-        list_array<entry> tags;
-    };
-
-    struct server_link {
-        enum class label_type {
-            bug_report,
-            community_guidelines,
-            support,
-            status,
-            feedback,
-            community,
-            website,
-            forums,
-            news,
-            announcements,
-        };
-
-        std::variant<label_type, Chat> label;
-        std::string url;
-    };
-
-    union teleport_flags {
-        bool x_relative : 1;
-        bool y_relative : 1;
-        bool z_relative : 1;
-        bool yaw_relative : 1;
-        bool pitch_relative : 1;
-        bool velocity_x_relative : 1;
-        bool velocity_y_relative : 1;
-        bool velocity_z_relative : 1;
-        bool rotate_by_yaw_pitch : 1;
-
-        inline void set(int32_t raw) {
-            union u_t {
-                teleport_flags flag;
-                int32_t r;
-            } u{.r = raw};
-
-            *this = u.flag;
-        }
-
-        inline int32_t get() const {
-            union u_t {
-                teleport_flags flag;
-                int32_t r;
-            } u{.flag = *this};
-
-            return u.r;
-        }
-    };
-
-    struct minecart_state {
-        double x, y, z;
-        double velocity_x, velocity_y, velocity_z;
-        float yaw, pitch;
-        float weight;
     };
 
     int32_t java_name_to_protocol(const std::string& name_or_number);

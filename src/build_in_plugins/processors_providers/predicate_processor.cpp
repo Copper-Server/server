@@ -314,13 +314,11 @@ namespace copper_server::build_in_plugins::processors_providers {
             return false;
         auto origin = loot_context.at("origin").as_compound();
         util::VECTOR pos = {origin.at("x"), origin.at("y"), origin.at("z")};
-        uint64_t world_id;
-        if (origin.contains("world"))
-            world_id = origin.at("world");
-        else if (context.executor)
-            world_id = api::world::resolve_id(context.executor->player_data.world_id);
+        int32_t world_id;
+        if (origin.contains("world_id"))
+            world_id = origin.at("world_id");
         else
-            world_id = api::world::get_default_world_id();
+            world_id = api::world::resolve_id(context.executor.player_data.world_id);
 
         auto block = base_objects::block::getStaticData(block_id);
         auto& pred_block = predicate.at("blocks");
@@ -473,13 +471,11 @@ namespace copper_server::build_in_plugins::processors_providers {
             return false;
         auto origin = loot_context.at("origin").as_compound();
         util::VECTOR pos = {origin.at("x"), origin.at("y"), origin.at("z")};
-        uint64_t world_id;
+        int32_t world_id;
         if (origin.contains("world"))
             world_id = origin.at("world");
-        else if (context.executor)
-            world_id = api::world::resolve_id(context.executor->player_data.world_id);
         else
-            world_id = api::world::get_default_world_id();
+            world_id = api::world::resolve_id(context.executor.player_data.world_id);
 
 
         int32_t offset_x = predicate.contains("offsetX") ? (int32_t)predicate.at("offsetX") : 0;

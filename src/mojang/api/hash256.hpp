@@ -10,7 +10,7 @@
 namespace mojang::api {
     class hash256 {
         EVP_MD_CTX* ctx;
-        static constexpr size_t DIGEST_LENGTH = 24; // SHA1 digest length
+        static constexpr size_t DIGEST_LENGTH = 32; // SHA1 digest length
         using hashed_array = unsigned char[DIGEST_LENGTH];
 
         static void two_complement(hashed_array& data) {

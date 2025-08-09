@@ -58,7 +58,7 @@ namespace copper_server::base_objects::network {
             template <class T>
             void write_var32_check(T value) {
                 if constexpr (!std::is_same<T, int32_t>::value)
-                    if ((int32_t)value != value)
+                    if ((T)(int32_t)value != value)
                         throw std::out_of_range("Value out of range");
                 write_var32((int32_t)value);
             }

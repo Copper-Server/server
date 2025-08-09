@@ -15,12 +15,12 @@ namespace copper_server::build_in_plugins {
             r.write_string("CopperServer");
             client << api::client::configuration::custom_payload{
                 .channel = "minecraft:brand",
-                .payload = r.data.to_container<std::vector>()
+                .payload = r.data
             };
             return false;
         }
 
-        bool OnConfigurationHandle(const PluginRegistrationPtr& self, const std::string& chanel, const std::vector<uint8_t>& data, base_objects::SharedClientData& client) override {
+        bool OnConfigurationHandle(const PluginRegistrationPtr& self, const std::string& chanel, const list_array<uint8_t>& data, base_objects::SharedClientData& client) override {
             if (chanel == "minecraft:brand") {
                 ArrayStream stream(data.data(), data.size());
                 int32_t len = stream.read_var<int32_t>();

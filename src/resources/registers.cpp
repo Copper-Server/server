@@ -536,7 +536,7 @@ namespace copper_server::resources {
                 for (auto&& it : category_values) {
                     auto category_value = js_object::get_object(it);
                     Biome::SpawnersValue value;
-                    value.type = category_value["type"];
+                    value.type = (std::string)category_value["type"];
                     value.weight = category_value["weight"];
                     value.weight = category_value["minCount"];
                     value.weight = category_value["maxCount"];
@@ -859,7 +859,7 @@ namespace copper_server::resources {
         else {
             auto sound_event_obj = js_object::get_object(sound_event_js);
             JukeboxSong::custom ex;
-            ex.sound_id = sound_event_obj["sound_id"];
+            ex.sound_id = (std::string)sound_event_obj["sound_id"];
             if (sound_event_obj.contains("fixed_range"))
                 ex.fixed_range = sound_event_obj["fixed_range"];
             song.sound_event = std::move(ex);
@@ -1136,7 +1136,7 @@ namespace copper_server::resources {
             }
         }
         if (type_js.at("supported_items").is_string())
-            type.supported_items = type_js.at("supported_items");
+            type.supported_items = (std::string)type_js.at("supported_items");
         else {
             auto supported_items_js = js_array::get_array(type_js.at("supported_items"));
             std::vector<base_objects::id_item> supported_items;
@@ -1147,7 +1147,7 @@ namespace copper_server::resources {
         }
         if (type_js.contains("primary_items")) {
             if (type_js.at("primary_items").is_string())
-                type.primary_items = type_js.at("primary_items");
+                type.primary_items = (std::string)type_js.at("primary_items");
             else {
                 auto primary_items_js = js_array::get_array(type_js.at("primary_items"));
                 std::vector<base_objects::id_item> primary_items;
@@ -1198,7 +1198,7 @@ namespace copper_server::resources {
             type.sound_event = (std::string)type_js.at("sound_event");
         } else {
             auto sound_event = js_object::get_object(type_js.at("sound_event"));
-            type.sound_event = Instrument::custom{.sound_name = sound_event.at("sound_name"), .fixed_range = sound_event.contains("fixed_range") ? std::optional<float>(sound_event.at("fixed_range")) : std::nullopt};
+            type.sound_event = Instrument::custom{.sound_name = (std::string)sound_event.at("sound_name"), .fixed_range = sound_event.contains("fixed_range") ? std::optional<float>(sound_event.at("fixed_range")) : std::nullopt};
         }
         instruments[id] = std::move(type);
     }
@@ -2108,14 +2108,14 @@ namespace copper_server::resources {
                 for (auto&& [name, decl] : parsed.as_object()) {
                     auto checked_decl = decl.as_object();
                     auto full_name = "minecraft:" + (std::string)name;
-                    std::vector<base_objects::id_mob_effect> effects;
+                    std::vector<base_objects::id_mob_effect> potion_effects;
                     for (auto&& item : checked_decl.at("effects").as_array())
-                        effects.push_back(item.to_number<uint32_t>());
+                        potion_effects.push_back(item.to_number<uint32_t>());
 
                     registers::potions[full_name] = potion{
                         .name = full_name,
                         .id = checked_decl.at("id").to_number<uint32_t>(),
-                        .effects = std::move(effects)
+                        .effects = std::move(potion_effects)
                     };
                 }
             }

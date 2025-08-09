@@ -26,10 +26,10 @@ namespace copper_server::storage::memory {
         std::atomic_size_t online;
 
     public:
-        void login_complete_to_cfg(base_objects::client_data_holder& player) {
-            if (player->getAssignedData() != this)
+        void login_complete_to_cfg(base_objects::SharedClientData& player) {
+            if (player.getAssignedData() != this)
                 throw std::runtime_error("player not assigned to this storage");
-            player->packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::configuration;
+            player.packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::configuration;
             ++online;
         }
 
@@ -158,9 +158,7 @@ namespace copper_server::storage::memory {
             return players;
         }
 
-        void apply_selector(base_objects::client_data_holder& caller, const std::string& selector, const std::function<void(base_objects::SharedClientData&)>& callback, const std::function<void()>& not_found) {
-            std::unique_lock lock(mutex);
-        }
+        void apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(base_objects::SharedClientData&)>&& callback);
 
         void iterate_online(const std::function<bool(base_objects::SharedClientData&)>& callback) {
             iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state::play, callback);

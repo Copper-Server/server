@@ -19,15 +19,23 @@ namespace copper_server::build_in_plugins {
             base_objects::entity_data::world_processor proc;
             proc.entity_add_effect = [](base_objects::entity& self, base_objects::entity& target, uint32_t id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) {
                 if (self.assigned_player) {
-                    //base_objects::packets::effect_flags flags;
-                    //flags.is_ambient = ambient;
-                    //flags.show_icon = show_icon;
-                    //flags.show_particles = show_particles;
-                    //flags.use_blend = use_blend;
-                    *self.assigned_player << api::client::play::update_mob_effect{
+                    api::client::play::update_mob_effect::flags_f f{};
+                    if (ambient)
+                        f = f | api::client::play::update_mob_effect::flags_f::is_ambient;
+                    if (show_particles)
+                        f = f | api::client::play::update_mob_effect::flags_f::show_particles;
+                    if (show_icon)
+                        f = f | api::client::play::update_mob_effect::flags_f::show_icon;
+                    if (use_blend)
+                        f = f | api::client::play::update_mob_effect::flags_f::blend;
 
+                    *self.assigned_player << api::client::play::update_mob_effect{
+                        .entity_id = target.protocol_id,
+                        .effect = id,
+                        .amplifier = amplifier,
+                        .duration = (int32_t)duration,
+                        .flags = f
                     };
-                    //api::packets::play::entityEffect(*self.assigned_player, target.protocol_id, id, duration, amplifier, flags);
                 }
             };
             proc.entity_animation = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_animation animation) {
@@ -41,8 +49,8 @@ namespace copper_server::build_in_plugins {
             proc.entity_attach = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_ref& other_entity_id) {
                 if (self.assigned_player && other_entity_id)
                     *self.assigned_player << api::client::play::set_entity_link{
-                        .attached_entity_id = (int32_t)other_entity_id->protocol_id,
-                        .holding_entity_id = (int32_t)target.protocol_id
+                        .attached_entity_id = other_entity_id->protocol_id,
+                        .holding_entity_id = target.protocol_id
                     };
             };
             proc.entity_attack = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_ref& other_entity_id) {
@@ -151,7 +159,7 @@ namespace copper_server::build_in_plugins {
                         .pitch = target.rotation.y,
                         .yaw = target.rotation.x,
                         .head_yaw = target.head_rotation.x,
-                        .data = *target.get_object_field().or_else([]() { return 0; }),
+                        .data = *target.get_object_field().or_else([]() { return std::optional<int>(0); }),
                         .velocity_x = velocity.x,
                         .velocity_y = velocity.y,
                         .velocity_z = velocity.z
@@ -176,7 +184,7 @@ namespace copper_server::build_in_plugins {
                 if (self.assigned_player && other)
                     *self.assigned_player << api::client::play::set_passengers{
                         .entity_id = target.protocol_id,
-                        .passengers = other->ride_by_entity.convert_fn([](auto& entity) { return entity->protocol_id; }).to_container<std::vector<base_objects::var_int32>>()
+                        .passengers = other->ride_by_entity.convert_fn([](auto& entity) { return (base_objects::var_int32)entity->protocol_id; })
                     };
             };
             proc.entity_look_changes = [](base_objects::entity& self, base_objects::entity& target, util::ANGLE_DEG rot) {
@@ -234,7 +242,7 @@ namespace copper_server::build_in_plugins {
                 if (self.assigned_player && other_entity)
                     *self.assigned_player << api::client::play::set_passengers{
                         .entity_id = other_entity->protocol_id,
-                        .passengers = other_entity->ride_by_entity.convert_fn([](auto& entity) { return entity->protocol_id; }).to_container<std::vector<base_objects::var_int32>>()
+                        .passengers = other_entity->ride_by_entity.convert_fn([](auto& entity) { return (base_objects::var_int32)entity->protocol_id; })
                     };
             };
             proc.entity_rotation_changes = [](base_objects::entity& self, base_objects::entity& target, util::ANGLE_DEG rot) {
@@ -521,10 +529,11 @@ namespace copper_server::build_in_plugins {
                             .dimension_name = new_world.world_name,
                             .seed_hashed = new_world.get_hashed_seed(),
                             .gamemode = player_data.gamemode,
-                            .previous_gamemode = player_data.gamemode,
+                            .previous_gamemode = (api::packets::optional_gamemode_e)player_data.gamemode,
                             .is_debug = new_world.world_generator_data.contains("debug") ? (bool)new_world.world_generator_data["debug"] : false,
                             .is_flat = new_world.world_generator_data.contains("flat") ? (bool)new_world.world_generator_data["flat"] : false,
                             .death_location = player_data.last_death_location ? std::make_optional(api::client::play::respawn::death_location_t(player_data.last_death_location->world_id, {(int32_t)player_data.last_death_location->x, (int32_t)player_data.last_death_location->y, (int32_t)player_data.last_death_location->z})) : std::nullopt,
+                            .portal_cooldown = 0,
                             .sea_level = new_world.world_generator_data.contains("sea_level") ? (bool)new_world.world_generator_data["sea_level"] : 60,
                             .flags = api::client::play::respawn::keep_attributes | api::client::play::respawn::keep_metadata
                         };
@@ -560,7 +569,7 @@ namespace copper_server::build_in_plugins {
         ~PlayEngine() noexcept {}
 
         void OnLoad(const PluginRegistrationPtr& self) override {
-            process_chat_command_id = api::new_packets::register_server_bound_processor<api::new_packets::server_bound::play::chat_command>([](api::new_packets::server_bound::play::chat_command&& packet, base_objects::SharedClientData& client) {
+            process_chat_command_id = api::packets::register_server_bound_processor<api::packets::server_bound::play::chat_command>([](api::packets::server_bound::play::chat_command&& packet, base_objects::SharedClientData& client) {
                 base_objects::command_context context(client, true);
                 try {
                     api::command::get_manager().execute_command(packet.command, context);
@@ -588,7 +597,7 @@ namespace copper_server::build_in_plugins {
         }
 
         void OnUnload(const PluginRegistrationPtr& self) override {
-            api::new_packets::unregister_server_bound_processor(process_chat_command_id);
+            api::packets::unregister_server_bound_processor(process_chat_command_id);
         }
 
         void OnCommandsLoadComplete(const std::shared_ptr<PluginRegistration>&, base_objects::command_root_browser& root) override {
@@ -617,7 +626,6 @@ namespace copper_server::build_in_plugins {
                                   .signature = std::move(mojang.signature)
                               };
                           })
-                          .to_container<std::vector>()
                 }
             );
             all_players.push_back(new_player);
@@ -637,7 +645,6 @@ namespace copper_server::build_in_plugins {
                                           .signature = std::move(mojang.signature)
                                       };
                                   })
-                                  .to_container<std::vector>()
                         }
                     );
                     all_players.push_back(std::move(act));
@@ -645,7 +652,7 @@ namespace copper_server::build_in_plugins {
                 }
                 return false;
             });
-            client_ref << piu{.actions{all_players.take().to_container<std::vector>()}};
+            client_ref << piu{.actions{all_players.take()}};
             client_ref << piu{.actions{std::move(new_player)}};
         }
 

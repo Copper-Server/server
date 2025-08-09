@@ -62,7 +62,7 @@ namespace copper_server::api::tags {
 
     struct tags_entry {
         list_array<std::string> items;
-        list_array<int32_t> ids_cache;
+        list_array<int32_t> ids_cache{};
         bool allow_override = true;
 
 

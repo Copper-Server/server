@@ -114,6 +114,10 @@ namespace copper_server::storage {
         });
     }
 
+    bool permissions_manager::is_in_group(const std::string& group_name, const base_objects::SharedClientData& client) {
+        return client.player_data.permission_groups.contains(group_name);
+    }
+
     bool permissions_manager::has_group(const std::string& group_name) const {
         return protected_values.get([&](const protected_values_t& values) {
             return values.permissions.contains(group_name);
@@ -498,7 +502,7 @@ namespace copper_server::storage {
             fast_task::files::async_iofstream file(
                 base_path,
                 fast_task::files::open_mode::write,
-                fast_task::files::on_open_action::truncate_exists,
+                fast_task::files::on_open_action::always_new,
                 fast_task::files::_sync_flags{}
             );
             if (!file.is_open()) {

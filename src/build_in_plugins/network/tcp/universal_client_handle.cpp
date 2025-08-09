@@ -1,6 +1,6 @@
-#include <src/build_in_plugins/network/tcp/universal_client_handle.hpp>
-#include <src/api/new_packets.hpp>
+#include <src/api/packets.hpp>
 #include <src/base_objects/shared_client_data.hpp>
+#include <src/build_in_plugins/network/tcp/universal_client_handle.hpp>
 
 namespace copper_server::build_in_plugins::network::tcp {
     std::string packet_is_to_large_str = Chat("Packet too large").ToStr();
@@ -11,7 +11,7 @@ namespace copper_server::build_in_plugins::network::tcp {
     
 
     base_objects::network::response universal_client_handle::work_packet(ArrayStream& data) {
-        api::new_packets::decode(session->shared_data(), data);
+        api::packets::decode(session->shared_data(), data);
         return {};
     }
 
@@ -23,11 +23,11 @@ namespace copper_server::build_in_plugins::network::tcp {
         default:
             return base_objects::network::response::disconnect();
         case login:
-            return api::new_packets::encode(api::new_packets::client_bound::login::login_disconnect{.reason = packet_is_to_large_str});
+            return api::packets::encode(api::packets::client_bound::login::login_disconnect{.reason = packet_is_to_large_str});
         case configuration:
-            return api::new_packets::encode(api::new_packets::client_bound::configuration::disconnect{.reason = packet_is_to_large});
+            return api::packets::encode(api::packets::client_bound::configuration::disconnect{.reason = packet_is_to_large});
         case play:
-            return api::new_packets::encode(api::new_packets::client_bound::play::disconnect{.reason = packet_is_to_large});
+            return api::packets::encode(api::packets::client_bound::play::disconnect{.reason = packet_is_to_large});
         }
     }
 
@@ -39,11 +39,11 @@ namespace copper_server::build_in_plugins::network::tcp {
         default:
             return base_objects::network::response::disconnect();
         case login:
-            return api::new_packets::encode(api::new_packets::client_bound::login::login_disconnect{.reason = Chat("Internal server error: " + std::string(ex.what()) + "\nPlease report this to the server owner!").ToStr()});
+            return api::packets::encode(api::packets::client_bound::login::login_disconnect{.reason = Chat("Internal server error: " + std::string(ex.what()) + "\nPlease report this to the server owner!").ToStr()});
         case configuration:
-            return api::new_packets::encode(api::new_packets::client_bound::configuration::disconnect{.reason = "Internal server error: " + std::string(ex.what()) + "\nPlease report this to the server owner!"});
+            return api::packets::encode(api::packets::client_bound::configuration::disconnect{.reason = "Internal server error: " + std::string(ex.what()) + "\nPlease report this to the server owner!"});
         case play:
-            return api::new_packets::encode(api::new_packets::client_bound::play::disconnect{.reason = "Internal server error: " + std::string(ex.what()) + "\nPlease report this to the server owner!"});
+            return api::packets::encode(api::packets::client_bound::play::disconnect{.reason = "Internal server error: " + std::string(ex.what()) + "\nPlease report this to the server owner!"});
         }
     }
 
@@ -55,11 +55,11 @@ namespace copper_server::build_in_plugins::network::tcp {
         default:
             return base_objects::network::response::disconnect();
         case login:
-            return api::new_packets::encode(api::new_packets::client_bound::login::login_disconnect{.reason = internal_error_str});
+            return api::packets::encode(api::packets::client_bound::login::login_disconnect{.reason = internal_error_str});
         case configuration:
-            return api::new_packets::encode(api::new_packets::client_bound::configuration::disconnect{.reason = internal_error});
+            return api::packets::encode(api::packets::client_bound::configuration::disconnect{.reason = internal_error});
         case play:
-            return api::new_packets::encode(api::new_packets::client_bound::play::disconnect{.reason = internal_error});
+            return api::packets::encode(api::packets::client_bound::play::disconnect{.reason = internal_error});
         }
     }
 

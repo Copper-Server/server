@@ -28,6 +28,36 @@ if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed.exe)
 
     message(STATUS "binary_embed tool built successfully")
 endif()
+if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map.exe)
+    message(STATUS "Configuring reflect_map tool...")
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out)
+
+
+    execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map -DCMAKE_TOOLCHAIN_FILE=${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DVCPKG_TARGET_TRIPLET=x64-windows-static
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out
+        RESULT_VARIABLE result
+        OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out/reflect_map.log
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out/reflect_map_error.log
+    )
+
+    if(result)
+        message(FATAL_ERROR "Failed to build reflect_map, see reflect_map_error.log for details in ${CMAKE_CURRENT_SOURCE_DIR}/tools/reflect_map/out")
+    endif()
+
+    message(STATUS "Building reflect_map tool...")
+    execute_process(COMMAND ${CMAKE_COMMAND} --build . --config Release --target reflect_map
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out
+        RESULT_VARIABLE result
+        OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out/reflect_map_build.log
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out/reflect_map_build_error.log
+    )
+
+    if(result)
+        message(FATAL_ERROR "Failed to build reflect_map, see reflect_map_build_error.log for details in ${CMAKE_CURRENT_SOURCE_DIR}/tools/reflect_map/out")
+    endif()
+
+    message(STATUS "reflect_map tool built successfully")
+endif()
 
 
 
@@ -215,3 +245,27 @@ function(create_resources_header resources_folder resouce_headers)
         file(APPEND ${resources_header} "#include \"${file}\"\n")
     endforeach()
 endfunction(create_resources_header)
+
+
+function(create_reflect_map output_file FILES)
+    cmake_path(GET output_file FILENAME result_name)
+    
+    #convert FILES to a string
+    set(FILES_STR "")
+    foreach(file ${FILES})
+        set(FILES_STR "${file} ${FILES_STR}")
+    endforeach()
+
+
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/reflect_map)
+    execute_process(
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/reflect_map.exe ${output_file} ${FILES_STR}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE result
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/reflect_map/${result_name}_error.log
+    )
+    if(result)
+        message(FATAL_ERROR "Failed to build reflection map ${output_file}")
+    endif()
+    file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
+endfunction(create_reflect_map)

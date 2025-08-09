@@ -59,4 +59,8 @@ namespace copper_server::api::entity_id_map {
     bool has_uuid(const enbt::raw_uuid& uuid) {
         return mem.has_uuid(uuid);
     }
+
+    void apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(base_objects::entity&)>&& callback) {
+        return mem.apply_selector(caller, selector, std::move(callback));
+    }
 }

@@ -7,6 +7,7 @@
 
 namespace copper_server::base_objects {
     struct entity;
+    struct SharedClientData;
     using entity_ref = atomic_holder<entity>;
 }
 namespace copper_server::storage::memory {
@@ -49,6 +50,7 @@ namespace copper_server::storage::memory {
         [[nodiscard]] base_objects::entity_ref get_entity(const enbt::raw_uuid& uuid);
         [[nodiscard]] bool has_id(int32_t id);
         [[nodiscard]] bool has_uuid(const enbt::raw_uuid& uuid);
+        void apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(base_objects::entity&)>&& callback);
     };
 }
 #endif /* SRC_STORAGE_MEMORY_ENTITY_IDS_MAP */

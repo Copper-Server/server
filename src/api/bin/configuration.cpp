@@ -329,7 +329,7 @@ namespace copper_server::api::configuration {
         fast_task::files::async_iofstream file(
             config_file_path / "config.json",
             fast_task::files::open_mode::write,
-            fast_task::files::on_open_action::truncate_exists,
+            fast_task::files::on_open_action::always_new,
             fast_task::files::_sync_flags{}
         );
 

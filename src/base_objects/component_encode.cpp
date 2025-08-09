@@ -1,5 +1,7 @@
+#include <src/api/packets.hpp> //for reflection //TODO change reflect_map to be more abstract;
 #include <src/base_objects/component.hpp>
 #include <src/base_objects/slot.hpp>
+#include <src/util/calculations.hpp> //for reflection //TODO change reflect_map to be more abstract;
 #include <src/util/reflect.hpp>
 
 namespace copper_server::base_objects {
@@ -40,10 +42,10 @@ namespace copper_server::base_objects {
     concept is_bitset_fixed = is_value_template_base_of<bitset_fixed, type>;
 
     template <class type>
-    concept is_vector_sized = is_tvalue_template_base_of<vector_sized, type> || is_tvalue_template_base_of<vector_sized_siz_from_packet, type> || is_tvalue_template_base_of<vector_sized_no_size, type>;
+    concept is_list_array_sized = is_tvalue_template_base_of<list_array_sized, type> || is_tvalue_template_base_of<list_array_sized_siz_from_packet, type> || is_tvalue_template_base_of<list_array_sized_no_size, type>;
 
     template <class type>
-    concept is_vector_fixed = is_tvalue_template_base_of<vector_fixed, type>;
+    concept is_list_array_fixed = is_tvalue_template_base_of<list_array_fixed, type>;
 
     template <class type>
     concept is_std_array = is_tvalue_template_base_of<std::array, type>;
@@ -74,7 +76,7 @@ namespace copper_server::base_objects {
             || std::is_same_v<enbt::simple_array_ui64, Type>
         ) {
             res = value;
-        } else if constexpr (is_std_array<Type> || is_template_base_of<std::vector, Type>) {
+        } else if constexpr (is_std_array<Type> || is_template_base_of<_list_array_impl::list_array, Type>) {
             enbt::fixed_array arr;
             arr.reserve(value.size());
             for (auto& it : value) {
@@ -154,10 +156,10 @@ namespace copper_server::base_objects {
             value.for_each_in_order([&](auto& it) {
                 serialize_entry(res, it);
             });
-        } else if constexpr (is_template_base_of<unordered_id, Type>) {
-            serialize_entry(res, value.value); //TODO
-        } else if constexpr (is_template_base_of<ordered_id, Type>) {
-            serialize_entry(res, value.value); //TODO
+            //} else if constexpr (is_template_base_of<unordered_id, Type>) {
+            //    serialize_entry(res, value.value); //TODO
+            //} else if constexpr (is_template_base_of<ordered_id, Type>) {
+            //    serialize_entry(res, value.value); //TODO
         } else if constexpr (is_template_base_of<value_optional, Type>) {
             if (value.rest && value.v) {
                 serialize_entry(res, value.v);

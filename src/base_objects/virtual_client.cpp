@@ -1,3 +1,4 @@
+#include <src/api/packets.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/virtual_client.hpp>
 #include <src/registers.hpp>
@@ -25,14 +26,14 @@ namespace copper_server::base_objects {
                 if (it.data.empty())
                     return;
                 ArrayStream arr(it.data.data(), it.data.size());
-                packet_processor(api::new_packets::decode_client_play(*client, arr));
+                packet_processor(api::packets::decode_client_play(*client, arr));
             });
             if (resp.is_disconnect())
                 requested_disconnect();
         };
     }
 
-    void virtual_client::send(api::new_packets::server_bound::play_packet&& packet) {
-        api::new_packets::make_process(*client, std::move(packet));
+    void virtual_client::send(api::packets::server_bound::play_packet&& packet) {
+        api::packets::make_process(*client, std::move(packet));
     }
 }

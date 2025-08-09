@@ -2,6 +2,7 @@
 #include <src/api/configuration.hpp>
 #include <src/api/console.hpp>
 #include <src/api/internal/console.hpp>
+#include <src/api/packets.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/player.hpp>
@@ -59,16 +60,16 @@ namespace copper_server::build_in_plugins {
                     .to_container<std::vector>();
             });
 
-            console_data.packet_processor = [this](const api::new_packets::client_bound::play_packet& packet) {
+            console_data.packet_processor = [this](const api::packets::client_bound::play_packet& packet) {
                 std::visit(
                     [this](auto& it) {
                         using T = std::decay_t<decltype(it)>;
-                        if constexpr (std::is_same_v<T, api::new_packets::client_bound::play::disguised_chat>) {
+                        if constexpr (std::is_same_v<T, api::packets::client_bound::play::disguised_chat>) {
                             if (!it.target_name)
                                 log::info("message", "[" + it.sender.to_ansi_console() + "] " + it.message.to_ansi_console());
                             else
                                 log::info("message", "[" + it.sender.to_ansi_console() + " -> " + it.target_name->to_ansi_console() + "] " + it.message.to_ansi_console());
-                        } else if constexpr (std::is_same_v<T, api::new_packets::client_bound::play::system_chat>) {
+                        } else if constexpr (std::is_same_v<T, api::packets::client_bound::play::system_chat>) {
                             if (!it.is_overlay)
                                 log::info("system", it.content.to_ansi_console());
                             else

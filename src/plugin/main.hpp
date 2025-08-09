@@ -32,26 +32,6 @@ namespace copper_server {
         public:
             PluginRegistrationPtr construct() override {
                 auto tmp_ = std::make_shared<T>();
-                register_configuration(tmp_);
-                if (
-                    &T::OnPlay_initialize != &PluginRegistration::OnPlay_initialize
-                    || &T::OnPlay_initialize_compatible != &PluginRegistration::OnPlay_initialize_compatible
-                    || &T::OnPlay_uninitialized != &PluginRegistration::OnPlay_uninitialized
-                    || &T::OnPlay_uninitialized_compatible != &PluginRegistration::OnPlay_uninitialized_compatible
-                    || &T::PlayerJoined != &PluginRegistration::PlayerJoined
-                    || &T::PlayerLeave != &PluginRegistration::PlayerLeave
-                )
-                    register_play(tmp_);
-                return tmp_;
-            }
-        };
-
-
-        template <class T>
-        class delayed_construct : public delayed_construct_base {
-        public:
-            PluginRegistrationPtr construct() override {
-                auto tmp_ = std::make_shared<T>();
                 if (
                     &T::OnConfiguration != &PluginRegistration::OnConfiguration
                     || &T::OnConfiguration_gotKnownPacks != &PluginRegistration::OnConfiguration_gotKnownPacks
@@ -281,20 +261,27 @@ namespace copper_server {
         void unregisterAll();
     };
 
-    template <class Self>
-        requires requires { Self::OnConfiguration == PluginRegistration::OnConfiguration || &Self::OnConfiguration_gotKnownPacks != &PluginRegistration::OnConfiguration_gotKnownPacks; }
+    template <class Self, bool>
     class PluginHandlingFixer {};
 
     template <class Self>
-        requires requires { Self::OnConfiguration != PluginRegistration::OnConfiguration && &Self::OnConfiguration_gotKnownPacks == &PluginRegistration::OnConfiguration_gotKnownPacks; }
-    class PluginHandlingFixer {
-        bool OnConfiguration_gotKnownPacks(base_objects::SharedClientData&, const api::new_packets::server_bound::configuration::select_known_packs&) override {
+    struct PluginHandlingFixer<Self, true> : public PluginRegistration {};
+
+    template <class Self>
+    struct PluginHandlingFixer<Self, false> : public PluginRegistration {
+        bool OnConfiguration_gotKnownPacks(base_objects::SharedClientData&, const api::packets::server_bound::configuration::select_known_packs&) override {
             return false;
         }
     };
 
+    template <class Self>
+        struct PluginHandlingFix : public PluginHandlingFixer < Self,
+        requires {
+        Self::OnConfiguration != PluginRegistration::OnConfiguration && &Self::OnConfiguration_gotKnownPacks == &PluginRegistration::OnConfiguration_gotKnownPacks;
+    }>{};
+
     template <util::CTS name, class Self>
-    class PluginAutoRegister : public PluginRegistration, PluginHandlingFixer<Self> {
+    class PluginAutoRegister : public PluginHandlingFix<Self> {
     public:
         static inline const std::string registered_name = []() {
             __internal__::register_value<Self, name>();

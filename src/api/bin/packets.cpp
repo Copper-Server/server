@@ -1,6 +1,7 @@
 #include <src/api/configuration.hpp>
-#include <src/api/new_packets.hpp>
+#include <src/api/packets.hpp>
 #include <src/api/permissions.hpp>
+#include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/base_objects/slot.hpp>
@@ -8,7 +9,7 @@
 #include <src/storage/world_data.hpp>
 
 namespace copper_server {
-    namespace api::new_packets {
+    namespace api::packets {
         bool debugging_enabled = false;
 
         namespace __internal {
@@ -133,7 +134,7 @@ namespace copper_server {
                     commanands.nodes.reserve(command_nodes.size());
                     for (auto& command : command_nodes) {
                         commands::node node;
-                        node.children = command.childs.to_container<std::vector<var_int32>>();
+                        node.children = command.childs.convert<var_int32>();
                         if (command.redirect)
                             node.flags_values.set(commands::node::redirect_node{.node = command.redirect->target_command});
                         if (command.executable)
@@ -306,61 +307,116 @@ namespace copper_server {
                         empty_block_light_mask.push_back(true);
                     }
 
-                    static auto convert_light = [](list_array<list_array<uint8_t>>& arr) {
+
+                    static auto convert_light = [](list_array<list_array<uint8_t>>&& arr) {
                         return arr
+                            .take()
                             .convert_fn(
-                                [](const list_array<uint8_t>& it) {
-                                    return it.to_container<vector_fixed<uint8_t, 2048>>();
+                                [](list_array<uint8_t>&& it) {
+                                    return it.to_container<list_array_fixed<uint8_t, 2048>>();
                                 }
-                            )
-                            .to_container<std::vector<vector_fixed<uint8_t, 2048>>>();
-                    };
-                    static auto convert_light_mask = [](bit_list_array<uint64_t>& arr) {
-                        return arr.data().to_container<std::vector>();
+                            );
                     };
 
                     light_update update;
                     update.x = (int32_t)chunk.chunk_x;
                     update.z = (int32_t)chunk.chunk_z;
-                    update.sky_light_mask = convert_light_mask(sky_light_mask);
-                    update.block_light_mask = convert_light_mask(block_light_mask);
-                    update.empty_sky_light_mask = convert_light_mask(empty_sky_light_mask);
-                    update.empty_block_light_mask = convert_light_mask(empty_block_light_mask);
-                    update.sky_light = convert_light(sky_light);
-                    update.block_light = convert_light(block_light);
+                    update.sky_light_mask = sky_light_mask.data();
+                    update.block_light_mask = block_light_mask.data();
+                    update.empty_sky_light_mask = empty_sky_light_mask.data();
+                    update.empty_block_light_mask = empty_block_light_mask.data();
+                    update.sky_light = convert_light(std::move(sky_light));
+                    update.block_light = convert_light(std::move(block_light));
                     return update;
                 }
+
+                bundle_delimiter::bundle_delimiter() {}
+
+                bundle_delimiter::bundle_delimiter(bundle_delimiter&& mov) : packets(std::move(mov.packets)) {}
+
+                bundle_delimiter::bundle_delimiter(const bundle_delimiter& copy) : packets(copy.packets) {}
+
+                bundle_delimiter::bundle_delimiter(list_array<play_packet>&& mov) : packets(std::move(mov)) {}
+
+                bundle_delimiter::bundle_delimiter(const list_array<play_packet>&& copy) : packets(copy) {}
+
+                uint64_t section_blocks_update::position_t::to_packet() const {
+                    union {
+                        uint64_t r;
+                        position_t v;
+                    } tmp;
+
+                    tmp.v = *this;
+                    return tmp.r;
+                }
+
+                section_blocks_update::position_t section_blocks_update::position_t::from_packet(uint64_t value) {
+                    union {
+                        uint64_t v;
+                        position_t r;
+                    } tmp;
+
+                    tmp.v = value;
+                    return tmp.r;
+                }
+
+                var_int64 section_blocks_update::block_entry::to_packet() const {
+                    union {
+                        int64_t r;
+                        block_entry v;
+                    } tmp;
+
+                    tmp.v = *this;
+                    return tmp.r;
+                }
+
+                section_blocks_update::block_entry section_blocks_update::block_entry::from_packet(var_int64 value) {
+                    union {
+                        int64_t v;
+                        block_entry r;
+                    } tmp;
+
+                    tmp.v = value;
+                    return tmp.r;
+                }
+
             }
         }
 
         base_objects::events::sync_event<base_objects::SharedClientData&> client_state_changed;
+
+        void set_debug_mode(bool enabled) {
+            debugging_enabled = enabled;
+        }
     }
 
-    base_objects::SharedClientData& operator<<(base_objects::SharedClientData& client, base_objects::switches_to::play) {
-        client.packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::play;
-        client.packets_state.extra_data = nullptr;
-        client.packets_state.processing_data.clear();
-        api::new_packets::client_state_changed(client);
-    }
+}
 
-    base_objects::SharedClientData& operator<<(base_objects::SharedClientData& client, base_objects::switches_to::configuration) {
-        client.packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::configuration;
-        client.packets_state.extra_data = nullptr;
-        client.packets_state.processing_data.clear();
-        api::new_packets::client_state_changed(client);
-    }
+copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::base_objects::switches_to::status) {
+    client.packets_state.state = copper_server::base_objects::SharedClientData::packets_state_t::protocol_state::status;
+    client.packets_state.extra_data = nullptr;
+    copper_server::api::packets::client_state_changed(client);
+    return client;
+}
 
-    base_objects::SharedClientData& operator<<(base_objects::SharedClientData& client, base_objects::switches_to::login) {
-        client.packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::login;
-        client.packets_state.extra_data = nullptr;
-        client.packets_state.processing_data.clear();
-        api::new_packets::client_state_changed(client);
-    }
+copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::base_objects::switches_to::login) {
+    client.packets_state.state = copper_server::base_objects::SharedClientData::packets_state_t::protocol_state::login;
+    client.packets_state.extra_data = nullptr;
+    copper_server::api::packets::client_state_changed(client);
+    return client;
+}
 
-    base_objects::SharedClientData& operator<<(base_objects::SharedClientData& client, base_objects::switches_to::status) {
-        client.packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::status;
-        client.packets_state.extra_data = nullptr;
-        client.packets_state.processing_data.clear();
-        api::new_packets::client_state_changed(client);
-    }
+copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::base_objects::switches_to::configuration) {
+    client.packets_state.state = copper_server::base_objects::SharedClientData::packets_state_t::protocol_state::configuration;
+    copper_server::api::players::login_complete_to_cfg(client);
+    client.packets_state.extra_data = nullptr;
+    copper_server::api::packets::client_state_changed(client);
+    return client;
+}
+
+copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::base_objects::switches_to::play) {
+    client.packets_state.state = copper_server::base_objects::SharedClientData::packets_state_t::protocol_state::play;
+    client.packets_state.extra_data = nullptr;
+    copper_server::api::packets::client_state_changed(client);
+    return client;
 }

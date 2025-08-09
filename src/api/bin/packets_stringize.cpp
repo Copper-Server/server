@@ -1,15 +1,9 @@
 #include <library/enbt/senbt.hpp>
-#include <src/api/new_packets.hpp>
+#include <src/api/packets.hpp>
+#include <src/base_objects/slot.hpp>
 #include <src/util/reflect.hpp>
 
-namespace copper_server::reflect {
-    template <>
-    struct enum_limits<copper_server::api::new_packets::client_bound::play::level_event::event_id> {
-        static constexpr uint16_t min = 1000;
-        static constexpr uint16_t max = 3022;
-    };
-}
-namespace copper_server::api::new_packets {
+namespace copper_server::api::packets {
     using namespace base_objects;
     template <class type>
     concept is_packet = requires(type& d) {
@@ -53,10 +47,10 @@ namespace copper_server::api::new_packets {
     concept is_bitset_fixed = is_value_template_base_of<bitset_fixed, type>;
 
     template <class type>
-    concept is_vector_sized = is_tvalue_template_base_of<vector_sized, type> || is_tvalue_template_base_of<vector_sized_siz_from_packet, type> || is_tvalue_template_base_of<vector_sized_no_size, type>;
+    concept is_list_array_sized = is_tvalue_template_base_of<list_array_sized, type> || is_tvalue_template_base_of<list_array_sized_siz_from_packet, type> || is_tvalue_template_base_of<list_array_sized_no_size, type>;
 
     template <class type>
-    concept is_vector_fixed = is_tvalue_template_base_of<vector_fixed, type>;
+    concept is_list_array_fixed = is_tvalue_template_base_of<list_array_fixed, type>;
 
     template <class type>
     concept is_std_array = is_tvalue_template_base_of<std::array, type>;
@@ -65,11 +59,7 @@ namespace copper_server::api::new_packets {
     concept is_limited_num = is_tvalue_template_base_of<limited_num, type>;
 
     template <class type>
-    concept requires_check = is_limited_num<type> || is_string_sized<type> || is_vector_sized<type> || is_vector_fixed<type> || is_value_template_base_of<no_size, type>;
-
-
-    template <class type>
-    concept need_preprocess = requires_check<type> || std::is_base_of_v<packet_preprocess, type>;
+    concept requires_check = is_limited_num<type> || is_string_sized<type> || is_list_array_sized<type> || is_list_array_fixed<type> || is_value_template_base_of<no_size, type>;
 
     namespace sp {
         template <class T>
@@ -77,8 +67,8 @@ namespace copper_server::api::new_packets {
 
         template <class T>
         void serialize_array(std::string& res, size_t spacing, const T& value) {
-            std::vector<std::string> res_tmp;
-            res.resize(value.size());
+            list_array<std::string> res_tmp;
+            res_tmp.reserve(value.size());
             size_t i = 0;
             for (auto&& it : value)
                 serialize_entry(res_tmp[i++], spacing + 4, it);
@@ -102,7 +92,9 @@ namespace copper_server::api::new_packets {
         template <class T>
         void serialize_entry(std::string& res, size_t spacing, const T& value) {
             using Type = std::decay_t<T>;
-            if constexpr (std::is_same_v<identifier, Type>)
+            if constexpr (is_convertible_to_packet_form<Type>) {
+                serialize_entry(res, spacing, value.to_packet());
+            } else if constexpr (std::is_same_v<identifier, Type>)
                 res += "\"" + value.value + "\"";
             else if constexpr (is_string_sized<Type>)
                 res += "\"" + value.value + "\"";
@@ -110,6 +102,8 @@ namespace copper_server::api::new_packets {
                 res += "\"" + value.value + "\"";
             else if constexpr (std::is_same_v<var_int32, Type>)
                 res += std::to_string(value.value);
+            else if constexpr (is_template_base_of<base_objects::box, Type>) 
+                serialize_entry(res, spacing, value);
             else if constexpr (std::is_same_v<var_int64, Type>)
                 res += std::to_string(value.value);
             else if constexpr (std::is_same_v<optional_var_int32, Type>) {
@@ -156,11 +150,11 @@ namespace copper_server::api::new_packets {
                 res += list_array<char>(senbt::serialize(value, false, true))
                            .replace('\n', alignment.data(), alignment.size())
                            .to_container<std::string>();
-            } else if constexpr (std::is_same_v<base_objects::pallete_container, Type>) {
+            } else if constexpr (std::is_base_of_v<base_objects::pallete_container, Type>) {
                 res += "pallete_data";
             } else if constexpr (std::is_same_v<base_objects::pallete_data_height_map, Type>) {
                 res += "pallete_data";
-            } else if constexpr (is_template_base_of<std::vector, Type> || is_std_array<Type>) {
+            } else if constexpr (is_template_base_of<_list_array_impl::list_array, Type> || is_std_array<Type>) {
                 serialize_array(res, spacing, value);
             } else if constexpr (is_template_base_of<ignored, Type>) {
             } else if constexpr (is_template_base_of<std::optional, Type>) {
@@ -172,24 +166,38 @@ namespace copper_server::api::new_packets {
                 res += reflect::get_enum_value(value.value);
             } else if constexpr (is_template_base_of<enum_as_flag, Type>) {
                 res += reflect::get_enum_flag_value(value.value);
-            } else if constexpr (is_template_base_of<or_, Type>) {
+            } else if constexpr (is_template_base_of<or_, Type> || is_template_base_of<bool_or, Type>) {
                 std::visit([&](auto& it) { serialize_entry(res, spacing, it); }, value);
             } else if constexpr (is_template_base_of<enum_switch, Type>) {
                 std::visit(
                     [&](auto& it) {
                         using it_T = std::decay_t<decltype(it)>;
                         res += "{ ";
-                        serialize_entry(res, spacing, Type::encode_type(it_T::item_id::value));
+                        serialize_entry(res, spacing, typename Type::encode_type(it_T::item_id::value));
                         res += ": ";
                         serialize_entry(res, spacing, it);
                         res += "}";
                     },
                     value
                 );
+            } else if constexpr (is_template_base_of<partial_enum_switch, Type>) {
+                std::visit(
+                    [&](auto& it) {
+                        using it_T = std::decay_t<decltype(it)>;
+                        if constexpr (std::is_same_v<it_T, typename Type::encode_type>) {
+                            serialize_entry(res, spacing, it);
+                        } else {
+                            res += "{ ";
+                            serialize_entry(res, spacing, typename Type::encode_type(it_T::item_id::value));
+                            res += ": ";
+                            serialize_entry(res, spacing, it);
+                            res += "}";
+                        }
+                    },
+                    value
+                );
             } else if constexpr (is_template_base_of<std::unique_ptr, Type>) {
                 serialize_entry(res, spacing, *value);
-            } else if constexpr (is_template_base_of<any_of, Type>) {
-                serialize_entry(res, spacing, value.value);
             } else if constexpr (is_template_base_of<flags_list, Type>) {
                 res += "{ ";
                 serialize_entry(res, spacing, value.flag);
@@ -206,10 +214,6 @@ namespace copper_server::api::new_packets {
                     serialize_entry(res, spacing + 4, it);
                 });
                 res += "}";
-            } else if constexpr (is_template_base_of<unordered_id, Type>) {
-                serialize_entry(res, spacing, value.value); //TODO
-            } else if constexpr (is_template_base_of<ordered_id, Type>) {
-                serialize_entry(res, spacing, value.value); //TODO
             } else if constexpr (is_template_base_of<value_optional, Type>) {
                 res += "{";
                 if (value.rest && value.v) {
@@ -221,18 +225,18 @@ namespace copper_server::api::new_packets {
                     serialize_entry(res, spacing + 4, tmp);
                 }
                 res += "}";
-            } else if constexpr (is_template_base_of<sized_entry, Type>) {
+            } else if constexpr (
+                is_template_base_of<sized_entry, Type>
+                || is_template_base_of<any_of, Type>
+                || is_template_base_of<packet_compress, Type>
+                || is_limited_num<Type>
+                || is_id_source<Type>
+            )
                 serialize_entry(res, spacing, value.value);
-            } else if constexpr (is_limited_num<Type>) {
-                serialize_entry(res, spacing, value.value);
-            } else if constexpr (is_bitset_fixed<Type>) {
+            else if constexpr (is_bitset_fixed<Type>) {
                 serialize_array(res, spacing, value.value.data());
             } else if constexpr (std::is_same_v<bit_list_array<uint64_t>, Type>) {
                 serialize_array(res, spacing, value.data());
-            } else if constexpr (is_convertible_to_packet_form<Type>) {
-                serialize_entry(res, spacing, value.to_packet());
-            } else if constexpr (is_id_source<Type>) {
-                serialize_entry(res, spacing, value.value);
             } else {
                 bool process_next = true;
                 bool processed = false;
@@ -243,9 +247,9 @@ namespace copper_server::api::new_packets {
                         res += "\n" + std::string(spacing + 4, ' ') + std::string(name) + ": ";
                         serialize_entry(res, spacing + 4, item);
                         processed = true;
+                        if constexpr (is_template_base_of<depends_next, std::decay_t<decltype(item)>>)
+                            process_next = (bool)item.value;
                     }
-                    if constexpr (is_template_base_of<depends_next, std::decay_t<decltype(item)>>)
-                        process_next = (bool)item.value;
                 });
             }
         }
@@ -268,15 +272,18 @@ namespace copper_server::api::new_packets {
                     if constexpr (is_packet<I>) {
                         serialize_packet(res, spacing + 4, item);
                     } else if constexpr (
-                        std::is_same_v<I, client_bound::login_packet>
+                        std::is_same_v<I, client_bound::status_packet>
+                        || std::is_same_v<I, client_bound::login_packet>
                         || std::is_same_v<I, client_bound::configuration_packet>
                         || std::is_same_v<I, client_bound::play_packet>
+                        || std::is_same_v<I, server_bound::handshake_packet>
+                        || std::is_same_v<I, server_bound::status_packet>
                         || std::is_same_v<I, server_bound::login_packet>
                         || std::is_same_v<I, server_bound::configuration_packet>
                         || std::is_same_v<I, server_bound::play_packet>
                     ) {
                         std::visit([&](auto& it) { serialize_packet(res, spacing + 4, it); }, item);
-                    } else if (is_template_base_of<std::vector, I>) {
+                    } else if (is_template_base_of<_list_array_impl::list_array, Type>) {
                         res += "[";
                         bool arr_processed = false;
                         for (auto&& it : item) {

@@ -7,12 +7,16 @@ namespace copper_server::api::players {
         base_objects::events::event<personal<Chat>> on_player_ban;
     }
 
+    namespace handlers {
+        base_objects::events::event<base_objects::client_data_holder> on_disconnect;
+    }
+    
     auto& get_storage() {
         static storage::memory::online_player_storage ops;
         return ops;
     }
 
-    void login_complete_to_cfg(base_objects::client_data_holder& player) {
+    void login_complete_to_cfg(base_objects::SharedClientData& player) {
         get_storage().login_complete_to_cfg(player);
     }
 
@@ -76,8 +80,8 @@ namespace copper_server::api::players {
         return get_storage().get_players();
     }
 
-    void apply_selector(base_objects::client_data_holder& caller, const std::string& selector, const std::function<void(base_objects::SharedClientData&)>& callback, const std::function<void()>& not_found) {
-        get_storage().apply_selector(caller, selector, callback, not_found);
+    void apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(base_objects::SharedClientData&)>&& callback) {
+        get_storage().apply_selector(caller, selector, std::move(callback));
     }
 
     void iterate_online(const std::function<bool(base_objects::SharedClientData&)>& callback) {

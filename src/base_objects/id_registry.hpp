@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <string>
 
-
 namespace copper_server::base_objects {
 
     enum class registry_source {
@@ -81,6 +80,14 @@ namespace copper_server::base_objects {
     std::string from_registry_source_value(registry_source source, int32_t value);
     int32_t to_registry_source_value(registry_source source, const std::string& value);
 
+
+    template <class T>
+    concept _id_source_has_underlying_type = requires { typename T::underlying_type; };
+
+    template <class From, class To>
+    concept id_source_allow_cast = (_id_source_has_underlying_type<From> && std::convertible_to<From, typename To::underlying_type>)
+                                   || (!_id_source_has_underlying_type<From> && std::convertible_to<From, To>);
+
     template <class Value, registry_source source>
     struct id_source {
         using underlying_type = Value;
@@ -89,10 +96,9 @@ namespace copper_server::base_objects {
 
         constexpr id_source() {}
 
-        template <class T>
+        template <id_source_allow_cast<Value> T>
         constexpr id_source(T value)
-            requires(std::is_convertible_v<T, Value>)
-            : value((Value)value) {}
+            : value(static_cast<Value>(value)) {}
 
         constexpr id_source(Value value) : value(value) {}
 
@@ -131,11 +137,12 @@ namespace copper_server::base_objects {
             return from_registry_source_value(source, value);
         }
 
-        template <class T>
-        constexpr operator T() const
-            requires(std::is_convertible_v<Value, T>)
-        {
-            return (T)value;
+        template <id_source_allow_cast<Value> T>
+        constexpr operator T() const {
+            if constexpr (requires { typename Value::underlying_type; })
+                return (T)(typename Value::underlying_type)value;
+            else
+                return (T)value;
         }
 
         auto operator<=>(const id_source& other) const = default;
@@ -217,4 +224,14 @@ namespace copper_server::base_objects {
     using id_llama_variant = id_source<int32_t, registry_source::llama_variant>;
     using id_axolotl_variant = id_source<int32_t, registry_source::axolotl_variant>;
 }
+
+namespace std {
+    template <class T, copper_server::base_objects::registry_source source>
+    struct hash<copper_server::base_objects::id_source<T, source>> {
+        size_t operator()(const copper_server::base_objects::id_source<T, source>& value) const {
+            return hash<T>()((T)value);
+        }
+    };
+}
+
 #endif /* SRC_BASE_OBJECTS_ID_REGISTRY */

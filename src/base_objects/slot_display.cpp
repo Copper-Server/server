@@ -38,25 +38,24 @@ namespace copper_server::base_objects {
             [](auto& it) -> list_array<slot> {
                 using T = std::decay_t<decltype(it)>;
                 if constexpr (std::is_same_v<slot_displays::minecraft::empty, T>) {
-                    return {};
+                    return list_array<slot>();
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::any_fuel, T>) {
                     return api::tags::unfold_tag(api::tags::builtin_entry::item, "minecraft:fuel").convert<slot>([](const auto& item) {
                         return std::make_optional(slot_data::create_item(item));
                     });
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::item, T>) {
-                    return {std::make_optional(slot_data::create_item(it.item))};
+                    return list_array<slot>().push_back(std::make_optional(slot_data::create_item(it.item)));
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::item_stack, T>) {
-                    return {std::make_optional(it.item)};
+                    return list_array<slot>().push_back(std::make_optional(it.item));
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::tag, T>) {
                     return api::tags::unfold_tag(api::tags::builtin_entry::item, it.tag).convert<slot>([](const auto& item) {
                         return std::make_optional(slot_data::create_item(item));
                     });
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::smithing_trim, T>) {
-                    return {
-                        it.base->to_slots(),
-                        it.material->to_slots(),
-                        it.pattern->to_slots()
-                    };
+                    return list_array<slot>()
+                        .push_back(it.base->to_slots())
+                        .push_back(it.material->to_slots())
+                        .push_back(it.pattern->to_slots());
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::with_remainder, T>) {
                     return it.ingredient->to_slots();
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::composite, T>) {
@@ -68,7 +67,7 @@ namespace copper_server::base_objects {
                     if (it.to_slots)
                         return it.to_slots(it.value);
                     else
-                        return {};
+                        return list_array<slot>();
                 }
             },
             value

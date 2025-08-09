@@ -297,7 +297,7 @@ namespace copper_server {
     }
 
     static void WriteString(list_array<uint8_t>& data, const std::string& str, int32_t max_string_len = INT32_MAX) {
-        if (str.size() > max_string_len)
+        if (str.size() > (size_t)max_string_len)
             throw std::out_of_range("actual string len out of range");
         WriteVar<int32_t>(str.size(), data);
         data.push_back((uint8_t*)str.data(), str.size());

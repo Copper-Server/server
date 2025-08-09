@@ -294,9 +294,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         return base_objects::network::response::answer(std::move(answer), valid_till);
     }
 
-    tcp_client_handle::tcp_client_handle(api::network::tcp::session* session)
-        : session(session), _keep_alive_solution(session ? new keep_alive_solution(session) : nullptr) {
-    }
+    tcp_client_handle::tcp_client_handle(api::network::tcp::session* session) : session(session) {}
 
     tcp_client_handle::~tcp_client_handle() {}
 

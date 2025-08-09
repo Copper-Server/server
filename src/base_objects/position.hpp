@@ -32,6 +32,8 @@ namespace copper_server::base_objects {
         bool operator!=(const position& other) const {
             return get() != other.get();
         }
+
+        auto operator<=>(const position& enbt) const = default;
     };
 }
 

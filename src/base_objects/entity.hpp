@@ -317,6 +317,8 @@ namespace copper_server {
                 }
 
                 void update_processing(int32_t center_x, int32_t center_z, uint8_t render_distance) {
+                    if (processing_region.center_x == center_x && processing_region.center_z == center_z && processing_region.radius == render_distance)
+                        return;
                     auto new_processing_diameter = 2 * render_distance + 7;
                     bit_list_array<> new_processing_data(new_processing_diameter * new_processing_diameter);
 
@@ -345,6 +347,11 @@ namespace copper_server {
                     processing_region = {center_x, center_z, new_radius};
                     processed_chunks = std::move(new_processing_data);
                 }
+
+                void update_render_distance(uint8_t render_distance) {
+                    update_processing((int32_t)processing_region.center_x, (int32_t)processing_region.center_z, render_distance);
+                }
+
 
                 void flush_processing() {
                     auto diameter = processing_region.radius + processing_region.radius + 1;
@@ -385,7 +392,7 @@ namespace copper_server {
             list_array<client_data_holder> spectating_players;
             client_data_holder assigned_player;
 
-            uint32_t protocol_id;
+            int32_t protocol_id;
 
             storage::world_data* current_world() const;
 
@@ -537,6 +544,10 @@ namespace copper_server {
             static entity_ref create(const std::string& id);
             static entity_ref create(const std::string& id, const enbt::compound_const_ref& nbt);
             static entity_ref load_from_enbt(const enbt::compound_const_ref& file_nbt);
+
+            bool hitboxes_in_range_x(double min, double max);
+            bool hitboxes_in_range_y(double min, double max);
+            bool hitboxes_in_range_z(double min, double max);
 
             entity();
             ~entity();

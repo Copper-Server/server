@@ -129,7 +129,7 @@ namespace copper_server::build_in_plugins {
 
         void add_world_id_suggestion(base_objects::command_browser& browser) {
             browser.set_suggestion_callback([this](const std::string& current, base_objects::command_context& context) {
-                auto suggestions = worlds_storage.get_list().convert<std::string>([](uint64_t id) {
+                auto suggestions = worlds_storage.get_list().convert<std::string>([](int32_t id) {
                     return std::to_string(id);
                 });
                 if (current.empty())
@@ -142,7 +142,7 @@ namespace copper_server::build_in_plugins {
 
         void add_world_name_suggestion(base_objects::command_browser& browser) {
             browser.set_suggestion_callback([this](const std::string& current, base_objects::command_context& context) {
-                auto suggestions = worlds_storage.get_list().convert<std::string>([this](uint64_t id) {
+                auto suggestions = worlds_storage.get_list().convert<std::string>([this](int32_t id) {
                     return worlds_storage.get_name(id);
                 });
                 if (current.empty())
@@ -165,7 +165,7 @@ namespace copper_server::build_in_plugins {
 
         void OnLoad(const PluginRegistrationPtr& self) override {
             log::info("World", "loading worlds...");
-            register_event(worlds_storage.on_world_loaded, [](uint64_t id) {
+            register_event(worlds_storage.on_world_loaded, [](int32_t id) {
                 log::debug("World", "world id " + std::to_string(id) + " loaded.");
                 api::world::get(id, [&](storage::world_data& world) {
                     world.profiling.enable_world_profiling = true;
@@ -174,7 +174,7 @@ namespace copper_server::build_in_plugins {
                 });
                 return false;
             });
-            register_event(worlds_storage.on_world_unloaded, [](uint64_t id) {
+            register_event(worlds_storage.on_world_unloaded, [](int32_t id) {
                 log::debug("World", "world id " + std::to_string(id) + " unloaded.");
                 return false;
             });
@@ -269,7 +269,7 @@ namespace copper_server::build_in_plugins {
             }
 
             worlds_storage.locked([&](storage::worlds_data& worlds) {
-                worlds.for_each_world([&](uint64_t id, storage::world_data& world) {
+                worlds.for_each_world([&](int32_t id, storage::world_data& world) {
                     log::info("World", "saving world " + world.world_name + "...");
                     world.save();
                     world.save_chunks(true);
@@ -284,7 +284,7 @@ namespace copper_server::build_in_plugins {
             log::info("World", "saving worlds...");
             worlds_storage.locked([&](storage::worlds_data& worlds) {
                 world_ticking->notify_cancel();
-                worlds.for_each_world([&](uint64_t id, storage::world_data& world) {
+                worlds.for_each_world([&](int32_t id, storage::world_data& world) {
                     log::info("World", "saving world " + world.world_name + "...");
                     world.save();
                     world.save_chunks(false);
@@ -303,6 +303,8 @@ namespace copper_server::build_in_plugins {
     using predicate = base_objects::parser;
     using pred_double = base_objects::parsers::_double;
     using cmd_pred_double = base_objects::parsers::command::_double;
+    using pred_int = base_objects::parsers::_integer;
+    using cmd_pred_int = base_objects::parsers::command::_integer;
     using pred_long = base_objects::parsers::_long;
     using cmd_pred_long = base_objects::parsers::command::_long;
     using pred_string = base_objects::parsers::string;
@@ -341,7 +343,7 @@ namespace copper_server::build_in_plugins {
             auto worlds = browser.add_child("worlds");
             {
                 auto pre_gen = worlds.add_child("pre_gen");
-                auto world_id = pre_gen.add_child("world_id", cmd_pred_long());
+                auto world_id = pre_gen.add_child("world_id", cmd_pred_int());
                 auto world_name = pre_gen.add_child("world_name", cmd_pred_string());
 
                 auto x0 = world_id.add_child("x0", cmd_pred_long());
@@ -361,7 +363,7 @@ namespace copper_server::build_in_plugins {
                     std::visit(
                         [&](auto&& arg) {
                             using T = std::decay_t<decltype(arg)>;
-                            if constexpr (std::is_same_v<T, pred_long> || std::is_same_v<T, pred_string>) {
+                            if constexpr (std::is_same_v<T, pred_int> || std::is_same_v<T, pred_string>) {
                                 api::world::get(arg.value, [&](storage::world_data& world) {
                                     bound.enum_points([&](auto x, auto z) {
                                         world.request_chunk_gen(x, z);
@@ -413,12 +415,12 @@ namespace copper_server::build_in_plugins {
             }
             {
                 auto remove = worlds.add_child("remove");
-                auto world_id = remove.add_child("<world_id>", cmd_pred_long());
+                auto world_id = remove.add_child("<world_id>", cmd_pred_int());
                 auto world_name = remove.add_child("<world_name>", cmd_pred_string());
 
                 world_id
                     .set_callback("command.world.remove", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                        uint64_t id = std::get<pred_long>(args[0]).value;
+                        int32_t id = std::get<pred_int>(args[0]).value;
                         if (!worlds_storage.exists(id)) {
                             Chat message("Failed to set world id, world with this id not set: " + std::to_string(id));
                             message.SetColor("red");
@@ -444,11 +446,11 @@ namespace copper_server::build_in_plugins {
                 auto base = worlds.add_child("base");
                 {
                     auto set = base.add_child("set");
-                    auto world_id = set.add_child("<world_id>", cmd_pred_long());
+                    auto world_id = set.add_child("<world_id>", cmd_pred_int());
                     auto world_name = set.add_child("<world_name>", cmd_pred_string());
                     world_id
                         .set_callback("command.world.base.set", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                            uint64_t id = std::get<pred_long>(args[0]).value;
+                            int32_t id = std::get<pred_int>(args[0]).value;
                             if (!worlds_storage.exists(id)) {
                                 Chat message("Failed to set world id, world with this id not set: " + std::to_string(id));
                                 message.SetColor("red");
@@ -479,11 +481,11 @@ namespace copper_server::build_in_plugins {
             }
             {
                 auto load = worlds.add_child("load");
-                auto world_id = load.add_child("<world_id>", cmd_pred_long());
+                auto world_id = load.add_child("<world_id>", cmd_pred_int());
                 auto world_name = load.add_child("<world_name>", cmd_pred_string());
                 world_id
                     .set_callback("command.world.load", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                        uint64_t id = std::get<pred_long>(args[0]).value;
+                        int32_t id = std::get<pred_int>(args[0]).value;
                         if (!worlds_storage.exists(id)) {
                             Chat message("Failed to load world, world with this id not set: " + std::to_string(id));
                             message.SetColor("red");
@@ -515,11 +517,11 @@ namespace copper_server::build_in_plugins {
             }
             {
                 auto save = worlds.add_child("save");
-                auto world_id = save.add_child("<world_id>", cmd_pred_long());
+                auto world_id = save.add_child("<world_id>", cmd_pred_int());
                 auto world_name = save.add_child("<world_name>", cmd_pred_string());
                 world_id
                     .set_callback("command.world.save", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                        uint64_t id = std::get<pred_long>(args[0]).value;
+                        int32_t id = std::get<pred_int>(args[0]).value;
                         if (!worlds_storage.exists(id)) {
                             Chat message("Failed to save world, world with this id not set: " + std::to_string(id));
                             message.SetColor("red");
@@ -562,7 +564,7 @@ namespace copper_server::build_in_plugins {
                 auto list = worlds.add_child("list");
                 list.set_callback("command.world.list", [this](const list_array<predicate>&, base_objects::command_context& context) {
                     std::string message = "Worlds: ";
-                    worlds_storage.for_each_world([&message](uint64_t id, storage::world_data& world) {
+                    worlds_storage.for_each_world([&message](int32_t id, storage::world_data& world) {
                         message += world.world_name + ", ";
                     });
                     message.erase(message.size() - 2);
@@ -572,11 +574,11 @@ namespace copper_server::build_in_plugins {
             }
             {
                 auto unload = worlds.add_child("unload");
-                auto world_id = unload.add_child("<world_id>", cmd_pred_long());
+                auto world_id = unload.add_child("<world_id>", cmd_pred_int());
                 auto world_name = unload.add_child("<world_name>", cmd_pred_string());
                 world_id
                     .set_callback("command.world.unload", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                        uint64_t id = std::get<pred_long>(args[0]).value;
+                        int32_t id = std::get<pred_int>(args[0]).value;
                         if (!worlds_storage.exists(id)) {
                             Chat message("Failed to unload world, world with this id not set: " + std::to_string(id));
                             message.SetColor("red");
@@ -636,10 +638,10 @@ namespace copper_server::build_in_plugins {
             }
             {
                 auto get_name = worlds.add_child("get_name");
-                auto world_id = get_name.add_child("<world_id>", cmd_pred_long());
+                auto world_id = get_name.add_child("<world_id>", cmd_pred_int());
                 world_id
                     .set_callback("command.world.get_name", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                        uint64_t id = std::get<pred_long>(args[0]).value;
+                        int32_t id = std::get<pred_int>(args[0]).value;
                         if (!worlds_storage.exists(id)) {
                             Chat message("Failed to get world name, world with this id not set: " + std::to_string(id));
                             message.SetColor("red");
@@ -654,7 +656,7 @@ namespace copper_server::build_in_plugins {
             }
             {
                 auto setblock = worlds.add_child("setblock");
-                auto world = setblock.add_child("world_id", cmd_pred_long());
+                auto world = setblock.add_child("world_id", cmd_pred_int());
                 auto world_name = setblock.add_child("world_name", cmd_pred_string());
                 auto position = world.add_child("xyz", cmd_pred_block_pos());
                 world_name.add_child(position);
@@ -678,8 +680,8 @@ namespace copper_server::build_in_plugins {
                     std::visit(
                         [&world, &pos, &block](auto&& arg) {
                             using T = std::decay_t<decltype(arg)>;
-                            if constexpr (std::is_same_v<T, pred_long>) {
-                                api::world::get(std::get<pred_long>(world).value, [pos, &block](storage::world_data& world) {
+                            if constexpr (std::is_same_v<T, pred_int>) {
+                                api::world::get(std::get<pred_int>(world).value, [pos, &block](storage::world_data& world) {
                                     world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::replace);
                                 });
                             } else {
@@ -710,8 +712,8 @@ namespace copper_server::build_in_plugins {
                     std::visit(
                         [&world, &pos, &block](auto&& arg) {
                             using T = std::decay_t<decltype(arg)>;
-                            if constexpr (std::is_same_v<T, pred_long>) {
-                                api::world::get(std::get<pred_long>(world).value, [pos, &block](storage::world_data& world) {
+                            if constexpr (std::is_same_v<T, pred_int>) {
+                                api::world::get(std::get<pred_int>(world).value, [pos, &block](storage::world_data& world) {
                                     world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::destroy);
                                 });
                             } else {
@@ -738,8 +740,8 @@ namespace copper_server::build_in_plugins {
 
                     std::visit([&world, &pos, &block](auto&& arg) {
                         using T = std::decay_t<decltype(arg)>;
-                        if constexpr (std::is_same_v<T, pred_long>) {
-                            api::world::get(std::get<pred_long>(world).value, [pos, &block](storage::world_data& world) {
+                        if constexpr (std::is_same_v<T, pred_int>) {
+                            api::world::get(std::get<pred_int>(world).value, [pos, &block](storage::world_data& world) {
                                 world.set_block(std::move(block), pos.x, pos.y, pos.z, storage::block_set_mode::keep);
                             });
                         } else {
@@ -757,7 +759,7 @@ namespace copper_server::build_in_plugins {
             }
             {
                 auto profile = worlds.add_child("profile");
-                auto world_id_ = profile.add_child("world_id", cmd_pred_long());
+                auto world_id_ = profile.add_child("world_id", cmd_pred_int());
                 auto world_name_ = profile.add_child("world_name", cmd_pred_string());
 
                 add_world_id_suggestion(world_id_);
@@ -772,7 +774,7 @@ namespace copper_server::build_in_plugins {
                             std::visit(
                                 [&](auto&& arg) {
                                     using T = std::decay_t<decltype(arg)>;
-                                    if constexpr (std::is_same_v<T, pred_long> || std::is_same_v<T, pred_string>) {
+                                    if constexpr (std::is_same_v<T, pred_int> || std::is_same_v<T, pred_string>) {
                                         api::world::get(arg.value, [&](storage::world_data& world) {
                                             if (world.profiling.chunk_speedometer_callback) {
                                                 Chat message("Failed to report chunks tick speed, chunk speed profiling already enabled for world: " + world.world_name);
@@ -799,7 +801,7 @@ namespace copper_server::build_in_plugins {
                     world_id
                         .add_child("tps")
                         .set_callback("command.world.profile.enable.tps", [&](const list_array<predicate>& args, base_objects::command_context& context) {
-                            auto& world_id = std::get<pred_long>(args[0]);
+                            auto& world_id = std::get<pred_int>(args[0]);
 
                             api::world::get(world_id.value, [&](storage::world_data& world) {
                                 if (world.profiling.enable_world_profiling && world.profiling.got_tps_update) {
@@ -837,7 +839,7 @@ namespace copper_server::build_in_plugins {
                     world_id
                         .add_child("slow_chunk")
                         .set_callback("command.world.profile.enable.slow_chunk", [&](const list_array<predicate>& args, base_objects::command_context& context) {
-                            auto& world_id = std::get<pred_long>(args[0]);
+                            auto& world_id = std::get<pred_int>(args[0]);
 
                             api::world::get(world_id.value, [&](storage::world_data& world) {
                                 if (world.profiling.enable_world_profiling && world.profiling.slow_chunk_tick_callback) {
@@ -875,7 +877,7 @@ namespace copper_server::build_in_plugins {
                     world_id
                         .add_child("slow_world")
                         .set_callback("command.world.profile.enable.slow_world", [&](const list_array<predicate>& args, base_objects::command_context& context) {
-                            auto& world_id = std::get<pred_long>(args[0]);
+                            auto& world_id = std::get<pred_int>(args[0]);
 
                             api::world::get(world_id.value, [&](storage::world_data& world) {
                                 if (world.profiling.enable_world_profiling && world.profiling.slow_world_tick_callback) {
@@ -917,7 +919,7 @@ namespace copper_server::build_in_plugins {
 
                     world_id
                         .set_callback("command.world.profile.disable", [&](const list_array<predicate>& args, base_objects::command_context& context) {
-                            auto& world_id = std::get<pred_long>(args[0]);
+                            auto& world_id = std::get<pred_int>(args[0]);
 
                             api::world::get(world_id.value, [&](storage::world_data& world) {
                                 if (world.profiling.enable_world_profiling) {
@@ -964,7 +966,7 @@ namespace copper_server::build_in_plugins {
                     world_id
                         .add_child("tps")
                         .set_callback("command.world.profile.disable.tps", [&](const list_array<predicate>& args, base_objects::command_context& context) {
-                            auto& world_id = std::get<pred_long>(args[0]);
+                            auto& world_id = std::get<pred_int>(args[0]);
 
                             api::world::get(world_id.value, [&](storage::world_data& world) {
                                 if (world.profiling.enable_world_profiling) {
@@ -1019,7 +1021,7 @@ namespace copper_server::build_in_plugins {
                     world_id
                         .add_child("slow_chunk")
                         .set_callback("command.world.profile.disable.slow_chunk", [&](const list_array<predicate>& args, base_objects::command_context& context) {
-                            auto& world_id = std::get<pred_long>(args[0]);
+                            auto& world_id = std::get<pred_int>(args[0]);
 
                             api::world::get(world_id.value, [&](storage::world_data& world) {
                                 if (world.profiling.enable_world_profiling) {
@@ -1069,7 +1071,7 @@ namespace copper_server::build_in_plugins {
                     world_id
                         .add_child("slow_world")
                         .set_callback("command.world.profile.disable.slow_world", [&](const list_array<predicate>& args, base_objects::command_context& context) {
-                            auto& world_id = std::get<pred_long>(args[0]);
+                            auto& world_id = std::get<pred_int>(args[0]);
 
                             api::world::get(world_id.value, [&](storage::world_data& world) {
                                 if (world.profiling.enable_world_profiling) {
@@ -1122,7 +1124,7 @@ namespace copper_server::build_in_plugins {
                     config_id
                         .add_child("slow_world_threshold")
                         .set_callback("command.world.profile.config.slow_world_threshold.get", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                            auto& world_id = std::get<pred_long>(args[0]);
+                            auto& world_id = std::get<pred_int>(args[0]);
 
                             api::world::get(world_id.value, [&](storage::world_data& world) {
                                 context.executor << api::client::play::system_chat{.content = "Slow world threshold: " + std::to_string(world.profiling.slow_world_tick_callback_threshold)};
@@ -1130,7 +1132,7 @@ namespace copper_server::build_in_plugins {
                         })
                         .add_child("value", cmd_pred_double())
                         .set_callback("command.world.profile.config.slow_world_threshold.set", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                            auto& world_id = std::get<pred_long>(args[0]);
+                            auto& world_id = std::get<pred_int>(args[0]);
                             auto& value = std::get<pred_double>(args[1]);
 
                             api::world::get(world_id.value, [&](storage::world_data& world) {
@@ -1160,7 +1162,7 @@ namespace copper_server::build_in_plugins {
                     config_id
                         .add_child("slow_chunk_threshold")
                         .set_callback("command.world.profile.config.slow_world_threshold.get", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                            auto& world_id = std::get<pred_long>(args[0]);
+                            auto& world_id = std::get<pred_int>(args[0]);
 
                             api::world::get(world_id.value, [&](storage::world_data& world) {
                                 context.executor << api::client::play::system_chat{.content = "Slow chunk threshold: " + std::to_string(world.profiling.slow_chunk_tick_callback_threshold)};
@@ -1168,7 +1170,7 @@ namespace copper_server::build_in_plugins {
                         })
                         .add_child("value", cmd_pred_double())
                         .set_callback("command.world.profile.config.slow_chunk_threshold.set", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                            auto& world_id = std::get<pred_long>(args[0]);
+                            auto& world_id = std::get<pred_int>(args[0]);
                             auto& value = std::get<pred_double>(args[1]);
 
                             api::world::get(world_id.value, [&](storage::world_data& world) {
@@ -1203,9 +1205,9 @@ namespace copper_server::build_in_plugins {
                     message.SetColor("green");
                     context.executor << api::client::play::system_chat{.content = message};
                 });
-                auto world_id = chunks_loaded.add_child("world_id", cmd_pred_long());
+                auto world_id = chunks_loaded.add_child("world_id", cmd_pred_int());
                 world_id.set_callback("command.chunks_loaded", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                    auto world_id = std::get<pred_long>(args[0]).value;
+                    auto world_id = std::get<pred_int>(args[0]).value;
                     Chat message("Chunks loaded: " + std::to_string(api::world::loaded_chunks_count(world_id)));
                     message.SetColor("green");
                     context.executor << api::client::play::system_chat{.content = message};

@@ -34,7 +34,7 @@ namespace copper_server::api::players {
         extern base_objects::events::event<base_objects::client_data_holder> on_disconnect;
     }
 
-    void login_complete_to_cfg(base_objects::client_data_holder& player);
+    void login_complete_to_cfg(base_objects::SharedClientData& player);
     size_t online_players();
     base_objects::client_data_holder allocate_special_player(const std::function<void(base_objects::SharedClientData&, base_objects::network::response&&)>& callback);
     base_objects::client_data_holder allocate_player(api::network::tcp::session* session = nullptr);
@@ -50,7 +50,7 @@ namespace copper_server::api::players {
     base_objects::client_data_holder get_player(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::string& player);
     base_objects::client_data_holder get_player_not_state(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::string& player);
     list_array<base_objects::client_data_holder> get_players();
-    void apply_selector(base_objects::client_data_holder& caller, const std::string& selector, const std::function<void(base_objects::SharedClientData&)>& callback, const std::function<void()>& not_found);
+    void apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(base_objects::SharedClientData&)>&& callback);
     void iterate_online(const std::function<bool(base_objects::SharedClientData&)>& callback);
     void iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::SharedClientData&)>& callback);
     void iterate_players_not_state(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::SharedClientData&)>& callback);

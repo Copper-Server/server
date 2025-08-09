@@ -21,7 +21,7 @@ namespace copper_server {
         using client_data_holder = atomic_holder<SharedClientData>;
     }
 
-    namespace api::new_packets::server_bound::configuration {
+    namespace api::packets::server_bound::configuration {
         struct select_known_packs;
     }
 
@@ -85,7 +85,7 @@ namespace copper_server {
 
             struct custom_query {
                 std::string identifier;
-                std::vector<uint8_t> data;
+                list_array<uint8_t> data;
             };
 
             std::variant<none, request_cookie, custom_query> value;
@@ -127,17 +127,20 @@ namespace copper_server {
 #pragma endregion
 
 #pragma region OnLogin
-
         //custom plugin handling
-        virtual login_response OnLoginHandle(const std::shared_ptr<PluginRegistration>& self, const std::string& chanel, const list_array<uint8_t>& data, bool successful, base_objects::SharedClientData& client) {
+        //args: self, chanel, is_successful, client
+        virtual login_response OnLoginHandle(const std::shared_ptr<PluginRegistration>&, const std::string&, const list_array<uint8_t>&, bool, base_objects::SharedClientData&) {
             return {login_response::none{}};
         }
 
-        virtual login_response OnLoginStart(const std::shared_ptr<PluginRegistration>& self, const std::string& chanel, base_objects::SharedClientData& client) {
+        //args: self, chanel, client
+        virtual login_response OnLoginStart(const std::shared_ptr<PluginRegistration>&, const std::string&, base_objects::SharedClientData&) {
+
             return {login_response::none{}};
         }
 
-        virtual login_response OnLoginCookie(const std::shared_ptr<PluginRegistration>& self, const std::string& cookie_id, const list_array<uint8_t>& data, bool successful, base_objects::SharedClientData& client) {
+        //args: self, chanel, is_successful, client
+        virtual login_response OnLoginCookie(const std::shared_ptr<PluginRegistration>&, const std::string&, const list_array<uint8_t>&, bool, base_objects::SharedClientData&) {
             return {login_response::none{}};
         }
 
@@ -151,47 +154,51 @@ namespace copper_server {
         }
 
         //returns true if the plugin completed its work in configuration
-        virtual bool OnConfigurationHandle(const std::shared_ptr<PluginRegistration>& self, const std::string& chanel, const std::vector<uint8_t>& data, base_objects::SharedClientData&) {
+        //args: self, chanel, data, client
+        virtual bool OnConfigurationHandle(const std::shared_ptr<PluginRegistration>&, const std::string&, const list_array<uint8_t>&, base_objects::SharedClientData&) {
             return true;
         }
 
         //returns true if the plugin completed its work in configuration
-        virtual bool OnConfiguration_gotKnownPacks(base_objects::SharedClientData&, const api::new_packets::server_bound::configuration::select_known_packs&) {
+        virtual bool OnConfiguration_gotKnownPacks(base_objects::SharedClientData&, const api::packets::server_bound::configuration::select_known_packs&) {
             return true;
         }
 
         //returns true if the plugin completed its work in configuration
-        virtual bool OnConfigurationCookie(const std::shared_ptr<PluginRegistration>& self, const std::string& cookie_id, const list_array<uint8_t>& data, base_objects::SharedClientData&) {}
+        //args: self, cookie_id, data, client
+        virtual bool OnConfigurationCookie(const std::shared_ptr<PluginRegistration>&, const std::string&, const list_array<uint8_t>&, base_objects::SharedClientData&) {
+            return true;
+        }
 
 #pragma endregion
 
 #pragma region OnPlay
 
         //custom plugin handling
-        virtual void OnPlayHandle(const std::shared_ptr<PluginRegistration>& self, const std::string& chanel, const list_array<uint8_t>& data, base_objects::SharedClientData&) {}
+        virtual void OnPlayHandle(const std::shared_ptr<PluginRegistration>&, const std::string&, const list_array<uint8_t>&, base_objects::SharedClientData&) {}
 
-        virtual void OnPlayCookie(const std::shared_ptr<PluginRegistration>& self, const std::string& cookie_id, const list_array<uint8_t>& data, base_objects::SharedClientData&) {}
+        virtual void OnPlayCookie(const std::shared_ptr<PluginRegistration>&, const std::string&, const list_array<uint8_t>&, base_objects::SharedClientData&) {}
 
-        virtual void OnPlay_initialize(base_objects::SharedClientData& client) {}
+        virtual void OnPlay_initialize(base_objects::SharedClientData&) {}
 
-        virtual void OnPlay_initialize_compatible(base_objects::SharedClientData& client) {}
+        virtual void OnPlay_initialize_compatible(base_objects::SharedClientData&) {}
 
-        virtual void OnPlay_post_initialize(base_objects::SharedClientData& client) {}
+        virtual void OnPlay_post_initialize(base_objects::SharedClientData&) {}
 
-        virtual void OnPlay_post_initialize_compatible(base_objects::SharedClientData& client) {}
+        virtual void OnPlay_post_initialize_compatible(base_objects::SharedClientData&) {}
 
-        virtual void OnPlay_uninitialized(base_objects::SharedClientData& client) {}
+        virtual void OnPlay_uninitialized(base_objects::SharedClientData&) {}
 
-        virtual void OnPlay_uninitialized_compatible(base_objects::SharedClientData& client) {}
+        virtual void OnPlay_uninitialized_compatible(base_objects::SharedClientData&) {}
 
         //player must be initialized for this call
-        virtual void PlayerJoined(base_objects::SharedClientData& client) {}
+        virtual void PlayerJoined(base_objects::SharedClientData&) {}
 
         //player data must be initialized for this call and uninitialized after
-        virtual void PlayerLeave(base_objects::SharedClientData& client) {}
+        virtual void PlayerLeave(base_objects::SharedClientData&) {}
 
         //notifies when player fully left, the send operation is disabled
-        virtual void PlayerLeft(base_objects::SharedClientData& client) {}
+        virtual void PlayerLeft(base_objects::SharedClientData&) {}
 
         //TODO add more events
 

@@ -7,7 +7,6 @@
 #include <src/base_objects/float_provider.hpp>
 #include <src/base_objects/id_registry.hpp>
 #include <src/base_objects/number_provider.hpp>
-#include <src/base_objects/particle_data.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/recipe.hpp>
 #include <string>

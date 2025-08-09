@@ -1,6 +1,6 @@
 #include <library/fast_task.hpp>
 #include <src/api/entity_id_map.hpp>
-#include <src/api/new_packets.hpp>
+#include <src/api/packets.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/base_objects/shared_client_data.hpp>
@@ -427,6 +427,18 @@ namespace copper_server {
             return res;
         }
 
+        bool entity::hitboxes_in_range_x(double min, double max) {
+            return false; //TODO
+        }
+
+        bool entity::hitboxes_in_range_y(double min, double max) {
+            return false; //TODO
+        }
+
+        bool entity::hitboxes_in_range_z(double min, double max) {
+            return false; //TODO
+        }
+
         void entity::teleport(util::VECTOR pos) {
             if (world_syncing_data)
                 world_syncing_data->world->entity_teleport(*this, pos);
@@ -562,7 +574,7 @@ namespace copper_server {
         void entity::set_health(float health) {
             nbt["health"] = health;
             if (assigned_player)
-                *assigned_player << api::new_packets::client_bound::play::set_health{
+                *assigned_player << api::packets::client_bound::play::set_health{
                     .health = health,
                     .food = get_food(),
                     .saturation = get_saturation()
@@ -609,7 +621,7 @@ namespace copper_server {
         void entity::set_food(uint8_t food) {
             nbt["food"] = food;
             if (assigned_player)
-                *assigned_player << api::new_packets::client_bound::play::set_health{
+                *assigned_player << api::packets::client_bound::play::set_health{
                     .health = get_health(),
                     .food = food,
                     .saturation = get_saturation()
@@ -631,7 +643,7 @@ namespace copper_server {
         void entity::set_saturation(float saturation) {
             nbt.at("saturation") = saturation;
             if (assigned_player)
-                *assigned_player << api::new_packets::client_bound::play::set_health{
+                *assigned_player << api::packets::client_bound::play::set_health{
                     .health = get_health(),
                     .food = get_food(),
                     .saturation = saturation
@@ -658,7 +670,7 @@ namespace copper_server {
             nbt["breath"] = breath;
             if (const_data().metadata.contains("AIR"))
                 if (assigned_player)
-                    *assigned_player << api::new_packets::client_bound::play::set_entity_data{
+                    *assigned_player << api::packets::client_bound::play::set_entity_data{
                         .entity_id = protocol_id,
                         .metadata = {} //TODO
                     };
@@ -765,7 +777,7 @@ namespace copper_server {
             int32_t total = calculate_experience_from_level(levels) + experience;
 
             if (assigned_player)
-                *assigned_player << api::new_packets::client_bound::play::set_experience{
+                *assigned_player << api::packets::client_bound::play::set_experience{
                     .bar = progress,
                     .level = required_exp,
                     .total_experience = total
@@ -803,7 +815,7 @@ namespace copper_server {
         void entity::set_selected_item(uint8_t selected_item) {
             nbt["selected_item"] = selected_item;
             if (assigned_player)
-                *assigned_player << api::new_packets::client_bound::play::set_held_slot{
+                *assigned_player << api::packets::client_bound::play::set_held_slot{
                     .slot = selected_item
                 };
         }

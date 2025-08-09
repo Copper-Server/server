@@ -24,6 +24,7 @@ namespace copper_server::api::permissions {
     void add_permission(base_objects::permissions_object permission);
     void remove_permission(const std::string& permission_tag);
 
+    bool is_in_group(const std::string& group_name, const base_objects::SharedClientData& client);
     void add_group(const base_objects::permission_group& group);
     void remove_group(const std::string& group_name);
     //permission_tags can also accept direct actions name with prefix 'action:'

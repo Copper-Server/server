@@ -9,7 +9,7 @@ namespace copper_server::storage {
         if (!data.contains())
             slot = std::nullopt;
         else
-            slot = base_objects::slot::from_enbt(data.as_compound());
+            slot = base_objects::slot_data::from_enbt(data.as_compound());
     }
 
     static enbt::optional compact_slot(base_objects::slot& slot) {
@@ -161,7 +161,7 @@ namespace copper_server::storage {
         fast_task::files::async_iofstream file(
             path,
             fast_task::files::open_mode::write,
-            fast_task::files::on_open_action::truncate_exists,
+            fast_task::files::on_open_action::always_new,
             fast_task::files::_sync_flags{}
         );
         if (!file.is_open())

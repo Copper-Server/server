@@ -189,7 +189,7 @@ namespace copper_server::storage {
         //this function also should increment generator_stage for chunk and set to 0xFF when complete
         //to access information from other chunk, the generator must use request_chunk_data_weak_* or request_chunk_data_weak
         //if chunk is not fully generated, it would not be accessible other way
-        virtual void process_chunk(world_data& world, chunk_data& chunk, uint8_t preset_stage) {
+        virtual void process_chunk([[maybe_unused]] world_data& world, chunk_data& chunk, [[maybe_unused]] uint8_t preset_stage) {
             chunk.generator_stage = 0xFF;
         };
 
@@ -215,10 +215,10 @@ namespace copper_server::storage {
         virtual ~chunk_light_processor() {}
 
         //fired after entity_teleport and entity_move
-        virtual void process_entity_light_source(world_data& world, const base_objects::entity& entity, util::VECTOR new_pos) {}
+        virtual void process_entity_light_source([[maybe_unused]] world_data& world, [[maybe_unused]] const base_objects::entity& entity, [[maybe_unused]] util::VECTOR new_pos) {}
 
         //fired after entity_look_changes
-        virtual void process_entity_light_source_rot(world_data& world, const base_objects::entity& entity, util::ANGLE_DEG new_rot) {}
+        virtual void process_entity_light_source_rot([[maybe_unused]] world_data& world, [[maybe_unused]] const base_objects::entity& entity, [[maybe_unused]] util::ANGLE_DEG new_rot) {}
 
         virtual void process_chunk(world_data& world, int64_t chunk_x, int64_t chunk_z) = 0;
         virtual void process_sub_chunk(world_data& world, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z) = 0;
@@ -455,19 +455,26 @@ namespace copper_server::storage {
 
         void for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func);
         void for_each_entity(base_objects::cubic_bounds_chunk bounds, std::function<void(base_objects::entity_ref& entity)> func);
+        void for_each_entity(base_objects::cubic_bounds_chunk_radius bounds, std::function<void(base_objects::entity_ref& entity)> func);
+        void for_each_entity(base_objects::cubic_bounds_chunk_radius_out bounds, std::function<void(base_objects::entity_ref& entity)> func);
         void for_each_entity(base_objects::spherical_bounds_chunk bounds, std::function<void(base_objects::entity_ref& entity)> func);
+        void for_each_entity(base_objects::spherical_bounds_chunk_out bounds, std::function<void(base_objects::entity_ref& entity)> func);
         void for_each_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
         void for_each_entity(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
         void for_each_block_entity(base_objects::cubic_bounds_chunk bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
+        void for_each_block_entity(base_objects::cubic_bounds_chunk_radius bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
+        void for_each_block_entity(base_objects::cubic_bounds_chunk_radius_out bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
         void for_each_block_entity(base_objects::spherical_bounds_chunk bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
+        void for_each_block_entity(base_objects::spherical_bounds_chunk_out bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
         void for_each_block_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
         void for_each_block_entity(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
 
 
         void for_each_entity(base_objects::cubic_bounds_block bounds, std::function<void(base_objects::entity_ref& entity)> func);
+        void for_each_entity(base_objects::cubic_bounds_block_radius bounds, std::function<void(base_objects::entity_ref& entity)> func);
+        void for_each_entity(base_objects::cubic_bounds_block_radius_out bounds, std::function<void(base_objects::entity_ref& entity)> func);
         void for_each_entity(base_objects::spherical_bounds_block bounds, std::function<void(base_objects::entity_ref& entity)> func);
-        void for_each_block_entity(base_objects::cubic_bounds_block bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
-        void for_each_block_entity(base_objects::spherical_bounds_block bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
+        void for_each_entity(base_objects::spherical_bounds_block_out bounds, std::function<void(base_objects::entity_ref& entity)> func);
         void for_each_entity_at(int64_t global_x, int64_t global_z, std::function<void(const base_objects::entity_ref& entity)> func);
         void for_each_entity_at(int64_t global_x, int64_t global_y, int64_t global_z, std::function<void(const base_objects::entity_ref& entity)> func);
         void for_each_block_entity_at(int64_t global_x, int64_t global_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);

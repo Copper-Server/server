@@ -1,4 +1,4 @@
-#include <src/api/new_packets.hpp>
+#include <src/api/packets.hpp>
 #include <src/base_objects/slot.hpp>
 
 namespace copper_server::base_objects {
@@ -141,14 +141,14 @@ namespace copper_server::base_objects {
             fn(*block);
     }
 
-    copper_server::api::new_packets::slot slot_data::to_packet() const {
-        api::new_packets::slot result;
+    copper_server::api::packets::slot slot_data::to_packet() const {
+        api::packets::slot result;
         result.count = count;
         if (result.count) {
             result.id = id;
             list_array<int32_t> removed_components;
             list_array<base_objects::component> added_components;
-            auto& default_components = base_objects::slot_data::get_slot_data(result.id).default_components;
+            auto& default_components = base_objects::slot_data::get_slot_data((int32_t)result.id).default_components;
             for (auto& [c_id, item] : default_components)
                 if (!components.contains(c_id))
                     removed_components.push_back(c_id);
@@ -161,8 +161,8 @@ namespace copper_server::base_objects {
                     added_components.push_back(item);
             result.components_to_add = (int32_t)added_components.size();
             result.components_to_remove = (int32_t)removed_components.size();
-            result.to_add = added_components.take().to_container<std::vector>();
-            result.to_remove = removed_components.take().to_container<decltype(result.to_remove)>();
+            result.to_add = added_components.take();
+            result.to_remove = removed_components.take().convert<var_int32::data_component_type>();
         } else {
             result.id = 0;
             result.components_to_add = 0;
@@ -171,16 +171,16 @@ namespace copper_server::base_objects {
         return result;
     }
 
-    slot_data slot_data::from_packet(copper_server::api::new_packets::slot&& slot) {
+    slot_data slot_data::from_packet(copper_server::api::packets::slot&& slot) {
         if (slot.count) {
             slot_data res{
-                .components = base_objects::slot_data::get_slot_data(slot.id).default_components,
+                .components = base_objects::slot_data::get_slot_data((int32_t)slot.id).default_components,
                 .count = slot.count,
                 .id = slot.id
             };
 
             for (auto component : slot.to_remove)
-                res.components.erase(component);
+                res.components.erase((int32_t)component);
             for (auto& component : slot.to_add)
                 res.add_component(std::move(component));
             return res;
@@ -188,11 +188,11 @@ namespace copper_server::base_objects {
             return slot_data{};
     }
 
-    copper_server::api::new_packets::slot slot::to_packet() const {
+    copper_server::api::packets::slot slot::to_packet() const {
         if (*this)
             return (*this)->to_packet();
         else {
-            api::new_packets::slot result;
+            api::packets::slot result;
             result.count = 0;
             result.id = 0;
             result.components_to_add = 0;
@@ -201,7 +201,7 @@ namespace copper_server::base_objects {
         }
     }
 
-    slot slot::from_packet(copper_server::api::new_packets::slot&& s) {
+    slot slot::from_packet(copper_server::api::packets::slot&& s) {
         if (s.count)
             return slot_data::from_packet(std::move(s));
         else
