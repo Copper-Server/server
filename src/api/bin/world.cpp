@@ -196,36 +196,36 @@ namespace copper_server::api::world {
             .location = {(int32_t)world->spawn_data.x, (int32_t)world->spawn_data.y, (int32_t)world->spawn_data.z},
             .angle = world->spawn_data.angle,
         } << api::packets::client_bound::play::game_event{
-            .event = api::packets::client_bound::play::game_event::wait_for_level_chunks{},
+            .event = {api::packets::client_bound::play::game_event::wait_for_level_chunks{}},
         };
     }
 
     void transfer(
-        base_objects::client_data_holder& client_ref,
-        int32_t world_id,
-        util::VECTOR position,
-        util::ANGLE_DEG rotation,
-        util::VECTOR velocity,
-        std::function<void(storage::world_data& world)> callback = nullptr
+        [[maybe_unused]] base_objects::client_data_holder& client_ref,
+        [[maybe_unused]] int32_t world_id,
+        [[maybe_unused]] util::VECTOR position,
+        [[maybe_unused]] util::ANGLE_DEG rotation,
+        [[maybe_unused]] util::VECTOR velocity,
+        [[maybe_unused]] std::function<void(storage::world_data& world)> callback = nullptr
     ) {
         //TODO
     }
 
     void transfer(
-        base_objects::client_data_holder& client_ref,
-        int32_t world_id,
-        util::VECTOR position,
-        util::ANGLE_DEG rotation,
-        std::function<void(storage::world_data& world)> callback = nullptr
+        [[maybe_unused]] base_objects::client_data_holder& client_ref,
+        [[maybe_unused]] int32_t world_id,
+        [[maybe_unused]] util::VECTOR position,
+        [[maybe_unused]] util::ANGLE_DEG rotation,
+        [[maybe_unused]] std::function<void(storage::world_data& world)> callback = nullptr
     ) {
         //TODO
     }
 
     void transfer(
-        base_objects::client_data_holder& client_ref,
-        int32_t world_id,
-        util::VECTOR position,
-        std::function<void(storage::world_data& world)> callback = nullptr
+        [[maybe_unused]] base_objects::client_data_holder& client_ref,
+        [[maybe_unused]] int32_t world_id,
+        [[maybe_unused]] util::VECTOR position,
+        [[maybe_unused]] std::function<void(storage::world_data& world)> callback = nullptr
     ) {
         //TODO
     }

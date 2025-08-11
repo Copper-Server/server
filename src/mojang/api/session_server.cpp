@@ -47,10 +47,17 @@ namespace mojang::api {
                 data.properties = std::move(properties);
             }
             data.last_check = std::chrono::system_clock::now();
-            return cache[username] = std::make_shared<player_data>(std::move(data));
+            if (cache_result)
+                return cache[username] = std::make_shared<player_data>(std::move(data));
+            else
+                return std::make_shared<player_data>(std::move(data));
+
         } else {
             auto uuid = enbt::raw_uuid::from_string(username);
-            return (cache[username] = std::make_shared<player_data>(copper_server::util::conversions::uuid::to(uuid), uuid, std::chrono::system_clock::now(), false));
+            if (cache_result)
+                return (cache[username] = std::make_shared<player_data>(copper_server::util::conversions::uuid::to(uuid), uuid, std::chrono::system_clock::now(), false));
+            else
+                return std::make_shared<player_data>(copper_server::util::conversions::uuid::to(uuid), uuid, std::chrono::system_clock::now(), false);
         }
     }
 }

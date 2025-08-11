@@ -48,7 +48,7 @@ namespace copper_server::base_objects {
                 if constexpr (std::is_same_v<slot_displays::minecraft::empty, T>) {
                     return list_array<slot>();
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::any_fuel, T>) {
-                    return api::tags::unfold_tag(api::tags::builtin_entry::item, "minecraft:fuel").convert<slot>([](const auto& item) {
+                    return api::tags::unfold_tag(api::tags::builtin_entry::item, "minecraft:fuel").convert_fn([](const auto& item) -> slot {
                         return std::make_optional(slot_data::create_item(item));
                     });
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::item, T>) {
@@ -56,7 +56,7 @@ namespace copper_server::base_objects {
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::item_stack, T>) {
                     return list_array<slot>().push_back(std::make_optional(it.item));
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::tag, T>) {
-                    return api::tags::unfold_tag(api::tags::builtin_entry::item, it.tag).convert<slot>([](const auto& item) {
+                    return api::tags::unfold_tag(api::tags::builtin_entry::item, it.tag).convert_fn([](const auto& item) -> slot {
                         return std::make_optional(slot_data::create_item(item));
                     });
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::smithing_trim, T>) {

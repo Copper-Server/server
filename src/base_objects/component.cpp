@@ -288,7 +288,6 @@ namespace copper_server::base_objects {
     }
 
     component& component::operator=(const component& copy) {
-        using Type_T = std::decay_t<decltype(type)>;
         type = copy.type;
         return *this;
     }

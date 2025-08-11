@@ -21,7 +21,7 @@
 
 namespace copper_server::build_in_plugins {
     void add_log_type_suggestion(base_objects::command_browser& browser) {
-        browser.set_suggestion_callback([](const std::string& current, base_objects::command_context& context) {
+        browser.set_suggestion_callback([](const std::string& current, base_objects::command_context&) {
             auto suggestions = list_array<std::string>{
                 "info",
                 "warn",
@@ -42,7 +42,7 @@ namespace copper_server::build_in_plugins {
     struct console : public PluginAutoRegister<"tools/console", console> {
         base_objects::virtual_client console_data{api::players::allocate_player(), "Console", "Console"};
 
-        void OnLoad(const PluginRegistrationPtr& self) override {
+        void OnLoad(const PluginRegistrationPtr&) override {
             api::console::register_virtual_client(console_data);
 
             log::commands::registerCommandSuggestion([this](const std::string& line, int position) {
@@ -68,9 +68,9 @@ namespace copper_server::build_in_plugins {
                     .to_container<std::vector>();
             });
 
-            console_data.packet_processor = [this](const api::packets::client_bound::play_packet& packet) {
+            console_data.packet_processor = [](const api::packets::client_bound::play_packet& packet) {
                 std::visit(
-                    [this](auto& it) {
+                    [](auto& it) {
                         using T = std::decay_t<decltype(it)>;
                         if constexpr (std::is_same_v<T, api::packets::client_bound::play::disguised_chat>) {
                             if (!it.target_name)
@@ -93,40 +93,36 @@ namespace copper_server::build_in_plugins {
             register_event(api::console::on_command, base_objects::events::priority::high, [&](const std::string& command) {
                 if (command.empty())
                     return false;
-                log::info("command", command);
                 try {
                     api::console::execute_as_console(command);
                 } catch (const base_objects::command_exception& ex) {
-                    try {
-                        std::rethrow_exception(ex.exception);
-                    } catch (const std::exception& inner_ex) {
-                        std::string error_message = command;
-                        std::string error_place(command.size() + 4, ' ');
-                        error_place[0] = '\n';
-                        error_place[error_place.size() - 2] = '\n';
-                        error_place[error_place.size() - 1] = '\t';
-                        if (ex.pos != -1)
-                            error_place[ex.pos] = '^';
-                        log::error("command", error_message + error_place + inner_ex.what());
-                    }
-                    return false;
+                    std::string error_message = command;
+                    std::string error_place(command.size() + 4, ' ');
+                    error_place[0] = '\n';
+                    error_place[error_place.size() - 2] = '\n';
+                    error_place[error_place.size() - 1] = '\t';
+                    if (ex.pos != -1)
+                        error_place[ex.pos] = '^';
+                    log::error("command", error_message + error_place + ex.what);
+                        return false;
                 } catch (const std::exception& ex) {
                     log::error("command", command + "\n Failed to execute command, reason:\n\t" + ex.what());
                     return false;
                 }
+                log::info("command", command);
                 return true;
             });
 
             log::info("Console", "console registered.");
         }
 
-        void OnUnload(const PluginRegistrationPtr& self) override {
+        void OnUnload(const PluginRegistrationPtr&) override {
             log::commands::unloadCommandSuggestion();
             clean_up_registered_events();
             api::console::unregister_virtual_client();
         }
 
-        void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override {
+        void OnCommandsLoad(const PluginRegistrationPtr&, base_objects::command_root_browser& browser) override {
             using predicate = base_objects::parser;
             using pred_string = base_objects::parsers::string;
             using cmd_pred_string = base_objects::parsers::command::string;
@@ -138,7 +134,7 @@ namespace copper_server::build_in_plugins {
                         = _log
                               .add_child("enable")
                               .add_child({"<log level>"}, cmd_pred_string::quotable_phrase)
-                              .set_callback({"command.console.log.enable", {"console"}}, [](const list_array<predicate>& args, base_objects::command_context& context) {
+                              .set_callback({"command.console.log.enable", {"console"}}, [](const list_array<predicate>& args, base_objects::command_context&) {
                                   auto& level = std::get<pred_string>(args[0]).value;
                                   if (level == "info")
                                       log::enable_log_level(log::level::info);
@@ -163,7 +159,7 @@ namespace copper_server::build_in_plugins {
                         = _log
                               .add_child("disable")
                               .add_child({"<log level>"}, cmd_pred_string::quotable_phrase)
-                              .set_callback({"command.console.log.disable", {"console"}}, [](const list_array<predicate>& args, base_objects::command_context& context) {
+                              .set_callback({"command.console.log.disable", {"console"}}, [](const list_array<predicate>& args, base_objects::command_context&) {
                                   auto& level = std::get<pred_string>(args[0]).value;
                                   if (level == "info")
                                       log::disable_log_level(log::level::info);
@@ -188,7 +184,7 @@ namespace copper_server::build_in_plugins {
                     add_log_type_suggestion(disable);
                 }
                 _console.add_child("clear")
-                    .set_callback({"command.console.clear", {"console"}}, [](const list_array<predicate>& args, base_objects::command_context& context) {
+                    .set_callback({"command.console.clear", {"console"}}, [](const list_array<predicate>&, base_objects::command_context&) {
                         log::clear();
                     });
             }

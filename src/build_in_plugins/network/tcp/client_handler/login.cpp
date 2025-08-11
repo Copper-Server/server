@@ -46,7 +46,7 @@ namespace copper_server::build_in_plugins::network::tcp {
             if (api::configuration::get().server.offline_mode)
                 client.data = api::mojang::get_session_server().hasJoined(client.name, "", false);
             if (!client.data)
-                client << api::packets::client_bound::login::login_disconnect{.reason = Chat("Invalid protocol state, 0").ToStr()};
+                client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 0").ToStr()}};
             else {
                 std::vector<api::packets::client_bound::login::login_finished::property> properties;
                 properties.reserve(client.data->properties.size());
@@ -112,7 +112,7 @@ namespace copper_server::build_in_plugins::network::tcp {
             using login_acknowledged = api::packets::server_bound::login::login_acknowledged;
             api::packets::register_server_bound_processor<hello>([](hello&& packet, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).stage != 0) {
-                    client << api::packets::client_bound::login::login_disconnect{.reason = Chat("Invalid protocol state, 0").ToStr()};
+                    client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 0").ToStr()}};
                     return;
                 }
 
@@ -120,7 +120,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                 auto player = api::players::get_player(packet.name);
                 if (player) {
                     if (api::configuration::get().protocol.connection_conflict == api::configuration::ServerConfiguration::Protocol::connection_conflict_t::prevent_join) {
-                        client << api::packets::client_bound::login::login_disconnect{.reason = Chat("Someone already connected with this nickname").ToStr()};
+                        client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Someone already connected with this nickname").ToStr()}};
                         return;
                     } else
                         api::players::calls::on_player_kick({player, "Someone already connected with this nickname"});
@@ -128,16 +128,16 @@ namespace copper_server::build_in_plugins::network::tcp {
                 client.name = packet.name.value;
 
                 if (int32_t compression = api::configuration::get().protocol.compression_threshold; compression != -1)
-                    client << api::packets::client_bound::login::login_compression{.threshold = compression};
+                    client << api::packets::client_bound::login::login_compression{.threshold = {compression}};
                 if (api::configuration::get().protocol.enable_encryption || !api::configuration::get().server.offline_mode) {
                     extra_data_t::get(client).stage = 1;
                     auto public_key = api::network::tcp::public_key_buffer();
                     static auto generate_ui8 = []() -> uint8_t {
                         static std::random_device rd;
-                        static std::mt19937_64 gen;
+                        static std::mt19937_64 gen(rd());
                         static std::uniform_int_distribution<uint16_t> dis;
                         uint16_t ui16 = dis(gen);
-                        return (uint8_t)((ui16 & 0xFF ^ (ui16 >> 8)) & 0xFF);
+                        return (uint8_t)(((ui16 & 0xFF) ^ (ui16 >> 8)) & 0xFF);
                     };
                     auto& vft = extra_data_t::get(client).verify_token;
                     vft[0] = generate_ui8();
@@ -161,14 +161,14 @@ namespace copper_server::build_in_plugins::network::tcp {
                         process_plugin_resp(std::move(response), client);
                     }
                 } else
-                    client << api::packets::client_bound::login::login_disconnect{.reason = Chat("Invalid protocol state, 2").ToStr()};
+                    client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 2").ToStr()}};
             });
             api::packets::register_server_bound_processor<custom_query_answer>([](custom_query_answer&& packet, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).stage == 2) {
                     if ((int32_t)packet.query_message_id == extra_data_t::get(client).plugin_query_id)
                         ++extra_data_t::get(client).plugin_query_id;
                     else {
-                        client << api::packets::client_bound::login::login_disconnect{.reason = Chat("Invalid protocol state, 2_0").ToStr()};
+                        client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 2_0").ToStr()}};
                         return;
                     }
                     processin_plugin_stage sent;
@@ -184,22 +184,22 @@ namespace copper_server::build_in_plugins::network::tcp {
                         }
                     } while (sent == requested_cookie);
                 } else
-                    client << api::packets::client_bound::login::login_disconnect{.reason = Chat("Invalid protocol state, 2").ToStr()};
+                    client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 2").ToStr()}};
             });
             api::packets::register_server_bound_processor<key>([](key&& packet, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).stage == 1) {
                     auto vft = to_list_array(packet.verify_token);
                     if (!api::network::tcp::decrypt_data(vft)) {
-                        client << api::packets::client_bound::login::login_disconnect{.reason = Chat("Encryption error, invalid verify token").ToStr()};
+                        client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Encryption error, invalid verify token").ToStr()}};
                         return;
                     }
                     if (memcmp(vft.data(), extra_data_t::get(client).verify_token, 4)) {
-                        client << api::packets::client_bound::login::login_disconnect{.reason = Chat("Encryption error, invalid verify token").ToStr()};
+                        client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Encryption error, invalid verify token").ToStr()}};
                         return;
                     }
                     auto shs = to_list_array(packet.shared_secret);
                     if (!api::network::tcp::decrypt_data(shs)) {
-                        client << api::packets::client_bound::login::login_disconnect{.reason = Chat("Encryption error").ToStr()};
+                        client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Encryption error").ToStr()}};
                         return;
                     }
 
@@ -215,9 +215,9 @@ namespace copper_server::build_in_plugins::network::tcp {
                     client.get_session()->start_symmetric_encryption(shs, shs);
                     switch_to_plugin_processing_stage(client);
                 } else
-                    client << api::packets::client_bound::login::login_disconnect{.reason = Chat("Invalid protocol state, 1").ToStr()};
+                    client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 1").ToStr()}};
             });
-            api::packets::register_server_bound_processor<login_acknowledged>([](login_acknowledged&& packet, base_objects::SharedClientData& client) {});
+            api::packets::register_server_bound_processor<login_acknowledged>([](login_acknowledged&&, base_objects::SharedClientData&) {});
         }
     };
 }

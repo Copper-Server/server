@@ -22,11 +22,11 @@ namespace copper_server::build_in_plugins {
 
         ~allow_list_plugin() noexcept {};
 
-        void OnInitialization(const PluginRegistrationPtr& self) {
+        void OnInitialization(const PluginRegistrationPtr&) override {
             api::configuration::get() ^ "allow_list" ^ "on_kick_message" |= enbt::compound{{"text", "You are not in allowlist."}, {"color", "red"}};
         }
 
-        void OnPostLoad(const PluginRegistrationPtr& self) override {
+        void OnPostLoad(const PluginRegistrationPtr&) override {
             register_event(api::allowlist::on_mode_change, base_objects::events::priority::high, [this](api::allowlist::allowlist_mode mode) {
                 if (mode == api::allowlist::allowlist_mode::block) {
                     bool reached = false;
@@ -40,7 +40,7 @@ namespace copper_server::build_in_plugins {
                 this->mode = mode;
                 return false;
             });
-            register_event(api::allowlist::on_kick, base_objects::events::priority::low, [this](const base_objects::client_data_holder& client) {
+            register_event(api::allowlist::on_kick, base_objects::events::priority::low, [](const base_objects::client_data_holder& client) {
                 api::players::calls::on_player_kick({client, Chat::fromEnbt(api::configuration::get() ^ "allow_list" ^ "on_kick_message")});
                 return false;
             });
@@ -61,7 +61,7 @@ namespace copper_server::build_in_plugins {
             });
         }
 
-        void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override {
+        void OnCommandsLoad(const PluginRegistrationPtr&, base_objects::command_root_browser& browser) override {
             using predicate = base_objects::parser;
             using pred_string = base_objects::parsers::string;
             using cmd_pred_string = base_objects::parsers::command::string;
@@ -121,7 +121,7 @@ namespace copper_server::build_in_plugins {
                     });
                 allowlist.add_child({"mode"})
                     .add_child({"<mode>", "set allowlist mode", "/allowlist mode block|allow|off"}, cmd_pred_string::quotable_phrase)
-                    .set_callback("command.allowlist.mode", [this](const list_array<predicate>& args, base_objects::command_context& context) -> void {
+                    .set_callback("command.allowlist.mode", [](const list_array<predicate>& args, base_objects::command_context& context) -> void {
                         auto& mode = std::get<pred_string>(args[0]).value;
                         if (mode == "block")
                             api::allowlist::on_mode_change(api::allowlist::allowlist_mode::block);

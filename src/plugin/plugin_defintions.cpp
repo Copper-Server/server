@@ -7,11 +7,8 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <src/plugin/main.hpp>
-#include <src/plugin/special.hpp>
 
 namespace copper_server {
-    SpecialPluginStatus* special_status;
-
     namespace __internal__ {
         std::vector<std::pair<std::string, std::shared_ptr<delayed_construct_base>>>& registration_list() {
             static std::vector<std::pair<std::string, std::shared_ptr<delayed_construct_base>>> list;

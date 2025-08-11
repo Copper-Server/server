@@ -163,7 +163,7 @@ namespace enbt::io_helper {
             if constexpr (std::is_integral_v<T>)
                 write_stream.write_sarray(value.size()).iterable(value);
             else if constexpr (serialization_simple_cast<T>::value)
-                write_stream.write_sarray(value.size()).iterable(value, [](const T& value) { serialization_simple_cast<T>::write_cast(value, write_stream); });
+                write_stream.write_sarray(value.size()).iterable(value, [](const T& value) { return (typename serialization_simple_cast_data<T>::type)value; });
             else
                 write_stream.write_array(value.size()).iterable(value, [](const T& value, value_write_stream& write_stream) { serialization<T>::write(value, write_stream); });
         }
@@ -496,7 +496,7 @@ namespace copper_server::storage {
         return true;
     }
 
-    bool chunk_data::save(const std::filesystem::path& path, uint64_t tick_counter, world_data& world) {
+    bool chunk_data::save(const std::filesystem::path& path, uint64_t tick_counter, world_data& _) {
         if (api::configuration::get().server.world_debug_mode)
             return false;
         std::filesystem::create_directories(path.parent_path());
@@ -594,11 +594,45 @@ namespace copper_server::storage {
         : chunk_x(chunk_x), chunk_z(chunk_z) {}
 
     void chunk_data::update_height_map_on(uint8_t local_x, uint64_t local_y, uint8_t local_z) {
+        uint64_t to_skip = local_y;
+        uint64_t local_y_block = local_y * 16;
+        auto& leaves = api::tags::unfold_tag(api::tags::builtin_entry::block, "minecraft:block/leaves");
+        auto end = sub_chunks.rend();
+
+        for (auto beg = sub_chunks.rbegin(); beg != end; beg++) {
+            if (to_skip) {
+                --to_skip;
+                continue;
+            }
+            auto& schunk = *beg;
+            for (int8_t y = 15; y >= 0; y--) {
+                auto block = schunk.blocks[local_x][y][local_z];
+                if (!block.is_air()) {
+                    auto y_pos = y + local_y_block;
+
+                    if (!height_maps.ocean_floor[local_x][local_z])
+                        height_maps.ocean_floor[local_x][local_z] = y_pos;
+
+                    if (block.is_liquid())
+                        if (!height_maps.surface[local_x][local_z])
+                            height_maps.surface[local_x][local_z] = y_pos;
+
+                    if (block.is_solid()) {
+                        if (!height_maps.motion_blocking[local_x][local_z])
+                            height_maps.motion_blocking[local_x][local_z] = y_pos;
+
+                        if (!leaves.contains(block.general_block_id()))
+                            if (!height_maps.motion_blocking_no_leaves[local_x][local_z])
+                                height_maps.motion_blocking_no_leaves[local_x][local_z] = y_pos;
+                    }
+                }
+            }
+        }
     }
 
     void chunk_data::update_height_map() {
         height_maps.make_zero();
-        uint64_t local_y = sub_chunks.size() - 1;
+        uint64_t local_y_block = (sub_chunks.size() - 1) * 16;
         auto& leaves = api::tags::unfold_tag(api::tags::builtin_entry::block, "minecraft:block/leaves");
         auto end = sub_chunks.rend();
         for (auto beg = sub_chunks.rbegin(); beg != end; beg++) {
@@ -608,7 +642,7 @@ namespace copper_server::storage {
                     for (uint8_t z = 0; z < 16; z++) {
                         auto block = schunk.blocks[x][y][z];
                         if (!block.is_air()) {
-                            auto y_pos = y + local_y * 16;
+                            auto y_pos = y + local_y_block;
 
                             if (!height_maps.ocean_floor[x][z])
                                 height_maps.ocean_floor[x][z] = y_pos;
@@ -689,7 +723,7 @@ namespace copper_server::storage {
         queried_for_liquid_tick.push_back({on_tick, base_objects::chunk_block_pos{local_x, uint8_t(global_y & 15), local_z}});
     }
 
-    void chunk_data::tick(world_data& world, size_t random_tick_speed, std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time) {
+    void chunk_data::tick(world_data& world, size_t random_tick_speed, std::mt19937& random_engine, [[maybe_unused]] std::chrono::high_resolution_clock::time_point current_time) {
         if (load_level > 32)
             return;
 
@@ -845,12 +879,12 @@ namespace copper_server::storage {
         }
     }
 
-    FuturePtr<base_objects::atomic_holder<chunk_data>> world_data::create_chunk_generate_future(int64_t chunk_x, int64_t chunk_z, base_objects::atomic_holder<chunk_data>& chunk) {
+    FuturePtr<base_objects::atomic_holder<chunk_data>> world_data::create_chunk_generate_future(base_objects::atomic_holder<chunk_data>& chunk) {
         if (profiling.enable_world_profiling)
             ++profiling.chunk_generator_counter;
 
         return Future<base_objects::atomic_holder<chunk_data>>::start(
-            [this, chunk_x, chunk_z, chunk = chunk]() {
+            [this, chunk = chunk]() {
                 auto gen = get_generator();
                 fast_task::mutex_unify unify(generator.mutex);
                 std::unique_lock lock(unify);
@@ -908,7 +942,7 @@ namespace copper_server::storage {
                 std::unique_lock lock(mutex);
                 if (auto process = on_generate_process.find({chunk_x, chunk_z}); process == on_generate_process.end()) {
                     chunks[chunk_x][chunk_z] = chunk;
-                    auto it = on_generate_process[{chunk_x, chunk_z}] = create_chunk_generate_future(chunk_x, chunk_z, chunk);
+                    auto it = on_generate_process[{chunk_x, chunk_z}] = create_chunk_generate_future(chunk);
                     it->wait_with(lock);
                     on_generate_process.erase({chunk_x, chunk_z});
                     return it->get();
@@ -1025,7 +1059,7 @@ namespace copper_server::storage {
     }
 
 #define WORLD_ASYNC_RUN(function, ...) \
-    fast_task::task::run([=] { api::world::get(world_id, [&](auto& world) { world.function(__VA_ARGS__); }); })
+    fast_task::task::run([=, this] { api::world::get(world_id, [&](auto& world) { world.function(__VA_ARGS__); }); })
 
     void world_data::entity_init(base_objects::entity& self) {
         std::unique_lock lock(mutex);
@@ -1323,30 +1357,43 @@ namespace copper_server::storage {
 
     void world_data::__set_block_silent(const base_objects::full_block_data& block, int64_t global_x, int64_t global_y_raw, int64_t global_z, block_set_mode mode) {
         TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
-        bool updates_height_map = false;
         get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
             sub_chunk.set_block(global_x & 15, global_y & 15, global_z & 15, block);
-            get_light_processor()->block_changed(*this, global_x, global_y, global_z);
         });
 
-        if (updates_height_map)
-            get_chunk_at(global_x, global_z, [&](auto& chunk) {
-                chunk.update_height_map_on((uint8_t)convert_chunk_local_pos(global_x), global_y, (uint8_t)convert_chunk_local_pos(global_z));
-            });
+        std::visit(
+            [&](auto& b) {
+                if (mode == block_set_mode::destroy)
+                    WORLD_ASYNC_RUN(notify_block_destroy_change, global_x, global_y_raw, global_z, b);
+                __update_block(global_x, global_y_raw, global_z, mode, b.general_block_id());
+            },
+            block
+        );
     }
 
     void world_data::__set_block_silent(base_objects::full_block_data&& block, int64_t global_x, int64_t global_y_raw, int64_t global_z, block_set_mode mode) {
         TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
-        bool updates_height_map = false;
+        auto b = std::visit(
+            [&](auto& b) {
+                if (mode == block_set_mode::destroy)
+                    WORLD_ASYNC_RUN(notify_block_destroy_change, global_x, global_y_raw, global_z, b);
+                return b.general_block_id();
+            },
+            block
+        );
         get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
             sub_chunk.set_block(global_x & 15, global_y & 15, global_z & 15, block);
-            get_light_processor()->block_changed(*this, global_x, global_y, global_z);
         });
+        __update_block(global_x, global_y_raw, global_z, mode, b);
+    }
 
-        if (updates_height_map)
-            get_chunk_at(global_x, global_z, [&](auto& chunk) {
-                chunk.update_height_map_on((uint8_t)convert_chunk_local_pos(global_x), global_y, (uint8_t)convert_chunk_local_pos(global_z));
-            });
+    void world_data::__update_block(int64_t global_x, int64_t global_y_raw, int64_t global_z, block_set_mode mode, base_objects::block_id_t b) {
+        if (mode != block_set_mode::keep) {
+            if (base_objects::block::get_general_block(b).is_liquid && general_world_data.liquid.contains(b))
+                query_for_liquid_tick(global_x, global_y_raw, global_z, tick_counter + general_world_data.liquid.at(b).spread_ticks);
+            else
+                query_for_tick(global_x, global_y_raw, global_z, tick_counter);
+        }
     }
 
     template <class T>
@@ -1395,7 +1442,12 @@ namespace copper_server::storage {
     }
 
     void world_data::load(const enbt::compound_const_ref& load_from_nbt) {
-        general_world_data = load_from_nbt.at("general_world_data");
+        general_world_data.other = load_from_nbt.at("general_world_data");
+        if (general_world_data.other.contains("liquid"))
+            for (auto& [block, settings] : general_world_data.other.at("liquid").as_compound())
+                general_world_data.liquid[base_objects::block::get_block(block).general_block_id] = {.spread_size = settings.at("spread_size"), .spread_ticks = settings.at("spread_ticks")};
+        else
+            general_world_data.liquid.clear();
         world_game_rules = load_from_nbt.at("world_game_rules");
         world_generator_data = load_from_nbt.at("world_generator_data");
         world_records = load_from_nbt.at("world_records");
@@ -1472,8 +1524,15 @@ namespace copper_server::storage {
         std::unique_lock lock(mutex);
         std::filesystem::create_directories(path);
         enbt::compound world_data_file;
+        {
+            enbt::compound res;
+            res.reserve(general_world_data.liquid.size());
+            for (auto& [it, data] : general_world_data.liquid)
+                res[base_objects::block::get_block(it).name] = enbt::compound{{"spread_size", data.spread_size}, {"spread_ticks", data.spread_ticks}};
+            general_world_data.other["liquid"] = std::move(res);
+        }
 
-        world_data_file["general_world_data"] = general_world_data;
+        world_data_file["general_world_data"] = general_world_data.other;
         world_data_file["world_game_rules"] = world_game_rules;
         world_data_file["world_generator_data"] = world_generator_data;
         world_data_file["world_records"] = world_records;
@@ -1564,7 +1623,7 @@ namespace copper_server::storage {
             std::filesystem::create_directories(path);
         world_spawn_ticket_id = add_loading_ticket(
             base_objects::world::loading_point_ticket{
-                [this](auto&, auto, auto&) { return true; },
+                [](auto&, auto, auto&) { return true; },
                 {convert_chunk_global_pos(spawn_data.x),
                  convert_chunk_global_pos(spawn_data.z),
                  convert_chunk_global_pos(spawn_data.radius)},
@@ -1812,8 +1871,10 @@ namespace copper_server::storage {
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end())
             on_load_process[{chunk_x, chunk_z}] = create_chunk_load_future(chunk_x, chunk_z, callback, fault);
         else
-            process->second->when_ready([this, chunk_x, chunk_z, callback, fault](base_objects::atomic_holder<chunk_data> chunk) {
-                if (!request_chunk_data_sync(chunk_x, chunk_z, callback))
+            process->second->when_ready([callback, fault](base_objects::atomic_holder<chunk_data> chunk) {
+                if (chunk)
+                    callback(*chunk);
+                else
                     fault();
             });
     }
@@ -1895,7 +1956,7 @@ namespace copper_server::storage {
     }
 
     void world_data::reset_light_data_at(int64_t global_x, int64_t global_z) {
-        reset_light_data(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_x));
+        reset_light_data(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z));
     }
 
     void world_data::for_each_chunk(std::function<void(chunk_data& chunk)> func) {
@@ -1966,7 +2027,7 @@ namespace copper_server::storage {
     }
 
     void world_data::for_each_sub_chunk_at(int64_t global_x, int64_t global_z, std::function<void(sub_chunk_data& chunk)> func) {
-        for_each_sub_chunk(convert_chunk_global_pos(global_z), convert_chunk_global_pos(global_z), func);
+        for_each_sub_chunk(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z), func);
     }
 
     void world_data::get_sub_chunk_at(int64_t global_x, int64_t global_y_raw, int64_t global_z, std::function<void(sub_chunk_data& chunk)> func) {
@@ -2191,18 +2252,20 @@ namespace copper_server::storage {
         TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
         bool updates_height_map = false;
         get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
-            std::visit(
+            auto gen_block_id = std::visit(
                 [&](auto& it) {
                     if (mode == block_set_mode::destroy)
                         WORLD_ASYNC_RUN(notify_block_destroy_change, global_x, global_y, global_z, it);
                     else
                         WORLD_ASYNC_RUN(notify_block_change, global_x, global_y, global_z, it);
                     updates_height_map = it.is_solid();
+                    return it.general_block_id();
                 },
                 block
             );
             sub_chunk.set_block(global_x & 15, global_y & 15, global_z & 15, block);
             get_light_processor()->block_changed(*this, global_x, global_y, global_z);
+            __update_block(global_x, global_y_raw, global_z, mode, gen_block_id);
         });
 
 
@@ -2215,17 +2278,19 @@ namespace copper_server::storage {
     void world_data::set_block(base_objects::full_block_data&& block, int64_t global_x, int64_t global_y_raw, int64_t global_z, block_set_mode mode) {
         TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
         get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
-            std::visit(
+            auto gen_block_id = std::visit(
                 [&](auto& it) {
                     if (mode == block_set_mode::destroy)
                         WORLD_ASYNC_RUN(notify_block_destroy_change, global_x, global_y, global_z, it);
                     else
                         WORLD_ASYNC_RUN(notify_block_change, global_x, global_y, global_z, it);
+                    return it.general_block_id();
                 },
                 block
             );
             sub_chunk.set_block(global_x & 15, global_y & 15, global_z & 15, std::move(block));
             get_light_processor()->block_changed(*this, global_x, global_y, global_z);
+            __update_block(global_x, global_y_raw, global_z, mode, gen_block_id);
         });
     }
 
@@ -2236,6 +2301,7 @@ namespace copper_server::storage {
             WORLD_ASYNC_RUN(notify_block_change, global_x, global_y, global_z, air);
             sub_chunk.set_block(global_x & 15, global_y & 15, global_z & 15, air);
             get_light_processor()->block_changed(*this, global_x, global_y, global_z);
+            __update_block(global_x, global_y_raw, global_z, block_set_mode::replace, air.general_block_id());
         });
     }
 
@@ -2294,7 +2360,6 @@ namespace copper_server::storage {
         func(*this);
     }
 
-    //TODO optimize more
     void world_data::set_block_range(base_objects::cubic_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks, block_set_mode mode) {
         if (blocks.size() == bounds.count()) {
             size_t i = 0;
@@ -2321,9 +2386,11 @@ namespace copper_server::storage {
                 });
             });
         }
-        ((base_objects::cubic_bounds_chunk)bounds).enum_points([&](int64_t x, int64_t z) {
-            WORLD_ASYNC_RUN(notify_chunk_blocks, x, z);
-        });
+
+        if (mode != block_set_mode::destroy)
+            ((base_objects::cubic_bounds_chunk)bounds).enum_points([&](int64_t x, int64_t z) {
+                WORLD_ASYNC_RUN(notify_chunk_blocks, x, z);
+            });
     }
 
     void world_data::set_block_range(base_objects::cubic_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks, block_set_mode mode) {
@@ -2343,7 +2410,7 @@ namespace copper_server::storage {
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
                     world.__set_block_silent(blocks[i++], x, y, z, mode);
-                    if (++i == max)
+                    if (i == max)
                         i = 0;
                 });
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
@@ -2351,9 +2418,11 @@ namespace copper_server::storage {
                 });
             });
         }
-        ((base_objects::cubic_bounds_chunk)bounds).enum_points([&](int64_t x, int64_t z) {
-            WORLD_ASYNC_RUN(notify_chunk_blocks, x, z);
-        });
+
+        if (mode != block_set_mode::destroy)
+            ((base_objects::cubic_bounds_chunk)bounds).enum_points([&](int64_t x, int64_t z) {
+                WORLD_ASYNC_RUN(notify_chunk_blocks, x, z);
+            });
     }
 
     void world_data::set_block_range(base_objects::spherical_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks, block_set_mode mode) {
@@ -2377,13 +2446,15 @@ namespace copper_server::storage {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
                     get_light_processor()->block_changed(*this, x, y, z);
                 });
-                if (++i == max)
+                if (i == max)
                     i = 0;
             });
         }
-        ((base_objects::spherical_bounds_chunk)bounds).enum_points([&](int64_t x, int64_t z) {
-            WORLD_ASYNC_RUN(notify_chunk_blocks, x, z);
-        });
+
+        if (mode != block_set_mode::destroy)
+            ((base_objects::spherical_bounds_chunk)bounds).enum_points([&](int64_t x, int64_t z) {
+                WORLD_ASYNC_RUN(notify_chunk_blocks, x, z);
+            });
     }
 
     void world_data::set_block_range(base_objects::spherical_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks, block_set_mode mode) {
@@ -2393,24 +2464,32 @@ namespace copper_server::storage {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
                     world.__set_block_silent(std::move(blocks[i++]), x, y, z, mode);
                 });
+                ((base_objects::spherical_bounds_chunk)bounds).enum_points([&](int64_t x, int64_t z) {
+                    get_light_processor()->process_chunk(world, x, z);
+                });
             });
         } else {
             size_t i = 0;
             size_t max = blocks.size();
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
+                    if (i == max)
+                        return;
                     world.__set_block_silent(std::move(blocks[i++]), x, y, z, mode);
-                    if (i++ == max)
-                        i = 0;
+                    ++i;
+                });
+                ((base_objects::spherical_bounds_chunk)bounds).enum_points([&](int64_t x, int64_t z) {
+                    get_light_processor()->process_chunk(world, x, z);
                 });
             });
         }
-        ((base_objects::spherical_bounds_chunk)bounds).enum_points([&](int64_t x, int64_t z) {
-            WORLD_ASYNC_RUN(notify_chunk_blocks, x, z);
-        });
+        if (mode != block_set_mode::destroy)
+            ((base_objects::spherical_bounds_chunk)bounds).enum_points([&](int64_t x, int64_t z) {
+                WORLD_ASYNC_RUN(notify_chunk_blocks, x, z);
+            });
     }
 
-    uint32_t world_data::get_biome(int64_t global_x, int64_t global_y_raw, int64_t global_z) {
+    int32_t world_data::get_biome(int64_t global_x, int64_t global_y_raw, int64_t global_z) {
         uint32_t res = 0;
         TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
         get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
@@ -2419,7 +2498,7 @@ namespace copper_server::storage {
         return res;
     }
 
-    void world_data::set_biome(int64_t global_x, int64_t global_y_raw, int64_t global_z, uint32_t biome_id) {
+    void world_data::set_biome(int64_t global_x, int64_t global_y_raw, int64_t global_z, int32_t biome_id) {
         TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
         get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
             sub_chunk.set_biome(global_x & 15, global_y & 15, global_z & 15, biome_id);
@@ -2427,20 +2506,20 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::set_biome_range(base_objects::cubic_bounds_block bounds, const list_array<uint32_t>& blocks, block_set_mode mode) {
-        if (blocks.size() == bounds.count()) {
+    void world_data::set_biome_range(base_objects::cubic_bounds_block bounds, const list_array<int32_t>& biomes) {
+        if (biomes.size() == bounds.count()) {
             size_t i = 0;
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                    world.set_biome(x, y, z, blocks[i++]);
+                    world.set_biome(x, y, z, biomes[i++]);
                 });
             });
         } else {
             size_t i = 0;
-            size_t max = blocks.size();
+            size_t max = biomes.size();
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                    world.set_biome(x, y, z, blocks[i++]);
+                    world.set_biome(x, y, z, biomes[i++]);
                     if (i == max)
                         i = 0;
                 });
@@ -2448,20 +2527,20 @@ namespace copper_server::storage {
         }
     }
 
-    void world_data::set_biome_range(base_objects::cubic_bounds_block bounds, list_array<uint32_t>&& blocks, block_set_mode mode) {
-        if (blocks.size() == bounds.count()) {
+    void world_data::set_biome_range(base_objects::cubic_bounds_block bounds, list_array<int32_t>&& biomes) {
+        if (biomes.size() == bounds.count()) {
             size_t i = 0;
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                    world.set_biome(x, y, z, blocks[i++]);
+                    world.set_biome(x, y, z, biomes[i++]);
                 });
             });
         } else {
             size_t i = 0;
-            size_t max = blocks.size();
+            size_t max = biomes.size();
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                    world.set_biome(x, y, z, blocks[i++]);
+                    world.set_biome(x, y, z, biomes[i++]);
                     if (i == max)
                         i = 0;
                 });
@@ -2469,20 +2548,20 @@ namespace copper_server::storage {
         }
     }
 
-    void world_data::set_biome_range(base_objects::spherical_bounds_block bounds, const list_array<uint32_t>& blocks, block_set_mode mode) {
-        if (blocks.size() == bounds.count()) {
+    void world_data::set_biome_range(base_objects::spherical_bounds_block bounds, const list_array<int32_t>& biomes) {
+        if (biomes.size() == bounds.count()) {
             size_t i = 0;
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                    world.set_biome(x, y, z, blocks[i++]);
+                    world.set_biome(x, y, z, biomes[i++]);
                 });
             });
         } else {
             size_t i = 0;
-            size_t max = blocks.size();
+            size_t max = biomes.size();
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                    world.set_biome(x, y, z, blocks[i++]);
+                    world.set_biome(x, y, z, biomes[i++]);
                     if (i == max)
                         i = 0;
                 });
@@ -2490,20 +2569,20 @@ namespace copper_server::storage {
         }
     }
 
-    void world_data::set_biome_range(base_objects::spherical_bounds_block bounds, list_array<uint32_t>&& blocks, block_set_mode mode) {
-        if (blocks.size() == bounds.count()) {
+    void world_data::set_biome_range(base_objects::spherical_bounds_block bounds, list_array<int32_t>&& biomes) {
+        if (biomes.size() == bounds.count()) {
             size_t i = 0;
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                    world.set_biome(x, y, z, blocks[i++]);
+                    world.set_biome(x, y, z, biomes[i++]);
                 });
             });
         } else {
             size_t i = 0;
-            size_t max = blocks.size();
+            size_t max = biomes.size();
             locked([&](storage::world_data& world) {
                 bounds.enum_points([&](int64_t x, int64_t y, int64_t z) {
-                    world.set_biome(x, y, z, blocks[i++]);
+                    world.set_biome(x, y, z, biomes[i++]);
                     if (i == max)
                         i = 0;
                 });
@@ -3014,7 +3093,7 @@ namespace copper_server::storage {
             func(id, *world);
     }
 
-    void worlds_data::apply_tick(std::chrono::high_resolution_clock::time_point current_time, std::chrono::nanoseconds ns) {
+    void worlds_data::apply_tick(std::chrono::high_resolution_clock::time_point current_time) {
         std::unique_lock lock(mutex);
         list_array<std::pair<int32_t, base_objects::atomic_holder<world_data>>> worlds_to_tick;
         for (auto& [id, world] : cached_worlds) {
@@ -3036,7 +3115,7 @@ namespace copper_server::storage {
         future::forEachMove(
             future::process<std::optional<int32_t>>(
                 worlds_to_tick,
-                [this, current_time, unload_speed](const auto& it) mutable -> std::optional<int32_t> {
+                [current_time, unload_speed](const auto& it) mutable -> std::optional<int32_t> {
                     auto id = it.first;
                     auto& world = it.second;
                     std::random_device rd;

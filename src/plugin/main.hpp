@@ -285,7 +285,7 @@ namespace copper_server {
     template <class Self>
         struct PluginHandlingFix : public PluginHandlingFixer < Self,
         requires {
-        Self::OnConfiguration != PluginRegistration::OnConfiguration && &Self::OnConfiguration_gotKnownPacks == &PluginRegistration::OnConfiguration_gotKnownPacks;
+        &Self::OnConfiguration != &PluginRegistration::OnConfiguration && &Self::OnConfiguration_gotKnownPacks == &PluginRegistration::OnConfiguration_gotKnownPacks;
     }>{};
 
     template <util::CTS name, class Self>

@@ -357,15 +357,15 @@ namespace copper_server::base_objects {
 
             if (dx)
                 entities = entities.take().where([check_x, dx = *dx](auto& entity) {
-                    return entity->hitboxes_in_range_x(check_x, dx);
+                    return entity->hitboxes_touching_x(check_x, dx);
                 });
             if (dy)
                 entities = entities.take().where([check_y, dy = *dy](auto& entity) {
-                    return entity->hitboxes_in_range_y(check_y, dy);
+                    return entity->hitboxes_touching_y(check_y, dy);
                 });
             if (dz)
                 entities = entities.take().where([check_z, dz = *dz](auto& entity) {
-                    return entity->hitboxes_in_range_z(check_z, dz);
+                    return entity->hitboxes_touching_z(check_z, dz);
                 });
             if (flags.nearest)
                 entities.push_back(
@@ -379,7 +379,7 @@ namespace copper_server::base_objects {
                         .take_back()
                 );
         } else if (!flags.self) {
-            api::world::iterate([&](auto id, storage::world_data& world) {
+            api::world::iterate([&](auto _, storage::world_data& world) {
                 world.for_each_entity([&entities](auto& entity) {
                     entities.push_back(entity);
                 });
@@ -558,8 +558,8 @@ namespace copper_server::base_objects {
 
                 entities
                     .sort([&](auto& prev, auto& next) {
-                        auto dif_prev = prev->position.x - check_x + prev->position.z - check_z + prev->position.z - check_z;
-                        auto dif_next = next->position.x - check_x + next->position.z - check_z + next->position.z - check_z;
+                        auto dif_prev = prev->position.x - check_x + prev->position.y - check_y + prev->position.z - check_z;
+                        auto dif_next = next->position.x - check_x + next->position.y - check_y + next->position.z - check_z;
                         return dif_prev < dif_next;
                     });
                 break;
@@ -577,14 +577,14 @@ namespace copper_server::base_objects {
 
                 entities
                     .sort([&](auto& prev, auto& next) {
-                        auto dif_prev = prev->position.x - check_x + prev->position.z - check_z + prev->position.z - check_z;
-                        auto dif_next = next->position.x - check_x + next->position.z - check_z + next->position.z - check_z;
+                        auto dif_prev = prev->position.x - check_x + prev->position.y - check_y + prev->position.z - check_z;
+                        auto dif_next = next->position.x - check_x + next->position.y - check_y + next->position.z - check_z;
                         return dif_prev > dif_next;
                     });
                 break;
             }
             case selector_sort::random: {
-                entities.sort([](auto& prev, auto& next) {
+                entities.sort([](auto& _, auto&) {
                     static std::mt19937_64 gen(std::random_device{}());
                     static std::uniform_int_distribution<> dis(0, 1);
                     return dis(gen) == 0;

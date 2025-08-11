@@ -33,7 +33,7 @@ namespace copper_server::util {
         void BuildBaseIntArray(int32_t len, enbt::value& arr, enbt::type_id base_id);
         void BuildSimpleIntArray(int32_t len, enbt::value& arr, enbt::type_id base_id);
         void BuildArray(int32_t len, enbt::value& arr, enbt::type_id base_id, bool compress);
-        void BuildArray(int32_t len, enbt::value& enbt, bool insert_type, bool compress);
+        void BuildArray(enbt::value& enbt, bool insert_type, bool compress);
         void RecursiveBuilder(enbt::value& enbt, bool insert_type, const std::string& name, bool compress, bool in_array);
 #pragma endregion
 #pragma region NBT_TO_ENBT
@@ -45,7 +45,7 @@ namespace copper_server::util {
         template <class T>
         static enbt::value extractArray(const uint8_t* data, size_t& i, size_t max_size);
 
-        static enbt::value RecursiveExtractor_1(uint8_t type, const uint8_t* data, size_t& i, size_t max_size, bool in_array);
+        static enbt::value RecursiveExtractor_1(uint8_t type, const uint8_t* data, size_t& i, size_t max_size);
         static enbt::value RecursiveExtractor(const uint8_t* data, size_t& i, size_t max_size);
         static enbt::value RecursiveExtractorNetwork(const uint8_t* data, size_t& i, size_t max_size);
 

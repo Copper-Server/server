@@ -26,7 +26,7 @@ namespace copper_server::base_objects {
     namespace world {
         struct sub_chunk_data {
             base_objects::block blocks[16][16][16];
-            uint32_t biomes[4][4][4];
+            int32_t biomes[4][4][4];
             std::unordered_map<uint16_t, enbt::value> block_entities;               //0xXYZ => block_entity
             std::unordered_map<uint64_t, base_objects::entity_ref> stored_entities; //uses id from world
 
@@ -45,8 +45,8 @@ namespace copper_server::base_objects {
             void get_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, std::function<void(base_objects::block& block)> on_normal, std::function<void(base_objects::block& block, enbt::value& entity_data)> on_entity);
             void set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::full_block_data& block);
             void set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::full_block_data&& block);
-            uint32_t get_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z);
-            void set_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z, uint32_t id);
+            int32_t get_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z);
+            void set_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z, int32_t id);
             void for_each_block(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block& block)> func);
             void for_each_block_entity(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block& block, enbt::value& entity_data)> func);
 

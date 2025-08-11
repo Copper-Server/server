@@ -31,7 +31,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         default:
             return base_objects::network::response::disconnect();
         case login:
-            return api::packets::encode(api::packets::client_bound::login::login_disconnect{.reason = packet_is_to_large_str});
+            return api::packets::encode(api::packets::client_bound::login::login_disconnect{.reason = {packet_is_to_large_str}});
         case configuration:
             return api::packets::encode(api::packets::client_bound::configuration::disconnect{.reason = packet_is_to_large});
         case play:
@@ -47,7 +47,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         default:
             return base_objects::network::response::disconnect();
         case login:
-            return api::packets::encode(api::packets::client_bound::login::login_disconnect{.reason = Chat("Internal server error: " + std::string(ex.what()) + "\nPlease report this to the server owner!").ToStr()});
+            return api::packets::encode(api::packets::client_bound::login::login_disconnect{.reason = {Chat("Internal server error: " + std::string(ex.what()) + "\nPlease report this to the server owner!").ToStr()}});
         case configuration:
             return api::packets::encode(api::packets::client_bound::configuration::disconnect{.reason = "Internal server error: " + std::string(ex.what()) + "\nPlease report this to the server owner!"});
         case play:
@@ -63,7 +63,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         default:
             return base_objects::network::response::disconnect();
         case login:
-            return api::packets::encode(api::packets::client_bound::login::login_disconnect{.reason = internal_error_str});
+            return api::packets::encode(api::packets::client_bound::login::login_disconnect{.reason = {internal_error_str}});
         case configuration:
             return api::packets::encode(api::packets::client_bound::configuration::disconnect{.reason = internal_error});
         case play:

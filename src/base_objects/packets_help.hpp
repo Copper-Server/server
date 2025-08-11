@@ -155,15 +155,15 @@ namespace copper_server::base_objects {
             return *this;
         }
 
-        constexpr operator std::string&() {
+        constexpr operator std::string&() & {
             return value;
         }
 
-        constexpr operator std::string&&() {
+        constexpr operator std::string&&() && {
             return std::move(value);
         }
 
-        constexpr operator const std::string&() const {
+        constexpr operator const std::string&() const& {
             return value;
         }
 
@@ -226,15 +226,15 @@ namespace copper_server::base_objects {
             return *this;
         }
 
-        constexpr operator std::string&() {
+        constexpr operator std::string&() & {
             return value;
         }
 
-        constexpr operator std::string&&() {
+        constexpr operator std::string&&() && {
             return std::move(value);
         }
 
-        constexpr operator const std::string&() const {
+        constexpr operator const std::string&() const& {
             return value;
         }
 

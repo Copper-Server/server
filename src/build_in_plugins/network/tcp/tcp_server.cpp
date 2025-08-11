@@ -11,7 +11,6 @@
 #include <src/api/server.hpp>
 #include <src/log.hpp>
 #include <src/plugin/main.hpp>
-#include <src/plugin/special.hpp>
 
 #include <library/fast_task/include/networking.hpp>
 #include <src/build_in_plugins/network/tcp/session.hpp>

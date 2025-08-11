@@ -25,13 +25,13 @@ namespace copper_server::build_in_plugins::light_processors {
             world.notify_chunk_light(chunk_x, chunk_z);
         }
 
-        void process_sub_chunk(storage::world_data& world, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z) override {}
+        void process_sub_chunk(storage::world_data&, int64_t, int64_t, int64_t) override {}
 
-        void block_changed(storage::world_data& world, int64_t global_x, int64_t global_y, int64_t global_z) override {}
+        void block_changed(storage::world_data&, int64_t, int64_t, int64_t) override {}
     };
 
     struct default_processor : public PluginAutoRegister<"light_processors/default_processor", default_processor> {
-        void OnRegister(const PluginRegistrationPtr& self) {
+        void OnRegister(const PluginRegistrationPtr& _) {
             storage::chunk_light_processor::register_it("default", new default_light_processor());
         }
     };

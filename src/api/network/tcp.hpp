@@ -33,6 +33,8 @@ namespace copper_server::api::network::tcp {
 
         session(uint64_t id) : id(id) {}
 
+        virtual ~session() {}
+
         virtual bool is_active() = 0;
         virtual void disconnect() = 0;
         virtual base_objects::client_data_holder& shared_data_ref() = 0;

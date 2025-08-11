@@ -722,21 +722,21 @@ namespace copper_server::resources {
                     return base_objects::number_provider_biased_to_bottom(min, max);
                 } else if (type == "score") {
                     base_objects::number_provider_score res;
-                    res.score = obj.at("score");
+                    res.score = (std::string)obj.at("score");
                     res.scale = obj.contains("scale") ? std::optional<float>((float)obj["scale"]) : std::nullopt;
                     auto target = js_object::get_object(obj.at("target"));
                     std::string score_type = target.at("type");
                     if (score_type == "fixed")
-                        res.target.value = target.at("name");
+                        res.target.value = (std::string)target.at("name");
                     else if (score_type == "context")
-                        res.target.value = target.at("target");
+                        res.target.value = (std::string)target.at("target");
                     else
                         target.parsing_error("Invalid target type: " + score_type);
                     return res;
                 } else if (type == "storage") {
                     base_objects::number_provider_storage res;
-                    res.storage = obj.at("storage");
-                    res.path = obj.at("path");
+                    res.storage = (std::string)obj.at("storage");
+                    res.path = (std::string)obj.at("path");
                     return res;
                 } else if (type == "enchantment_level")
                     return base_objects::number_provider_enchantment_level((std::string)obj.at("amount"));
@@ -789,10 +789,10 @@ namespace copper_server::resources {
                 auto icon_js = js_object::get_object(display_js["icon"]);
                 display.icon.item = (std::string)icon_js["item"];
                 if (icon_js.contains("nbt"))
-                    display.icon.nbt = icon_js["nbt"];
+                    display.icon.nbt = icon_js["nbt"].to_text();
             }
             if (display_js.contains("frame"))
-                display.frame = display_js["frame"];
+                display.frame = (std::string)display_js["frame"];
             else
                 display.frame = "task";
 
@@ -807,7 +807,7 @@ namespace copper_server::resources {
                 display.hidden = display_js["hidden"];
         }
         if (advancement_js.contains("parent"))
-            advancement.parent = advancement_js["parent"];
+            advancement.parent = (std::string)advancement_js["parent"];
         advancement.criteria = util::conversions::json::from_json(advancement_js["criteria"].get());
         if (advancement_js.contains("requirements")) {
             auto list_of_requirements_js = js_array::get_array(advancement_js["requirements"]);
@@ -838,7 +838,7 @@ namespace copper_server::resources {
             if (rewards_js.contains("experience"))
                 advancement.rewards.experience = rewards_js["experience"];
             if (rewards_js.contains("function"))
-                advancement.rewards.function = rewards_js["function"];
+                advancement.rewards.function = (std::string)rewards_js["function"];
         }
 
         if (advancement_js.contains("sends_telemetry_event"))
@@ -1192,7 +1192,7 @@ namespace copper_server::resources {
 
     void load_file_enchantment_provider(boost::json::object& type_js, const std::string& id, bool send_via_network_body = true) {
         check_conflicts(enchantment_providers, id, "enchantment providers");
-        enchantment_providers[id].data = util::conversions::json::from_json(type_js);
+        enchantment_providers[id] = {.data = util::conversions::json::from_json(type_js), .id = 0, .send_via_network_body = send_via_network_body};
     }
 
     void load_file_instrument(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
@@ -1319,7 +1319,7 @@ namespace copper_server::resources {
         load_file_paintingVariant(js_object::get_object(res.value()), id);
     }
 
-    void load_file_recipe(js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
+    void load_file_recipe(js_object&& variant_js, const std::string& id, [[maybe_unused]] bool send_via_network_body = true) {
         if (!api::recipe::registered())
             throw std::runtime_error("Recipe api not registered!");
 
@@ -1677,7 +1677,7 @@ namespace copper_server::resources {
                                     std::shared_ptr<base_objects::static_block_data> block_data = std::make_shared<base_objects::static_block_data>();
                                     base_objects::block_id_t block_data_id = 0;
                                     block_data->opacity = 255;
-#define ARGS__d base_objects::block_id_t &default_state, bool &has_default_state, list_array<std::shared_ptr<base_objects::static_block_data>>&full_block_data_, std::shared_ptr<base_objects::static_block_data>&block_data, base_objects::block_id_t &block_data_id, enbt::io_helper::value_read_stream &item
+#define ARGS__d [[maybe_unused]] base_objects::block_id_t &default_state, [[maybe_unused]] bool &has_default_state, [[maybe_unused]] list_array<std::shared_ptr<base_objects::static_block_data>>&full_block_data_, [[maybe_unused]] std::shared_ptr<base_objects::static_block_data>&block_data, [[maybe_unused]] base_objects::block_id_t &block_data_id, [[maybe_unused]] enbt::io_helper::value_read_stream &item
 #define ARGS__pass default_state, has_default_state, full_block_data_, block_data, block_data_id, item
 
                                     static std::unordered_map<std::string, void (*)(ARGS__d)> map{
@@ -1851,7 +1851,7 @@ namespace copper_server::resources {
                         std::string computed_tag = tag;
                         if (computed_tag.size())
                             computed_tag += "/";
-                        computed_tag += (std::string)name.substr(0, name.size() - 5);
+                        computed_tag += (std::string)std::string_view(name).substr(0, name.size() - 5);
                         list_array<std::string> res;
                         for (auto&& value : values.get_array())
                             res.push_back((std::string)value.as_string());
@@ -1872,7 +1872,7 @@ namespace copper_server::resources {
     void process_item_(boost::json::object& decl, const std::string& namespace_, void (*fn)(js_object&&, const std::string&, bool send_via_network_body), bool send_via_network_body) {
         for (auto& [id, value] : decl) {
             if (id.ends_with(".json")) {
-                std::string _id = namespace_ + std::string(id.substr(0, id.size() - 5));
+                std::string _id = namespace_ + (std::string)std::string_view(id).substr(0, id.size() - 5);
                 fn(js_object::get_object(value), _id, send_via_network_body);
             } else
                 process_item_(value.as_object(), namespace_ + std::string(id), fn, send_via_network_body);
@@ -1882,7 +1882,7 @@ namespace copper_server::resources {
     void process_item_(boost::json::object& decl, const std::string& namespace_, void (*fn)(boost::json::object&, const std::string&, bool send_via_network_body), bool send_via_network_body) {
         for (auto& [id, value] : decl) {
             if (id.ends_with(".json")) {
-                std::string _id = namespace_ + std::string(id.substr(0, id.size() - 5));
+                std::string _id = namespace_ + (std::string)std::string_view(id).substr(0, id.size() - 5);
                 fn(value.as_object(), _id, send_via_network_body);
             } else
                 process_item_(value.as_object(), namespace_ + std::string(id), fn, send_via_network_body);
@@ -1991,13 +1991,13 @@ namespace copper_server::resources {
                                 for (auto&& [in_pack_name, in_pack_decl] : in_pack_data)
                                     process_pack(in_pack_decl, in_pack_name, pack_id, false, send_via_network_body);
                             } else
-                                loaded_packs_.push_back({.namespace_ = "minecraft", .id = pack_id});
+                                loaded_packs_.push_back({.namespace_ = "minecraft", .id = pack_id, .version = "1.21.8"});
                         }
                     }
                 }
             }
         }
-        loaded_packs_.push_back({.namespace_ = namespace_, .id = id});
+        loaded_packs_.push_back({.namespace_ = namespace_, .id = id, .version = "1.21.8"});
     }
 
     void process_pack(boost::json::object& parsed, const std::string& namespace_, const std::string& id) {
@@ -2123,7 +2123,8 @@ namespace copper_server::resources {
                     registers::potions[full_name] = potion{
                         .name = full_name,
                         .id = checked_decl.at("id").to_number<uint32_t>(),
-                        .effects = std::move(potion_effects)
+                        .effects = std::move(potion_effects),
+                        .recipe = {}
                     };
                 }
             }

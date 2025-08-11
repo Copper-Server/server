@@ -141,7 +141,7 @@ namespace copper_server::base_objects {
             return value;
         }
 
-        std::string_view to_string() const {
+        std::string to_string() const {
             return from_registry_source_value(source, value);
         }
 

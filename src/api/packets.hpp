@@ -101,7 +101,7 @@ namespace copper_server {
                 using enum param_e;
                 std::string translation_key;
                 list_array<base_objects::enum_as<param_e, base_objects::var_int32>> parameters;
-                std::optional<Chat> style;
+                std::optional<Chat> style = std::nullopt;
             };
 
             decoration chat;
@@ -378,7 +378,7 @@ namespace copper_server {
                     struct property {
                         string_sized<64> name;
                         string_sized<32767> value;
-                        std::optional<string_sized<1024>> signature;
+                        std::optional<string_sized<1024>> signature = std::nullopt;
                     };
 
                     enbt::raw_uuid uuid;
@@ -441,7 +441,7 @@ namespace copper_server {
 
                     struct entry {
                         identifier entry_id;
-                        std::optional<enbt::value> data;
+                        std::optional<enbt::value> data = std::nullopt;
                     };
 
                     identifier registry_id;
@@ -449,7 +449,7 @@ namespace copper_server {
                 };
 
                 struct resource_pack_pop : public packet<0x08> {
-                    std::optional<enbt::raw_uuid> uuid;
+                    std::optional<enbt::raw_uuid> uuid = std::nullopt;
                 };
 
                 struct resource_pack_push : public packet<0x09> {
@@ -457,7 +457,7 @@ namespace copper_server {
                     string_sized<32767> url;
                     string_sized<40> hash;
                     bool forced;
-                    std::optional<Chat> prompt_message;
+                    std::optional<Chat> prompt_message = std::nullopt;
                 };
 
                 struct store_cookie : public packet<0x0A> {
@@ -717,7 +717,7 @@ namespace copper_server {
 
                     struct match {
                         string_sized<32767> set;
-                        std::optional<Chat> tooltip;
+                        std::optional<Chat> tooltip = std::nullopt;
                     };
 
                     var_int32 suggestion_transaction_id;
@@ -1161,10 +1161,10 @@ namespace copper_server {
 
                 struct damage_event : public packet<0x19> {
                     var_int32 entity_id;
-                    optional_var_int32 source_damage_type_id;
-                    optional_var_int32 source_entity_id;
-                    optional_var_int32 source_direct_entity_id;
-                    std::optional<util::VECTOR> source_pos;
+                    optional_var_int32 source_damage_type_id = std::nullopt;
+                    optional_var_int32 source_entity_id = std::nullopt;
+                    optional_var_int32 source_direct_entity_id = std::nullopt;
+                    std::optional<util::VECTOR> source_pos = std::nullopt;
                 };
 
                 struct debug_sample : public packet<0x1A> {
@@ -1174,7 +1174,7 @@ namespace copper_server {
 
                 struct delete_chat : public packet<0x1B> {
                     var_int32 message_id;
-                    std::optional<std::array<uint8_t, 256>> signature;
+                    std::optional<std::array<uint8_t, 256>> signature = std::nullopt;
                 };
 
                 struct disconnect : public packet<0x1C>, disconnect_after {
@@ -1185,7 +1185,7 @@ namespace copper_server {
                     Chat message;
                     or_<var_int32::chat_type, chat_type> type;
                     Chat sender;
-                    std::optional<Chat> target_name;
+                    std::optional<Chat> target_name = std::nullopt;
                 };
 
                 struct entity_event : public packet<0x1E> {
@@ -1217,7 +1217,7 @@ namespace copper_server {
                     double x;
                     double y;
                     double z;
-                    std::optional<player_delta_velocity_t> player_delta_velocity;
+                    std::optional<player_delta_velocity_t> player_delta_velocity = std::nullopt;
                     particle_data particle;
                     or_<var_int32::sound_event, base_objects::sound_event> sound;
                 };
@@ -1522,7 +1522,7 @@ namespace copper_server {
                     enum_as<optional_gamemode_e, int8_t> prev_gamemode;
                     bool world_is_debug;
                     bool world_is_flat;
-                    std::optional<death_location_t> death_location;
+                    std::optional<death_location_t> death_location = std::nullopt;
                     var_int32 portal_cooldown;
                     var_int32 sea_level;
                     bool enforce_secure_chat;
@@ -1572,7 +1572,7 @@ namespace copper_server {
                         limited_num<int8_t, -128, 127> x;
                         limited_num<int8_t, -128, 127> z;
                         limited_num<int8_t, 0, 15> dir;
-                        std::optional<Chat> name;
+                        std::optional<Chat> name = std::nullopt;
                     };
 
                     struct color_patch {
@@ -1586,7 +1586,7 @@ namespace copper_server {
                     var_int32 map_id;
                     int8_t scale;
                     bool is_locked;
-                    std::optional<list_array<icon>> icons;
+                    std::optional<list_array<icon>> icons = std::nullopt;
                     color_patch patch;
                 };
 
@@ -1601,7 +1601,7 @@ namespace copper_server {
 
                         trade_item input_0;
                         slot output;
-                        std::optional<trade_item> input_1;
+                        std::optional<trade_item> input_1 = std::nullopt;
                         bool trade_disabled;
                         int trade_uses;
                         int max_trade_uses;
@@ -1733,15 +1733,15 @@ namespace copper_server {
                     var_int32 global_index;
                     enbt::raw_uuid sender;
                     var_int32 index;
-                    std::optional<std::array<uint8_t, 256>> signature;
+                    std::optional<std::array<uint8_t, 256>> signature = std::nullopt;
                     string_sized<256> message;
                     uint64_t timestamp;
                     uint64_t salt;
                     list_array_sized<previous_message, 20> previous_messages;
-                    std::optional<Chat> unsigned_content;
+                    std::optional<Chat> unsigned_content = std::nullopt;
                     enum_switch<var_int32, no_filter, fully_filtered, partially_filtered> filter;
                     Chat sender_name;
-                    std::optional<Chat> target_name;
+                    std::optional<Chat> target_name = std::nullopt;
                 };
 
                 struct player_combat_end : public packet<0x3B> {
@@ -1767,7 +1767,7 @@ namespace copper_server {
                         struct property {
                             string_sized<64> name;
                             string_sized<32767> value;
-                            std::optional<string_sized<1024>> signature;
+                            std::optional<string_sized<1024>> signature = std::nullopt;
                         };
 
                         list_array_sized<property, 16> properties;
@@ -1793,7 +1793,7 @@ namespace copper_server {
                     };
 
                     struct set_display_name : public flag_item<0x20, 0x20, 6> {
-                        std::optional<Chat> name;
+                        std::optional<Chat> name = std::nullopt;
                     };
 
                     struct set_list_priority : public flag_item<0x40, 0x40, 7> {
@@ -1834,7 +1834,7 @@ namespace copper_server {
                     double target_x;
                     double target_y;
                     double target_z;
-                    std::optional<entity_target> entity;
+                    std::optional<entity_target> entity = std::nullopt;
                 };
 
                 struct player_position : public packet<0x41> {
@@ -1868,7 +1868,7 @@ namespace copper_server {
                         recipe_display display;
                         var_int32 group_id;
                         var_int32 category_id;
-                        std::optional<list_array<id_set<var_int32::item>>> ingredients;
+                        std::optional<list_array<id_set<var_int32::item>>> ingredients = std::nullopt;
                         enum_as_flag<flags_f, int8_t> flags;
                     };
 
@@ -1902,11 +1902,11 @@ namespace copper_server {
 
                 struct reset_score : public packet<0x48> {
                     string_sized<32767> entity_name;
-                    std::optional<string_sized<32767>> objective_name;
+                    std::optional<string_sized<32767>> objective_name = std::nullopt;
                 };
 
                 struct resource_pack_pop : public packet<0x49> {
-                    std::optional<enbt::raw_uuid> uuid;
+                    std::optional<enbt::raw_uuid> uuid = std::nullopt;
                 };
 
                 struct resource_pack_push : public packet<0x4A> {
@@ -1914,7 +1914,7 @@ namespace copper_server {
                     string_sized<32767> url;
                     string_sized<40> hash; //0 or 40, other values waste bandwidth
                     bool forced;
-                    std::optional<Chat> prompt_message;
+                    std::optional<Chat> prompt_message = std::nullopt;
                 };
 
                 struct respawn : public packet<0x4B> {
@@ -1931,7 +1931,7 @@ namespace copper_server {
                     enum_as<optional_gamemode_e, int8_t> previous_gamemode;
                     bool is_debug;
                     bool is_flat;
-                    std::optional<death_location_t> death_location;
+                    std::optional<death_location_t> death_location = std::nullopt;
                     var_int32 portal_cooldown;
                     var_int32 sea_level;
                     enum class flags_f : uint8_t {
@@ -1976,12 +1976,12 @@ namespace copper_server {
                 };
 
                 struct select_advancements_tab : public packet<0x4E> {
-                    std::optional<identifier> id;
+                    std::optional<identifier> id = std::nullopt;
                 };
 
                 struct server_data : public packet<0x4F> {
                     Chat motd;
-                    std::optional<list_array<uint8_t>> icon_png;
+                    std::optional<list_array<uint8_t>> icon_png = std::nullopt;
                 };
 
                 struct set_action_bar_text : public packet<0x50> {
@@ -2131,7 +2131,7 @@ namespace copper_server {
                     struct create : public enum_item<0> {
                         Chat name;
                         var_int32 type; //0 numbers, 1 - hearts
-                        std::optional<enum_switch<var_int32, blank, styled, fixed>> default_format;
+                        std::optional<enum_switch<var_int32, blank, styled, fixed>> default_format = std::nullopt;
                     };
 
                     struct remove : public enum_item<1> {};
@@ -2139,7 +2139,7 @@ namespace copper_server {
                     struct update : public enum_item<2> {
                         Chat name;
                         var_int32 type; //0 numbers, 1 - hearts
-                        std::optional<enum_switch<var_int32, blank, styled, fixed>> default_format;
+                        std::optional<enum_switch<var_int32, blank, styled, fixed>> default_format = std::nullopt;
                     };
 
                     string_sized<32767> name;
@@ -2227,8 +2227,8 @@ namespace copper_server {
                     string_sized<32767> entry_name;
                     string_sized<32767> objective_name;
                     var_int32 value;
-                    std::optional<Chat> name;
-                    std::optional<enum_switch<var_int32, blank, styled, fixed>> default_format;
+                    std::optional<Chat> name = std::nullopt;
+                    std::optional<enum_switch<var_int32, blank, styled, fixed>> default_format = std::nullopt;
                 };
 
                 struct set_simulation_distance : public packet<0x68> {
@@ -2339,7 +2339,7 @@ namespace copper_server {
                     };
 
                     Chat status;
-                    std::optional<volume_t> volume;
+                    std::optional<volume_t> volume = std::nullopt;
                 };
 
                 struct ticking_state : public packet<0x78> {
@@ -2377,15 +2377,15 @@ namespace copper_server {
                     };
 
                     struct advancement {
-                        std::optional<identifier> parent_id;
-                        std::optional<display> display;
+                        std::optional<identifier> parent_id = std::nullopt;
+                        std::optional<display> display = std::nullopt;
                         list_array<list_array<string_sized<32767>>> nested_requirements;
                         bool send_telemetry = false;
                     };
 
                     struct progress {
                         identifier criterion;
-                        std::optional<int64_t> date_of_archiving;
+                        std::optional<int64_t> date_of_archiving = std::nullopt;
                     };
 
                     struct advancement_mapping {
@@ -2545,7 +2545,7 @@ namespace copper_server {
 
                     bool_or<enbt::raw_uuid, std::string> id;
                     identifier icon_style; //assets path
-                    std::optional<color_t> color;
+                    std::optional<color_t> color = std::nullopt;
                     enum_switch<var_int32, here, near, far, far_away> type;
                 };
 
@@ -2750,7 +2750,7 @@ namespace copper_server {
 
                 struct cookie_response : public packet<0x04> {
                     identifier key;
-                    std::optional<list_array_sized<uint8_t, 5120>> payload;
+                    std::optional<list_array_sized<uint8_t, 5120>> payload = std::nullopt;
                 };
             }
 
@@ -2802,7 +2802,7 @@ namespace copper_server {
 
                 struct cookie_response : public packet<0x01> {
                     identifier key;
-                    std::optional<list_array_sized<uint8_t, 5120>> payload;
+                    std::optional<list_array_sized<uint8_t, 5120>> payload = std::nullopt;
                 };
 
                 struct custom_payload : public packet<0x02> {
@@ -2917,7 +2917,7 @@ namespace copper_server {
                     string_sized<256> command;
                     uint64_t timestamp;
                     uint64_t salt;
-                    std::optional<std::array<uint8_t, 256>> signature;
+                    std::optional<std::array<uint8_t, 256>> signature = std::nullopt;
                     var_int32 message_count;
                     bitset_fixed<20> acknowledged;
                     uint8_t check_sum;
@@ -3009,7 +3009,7 @@ namespace copper_server {
 
                     struct changed_slot {
                         short slot;
-                        std::optional<hashed_slot_data> data;
+                        std::optional<hashed_slot_data> data = std::nullopt;
                     };
 
                     var_int32 window_id;
@@ -3018,7 +3018,7 @@ namespace copper_server {
                     int8_t button;
                     var_int32 mode;
                     list_array_sized<changed_slot, 128> changed;
-                    std::optional<hashed_slot_data> carry_item;
+                    std::optional<hashed_slot_data> carry_item = std::nullopt;
                 };
 
                 struct container_close : public packet<0x12> {
@@ -3033,7 +3033,7 @@ namespace copper_server {
 
                 struct cookie_response : public packet<0x14> {
                     identifier key;
-                    std::optional<list_array_sized<uint8_t, 5120>> payload;
+                    std::optional<list_array_sized<uint8_t, 5120>> payload = std::nullopt;
                 };
 
                 struct custom_payload : public packet<0x15> {
@@ -3048,7 +3048,7 @@ namespace copper_server {
                 struct edit_book : public packet<0x17> {
                     var_int32 slot;
                     list_array_sized<string_sized<1024>, 100> entries;
-                    std::optional<string_sized<32>> title;
+                    std::optional<string_sized<32>> title = std::nullopt;
                 };
 
                 struct entity_tag_query : public packet<0x18> {
@@ -3300,8 +3300,8 @@ namespace copper_server {
                 };
 
                 struct set_beacon : public packet<0x33> {
-                    std::optional<var_int32::mob_effect> primary_effect;
-                    std::optional<var_int32::mob_effect> secondary_effect;
+                    std::optional<var_int32::mob_effect> primary_effect = std::nullopt;
+                    std::optional<var_int32::mob_effect> secondary_effect = std::nullopt;
                 };
 
                 struct set_carried_item : public packet<0x34> {
@@ -3448,14 +3448,14 @@ namespace copper_server {
                     };
                     position location;
                     enum_as<action_e, var_int32> action;
-                    std::optional<var_int32::test_instance> test_id;
+                    std::optional<var_int32::test_instance> test_id = std::nullopt;
                     var_int32 size_x;
                     var_int32 size_y;
                     var_int32 size_z;
                     enum_as<rotation_e, var_int32> rotation;
                     bool ignore_entities;
                     enum_as<status_e, var_int32> status;
-                    std::optional<Chat> error_message;
+                    std::optional<Chat> error_message = std::nullopt;
                 };
 
                 struct use_item_on : public packet<0x3F> {

@@ -395,6 +395,7 @@ namespace copper_server {
             util::VECTOR motion;
             util::ANGLE_DEG head_rotation;
             util::ANGLE_DEG rotation;
+            bounding bounds;
 
             std::optional<world_syncing> world_syncing_data;
             list_array<client_data_holder> spectating_players;
@@ -553,9 +554,9 @@ namespace copper_server {
             static entity_ref create(const std::string& id, const enbt::compound_const_ref& nbt);
             static entity_ref load_from_enbt(const enbt::compound_const_ref& file_nbt);
 
-            bool hitboxes_in_range_x(double min, double max);
-            bool hitboxes_in_range_y(double min, double max);
-            bool hitboxes_in_range_z(double min, double max);
+            bool hitboxes_touching_x(double min, double max);
+            bool hitboxes_touching_y(double min, double max);
+            bool hitboxes_touching_z(double min, double max);
 
             entity();
             ~entity();

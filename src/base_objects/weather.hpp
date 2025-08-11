@@ -20,7 +20,12 @@ namespace copper_server::base_objects {
 
         weather(_value value) : value(value) {}
 
-        weather(const weather& value) : value(value.value) {}
+        weather(const weather& copy) : value(copy.value) {}
+
+        weather& operator=(const weather& copy) {
+            value = copy.value;
+            return *this;
+        }
 
         static weather from_string(const std::string& view) {
             static std::unordered_map<std::string, _value> map{

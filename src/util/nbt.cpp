@@ -257,7 +257,7 @@ namespace copper_server::util {
         }
     }
 
-    void NBT::BuildArray(int32_t len, enbt::value& enbt, bool insert_type, bool compress) {
+    void NBT::BuildArray(enbt::value& enbt, bool insert_type, bool compress) {
         if (!enbt.size()) {
             if (insert_type)
                 nbt_data.push_back(9);
@@ -265,7 +265,10 @@ namespace copper_server::util {
             insertValue(0);
             return;
         }
-        if (((int32_t)enbt.size()) != enbt.size())
+        auto check_siz = (int32_t)enbt.size();
+        if (check_siz < 0)
+            throw std::exception("Unsupported array len");
+        if ((size_t)check_siz != enbt.size())
             throw std::exception("Unsupported array len");
         auto base_type = enbt.is_sarray() ? enbt.get_index(0).type_id() : enbt[0].type_id();
         if ((base_type.type == enbt::type::integer || base_type.type == enbt::type::var_integer) && compress) {
@@ -343,7 +346,7 @@ namespace copper_server::util {
         case enbt::type::sarray:
         case enbt::type::array:
         case enbt::type::darray:
-            BuildArray((int32_t)enbt.size(), enbt, insert_type, compress);
+            BuildArray(enbt, insert_type, compress);
             break;
         case enbt::type::compound:
             if (insert_type)
@@ -358,7 +361,7 @@ namespace copper_server::util {
 #pragma endregion
 #pragma region NBT_TO_ENBT
 
-    enbt::value NBT::RecursiveExtractor_1(uint8_t type, const uint8_t* data, size_t& i, size_t max_size, bool in_compound) {
+    enbt::value NBT::RecursiveExtractor_1(uint8_t type, const uint8_t* data, size_t& i, size_t max_size) {
         switch (type) {
         case 0: //end
             return enbt::value();
@@ -400,7 +403,7 @@ namespace copper_server::util {
             std::vector<enbt::value> res;
             res.reserve(length);
             for (int32_t iterate = 0; iterate < length; iterate++)
-                res.push_back(RecursiveExtractor_1(list_type, data, i, max_size, false));
+                res.push_back(RecursiveExtractor_1(list_type, data, i, max_size));
             return enbt::value(res, enbt::type_id(enbt::type::array, enbt::type_len::Default));
         }
         case 10: { //compound
@@ -414,7 +417,7 @@ namespace copper_server::util {
                     throw std::out_of_range("Out of bounds");
                 std::string res(data + i, data + i + length);
                 i += length;
-                compound[res] = RecursiveExtractor_1(compound_type, data, i, max_size, true);
+                compound[res] = RecursiveExtractor_1(compound_type, data, i, max_size);
             }
             return compound;
         }
@@ -444,15 +447,15 @@ namespace copper_server::util {
             //skip first base compound name tag
             i++;
             i += extractValue<uint16_t>(data, i, max_size);
-            return RecursiveExtractor_1(10, data, i, max_size, true);
+            return RecursiveExtractor_1(10, data, i, max_size);
         }
-        return RecursiveExtractor_1(data[i++], data, i, max_size, false);
+        return RecursiveExtractor_1(data[i++], data, i, max_size);
     }
 
     enbt::value NBT::RecursiveExtractorNetwork(const uint8_t* data, size_t& i, size_t max_size) {
         if (max_size == 0)
             return enbt::value();
-        return RecursiveExtractor_1(data[i++], data, i, max_size, data[0] == 10);
+        return RecursiveExtractor_1(data[i++], data, i, max_size);
     }
 
 #pragma endregion
@@ -478,7 +481,7 @@ namespace copper_server::util {
     }
 
     NBT::NBT(NBT&& move)
-        : nbt_data(std::move(nbt_data)) {}
+        : nbt_data(std::move(move)) {}
 
     NBT::~NBT() = default;
 

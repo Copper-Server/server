@@ -668,7 +668,7 @@ namespace copper_server {
         enbt::value& view_registry_entries(const std::string& registry);
         enbt::value& view_registry_proto_invert(const std::string& registry);
         int32_t view_reg_pro_id(const std::string& registry, const std::string& item);
-        std::string view_reg_pro_name(const std::string& registry, int32_t id);
+        std::string_view view_reg_pro_name(const std::string& registry, int32_t id);
         list_array<int32_t> convert_reg_pro_id(const std::string& registry, const list_array<std::string>& item);
         list_array<int32_t> convert_reg_pro_id(const std::string& registry, const std::vector<std::string>& item);
         list_array<std::string> convert_reg_pro_name(const std::string& registry, const list_array<int32_t>& item);

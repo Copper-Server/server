@@ -192,10 +192,10 @@ namespace copper_server::base_objects::packets {
         };
 
         struct properties_t {
-            std::optional<uint8_t> flags;
-            std::optional<std::variant<int64_t, int32_t, float, double>> min;
-            std::optional<std::variant<int64_t, int32_t, float, double>> max;
-            std::optional<std::string> registry;
+            std::optional<uint8_t> flags = std::nullopt;
+            std::optional<std::variant<int64_t, int32_t, float, double>> min = std::nullopt;
+            std::optional<std::variant<int64_t, int32_t, float, double>> max = std::nullopt;
+            std::optional<std::string> registry = std::nullopt;
         };
 
         struct flag_t {

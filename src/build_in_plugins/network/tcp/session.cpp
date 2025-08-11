@@ -20,14 +20,17 @@ namespace copper_server::build_in_plugins::network::tcp {
     bool session::do_log_connection_errors = true;
 
     session::session(fast_task::networking::TcpNetworkStream& s, client* client_handler, float& set_timeout)
-        : stream(&s), timeout(set_timeout), api::network::tcp::session(id_gen++) {
+        : api::network::tcp::session(id_gen++), stream(&s), timeout(set_timeout) {
         chandler = client_handler->define_ourself(this);
         read_data.resize(1024);
     }
 
-    session::~session() {
+    session::~session() noexcept {
         if (_sharedData) {
-            api::players::handlers::on_disconnect.await_notify(shared_data_ref());
+            try {
+                api::players::handlers::on_disconnect.await_notify(shared_data_ref());
+            } catch (...) {
+            }
             api::players::remove_player(shared_data_ref());
         }
         if (chandler)

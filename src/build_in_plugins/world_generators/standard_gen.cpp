@@ -28,7 +28,7 @@ namespace copper_server::build_in_plugins::world_generators {
             };
         }
 
-        void process_chunk(storage::world_data& world, storage::chunk_data& chunk, uint8_t preset_stage) {
+        void process_chunk([[maybe_unused]] storage::world_data& world, storage::chunk_data& chunk, uint8_t preset_stage) override {
             switch (preset_stage) {
             case 0:
                 chunk.generator_stage = 1;
@@ -68,19 +68,19 @@ namespace copper_server::build_in_plugins::world_generators {
             }
         }
 
-        enbt::compound generate_chunk(storage::world_data& world, int64_t chunk_x, int64_t chunk_z) override {
+        enbt::compound generate_chunk(storage::world_data&, int64_t, int64_t) override {
             return {
                 {"generator_stage", 0}
             };
         }
 
-        enbt::compound generate_sub_chunk(storage::world_data& world, int64_t chunk_x, int64_t sub_chunk_y, int64_t chunk_z) override {
+        enbt::compound generate_sub_chunk(storage::world_data&, int64_t, int64_t, int64_t) override {
             return {};
         }
     };
 
     struct standard_gen : public PluginAutoRegister<"world_generators/standard", standard_gen> {
-        void OnRegister(const PluginRegistrationPtr& self) override {
+        void OnRegister(const PluginRegistrationPtr&) override {
             storage::chunk_generator::register_it("standard", new standard_generator());
         }
     };

@@ -90,6 +90,11 @@ namespace copper_server::base_objects {
     item_id_t::item_id_t()
         : id(0) {}
 
+    item_id_t& item_id_t::operator=(const item_id_t& copy) {
+        id = copy.id;
+        return *this;
+    }
+
     const std::string& item_id_t::to_name() const {
         return slot_data::get_slot_data(id).id;
     }

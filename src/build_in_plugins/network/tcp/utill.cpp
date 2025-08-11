@@ -183,7 +183,7 @@ namespace copper_server::build_in_plugins::network::tcp {
             WriteVar<int32_t>(packet.size(), build_packet);
             build_packet.push_back(std::move(packet));
         } else {
-            if (packet.size() < session->compression_threshold) {
+            if (packet.size() < (size_t)session->compression_threshold) {
                 build_packet.push_back(0);
                 build_packet.push_back(std::move(packet));
             } else {

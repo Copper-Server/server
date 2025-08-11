@@ -249,66 +249,34 @@ namespace copper_server::util::conversions {
             std::vector<std::uint8_t> result;
             result.resize(to_add);
             for (size_t i = 0; i < data_size; i += 2)
-                result[result_i++] = (map.hex_map_index[data[i]] << 4) | map.hex_map_index[data[i + 1]];
+                result[result_i++] = (map.hex_map_index[(uint8_t)data[i]] << 4) | map.hex_map_index[(uint8_t)data[i + 1]];
             return result;
         }
     }
 
     namespace uuid {
         namespace __internal__ {
-            static uint8_t unHex_0(char ch0) {
-                switch (ch0) {
-                case '0':
-                    return 0;
-                case '1':
-                    return 1;
-                case '2':
-                    return 2;
-                case '3':
-                    return 3;
-                case '4':
-                    return 4;
-                case '5':
-                    return 5;
-                case '6':
-                    return 6;
-                case '7':
-                    return 7;
-                case '8':
-                    return 8;
-                case '9':
-                    return 9;
-                case 'a':
-                case 'A':
-                    return 0xa;
-                case 'b':
-                case 'B':
-                    return 0xb;
-                case 'c':
-                case 'C':
-                    return 0xc;
-                case 'd':
-                case 'D':
-                    return 0xd;
-                case 'e':
-                case 'E':
-                    return 0xe;
-                case 'f':
-                case 'F':
-                    return 0xf;
-                default:
-                    throw std::invalid_argument("This function accepts only hex symbols");
-                }
-            }
-
             static uint8_t unHex(char ch0, char ch1) {
-                return unHex_0(ch0) & (unHex_0(ch1) << 4);
+                struct construct_ {
+                    uint8_t hex_map_index[256]{0};
+
+                    construct_() {
+                        for (uint8_t i = 0; i < 10; i++)
+                            hex_map_index['0' + i] = i;
+                        for (uint8_t i = 0; i < 6; i++)
+                            hex_map_index['a' + i] = 10 + i;
+                        for (uint8_t i = 0; i < 6; i++)
+                            hex_map_index['A' + i] = 10 + i;
+                    }
+                } static const map;
+
+                return (map.hex_map_index[(uint8_t)ch0] << 4) | map.hex_map_index[(uint8_t)ch1];
             }
 
             static void addHex(std::string& str, uint8_t i) {
-                static constexpr char map[]{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
-                str += map[i & 0xF];
-                str += map[(i >> 4) & 0xF0];
+                static const char hex[] = "0123456789abcdef";
+                str += hex[i & 0xF];
+                str += hex[(i >> 4) & 0xF0];
             }
         }
 
@@ -340,7 +308,7 @@ namespace copper_server::util::conversions {
         enbt::raw_uuid from(std::string_view id) {
             enbt::raw_uuid res;
             uint8_t index = 0;
-            char cache;
+            char cache = 0;
             bool cached = false;
             for (char ch : id) {
                 if (ch == '-')
@@ -349,7 +317,7 @@ namespace copper_server::util::conversions {
                     cache = ch;
                     cached = true;
                 } else {
-                    res.data[index++] = __internal__::unHex(cached, ch);
+                    res.data[index++] = __internal__::unHex(cache, ch);
                     cached = false;
                 }
                 if (index == 16)

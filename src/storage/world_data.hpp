@@ -114,7 +114,7 @@ namespace copper_server::storage {
         void get_sub_chunk(uint64_t local_y, std::function<void(base_objects::world::sub_chunk_data& sub_chunk)> func);
 
         //priority accepts only negative values
-        void query_for_tick(uint8_t local_x, uint64_t local_y, uint8_t local_z, uint64_t on_tick, int8_t priority = 0);
+        void query_for_tick(uint8_t local_x, uint64_t local_y, uint8_t local_z, uint64_t on_tick, int8_t priority = -1);
         void query_for_liquid_tick(uint8_t local_x, uint64_t local_y, uint8_t local_z, uint64_t on_tick);
 
 
@@ -302,7 +302,7 @@ namespace copper_server::storage {
 
         std::chrono::high_resolution_clock::time_point last_usage;
 
-        FuturePtr<base_objects::atomic_holder<chunk_data>> create_chunk_generate_future(int64_t chunk_x, int64_t chunk_z, base_objects::atomic_holder<chunk_data>& chunk);
+        FuturePtr<base_objects::atomic_holder<chunk_data>> create_chunk_generate_future(base_objects::atomic_holder<chunk_data>& chunk);
         FuturePtr<base_objects::atomic_holder<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback, std::function<void()> fault);
         FuturePtr<base_objects::atomic_holder<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z);
         void make_save(int64_t chunk_x, int64_t chunk_z, bool also_unload);
@@ -321,6 +321,7 @@ namespace copper_server::storage {
 
         void __set_block_silent(const base_objects::full_block_data& block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
         void __set_block_silent(base_objects::full_block_data&& block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
+        void __update_block(int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode, base_objects::block_id_t);
 
     public:
         uint16_t get_chunk_y_count() const {
@@ -347,7 +348,18 @@ namespace copper_server::storage {
         void load();
         //metadata
         void save();
-        enbt::compound general_world_data;
+
+        struct general_world_data_t {
+            struct liquid_data {
+                int16_t spread_size;   //-1 for infinity
+                uint16_t spread_ticks; //-1 for infinity
+            };
+
+            std::unordered_map<base_objects::block_id_t, liquid_data> liquid;
+            enbt::compound other;
+        } general_world_data;
+
+
         enbt::compound world_game_rules;
         enbt::compound world_generator_data;
         enbt::compound world_light_processor_data; //not saved
@@ -512,12 +524,12 @@ namespace copper_server::storage {
         void set_block_range(base_objects::spherical_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks, block_set_mode mode = block_set_mode::replace);
 
 
-        uint32_t get_biome(int64_t global_x, int64_t global_y, int64_t global_z);
-        void set_biome(int64_t global_x, int64_t global_y, int64_t global_z, uint32_t id);
-        void set_biome_range(base_objects::cubic_bounds_block bounds, const list_array<uint32_t>& blocks, block_set_mode mode = block_set_mode::replace);
-        void set_biome_range(base_objects::cubic_bounds_block bounds, list_array<uint32_t>&& blocks, block_set_mode mode = block_set_mode::replace);
-        void set_biome_range(base_objects::spherical_bounds_block bounds, const list_array<uint32_t>& blocks, block_set_mode mode = block_set_mode::replace);
-        void set_biome_range(base_objects::spherical_bounds_block bounds, list_array<uint32_t>&& blocks, block_set_mode mode = block_set_mode::replace);
+        int32_t get_biome(int64_t global_x, int64_t global_y, int64_t global_z);
+        void set_biome(int64_t global_x, int64_t global_y, int64_t global_z, int32_t id);
+        void set_biome_range(base_objects::cubic_bounds_block bounds, const list_array<int32_t>& biomes);
+        void set_biome_range(base_objects::cubic_bounds_block bounds, list_array<int32_t>&& biomes);
+        void set_biome_range(base_objects::spherical_bounds_block bounds, const list_array<int32_t>& biomes);
+        void set_biome_range(base_objects::spherical_bounds_block bounds, list_array<int32_t>&& biomes);
 
         void get_height_maps(int64_t chunk_x, int64_t chunk_z, std::function<void(base_objects::world::height_maps& height_maps)> func);
         void get_height_maps_at(int64_t chunk_x, int64_t chunk_z, std::function<void(base_objects::world::height_maps& height_maps)> func);
@@ -699,7 +711,7 @@ namespace copper_server::storage {
 
         void for_each_world(std::function<void(int32_t id, world_data& world)> func);
 
-        void apply_tick(std::chrono::high_resolution_clock::time_point current_time, std::chrono::nanoseconds elapsed);
+        void apply_tick(std::chrono::high_resolution_clock::time_point current_time);
     };
 }
 #endif /* SRC_STORAGE_WORLD_DATA */

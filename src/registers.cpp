@@ -72,8 +72,8 @@ namespace copper_server {
                 return view_registry_entries(registry).at("minecraft:" + item).at("protocol_id");
         }
 
-        std::string view_reg_pro_name(const std::string& registry, int32_t id) {
-            return view_registry_proto_invert(registry).at(id);
+        std::string_view view_reg_pro_name(const std::string& registry, int32_t id) {
+            return (const std::string&)view_registry_proto_invert(registry).at(id);
         }
 
         list_array<int32_t> convert_reg_pro_id(const std::string& registry, const list_array<std::string>& item) {

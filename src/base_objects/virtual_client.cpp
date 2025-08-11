@@ -29,7 +29,7 @@ namespace copper_server::base_objects {
         client->is_virtual = true;
         client->packets_state.protocol_version = registers::current_protocol_id;
         client->packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::play;
-        client->special_callback = [this](base_objects::SharedClientData& self, network::response&& resp) {
+        client->special_callback = [this](base_objects::SharedClientData& _, network::response&& resp) {
             resp.data.for_each([&](base_objects::network::response::item& it) {
                 if (it.data.empty())
                     return;

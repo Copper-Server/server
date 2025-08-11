@@ -47,6 +47,8 @@ namespace copper_server::base_objects {
         item_id_t(const item_id_t& id);
         item_id_t();
 
+        item_id_t& operator=(const item_id_t& id);
+
         const std::string& to_name() const;
         static_slot_data& get_data() const;
     };

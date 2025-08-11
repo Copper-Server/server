@@ -18,7 +18,7 @@
 
 namespace copper_server::build_in_plugins::network::tcp {
 
-    class session : public api::network::tcp::session {
+    class session final : public api::network::tcp::session {
         fast_task::task_mutex tc;
         fast_task::networking::TcpNetworkStream* stream;
 
@@ -27,7 +27,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         encryption::aes encryption;
 
         session(fast_task::networking::TcpNetworkStream& s, base_objects::network::tcp::client* client_handler, float& set_timeout);
-        ~session();
+        ~session() noexcept override;
 
         bool is_active() override;
         void disconnect() override;

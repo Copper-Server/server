@@ -62,11 +62,11 @@ namespace copper_server::base_objects::world {
         );
     }
 
-    uint32_t sub_chunk_data::get_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z) {
+    int32_t sub_chunk_data::get_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z) {
         return biomes[2 >> local_x][2 >> local_y][2 >> local_z];
     }
 
-    void sub_chunk_data::set_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z, uint32_t id) {
+    void sub_chunk_data::set_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z, int32_t id) {
         biomes[2 >> local_x][2 >> local_y][2 >> local_z] = id;
     }
 

@@ -134,7 +134,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 }
                 return false;
             });
-            api::packets::register_server_bound_processor<api::packets::server_bound::configuration::finish_configuration>([this](api::packets::server_bound::configuration::finish_configuration&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<api::packets::server_bound::configuration::finish_configuration>([this](api::packets::server_bound::configuration::finish_configuration&&, base_objects::SharedClientData& client) {
                 extra_data_t::get(client).ka_solution.set_callback([](int64_t res, base_objects::SharedClientData& client) {
                     client << api::packets::client_bound::configuration::keep_alive{.keep_alive_id = (uint64_t)res};
                 });
@@ -210,7 +210,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     .difficulty = (api::packets::difficulty_e)difficulty,
                     .is_locked = difficulty_locked
                 };
-                api::client::play::player_abilities::flags_f abilities_f;
+                api::client::play::player_abilities::flags_f abilities_f{};
                 if (client.player_data.abilities.flags.allow_flying)
                     abilities_f = abilities_f | api::client::play::player_abilities::allow_flying;
                 if (client.player_data.abilities.flags.creative_mode)
@@ -238,6 +238,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 client.packets_state.is_play_fully_initialized = false;
                 auto [yaw, pitch] = util::to_yaw_pitch(client.player_data.assigned_entity->rotation);
                 client << api::client::play::player_position{
+                    .teleport_id = 0, //TODO replace with automatic id
                     .x = client.player_data.assigned_entity->position.x,
                     .y = client.player_data.assigned_entity->position.y,
                     .z = client.player_data.assigned_entity->position.z,
@@ -250,7 +251,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 };
             });
 
-            api::packets::register_server_bound_processor<accept_teleportation>([this](accept_teleportation&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<accept_teleportation>([]([[maybe_unused]] accept_teleportation&& packet, base_objects::SharedClientData& client) {
                 if (!client.packets_state.is_fully_initialized) {
                     client.packets_state.is_fully_initialized = true;
                     api::world::sync_settings(client);
@@ -265,7 +266,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 }
             });
 
-            api::packets::register_server_bound_processor<block_entity_tag_query>([this](block_entity_tag_query&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<block_entity_tag_query>([](block_entity_tag_query&& packet, base_objects::SharedClientData& client) {
                 if (client.player_data.assigned_entity)
                     if (client.player_data.assigned_entity->current_world())
                         client.player_data.assigned_entity->current_world()->get_block(
@@ -273,7 +274,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                             packet.location.y,
                             packet.location.z,
                             [](auto&) {},
-                            [&](auto& block, auto& enbt) {
+                            [&](auto&, auto& enbt) {
                                 client << api::client::play::tag_query{
                                     .tag_query_id = packet.tag_query_id,
                                     .nbt = enbt
@@ -282,42 +283,42 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         );
             });
 
-            api::packets::register_server_bound_processor<bundle_item_selected>([](bundle_item_selected&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<bundle_item_selected>([]([[maybe_unused]] bundle_item_selected&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<change_difficulty>([](change_difficulty&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<change_difficulty>([]([[maybe_unused]] change_difficulty&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<change_gamemode>([](change_gamemode&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<change_gamemode>([]([[maybe_unused]] change_gamemode&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<chat_ack>([](chat_ack&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<chat_ack>([]([[maybe_unused]] chat_ack&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            //api::packets::register_server_bound_processor<chat_command>([](chat_command&& packet, base_objects::SharedClientData& client) {precessed by play_engine
+            //api::packets::register_server_bound_processor<chat_command>([](chat_command&& packet, base_objects::SharedClientData& client) { //processed by play_engine
             //});
 
-            api::packets::register_server_bound_processor<chat_command_signed>([](chat_command_signed&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<chat_command_signed>([]([[maybe_unused]] chat_command_signed&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<chat>([](chat&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<chat>([]([[maybe_unused]] chat&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<chat_session_update>([](chat_session_update&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<chat_session_update>([]([[maybe_unused]] chat_session_update&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<chunk_batch_received>([](chunk_batch_received&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<chunk_batch_received>([]([[maybe_unused]] chunk_batch_received&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<client_command>([](client_command&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<client_command>([](client_command&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 if (packet.action_id == client_command::action_id_e::perform_respawn) {
                     //TODO client << api::client::play::respawn{};
                 } else if (packet.action_id == client_command::action_id_e::request_stats) {
@@ -327,7 +328,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 }
             });
 
-            api::packets::register_server_bound_processor<client_tick_end>([](client_tick_end&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<client_tick_end>([](client_tick_end&&, base_objects::SharedClientData& client) {
                 client << api::client::play::ticking_step{};
             });
 
@@ -363,21 +364,21 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 };
             });
 
-            api::packets::register_server_bound_processor<configuration_acknowledged>([](configuration_acknowledged&& packet, base_objects::SharedClientData& client) {});
+            api::packets::register_server_bound_processor<configuration_acknowledged>([]([[maybe_unused]] configuration_acknowledged&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {});
 
-            api::packets::register_server_bound_processor<container_button_click>([](container_button_click&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<container_button_click>([]([[maybe_unused]] container_button_click&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<container_click>([](container_click&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<container_click>([]([[maybe_unused]] container_click&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<container_close>([](container_close&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<container_close>([]([[maybe_unused]] container_close&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<container_slot_state_changed>([](container_slot_state_changed&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<container_slot_state_changed>([]([[maybe_unused]] container_slot_state_changed&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
@@ -391,15 +392,15 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     plugin->OnPlayHandle(plugin, packet.channel, packet.payload, client);
             });
 
-            api::packets::register_server_bound_processor<debug_sample_subscription>([](debug_sample_subscription&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<debug_sample_subscription>([]([[maybe_unused]] debug_sample_subscription&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<edit_book>([](edit_book&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<edit_book>([]([[maybe_unused]] edit_book&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<entity_tag_query>([](entity_tag_query&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<entity_tag_query>([]([[maybe_unused]] entity_tag_query&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 auto entity = api::entity_id_map::get_entity(packet.entity_id);
                 if (entity)
                     client << api::client::play::tag_query{
@@ -408,11 +409,11 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     };
             });
 
-            api::packets::register_server_bound_processor<interact>([](interact&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<interact>([]([[maybe_unused]] interact&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<jigsaw_generate>([](jigsaw_generate&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<jigsaw_generate>([]([[maybe_unused]] jigsaw_generate&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
@@ -421,105 +422,105 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 client.packets_state.keep_alive_ping_ms = (int32_t)std::min<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(delay).count(), INT32_MAX);
             });
 
-            api::packets::register_server_bound_processor<lock_difficulty>([](lock_difficulty&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<lock_difficulty>([]([[maybe_unused]] lock_difficulty&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<move_player_pos>([](move_player_pos&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<move_player_pos>([]([[maybe_unused]] move_player_pos&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<move_player_pos_rot>([](move_player_pos_rot&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<move_player_pos_rot>([]([[maybe_unused]] move_player_pos_rot&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<move_player_rot>([](move_player_rot&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<move_player_rot>([]([[maybe_unused]] move_player_rot&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<move_player_status_only>([](move_player_status_only&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<move_player_status_only>([]([[maybe_unused]] move_player_status_only&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            api::packets::register_server_bound_processor<move_vehicle>([](move_vehicle&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<move_vehicle>([]([[maybe_unused]] move_vehicle&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<paddle_boat>([](paddle_boat&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<paddle_boat>([]([[maybe_unused]] paddle_boat&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<pick_item_from_block>([](pick_item_from_block&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<pick_item_from_block>([]([[maybe_unused]] pick_item_from_block&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<pick_item_from_entity>([](pick_item_from_entity&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<pick_item_from_entity>([]([[maybe_unused]] pick_item_from_entity&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
             api::packets::register_server_bound_processor<ping_request>([](ping_request&& packet, base_objects::SharedClientData& client) {
                 client << api::client::play::pong_response{.id = packet.payload};
             });
-            api::packets::register_server_bound_processor<place_recipe>([](place_recipe&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<place_recipe>([]([[maybe_unused]] place_recipe&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<player_abilities>([](player_abilities&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<player_abilities>([]([[maybe_unused]] player_abilities&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<player_action>([](player_action&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<player_action>([]([[maybe_unused]] player_action&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<player_command>([](player_command&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<player_command>([]([[maybe_unused]] player_command&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<player_input>([](player_input&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<player_input>([]([[maybe_unused]] player_input&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<player_loaded>([](player_loaded&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<player_loaded>([]([[maybe_unused]] player_loaded&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<pong>([](pong&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<pong>([]([[maybe_unused]] pong&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<recipe_book_change_settings>([](recipe_book_change_settings&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<recipe_book_change_settings>([]([[maybe_unused]] recipe_book_change_settings&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<recipe_book_seen_recipe>([](recipe_book_seen_recipe&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<recipe_book_seen_recipe>([]([[maybe_unused]] recipe_book_seen_recipe&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<rename_item>([](rename_item&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<rename_item>([]([[maybe_unused]] rename_item&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<resource_pack>([](resource_pack&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<resource_pack>([]([[maybe_unused]] resource_pack&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<seen_advancements>([](seen_advancements&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<seen_advancements>([]([[maybe_unused]] seen_advancements&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<select_trade>([](select_trade&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<select_trade>([]([[maybe_unused]] select_trade&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<set_beacon>([](set_beacon&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<set_beacon>([]([[maybe_unused]] set_beacon&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<set_carried_item>([](set_carried_item&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<set_carried_item>([]([[maybe_unused]] set_carried_item&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<set_command_block>([](set_command_block&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<set_command_block>([]([[maybe_unused]] set_command_block&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<set_command_minecart>([](set_command_minecart&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<set_command_minecart>([]([[maybe_unused]] set_command_minecart&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<set_creative_mode_slot>([](set_creative_mode_slot&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<set_creative_mode_slot>([]([[maybe_unused]] set_creative_mode_slot&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<set_jigsaw_block>([](set_jigsaw_block&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<set_jigsaw_block>([]([[maybe_unused]] set_jigsaw_block&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<set_structure_block>([](set_structure_block&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<set_structure_block>([]([[maybe_unused]] set_structure_block&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<set_test_block>([](set_test_block&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<set_test_block>([]([[maybe_unused]] set_test_block&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<sign_update>([](sign_update&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<sign_update>([]([[maybe_unused]] sign_update&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
             api::packets::register_server_bound_processor<swing>([](swing&& packet, base_objects::SharedClientData& client) {
@@ -534,16 +535,16 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                             );
                         });
             });
-            api::packets::register_server_bound_processor<teleport_to_entity>([](teleport_to_entity&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<teleport_to_entity>([]([[maybe_unused]] teleport_to_entity&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<test_instance_block_action>([](test_instance_block_action&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<test_instance_block_action>([]([[maybe_unused]] test_instance_block_action&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<use_item_on>([](use_item_on&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<use_item_on>([]([[maybe_unused]] use_item_on&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            api::packets::register_server_bound_processor<use_item>([](use_item&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<use_item>([]([[maybe_unused]] use_item&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
             api::packets::register_server_bound_processor<custom_click_action>([](custom_click_action&& packet, base_objects::SharedClientData& client) {

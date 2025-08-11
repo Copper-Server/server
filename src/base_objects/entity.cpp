@@ -84,8 +84,11 @@ namespace copper_server {
                     if (auto it = data.entity_processors.find(entity.id); it != data.entity_processors.end())
                         entity.processor = it->second;
                 }
+                player_entity_id = data._name_to_id.at("minecraft:player");
             });
         }
+
+        uint16_t entity_data::player_entity_id;
 
         entity::entity() {}
 
@@ -309,6 +312,7 @@ namespace copper_server {
             res->entity_id = nbt["entity_id"];
 
             res->id = nbt["id"];
+            res->bounds = res->const_data().base_bounds;
 
             auto motion = nbt["motion"].as_fixed_array();
             res->motion = {motion[0], motion[1], motion[2]};
@@ -435,16 +439,16 @@ namespace copper_server {
             return res;
         }
 
-        bool entity::hitboxes_in_range_x(double min, double max) {
-            return false; //TODO
+        bool entity::hitboxes_touching_x(double min, double max) {
+            return (position.x - bounds.xz) >= min && (position.x + bounds.xz) <= max;
         }
 
-        bool entity::hitboxes_in_range_y(double min, double max) {
-            return false; //TODO
+        bool entity::hitboxes_touching_y(double min, double max) {
+            return (position.y) >= min && (position.y + bounds.y) <= max;
         }
 
-        bool entity::hitboxes_in_range_z(double min, double max) {
-            return false; //TODO
+        bool entity::hitboxes_touching_z(double min, double max) {
+            return (position.z - bounds.xz) >= min && (position.z + bounds.xz) <= max;
         }
 
         void entity::teleport(util::VECTOR pos) {
@@ -585,7 +589,7 @@ namespace copper_server {
                 *assigned_player << api::packets::client_bound::play::set_health{
                     .health = health,
                     .food = get_food(),
-                    .saturation = get_saturation()
+                    .saturation = {get_saturation()}
                 };
 
             if (health <= 0.0f)
@@ -632,7 +636,7 @@ namespace copper_server {
                 *assigned_player << api::packets::client_bound::play::set_health{
                     .health = get_health(),
                     .food = food,
-                    .saturation = get_saturation()
+                    .saturation = {get_saturation()}
                 };
         }
 
@@ -654,7 +658,7 @@ namespace copper_server {
                 *assigned_player << api::packets::client_bound::play::set_health{
                     .health = get_health(),
                     .food = get_food(),
-                    .saturation = saturation
+                    .saturation = {saturation}
                 };
         }
 
@@ -786,7 +790,7 @@ namespace copper_server {
 
             if (assigned_player)
                 *assigned_player << api::packets::client_bound::play::set_experience{
-                    .bar = progress,
+                    .bar = {progress},
                     .level = required_exp,
                     .total_experience = total
                 };
@@ -828,7 +832,7 @@ namespace copper_server {
                 };
         }
 
-        void entity::move(float side, float forward, bool jump, bool sneaking) {
+        void entity::move([[maybe_unused]] float side, [[maybe_unused]] float forward, [[maybe_unused]] bool jump, [[maybe_unused]] bool sneaking) {
             //TODO
         }
 
@@ -899,10 +903,26 @@ namespace copper_server {
             set_head_rotation(get_head_rotation() += rot);
         }
 
+        void entity::attack_from_this([[maybe_unused]] const entity_ref& entity) {
+        }
+
+        void entity::breaking_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] uint32_t time) {
+        }
+
+        void entity::place_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] const block&) {
+        }
+
+        void entity::place_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] base_objects::const_block_entity_ref) {
+        }
+
+        void entity::place_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] block_entity&&) {
+        }
+
         entity_ref entity::create(uint16_t id) {
             auto it = entity_data::get_entity(id);
             entity_ref res = new entity();
             res->entity_id = id;
+            res->bounds = it.base_bounds;
             if (it.create_callback)
                 it.create_callback(*res);
             return res;
@@ -912,6 +932,7 @@ namespace copper_server {
             auto it = entity_data::get_entity(id);
             entity_ref res = new entity();
             res->entity_id = id;
+            res->bounds = it.base_bounds;
             if (it.create_callback)
                 it.create_callback_with_nbt(*res, nbt);
             else
@@ -923,6 +944,7 @@ namespace copper_server {
             auto it = entity_data::get_entity(id);
             entity_ref res = new entity();
             res->entity_id = it.entity_id;
+            res->bounds = it.base_bounds;
             if (it.create_callback)
                 it.create_callback(*res);
             return res;
@@ -932,6 +954,7 @@ namespace copper_server {
             auto it = entity_data::get_entity(id);
             entity_ref res = new entity();
             res->entity_id = it.entity_id;
+            res->bounds = it.base_bounds;
             if (it.create_callback)
                 it.create_callback_with_nbt(*res, nbt);
             else
@@ -944,6 +967,10 @@ namespace copper_server {
             if (!obj_field_getter)
                 return std::nullopt;
             return obj_field_getter(*this);
+        }
+
+        bool entity::is_player() {
+            return entity_id == entity_data::player_entity_id;
         }
     }
 }

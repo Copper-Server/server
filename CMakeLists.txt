@@ -77,7 +77,7 @@ include_directories(${Boost_INCLUDE_DIRS} ${CC_INCLUDE_DIR} ${ZLIB_INCLUDE_DIRS}
 
 
 IF(MSVC)
-  SET(CMAKE_CXX_FLAGS "/EHa")
+  SET(CMAKE_CXX_FLAGS "/EHsc")
   add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 ENDIF(MSVC)
 add_executable(CopperServer ${SRCFILES} ${RESOURCE_FILES_build})

@@ -9,14 +9,18 @@
 #include <src/api/internal/loot_table_pool_entry.hpp>
 #include <src/api/loot_table_pool_entry.hpp>
 #include <src/api/world.hpp>
-#include <src/build_in_plugins/processors_providers/loot_table_pool_entry_processor.hpp>
+#include <src/base_objects/loot_table_pool_entry_processor.hpp>
+#include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins::processors_providers {
+    class loot_table_pool_entry : public PluginAutoRegister<"processors_provider/loot_table_pool_entry", loot_table_pool_entry> {
+        base_objects::loot_table_pool_entry_processor processor;
 
-    LootTablePoolEntryProcessor::LootTablePoolEntryProcessor() {}
+    public:
+        loot_table_pool_entry() {}
 
-    void LootTablePoolEntryProcessor::OnInitialization(const PluginRegistrationPtr& self) {
-
-        api::loot_table_pool_entry::register_processor(processor);
-    }
+        void OnInitialization(const PluginRegistrationPtr&) override {
+            api::loot_table_pool_entry::register_processor(processor);
+        }
+    };
 }

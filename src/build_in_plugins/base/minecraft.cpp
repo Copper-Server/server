@@ -28,7 +28,7 @@ namespace copper_server::build_in_plugins {
             return false;
         }
 
-        bool OnConfigurationHandle(const PluginRegistrationPtr& self, const std::string& chanel, const list_array<uint8_t>& data, base_objects::SharedClientData& client) override {
+        bool OnConfigurationHandle(const PluginRegistrationPtr& _, const std::string& chanel, const list_array<uint8_t>& data, base_objects::SharedClientData& client) override {
             if (chanel == "minecraft:brand") {
                 ArrayStream stream(data.data(), data.size());
                 int32_t len = stream.read_var<int32_t>();

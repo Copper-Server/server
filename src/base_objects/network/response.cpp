@@ -48,7 +48,7 @@ namespace copper_server::base_objects::network {
     }
 
     response::item::item()
-        : apply_compression(false), compression_threshold(-1) {}
+        : compression_threshold(-1), apply_compression(false) {}
 
     response::item::item(const list_array<uint8_t>& data, int32_t compression_threshold, bool apply_compression)
         : data(data), compression_threshold(compression_threshold), apply_compression(apply_compression) {}
@@ -143,7 +143,7 @@ namespace copper_server::base_objects::network {
         size_t actual_len = str.size();
         if (actual_len != str.size())
             throw std::out_of_range("actual string len out of range");
-        if (actual_len > max_string_len)
+        if (actual_len > (size_t)max_string_len)
             throw std::out_of_range("actual string len out of range");
         write_var32_check(actual_len);
         data.push_back((uint8_t*)str.data(), str.size());

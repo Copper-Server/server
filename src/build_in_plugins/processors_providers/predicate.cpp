@@ -6,12 +6,14 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/api/entity_id_map.hpp>
 #include <src/api/internal/predicate.hpp>
 #include <src/api/predicate.hpp>
 #include <src/api/tags.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/player.hpp>
-#include <src/build_in_plugins/processors_providers/predicate_processor.hpp>
+#include <src/base_objects/predicate_processor.hpp>
+#include <src/plugin/main.hpp>
 #include <src/registers.hpp>
 
 namespace copper_server::build_in_plugins::processors_providers {
@@ -25,16 +27,16 @@ namespace copper_server::build_in_plugins::processors_providers {
         return value >= (T)com.at("min") && value <= (T)com.at("max");
     }
 
-    bool __item_check(const enbt::compound_const_ref& predicate, const enbt::compound_const_ref& item) {
+    bool __item_check([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] const enbt::compound_const_ref& item) {
         return false; //TODO
     }
 
-    bool __location_check(const enbt::compound_const_ref& predicate, util::VECTOR pos, util::ANGLE_DEG rot, storage::world_data& assigned_world) {
+    bool __location_check([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] util::VECTOR pos, [[maybe_unused]] util::ANGLE_DEG rot, [[maybe_unused]] storage::world_data& assigned_world) {
         return false; //TODO
     }
 
-    bool __entity_check(const enbt::compound_const_ref& predicate, enbt::raw_uuid entity_uuid) {
-        base_objects::entity_ref entity; //TODO resolve form entity_uuid
+    bool __entity_check([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] enbt::raw_uuid entity_uuid) {
+        base_objects::entity_ref entity = api::entity_id_map::get_entity(entity_uuid);
         if (!entity)
             return false;
         auto entity_const_data = entity->const_data();
@@ -457,12 +459,12 @@ namespace copper_server::build_in_plugins::processors_providers {
         return __entity_check(predicate.at("predicate").as_compound(), loot_context.at(entity));
     }
 
-    bool entity_scores(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+    bool entity_scores([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] const base_objects::command_context& context) {
         //TODO
         return false;
     }
 
-    bool killed_by_player(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+    bool killed_by_player([[maybe_unused]] const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
         if (!context.other_data.contains("loot_context"))
             return false;
         auto loot_context = context.other_data.at("loot_context").as_compound();
@@ -513,12 +515,12 @@ namespace copper_server::build_in_plugins::processors_providers {
         return __item_check(predicate.at("predicate").as_compound(), loot_context.at("tool").as_compound());
     }
 
-    bool random_chance(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+    bool random_chance([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] const base_objects::command_context& context) {
         //TODO
         return false;
     }
 
-    bool random_chance_with_enchanted_bonus(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+    bool random_chance_with_enchanted_bonus([[maybe_unused]] const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
         //int32_t enchantment_level = 0;
         if (context.other_data.contains("loot_context")) {
             auto loot_context = context.other_data.at("loot_context").as_compound();
@@ -531,7 +533,7 @@ namespace copper_server::build_in_plugins::processors_providers {
         return false;
     }
 
-    bool survives_explosion(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+    bool survives_explosion([[maybe_unused]] const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
         if (!context.other_data.contains("loot_context"))
             return false;
         auto loot_context = context.other_data.at("loot_context").as_compound();
@@ -542,79 +544,84 @@ namespace copper_server::build_in_plugins::processors_providers {
         return rand() % 100 < chance * 100;
     }
 
-    bool table_bonus(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+    bool table_bonus([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] const base_objects::command_context& context) {
         //TODO
         return false;
     }
 
-    bool time_check(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+    bool time_check([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] const base_objects::command_context& context) {
         //TODO
         return false;
     }
 
-    bool value_check(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+    bool value_check([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] const base_objects::command_context& context) {
         //TODO
         return false;
     }
 
-    bool weather_check(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+    bool weather_check([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] const base_objects::command_context& context) {
         //TODO
         return false;
     }
 
-    PredicateProcessor::PredicateProcessor() {}
+    class predicate : public PluginAutoRegister<"processors_provider/predicate", predicate> {
+        base_objects::predicate_processor processor;
 
-    void PredicateProcessor::OnInitialization(const PluginRegistrationPtr& self) {
-        processor.register_handler("all_of", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
-            for (auto& value : predicate["terms"].as_array()) {
-                if (!processor.process_predicate(
-                        value.as_compound(),
-                        context
-                    ))
-                    return false;
-            }
-            return true;
-        });
-        processor.register_handler("any_of", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
-            for (auto& value : predicate["terms"].as_array()) {
-                if (processor.process_predicate(
-                        value.as_compound(),
-                        context
-                    ))
-                    return true;
-            }
-            return false;
-        });
-        processor.register_handler("inverted", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
-            return !processor.process_predicate(
-                predicate.at("term").as_compound(),
-                context
-            );
-        });
-        processor.register_handler("reference", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
-            return processor.process_predicate( //TODO
-                context.other_data.at(predicate.at("name")).as_compound(),
-                context
-            );
-        });
+    public:
+        predicate() {}
+
+        void OnInitialization(const PluginRegistrationPtr&) override {
+            processor.register_handler("all_of", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+                for (auto& value : predicate["terms"].as_array()) {
+                    if (!processor.process_predicate(
+                            value.as_compound(),
+                            context
+                        ))
+                        return false;
+                }
+                return true;
+            });
+            processor.register_handler("any_of", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+                for (auto& value : predicate["terms"].as_array()) {
+                    if (processor.process_predicate(
+                            value.as_compound(),
+                            context
+                        ))
+                        return true;
+                }
+                return false;
+            });
+            processor.register_handler("inverted", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+                return !processor.process_predicate(
+                    predicate.at("term").as_compound(),
+                    context
+                );
+            });
+            processor.register_handler("reference", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+                return processor.process_predicate( //TODO
+                    context.other_data.at(predicate.at("name")).as_compound(),
+                    context
+                );
+            });
 
 
-        processor.register_handler("copper_server:__adventure_block_", _server_helper__adventure_block_);
-        processor.register_handler("block_state_property", block_state_property);
-        processor.register_handler("damage_source_properties", damage_source_properties);
-        processor.register_handler("enchantment_active_check", enchantment_active_check);
-        processor.register_handler("entity_properties", entity_properties);
-        processor.register_handler("entity_scores", entity_scores);
-        processor.register_handler("killed_by_player", killed_by_player);
-        processor.register_handler("location_check", location_check);
-        processor.register_handler("match_tool", match_tool);
-        processor.register_handler("random_chance", random_chance);
-        processor.register_handler("random_chance_with_enchanted_bonus", random_chance_with_enchanted_bonus);
-        processor.register_handler("survives_explosion", survives_explosion);
-        processor.register_handler("table_bonus", table_bonus);
-        processor.register_handler("time_check", time_check);
-        processor.register_handler("value_check", value_check);
-        processor.register_handler("weather_check", weather_check);
-        api::predicate::register_processor(processor);
-    }
+            processor.register_handler("copper_server:__adventure_block_", _server_helper__adventure_block_);
+            processor.register_handler("block_state_property", block_state_property);
+            processor.register_handler("damage_source_properties", damage_source_properties);
+            processor.register_handler("enchantment_active_check", enchantment_active_check);
+            processor.register_handler("entity_properties", entity_properties);
+            processor.register_handler("entity_scores", entity_scores);
+            processor.register_handler("killed_by_player", killed_by_player);
+            processor.register_handler("location_check", location_check);
+            processor.register_handler("match_tool", match_tool);
+            processor.register_handler("random_chance", random_chance);
+            processor.register_handler("random_chance_with_enchanted_bonus", random_chance_with_enchanted_bonus);
+            processor.register_handler("survives_explosion", survives_explosion);
+            processor.register_handler("table_bonus", table_bonus);
+            processor.register_handler("time_check", time_check);
+            processor.register_handler("value_check", value_check);
+            processor.register_handler("weather_check", weather_check);
+            api::predicate::register_processor(processor);
+        }
+    };
 }

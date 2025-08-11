@@ -14,7 +14,7 @@
 
 namespace copper_server::build_in_plugins {
     struct config : public PluginAutoRegister<"tools/config", config> {
-        void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override {
+        void OnCommandsLoad(const PluginRegistrationPtr&, base_objects::command_root_browser& browser) override {
             using predicate = base_objects::parser;
             using pred_string = base_objects::parsers::string;
             using cmd_pred_string = base_objects::parsers::command::string;
@@ -22,7 +22,7 @@ namespace copper_server::build_in_plugins {
                 auto _config = browser.add_child("config");
                 _config
                     .add_child({"reload", "reloads config from file", "/config reload"})
-                    .set_callback({"command.config.reload", {"console"}}, [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                    .set_callback({"command.config.reload", {"console"}}, [&](const list_array<predicate>&, base_objects::command_context& context) {
                         api::configuration::load(true);
                         pluginManagement.registeredPlugins().for_each([&](const PluginRegistrationPtr& plugin) {
                             plugin->OnConfigReload(plugin);
@@ -44,7 +44,7 @@ namespace copper_server::build_in_plugins {
                     .add_child({"<config item>", "returns config value", "/config get <config item>"}, cmd_pred_string::quotable_phrase)
                     .set_callback({"command.config.get", {"console"}}, [&](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto value = api::configuration::get().get(std::get<pred_string>(args[0]).value);
-                        while (value.ends_with('\n') | value.ends_with('\r'))
+                        while (value.ends_with('\n') || value.ends_with('\r'))
                             value.pop_back();
                         if (value.contains("\n"))
                             context.executor << api::client::play::system_chat{.content = "Config value: \n" + value};

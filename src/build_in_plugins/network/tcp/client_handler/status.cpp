@@ -114,7 +114,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         void OnRegister(const PluginRegistrationPtr&) override {
             using status_req = api::packets::server_bound::status::status_request;
             using ping_req = api::packets::server_bound::status::ping_response;
-            api::packets::register_server_bound_processor<status_req>([](status_req&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<status_req>([](status_req&&, base_objects::SharedClientData& client) {
                 client << api::packets::client_bound::status::status_response{
                     .json_response = build_response(client)
                 };

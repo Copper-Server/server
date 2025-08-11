@@ -146,7 +146,7 @@ namespace copper_server::base_objects {
             std::visit(
                 [&](auto& it) {
                     using it_T = std::decay_t<decltype(it)>;
-                    serialize_entry(res, Type::encode_type(it_T::item_id::value));
+                    serialize_entry(res, typename Type::encode_type(it_T::item_id::value));
                     serialize_entry(res, it);
                 },
                 value

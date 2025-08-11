@@ -136,7 +136,7 @@ namespace copper_server {
         namespace client_bound {
             namespace play {
                 commands build_commands(const base_objects::command_manager& manager) {
-                    commands commanands{.root_index = 0};
+                    commands commanands{.nodes = {}, .root_index = 0};
                     bool is_root = true;
                     auto& command_nodes = manager.get_nodes();
                     commanands.nodes.reserve(command_nodes.size());

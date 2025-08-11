@@ -290,13 +290,11 @@ namespace copper_server::build_in_plugins {
           "SOFTWARE.\n";
 #pragma endregion
     struct license : public PluginAutoRegister<"base/license", license> {
-        void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override {
+        void OnCommandsLoad(const PluginRegistrationPtr& _, base_objects::command_root_browser& browser) override {
             using predicate = base_objects::parser;
-            using pred_string = base_objects::parsers::string;
-            using cmd_pred_string = base_objects::parsers::command::string;
             {
                 auto licenses = browser.add_child({"licenses", "returns licenses", "/licenses"});
-                licenses.set_callback("command.licenses", [this](const list_array<predicate>&, base_objects::command_context& context) {
+                licenses.set_callback("command.licenses", [](const list_array<predicate>&, base_objects::command_context& context) {
                     context.executor << api::client::play::system_chat{
                         .content = "The copper_server is licensed under the Apache License Version 2.0\n"
                                    " Libraries:\n"
@@ -313,35 +311,35 @@ namespace copper_server::build_in_plugins {
                     };
                 });
 
-                licenses.add_child("OpenSSL").set_callback("command.licenses.OpenSSL", [this](const list_array<predicate>&, base_objects::command_context& context) {
+                licenses.add_child("OpenSSL").set_callback("command.licenses.OpenSSL", [](const list_array<predicate>&, base_objects::command_context& context) {
                     context.executor << api::client::play::system_chat{.content = apache_license};
                 });
-                licenses.add_child("boost").set_callback("command.licenses.boost", [this](const list_array<predicate>&, base_objects::command_context& context) {
+                licenses.add_child("boost").set_callback("command.licenses.boost", [](const list_array<predicate>&, base_objects::command_context& context) {
                     context.executor << api::client::play::system_chat{.content = boost_license};
                 });
-                licenses.add_child("utfcpp").set_callback("command.licenses.utfcpp", [this](const list_array<predicate>&, base_objects::command_context& context) {
+                licenses.add_child("utfcpp").set_callback("command.licenses.utfcpp", [](const list_array<predicate>&, base_objects::command_context& context) {
                     context.executor << api::client::play::system_chat{.content = boost_license};
                 });
-                licenses.add_child("zlib").set_callback("command.licenses.zlib", [this](const list_array<predicate>&, base_objects::command_context& context) {
+                licenses.add_child("zlib").set_callback("command.licenses.zlib", [](const list_array<predicate>&, base_objects::command_context& context) {
                     context.executor << api::client::play::system_chat{.content = custom_gally_and_adler_license};
                 });
-                licenses.add_child("lionkor-commandline").set_callback("command.licenses.lionkor-commandline", [this](const list_array<predicate>&, base_objects::command_context& context) {
+                licenses.add_child("lionkor-commandline").set_callback("command.licenses.lionkor-commandline", [](const list_array<predicate>&, base_objects::command_context& context) {
                     context.executor << api::client::play::system_chat{.content = mit_kortlepel_license};
                 });
-                licenses.add_child("enbt").set_callback("command.licenses.enbt", [this](const list_array<predicate>&, base_objects::command_context& context) {
+                licenses.add_child("enbt").set_callback("command.licenses.enbt", [](const list_array<predicate>&, base_objects::command_context& context) {
                     context.executor << api::client::play::system_chat{.content = mit_melnytskyi_license};
                 });
-                licenses.add_child("list_array").set_callback("command.licenses.list_array", [this](const list_array<predicate>&, base_objects::command_context& context) {
+                licenses.add_child("list_array").set_callback("command.licenses.list_array", [](const list_array<predicate>&, base_objects::command_context& context) {
                     context.executor << api::client::play::system_chat{.content = mit_melnytskyi_license};
                 });
-                licenses.add_child("fast_task").set_callback("command.licenses.fast_task", [this](const list_array<predicate>&, base_objects::command_context& context) {
+                licenses.add_child("fast_task").set_callback("command.licenses.fast_task", [](const list_array<predicate>&, base_objects::command_context& context) {
                     context.executor << api::client::play::system_chat{.content = boost_license};
                 });
-                licenses.add_child("copper_server").set_callback("command.licenses.copper_server", [this](const list_array<predicate>&, base_objects::command_context& context) {
+                licenses.add_child("copper_server").set_callback("command.licenses.copper_server", [](const list_array<predicate>&, base_objects::command_context& context) {
                     context.executor << api::client::play::system_chat{.content = apache_license};
                 });
             }
-            browser.add_child("license").set_callback("command.license", [this](const list_array<predicate>&, base_objects::command_context& context) {
+            browser.add_child("license").set_callback("command.license", [](const list_array<predicate>&, base_objects::command_context& context) {
                 context.executor << api::client::play::system_chat{.content = std::string("The copper_server is licensed under the Apache License Version 2.0\n") + apache_license};
             });
         }

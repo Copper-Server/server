@@ -23,10 +23,20 @@
 
 namespace copper_server::base_objects {
     struct command_exception {
-        std::exception_ptr exception;
+        std::string what;
         size_t pos = 0;
-        command_exception(std::exception_ptr exception, size_t pos)
-            : exception(exception), pos(pos) {}
+
+        command_exception(const char* what, size_t pos)
+            : what(what), pos(pos) {}
+
+        command_exception(std::string_view what, size_t pos)
+            : what(what), pos(pos) {}
+
+        command_exception(std::string&& what, size_t pos)
+            : what(std::move(what)), pos(pos) {}
+
+        command_exception(const std::string& what, size_t pos)
+            : what(what), pos(pos) {}
     };
 
     struct command_context {
@@ -192,7 +202,9 @@ namespace copper_server::base_objects {
         };
         list_array<command> command_nodes;
         size_t changes_id = 0;
-        void remove(size_t id);
+        void collect_child(int32_t id);
+        void remove_links(int32_t id);
+        void remove(int32_t id);
 
     public:
         friend class command_browser;

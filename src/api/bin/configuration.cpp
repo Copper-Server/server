@@ -52,9 +52,9 @@ namespace copper_server::api::configuration {
 
     void merge_configs_world(ServerConfiguration& cfg, js_object& data) {
         auto world = js_object::get_object(data["world"]);
-        cfg.world.name = world["name"].or_apply(cfg.world.name);
-        cfg.world.seed = world["seed"].or_apply(cfg.world.seed);
-        cfg.world.type = world["type"].or_apply(cfg.world.type);
+        cfg.world.name = (std::string)world["name"].or_apply(cfg.world.name);
+        cfg.world.seed = world["seed"].or_apply(cfg.world.seed).to_text();
+        cfg.world.type = (std::string)world["type"].or_apply(cfg.world.type);
         cfg.world.unload_speed = world["unload_speed"].or_apply(cfg.world.unload_speed);
         cfg.world.auto_save = world["auto_save"].or_apply(cfg.world.auto_save);
         {
@@ -76,7 +76,7 @@ namespace copper_server::api::configuration {
             };
             if (!allowed_modes.contains(saving_mode))
                 saving_mode = "zstd";
-            cfg.world.saving_mode;
+            cfg.world.saving_mode = saving_mode;
         }
         {
             static std::unordered_map<std::string, ServerConfiguration::World::world_not_found_for_client_e> world_not_found_for_client_from_str = {
@@ -100,8 +100,8 @@ namespace copper_server::api::configuration {
 
     void merge_configs_game_play(ServerConfiguration& cfg, js_object& data) {
         auto game_play = js_object::get_object(data["game_play"]);
-        cfg.game_play.difficulty = game_play["difficulty"].or_apply(cfg.game_play.difficulty);
-        cfg.game_play.gamemode = game_play["gamemode"].or_apply(cfg.game_play.gamemode);
+        cfg.game_play.difficulty = (std::string)game_play["difficulty"].or_apply(cfg.game_play.difficulty);
+        cfg.game_play.gamemode = (std::string)game_play["gamemode"].or_apply(cfg.game_play.gamemode);
         cfg.game_play.max_chained_neighbor_updates = game_play["max_chained_neighbor_updates"].or_apply(cfg.game_play.max_chained_neighbor_updates);
         cfg.game_play.max_tick_time = game_play["max_tick_time"].or_apply(cfg.game_play.max_tick_time);
         cfg.game_play.view_distance = game_play["view_distance"].or_apply(cfg.game_play.view_distance);
@@ -266,7 +266,7 @@ namespace copper_server::api::configuration {
         }
     }
 
-    void merge_configs__process__status_favicon_path(ServerConfiguration& cfg, js_object& data) {
+    void merge_configs__process__status_favicon_path(ServerConfiguration& cfg) {
         if (!cfg.status.favicon_path.empty()) {
             fast_task::files::async_iofstream file(
                 cfg.status.favicon_path,
@@ -314,7 +314,7 @@ namespace copper_server::api::configuration {
         }
     }
 
-    void merge_configs(ServerConfiguration& cfg, js_object& data) {
+    void merge_configs(ServerConfiguration& cfg, js_object& data, bool process = false) {
         merge_configs_query(cfg, data);
         merge_configs_world(cfg, data);
         merge_configs_game_play(cfg, data);
@@ -324,10 +324,11 @@ namespace copper_server::api::configuration {
         merge_configs_status(cfg, data);
         merge_configs_server(cfg, data);
         merge_configs_allowed_dimensions(cfg, data);
-
-        merge_configs__process__status_favicon_path(cfg, data);
         merge_configs_plugins(cfg, data);
         merge_configs_disabled_plugins(cfg, data);
+
+        if (process)
+            merge_configs__process__status_favicon_path(cfg);
     }
 
     void save_config(const std::filesystem::path& config_file_path, boost::json::object& config_data) {
@@ -483,7 +484,7 @@ namespace copper_server::api::configuration {
             //if (fill_default_values) {
 
             try {
-                merge_configs(config, config_js);
+                merge_configs(config, config_js, true);
             } catch (const std::exception& ex) {
                 log::error("server", ex.what());
                 throw;
@@ -510,7 +511,7 @@ namespace copper_server::api::configuration {
         val = boost::json::parse(value, ec);
         if (ec)
             throw std::runtime_error("Failed to parse value, strings must be in \" scope and constants must be in lowercase");
-        merge_configs(config, config_js);
+        merge_configs(config, config_js, true);
         save_config(std::filesystem::current_path(), config_data.get_object());
         updated();
     }

@@ -44,7 +44,7 @@ namespace copper_server::base_objects {
 
     struct sound_event {
         identifier name;
-        std::optional<float> fixed_range;
+        std::optional<float> fixed_range = std::nullopt;
         bool operator==(const sound_event& other) const = default;
     };
 
@@ -55,7 +55,7 @@ namespace copper_server::base_objects {
             bool is_ambient;
             bool show_particles;
             bool show_icon;
-            std::optional<box<data_t>> hidden_effect;
+            std::optional<box<data_t>> hidden_effect = std::nullopt;
 
             data_t();
             data_t(data_t&&);
@@ -262,9 +262,9 @@ namespace copper_server::base_objects {
                 bool operator==(const property& other) const = default;
             };
 
-            std::optional<id_set<var_int32::block_type>> blocks;
-            std::optional<list_array<property>> properties;
-            std::optional<enbt::value> nbt;
+            std::optional<id_set<var_int32::block_type>> blocks = std::nullopt;
+            std::optional<list_array<property>> properties = std::nullopt;
+            std::optional<enbt::value> nbt = std::nullopt;
             list_array<component> full_components_match;
             list_array<partial_component> partial_components_match;
             bool operator==(const can_place_on& other) const;
@@ -290,9 +290,9 @@ namespace copper_server::base_objects {
                 bool operator==(const property& other) const = default;
             };
 
-            std::optional<id_set<var_int32::block_type>> blocks;
-            std::optional<list_array<property>> properties;
-            std::optional<enbt::value> nbt;
+            std::optional<id_set<var_int32::block_type>> blocks = std::nullopt;
+            std::optional<list_array<property>> properties = std::nullopt;
+            std::optional<enbt::value> nbt = std::nullopt;
             list_array<component> full_components_match;
             list_array<partial_component> partial_components_match;
             bool operator==(const can_break& other) const;
@@ -422,7 +422,7 @@ namespace copper_server::base_objects {
 
         struct use_cooldown : public enum_item<23> {
             float seconds;
-            std::optional<identifier> cooldown_group;
+            std::optional<identifier> cooldown_group = std::nullopt;
             bool operator==(const use_cooldown& other) const = default;
         };
 
@@ -434,8 +434,8 @@ namespace copper_server::base_objects {
         struct tool : public enum_item<25> {
             struct rule {
                 id_set<var_int32::block_type> blocks;
-                std::optional<float> speed;
-                std::optional<bool> correct_drop_for_blocks;
+                std::optional<float> speed = std::nullopt;
+                std::optional<bool> correct_drop_for_blocks = std::nullopt;
                 bool operator==(const rule& other) const = default;
             };
 
@@ -469,9 +469,9 @@ namespace copper_server::base_objects {
             };
             enum_as<equippable_on_e, var_int32> equippable_on;
             or_<var_int32::sound_event, sound_event> equip_sound;
-            std::optional<identifier> model;
-            std::optional<identifier> overlay;
-            std::optional<id_set<var_int32::entity_type>> allowed_entities;
+            std::optional<identifier> model = std::nullopt;
+            std::optional<identifier> overlay = std::nullopt;
+            std::optional<id_set<var_int32::entity_type>> allowed_entities = std::nullopt;
             bool dispensable;
             bool swappable;
             bool reduces_durability_on_damage;
@@ -501,7 +501,7 @@ namespace copper_server::base_objects {
 
             struct damage_reductions {
                 float horizontal_block_angle;
-                std::optional<id_set<var_int32::damage_type>> damage_kind;
+                std::optional<id_set<var_int32::damage_type>> damage_kind = std::nullopt;
                 float base;
                 float factor;
                 bool operator==(const damage_reductions& other) const = default;
@@ -513,9 +513,9 @@ namespace copper_server::base_objects {
             float item_damage_threshold;
             float item_damage_base;
             float item_damage_factor;
-            std::optional<identifier> bypassed_by;
-            std::optional<or_<var_int32::sound_event, sound_event>> block_sound;
-            std::optional<or_<var_int32::sound_event, sound_event>> disable_sound;
+            std::optional<identifier> bypassed_by = std::nullopt;
+            std::optional<or_<var_int32::sound_event, sound_event>> block_sound = std::nullopt;
+            std::optional<or_<var_int32::sound_event, sound_event>> disable_sound = std::nullopt;
             bool operator==(const blocks_attacks& other) const = default;
         };
 
@@ -572,8 +572,8 @@ namespace copper_server::base_objects {
         };
 
         struct potion_contents : public enum_item<42> {
-            std::optional<var_int32::potion> id;
-            std::optional<int32_t> custom_color;
+            std::optional<var_int32::potion> id = std::nullopt;
+            std::optional<int32_t> custom_color = std::nullopt;
             list_array<potion_effect> custom_effects;
             std::string custom_name;
             bool operator==(const potion_contents& other) const = default;
@@ -600,7 +600,7 @@ namespace copper_server::base_objects {
 
             struct page {
                 string_sized<1024> raw;
-                std::optional<string_sized<1024>> filtered;
+                std::optional<string_sized<1024>> filtered = std::nullopt;
                 bool operator==(const page& other) const = default;
             };
 
@@ -612,12 +612,12 @@ namespace copper_server::base_objects {
 
             struct page {
                 string_sized<1024> raw;
-                std::optional<string_sized<1024>> filtered;
+                std::optional<string_sized<1024>> filtered = std::nullopt;
                 bool operator==(const page& other) const = default;
             };
 
             string_sized<32> raw_title;
-            std::optional<string_sized<32>> filtered_title;
+            std::optional<string_sized<32>> filtered_title = std::nullopt;
             std::string author;
             var_int32 generation;
             list_array_sized<page, 100> pages;
@@ -713,7 +713,7 @@ namespace copper_server::base_objects {
                 bool operator==(const position& other) const = default;
             };
 
-            std::optional<position> global_position;
+            std::optional<position> global_position = std::nullopt;
 
             bool operator==(const lodestone_tracker& other) const = default;
         };
@@ -734,12 +734,12 @@ namespace copper_server::base_objects {
             struct property {
                 string_sized<64> name;
                 std::string value;
-                std::optional<string_sized<1024>> signature;
+                std::optional<string_sized<1024>> signature = std::nullopt;
                 bool operator==(const property& other) const = default;
             };
 
-            std::optional<string_sized<16>> name;
-            std::optional<enbt::raw_uuid> uuid;
+            std::optional<string_sized<16>> name = std::nullopt;
+            std::optional<enbt::raw_uuid> uuid = std::nullopt;
             list_array<property> properties;
 
             bool operator==(const profile& other) const = default;

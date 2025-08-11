@@ -29,7 +29,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             } load_state
                 = load_state_e::to_init;
             keep_alive_solution ka_solution;
-            list_array<PluginRegistrationPtr> active_plugins;
+            list_array<PluginRegistrationPtr> active_plugins{};
 
             static extra_data_t& get(base_objects::SharedClientData& client) {
                 if (!client.packets_state.extra_data) {
@@ -553,7 +553,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 } else
                     client << api::packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 2"};
             });
-            api::packets::register_viewer_server_bound<api::packets::server_bound::configuration::finish_configuration>([](api::packets::server_bound::configuration::finish_configuration&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_viewer_server_bound<api::packets::server_bound::configuration::finish_configuration>([](api::packets::server_bound::configuration::finish_configuration&&, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).load_state == extra_data_t::load_state_e::done) {
                     if (extra_data_t::get(client).active_plugins.empty()) {
                         if (client.packets_state.pending_resource_packs.empty())
@@ -570,7 +570,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 auto delay = extra_data_t::get(client).ka_solution.got_valid_keep_alive((int64_t)packet.keep_alive_id);
                 client.packets_state.keep_alive_ping_ms = (int32_t)std::min<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(delay).count(), INT32_MAX);
             });
-            api::packets::register_server_bound_processor<pong>([](pong&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_server_bound_processor<pong>([](pong&&, base_objects::SharedClientData& client) {
                 client.ping = std::chrono::duration_cast<std::chrono::milliseconds>(client.packets_state.pong_timer - std::chrono::system_clock::now());
             });
             api::packets::register_server_bound_processor<resource_pack>([](resource_pack&& packet, base_objects::SharedClientData& client) {

@@ -13,8 +13,8 @@
 #include <src/util/reflect.hpp>
 
 namespace copper_server::base_objects {
-    
-    component component::parse_component(const std::string& name, const enbt::value& item) {
+
+    component component::parse_component([[maybe_unused]] const std::string& name, [[maybe_unused]] const enbt::value& item) {
         return {};//TODO
     }
 }

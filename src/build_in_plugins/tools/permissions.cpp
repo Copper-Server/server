@@ -68,16 +68,16 @@ namespace copper_server::build_in_plugins {
 
         ~permissions() noexcept {}
 
-        void OnInitialization(const PluginRegistrationPtr& self) override {
+        void OnInitialization(const PluginRegistrationPtr&) override {
             api::permissions::init_permissions(manager);
         }
 
-        void OnLoad(const PluginRegistrationPtr& self) override {
+        void OnLoad(const PluginRegistrationPtr&) override {
             if (!op_list.is_loaded())
                 log::error("permissions", "failed to load permissions");
         }
 
-        void OnPostLoad(const PluginRegistrationPtr& self) override {
+        void OnPostLoad(const PluginRegistrationPtr&) override {
             api::permissions::make_sync();
             api::players::iterate_online([&](base_objects::SharedClientData& client_ref) {
                 update_perm(client_ref);
@@ -85,12 +85,12 @@ namespace copper_server::build_in_plugins {
             });
         }
 
-        void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override {
+        void OnCommandsLoad(const PluginRegistrationPtr&, base_objects::command_root_browser& browser) override {
             using predicate = base_objects::parser;
             using pred_string = base_objects::parsers::string;
             using cmd_pred_string = base_objects::parsers::command::string;
             auto permissions = browser.add_child("permissions");
-            permissions.add_child("reload").set_callback("command.permissions.reload", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+            permissions.add_child("reload").set_callback("command.permissions.reload", [this](const list_array<predicate>&, base_objects::command_context& context) {
                 context.executor << api::client::play::system_chat{.content = "Reloading permissions..."};
                 api::permissions::make_sync();
                 api::players::iterate_online([&](base_objects::SharedClientData& client_ref) {
@@ -101,7 +101,7 @@ namespace copper_server::build_in_plugins {
             });
             {
                 auto list = permissions.add_child("list");
-                list.add_child("group").set_callback("command.permissions.list.group", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                list.add_child("group").set_callback("command.permissions.list.group", [](const list_array<predicate>&, base_objects::command_context& context) {
                     list_array<std::string> enumerate;
                     bool overflow = false;
                     api::permissions::enum_groups([&](const base_objects::permission_group& group) {
@@ -128,7 +128,7 @@ namespace copper_server::build_in_plugins {
                         context.executor << api::client::play::system_chat{.content = std::move(buf)};
                     }
                 });
-                list.add_child("permission").set_callback("command.permissions.list.permission", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                list.add_child("permission").set_callback("command.permissions.list.permission", [](const list_array<predicate>&, base_objects::command_context& context) {
                     list_array<std::string> enumerate;
                     bool overflow = false;
                     api::permissions::enum_permissions([&](const base_objects::permissions_object& group) {
@@ -163,7 +163,7 @@ namespace copper_server::build_in_plugins {
                     .add_child("list")
                     .set_redirect(
                         "permissions list group",
-                        [browser](base_objects::command& cmd, const list_array<predicate>& args, const std::string& left, base_objects::command_context& context) {
+                        [browser](base_objects::command& cmd, const list_array<predicate>&, const std::string&, base_objects::command_context& context) {
                             browser.get_manager().execute_command_from("", cmd, context);
                         }
                     );
@@ -171,11 +171,11 @@ namespace copper_server::build_in_plugins {
                     group
                         .add_child("add")
                         .add_child("<name>", cmd_pred_string::quotable_phrase)
-                        .set_callback("command.permissions.group.add", [this](const list_array<predicate>& args, base_objects::command_context& context) {
-                            api::permissions::add_group({std::get<pred_string>(args[0]).value});
+                        .set_callback("command.permissions.group.add", [](const list_array<predicate>& args, base_objects::command_context&) {
+                            api::permissions::add_group({std::get<pred_string>(args[0]).value, {}});
                         })
                         .add_child("<values>", cmd_pred_string::greedy_phrase)
-                        .set_callback("command.permissions.group.add:with_values", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                        .set_callback("command.permissions.group.add:with_values", [](const list_array<predicate>& args, base_objects::command_context&) {
                             auto permissions = list_array<char>(std::get<pred_string>(args[1]).value).split_by(' ').convert<std::string>([](const list_array<char>& a) {
                                 return std::string(a.data(), a.size());
                             });
@@ -209,7 +209,7 @@ namespace copper_server::build_in_plugins {
             {
                 browser.add_child("deop")
                     .add_child({"<player>", "deop player", "/deop <player>"}, cmd_pred_string::greedy_phrase)
-                    .set_callback("command.deop", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                    .set_callback("command.deop", [this](const list_array<predicate>& args, base_objects::command_context&) {
                         auto& player_name = std::get<pred_string>(args[0]).value;
                         op_list.remove(player_name);
                         auto target = api::players::get_player(

@@ -148,34 +148,43 @@ namespace copper_server::log {
         }
     } // namespace console
 
+    struct log_event_data {
+        level l;
+        std::string source;
+        std::string message;
+    };
+
+    fast_task::task_query q(1);
+
+    void log_event(log_event_data&& data) {
+        q.add(std::make_shared<fast_task::task>([data = std::move(data)]() {
+            console::print(data.l, data.source, data.message);
+            file::print(data.l, data.source, data.message);
+        }));
+    }
+
     void info(std::string_view source, std::string_view message) {
-        console::print(level::info, source, message);
-        file::print(level::info, source, message);
+        log_event(log_event_data{level::info, std::string(source), std::string(message)});
     }
 
     void error(std::string_view source, std::string_view message) {
-        console::print(level::error, source, message);
-        file::print(level::error, source, message);
+        log_event(log_event_data{level::error, std::string(source), std::string(message)});
     }
 
     void warn(std::string_view source, std::string_view message) {
-        console::print(level::warn, source, message);
-        file::print(level::warn, source, message);
+        log_event(log_event_data{level::warn, std::string(source), std::string(message)});
     }
 
     void debug(std::string_view source, std::string_view message) {
-        console::print(level::debug, source, message);
-        file::print(level::debug, source, message);
+        log_event(log_event_data{level::debug, std::string(source), std::string(message)});
     }
 
     void debug_error(std::string_view source, std::string_view message) {
-        console::print(level::debug_error, source, message);
-        file::print(level::debug_error, source, message);
+        log_event(log_event_data{level::debug_error, std::string(source), std::string(message)});
     }
 
     void fatal(std::string_view source, std::string_view message) {
-        console::print(level::fatal, source, message);
-        file::print(level::fatal, source, message);
+        log_event(log_event_data{level::fatal, std::string(source), std::string(message)});
     }
 
     void clear() {
@@ -259,10 +268,12 @@ namespace copper_server::log {
                     command = command.substr(0, command.size() - 1);
                 api::console::on_command.async_notify(command);
             };
+            q.enable();
         }
 
         void deinit() {
             fast_task::write_lock lock(console::console_mutex);
+            q.disable();
             console::cmd.reset();
         }
 

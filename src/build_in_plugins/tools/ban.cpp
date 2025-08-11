@@ -35,20 +35,20 @@ namespace copper_server::build_in_plugins {
 
         ~ban() noexcept {};
 
-        void OnInitialization(const PluginRegistrationPtr& self) {
+        void OnInitialization(const PluginRegistrationPtr&) override {
             api::configuration::get() ^ "ban" ^ "on_ban_message" |= enbt::compound{{"text", "You are banned from this server\nReason: %."}, {"color", "red"}};
             api::configuration::get() ^ "ban" ^ "on_ban_ip_message" |= enbt::compound{{"text", "You are banned from this server\nReason: %."}, {"color", "red"}};
         }
 
-        void OnPostLoad(const PluginRegistrationPtr& self) override {
-            register_event(api::ban::on_ban, base_objects::events::priority::low, [this](const api::ban::ban_data& client) {
+        void OnPostLoad(const PluginRegistrationPtr&) override {
+            register_event(api::ban::on_ban, base_objects::events::priority::low, [](const api::ban::ban_data& client) {
                 api::players::calls::on_player_kick(
                     {api::players::get_player(base_objects::SharedClientData::packets_state_t::protocol_state::play, client.who),
                      Chat::from_enbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_message", {client.reason})}
                 );
                 return false;
             });
-            register_event(api::ban::on_ban, base_objects::events::priority::low, [this](const api::ban::ban_data& client) {
+            register_event(api::ban::on_ban, base_objects::events::priority::low, [](const api::ban::ban_data& client) {
                 api::players::calls::on_player_kick(
                     {api::players::get_player(base_objects::SharedClientData::packets_state_t::protocol_state::play, client.who),
                      Chat::from_enbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_ip_message", {client.reason})}
@@ -57,7 +57,7 @@ namespace copper_server::build_in_plugins {
             });
         }
 
-        void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override {
+        void OnCommandsLoad(const PluginRegistrationPtr&, base_objects::command_root_browser& browser) override {
             using predicate = base_objects::parser;
             using pred_string = base_objects::parsers::string;
             using cmd_pred_string = base_objects::parsers::command::string;
@@ -112,7 +112,7 @@ namespace copper_server::build_in_plugins {
                     auto players = ban_list.add_child({"players", "list all banned players", "/banlist players"});
 
 
-                    players.set_callback("command.banlist.players", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                    players.set_callback("command.banlist.players", [this](const list_array<predicate>&, base_objects::command_context& context) {
                         bool max_reached = false;
                         auto banned = banned_players.keys(100, max_reached);
                         if (banned.size() == 0) {
@@ -137,7 +137,7 @@ namespace copper_server::build_in_plugins {
 
                     players
                         .add_child({"detailed", "list all banned players with reasons", "/banlist players detailed"})
-                        .set_callback("command.banlist.players.detailed", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                        .set_callback("command.banlist.players.detailed", [this](const list_array<predicate>&, base_objects::command_context& context) {
                             std::string message = "List of banned players:\n";
                             banned_players.for_each(
                                 100,
@@ -187,7 +187,7 @@ namespace copper_server::build_in_plugins {
                     });
                     ips
                         .add_child({"detailed", "list all banned ips with reasons", "/banlist ips detailed"})
-                        .set_callback("command.banlist.ips.detailed", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                        .set_callback("command.banlist.ips.detailed", [this](const list_array<predicate>&, base_objects::command_context& context) {
                             std::string message = "List of banned ips:\n";
                             banned_ips.for_each(
                                 100,

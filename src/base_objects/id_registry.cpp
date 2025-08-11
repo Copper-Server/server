@@ -68,7 +68,7 @@ namespace copper_server::base_objects {
 
 
         case registry_source::attribute:
-            return registers::view_reg_pro_name("minecraft:attribute", value);
+            return (std::string)registers::view_reg_pro_name("minecraft:attribute", value);
         case registry_source::block_state:
             return block::get_block((block_id_t)value).name;
         case registry_source::block_type:
@@ -76,13 +76,13 @@ namespace copper_server::base_objects {
         case registry_source::block_entity_type:
             return block::get_block_entity((block_id_t)value).name;
         case registry_source::data_component_type:
-            return registers::view_reg_pro_name("minecraft:data_component_type", value);
+            return (std::string)registers::view_reg_pro_name("minecraft:data_component_type", value);
         case registry_source::entity_type:
             return entity_data::get_entity((uint16_t)value).id;
         case registry_source::fluid:
-            return registers::view_reg_pro_name("minecraft:fluid", value);
+            return (std::string)registers::view_reg_pro_name("minecraft:fluid", value);
         case registry_source::game_event:
-            return registers::view_reg_pro_name("minecraft:game_event", value);
+            return (std::string)registers::view_reg_pro_name("minecraft:game_event", value);
         case registry_source::potion:
             return registers::potions_cache.at(value)->first;
         case registry_source::dimension: {
@@ -93,7 +93,7 @@ namespace copper_server::base_objects {
             return res;
         }
         case registry_source::menu:
-            return registers::view_reg_pro_name("minecraft:menu", value);
+            return (std::string)registers::view_reg_pro_name("minecraft:menu", value);
         default:
             return ""; //TODO
             //position_source_type,

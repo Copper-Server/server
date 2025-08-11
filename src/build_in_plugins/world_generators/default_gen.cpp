@@ -20,7 +20,7 @@ namespace copper_server::build_in_plugins::world_generators {
             };
         }
 
-        enbt::compound generate_sub_chunk(storage::world_data& world, int64_t chunk_x, int64_t sub_chunk_y, int64_t chunk_z) override {
+        enbt::compound generate_sub_chunk(storage::world_data&, int64_t, int64_t sub_chunk_y, int64_t) override {
             if (sub_chunk_y != 0) {
                 return {};
             } else {
@@ -45,7 +45,7 @@ namespace copper_server::build_in_plugins::world_generators {
     };
 
     struct default_gen : public PluginAutoRegister<"world_generators/default", default_gen> {
-        void OnRegister(const PluginRegistrationPtr& self) override {
+        void OnRegister(const PluginRegistrationPtr&) override {
             storage::chunk_generator::register_it("default", new default_generator());
         }
     };

@@ -18,14 +18,14 @@
 
 namespace copper_server::build_in_plugins {
     struct kick : public PluginAutoRegister<"tools/kick", kick> {
-        void OnCommandsLoad(const PluginRegistrationPtr& self, base_objects::command_root_browser& browser) override {
+        void OnCommandsLoad(const PluginRegistrationPtr&, base_objects::command_root_browser& browser) override {
             using predicate = base_objects::parser;
             using pred_string = base_objects::parsers::string;
             using cmd_pred_string = base_objects::parsers::command::string;
 
             browser.add_child("kick")
                 .add_child("<player>", cmd_pred_string::quotable_phrase)
-                .set_callback("command.kick", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                .set_callback("command.kick", [](const list_array<predicate>& args, base_objects::command_context& context) {
                     auto target = api::players::get_player(
                         base_objects::SharedClientData::packets_state_t::protocol_state::play,
                         std::get<pred_string>(args[0]).value
@@ -41,7 +41,7 @@ namespace copper_server::build_in_plugins {
                     api::players::calls::on_player_kick({target, "kicked by admin"});
                 })
                 .add_child({"[reason]", "kick player with reason", "/kick <player> [reason]"}, cmd_pred_string::greedy_phrase)
-                .set_callback("command.kick", [this](const list_array<predicate>& args, base_objects::command_context& context) {
+                .set_callback("command.kick", [](const list_array<predicate>& args, base_objects::command_context& context) {
                     auto target = api::players::get_player(
                         base_objects::SharedClientData::packets_state_t::protocol_state::play,
                         std::get<pred_string>(args[0]).value
