@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_BASE_OBJECTS_SCOREBOARD
 #define SRC_BASE_OBJECTS_SCOREBOARD
 #include <library/fast_task.hpp>
@@ -76,13 +84,13 @@ namespace copper_server::base_objects {
         }
 
         void set_display_name(std::string display_name) {
-            protected_vals.set([display_name, this](protected_vals_t& vals) {
+            protected_vals.set([display_name](protected_vals_t& vals) {
                 vals.display_name = display_name;
             });
         }
 
         void set_criteria(std::string criteria) {
-            protected_vals.set([criteria, this](protected_vals_t& vals) {
+            protected_vals.set([criteria](protected_vals_t& vals) {
                 vals.criteria = criteria;
             });
         }
@@ -298,67 +306,67 @@ namespace copper_server::base_objects {
         }
 
         void set_display_name(std::string display_name) {
-            protected_vals.set([display_name, this](protected_vals_t& vals) {
+            protected_vals.set([display_name](protected_vals_t& vals) {
                 vals.display_name = display_name;
             });
         }
 
         void set_prefix(std::string prefix) {
-            protected_vals.set([prefix, this](protected_vals_t& vals) {
+            protected_vals.set([prefix](protected_vals_t& vals) {
                 vals.prefix = prefix;
             });
         }
 
         void set_suffix(std::string suffix) {
-            protected_vals.set([suffix, this](protected_vals_t& vals) {
+            protected_vals.set([suffix](protected_vals_t& vals) {
                 vals.suffix = suffix;
             });
         }
 
         void set_color(color color) {
-            protected_vals.set([color, this](protected_vals_t& vals) {
+            protected_vals.set([color](protected_vals_t& vals) {
                 vals.color = color;
             });
         }
 
         void set_collision_rule(collision_rule rule) {
-            protected_vals.set([rule, this](protected_vals_t& vals) {
+            protected_vals.set([rule](protected_vals_t& vals) {
                 vals.collision_rule = rule;
             });
         }
 
         void set_death_message_visibility(death_message_visibility visibility) {
-            protected_vals.set([visibility, this](protected_vals_t& vals) {
+            protected_vals.set([visibility](protected_vals_t& vals) {
                 vals.death_message_visibility = visibility;
             });
         }
 
         void set_name_tag_visibility(name_tag_visibility visibility) {
-            protected_vals.set([visibility, this](protected_vals_t& vals) {
+            protected_vals.set([visibility](protected_vals_t& vals) {
                 vals.name_tag_visibility = visibility;
             });
         }
 
         void set_friendly_fire(bool friendly_fire) {
-            protected_vals.set([friendly_fire, this](protected_vals_t& vals) {
+            protected_vals.set([friendly_fire](protected_vals_t& vals) {
                 vals.friendly_fire = friendly_fire;
             });
         }
 
         void set_see_invisible(bool see_invisible) {
-            protected_vals.set([see_invisible, this](protected_vals_t& vals) {
+            protected_vals.set([see_invisible](protected_vals_t& vals) {
                 vals.see_invisible = see_invisible;
             });
         }
 
         void add_player(std::string player) {
-            protected_vals.set([player, this](protected_vals_t& vals) {
+            protected_vals.set([player](protected_vals_t& vals) {
                 vals.players.insert(player);
             });
         }
 
         void remove_player(std::string player) {
-            protected_vals.set([player, this](protected_vals_t& vals) {
+            protected_vals.set([player](protected_vals_t& vals) {
                 vals.players.erase(player);
             });
         }
@@ -370,7 +378,7 @@ namespace copper_server::base_objects {
         }
 
         void clear_players() {
-            protected_vals.set([this](protected_vals_t& vals) {
+            protected_vals.set([](protected_vals_t& vals) {
                 vals.players.clear();
             });
         }
@@ -455,7 +463,7 @@ namespace copper_server::base_objects {
         }
 
         void add_objective(std::string name, std::string display_name, std::string criteria) {
-            protected_vals.set([name, display_name, criteria, this](protected_vals_t& vals) {
+            protected_vals.set([name, display_name, criteria](protected_vals_t& vals) {
                 auto it = vals.objectives.find(name);
                 if (it != vals.objectives.end())
                     throw std::runtime_error("Objective already exists");
@@ -464,7 +472,7 @@ namespace copper_server::base_objects {
         }
 
         void add_team(std::string name, std::string display_name, std::string prefix, std::string suffix) {
-            protected_vals.set([name, display_name, prefix, suffix, this](protected_vals_t& vals) {
+            protected_vals.set([name, display_name, prefix, suffix](protected_vals_t& vals) {
                 auto it = vals.teams.find(name);
                 if (it != vals.teams.end())
                     throw std::runtime_error("Team already exists");
@@ -485,19 +493,19 @@ namespace copper_server::base_objects {
         }
 
         void remove_objective(std::string name) {
-            protected_vals.set([name, this](protected_vals_t& vals) {
+            protected_vals.set([name](protected_vals_t& vals) {
                 vals.objectives.erase(name);
             });
         }
 
         void remove_team(std::string name) {
-            protected_vals.set([name, this](protected_vals_t& vals) {
+            protected_vals.set([name](protected_vals_t& vals) {
                 vals.teams.erase(name);
             });
         }
 
         void clear() {
-            protected_vals.set([this](protected_vals_t& vals) {
+            protected_vals.set([](protected_vals_t& vals) {
                 vals.objectives.clear();
                 vals.teams.clear();
             });
@@ -528,13 +536,13 @@ namespace copper_server::base_objects {
         }
 
         void clear_teams() {
-            protected_vals.set([this](protected_vals_t& vals) {
+            protected_vals.set([](protected_vals_t& vals) {
                 vals.teams.clear();
             });
         }
 
         void clear_objectives() {
-            protected_vals.set([this](protected_vals_t& vals) {
+            protected_vals.set([](protected_vals_t& vals) {
                 vals.objectives.clear();
             });
         }

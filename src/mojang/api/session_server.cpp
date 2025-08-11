@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #include <boost/json.hpp>
 #include <src/mojang/api/http.hpp>
 #include <src/mojang/api/session_server.hpp>
@@ -39,10 +47,17 @@ namespace mojang::api {
                 data.properties = std::move(properties);
             }
             data.last_check = std::chrono::system_clock::now();
-            return cache[username] = std::make_shared<player_data>(std::move(data));
+            if (cache_result)
+                return cache[username] = std::make_shared<player_data>(std::move(data));
+            else
+                return std::make_shared<player_data>(std::move(data));
+
         } else {
-            auto uuid = generateOfflineUUID();
-            return (cache[username] = std::make_shared<player_data>(copper_server::util::conversions::uuid::to(uuid), uuid, std::chrono::system_clock::now(), false));
+            auto uuid = enbt::raw_uuid::from_string(username);
+            if (cache_result)
+                return (cache[username] = std::make_shared<player_data>(copper_server::util::conversions::uuid::to(uuid), uuid, std::chrono::system_clock::now(), false));
+            else
+                return std::make_shared<player_data>(copper_server::util::conversions::uuid::to(uuid), uuid, std::chrono::system_clock::now(), false);
         }
     }
 }

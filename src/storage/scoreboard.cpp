@@ -1,3 +1,12 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
+#include <library/fast_task/include/files.hpp>
 #include <src/log.hpp>
 #include <src/storage/scoreboard.hpp>
 #include <src/util/json_helpers.hpp>
@@ -230,11 +239,16 @@ namespace copper_server::storage {
         });
 
 
-        std::ofstream file(path, std::ofstream::trunc);
+        fast_task::files::async_iofstream file(
+            path,
+            fast_task::files::open_mode::write,
+            fast_task::files::on_open_action::always_new,
+            fast_task::files::_sync_flags{}
+        );
         if (!file.is_open()) {
             log::warn("server", "Failed to save permissions file. Can not open file.");
             return;
         }
-        util::pretty_print(file, entry);
+        file << util::pretty_print(entry);
     }
 }

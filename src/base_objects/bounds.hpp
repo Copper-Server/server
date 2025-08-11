@@ -1,7 +1,16 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_BASE_OBJECTS_BOUNDS
 #define SRC_BASE_OBJECTS_BOUNDS
 #include <cstdint>
 #include <random>
+#include <tuple>
 
 namespace copper_server::base_objects {
     namespace __impl {
@@ -192,6 +201,22 @@ namespace copper_server::base_objects {
             }
         }
 
+        template <class _FN>
+        void enum_points_from_center_w_layer_no_center(_FN fn) const {
+            for (int64_t layer = radius_begin ? radius_begin : 1; layer <= radius_end; ++layer) {
+                for (int64_t i = -layer + 1; i < layer; ++i) {
+                    fn(center_x + i, center_z - layer, layer);
+                    fn(center_x - layer, center_z + i, layer);
+                    fn(center_x + i, center_z + layer, layer);
+                    fn(center_x + layer, center_z + i, layer);
+                }
+                fn(center_x - layer, center_z - layer, layer);
+                fn(center_x + layer, center_z - layer, layer);
+                fn(center_x - layer, center_z + layer, layer);
+                fn(center_x + layer, center_z + layer, layer);
+            }
+        }
+
         bool in_bounds(int64_t x, int64_t z) const {
             return x >= (center_x - radius_begin) && x <= (center_x + radius_end) && z >= (center_z - radius_begin) && z <= (center_z + radius_end);
         }
@@ -287,12 +312,12 @@ namespace copper_server::base_objects {
                         fn(i, j, k);
         }
 
-        bool in_bounds(int64_t x, int64_t y, int64_t z) const {
-            return ((x - this->x) * (x - this->x) + (y - this->y) * (y - this->y) + (z - this->z) * (z - this->z)) <= radius * radius;
+        bool in_bounds(int64_t _x, int64_t _y, int64_t _z) const {
+            return ((_x - this->x) * (_x - this->x) + (_y - this->y) * (_y - this->y) + (_z - this->z) * (_z - this->z)) <= radius * radius;
         }
 
-        bool out_of_bounds(int64_t x, int64_t y, int64_t z) const {
-            return !in_bounds(x, y, z);
+        bool out_of_bounds(int64_t _x, int64_t _y, int64_t _z) const {
+            return !in_bounds(_x, _y, _z);
         }
 
         size_t count() const {
@@ -319,6 +344,56 @@ namespace copper_server::base_objects {
         }
     };
 
+    struct cubic_bounds_block_radius_out {
+        int64_t center_x;
+        int64_t center_y;
+        int64_t center_z;
+        int64_t radius_begin;
+        int64_t radius_end;
+
+        template <class _FN>
+        void enum_points(_FN fn) const {
+            int64_t max_x = center_x + radius_end;
+            int64_t max_y = center_y + radius_end;
+            int64_t max_z = center_z + radius_end;
+            for (int64_t i = center_x - radius_begin; i <= max_x; i++)
+                for (int64_t j = center_y - radius_begin; j <= max_y; j++)
+                    for (int64_t k = center_z - radius_begin; k <= max_z; k++)
+                        fn(i, j, k);
+        }
+
+        bool in_bounds(int64_t x, int64_t y, int64_t z) const {
+            return x >= (center_x - radius_begin) && x <= (center_x + radius_end) && y >= (center_y - radius_begin) && y <= (center_y + radius_end) && z >= (center_z - radius_begin) && z <= (center_z + radius_end);
+        }
+
+        bool out_of_bounds(int64_t x, int64_t y, int64_t z) const {
+            return !in_bounds(x, y, z);
+        }
+
+        size_t count() {
+            return (radius_end - radius_begin + 1) * (radius_end - radius_begin + 1) * (radius_end - radius_begin + 1);
+        }
+
+        std::tuple<int64_t, int64_t, int64_t> random_point() const {
+            std::mt19937_64 gen(std::random_device{}());
+            std::uniform_int_distribution<int64_t> dis_x(center_x - radius_begin, center_x + radius_end);
+            std::uniform_int_distribution<int64_t> dis_y(center_y - radius_begin, center_y + radius_end);
+            std::uniform_int_distribution<int64_t> dis_z(center_z - radius_begin, center_z + radius_end);
+            return std::make_tuple(dis_x(gen), dis_y(gen), dis_z(gen));
+        }
+
+        auto operator<=>(const cubic_bounds_block_radius_out& other) const = default;
+
+        explicit operator cubic_bounds_chunk_radius_out() {
+            return {
+                __impl::convert_chunk_global_pos(center_x),
+                __impl::convert_chunk_global_pos(center_z),
+                __impl::convert_chunk_global_pos(radius_begin),
+                __impl::convert_chunk_global_pos(radius_end)
+            };
+        }
+    };
+
     struct spherical_bounds_chunk {
         int64_t x;
         int64_t z;
@@ -327,12 +402,12 @@ namespace copper_server::base_objects {
         template <class _FN>
         void enum_points(_FN fn) const {
             double radius2 = radius * radius;
-            int64_t start_x = x - radius;
-            int64_t end_x = x + radius;
+            int64_t start_x = int64_t(x - radius);
+            int64_t end_x = int64_t(x + radius);
 
 
-            int64_t start_z = x - radius;
-            int64_t end_z = x + radius;
+            int64_t start_z = int64_t(x - radius);
+            int64_t end_z = int64_t(x + radius);
 
             for (int64_t i = start_x; i <= end_x; i++)
                 for (int64_t j = start_z; j <= end_z; j++)
@@ -340,16 +415,16 @@ namespace copper_server::base_objects {
                         fn(i, j);
         }
 
-        bool in_bounds(int64_t x, int64_t z) const {
-            return ((x - this->x) * (x - this->x) + (z - this->z) * (z - this->z)) <= radius * radius;
+        bool in_bounds(int64_t _x, int64_t _z) const {
+            return ((_x - this->x) * (_x - this->x) + (_z - this->z) * (_z - this->z)) <= radius * radius;
         }
 
-        bool out_of_bounds(int64_t x, int64_t z) const {
-            return !in_bounds(x, z);
+        bool out_of_bounds(int64_t _x, int64_t _z) const {
+            return !in_bounds(_x, _z);
         }
 
         size_t count() const {
-            return (radius * 2 + 1) * (radius * 2 + 1);
+            return size_t(std::ceil((radius * 2 + 1) * (radius * 2 + 1)));
         }
 
         std::tuple<double, double> random_point() const {
@@ -361,6 +436,53 @@ namespace copper_server::base_objects {
         auto operator<=>(const spherical_bounds_chunk& other) const = default;
     };
 
+    struct spherical_bounds_chunk_out {
+        int64_t x;
+        int64_t z;
+        double radius_begin;
+        double radius_end;
+
+        template <class _FN>
+        void enum_points(_FN fn) const {
+            double radius2_begin = radius_begin * radius_begin;
+            double radius2_end = radius_end * radius_end;
+            int64_t start_x = int64_t(x - radius_begin);
+            int64_t end_x = int64_t(x + radius_begin);
+
+
+            int64_t start_z = int64_t(x - radius_end);
+            int64_t end_z = int64_t(x + radius_end);
+
+            for (int64_t i = start_x; i <= end_x; i++)
+                for (int64_t j = start_z; j <= end_z; j++) {
+                    auto check = ((i - x) * (i - x) + (j - z) * (j - z));
+                    if (check >= radius2_begin && check <= radius2_end)
+                        fn(i, j);
+                }
+        }
+
+        bool in_bounds(int64_t _x, int64_t _z) const {
+            auto res = ((_x - this->x) * (_x - this->x) + (_z - this->z) * (_z - this->z));
+            return res >= radius_begin * radius_begin && res <= radius_end * radius_end;
+        }
+
+        bool out_of_bounds(int64_t _x, int64_t _z) const {
+            return !in_bounds(_x, _z);
+        }
+
+        size_t count() const {
+            return size_t(std::ceil((radius_begin * 2 + 1) * (radius_begin * 2 + 1) - (radius_end * 2 + 1) * (radius_end * 2 + 1)));
+        }
+
+        std::tuple<double, double> random_point() const {
+            std::mt19937 gen(std::random_device{}());
+            std::normal_distribution<> dis(radius_begin, radius_end);
+            return {x + dis(gen), z + dis(gen)};
+        }
+
+        auto operator<=>(const spherical_bounds_chunk_out& other) const = default;
+    };
+
     struct spherical_bounds_block {
         int64_t x;
         int64_t y;
@@ -370,14 +492,14 @@ namespace copper_server::base_objects {
         template <class _FN>
         void enum_points(_FN fn) const {
             double radius2 = radius * radius;
-            int64_t start_x = x - radius;
-            int64_t end_x = x + radius;
+            int64_t start_x = int64_t(x - radius);
+            int64_t end_x = int64_t(x + radius);
 
-            int64_t start_y = y - radius;
-            int64_t end_y = y + radius;
+            int64_t start_y = int64_t(y - radius);
+            int64_t end_y = int64_t(y + radius);
 
-            int64_t start_z = z - radius;
-            int64_t end_z = z + radius;
+            int64_t start_z = int64_t(z - radius);
+            int64_t end_z = int64_t(z + radius);
 
             for (int64_t i = start_x; i <= end_x; i++)
                 for (int64_t j = start_y; j <= end_y; j++)
@@ -386,16 +508,16 @@ namespace copper_server::base_objects {
                             fn(i, j, k);
         }
 
-        bool in_bounds(int64_t x, int64_t y, int64_t z) const {
-            return ((x - this->x) * (x - this->x) + (y - this->y) * (y - this->y) + (z - this->z) * (z - this->z)) <= radius * radius;
+        bool in_bounds(int64_t _x, int64_t _y, int64_t _z) const {
+            return ((_x - this->x) * (_x - this->x) + (_y - this->y) * (_y - this->y) + (_z - this->z) * (_z - this->z)) <= radius * radius;
         }
 
-        bool out_of_bounds(int64_t x, int64_t y, int64_t z) const {
-            return !in_bounds(x, y, z);
+        bool out_of_bounds(int64_t _x, int64_t _y, int64_t _z) const {
+            return !in_bounds(_x, _y, _z);
         }
 
         size_t count() const {
-            return (radius * 2 + 1) * (radius * 2 + 1) * (radius * 2 + 1);
+            return size_t(std::ceil(radius * 2 + 1) * (radius * 2 + 1) * (radius * 2 + 1));
         }
 
         std::tuple<double, double, double> random_point() const {
@@ -411,6 +533,66 @@ namespace copper_server::base_objects {
                 __impl::convert_chunk_global_pos(x),
                 __impl::convert_chunk_global_pos(z),
                 __impl::convert_chunk_global_pos(radius),
+            };
+        }
+    };
+
+    struct spherical_bounds_block_out {
+        int64_t x;
+        int64_t y;
+        int64_t z;
+        double radius_begin;
+        double radius_end;
+
+        template <class _FN>
+        void enum_points(_FN fn) const {
+            double radius2_begin = radius_begin * radius_begin;
+            double radius2_end = radius_end * radius_end;
+            int64_t start_x = int64_t(x - radius_begin);
+            int64_t end_x = int64_t(x + radius_end);
+
+            int64_t start_y = int64_t(y - radius_begin);
+            int64_t end_y = int64_t(y + radius_end);
+
+            int64_t start_z = int64_t(z - radius_begin);
+            int64_t end_z = int64_t(z + radius_end);
+
+            for (int64_t i = start_x; i <= end_x; i++)
+                for (int64_t j = start_y; j <= end_y; j++)
+                    for (int64_t k = start_z; k <= end_z; k++) {
+                        auto check = ((i - x) * (i - x) + (j - y) * (j - y) + (k - z) * (k - z));
+                        if (check >= radius2_begin && check <= radius2_end)
+                            fn(i, j, k);
+                    }
+        }
+
+        bool in_bounds(int64_t _x, int64_t _y, int64_t _z) const {
+            auto res = ((_x - this->x) * (_x - this->x) + (_y - this->y) * (_y - this->y) + (_z - this->z) * (_z - this->z));
+            return res >= radius_begin * radius_begin && res <= radius_end * radius_end;
+        }
+
+        bool out_of_bounds(int64_t _x, int64_t _y, int64_t _z) const {
+            return !in_bounds(_x, _y, _z);
+        }
+
+        size_t count() const {
+            return size_t(std::ceil((radius_begin * 2 + 1) * (radius_begin * 2 + 1) * (radius_begin * 2 + 1) - (radius_end * 2 + 1) * (radius_end * 2 + 1) * (radius_end * 2 + 1)));
+        }
+
+        std::tuple<double, double, double> random_point() const {
+            std::mt19937 gen(std::random_device{}());
+            std::normal_distribution<> dis(radius_begin, radius_end);
+            return std::make_tuple(x + dis(gen), y + dis(gen), z + dis(gen));
+        }
+
+        auto operator<=>(const spherical_bounds_block_out& other) const = default;
+
+        explicit operator spherical_bounds_chunk_out() {
+            return {
+                __impl::convert_chunk_global_pos(x),
+                __impl::convert_chunk_global_pos(z),
+                __impl::convert_chunk_global_pos(radius_begin),
+                __impl::convert_chunk_global_pos(radius_end),
             };
         }
     };

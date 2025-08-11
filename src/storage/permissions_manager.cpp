@@ -1,6 +1,14 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #include <boost/json.hpp>
 #include <format>
-#include <fstream>
+#include <library/fast_task/include/files.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/log.hpp>
@@ -9,11 +17,11 @@
 
 namespace copper_server::storage {
     permissions_manager::permissions_manager(const std::filesystem::path& base_path)
-        : base_path(base_path / "permissions.json") {}
+        : base_path(base_path) {}
 
-    bool permissions_manager::has_rights(const std::string& action_name, const base_objects::client_data_holder& client) {
+    bool permissions_manager::has_rights(const std::string& action_name, const base_objects::SharedClientData& client) {
         return protected_values.get([&](const protected_values_t& values) {
-            if (client->player_data.instant_granted_actions.find(action_name) != client->player_data.instant_granted_actions.npos)
+            if (client.player_data.instant_granted_actions.find(action_name) != client.player_data.instant_granted_actions.npos)
                 return true;
 
             bool pass_if_noting = values.check_mode == permission_check_mode::all_or_noting || values.check_mode == permission_check_mode::any_or_noting;
@@ -22,7 +30,7 @@ namespace copper_server::storage {
             if (item == values.actions.end())
                 return pass_if_noting;
 
-            auto& client_data = client->player_data;
+            auto& client_data = client.player_data;
             bool instant_granted = false;
             bool has_not_found = false;
             bool is_incompatible = false;
@@ -97,10 +105,25 @@ namespace copper_server::storage {
         });
     }
 
+    bool permissions_manager::has_action_limits(const std::string& action_name) const {
+        return protected_values.get([&](const protected_values_t& values) {
+            bool pass_if_noting = values.check_mode == permission_check_mode::all_or_noting || values.check_mode == permission_check_mode::any_or_noting;
+            auto item = values.actions.find(action_name);
+            if (item == values.actions.end())
+                return pass_if_noting;
+            else
+                return !item->second.empty();
+        });
+    }
+
     bool permissions_manager::has_permission(const std::string& permission_name) const {
         return protected_values.get([&](const protected_values_t& values) {
             return values.permissions.contains(permission_name);
         });
+    }
+
+    bool permissions_manager::is_in_group(const std::string& group_name, const base_objects::SharedClientData& client) {
+        return client.player_data.permission_groups.contains(group_name);
     }
 
     bool permissions_manager::has_group(const std::string& group_name) const {
@@ -484,12 +507,17 @@ namespace copper_server::storage {
             return values;
         });
         {
-            std::ofstream file(base_path, std::ofstream::trunc);
+            fast_task::files::async_iofstream file(
+                base_path,
+                fast_task::files::open_mode::write,
+                fast_task::files::on_open_action::always_new,
+                fast_task::files::_sync_flags{}
+            );
             if (!file.is_open()) {
                 log::warn("server", "Failed to save permissions file. Can not open file.");
                 return;
             }
-            util::pretty_print(file, *config_holder);
+            file << util::pretty_print(*config_holder);
         }
     }
 }

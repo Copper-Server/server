@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_BASE_OBJECTS_ATOMIC_HOLDER
 #define SRC_BASE_OBJECTS_ATOMIC_HOLDER
 #include <atomic>
@@ -45,11 +53,11 @@ namespace copper_server::base_objects {
             other.ref_count = nullptr;
         }
 
-        atomic_holder& operator=(T* data) {
-            if (this->data == data)
+        atomic_holder& operator=(T* value) {
+            if (data == value)
                 return *this;
             decrease_counter();
-            this->data = data;
+            data = value;
             ref_count = data ? new std::atomic_size_t(1) : nullptr;
             return *this;
         }

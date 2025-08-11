@@ -1,317 +1,57 @@
-
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #include <src/base_objects/chat.hpp>
 #include <src/util/conversions.hpp>
 #include <src/util/json_helpers.hpp>
 #include <utf8.h>
 
 namespace copper_server {
-    Chat Chat::parseToChat(const std::string& string) {
-        list_array<Chat> result;
 
-        constexpr const uint32_t format_symbol = U'§';
-        constexpr const unsigned char format_symbol_parts[2] = {0xC2, 0xA7};
-        Chat current_chat;
-
-        bool format_command = false;
-        bool got_first_part_format_symbol = false;
-        bool got_slash = false;
-        bool got_slash_except_part_format = false;
-        bool got_utf_code_point = false;
-        bool got_big_utf_code_point = false;
-        bool got_variable_utf_code_point = false;
-
-        std::string current_string;
-        current_string.reserve(string.size());
-        std::string utf_code_point;
-        for (char c : string) {
-            if (format_command) {
-                switch (c) {
-                case '0':
-                    current_chat.SetColor("black");
-                    break;
-                case '1':
-                    current_chat.SetColor("dark_blue");
-                    break;
-                case '2':
-                    current_chat.SetColor("dark_green");
-                    break;
-                case '3':
-                    current_chat.SetColor("dark_aqua");
-                    break;
-                case '4':
-                    current_chat.SetColor("dark_red");
-                    break;
-                case '5':
-                    current_chat.SetColor("dark_purple");
-                    break;
-                case '6':
-                    current_chat.SetColor("gold");
-                    break;
-                case '7':
-                    current_chat.SetColor("gray");
-                    break;
-                case '8':
-                    current_chat.SetColor("dark_gray");
-                    break;
-                case '9':
-                    current_chat.SetColor("blue");
-                    break;
-                case 'a':
-                    current_chat.SetColor("green");
-                    break;
-                case 'b':
-                    current_chat.SetColor("aqua");
-                    break;
-                case 'c':
-                    current_chat.SetColor("red");
-                    break;
-                case 'd':
-                    current_chat.SetColor("light_purple");
-                    break;
-                case 'e':
-                    current_chat.SetColor("yellow");
-                    break;
-                case 'f':
-                    current_chat.SetColor("white");
-                    break;
-                case 'k':
-                    current_chat.SetObfuscated(true);
-                    break;
-                case 'l':
-                    current_chat.SetBold(true);
-                    break;
-                case 'm':
-                    current_chat.SetStrikethrough(true);
-                    break;
-                case 'n':
-                    current_chat.SetUnderlined(true);
-                    break;
-                case 'o':
-                    current_chat.SetItalic(true);
-                    break;
-                case 'r':
-                    current_chat.removeColor();
-                    current_chat.SetBold(false);
-                    current_chat.SetItalic(false);
-                    current_chat.SetUnderlined(false);
-                    current_chat.SetStrikethrough(false);
-                    current_chat.SetObfuscated(false);
-                    break;
-                default:
-                    break;
-                }
-                format_command = false;
-            } else if (got_utf_code_point) {
-                utf_code_point += c;
-                if (utf_code_point.size() == 4) {
-                    utf8::utfchar16_t code_point = std::stoi(utf_code_point, nullptr, 16);
-                    char utf8_code_point[4];
-                    current_string += std::string(utf8_code_point, utf8::utf16to8(&code_point, &code_point + 1, utf8_code_point));
-                    got_utf_code_point = false;
-                    utf_code_point.clear();
-                }
-            } else if (got_big_utf_code_point) {
-                utf_code_point += c;
-                if (utf_code_point.size() == 8) {
-                    utf8::utfchar32_t code_point = std::stoi(utf_code_point, nullptr, 16);
-                    char utf8_code_point[4];
-                    current_string += std::string(utf8_code_point, utf8::utf32to8(&code_point, &code_point + 1, utf8_code_point));
-                    got_big_utf_code_point = false;
-                    utf_code_point.clear();
-                }
-            } else if (got_slash) {
-                if (got_slash_except_part_format) {
-                    if (c != format_symbol_parts[1]) {
-                        current_string += format_symbol_parts[1];
-                        current_string += c;
-                        got_slash_except_part_format = false;
-                        got_slash = false;
-                        continue;
-                    }
-                }
-                switch (c) {
-                case 'a':
-                    current_string += '\a';
-                    break;
-                case 'n':
-                    current_string += '\n';
-                    break;
-                case 't':
-                    current_string += '\t';
-                    break;
-                case 'r':
-                    current_string += '\r';
-                    break;
-                case 'f':
-                    current_string += '\f';
-                    break;
-                case 'b':
-                    current_string += '\b';
-                    break;
-                case '\\':
-                    current_string += '\\';
-                    break;
-                case '\'':
-                    current_string += '\'';
-                    break;
-                case '\"':
-                    current_string += '\"';
-                    break;
-                case 'v':
-                    current_string += '\v';
-                    break;
-                case 'u':
-                    got_utf_code_point = true;
-                    break;
-                case 'U':
-                    got_big_utf_code_point = true;
-                    break;
-                case format_symbol_parts[0]:
-                    current_string += format_symbol_parts[0];
-                    got_slash_except_part_format = true;
-                    break;
-                case format_symbol_parts[1]:
-                    current_string += format_symbol_parts[1];
-                    got_slash_except_part_format = false;
-                    break;
-                default:
-                    current_string += '\\';
-                    current_string += c;
-                    break;
-                }
-                if (c != format_symbol_parts[0])
-                    got_slash = false;
-            } else if (c == format_symbol_parts[0]) {
-                got_first_part_format_symbol = true;
-            } else if (c == format_symbol_parts[1]) {
-                if (current_string.size()) {
-                    current_chat.SetText(current_string);
-                    result.push_back(current_chat);
-                    current_chat.SetText();
-                    current_string.clear();
-                }
-                got_first_part_format_symbol = false;
-                format_command = true;
-            } else if (got_first_part_format_symbol) {
-                current_string += format_symbol_parts[0];
-                current_string += c;
-                got_first_part_format_symbol = false;
-            } else if (c == '\\') {
-                got_slash = true;
-            } else
-                current_string += c;
-        }
-        if (got_slash) {
-            current_string += '\\';
-            got_slash = false;
-        }
-        if (current_string.size()) {
-            current_chat.SetText(current_string);
-            result.push_back(current_chat);
-        }
-        Chat final_chat;
-        final_chat.GetExtra() = result;
-        return final_chat;
-    }
-
-    std::string Chat::to_ansi_console() const {
-        std::string result;
-        if (color) {
-            if (strcmp(color, "black") == 0)
-                result += "\033[30m";
-            else if (strcmp(color, "dark_blue") == 0)
-                result += "\033[34m";
-            else if (strcmp(color, "dark_green") == 0)
-                result += "\033[32m";
-            else if (strcmp(color, "dark_aqua") == 0)
-                result += "\033[36m";
-            else if (strcmp(color, "dark_red") == 0)
-                result += "\033[31m";
-            else if (strcmp(color, "dark_purple") == 0)
-                result += "\033[35m";
-            else if (strcmp(color, "gold") == 0)
-                result += "\033[33m";
-            else if (strcmp(color, "gray") == 0)
-                result += "\033[37m";
-            else if (strcmp(color, "dark_gray") == 0)
-                result += "\033[90m";
-            else if (strcmp(color, "blue") == 0)
-                result += "\033[94m";
-            else if (strcmp(color, "green") == 0)
-                result += "\033[92m";
-            else if (strcmp(color, "aqua") == 0)
-                result += "\033[96m";
-            else if (strcmp(color, "red") == 0)
-                result += "\033[91m";
-            else if (strcmp(color, "light_purple") == 0)
-                result += "\033[95m";
-            else if (strcmp(color, "yellow") == 0)
-                result += "\033[93m";
-            else if (strcmp(color, "white") == 0)
-                result += "\033[97m";
-        }
-        if (bold)
-            result += "\033[1m";
-        if (italic)
-            result += "\033[3m";
-        if (underlined)
-            result += "\033[4m";
-        if (strikethrough)
-            result += "\033[9m";
-        if (obfuscated)
-            result += "\033[8m";
-        if (text)
-            result += text;
-        if (bold || italic || underlined || strikethrough || obfuscated)
-            result += "\033[0m";
-
-        for (auto& it : extra)
-            result += it.to_ansi_console();
-        return result;
-    }
-
-    Chat Chat::fromEnbt(const enbt::value& enbt) {
-        if (enbt.is_string())
-            return Chat((std::string)enbt);
+    Chat fromJson(util::js_object&& json) {
+        using namespace util;
         Chat result;
-        auto entry = enbt.as_compound();
+        if (json.contains("text"))
+            result.SetText(util::conversions::string::to_direct(json["text"]));
+        else if (json.contains("translate"))
+            result.SetTranslation(json["translate"]);
 
-        if (entry.contains("text"))
-            result.SetText(entry["text"]);
-        else if (entry.contains("translate"))
-            result.SetTranslation(entry["translate"]);
+        if (json.contains("color"))
+            result.SetColor(json["color"]);
 
-        if (entry.contains("color"))
-            result.SetColor(entry["color"]);
+        if (json.contains("insertion"))
+            result.SetInsertion(json["insertion"]);
 
-        if (entry.contains("insertion"))
-            result.SetInsertion(entry["insertion"]);
+        if (json.contains("bold"))
+            result.SetBold(json["bold"]);
 
-        if (entry.contains("bold"))
-            result.SetBold(entry["bold"]);
+        if (json.contains("italic"))
+            result.SetItalic(json["italic"]);
 
-        if (entry.contains("italic"))
-            result.SetItalic(entry["italic"]);
+        if (json.contains("underlined"))
+            result.SetUnderlined(json["underlined"]);
 
-        if (entry.contains("underlined"))
-            result.SetUnderlined(entry["underlined"]);
+        if (json.contains("strikethrough"))
+            result.SetStrikethrough(json["strikethrough"]);
 
-        if (entry.contains("strikethrough"))
-            result.SetStrikethrough(entry["strikethrough"]);
+        if (json.contains("obfuscated"))
+            result.SetObfuscated(json["obfuscated"]);
 
-        if (entry.contains("obfuscated"))
-            result.SetObfuscated(entry["obfuscated"]);
+        if (json.contains("insertion"))
+            result.SetInsertion(json["insertion"]);
 
-        if (entry.contains("insertion"))
-            result.SetInsertion(entry["insertion"]);
+        if (json.contains("insertion"))
+            result.SetInsertion(json["insertion"]);
 
-        if (entry.contains("insertion"))
-            result.SetInsertion(entry["insertion"]);
-
-        if (entry.contains("clickEvent")) {
-            auto click_event = entry["clickEvent"].as_compound();
-            const std::string& action = (const std::string&)click_event["action"];
-            auto& value = click_event["value"];
+        if (json.contains("clickEvent")) {
+            auto click_event = js_object::get_object(json["clickEvent"]);
+            std::string action = click_event["action"];
+            auto value = click_event["value"];
             if (action == "open_url")
                 result.SetClickEventOpenUrl(value);
             else if (action == "run_command")
@@ -326,36 +66,427 @@ namespace copper_server {
             else if (action == "copy_to_clipboard")
                 result.SetClickEventCopyToClipboard(value);
         }
-        if (entry.contains("hoverEvent")) {
-            auto hover_event = entry["hoverEvent"].as_compound();
-            const std::string& action = (const std::string&)hover_event["action"];
-            auto& content = hover_event["content"];
+        if (json.contains("hoverEvent")) {
+            auto hover_event = js_object::get_object(json["hoverEvent"]);
+            std::string action = hover_event["action"];
+            auto content = hover_event["content"];
             if (action == "show_item") {
-                if (content.contains("tag"))
-                    result.SetHoverEventShowItem(content["id"], content["count"], (std::string)content["tag"]);
+                auto content_obj = js_object::get_object(content);
+                if (content_obj.contains("tag"))
+                    result.SetHoverEventShowItem(content_obj["id"], content_obj["count"], (std::string)content_obj["tag"]);
                 else
-                    result.SetHoverEventShowItem(content["id"], content["count"], std::nullopt);
+                    result.SetHoverEventShowItem(content_obj["id"], content_obj["count"], std::nullopt);
             } else if (action == "show_entity") {
-                if (content.contains("name"))
-                    result.SetHoverEventShowEntity(content["id"], content["type"], (std::string)content["name"]);
+                auto content_obj = js_object::get_object(content);
+                if (content_obj.contains("name"))
+                    result.SetHoverEventShowEntity(content_obj["id"], content_obj["type"], (std::string)content_obj["name"]);
                 else
-                    result.SetHoverEventShowItem(content["id"], content["type"], std::nullopt);
+                    result.SetHoverEventShowItem(content_obj["id"], content_obj["type"], std::nullopt);
             } else if (action == "show_text")
-                result.SetHoverEventShowText(content);
+                result.SetHoverEventShowText(util::conversions::string::to_direct(content));
         }
 
-        if (entry.contains("extra")) {
+        if (json.contains("extra")) {
             auto& extra_arr = result.GetExtra();
-            auto extra = entry["extra"].as_fixed_array();
+            auto extra = js_array::get_array(json["extra"]);
             extra_arr.reserve(extra.size());
-            for (auto& it : extra)
-                extra_arr.push_back(Chat::fromEnbt(it));
+            for (auto it : extra)
+                extra_arr.push_back(fromJson(js_object::get_object(it)));
         }
         return result;
     }
 
-    Chat Chat::fromTextComponent(const list_array<uint8_t>& enbt) {
-        return fromEnbt(NBT::build(enbt).get_as_enbt());
+    void formater(list_array<enbt::value>& items, Chat& it) {
+        if (it.GetText() && items.size()) {
+            std::string_view str(*it.GetText());
+            if (auto res = str.find("%"); res != str.npos) {
+                Chat insert[3]{it, {}, it};
+                insert[1] = Chat::fromEnbt(items.take_back());
+                insert[0].SetText(std::string(str.substr(0, res)));
+                for (auto& i : insert[1].GetExtra())
+                    formater(items, i);
+
+                if (res + 1 < str.size()) {
+                    insert[2].SetText(std::string(str.substr(res + 1)));
+                    it.GetExtra().push_back(insert[0]);
+                    it.GetExtra().push_back(insert[1]);
+                    it.GetExtra().push_back(insert[2]);
+                } else {
+                    it.GetExtra().push_back(insert[0]);
+                    it.GetExtra().push_back(insert[1]);
+                }
+            }
+        }
+        for (auto& i : it.GetExtra())
+            formater(items, i);
+    };
+
+    Chat::Chat() = default;
+
+    Chat::Chat(std::initializer_list<Chat> args) {
+        bool first = true;
+        for (auto& it : args) {
+            if (first) {
+                operator=(it);
+                first = false;
+            } else
+                extra.push_back(it);
+        }
+    }
+
+    Chat::Chat(const char* set_text, bool is_translation) {
+        setString(text, set_text);
+        text_is_translation = is_translation;
+    }
+
+    Chat::Chat(const std::string& set_text, bool is_translation) {
+        setString(text, set_text);
+        text_is_translation = is_translation;
+    }
+
+    Chat::Chat(const Chat& copy) {
+        operator=(copy);
+    }
+
+    Chat::Chat(Chat&& copy) noexcept {
+        operator=(std::move(copy));
+    }
+
+    Chat& Chat::operator=(const Chat& copy) {
+        if (copy.text)
+            setString(text, copy.text);
+        if (copy.color)
+            setString(color, copy.color);
+        if (copy.insertion)
+            setString(insertion, copy.insertion);
+        defined_bold = copy.defined_bold;
+        defined_italic = copy.defined_italic;
+        defined_underlined = copy.defined_underlined;
+        defined_strikethrough = copy.defined_strikethrough;
+        defined_obfuscated = copy.defined_obfuscated;
+        bold = copy.bold;
+        italic = copy.italic;
+        underlined = copy.underlined;
+        strikethrough = copy.strikethrough;
+        obfuscated = copy.obfuscated;
+        text_is_translation = copy.text_is_translation;
+        extra = copy.extra;
+        return *this;
+    }
+
+    Chat& Chat::operator=(Chat&& copy) noexcept {
+        text = copy.text;
+        copy.text = nullptr;
+        color = copy.color;
+        copy.color = nullptr;
+        insertion = copy.insertion;
+        copy.insertion = nullptr;
+        clickEvent = copy.clickEvent;
+        copy.clickEvent = nullptr;
+        hoverEvent = copy.hoverEvent;
+        copy.hoverEvent = nullptr;
+        defined_bold = copy.defined_bold;
+        defined_italic = copy.defined_italic;
+        defined_underlined = copy.defined_underlined;
+        defined_strikethrough = copy.defined_strikethrough;
+        defined_obfuscated = copy.defined_obfuscated;
+        bold = copy.bold;
+        italic = copy.italic;
+        underlined = copy.underlined;
+        strikethrough = copy.strikethrough;
+        obfuscated = copy.obfuscated;
+        text_is_translation = copy.text_is_translation;
+        extra = std::move(copy.extra);
+        return *this;
+    }
+
+    Chat::~Chat() {
+        if (text)
+            delete text;
+        if (color)
+            delete color;
+        if (insertion)
+            delete insertion;
+        if (clickEvent)
+            delete clickEvent;
+        if (hoverEvent)
+            delete hoverEvent;
+        text = nullptr;
+        color = nullptr;
+        insertion = nullptr;
+        clickEvent = nullptr;
+        hoverEvent = nullptr;
+    }
+
+    Chat& Chat::SetText(const std::string& set_text) {
+        setString(text, set_text);
+        text_is_translation = false;
+        return *this;
+    }
+
+    Chat& Chat::SetTranslation(const std::string& set_text) {
+        setString(text, set_text);
+        text_is_translation = true;
+        return *this;
+    }
+
+    Chat& Chat::SetColor(const std::string& set_text) {
+        setString(color, set_text);
+        return *this;
+    }
+
+    Chat& Chat::SetInsertion(const std::string& set_text) {
+        setString(insertion, set_text);
+        return *this;
+    }
+
+    Chat& Chat::SetFont(const std::string& set_text) {
+        setString(font, set_text);
+        return *this;
+    }
+
+    Chat& Chat::SetBold() {
+        defined_bold = false;
+        return *this;
+    }
+
+    Chat& Chat::SetItalic() {
+        defined_italic = false;
+        return *this;
+    }
+
+    Chat& Chat::SetUnderlined() {
+        defined_underlined = false;
+        return *this;
+    }
+
+    Chat& Chat::SetStrikethrough() {
+        defined_strikethrough = false;
+        return *this;
+    }
+
+    Chat& Chat::SetObfuscated() {
+        defined_obfuscated = false;
+        return *this;
+    }
+
+    Chat& Chat::SetBold(bool is) {
+        bold = is;
+        defined_bold = true;
+        return *this;
+    }
+
+    Chat& Chat::SetItalic(bool is) {
+        italic = is;
+        defined_italic = true;
+        return *this;
+    }
+
+    Chat& Chat::SetUnderlined(bool is) {
+        underlined = is;
+        defined_underlined = true;
+        return *this;
+    }
+
+    Chat& Chat::SetStrikethrough(bool is) {
+        strikethrough = is;
+        defined_strikethrough = true;
+        return *this;
+    }
+
+    Chat& Chat::SetObfuscated(bool is) {
+        obfuscated = is;
+        defined_obfuscated = true;
+        return *this;
+    }
+
+    Chat& Chat::SetHoverEventShowText(const std::string& _show_text) {
+        setHoverEvent(_show_text);
+        return *this;
+    }
+
+    Chat& Chat::SetHoverEventShowItem(const std::string& _id, int32_t _count, const std::optional<std::string>& _tag) {
+        hoverEventS::show_itemS* show_item = new hoverEventS::show_itemS;
+        show_item->id = _id;
+        show_item->count = _count;
+        show_item->tag = _tag;
+        setHoverEvent(show_item);
+        return *this;
+    }
+
+    Chat& Chat::SetHoverEventShowEntity(const std::string& _id, const std::string& _type, const std::optional<std::string>& _name) {
+        hoverEventS::show_entityS* show_entity = new hoverEventS::show_entityS;
+        show_entity->id = _id;
+        show_entity->type = _type;
+        show_entity->name = _name;
+        setHoverEvent(show_entity);
+        return *this;
+    }
+
+    Chat& Chat::SetHoverEvent() {
+        if (hoverEvent)
+            delete hoverEvent;
+        hoverEvent = nullptr;
+        return *this;
+    }
+
+    Chat& Chat::SetClickEventOpenUrl(const std::string& _open_url) {
+        if (!clickEvent)
+            clickEvent = new clickEventS;
+
+        if (clickEvent->run_command)
+            delete clickEvent->run_command;
+
+        if (clickEvent->suggest_command)
+            delete clickEvent->suggest_command;
+
+        if (clickEvent->change_page)
+            delete clickEvent->change_page;
+        setString(clickEvent->open_url, _open_url);
+        return *this;
+    }
+
+    Chat& Chat::SetClickEventRunCommand(const std::string& _run_command) {
+        if (!clickEvent)
+            clickEvent = new clickEventS;
+
+        if (clickEvent->open_url)
+            delete clickEvent->open_url;
+
+        if (clickEvent->suggest_command)
+            delete clickEvent->suggest_command;
+
+        if (clickEvent->change_page)
+            delete clickEvent->change_page;
+
+        setString(clickEvent->run_command, _run_command);
+        return *this;
+    }
+
+    Chat& Chat::SetClickEventSuggestCommand(const std::string& _suggest_command) {
+        if (!clickEvent)
+            clickEvent = new clickEventS;
+
+        if (clickEvent->open_url)
+            delete clickEvent->open_url;
+
+        if (clickEvent->run_command)
+            delete clickEvent->run_command;
+
+        if (clickEvent->change_page)
+            delete clickEvent->change_page;
+
+        setString(clickEvent->suggest_command, _suggest_command);
+        return *this;
+    }
+
+    Chat& Chat::SetClickEventChangePage(uint32_t _change_page) {
+        if (!clickEvent)
+            clickEvent = new clickEventS;
+        if (!clickEvent->change_page)
+            clickEvent->change_page = new uint32_t;
+        *clickEvent->change_page = _change_page;
+        return *this;
+    }
+
+    Chat& Chat::SetClickEventCopyToClipboard(const std::string& _copy_to_clipboard) {
+        if (!clickEvent)
+            clickEvent = new clickEventS;
+        if (clickEvent->copy_to_clipboard)
+            delete clickEvent->copy_to_clipboard;
+        clickEvent->copy_to_clipboard = nullptr;
+        setString(clickEvent->copy_to_clipboard, _copy_to_clipboard);
+        return *this;
+    }
+
+    Chat& Chat::SetClickEvent() {
+        if (clickEvent)
+            delete clickEvent;
+        clickEvent = nullptr;
+        return *this;
+    }
+
+    list_array<Chat>& Chat::GetExtra() {
+        return extra;
+    }
+
+    std::optional<const char*> Chat::GetText() const {
+        if (text_is_translation || !text)
+            return std::nullopt;
+        return text;
+    }
+
+    std::optional<const char*> Chat::GetTranslation() const {
+        if (!text_is_translation || !text)
+            return std::nullopt;
+        return text;
+    }
+
+    std::optional<const char*> Chat::GetColor() const {
+        if (!color)
+            return std::nullopt;
+        return color;
+    }
+
+    std::optional<const char*> Chat::GetInsertion() const {
+        if (!insertion)
+            return std::nullopt;
+        return insertion;
+    }
+
+    std::optional<const char*> Chat::GetFont() const {
+        if (!font)
+            return std::nullopt;
+        return font;
+    }
+
+    std::optional<const Chat::hoverEventS*> Chat::GetHoverEvent() const {
+        if (hoverEvent)
+            return std::make_optional(hoverEvent);
+        else
+            return std::nullopt;
+    }
+
+    std::optional<const Chat::clickEventS*> Chat::GetClickEvent() const {
+        if (clickEvent)
+            return std::make_optional(clickEvent);
+        else
+            return std::nullopt;
+    }
+
+    std::optional<bool> Chat::GetBold() {
+        if (defined_bold)
+            return std::make_optional<bool>((bool)bold);
+        else
+            return std::nullopt;
+    }
+
+    std::optional<bool> Chat::GetItalic() {
+        if (defined_italic)
+            return std::make_optional<bool>((bool)italic);
+        else
+            return std::nullopt;
+    }
+
+    std::optional<bool> Chat::GetUnderlined() {
+        if (defined_underlined)
+            return std::make_optional<bool>((bool)underlined);
+        else
+            return std::nullopt;
+    }
+
+    std::optional<bool> Chat::GetStrikethrough() {
+        if (defined_strikethrough)
+            return std::make_optional<bool>((bool)strikethrough);
+        else
+            return std::nullopt;
+    }
+
+    std::optional<bool> Chat::GetObfuscated() {
+        if (defined_obfuscated)
+            return std::make_optional<bool>((bool)obfuscated);
+        else
+            return std::nullopt;
     }
 
     std::string Chat::ToStr() const {
@@ -502,89 +633,6 @@ namespace copper_server {
         return str;
     }
 
-    Chat fromJson(util::js_object&& json) {
-        using namespace util;
-        Chat result;
-        if (json.contains("text"))
-            result.SetText(util::conversions::string::to_direct(json["text"]));
-        else if (json.contains("translate"))
-            result.SetTranslation(json["translate"]);
-
-        if (json.contains("color"))
-            result.SetColor(json["color"]);
-
-        if (json.contains("insertion"))
-            result.SetInsertion(json["insertion"]);
-
-        if (json.contains("bold"))
-            result.SetBold(json["bold"]);
-
-        if (json.contains("italic"))
-            result.SetItalic(json["italic"]);
-
-        if (json.contains("underlined"))
-            result.SetUnderlined(json["underlined"]);
-
-        if (json.contains("strikethrough"))
-            result.SetStrikethrough(json["strikethrough"]);
-
-        if (json.contains("obfuscated"))
-            result.SetObfuscated(json["obfuscated"]);
-
-        if (json.contains("insertion"))
-            result.SetInsertion(json["insertion"]);
-
-        if (json.contains("insertion"))
-            result.SetInsertion(json["insertion"]);
-
-        if (json.contains("clickEvent")) {
-            auto click_event = js_object::get_object(json["clickEvent"]);
-            std::string action = click_event["action"];
-            auto value = click_event["value"];
-            if (action == "open_url")
-                result.SetClickEventOpenUrl(value);
-            else if (action == "run_command")
-
-                result.SetClickEventRunCommand(value);
-
-            else if (action == "suggest_command")
-                result.SetClickEventSuggestCommand(value);
-
-            else if (action == "change_page")
-                result.SetClickEventChangePage(value);
-            else if (action == "copy_to_clipboard")
-                result.SetClickEventCopyToClipboard(value);
-        }
-        if (json.contains("hoverEvent")) {
-            auto hover_event = js_object::get_object(json["hoverEvent"]);
-            std::string action = hover_event["action"];
-            auto content = hover_event["content"];
-            if (action == "show_item") {
-                auto content_obj = js_object::get_object(content);
-                if (content_obj.contains("tag"))
-                    result.SetHoverEventShowItem(content_obj["id"], content_obj["count"], (std::string)content_obj["tag"]);
-                else
-                    result.SetHoverEventShowItem(content_obj["id"], content_obj["count"], std::nullopt);
-            } else if (action == "show_entity") {
-                auto content_obj = js_object::get_object(content);
-                if (content_obj.contains("name"))
-                    result.SetHoverEventShowEntity(content_obj["id"], content_obj["type"], (std::string)content_obj["name"]);
-                else
-                    result.SetHoverEventShowItem(content_obj["id"], content_obj["type"], std::nullopt);
-            } else if (action == "show_text")
-                result.SetHoverEventShowText(util::conversions::string::to_direct(content));
-        }
-
-        if (json.contains("extra")) {
-            auto& extra_arr = result.GetExtra();
-            auto extra = js_array::get_array(json["extra"]);
-            extra_arr.reserve(extra.size());
-            for (auto it : extra)
-                extra_arr.push_back(fromJson(js_object::get_object(it)));
-        }
-        return result;
-    }
-
     Chat Chat::fromStr(const std::string& str) {
         auto json_hold = boost::json::parse(str);
         if (json_hold.is_string())
@@ -671,106 +719,399 @@ namespace copper_server {
                 extra_enbt.set(i++, it.ToENBT());
             enbt["extra"] = std::move(extra_enbt);
         }
+        if (enbt.size() == 1) {
+            if (enbt.contains("text"))
+                return enbt["text"];
+        }
         return enbt;
     }
 
-    list_array<uint8_t> Chat::ToTextComponent() const {
-        return NBT::build(ToENBT()).get_as_normal();
+    void Chat::removeColor() {
+        if (color)
+            delete color;
     }
 
-    void Chat::setString(char*& char_ptr, const std::string& string) {
-        if (string.contains("\"{}")) {
-            std::string new_string;
-            for (auto& it : string) {
-                if (it == '\"' || it == '{' || it == '}')
-                    new_string += '\\';
-                new_string += it;
-            }
-            setString(char_ptr, new_string);
-            return;
+    void Chat::removeColorRecursive() {
+        if (color)
+            delete color;
+        for (auto& it : extra)
+            it.removeColorRecursive();
+    }
+
+    bool Chat::empty() const {
+        return !text && extra.empty();
+    }
+
+    Chat Chat::parseToChat(const std::string& string) {
+        list_array<Chat> result;
+
+        constexpr const char format_symbol_parts[2] = {(char)(unsigned char)194, (char)(unsigned char)167}; //{(char)0xC2, (char)0xA7};
+        Chat current_chat;
+
+        bool format_command = false;
+        bool got_first_part_format_symbol = false;
+        bool got_slash = false;
+        bool got_slash_except_part_format = false;
+        bool got_utf_code_point = false;
+        bool got_big_utf_code_point = false;
+
+        std::string current_string;
+        current_string.reserve(string.size());
+        std::string utf_code_point;
+        for (char c : string) {
+            if (format_command) {
+                switch (c) {
+                case '0':
+                    current_chat.SetColor("black");
+                    break;
+                case '1':
+                    current_chat.SetColor("dark_blue");
+                    break;
+                case '2':
+                    current_chat.SetColor("dark_green");
+                    break;
+                case '3':
+                    current_chat.SetColor("dark_aqua");
+                    break;
+                case '4':
+                    current_chat.SetColor("dark_red");
+                    break;
+                case '5':
+                    current_chat.SetColor("dark_purple");
+                    break;
+                case '6':
+                    current_chat.SetColor("gold");
+                    break;
+                case '7':
+                    current_chat.SetColor("gray");
+                    break;
+                case '8':
+                    current_chat.SetColor("dark_gray");
+                    break;
+                case '9':
+                    current_chat.SetColor("blue");
+                    break;
+                case 'a':
+                    current_chat.SetColor("green");
+                    break;
+                case 'b':
+                    current_chat.SetColor("aqua");
+                    break;
+                case 'c':
+                    current_chat.SetColor("red");
+                    break;
+                case 'd':
+                    current_chat.SetColor("light_purple");
+                    break;
+                case 'e':
+                    current_chat.SetColor("yellow");
+                    break;
+                case 'f':
+                    current_chat.SetColor("white");
+                    break;
+                case 'k':
+                    current_chat.SetObfuscated(true);
+                    break;
+                case 'l':
+                    current_chat.SetBold(true);
+                    break;
+                case 'm':
+                    current_chat.SetStrikethrough(true);
+                    break;
+                case 'n':
+                    current_chat.SetUnderlined(true);
+                    break;
+                case 'o':
+                    current_chat.SetItalic(true);
+                    break;
+                case 'r':
+                    current_chat.removeColor();
+                    current_chat.SetBold(false);
+                    current_chat.SetItalic(false);
+                    current_chat.SetUnderlined(false);
+                    current_chat.SetStrikethrough(false);
+                    current_chat.SetObfuscated(false);
+                    break;
+                default:
+                    break;
+                }
+                format_command = false;
+            } else if (got_utf_code_point) {
+                utf_code_point += c;
+                if (utf_code_point.size() == 4) {
+                    utf8::utfchar16_t code_point = (utf8::utfchar16_t)std::stoi(utf_code_point, nullptr, 16);
+                    char utf8_code_point[4];
+                    current_string += std::string(utf8_code_point, utf8::utf16to8(&code_point, &code_point + 1, utf8_code_point));
+                    got_utf_code_point = false;
+                    utf_code_point.clear();
+                }
+            } else if (got_big_utf_code_point) {
+                utf_code_point += c;
+                if (utf_code_point.size() == 8) {
+                    utf8::utfchar32_t code_point = (utf8::utfchar32_t)std::stoi(utf_code_point, nullptr, 16);
+                    char utf8_code_point[4];
+                    current_string += std::string(utf8_code_point, utf8::utf32to8(&code_point, &code_point + 1, utf8_code_point));
+                    got_big_utf_code_point = false;
+                    utf_code_point.clear();
+                }
+            } else if (got_slash) {
+                if (got_slash_except_part_format) {
+                    if (c != format_symbol_parts[1]) {
+                        current_string += format_symbol_parts[1];
+                        current_string += c;
+                        got_slash_except_part_format = false;
+                        got_slash = false;
+                        continue;
+                    }
+                }
+                switch (c) {
+                case 'a':
+                    current_string += '\a';
+                    break;
+                case 'n':
+                    current_string += '\n';
+                    break;
+                case 't':
+                    current_string += '\t';
+                    break;
+                case 'r':
+                    current_string += '\r';
+                    break;
+                case 'f':
+                    current_string += '\f';
+                    break;
+                case 'b':
+                    current_string += '\b';
+                    break;
+                case '\\':
+                    current_string += '\\';
+                    break;
+                case '\'':
+                    current_string += '\'';
+                    break;
+                case '\"':
+                    current_string += '\"';
+                    break;
+                case 'v':
+                    current_string += '\v';
+                    break;
+                case 'u':
+                    got_utf_code_point = true;
+                    break;
+                case 'U':
+                    got_big_utf_code_point = true;
+                    break;
+                case format_symbol_parts[0]:
+                    current_string += format_symbol_parts[0];
+                    got_slash_except_part_format = true;
+                    break;
+                case format_symbol_parts[1]:
+                    current_string += format_symbol_parts[1];
+                    got_slash_except_part_format = false;
+                    break;
+                default:
+                    current_string += '\\';
+                    current_string += c;
+                    break;
+                }
+                if (c != format_symbol_parts[0])
+                    got_slash = false;
+            } else if (c == format_symbol_parts[0]) {
+                got_first_part_format_symbol = true;
+            } else if (c == format_symbol_parts[1]) {
+                if (current_string.size()) {
+                    current_chat.SetText(current_string);
+                    result.push_back(current_chat);
+                    current_chat.SetText();
+                    current_string.clear();
+                }
+                got_first_part_format_symbol = false;
+                format_command = true;
+            } else if (got_first_part_format_symbol) {
+                current_string += format_symbol_parts[0];
+                current_string += c;
+                got_first_part_format_symbol = false;
+            } else if (c == '\\') {
+                got_slash = true;
+            } else
+                current_string += c;
         }
-        if (size_t str_len = string.size(); str_len) {
-            str_len++;
-            if (char_ptr)
-                delete[] char_ptr;
-            char_ptr = new char[str_len + 1];
-            for (size_t i = 0; i < str_len; i++)
-                char_ptr[i] = string[i];
-            char_ptr[str_len] = 0;
-        } else if (char_ptr) {
-            delete[] char_ptr;
-            char_ptr = nullptr;
+        if (got_slash) {
+            current_string += '\\';
+            got_slash = false;
         }
+        if (current_string.size()) {
+            current_chat.SetText(current_string);
+            result.push_back(current_chat);
+        }
+        Chat final_chat;
+        final_chat.GetExtra() = result;
+        return final_chat;
     }
 
-    void Chat::setHoverEvent(hoverEventS::show_itemS* setHoverEvent) {
-        if (!hoverEvent)
-            hoverEvent = new hoverEventS;
-        if (hoverEvent->show_item)
-            delete hoverEvent->show_item;
-        hoverEvent->show_item = setHoverEvent;
+    Chat Chat::fromEnbt(const enbt::value& enbt) {
+        if (enbt.is_string())
+            return Chat((std::string)enbt);
+        Chat result;
+        auto entry = enbt.as_compound();
 
-        if (hoverEvent->show_entity)
-            delete hoverEvent->show_entity;
-        hoverEvent->show_entity = nullptr;
+        if (entry.contains("text"))
+            result.SetText(entry["text"]);
+        else if (entry.contains("translate"))
+            result.SetTranslation(entry["translate"]);
 
-        if (hoverEvent->show_text)
-            delete hoverEvent->show_text;
+        if (entry.contains("color"))
+            result.SetColor(entry["color"]);
 
-        hoverEvent->show_text = nullptr;
+        if (entry.contains("insertion"))
+            result.SetInsertion(entry["insertion"]);
+
+        if (entry.contains("bold"))
+            result.SetBold(entry["bold"]);
+
+        if (entry.contains("italic"))
+            result.SetItalic(entry["italic"]);
+
+        if (entry.contains("underlined"))
+            result.SetUnderlined(entry["underlined"]);
+
+        if (entry.contains("strikethrough"))
+            result.SetStrikethrough(entry["strikethrough"]);
+
+        if (entry.contains("obfuscated"))
+            result.SetObfuscated(entry["obfuscated"]);
+
+        if (entry.contains("insertion"))
+            result.SetInsertion(entry["insertion"]);
+
+        if (entry.contains("insertion"))
+            result.SetInsertion(entry["insertion"]);
+
+        if (entry.contains("clickEvent")) {
+            auto click_event = entry["clickEvent"].as_compound();
+            const std::string& action = (const std::string&)click_event["action"];
+            auto& value = click_event["value"];
+            if (action == "open_url")
+                result.SetClickEventOpenUrl(value);
+            else if (action == "run_command")
+
+                result.SetClickEventRunCommand(value);
+
+            else if (action == "suggest_command")
+                result.SetClickEventSuggestCommand(value);
+
+            else if (action == "change_page")
+                result.SetClickEventChangePage(value);
+            else if (action == "copy_to_clipboard")
+                result.SetClickEventCopyToClipboard(value);
+        }
+        if (entry.contains("hoverEvent")) {
+            auto hover_event = entry["hoverEvent"].as_compound();
+            const std::string& action = (const std::string&)hover_event["action"];
+            auto& content = hover_event["content"];
+            if (action == "show_item") {
+                if (content.contains("tag"))
+                    result.SetHoverEventShowItem(content["id"], content["count"], (std::string)content["tag"]);
+                else
+                    result.SetHoverEventShowItem(content["id"], content["count"], std::nullopt);
+            } else if (action == "show_entity") {
+                if (content.contains("name"))
+                    result.SetHoverEventShowEntity(content["id"], content["type"], (std::string)content["name"]);
+                else
+                    result.SetHoverEventShowItem(content["id"], content["type"], std::nullopt);
+            } else if (action == "show_text")
+                result.SetHoverEventShowText(content);
+        }
+
+        if (entry.contains("extra")) {
+            auto& extra_arr = result.GetExtra();
+            auto extra = entry["extra"].as_fixed_array();
+            extra_arr.reserve(extra.size());
+            for (auto& it : extra)
+                extra_arr.push_back(Chat::fromEnbt(it));
+        }
+        return result;
     }
 
-    void Chat::setHoverEvent(hoverEventS::show_entityS* setHoverEvent) {
-        if (!hoverEvent)
-            hoverEvent = new hoverEventS;
-        if (hoverEvent->show_entity)
-            delete hoverEvent->show_entity;
-        hoverEvent->show_entity = setHoverEvent;
-
-        if (hoverEvent->show_item)
-            delete hoverEvent->show_item;
-        hoverEvent->show_item = nullptr;
-
-        if (hoverEvent->show_text)
-            delete hoverEvent->show_text;
-
-        hoverEvent->show_text = nullptr;
+    Chat Chat::from_enbt_with_format(const enbt::value& enbt, list_array<enbt::value>&& items) {
+        auto res = fromEnbt(enbt);
+        formater(items, res);
+        return res;
     }
 
-    void Chat::setHoverEvent(const std::string& setHoverEvent) {
-        if (!hoverEvent)
-            hoverEvent = new hoverEventS;
-        if (hoverEvent->show_text)
-            delete hoverEvent->show_text;
-        hoverEvent->show_text = nullptr;
-        setString(hoverEvent->show_text, setHoverEvent);
+    std::string Chat::to_ansi_console() const {
+        std::string result;
+        if (color) {
+            if (strcmp(color, "black") == 0)
+                result += "\033[30m";
+            else if (strcmp(color, "dark_blue") == 0)
+                result += "\033[34m";
+            else if (strcmp(color, "dark_green") == 0)
+                result += "\033[32m";
+            else if (strcmp(color, "dark_aqua") == 0)
+                result += "\033[36m";
+            else if (strcmp(color, "dark_red") == 0)
+                result += "\033[31m";
+            else if (strcmp(color, "dark_purple") == 0)
+                result += "\033[35m";
+            else if (strcmp(color, "gold") == 0)
+                result += "\033[33m";
+            else if (strcmp(color, "gray") == 0)
+                result += "\033[37m";
+            else if (strcmp(color, "dark_gray") == 0)
+                result += "\033[90m";
+            else if (strcmp(color, "blue") == 0)
+                result += "\033[94m";
+            else if (strcmp(color, "green") == 0)
+                result += "\033[92m";
+            else if (strcmp(color, "aqua") == 0)
+                result += "\033[96m";
+            else if (strcmp(color, "red") == 0)
+                result += "\033[91m";
+            else if (strcmp(color, "light_purple") == 0)
+                result += "\033[95m";
+            else if (strcmp(color, "yellow") == 0)
+                result += "\033[93m";
+            else if (strcmp(color, "white") == 0)
+                result += "\033[97m";
+        }
+        if (bold)
+            result += "\033[1m";
+        if (italic)
+            result += "\033[3m";
+        if (underlined)
+            result += "\033[4m";
+        if (strikethrough)
+            result += "\033[9m";
+        if (obfuscated)
+            result += "\033[8m";
+        if (text)
+            result += text;
+        if (bold || italic || underlined || strikethrough || obfuscated)
+            result += "\033[0m";
 
-        if (hoverEvent->show_item)
-            delete hoverEvent->show_item;
-        hoverEvent->show_item = nullptr;
-
-        if (hoverEvent->show_entity)
-            delete hoverEvent->show_entity;
-        hoverEvent->show_entity = nullptr;
+        for (auto& it : extra)
+            result += it.to_ansi_console();
+        return result;
     }
 
     bool Chat::operator==(const Chat& other) const {
         if (
             defined_bold != other.defined_bold
-            | defined_italic != other.defined_italic
-            | defined_underlined != other.defined_underlined
-            | defined_strikethrough != other.defined_strikethrough
-            | defined_obfuscated != other.defined_obfuscated
+            || defined_italic != other.defined_italic
+            || defined_underlined != other.defined_underlined
+            || defined_strikethrough != other.defined_strikethrough
+            || defined_obfuscated != other.defined_obfuscated
         )
             return false;
 
         if (
             (!text != !other.text)
-            | (!color != !other.color)
-            | (!insertion != !other.insertion)
-            | (!font != !other.font)
-            | (!clickEvent != !other.clickEvent)
-            | (!hoverEvent != !other.hoverEvent)
+            || (!color != !other.color)
+            || (!insertion != !other.insertion)
+            || (!font != !other.font)
+            || (!clickEvent != !other.clickEvent)
+            || (!hoverEvent != !other.hoverEvent)
         )
             return false;
 
@@ -866,5 +1207,85 @@ namespace copper_server {
         if (extra != other.extra)
             return false;
         return true;
+    }
+
+    bool Chat::operator!=(const Chat& other) const {
+        return !operator==(other);
+    }
+
+    void Chat::setString(char*& char_ptr, const std::string& string) {
+        if (string.contains("\"{}")) {
+            std::string new_string;
+            for (auto& it : string) {
+                if (it == '\"' || it == '{' || it == '}')
+                    new_string += '\\';
+                new_string += it;
+            }
+            setString(char_ptr, new_string);
+            return;
+        }
+        if (size_t str_len = string.size(); str_len) {
+            str_len++;
+            if (char_ptr)
+                delete[] char_ptr;
+            char_ptr = new char[str_len + 1];
+            for (size_t i = 0; i < str_len; i++)
+                char_ptr[i] = string[i];
+            char_ptr[str_len] = 0;
+        } else if (char_ptr) {
+            delete[] char_ptr;
+            char_ptr = nullptr;
+        }
+    }
+
+    void Chat::setHoverEvent(hoverEventS::show_itemS* setHoverEvent) {
+        if (!hoverEvent)
+            hoverEvent = new hoverEventS;
+        if (hoverEvent->show_item)
+            delete hoverEvent->show_item;
+        hoverEvent->show_item = setHoverEvent;
+
+        if (hoverEvent->show_entity)
+            delete hoverEvent->show_entity;
+        hoverEvent->show_entity = nullptr;
+
+        if (hoverEvent->show_text)
+            delete hoverEvent->show_text;
+
+        hoverEvent->show_text = nullptr;
+    }
+
+    void Chat::setHoverEvent(hoverEventS::show_entityS* setHoverEvent) {
+        if (!hoverEvent)
+            hoverEvent = new hoverEventS;
+        if (hoverEvent->show_entity)
+            delete hoverEvent->show_entity;
+        hoverEvent->show_entity = setHoverEvent;
+
+        if (hoverEvent->show_item)
+            delete hoverEvent->show_item;
+        hoverEvent->show_item = nullptr;
+
+        if (hoverEvent->show_text)
+            delete hoverEvent->show_text;
+
+        hoverEvent->show_text = nullptr;
+    }
+
+    void Chat::setHoverEvent(const std::string& setHoverEvent) {
+        if (!hoverEvent)
+            hoverEvent = new hoverEventS;
+        if (hoverEvent->show_text)
+            delete hoverEvent->show_text;
+        hoverEvent->show_text = nullptr;
+        setString(hoverEvent->show_text, setHoverEvent);
+
+        if (hoverEvent->show_item)
+            delete hoverEvent->show_item;
+        hoverEvent->show_item = nullptr;
+
+        if (hoverEvent->show_entity)
+            delete hoverEvent->show_entity;
+        hoverEvent->show_entity = nullptr;
     }
 }

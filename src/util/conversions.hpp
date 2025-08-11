@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_UTIL_CONVERSIONS
 #define SRC_UTIL_CONVERSIONS
 #include <boost/json.hpp>
@@ -34,9 +42,12 @@ namespace copper_server::util::conversions {
 
     namespace json {
         boost::json::value to_json(const enbt::value& enbt);
+        boost::json::object to_json(const enbt::compound& enbt);
+        boost::json::array to_json(const enbt::dynamic_array& enbt);
+        boost::json::array to_json(const enbt::fixed_array& enbt);
         enbt::value from_json(const boost::json::value& json);
-        enbt::value from_json(const boost::json::object& json);
-        enbt::value from_json(const boost::json::array& json);
+        enbt::compound from_json(const boost::json::object& json);
+        enbt::dynamic_array from_json(const boost::json::array& json);
     }
 }
 #endif /* SRC_UTIL_CONVERSIONS */

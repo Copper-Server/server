@@ -1,18 +1,26 @@
-#include <src/build_in_plugins/world_generators/default_gen.hpp>
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
+#include <src/plugin/main.hpp>
 #include <src/storage/world_data.hpp>
 
 namespace copper_server::build_in_plugins::world_generators {
-    class DefaultGeneratorImpl : public storage::chunk_generator {
+    struct default_generator : public storage::chunk_generator {
         enbt::compound generate_chunk(storage::world_data& world, int64_t chunk_x, int64_t chunk_z) override {
             enbt::fixed_array subchunks;
-            for (size_t i = 0; i < world.chunk_y_count; i++)
+            for (size_t i = 0; i < world.get_chunk_y_count(); i++)
                 subchunks.push_back(generate_sub_chunk(world, chunk_x, i, chunk_z));
             return {
                 {"sub_chunks", std::move(subchunks)}
             };
         }
 
-        enbt::compound generate_sub_chunk(storage::world_data& world, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z) override {
+        enbt::compound generate_sub_chunk(storage::world_data&, int64_t, int64_t sub_chunk_y, int64_t) override {
             if (sub_chunk_y != 0) {
                 return {};
             } else {
@@ -36,7 +44,9 @@ namespace copper_server::build_in_plugins::world_generators {
         }
     };
 
-    void DefaultGen::OnRegister(const PluginRegistrationPtr& self) {
-        storage::chunk_generator::register_it("default", new DefaultGeneratorImpl());
-    }
+    struct default_gen : public PluginAutoRegister<"world_generators/default", default_gen> {
+        void OnRegister(const PluginRegistrationPtr&) override {
+            storage::chunk_generator::register_it("default", new default_generator());
+        }
+    };
 }

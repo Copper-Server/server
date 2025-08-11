@@ -1,8 +1,16 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_BASE_OBJECTS_CHAT
 #define SRC_BASE_OBJECTS_CHAT
+#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <optional>
-#include <src/protocolHelperNBT.hpp>
 #include <string>
 #include <vector>
 
@@ -61,404 +69,75 @@ namespace copper_server {
             }
         };
 
-        Chat() = default;
+        Chat();
+        Chat(std::initializer_list<Chat> args);
+        Chat(const char* set_text, bool is_translation = false);
+        Chat(const std::string& set_text, bool is_translation = false);
+        Chat(const Chat& copy);
+        Chat(Chat&& copy) noexcept;
+        Chat& operator=(const Chat& copy);
+        Chat& operator=(Chat&& copy) noexcept;
+        ~Chat();
 
-        Chat(std::initializer_list<Chat> args) {
-            bool first = true;
-            for (auto& it : args) {
-                if (first) {
-                    operator=(it);
-                    first = false;
-                } else
-                    extra.push_back(it);
-            }
-        }
+        Chat& SetText(const std::string& set_text = "");
+        Chat& SetTranslation(const std::string& set_text = "");
+        Chat& SetColor(const std::string& set_text = "");
+        Chat& SetInsertion(const std::string& set_text = "");
+        Chat& SetFont(const std::string& set_text = "");
+        Chat& SetBold();
+        Chat& SetItalic();
+        Chat& SetUnderlined();
+        Chat& SetStrikethrough();
+        Chat& SetObfuscated();
+        Chat& SetBold(bool is);
+        Chat& SetItalic(bool is);
+        Chat& SetUnderlined(bool is);
+        Chat& SetStrikethrough(bool is);
+        Chat& SetObfuscated(bool is);
+        Chat& SetHoverEventShowText(const std::string& _show_text);
+        Chat& SetHoverEventShowItem(const std::string& _id, int32_t _count, const std::optional<std::string>& _tag = std::nullopt);
+        Chat& SetHoverEventShowEntity(const std::string& _id, const std::string& _type, const std::optional<std::string>& _name = std::nullopt);
+        Chat& SetHoverEvent();
+        Chat& SetClickEventOpenUrl(const std::string& _open_url);
+        Chat& SetClickEventRunCommand(const std::string& _run_command);
+        Chat& SetClickEventSuggestCommand(const std::string& _suggest_command);
+        Chat& SetClickEventChangePage(uint32_t _change_page);
+        Chat& SetClickEventCopyToClipboard(const std::string& _copy_to_clipboard);
+        Chat& SetClickEvent();
 
-        Chat(const char* set_text, bool is_translation = false) {
-            setString(text, set_text);
-            text_is_translation = is_translation;
-        }
-
-        Chat(const std::string& set_text, bool is_translation = false) {
-            setString(text, set_text);
-            text_is_translation = is_translation;
-        }
-
-        Chat(const Chat& copy) {
-            operator=(copy);
-        }
-
-        Chat(Chat&& copy) noexcept {
-            operator=(std::move(copy));
-        }
-
-        Chat& operator=(const Chat& copy) {
-            if (copy.text)
-                setString(text, copy.text);
-            if (copy.color)
-                setString(color, copy.color);
-            if (copy.insertion)
-                setString(insertion, copy.insertion);
-            defined_bold = copy.defined_bold;
-            defined_italic = copy.defined_italic;
-            defined_underlined = copy.defined_underlined;
-            defined_strikethrough = copy.defined_strikethrough;
-            defined_obfuscated = copy.defined_obfuscated;
-            bold = copy.bold;
-            italic = copy.italic;
-            underlined = copy.underlined;
-            strikethrough = copy.strikethrough;
-            obfuscated = copy.obfuscated;
-            text_is_translation = copy.text_is_translation;
-            extra = copy.extra;
-            return *this;
-        }
-
-        Chat& operator=(Chat&& copy) noexcept {
-            text = copy.text;
-            copy.text = nullptr;
-            color = copy.color;
-            copy.color = nullptr;
-            insertion = copy.insertion;
-            copy.insertion = nullptr;
-            clickEvent = copy.clickEvent;
-            copy.clickEvent = nullptr;
-            hoverEvent = copy.hoverEvent;
-            copy.hoverEvent = nullptr;
-            defined_bold = copy.defined_bold;
-            defined_italic = copy.defined_italic;
-            defined_underlined = copy.defined_underlined;
-            defined_strikethrough = copy.defined_strikethrough;
-            defined_obfuscated = copy.defined_obfuscated;
-            bold = copy.bold;
-            italic = copy.italic;
-            underlined = copy.underlined;
-            strikethrough = copy.strikethrough;
-            obfuscated = copy.obfuscated;
-            text_is_translation = copy.text_is_translation;
-            extra = std::move(copy.extra);
-            return *this;
-        }
-
-        ~Chat() {
-            if (text)
-                delete text;
-            if (color)
-                delete color;
-            if (insertion)
-                delete insertion;
-            if (clickEvent)
-                delete clickEvent;
-            if (hoverEvent)
-                delete hoverEvent;
-            text = nullptr;
-            color = nullptr;
-            insertion = nullptr;
-            clickEvent = nullptr;
-            hoverEvent = nullptr;
-        }
-
-        Chat& SetText(const std::string& set_text = "") {
-            setString(text, set_text);
-            text_is_translation = false;
-            return *this;
-        }
-
-        Chat& SetTranslation(const std::string& set_text = "") {
-            setString(text, set_text);
-            text_is_translation = true;
-            return *this;
-        }
-
-        Chat& SetColor(const std::string& set_text = "") {
-            setString(color, set_text);
-            return *this;
-        }
-
-        Chat& SetInsertion(const std::string& set_text = "") {
-            setString(insertion, set_text);
-            return *this;
-        }
-
-        Chat& SetFont(const std::string& set_text = "") {
-            setString(font, set_text);
-            return *this;
-        }
-
-        Chat& SetBold() {
-            defined_bold = false;
-            return *this;
-        }
-
-        Chat& SetItalic() {
-            defined_italic = false;
-            return *this;
-        }
-
-        Chat& SetUnderlined() {
-            defined_underlined = false;
-            return *this;
-        }
-
-        Chat& SetStrikethrough() {
-            defined_strikethrough = false;
-            return *this;
-        }
-
-        Chat& SetObfuscated() {
-            defined_obfuscated = false;
-            return *this;
-        }
-
-        Chat& SetBold(bool is) {
-            bold = is;
-            defined_bold = true;
-            return *this;
-        }
-
-        Chat& SetItalic(bool is) {
-            italic = is;
-            defined_italic = true;
-            return *this;
-        }
-
-        Chat& SetUnderlined(bool is) {
-            underlined = is;
-            defined_underlined = true;
-            return *this;
-        }
-
-        Chat& SetStrikethrough(bool is) {
-            strikethrough = is;
-            defined_strikethrough = true;
-            return *this;
-        }
-
-        Chat& SetObfuscated(bool is) {
-            obfuscated = is;
-            defined_obfuscated = true;
-            return *this;
-        }
-
-        Chat& SetHoverEventShowText(const std::string& _show_text) {
-            setHoverEvent(_show_text);
-            return *this;
-        }
-
-        Chat& SetHoverEventShowItem(const std::string& _id, int32_t _count, const std::optional<std::string>& _tag = std::nullopt) {
-            hoverEventS::show_itemS* show_item = new hoverEventS::show_itemS;
-            show_item->id = _id;
-            show_item->count = _count;
-            show_item->tag = _tag;
-            setHoverEvent(show_item);
-            return *this;
-        }
-
-        Chat& SetHoverEventShowEntity(const std::string& _id, const std::string& _type, const std::optional<std::string>& _name = std::nullopt) {
-            hoverEventS::show_entityS* show_entity = new hoverEventS::show_entityS;
-            show_entity->id = _id;
-            show_entity->type = _type;
-            show_entity->name = _name;
-            setHoverEvent(show_entity);
-            return *this;
-        }
-
-        Chat& SetHoverEvent() {
-            if (hoverEvent)
-                delete hoverEvent;
-            hoverEvent = nullptr;
-            return *this;
-        }
-
-        Chat& SetClickEventOpenUrl(const std::string& _open_url) {
-            if (!clickEvent)
-                clickEvent = new clickEventS;
-
-            if (clickEvent->run_command)
-                delete clickEvent->run_command;
-
-            if (clickEvent->suggest_command)
-                delete clickEvent->suggest_command;
-
-            if (clickEvent->change_page)
-                delete clickEvent->change_page;
-            setString(clickEvent->open_url, _open_url);
-            return *this;
-        }
-
-        Chat& SetClickEventRunCommand(const std::string& _run_command) {
-            if (!clickEvent)
-                clickEvent = new clickEventS;
-
-            if (clickEvent->open_url)
-                delete clickEvent->open_url;
-
-            if (clickEvent->suggest_command)
-                delete clickEvent->suggest_command;
-
-            if (clickEvent->change_page)
-                delete clickEvent->change_page;
-
-            setString(clickEvent->run_command, _run_command);
-            return *this;
-        }
-
-        Chat& SetClickEventSuggestCommand(const std::string& _suggest_command) {
-            if (!clickEvent)
-                clickEvent = new clickEventS;
-
-            if (clickEvent->open_url)
-                delete clickEvent->open_url;
-
-            if (clickEvent->run_command)
-                delete clickEvent->run_command;
-
-            if (clickEvent->change_page)
-                delete clickEvent->change_page;
-
-            setString(clickEvent->suggest_command, _suggest_command);
-            return *this;
-        }
-
-        Chat& SetClickEventChangePage(uint32_t _change_page) {
-            if (!clickEvent)
-                clickEvent = new clickEventS;
-            if (!clickEvent->change_page)
-                clickEvent->change_page = new uint32_t;
-            *clickEvent->change_page = _change_page;
-            return *this;
-        }
-
-        Chat& SetClickEventCopyToClipboard(const std::string& _copy_to_clipboard) {
-            if (!clickEvent)
-                clickEvent = new clickEventS;
-            if (clickEvent->copy_to_clipboard)
-                delete clickEvent->copy_to_clipboard;
-            clickEvent->copy_to_clipboard = nullptr;
-            setString(clickEvent->copy_to_clipboard, _copy_to_clipboard);
-            return *this;
-        }
-
-        Chat& SetClickEvent() {
-            if (clickEvent)
-                delete clickEvent;
-            clickEvent = nullptr;
-            return *this;
-        }
-
-        list_array<Chat>& GetExtra() {
-            return extra;
-        }
-
-        std::optional<const char*> GetText() const {
-            if (text_is_translation || !text)
-                return std::nullopt;
-            return text;
-        }
-
-        std::optional<const char*> GetTranslation() const {
-            if (!text_is_translation || !text)
-                return std::nullopt;
-            return text;
-        }
-
-        std::optional<const char*> GetColor() const {
-            if (!color)
-                return std::nullopt;
-            return color;
-        }
-
-        std::optional<const char*> GetInsertion() const {
-            if (!insertion)
-                return std::nullopt;
-            return insertion;
-        }
-
-        std::optional<const char*> GetFont() const {
-            if (!font)
-                return std::nullopt;
-            return font;
-        }
-
-        std::optional<const hoverEventS*> GetHoverEvent() const {
-            if (hoverEvent)
-                return std::make_optional(hoverEvent);
-            else
-                return std::nullopt;
-        }
-
-        std::optional<const clickEventS*> GetClickEvent() const {
-            if (clickEvent)
-                return std::make_optional(clickEvent);
-            else
-                return std::nullopt;
-        }
-
-        std::optional<bool> GetBold() {
-            if (defined_bold)
-                return std::make_optional<bool>((bool)bold);
-            else
-                return std::nullopt;
-        }
-
-        std::optional<bool> GetItalic() {
-            if (defined_italic)
-                return std::make_optional<bool>((bool)italic);
-            else
-                return std::nullopt;
-        }
-
-        std::optional<bool> GetUnderlined() {
-            if (defined_underlined)
-                return std::make_optional<bool>((bool)underlined);
-            else
-                return std::nullopt;
-        }
-
-        std::optional<bool> GetStrikethrough() {
-            if (defined_strikethrough)
-                return std::make_optional<bool>((bool)strikethrough);
-            else
-                return std::nullopt;
-        }
-
-        std::optional<bool> GetObfuscated() {
-            if (defined_obfuscated)
-                return std::make_optional<bool>((bool)obfuscated);
-            else
-                return std::nullopt;
-        }
+        list_array<Chat>& GetExtra();
+        std::optional<const char*> GetText() const;
+        std::optional<const char*> GetTranslation() const;
+        std::optional<const char*> GetColor() const;
+        std::optional<const char*> GetInsertion() const;
+        std::optional<const char*> GetFont() const;
+        std::optional<const hoverEventS*> GetHoverEvent() const;
+        std::optional<const clickEventS*> GetClickEvent() const;
+        std::optional<bool> GetBold();
+        std::optional<bool> GetItalic();
+        std::optional<bool> GetUnderlined();
+        std::optional<bool> GetStrikethrough();
+        std::optional<bool> GetObfuscated();
 
         std::string ToStr() const;
         static Chat fromStr(const std::string& str);
         enbt::value ToENBT() const;
-        list_array<uint8_t> ToTextComponent() const;
 
-        void removeColor() {
-            if (color)
-                delete color;
-        }
-
-        void removeColorRecursive() {
-            if (color)
-                delete color;
-            for (auto& it : extra)
-                it.removeColorRecursive();
-        }
-
-        bool empty() const {
-            return !text && extra.empty();
-        }
+        void removeColor();
+        void removeColorRecursive();
+        bool empty() const;
 
         static Chat parseToChat(const std::string& string);
-        static Chat fromTextComponent(const list_array<uint8_t>& enbt);
         static Chat fromEnbt(const enbt::value& enbt);
+        static Chat from_enbt_with_format(const enbt::value& enbt, list_array<enbt::value>&&);
         std::string to_ansi_console() const;
 
 
         bool operator==(const Chat&) const;
-        bool operator!=(const Chat& other) const{
-            return !operator==(other);
+        bool operator!=(const Chat& other) const;
+
+        std::strong_ordering operator<=>(const Chat& other) const {
+            return operator==(other) ? std::strong_ordering::equal : std::strong_ordering::less;
         }
 
     private:

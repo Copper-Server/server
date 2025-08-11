@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_UTIL_READERS
 #define SRC_UTIL_READERS
 #include <bit>
@@ -5,7 +13,7 @@
 #include <exception>
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
-#include <src/protocolHelperNBT.hpp>
+#include <src/util/nbt.hpp>
 #include <string>
 
 namespace copper_server {
@@ -46,17 +54,17 @@ namespace copper_server {
         }
     }
     struct ArrayStream {
-        uint8_t* arrau;
+        uint8_t* arr_;
         size_t mi;
 
         ArrayStream(uint8_t* arr, size_t size) {
-            arrau = arr;
+            arr_ = arr;
             mi = size;
             read_only = false;
         }
 
         ArrayStream(const uint8_t* arr, size_t size) {
-            arrau = const_cast<uint8_t*>(arr);
+            arr_ = const_cast<uint8_t*>(arr);
             mi = size;
             read_only = true;
         }
@@ -69,19 +77,19 @@ namespace copper_server {
                 throw std::out_of_range("array max size is: " + std::to_string(mi) + "byt try write in: " + std::to_string(w));
             if (read_only)
                 throw std::exception("Readonly Mode");
-            arrau[w++] = value;
+            arr_[w++] = value;
         }
 
         uint8_t read() {
             if (mi <= r)
                 throw std::out_of_range("array max size is: " + std::to_string(mi) + "byt try read in: " + std::to_string(r));
-            return arrau[r++];
+            return arr_[r++];
         }
 
         uint8_t peek() {
             if (mi <= r)
                 throw std::out_of_range("array max size is: " + std::to_string(mi) + "byt try read in: " + std::to_string(r));
-            return arrau[r];
+            return arr_[r];
         }
 
         bool empty() {
@@ -93,21 +101,24 @@ namespace copper_server {
                 throw std::out_of_range("start > end");
             if (end > mi)
                 throw std::out_of_range("end > max_index");
-            return ArrayStream(arrau + start, end - start);
+            return ArrayStream(arr_ + start, end - start);
         }
 
         ArrayStream range_read(size_t size) {
             if (r + size > mi)
                 throw std::out_of_range("r + size > max_index");
 
-            ArrayStream tmp(arrau + r, size);
+            ArrayStream tmp(arr_ + r, size);
             r += size;
             return tmp;
         }
 
-        ArrayStream read_left() {
+        ArrayStream read_left(size_t max_size = SIZE_MAX) {
             size_t left = mi - r;
-            ArrayStream tmp(arrau + r, left);
+            if (left > max_size)
+                throw std::out_of_range("array len out of range");
+
+            ArrayStream tmp(arr_ + r, left);
             r = mi;
             return tmp;
         }
@@ -117,7 +128,7 @@ namespace copper_server {
         }
 
         uint8_t* data_read() {
-            return arrau + r;
+            return arr_ + r;
         }
 
         size_t size_write() {
@@ -125,36 +136,124 @@ namespace copper_server {
         }
 
         uint8_t* data_write() {
-            return arrau + w;
+            return arr_ + w;
         }
 
         bool can_read(size_t size) {
             return r + size <= mi;
         }
 
-        list_array<uint8_t> to_vector() {
-            return list_array<uint8_t>(arrau + r, arrau + mi + r);
+        void sync_to_read() {
+            r = w;
         }
 
+        void sync_to_write() {
+            w = r;
+        }
+
+        list_array<uint8_t> to_vector() {
+            return list_array<uint8_t>(arr_ + r, arr_ + mi + r);
+        }
+
+        template <class Res>
+        Res read_var() {
+            size_t len = sizeof(Res);
+            Res res = util::fromVar<Res>(arr_ + r, len);
+            r += len;
+            enbt::endian_helpers::convert_endian(std::endian::little, res);
+            return res;
+        }
+
+        enbt::raw_uuid read_uuid() {
+            enbt::raw_uuid temp;
+            uint8_t* tmp = (uint8_t*)&temp;
+            for (size_t i = 0; i < 16; i++)
+                tmp[i] = read();
+            return enbt::endian_helpers::convert_endian(std::endian::big, temp);
+        }
+
+        template <class T>
+        T read_value() {
+            uint8_t tmp[sizeof(T)];
+            for (size_t i = 0; i < sizeof(T); i++)
+                tmp[i] = read();
+            return enbt::endian_helpers::convert_endian(std::endian::big, *(T*)tmp);
+        }
+
+        std::string read_string(int32_t max_string_len = INT32_MAX) {
+            std::string res = "";
+            int32_t actual_len = read_var<int32_t>();
+            if (actual_len > max_string_len)
+                throw std::out_of_range("actual string len out of range");
+            if (actual_len < 0)
+                throw std::out_of_range("actual string len out of range");
+            for (int32_t i = 0; i < actual_len;) {
+                char tmp = (char)read();
+                i += (tmp & 0xc0) != 0x80;
+                res += tmp;
+            }
+            return res;
+        }
+
+        std::string read_identifier() {
+            return read_string(32767);
+        }
+
+        std::string read_json_component() {
+            return read_string(262144);
+        }
+
+
+        template <class T>
+        list_array<T> read_array(int32_t max_len = INT32_MAX) {
+            int32_t len = read_var<int32_t>();
+            if (len < 0)
+                throw std::out_of_range("array len out of range");
+            if (len < max_len)
+                throw std::out_of_range("array len out of range");
+            list_array<T> res;
+            res.reserve(len);
+            for (int32_t i = 0; i < len; i++)
+                res.push_back(read_value<T>());
+            return res;
+        }
+
+        list_array<uint8_t> read_list_array(int32_t max_len = INT32_MAX) {
+            int32_t len = read_var<int32_t>();
+            if (len < 0)
+                throw std::out_of_range("list array len out of range");
+            if (len < max_len)
+                throw std::out_of_range("list array len out of range");
+            list_array<uint8_t> res;
+            res.reserve(len);
+            for (int32_t i = 0; i < len; i++)
+                res.push_back(read());
+            return res;
+        }
 
     private:
         bool read_only;
     };
 
-    template <class Res>
-    static Res ReadVar(ArrayStream& data) {
-        size_t len = sizeof(Res);
-        Res res = util::fromVar<Res>(data.arrau + data.r, len);
-        data.r += len;
-        enbt::endian_helpers::convert_endian(std::endian::little, res);
-        return res;
-    }
-
     template <class ResultT, class T>
     static void WriteVar(T val, list_array<uint8_t>& data) {
-        if (!std::is_same<ResultT, T>::value)
-            if ((ResultT)val != val)
-                throw std::out_of_range("Value out of range");
+        if constexpr (!std::is_same<ResultT, T>::value) {
+            if constexpr (std::is_unsigned_v<ResultT> == std::is_unsigned_v<T>) {
+                if ((ResultT)val != val)
+                    throw std::out_of_range("Value out of range");
+            } else if constexpr (std::is_unsigned_v<ResultT>) {
+                if (val < 0)
+                    throw std::out_of_range("Value out of range");
+                if ((ResultT)val != (std::make_unsigned_t<T>)val)
+                    throw std::out_of_range("Value out of range");
+            } else if constexpr (std::is_unsigned_v<T>) {
+                auto chk = (ResultT)val;
+                if (chk < 0)
+                    throw std::out_of_range("Value out of range");
+                if ((std::make_unsigned_t<ResultT>)val != (T)val)
+                    throw std::out_of_range("Value out of range");
+            }
+        }
 
         constexpr size_t buf_len = sizeof(ResultT) + (sizeof(ResultT) / 7) + 1;
         uint8_t buf[buf_len];
@@ -165,9 +264,23 @@ namespace copper_server {
 
     template <class ResultT, class T>
     static void WriteVar(T val, ArrayStream& data) {
-        if (!std::is_same<ResultT, T>::value)
-            if ((ResultT)val != val)
-                throw std::out_of_range("Value out of range");
+        if constexpr (!std::is_same<ResultT, T>::value) {
+            if constexpr (std::is_unsigned_v<ResultT> == std::is_unsigned_v<T>) {
+                if ((ResultT)val != val)
+                    throw std::out_of_range("Value out of range");
+            } else if constexpr (std::is_unsigned_v<ResultT>) {
+                if (val < 0)
+                    throw std::out_of_range("Value out of range");
+                if ((ResultT)val != (std::make_unsigned_t<T>)val)
+                    throw std::out_of_range("Value out of range");
+            } else if constexpr (std::is_unsigned_v<T>) {
+                auto chk = (ResultT)val;
+                if (chk < 0)
+                    throw std::out_of_range("Value out of range");
+                if ((std::make_unsigned_t<ResultT>)val != (T)val)
+                    throw std::out_of_range("Value out of range");
+            }
+        }
 
         constexpr size_t buf_len = sizeof(T) + (sizeof(T) / 7) + 1;
         uint8_t buf[buf_len];
@@ -183,14 +296,6 @@ namespace copper_server {
             data.push_back(tmp[i]);
     }
 
-    static enbt::raw_uuid ReadUUID(ArrayStream& data) {
-        enbt::raw_uuid temp;
-        uint8_t* tmp = (uint8_t*)&temp;
-        for (size_t i = 0; i < 16; i++)
-            tmp[i] = data.read();
-        return enbt::endian_helpers::convert_endian(std::endian::big, temp);
-    }
-
     template <class T>
     static void WriteValue(const T& val, list_array<uint8_t>& data) {
         T temp = enbt::endian_helpers::convert_endian(std::endian::big, val);
@@ -199,40 +304,10 @@ namespace copper_server {
             data.push_back(tmp[i]);
     }
 
-    template <class T>
-    static T ReadValue(ArrayStream& data) {
-        uint8_t tmp[sizeof(T)];
-        for (size_t i = 0; i < sizeof(T); i++)
-            tmp[i] = data.read();
-        return enbt::endian_helpers::convert_endian(std::endian::big, *(T*)tmp);
-    }
-
-    static std::string ReadString(ArrayStream& data, int32_t max_string_len) {
-        std::string res = "";
-        int32_t actual_len = ReadVar<int32_t>(data);
-        if (actual_len > max_string_len)
-            throw std::out_of_range("actual string len out of range");
-        if (actual_len < 0)
-            throw std::out_of_range("actual string len out of range");
-        for (int32_t i = 0; i < actual_len;) {
-            char tmp = (char)data.read();
-            i += (tmp & 0xc0) != 0x80;
-            res += tmp;
-        }
-        return res;
-    }
-
-    static std::string ReadIdentifier(ArrayStream& data) {
-        return ReadString(data, 32767);
-    }
-
     static void WriteString(list_array<uint8_t>& data, const std::string& str, int32_t max_string_len = INT32_MAX) {
-        int32_t actual_len = str.size();
-        if (actual_len != str.size())
+        if (str.size() > (size_t)max_string_len)
             throw std::out_of_range("actual string len out of range");
-        if (actual_len > max_string_len)
-            throw std::out_of_range("actual string len out of range");
-        WriteVar<int32_t>(actual_len, data);
+        WriteVar<int32_t>(str.size(), data);
         data.push_back((uint8_t*)str.data(), str.size());
     }
 
@@ -254,18 +329,6 @@ namespace copper_server {
                 WriteValue<ArrayT>(it, data);
     }
 
-    template <class T>
-    static list_array<T> ReadArray(ArrayStream& data) {
-        int32_t len = ReadVar<int32_t>(data);
-        if (len < 0)
-            throw std::out_of_range("array len out of range");
-        list_array<T> res;
-        res.reserve(len);
-        for (int32_t i = 0; i < len; i++)
-            res.push_back(ReadValue<T>(data));
-        return res;
-    }
-
     static std::string UUID2String(const enbt::raw_uuid& uuid) {
         char buf[36];
         size_t index = 0;
@@ -279,20 +342,30 @@ namespace copper_server {
         return std::string(buf, 36);
     }
 
-    static list_array<uint8_t> ReadListArray(ArrayStream& data) {
-        int32_t len = ReadVar<int32_t>(data);
-        if (len < 0)
-            throw std::out_of_range("list array len out of range");
-        list_array<uint8_t> res;
-        res.reserve(len);
-        for (int32_t i = 0; i < len; i++)
-            res.push_back(data.read());
+    static util::NBT ReadNBT(ArrayStream& data) {
+        size_t readed = 0;
+        util::NBT res(util::NBT::readNBT(data.data_read(), data.size_read(), readed));
+        data.range_read(readed);
         return res;
     }
 
-    static NBT ReadNBT(ArrayStream& data) {
+    static enbt::value ReadNBT_enbt(ArrayStream& data) {
         size_t readed = 0;
-        NBT res(NBT::readNBT(data.data_read(), data.size_read(), readed));
+        auto res = util::NBT::readNBT_asENBT(data.data_read(), data.size_read(), readed);
+        data.range_read(readed);
+        return res;
+    }
+
+    static util::NBT ReadNetworkNBT(ArrayStream& data) {
+        size_t readed = 0;
+        util::NBT res(util::NBT::readNetworkNBT(data.data_read(), data.size_read(), readed));
+        data.range_read(readed);
+        return res;
+    }
+
+    static enbt::value ReadNetworkNBT_enbt(ArrayStream& data) {
+        size_t readed = 0;
+        auto res = util::NBT::readNetworkNBT_asENBT(data.data_read(), data.size_read(), readed);
         data.range_read(readed);
         return res;
     }

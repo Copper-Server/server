@@ -3,7 +3,7 @@ if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed.exe)
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out)
 
 
-    execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed 
+    execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed -DCMAKE_TOOLCHAIN_FILE=${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DVCPKG_TARGET_TRIPLET=x64-windows-static
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out
         RESULT_VARIABLE result
         OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out/binary_embed.log
@@ -27,16 +27,45 @@ if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed.exe)
     endif()
 
     message(STATUS "binary_embed tool built successfully")
-    file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out)
+endif()
+if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map.exe)
+    message(STATUS "Configuring reflect_map tool...")
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out)
+
+
+    execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map -DCMAKE_TOOLCHAIN_FILE=${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DVCPKG_TARGET_TRIPLET=x64-windows-static
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out
+        RESULT_VARIABLE result
+        OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out/reflect_map.log
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out/reflect_map_error.log
+    )
+
+    if(result)
+        message(FATAL_ERROR "Failed to build reflect_map, see reflect_map_error.log for details in ${CMAKE_CURRENT_SOURCE_DIR}/tools/reflect_map/out")
+    endif()
+
+    message(STATUS "Building reflect_map tool...")
+    execute_process(COMMAND ${CMAKE_COMMAND} --build . --config Release --target reflect_map
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out
+        RESULT_VARIABLE result
+        OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out/reflect_map_build.log
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out/reflect_map_build_error.log
+    )
+
+    if(result)
+        message(FATAL_ERROR "Failed to build reflect_map, see reflect_map_build_error.log for details in ${CMAKE_CURRENT_SOURCE_DIR}/tools/reflect_map/out")
+    endif()
+
+    message(STATUS "reflect_map tool built successfully")
 endif()
 
 
 
-function(build_resource project_name input_file output_folder)
+function(build_resource project_name input_file output_folder mode)
     cmake_path(GET input_file FILENAME result_name)
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed)
     execute_process(
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed.exe "direct" ${project_name} ${input_file} ${output_folder}
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed.exe "direct" ${project_name} ${input_file} ${output_folder} ${mode}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         RESULT_VARIABLE result
         ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed/${result_name}_error.log
@@ -47,11 +76,11 @@ function(build_resource project_name input_file output_folder)
     file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
 endfunction(build_resource)
 
-function(build_resource_json project_name input_file output_folder)
+function(build_resource_json project_name input_file output_folder mode)
     cmake_path(GET input_file FILENAME result_name)
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed)
     execute_process(
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed.exe "json" ${project_name} ${input_file} ${output_folder}
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed.exe "json" ${project_name} ${input_file} ${output_folder} ${mode}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         RESULT_VARIABLE result
         ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed/${result_name}_error.log
@@ -62,11 +91,11 @@ function(build_resource_json project_name input_file output_folder)
     file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
 endfunction(build_resource_json)
 
-function(build_resource_merge_json project_name input_folder output_folder)
+function(build_resource_merge_json project_name input_folder output_folder mode)
     cmake_path(GET input_folder FILENAME result_name)
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed)
     execute_process(
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed.exe "merge_json" ${project_name} ${input_folder} ${output_folder}
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed.exe "merge_json" ${project_name} ${input_folder} ${output_folder} ${mode}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         RESULT_VARIABLE result
         ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed/${result_name}_error.log
@@ -77,9 +106,40 @@ function(build_resource_merge_json project_name input_folder output_folder)
     file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
 endfunction(build_resource_merge_json)
 
-function(build_resources project_name output_folder FILES HEADERS_PAR SOURCES_PAR)
+
+function(build_resource_senbt project_name input_file output_folder mode)
+    cmake_path(GET input_file FILENAME result_name)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed)
+    execute_process(
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed.exe "senbt" ${project_name} ${input_file} ${output_folder} ${mode}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE result
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed/${result_name}_error.log
+    )
+    if(result)
+        message(FATAL_ERROR "Failed to build resource ${input_file}")
+    endif()
+    file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
+endfunction(build_resource_senbt)
+
+function(build_resource_merge_senbt project_name input_folder output_folder mode)
+    cmake_path(GET input_folder FILENAME result_name)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed)
+    execute_process(
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed.exe "merge_senbt" ${project_name} ${input_folder} ${output_folder} ${mode}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE result
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/binary_embed/${result_name}_error.log
+    )
+    if(result)
+        message(FATAL_ERROR "Failed to build resource ${input_folder}")
+    endif()
+    file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
+endfunction(build_resource_merge_senbt)
+
+function(build_resources project_name output_folder FILES HEADERS_PAR SOURCES_PAR mode)
     foreach(file ${FILES})
-        build_resource(${project_name} ${file} ${output_folder})
+        build_resource(${project_name} ${file} ${output_folder} ${mode})
     endforeach()
 
     FILE(GLOB HEADERS
@@ -108,9 +168,9 @@ function(build_resources project_name output_folder FILES HEADERS_PAR SOURCES_PA
 endfunction(build_resources)
 
 
-function(build_resources_json project_name output_folder FILES HEADERS_PAR SOURCES_PAR)
+function(build_resources_json project_name output_folder FILES HEADERS_PAR SOURCES_PAR mode)
     foreach(file ${FILES})
-        build_resource_json(${project_name} ${file} ${output_folder})
+        build_resource_json(${project_name} ${file} ${output_folder} ${mode})
     endforeach()
 
     FILE(GLOB HEADERS
@@ -138,6 +198,44 @@ function(build_resources_json project_name output_folder FILES HEADERS_PAR SOURC
     return(PROPAGATE ${HEADERS_PAR} ${SOURCES_PAR})
 endfunction(build_resources_json)
 
+
+function(build_resources project_name output_folder FILES HEADERS_PAR SOURCES_PAR mode)
+    foreach(file ${FILES})
+        cmake_path(GET file EXTENSION file_ext)
+        if(file_ext STREQUAL ".json")
+            build_resource_json(${project_name} ${file} ${output_folder} ${mode})
+        elseif(file_ext STREQUAL ".senbt")
+            build_resource_senbt(${project_name} ${file} ${output_folder} ${mode})
+        else()
+            build_resource(${project_name} ${file} ${output_folder} ${mode})
+        endif() 
+    endforeach()
+
+    FILE(GLOB HEADERS
+        "${output_folder}/*.hpp"
+        "${output_folder}/*/*.hpp"
+        "${output_folder}/*/*/*.hpp"
+        "${output_folder}/*/*/*/*.hpp"
+        "${output_folder}/*/*/*/*/*.hpp"
+        "${output_folder}/*/*/*/*/*/*.hpp"
+        "${output_folder}/*/*/*/*/*/*/*.hpp"
+    )
+    FILE(GLOB SOURCES
+        "${output_folder}/*.cpp"
+        "${output_folder}/*/*.cpp"
+        "${output_folder}/*/*/*.cpp"
+        "${output_folder}/*/*/*/*.cpp"
+        "${output_folder}/*/*/*/*/*.cpp"
+        "${output_folder}/*/*/*/*/*/*.cpp"
+        "${output_folder}/*/*/*/*/*/*/*.cpp"
+    )
+
+    set(${HEADERS_PAR} ${HEADERS})
+    set(${SOURCES_PAR} ${SOURCES})
+
+    return(PROPAGATE ${HEADERS_PAR} ${SOURCES_PAR})
+endfunction(build_resources)
+
 function(create_resources_header resources_folder resouce_headers)
     file(MAKE_DIRECTORY "${resources_folder}")
     set(resources_header "${resources_folder}/include.hpp")
@@ -147,3 +245,27 @@ function(create_resources_header resources_folder resouce_headers)
         file(APPEND ${resources_header} "#include \"${file}\"\n")
     endforeach()
 endfunction(create_resources_header)
+
+
+function(create_reflect_map output_file FILES)
+    cmake_path(GET output_file FILENAME result_name)
+    
+    #convert FILES to a string
+    set(FILES_STR "")
+    foreach(file ${FILES})
+        set(FILES_STR "${file} ${FILES_STR}")
+    endforeach()
+
+
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/reflect_map)
+    execute_process(
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/reflect_map.exe ${output_file} ${FILES_STR}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE result
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/reflect_map/${result_name}_error.log
+    )
+    if(result)
+        message(FATAL_ERROR "Failed to build reflection map ${output_file}")
+    endif()
+    file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
+endfunction(create_reflect_map)

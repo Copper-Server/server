@@ -1,5 +1,15 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #include <filesystem>
 #include <library/enbt/io.hpp>
+#include <library/fast_task/include/files.hpp>
+#include <src/base_objects/entity.hpp>
 #include <src/storage/players_data.hpp>
 
 namespace copper_server::storage {
@@ -18,9 +28,13 @@ namespace copper_server::storage {
         : path(path) {}
 
     void player_data::load() {
-        std::ifstream file(path, std::ios::binary);
+        fast_task::files::async_iofstream file(
+            path,
+            fast_task::files::open_mode::read,
+            fast_task::files::on_open_action::open,
+            fast_task::files::_sync_flags{}
+        );
         if (!file.is_open()) {
-            file.close();
             if (std::filesystem::exists(path))
                 throw std::runtime_error("Failed to open file: " + path.string());
             else {
@@ -99,7 +113,6 @@ namespace copper_server::storage {
 
         if (!player.assigned_entity)
             player.assigned_entity = base_objects::entity::create("minecraft:player");
-        file.close();
     }
 
     void player_data::save() {
@@ -153,14 +166,16 @@ namespace copper_server::storage {
         if (player.assigned_entity)
             as_file_data["assigned_entity"] = player.assigned_entity->copy_to_enbt();
 
-        std::ofstream file(path, std::ios::binary);
-        if (!file.is_open()) {
-            file.close();
+        fast_task::files::async_iofstream file(
+            path,
+            fast_task::files::open_mode::write,
+            fast_task::files::on_open_action::always_new,
+            fast_task::files::_sync_flags{}
+        );
+        if (!file.is_open())
             throw std::runtime_error("Failed to open file: " + path.string());
-        }
         enbt::io_helper::write_token(file, as_file_data);
         file.flush();
-        file.close();
     }
 
     players_data::players_data(const std::filesystem::path& base_path)

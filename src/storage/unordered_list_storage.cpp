@@ -1,25 +1,39 @@
-#include <fstream>
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
+#include <library/fast_task/include/files.hpp>
 #include <src/storage/unordered_list_storage.hpp>
 
 namespace copper_server::storage {
     unordered_list_storage::unordered_list_storage(const std::filesystem::path& path) {
         if (!std::filesystem::exists(path)) {
             std::filesystem::create_directories(path.parent_path());
-            std::ofstream file;
-            file.open(path, std::ios::out);
-            file.close();
+            fast_task::files::async_iofstream file(
+                path,
+                fast_task::files::open_mode::write,
+                fast_task::files::on_open_action::open,
+                fast_task::files::_sync_flags{}
+            );
             _is_loaded = true;
             return;
         }
-        std::ifstream file;
-        file.open(path, std::ios::in);
+        fast_task::files::async_iofstream file(
+            path,
+            fast_task::files::open_mode::read,
+            fast_task::files::on_open_action::open,
+            fast_task::files::_sync_flags{}
+        );
         if (!file.is_open())
             return;
         data.set([&](auto& value) {
             for (std::string line; std::getline(file, line);)
                 value.insert(line);
         });
-        file.close();
         _is_loaded = true;
     }
 
@@ -32,11 +46,14 @@ namespace copper_server::storage {
             }
         });
         if (save) {
-            std::ofstream file;
-            file.open(path, std::ios::out | std::ios::app);
+            fast_task::files::async_iofstream file(
+                path,
+                fast_task::files::open_mode::append,
+                fast_task::files::on_open_action::open,
+                fast_task::files::_sync_flags{}
+            );
             file << set_value << std::endl;
             file.flush();
-            file.close();
         }
     }
 
@@ -57,14 +74,17 @@ namespace copper_server::storage {
         });
 
         if (save) {
-            std::ofstream file;
-            file.open(path, std::ios::out | std::ios::trunc);
+            fast_task::files::async_iofstream file(
+                path,
+                fast_task::files::open_mode::write,
+                fast_task::files::on_open_action::always_new,
+                fast_task::files::_sync_flags{}
+            );
             data.get([&](auto& value) {
                 for (const auto& line : value)
                     file << line << '\n';
             });
             file.flush();
-            file.close();
         }
     }
 
@@ -90,9 +110,12 @@ namespace copper_server::storage {
         data.set([&](auto& value) {
             value.clear();
         });
-        std::ofstream file;
-        file.open(path, std::ios::out | std::ios::trunc);
+        fast_task::files::async_iofstream file(
+            path,
+            fast_task::files::open_mode::write,
+            fast_task::files::on_open_action::always_new,
+            fast_task::files::_sync_flags{}
+        );
         file.flush();
-        file.close();
     }
 }

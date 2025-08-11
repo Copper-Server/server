@@ -4,9 +4,7 @@
     "color": "#625859",
     "translate": "trim_material.minecraft.netherite"
   },
-  "ingredient": "minecraft:netherite_ingot",
-  "item_model_index": 0.3,
-  "override_armor_materials": {
+  "override_armor_assets": {
     "minecraft:netherite": "netherite_darker"
   }
 }

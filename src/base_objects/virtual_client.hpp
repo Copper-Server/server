@@ -1,7 +1,24 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_BASE_OBJECTS_VIRTUAL_CLIENT
 #define SRC_BASE_OBJECTS_VIRTUAL_CLIENT
 #include <src/base_objects/shared_client_data.hpp>
-#include <src/protocolHelper/packets.hpp>
+
+namespace copper_server::api::packets {
+    namespace client_bound {
+        struct play_packet;
+    }
+
+    namespace server_bound {
+        struct play_packet;
+    }
+}
 
 namespace copper_server::base_objects {
     struct virtual_client {
@@ -9,17 +26,15 @@ namespace copper_server::base_objects {
 
         virtual_client(client_data_holder allocated, const std::string& name, const std::string& brand);
 
-        void parse_packet(list_array<uint8_t>&);
+        std::function<void(const api::packets::client_bound::play_packet&)> packet_processor;
+        std::function<void()> requested_disconnect;
 
-        std::function<void(int32_t transaction_id, int32_t start_pos, int32_t length, const list_array<base_objects::packets::command_suggestion>& suggestions)> commandSuggestionsResponse;
-
-        std::function<void(int32_t message_id)> deleteMessage;
-
-        std::function<void(const Chat& message, int32_t chat_type, const Chat& sender, std::optional<Chat> target_name)> disguisedChatMessage;
-        std::function<void(enbt::raw_uuid sender, int32_t index, const std::optional<std::array<uint8_t, 256>>& signature, const std::string& message, int64_t timestamp, int64_t salt, const list_array<std::array<uint8_t, 256>>& prev_messages, std::optional<enbt::value> __UNDEFINED__FIELD__, int32_t filter_type, const list_array<uint8_t>& filtered_symbols_bitfield, int32_t chat_type, const Chat& sender_name, const std::optional<Chat>& target_name)> playerChatMessage;
-
-        std::function<void(const Chat& message)> systemChatMessage;
-        std::function<void(const Chat& message)> systemChatMessageOverlay;
+        void send(api::packets::server_bound::play_packet&&);
     };
+
+    inline virtual_client& operator<<(virtual_client& client, api::packets::server_bound::play_packet&& packet) {
+        client.send(std::move(packet));
+        return client;
+    }
 }
 #endif /* SRC_BASE_OBJECTS_VIRTUAL_CLIENT */

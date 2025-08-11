@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_BASE_OBJECTS_PTR_OPTIONAL
 #define SRC_BASE_OBJECTS_PTR_OPTIONAL
 #include <stdexcept>
@@ -10,7 +18,13 @@ namespace copper_server::base_objects {
 
     public:
         ptr_optional()
-            : data() {}
+            : data(nullptr) {}
+
+        ptr_optional(const T& data)
+            : data(new T(data)) {}
+
+        ptr_optional(T&& data)
+            : data(new T(std::move(data))) {}
 
         ptr_optional(T* data)
             : data(data) {}
@@ -18,6 +32,8 @@ namespace copper_server::base_objects {
         ptr_optional(const ptr_optional& other) {
             if (other.data)
                 data = new T(*other.data);
+            else
+                data = nullptr;
         }
 
         ptr_optional(ptr_optional&& other) {
@@ -25,12 +41,12 @@ namespace copper_server::base_objects {
             other.data = nullptr;
         }
 
-        ptr_optional& operator=(T* data) {
-            if (this->data == data)
+        ptr_optional& operator=(T* value) {
+            if (data == value)
                 return *this;
-            if (this->data)
-                delete this->data;
-            this->data = data;
+            if (data)
+                delete data;
+            data = value;
             return *this;
         }
 
@@ -41,6 +57,8 @@ namespace copper_server::base_objects {
                 delete data;
             if (other.data)
                 data = new T(*other.data);
+            else
+                data = nullptr;
             return *this;
         }
 
@@ -97,6 +115,12 @@ namespace copper_server::base_objects {
 
         bool operator!() const {
             return data == nullptr;
+        }
+
+        void reset() {
+            if (data)
+                delete data;
+            data = nullptr;
         }
     };
 }

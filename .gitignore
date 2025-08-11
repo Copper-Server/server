@@ -5,8 +5,6 @@ build/*
 .VSCodeCounter
 out/
 /storage
-op_list.txt
-permissions.json
 config.json
 tools/logs
 tools/*/out

@@ -1,4 +1,11 @@
-
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #include <boost/json.hpp>
 #include <cstddef>
 #include <cstdint>
@@ -223,11 +230,11 @@ namespace copper_server::util::conversions {
                 uint8_t hex_map_index[256]{0};
 
                 construct_() {
-                    for (int i = 0; i < 10; i++)
+                    for (uint8_t i = 0; i < 10; i++)
                         hex_map_index['0' + i] = i;
-                    for (int i = 0; i < 6; i++)
+                    for (uint8_t i = 0; i < 6; i++)
                         hex_map_index['a' + i] = 10 + i;
-                    for (int i = 0; i < 6; i++)
+                    for (uint8_t i = 0; i < 6; i++)
                         hex_map_index['A' + i] = 10 + i;
                 }
             } static const map;
@@ -242,66 +249,34 @@ namespace copper_server::util::conversions {
             std::vector<std::uint8_t> result;
             result.resize(to_add);
             for (size_t i = 0; i < data_size; i += 2)
-                result[result_i++] = (map.hex_map_index[data[i]] << 4) | map.hex_map_index[data[i + 1]];
+                result[result_i++] = (map.hex_map_index[(uint8_t)data[i]] << 4) | map.hex_map_index[(uint8_t)data[i + 1]];
             return result;
         }
     }
 
     namespace uuid {
         namespace __internal__ {
-            static uint8_t unHex_0(char ch0) {
-                switch (ch0) {
-                case '0':
-                    return 0;
-                case '1':
-                    return 1;
-                case '2':
-                    return 2;
-                case '3':
-                    return 3;
-                case '4':
-                    return 4;
-                case '5':
-                    return 5;
-                case '6':
-                    return 6;
-                case '7':
-                    return 7;
-                case '8':
-                    return 8;
-                case '9':
-                    return 9;
-                case 'a':
-                case 'A':
-                    return 0xa;
-                case 'b':
-                case 'B':
-                    return 0xb;
-                case 'c':
-                case 'C':
-                    return 0xc;
-                case 'd':
-                case 'D':
-                    return 0xd;
-                case 'e':
-                case 'E':
-                    return 0xe;
-                case 'f':
-                case 'F':
-                    return 0xf;
-                default:
-                    throw std::invalid_argument("This function accepts only hex symbols");
-                }
-            }
-
             static uint8_t unHex(char ch0, char ch1) {
-                return unHex_0(ch0) & (unHex_0(ch1) << 4);
+                struct construct_ {
+                    uint8_t hex_map_index[256]{0};
+
+                    construct_() {
+                        for (uint8_t i = 0; i < 10; i++)
+                            hex_map_index['0' + i] = i;
+                        for (uint8_t i = 0; i < 6; i++)
+                            hex_map_index['a' + i] = 10 + i;
+                        for (uint8_t i = 0; i < 6; i++)
+                            hex_map_index['A' + i] = 10 + i;
+                    }
+                } static const map;
+
+                return (map.hex_map_index[(uint8_t)ch0] << 4) | map.hex_map_index[(uint8_t)ch1];
             }
 
             static void addHex(std::string& str, uint8_t i) {
-                static constexpr char map[]{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
-                str += map[i & 0xF];
-                str += map[(i >> 4) & 0xF0];
+                static const char hex[] = "0123456789abcdef";
+                str += hex[i & 0xF];
+                str += hex[(i >> 4) & 0xF0];
             }
         }
 
@@ -333,7 +308,7 @@ namespace copper_server::util::conversions {
         enbt::raw_uuid from(std::string_view id) {
             enbt::raw_uuid res;
             uint8_t index = 0;
-            char cache;
+            char cache = 0;
             bool cached = false;
             for (char ch : id) {
                 if (ch == '-')
@@ -342,7 +317,7 @@ namespace copper_server::util::conversions {
                     cache = ch;
                     cached = true;
                 } else {
-                    res.data[index++] = __internal__::unHex(cached, ch);
+                    res.data[index++] = __internal__::unHex(cache, ch);
                     cached = false;
                 }
                 if (index == 16)
@@ -364,7 +339,7 @@ namespace copper_server::util::conversions {
                 if (got_utf_code_point) {
                     utf_code_pint += c;
                     if (utf_code_pint.size() == 4) {
-                        utf8::utfchar16_t code_point = std::stoi(utf_code_pint, nullptr, 16);
+                        utf8::utfchar16_t code_point = (utf8::utfchar16_t)std::stoi(utf_code_pint, nullptr, 16);
                         char utf8_code_point[4];
                         result += std::string(utf8_code_point, utf8::utf16to8(&code_point, &code_point + 1, utf8_code_point));
                         got_utf_code_point = false;
@@ -373,7 +348,7 @@ namespace copper_server::util::conversions {
                 } else if (got_big_utf_code_point) {
                     utf_code_pint += c;
                     if (utf_code_pint.size() == 8) {
-                        utf8::utfchar32_t code_point = std::stoi(utf_code_pint, nullptr, 16);
+                        utf8::utfchar32_t code_point = (utf8::utfchar32_t)std::stoi(utf_code_pint, nullptr, 16);
                         char utf8_code_point[4];
                         result += std::string(utf8_code_point, utf8::utf32to8(&code_point, &code_point + 1, utf8_code_point));
                         got_big_utf_code_point = false;
@@ -688,6 +663,30 @@ namespace copper_server::util::conversions {
             }
         }
 
+        boost::json::object to_json(const enbt::compound& enbt) {
+            boost::json::object result;
+            result.reserve(enbt.size());
+            for (auto& [key, value] : enbt)
+                result[key] = to_json(value);
+            return result;
+        }
+
+        boost::json::array to_json(const enbt::dynamic_array& enbt) {
+            boost::json::array result;
+            result.reserve(enbt.size());
+            for (auto& item : enbt)
+                result.push_back(to_json(item));
+            return result;
+        }
+
+        boost::json::array to_json(const enbt::fixed_array& enbt) {
+            boost::json::array result;
+            result.reserve(enbt.size());
+            for (auto& item : enbt)
+                result.push_back(to_json(item));
+            return result;
+        }
+
         enbt::value from_json(const boost::json::value& json) {
             switch (json.kind()) {
             case boost::json::kind::null:
@@ -723,7 +722,7 @@ namespace copper_server::util::conversions {
             }
         }
 
-        enbt::value from_json(const boost::json::object& obj) {
+        enbt::compound from_json(const boost::json::object& obj) {
             enbt::compound result;
             result.reserve(obj.size());
             for (auto& [key, value] : obj)
@@ -731,7 +730,7 @@ namespace copper_server::util::conversions {
             return result;
         }
 
-        enbt::value from_json(const boost::json::array& arr) {
+        enbt::dynamic_array from_json(const boost::json::array& arr) {
             std::vector<enbt::value> result;
             result.reserve(arr.size());
             for (auto& item : arr)

@@ -1,6 +1,19 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
+#include <boost/iostreams/filter/zstd.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <library/enbt/io_tools.hpp>
 #include <resources/include.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/recipe.hpp>
+#include <src/api/tags.hpp>
+#include <src/base_objects/data_packs/known_pack.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/log.hpp>
 #include <src/registers.hpp>
@@ -8,8 +21,12 @@
 #include <src/util/json_helpers.hpp>
 
 namespace copper_server::resources {
-    std::unordered_map<uint32_t, boost::json::object> internal_compatibility_versions;
+    list_array<base_objects::data_packs::known_pack> loaded_packs_;
     int32_t latest_protocol_version = -1;
+
+    list_array<base_objects::data_packs::known_pack> loaded_packs() {
+        return loaded_packs_;
+    }
 
     template <class T, class Iterator>
     void id_assigner(std::unordered_map<std::string, T>& map, list_array<Iterator>& cache) {
@@ -18,7 +35,7 @@ namespace copper_server::resources {
         auto end = map.end();
         cache.reserve(map.size());
         for (; it != end; ++it) {
-            it->second.id = i++;
+            it->second.id = (decltype(it->second.id))i++;
             cache.push_back(it);
         }
     }
@@ -80,6 +97,21 @@ namespace copper_server::resources {
             throw std::runtime_error("This " + std::string(type_name) + " is already defined and cannot be overriden. [" + id + "]");
     }
 
+    template <class T>
+    void check_override(std::unordered_map<std::string, T>& map, const std::string& id, const std::string& type_name) {
+        auto it = map.find(id);
+        if (it != map.end())
+            if (!it->second.allow_override)
+                throw std::runtime_error("This " + type_name + " is already defined and does not allow override. [" + id + "]");
+    }
+
+    template <class T>
+    void check_conflicts(std::unordered_map<std::string, T>& map, const std::string& id, const std::string& type_name) {
+        auto it = map.find(id);
+        if (it != map.end())
+            throw std::runtime_error("This " + type_name + " is already defined and cannot be overriden. [" + id + "]");
+    }
+
     using namespace util;
     using namespace registers;
 
@@ -89,22 +121,40 @@ namespace copper_server::resources {
         chatTypes.clear();
         armorTrimPatterns.clear();
         armorTrimMaterials.clear();
+        wolfSoundVariants.clear();
         wolfVariants.clear();
+        catVariants.clear();
+        chickenVariants.clear();
+        cowVariants.clear();
+        pigVariants.clear();
+        frogVariants.clear();
         dimensionTypes.clear();
         damageTypes.clear();
         bannerPatterns.clear();
         paintingVariants.clear();
+        enchantments.clear();
+        enchantment_providers.clear();
+        instruments.clear();
         biomes_cache.clear();
         biomes_cache.clear();
         chatTypes_cache.clear();
         armorTrimPatterns_cache.clear();
         armorTrimMaterials_cache.clear();
+        wolfSoundVariants_cache.clear();
         wolfVariants_cache.clear();
+        catVariants_cache.clear();
+        chickenVariants_cache.clear();
+        cowVariants_cache.clear();
+        pigVariants_cache.clear();
+        frogVariants_cache.clear();
         dimensionTypes_cache.clear();
         damageTypes_cache.clear();
         bannerPatterns_cache.clear();
         paintingVariants_cache.clear();
-        tags.clear();
+        enchantments_cache.clear();
+        enchantment_providers_cache.clear();
+        instruments_cache.clear();
+        api::tags::loading_stage_begin();
     }
 
     void load_registers_complete() {
@@ -112,86 +162,270 @@ namespace copper_server::resources {
         id_assigner(chatTypes, chatTypes_cache);
         id_assigner(armorTrimPatterns, armorTrimPatterns_cache);
         id_assigner(armorTrimMaterials, armorTrimMaterials_cache);
+        id_assigner(wolfSoundVariants, wolfSoundVariants_cache);
         id_assigner(wolfVariants, wolfVariants_cache);
+        id_assigner(catVariants, catVariants_cache);
+        id_assigner(chickenVariants, chickenVariants_cache);
+        id_assigner(cowVariants, cowVariants_cache);
+        id_assigner(pigVariants, pigVariants_cache);
+        id_assigner(frogVariants, frogVariants_cache);
         id_assigner(dimensionTypes, dimensionTypes_cache);
         id_assigner(damageTypes, damageTypes_cache);
         id_assigner(bannerPatterns, bannerPatterns_cache);
         id_assigner(paintingVariants, paintingVariants_cache);
+        id_assigner(enchantments, enchantments_cache);
+        id_assigner(enchantment_providers, enchantment_providers_cache);
+        id_assigner(instruments, instruments_cache);
+        id_assigner(jukebox_songs, jukebox_songs_cache);
+        api::tags::loading_stage_end();
+    }
 
-        for (auto& it : tags)
-            for (auto& it2 : it.second)
-                for (auto& it3 : it2.second)
-                    it3.second.commit();
+    void hardcoded_values_for_entity(base_objects::entity_data& entity_data) {
+        if (entity_data.living_entity_data || entity_data.name == "player") {
+            entity_data.acceleration = 0.08f;
+            entity_data.drag_vertical = 0.02f;
+            entity_data.drag_horizontal = 0.09f;
+            entity_data.terminal_velocity = 3.92f;
+            entity_data.drag_applied_after_acceleration = true;
+            entity_data.loading_ticket_level = 31;
+        } else {
+            if (entity_data.name == "experience_bottle") {
+                entity_data.acceleration = 0.07f;
+                entity_data.drag_vertical = 0.01f;
+                entity_data.drag_horizontal = 0.01f;
+                entity_data.terminal_velocity = 7.0f;
+                entity_data.drag_applied_after_acceleration = false;
+            } else if (entity_data.name == "llama_spit") {
+                entity_data.acceleration = 0.06f;
+                entity_data.drag_vertical = 0.01f;
+                entity_data.drag_horizontal = 0.01f;
+                entity_data.terminal_velocity = 6.0f;
+                entity_data.drag_applied_after_acceleration = false;
+            } else if (entity_data.name == "splash_potion" || entity_data.name == "lingering_potion" || entity_data.name == "arrow" || entity_data.name == "trident") {
+                entity_data.acceleration = 0.05f;
+                entity_data.drag_vertical = 0.01f;
+                entity_data.drag_horizontal = 0.01f;
+                entity_data.terminal_velocity = 5.0f;
+                entity_data.drag_applied_after_acceleration = false;
+            } else if (entity_data.name == "egg" || entity_data.name == "snowball" || entity_data.name == "ender_pearl") {
+                entity_data.acceleration = 0.03f;
+                entity_data.drag_vertical = 0.01f;
+                entity_data.drag_horizontal = 0.01f;
+                entity_data.terminal_velocity = 3.0f;
+                entity_data.drag_applied_after_acceleration = false;
+            } else if (entity_data.name == "tnt" || entity_data.name == "falling_block" || entity_data.name == "item") {
+                entity_data.acceleration = 0.04f;
+                entity_data.drag_vertical = 0.02f;
+                entity_data.drag_horizontal = 0.02f;
+                entity_data.terminal_velocity = 1.96f;
+                entity_data.drag_applied_after_acceleration = true;
+            } else if (entity_data.name == "fireball" || entity_data.name == "small_fireball" || entity_data.name == "dragon_fireball" || entity_data.name == "wither_skull") {
+                entity_data.acceleration = 0.10f;
+                entity_data.drag_vertical = 0.05f;
+                entity_data.drag_horizontal = 0.05f;
+                entity_data.terminal_velocity = 1.9f;
+                entity_data.drag_applied_after_acceleration = true;
+            } else if (entity_data.name == "experience_orb") {
+                entity_data.acceleration = 0.03f;
+                entity_data.drag_vertical = 0.02f;
+                entity_data.drag_horizontal = 0.02f;
+                entity_data.terminal_velocity = 1.47f;
+                entity_data.drag_applied_after_acceleration = true;
+            } else if (entity_data.name == "fishing_bobber") {
+                entity_data.acceleration = 0.03f;
+                entity_data.drag_vertical = 0.08f;
+                entity_data.drag_horizontal = 0.08f;
+                entity_data.terminal_velocity = 0.345f;
+                entity_data.drag_applied_after_acceleration = true;
+            } else if (entity_data.name.contains("minecart")) {
+                entity_data.acceleration = 0.04f;
+                entity_data.drag_vertical = 0.05f;
+                entity_data.drag_horizontal = 0.05f;
+                entity_data.terminal_velocity = 0.76f;
+                entity_data.drag_applied_after_acceleration = true;
+            } else if (entity_data.name.contains("boat") || entity_data.name == "bamboo_chest_raft" || entity_data.name == "bamboo_raft") {
+                entity_data.acceleration = 0.04f;
+                entity_data.drag_vertical = 0.00f;
+                entity_data.drag_horizontal = 0.00f;
+                entity_data.terminal_velocity = 3400000.0f;
+                entity_data.drag_applied_after_acceleration = true;
+            } else if (entity_data.name.contains("boat")) {
+                entity_data.acceleration = 0.04f;
+                entity_data.drag_vertical = 0.00f;
+                entity_data.drag_horizontal = 0.00f;
+                entity_data.terminal_velocity = 3400000.0f;
+                entity_data.drag_applied_after_acceleration = true;
+            } else if (entity_data.name.contains("wind_charge")) {
+                entity_data.acceleration = 0.04f;
+                entity_data.drag_vertical = 0.00f;
+                entity_data.drag_horizontal = 0.00f;
+                entity_data.terminal_velocity = 3400000.0f;
+                entity_data.drag_applied_after_acceleration = true;
+            } else {
+                entity_data.acceleration = 0.00f;
+                entity_data.drag_vertical = 0.00f;
+                entity_data.drag_horizontal = 0.00f;
+                entity_data.terminal_velocity = 0.0f;
+                entity_data.drag_applied_after_acceleration = true;
+                log::debug("resource_load", "Entity " + entity_data.name + " has no hardcoded values");
+            }
+        }
     }
 
     void initialize_entities() {
         auto parsed = boost::json::parse(resources::registry::entities);
         for (auto& [id, obj_] : parsed.as_object()) {
             auto& obj = obj_.as_object();
-            base_objects::entity_data data;
-            data.id = id;
-            data.name = obj.at("name").as_string();
-            data.translation_resource_key = obj.at("translation_resource_key").as_string();
-            data.kind_name = obj.at("kind_name").as_string();
-            if (obj.contains("base_bounds")) {
-                auto& val = obj.at("base_bounds");
-                base_objects::bounding bounds;
-                if (val.is_object()) {
-                    bounds.xz = val.at("xz").to_number<double>();
-                    bounds.y = val.at("y").to_number<double>();
-                } else {
-                    bounds.xz = val.at(0).to_number<double>();
-                    bounds.y = val.at(1).to_number<double>();
+            base_objects::entity_data entity_data;
+            entity_data.id = "minecraft:" + std::string(id);
+            if (obj.contains("max_health")) {
+                base_objects::entity_data::living_entity_data_t living_data;
+                living_data.base_health = obj.at("max_health").to_number<float>();
+                living_data.step_height = obj.at("step_height").to_number<float>();
+                living_data.can_freeze = obj.at("can_freeze").as_bool();
+                living_data.can_hit = obj.at("can_hit").as_bool();
+                living_data.is_collidable = obj.at("is_collidable").as_bool();
+                living_data.is_attackable = obj.at("attackable").as_bool();
+                if (obj.contains("inventory_size"))
+                    living_data.inventory_size = obj.at("inventory_size").to_number<int32_t>();
+                if (obj.contains("max_air"))
+                    living_data.max_air = obj.at("max_air").to_number<uint16_t>();
+                if (obj.contains("can_avoid_traps"))
+                    living_data.can_avoid_traps = obj.at("can_avoid_traps").as_bool();
+                if (obj.contains("can_be_hit_by_projectile"))
+                    living_data.can_be_hit_by_projectile = obj.at("can_be_hit_by_projectile").as_bool();
+                {
+                    auto tasks = obj.at("brain_tasks").as_array();
+                    //TODO
                 }
-                data.base_bounds = bounds;
-            } else {
-                log::warn("Resource loader", "Entity " + (std::string)id + " has no base bounds declared. Using {0, 0}.");
-                data.base_bounds = {0, 0};
+                {
+                    auto sensors = obj.at("brain_sensors").as_array();
+                    living_data.brain_sensors.reserve(sensors.size());
+                    for (auto& sensor : sensors)
+                        living_data.brain_sensors.push_back((std::string)sensor.as_string());
+                }
+                {
+                    auto memories = obj.at("brain_memories").as_array();
+                    living_data.brain_memories.reserve(memories.size());
+                    for (auto& memory : memories)
+                        living_data.brain_memories.push_back((std::string)memory.as_string());
+                }
+                entity_data.living_entity_data = std::move(living_data);
             }
 
-            if (obj.contains("bounds_mode")) {
-                static const std::unordered_map<std::string, base_objects::entity_data::bounds_mode_t> mode_map{
-                    {"solid", base_objects::entity_data::bounds_mode_t::solid},
-                    {"solid_except_self_type", base_objects::entity_data::bounds_mode_t::solid_except_self_type},
-                    {"solid_for_vehicles", base_objects::entity_data::bounds_mode_t::solid_for_vehicles},
-                    {"weak", base_objects::entity_data::bounds_mode_t::weak},
-                    {"none", base_objects::entity_data::bounds_mode_t::none},
+            entity_data.is_summonable = obj.at("summonable").as_bool();
+            entity_data.is_fire_immune = obj.at("fire_immune").as_bool();
+            entity_data.is_saveable = obj.at("saveable").as_bool();
+            entity_data.is_spawnable_far_from_player = obj.at("spawnable_far_from_player").as_bool();
+            entity_data.max_track_distance = obj.at("max_track_distance").to_number<int32_t>();
+            entity_data.track_tick_interval = obj.at("track_tick_interval").to_number<int32_t>();
+            entity_data.spawn_group = obj.at("spawn_group").as_string();
+            {
+                auto dimension = obj.at("dimension").as_array();
+                entity_data.base_bounds.xz = dimension.at(0).to_number<double>();
+                entity_data.base_bounds.y = dimension.at(1).to_number<double>();
+            }
+            if (obj.contains("loot_table"))
+                entity_data.data["loot_table"] = util::conversions::json::from_json(obj.at("loot_table"));
+
+            {
+                using type = base_objects::entity_data::metadata_sync::type_t;
+                //global_pos,
+                static std::unordered_map<std::string, type> types = {
+                    {"Byte", type::byte},
+                    {"Integer", type::varint},
+                    {"Long", type::varlong},
+                    {"Boolean", type::boolean},
+                    {"Float", type::_float},
+                    {"OptionalInt", type::opt_varint},
+                    {"NBT", type::nbt},
+                    {"NbtCompound", type::nbt},
+                    {"String", type::_string},
+
+                    {"Text", type::text},
+                    {"Optional<Text>", type::opt_text},
+
+                    {"ItemStack", type::slot},
+
+                    {"EulerAngle", type::euler_angle},
+                    {"Vector3f", type::vector3},
+                    {"Quaternionf", type::quaternion},
+
+                    {"BlockPos", type::postion},
+                    {"Optional<BlockPos>", type::opt_position},
+
+                    {"Direction", type::direction},
+                    {"EntityPose", type::pose},
+                    {"BlockState", type::block_state},
+                    {"Optional<BlockState>", type::opt_block_state},
+
+                    {"VillagerData", type::villager_data},
+
+                    {"ParticleEffect", type::particle},
+                    {"List<ParticleEffect>", type::particles},
+
+                    {"SnifferEntity$State", type::sniffer_state},
+                    {"ArmadilloEntity$State", type::armadillo_state},
+                    {"RegistryEntry<CatVariant>", type::cat_variant},
+                    {"RegistryEntry<ChickenVariant>", type::chicken_variant},
+                    {"RegistryEntry<CowVariant>", type::cow_variant},
+                    {"RegistryEntry<FrogVariant>", type::frog_variant},
+                    {"RegistryEntry<PaintingVariant>", type::painting_variant},
+                    {"RegistryEntry<PigVariant>", type::pig_variant},
+                    {"RegistryEntry<WolfVariant>", type::wolf_variant},
+                    {"RegistryEntry<WolfSoundVariant>", type::wolf_sound_variant},
+
+                    {"Optional<LazyEntityReference<LivingEntity>>", type::entity_refrence},
                 };
-                data.bounds_mode = mode_map.at((std::string)obj.at("bounds_mode").as_string());
+                auto metadata = obj.at("metadata").as_array();
+                entity_data.metadata.reserve(metadata.size());
+                for (auto& meta : obj.at("metadata").as_array()) {
+                    base_objects::entity_data::metadata_sync metadata_sync;
+                    metadata_sync.index = meta.at("network_id").to_number<uint8_t>();
+                    std::string name = (std::string)meta.at("field_name").as_string();
+                    metadata_sync.type = types.at((std::string)meta.at("type_name").as_string());
+                    entity_data.metadata[name] = std::move(metadata_sync);
+                }
             }
 
-            if (obj.contains("acceleration"))
-                data.acceleration = obj.at("acceleration").to_number<float>();
-            else
-                data.acceleration = 5.6f;
+            if (obj.contains("spawn_restriction")) {
+                auto& spawn_restriction_js = obj.at("spawn_restriction").as_object();
 
-            if (obj.contains("inventory"))
-                data.data["slot"] = util::conversions::json::from_json(obj.at("inventory"));
+                auto& location = spawn_restriction_js.at("location").as_string();
+                auto& heightmap = spawn_restriction_js.at("heightmap").as_string();
+                using enum base_objects::entity_data::spawn_restriction_t::location_e;
+                using enum base_objects::entity_data::spawn_restriction_t::heightmap_e;
+                if (heightmap == "SURFACE")
+                    entity_data.spawn_restriction.heightmap = surface;
+                else if (heightmap == "OCEAN_FLOOR")
+                    entity_data.spawn_restriction.heightmap = ocean_floor;
+                else if (heightmap == "MOTION_BLOCKING")
+                    entity_data.spawn_restriction.heightmap = motion_blocking;
+                else if (heightmap == "MOTION_BLOCKING_NO_LEAVES")
+                    entity_data.spawn_restriction.heightmap = motion_blocking_no_leaves;
 
-            if (obj.contains("custom_data"))
-                data.data["custom_data"].merge(util::conversions::json::from_json(obj.at("custom_data")));
-            if (obj.contains("base_health")) {
-                auto& base_health = obj.at("base_health");
-                if (base_health.is_number())
-                    data.base_health = obj.at("base_health").to_number<float>();
-                else if (base_health == "infinity")
-                    data.base_health = NAN;
-            } else
-                data.base_health = NAN;
+                if (location == "IN_LAVA")
+                    entity_data.spawn_restriction.location = in_lava;
+                else if (location == "IN_WATER")
+                    entity_data.spawn_restriction.location = in_water;
+                else if (location == "ON_GROUND")
+                    entity_data.spawn_restriction.location = on_ground;
+                else if (location == "UNRESTRICTED")
+                    entity_data.spawn_restriction.location = unrestricted;
+            }
+            entity_data.name = (std::string)id;
+            entity_data.translation_resource_key = obj.at("translation_key").as_string();
+            entity_data.eye_height = obj.at("eye_height").to_number<float>();
 
-            if (obj.contains("is_living_entity"))
-                data.living_entity = obj.at("is_living_entity").as_bool();
-            else
-                data.living_entity = false;
-
-
-            base_objects::entity_data::register_entity(std::move(data));
+            hardcoded_values_for_entity(entity_data);
+            base_objects::entity_data::register_entity(std::move(entity_data));
         }
     }
 
-    void load_file_biomes(js_object&& bio_js, const std::string& id) {
+    void load_file_biomes(js_object&& bio_js, const std::string& id, bool send_via_network_body = true) {
         check_override(biomes, id, "biome");
         Biome bio;
+        bio.send_via_network_body = send_via_network_body;
         bio.downfall = bio_js["downfall"];
         bio.temperature = bio_js["temperature"];
         bio.has_precipitation = bio_js["has_precipitation"];
@@ -200,18 +434,18 @@ namespace copper_server::resources {
             bio.temperature_modifier = (std::string)bio_js["temperature_modifier"];
 
         {
-            Biome::Effects effects;
+            Biome::Effects biom_effects;
             js_object effects_js = js_object::get_object(bio_js["effects"]);
-            effects.sky_color = effects_js["sky_color"];
-            effects.water_fog_color = effects_js["water_fog_color"];
-            effects.fog_color = effects_js["fog_color"];
-            effects.water_color = effects_js["water_color"];
+            biom_effects.sky_color = effects_js["sky_color"];
+            biom_effects.water_fog_color = effects_js["water_fog_color"];
+            biom_effects.fog_color = effects_js["fog_color"];
+            biom_effects.water_color = effects_js["water_color"];
             if (effects_js.contains("foliage_color"))
-                effects.foliage_color = effects_js["foliage_color"];
+                biom_effects.foliage_color = effects_js["foliage_color"];
             if (effects_js.contains("grass_color"))
-                effects.grass_color = effects_js["grass_color"];
+                biom_effects.grass_color = effects_js["grass_color"];
             if (effects_js.contains("grass_color_modifier"))
-                effects.grass_color_modifier = (std::string)effects_js["grass_color_modifier"];
+                biom_effects.grass_color_modifier = (std::string)effects_js["grass_color_modifier"];
             if (effects_js.contains("particle")) {
                 js_object particle_js = js_object::get_object(effects_js["particle"]);
                 Biome::Particle particle;
@@ -219,18 +453,18 @@ namespace copper_server::resources {
                 auto options = js_object::get_object(particle_js["options"]);
                 particle.options.type = (std::string)options["type"];
                 particle.options.options = conversions::json::from_json(options.get());
-                effects.particle = std::move(particle);
+                biom_effects.particle = std::move(particle);
             }
             if (effects_js.contains("ambient_sound")) {
                 auto eff = effects_js["ambient_sound"];
                 if (eff.is_string())
-                    effects.ambient_sound = (std::string)eff;
+                    biom_effects.ambient_sound = (std::string)eff;
                 else {
                     js_object ambient_sound_js = js_object::get_object(effects_js["ambient_sound"]);
                     Biome::AmbientSound ambient_sound;
                     ambient_sound.sound = (std::string)ambient_sound_js["sound"];
                     ambient_sound.range = ambient_sound_js["range"];
-                    effects.ambient_sound = std::move(ambient_sound);
+                    biom_effects.ambient_sound = std::move(ambient_sound);
                 }
             }
             if (effects_js.contains("mood_sound")) {
@@ -238,27 +472,42 @@ namespace copper_server::resources {
                 Biome::MoodSound mood_sound;
                 mood_sound.sound = (std::string)mood_sound_js["sound"];
                 mood_sound.offset = mood_sound_js["offset"].or_apply(2.0);
-                mood_sound.block_search_extend = mood_sound_js["block_search_extend"].or_apply(8);
+                mood_sound.block_search_extent = mood_sound_js["block_search_extent"].or_apply(8);
                 mood_sound.tick_delay = mood_sound_js["tick_delay"].or_apply(6000);
-                effects.mood_sound = std::move(mood_sound);
+                biom_effects.mood_sound = std::move(mood_sound);
             }
             if (effects_js.contains("additions_sound")) {
                 js_object additions_sound_js = js_object::get_object(effects_js["additions_sound"]);
                 Biome::AdditionsSound additions_sound;
                 additions_sound.sound = (std::string)additions_sound_js["sound"];
                 additions_sound.tick_chance = additions_sound_js["tick_chance"];
-                effects.additions_sound = std::move(additions_sound);
+                biom_effects.additions_sound = std::move(additions_sound);
             }
             if (effects_js.contains("music")) {
-                js_object music_js = js_object::get_object(effects_js["music"]);
-                Biome::Music music;
-                music.sound = (std::string)music_js["sound"];
-                music.min_delay = music_js["min_delay"].or_apply(12000);
-                music.max_delay = music_js["max_delay"].or_apply(24000);
-                music.replace_current_music = music_js["replace_current_music"].or_apply(true);
-                effects.music = std::move(music);
+                std::vector<Biome::Music> music_arr;
+                auto music_arr_js = js_array::get_array(effects_js["music"]);
+                music_arr.reserve(music_arr_js.size());
+                for (auto&& it : music_arr_js) {
+                    js_object music_js = js_object::get_object(it);
+                    Biome::Music music;
+                    if (music_js.contains("data")) {
+                        auto music_data = js_object::get_object(music_js["data"]);
+                        music.sound = (std::string)music_data["sound"];
+                        music.min_delay = music_data["min_delay"].or_apply(12000);
+                        music.max_delay = music_data["max_delay"].or_apply(24000);
+                        music.replace_current_music = music_data["replace_current_music"].or_apply(true);
+                    } else {
+                        music.sound = (std::string)music_js["sound"];
+                        music.min_delay = music_js["min_delay"].or_apply(12000);
+                        music.max_delay = music_js["max_delay"].or_apply(24000);
+                        music.replace_current_music = music_js["replace_current_music"].or_apply(true);
+                    }
+                    music.music_weight = music_js["weight"].or_apply(1.0);
+                    music_arr.emplace_back(std::move(music));
+                }
+                biom_effects.music = std::move(music_arr);
             }
-            bio.effects = std::move(effects);
+            bio.effects = std::move(biom_effects);
         }
         {
             js_object cavers_js = js_object::get_object(bio_js["cavers"]);
@@ -295,7 +544,7 @@ namespace copper_server::resources {
                 for (auto&& it : category_values) {
                     auto category_value = js_object::get_object(it);
                     Biome::SpawnersValue value;
-                    value.type = category_value["type"];
+                    value.type = (std::string)category_value["type"];
                     value.weight = category_value["weight"];
                     value.weight = category_value["minCount"];
                     value.weight = category_value["maxCount"];
@@ -355,8 +604,8 @@ namespace copper_server::resources {
                 std::string type = obj["type"];
 
                 if (type == "constant") {
-                    auto value = obj.at("value");
-                    return value.is_integral() ? base_objects::number_provider_constant((int32_t)value) : base_objects::number_provider_constant((float)value);
+                    auto val = obj.at("value");
+                    return val.is_integral() ? base_objects::number_provider_constant((int32_t)val) : base_objects::number_provider_constant((float)val);
                 } else if (type == "uniform") {
                     std::variant<int32_t, float> min;
                     std::variant<int32_t, float> max;
@@ -442,8 +691,8 @@ namespace copper_server::resources {
                     std::vector<std::pair<base_objects::number_provider, double>> values;
                     auto values_js = js_array::get_array(obj.at("values"));
                     values.reserve(values_js.size());
-                    for (auto&& value : values_js) {
-                        auto value_js = js_object::get_object(value);
+                    for (auto&& val : values_js) {
+                        auto value_js = js_object::get_object(val);
                         auto weight = value_js.contains("weight") ? value_js["weight"] : 1.0;
                         values.push_back({read_number_provider(value_js.at("data")), weight});
                     }
@@ -473,21 +722,21 @@ namespace copper_server::resources {
                     return base_objects::number_provider_biased_to_bottom(min, max);
                 } else if (type == "score") {
                     base_objects::number_provider_score res;
-                    res.score = obj.at("score");
+                    res.score = (std::string)obj.at("score");
                     res.scale = obj.contains("scale") ? std::optional<float>((float)obj["scale"]) : std::nullopt;
                     auto target = js_object::get_object(obj.at("target"));
-                    std::string type = target.at("type");
-                    if (type == "fixed")
-                        res.target.value = target.at("name");
-                    else if (type == "context")
-                        res.target.value = target.at("target");
+                    std::string score_type = target.at("type");
+                    if (score_type == "fixed")
+                        res.target.value = (std::string)target.at("name");
+                    else if (score_type == "context")
+                        res.target.value = (std::string)target.at("target");
                     else
-                        target.parsing_error("Invalid target type: " + type);
+                        target.parsing_error("Invalid target type: " + score_type);
                     return res;
                 } else if (type == "storage") {
                     base_objects::number_provider_storage res;
-                    res.storage = obj.at("storage");
-                    res.path = obj.at("path");
+                    res.storage = (std::string)obj.at("storage");
+                    res.path = (std::string)obj.at("path");
                     return res;
                 } else if (type == "enchantment_level")
                     return base_objects::number_provider_enchantment_level((std::string)obj.at("amount"));
@@ -501,9 +750,10 @@ namespace copper_server::resources {
         }
     }
 
-    void load_file_chatType(js_object&& type_js, const std::string& id) {
+    void load_file_chatType(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
         check_override(chatTypes, id, "chat type");
         ChatType type;
+        type.send_via_network_body = send_via_network_body;
         if (type_js.contains("chat"))
             type.chat = to_decoration(type_js["chat"]);
         if (type_js.contains("narration"))
@@ -528,20 +778,21 @@ namespace copper_server::resources {
         chatTypes[id] = std::move(type);
     }
 
-    void load_file_advancements(js_object&& advancement_js, const std::string& id) {
+    void load_file_advancements(js_object&& advancement_js, const std::string& id, bool send_via_network_body = true) {
         check_conflicts(advancements, id, "advancements");
         Advancement advancement;
+        advancement.send_via_network_body = send_via_network_body;
         if (advancement_js.contains("display")) {
             auto display_js = js_object::get_object(advancement_js["display"]);
             Advancement::Display display;
             {
                 auto icon_js = js_object::get_object(display_js["icon"]);
-                display.icon.item = icon_js["item"];
+                display.icon.item = (std::string)icon_js["item"];
                 if (icon_js.contains("nbt"))
-                    display.icon.nbt = icon_js["nbt"];
+                    display.icon.nbt = icon_js["nbt"].to_text();
             }
             if (display_js.contains("frame"))
-                display.frame = display_js["frame"];
+                display.frame = (std::string)display_js["frame"];
             else
                 display.frame = "task";
 
@@ -556,7 +807,7 @@ namespace copper_server::resources {
                 display.hidden = display_js["hidden"];
         }
         if (advancement_js.contains("parent"))
-            advancement.parent = advancement_js["parent"];
+            advancement.parent = (std::string)advancement_js["parent"];
         advancement.criteria = util::conversions::json::from_json(advancement_js["criteria"].get());
         if (advancement_js.contains("requirements")) {
             auto list_of_requirements_js = js_array::get_array(advancement_js["requirements"]);
@@ -576,18 +827,18 @@ namespace copper_server::resources {
                 auto recipes_js = js_array::get_array(rewards_js["recipes"]);
                 advancement.rewards.recipes.reserve(rewards_js.size());
                 for (auto&& req : recipes_js)
-                    advancement.rewards.recipes.push_back(req);
+                    advancement.rewards.recipes.push_back((std::string)req);
             }
             if (rewards_js.contains("loot")) {
                 auto loot_js = js_array::get_array(rewards_js["loot"]);
                 advancement.rewards.loot.reserve(rewards_js.size());
                 for (auto&& req : loot_js)
-                    advancement.rewards.loot.push_back(req);
+                    advancement.rewards.loot.push_back((std::string)req);
             }
             if (rewards_js.contains("experience"))
                 advancement.rewards.experience = rewards_js["experience"];
             if (rewards_js.contains("function"))
-                advancement.rewards.function = rewards_js["function"];
+                advancement.rewards.function = (std::string)rewards_js["function"];
         }
 
         if (advancement_js.contains("sends_telemetry_event"))
@@ -603,9 +854,10 @@ namespace copper_server::resources {
         load_file_advancements(js_object::get_object(res.value()), id);
     }
 
-    void load_file_jukebox_song(js_object&& song_js, const std::string& id) {
+    void load_file_jukebox_song(js_object&& song_js, const std::string& id, bool send_via_network_body = true) {
         check_conflicts(jukebox_songs, id, "jukebox song");
         JukeboxSong song;
+        song.send_via_network_body = send_via_network_body;
         song.comparator_output = song_js["comparator_output"];
         song.length_in_seconds = song_js["length_in_seconds"];
         song.description = Chat::fromEnbt(util::conversions::json::from_json(song_js["description"].get()));
@@ -614,10 +866,10 @@ namespace copper_server::resources {
             song.sound_event = (std::string)sound_event_js;
         else {
             auto sound_event_obj = js_object::get_object(sound_event_js);
-            base_objects::slot_component::inner::sound_extended ex;
-            ex.sound_name = sound_event_obj["sound_id"];
-            if (sound_event_obj.contains("range"))
-                ex.fixed_range = sound_event_obj["range"];
+            JukeboxSong::custom ex;
+            ex.sound_id = (std::string)sound_event_obj["sound_id"];
+            if (sound_event_obj.contains("fixed_range"))
+                ex.fixed_range = sound_event_obj["fixed_range"];
             song.sound_event = std::move(ex);
         }
         jukebox_songs[id] = std::move(song);
@@ -631,10 +883,11 @@ namespace copper_server::resources {
         load_file_jukebox_song(js_object::get_object(res.value()), id);
     }
 
-    void load_file_loot_table(js_object&& loot_table_js, const std::string& id) {
+    void load_file_loot_table(js_object&& loot_table_js, const std::string& id, bool send_via_network_body = true) {
         check_conflicts(loot_table, id, "loot table");
 
         loot_table_item item;
+        item.send_via_network_body = send_via_network_body;
         if (loot_table_js.contains("type"))
             item.type = (std::string)loot_table_js["type"];
         else
@@ -701,12 +954,12 @@ namespace copper_server::resources {
         load_file_loot_table(js_object::get_object(res.value()), id);
     }
 
-    void load_file_armorTrimPattern(js_object&& pattern_js, const std::string& id) {
+    void load_file_armorTrimPattern(js_object&& pattern_js, const std::string& id, bool send_via_network_body = true) {
         check_override(armorTrimPatterns, id, "armor trim pattern");
         ArmorTrimPattern pattern;
+        pattern.send_via_network_body = send_via_network_body;
         pattern.asset_id = (std::string)pattern_js["asset_id"];
         pattern.decal = pattern_js["decal"];
-        pattern.template_item = (std::string)pattern_js["template_item"];
         {
             auto desc = pattern_js["description"];
             if (desc.is_string())
@@ -725,23 +978,17 @@ namespace copper_server::resources {
         load_file_armorTrimPattern(js_object::get_object(res.value()), id);
     }
 
-    void load_file_armorTrimMaterial(js_object&& material_js, const std::string& id) {
+    void load_file_armorTrimMaterial(js_object&& material_js, const std::string& id, bool send_via_network_body = true) {
         check_override(armorTrimMaterials, id, "armor trim material");
         ArmorTrimMaterial material;
+        material.send_via_network_body = send_via_network_body;
         material.asset_name = (std::string)material_js["asset_name"];
-        material.ingredient = (std::string)material_js["ingredient"];
-        material.item_model_index = material_js["item_model_index"];
         {
             auto desc = material_js["description"];
             if (desc.is_string())
                 material.description = (std::string)desc;
             else
                 material.description = Chat::fromEnbt(conversions::json::from_json(desc.get()));
-        }
-        if (material_js.contains("override_armor_materials")) {
-            auto override_armor_materials = material_js["override_armor_materials"];
-            for (auto&& [name, material_] : js_object::get_object(override_armor_materials))
-                material.override_armor_materials[(std::string)name] = (std::string)material_;
         }
         armorTrimMaterials[id] = std::move(material);
     }
@@ -754,20 +1001,12 @@ namespace copper_server::resources {
         load_file_armorTrimMaterial(js_object::get_object(res.value()), id);
     }
 
-    void load_file_wolfVariant(js_object&& variant_js, const std::string& id) {
+    void load_file_wolfVariant(js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
         check_override(wolfVariants, id, "wolf variant");
         WolfVariant variant;
-        variant.wild_texture = (std::string)variant_js.at("wild_texture");
-        variant.tame_texture = (std::string)variant_js.at("tame_texture");
-        variant.angry_texture = (std::string)variant_js.at("angry_texture");
-        auto _biomes = variant_js.at("biomes");
-        if (_biomes.is_array()) {
-            auto biomes = js_array::get_array(variant_js.at("biomes"));
-            variant.biomes.reserve(biomes.size());
-            for (auto&& biome : biomes)
-                variant.biomes.push_back(biome);
-        } else
-            variant.biomes.push_back((std::string)_biomes);
+        variant.send_via_network_body = send_via_network_body;
+        variant.assets = conversions::json::from_json(variant_js.at("assets").get());
+        variant.spawn_conditions = conversions::json::from_json(variant_js.at("spawn_conditions").get());
         wolfVariants[id] = std::move(variant);
     }
 
@@ -779,9 +1018,64 @@ namespace copper_server::resources {
         load_file_wolfVariant(js_object::get_object(res.value()), id);
     }
 
-    void load_file_dimensionType(js_object&& type_js, const std::string& id) {
+    void load_file_entityVariant(std::unordered_map<std::string, EntityVariant>& map, const std::string& key, js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
+        check_override(map, id, key);
+        EntityVariant variant;
+        variant.send_via_network_body = send_via_network_body;
+        variant.asset_id = (std::string)variant_js.at("asset_id");
+        variant.spawn_conditions = conversions::json::from_json(variant_js.at("spawn_conditions").get());
+        if (variant_js.contains("model"))
+            variant.model = (std::string)variant_js.at("model");
+        map[id] = std::move(variant);
+    }
+
+    void load_file_entityVariant(std::unordered_map<std::string, EntityVariant>& map, const std::string& key, const std::filesystem::path& file_path, const std::string& id) {
+        check_override(map, id, key);
+        auto res = try_read_json_file(file_path);
+        if (!res)
+            throw std::runtime_error("Failed to read file: " + file_path.string());
+        load_file_entityVariant(map, key, js_object::get_object(res.value()), id);
+    }
+
+#define LOAD_FILE_ENTITY_VARIANT(name)                                                                                 \
+    void load_file_##name##Variant(js_object&& variant_js, const std::string& id, bool send_via_network_body = true) { \
+        load_file_entityVariant(name##Variants, #name " variant", std::move(variant_js), id, send_via_network_body);   \
+    }                                                                                                                  \
+    void load_file_##name##Variant(const std::filesystem::path& file_path, const std::string& id) {                    \
+        load_file_entityVariant(name##Variants, #name " variant", file_path, id);                                      \
+    }
+    LOAD_FILE_ENTITY_VARIANT(cat)
+    LOAD_FILE_ENTITY_VARIANT(chicken)
+    LOAD_FILE_ENTITY_VARIANT(cow)
+    LOAD_FILE_ENTITY_VARIANT(pig)
+    LOAD_FILE_ENTITY_VARIANT(frog)
+#undef LOAD_FILE_ENTITY_VARIANT
+
+    void load_file_wolfSoundVariant(js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
+        check_override(wolfSoundVariants, id, "wolf sound variant");
+        WolfSoundVariant variant;
+        variant.send_via_network_body = send_via_network_body;
+        variant.ambient_sound = (std::string)variant_js.at("ambient_sound");
+        variant.death_sound = (std::string)variant_js.at("death_sound");
+        variant.growl_sound = (std::string)variant_js.at("growl_sound");
+        variant.hurt_sound = (std::string)variant_js.at("hurt_sound");
+        variant.pant_sound = (std::string)variant_js.at("pant_sound");
+        variant.whine_sound = (std::string)variant_js.at("whine_sound");
+        wolfSoundVariants[id] = std::move(variant);
+    }
+
+    void load_file_wolfSoundVariant(const std::filesystem::path& file_path, const std::string& id) {
+        check_override(wolfSoundVariants, id, "wolf sound variant");
+        auto res = try_read_json_file(file_path);
+        if (!res)
+            throw std::runtime_error("Failed to read file: " + file_path.string());
+        load_file_wolfSoundVariant(js_object::get_object(res.value()), id);
+    }
+
+    void load_file_dimensionType(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
         check_override(dimensionTypes, id, "dimension type");
         DimensionType type;
+        type.send_via_network_body = send_via_network_body;
         if (type_js.contains("monster_spawn_light_level")) {
             auto monster_spawn_light_level = type_js["monster_spawn_light_level"];
             if (monster_spawn_light_level.is_number())
@@ -825,9 +1119,10 @@ namespace copper_server::resources {
         load_file_dimensionType(js_object::get_object(res.value()), id);
     }
 
-    void load_file_enchantment(js_object&& type_js, const std::string& id) {
+    void load_file_enchantment(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
         check_conflicts(enchantments, id, "enchantments");
         enchantment type;
+        type.send_via_network_body = send_via_network_body;
         type.description = Chat::fromEnbt(util::conversions::json::from_json(type_js.at("description").get()));
         type.max_level = type_js.at("max_level");
         type.weight = type_js.at("weight");
@@ -849,24 +1144,24 @@ namespace copper_server::resources {
             }
         }
         if (type_js.at("supported_items").is_string())
-            type.supported_items = type_js.at("supported_items");
+            type.supported_items = (std::string)type_js.at("supported_items");
         else {
             auto supported_items_js = js_array::get_array(type_js.at("supported_items"));
-            std::vector<std::string> supported_items;
+            std::vector<base_objects::id_item> supported_items;
             supported_items.reserve(supported_items_js.size());
             for (auto&& set : supported_items_js)
-                supported_items.push_back(set);
+                supported_items.push_back((std::string)set);
             type.supported_items = std::move(supported_items);
         }
         if (type_js.contains("primary_items")) {
             if (type_js.at("primary_items").is_string())
-                type.primary_items = type_js.at("primary_items");
+                type.primary_items = (std::string)type_js.at("primary_items");
             else {
                 auto primary_items_js = js_array::get_array(type_js.at("primary_items"));
-                std::vector<std::string> primary_items;
+                std::vector<base_objects::id_item> primary_items;
                 primary_items.reserve(primary_items_js.size());
                 for (auto&& set : primary_items_js)
-                    primary_items.push_back(set);
+                    primary_items.push_back((std::string)set);
                 type.primary_items = std::move(primary_items);
             }
         }
@@ -879,9 +1174,9 @@ namespace copper_server::resources {
         type.max_cost.per_level_above_first = max_cost.at("per_level_above_first");
 
         if (type_js.contains("effects")) {
-            auto effects = js_object::get_object(type_js.at("effects"));
-            type.effects.reserve(effects.size());
-            for (auto&& [component_id, effect] : effects)
+            auto ench_effects = js_object::get_object(type_js.at("effects"));
+            type.effects.reserve(ench_effects.size());
+            for (auto&& [component_id, effect] : ench_effects)
                 type.effects[component_id] = util::conversions::json::from_json(effect.get());
         }
         enchantments[id] = std::move(type);
@@ -895,9 +1190,33 @@ namespace copper_server::resources {
         load_file_enchantment(js_object::get_object(res.value()), id);
     }
 
-    void load_file_enchantment_provider(boost::json::object& type_js, const std::string& id) {
+    void load_file_enchantment_provider(boost::json::object& type_js, const std::string& id, bool send_via_network_body = true) {
         check_conflicts(enchantment_providers, id, "enchantment providers");
-        enchantment_providers[id] = util::conversions::json::from_json(type_js);
+        enchantment_providers[id] = {.data = util::conversions::json::from_json(type_js), .id = 0, .send_via_network_body = send_via_network_body};
+    }
+
+    void load_file_instrument(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
+        check_conflicts(instruments, id, "instruments");
+        Instrument type;
+        type.description = Chat::fromEnbt(util::conversions::json::from_json(type_js.at("description").get()));
+        type.use_duration = type_js.at("use_duration");
+        type.range = type_js.at("range");
+        type.send_via_network_body = send_via_network_body;
+        if (type_js.at("sound_event").is_string()) {
+            type.sound_event = (std::string)type_js.at("sound_event");
+        } else {
+            auto sound_event = js_object::get_object(type_js.at("sound_event"));
+            type.sound_event = Instrument::custom{.sound_name = (std::string)sound_event.at("sound_name"), .fixed_range = sound_event.contains("fixed_range") ? std::optional<float>(sound_event.at("fixed_range")) : std::nullopt};
+        }
+        instruments[id] = std::move(type);
+    }
+
+    void load_file_instrument(const std::filesystem::path& file_path, const std::string& id) {
+        check_conflicts(enchantments, id, "enchantments");
+        auto res = try_read_json_file(file_path);
+        if (!res)
+            throw std::runtime_error("Failed to read file: " + file_path.string());
+        load_file_instrument(js_object::get_object(res.value()), id);
     }
 
     void load_file_enchantment_provider(const std::filesystem::path& file_path, const std::string& id) {
@@ -908,10 +1227,11 @@ namespace copper_server::resources {
         load_file_enchantment_provider(res.value(), id);
     }
 
-    void load_file_damageType(js_object&& type_js, const std::string& id) {
+    void load_file_damageType(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
         check_override(damageTypes, id, "damage type");
         DamageType type;
         type.message_id = (std::string)type_js["message_id"];
+        type.send_via_network_body = send_via_network_body;
         std::string scaling = type_js["scaling"];
         if (scaling == "never")
             type.scaling = DamageType::ScalingType::never;
@@ -923,21 +1243,21 @@ namespace copper_server::resources {
             type_js["scaling"].parsing_error("Unknown scaling type: " + scaling);
 
         if (type_js.contains("effects")) {
-            std::string effects = type_js["effects"];
-            if (effects == "hurt")
+            std::string damage_effects = type_js["effects"];
+            if (damage_effects == "hurt")
                 type.effects = DamageType::EffectsType::hurt;
-            else if (effects == "thorns")
+            else if (damage_effects == "thorns")
                 type.effects = DamageType::EffectsType::thorns;
-            else if (effects == "drowning")
+            else if (damage_effects == "drowning")
                 type.effects = DamageType::EffectsType::drowning;
-            else if (effects == "burning")
+            else if (damage_effects == "burning")
                 type.effects = DamageType::EffectsType::burning;
-            else if (effects == "poking")
+            else if (damage_effects == "poking")
                 type.effects = DamageType::EffectsType::poking;
-            else if (effects == "freezing")
+            else if (damage_effects == "freezing")
                 type.effects = DamageType::EffectsType::freezing;
             else
-                type_js["effects"].parsing_error("Unknown effects type: " + effects);
+                type_js["effects"].parsing_error("Unknown damage effects type: " + damage_effects);
         }
 
         if (type_js.contains("death_message_type")) {
@@ -964,11 +1284,12 @@ namespace copper_server::resources {
         load_file_damageType(js_object::get_object(res.value()), id);
     }
 
-    void load_file_bannerPattern(js_object&& pattern_js, const std::string& id) {
+    void load_file_bannerPattern(js_object&& pattern_js, const std::string& id, bool send_via_network_body = true) {
         check_override(bannerPatterns, id, "banner pattern");
         BannerPattern pattern;
         pattern.asset_id = (std::string)pattern_js["asset_id"];
         pattern.translation_key = (std::string)pattern_js["translation_key"];
+        pattern.send_via_network_body = send_via_network_body;
         bannerPatterns[id] = std::move(pattern);
     }
 
@@ -980,12 +1301,13 @@ namespace copper_server::resources {
         load_file_bannerPattern(js_object::get_object(res.value()), id);
     }
 
-    void load_file_paintingVariant(js_object&& variant_js, const std::string& id) {
+    void load_file_paintingVariant(js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
         check_override(paintingVariants, id, "painting variant");
         PaintingVariant variant;
         variant.asset_id = (std::string)variant_js["asset_id"];
         variant.height = variant_js["height"];
         variant.width = variant_js["width"];
+        variant.send_via_network_body = send_via_network_body;
         paintingVariants[id] = std::move(variant);
     }
 
@@ -997,7 +1319,7 @@ namespace copper_server::resources {
         load_file_paintingVariant(js_object::get_object(res.value()), id);
     }
 
-    void load_file_recipe(js_object&& variant_js, const std::string& id) {
+    void load_file_recipe(js_object&& variant_js, const std::string& id, [[maybe_unused]] bool send_via_network_body = true) {
         if (!api::recipe::registered())
             throw std::runtime_error("Recipe api not registered!");
 
@@ -1023,20 +1345,14 @@ namespace copper_server::resources {
                 auto tag_ = js_object::get_object(tag);
                 the_tag = (std::string)tag_.at("id");
             }
-
-            if (the_tag.starts_with("#")) {
-                result.push_back(unfold_tag(type, namespace_, the_tag.substr(1)));
-            } else
-                result.push_back(the_tag);
+            result.push_back(the_tag);
         }
-        tags[type][namespace_][path_].push_back(std::move(result));
+        api::tags::add_tag(type, namespace_ + ":" + path_, result, !replace);
     }
 
     void load_file_tags(js_object&& tags_, const std::string& type, const std::string& namespace_, const std::string& path_) {
         if (tags_.contains("replace")) {
             bool replace = tags_["replace"];
-            if (replace)
-                tags[type][namespace_][path_].clear();
             apply_tags(tags_["values"], type, namespace_, path_, replace);
         } else if (tags_.contains("values"))
             apply_tags(tags_["values"], type, namespace_, path_, false);
@@ -1056,7 +1372,7 @@ namespace copper_server::resources {
     void load_register_file(std::string_view memory, const std::string& namespace_, const std::string& path_, const std::string& type) {
         if (path_.empty())
             throw std::runtime_error("Path is empty");
-        std::string id = (namespace_.empty() ? default_namespace : namespace_) + ":" + path_;
+        std::string id = (namespace_.empty() ? "minecraft" : namespace_) + ":" + path_;
         if (type == "advancement") {
             load_file_advancements(memory, id);
         } else if (type == "banner_pattern")
@@ -1085,6 +1401,18 @@ namespace copper_server::resources {
             load_file_armorTrimMaterial(memory, id);
         else if (type == "wolf_variant")
             load_file_wolfVariant(memory, id);
+        else if (type == "cat_variant")
+            load_file_catVariant(memory, id);
+        else if (type == "chicken_variant")
+            load_file_chickenVariant(memory, id);
+        else if (type == "cow_variant")
+            load_file_cowVariant(memory, id);
+        else if (type == "frog_variant")
+            load_file_frogVariant(memory, id);
+        else if (type == "pig_variant")
+            load_file_pigVariant(memory, id);
+        else if (type == "wolf_sound_variant")
+            load_file_wolfSoundVariant(memory, id);
         else if (type == "worldgen/biome")
             load_file_biomes(memory, id);
         else if (type == "worldgen/configured_carver")
@@ -1129,7 +1457,7 @@ namespace copper_server::resources {
     void load_register_file(const std::filesystem::path& file_path, const std::string& namespace_, const std::string& path_, const std::string& type) {
         if (path_.empty())
             throw std::runtime_error("Path is empty");
-        std::string id = (namespace_.empty() ? default_namespace : namespace_) + ":" + path_;
+        std::string id = (namespace_.empty() ? "minecraft" : namespace_) + ":" + path_;
         if (type == "advancement") {
             load_file_advancements(file_path, id);
         } else if (type == "banner_pattern")
@@ -1158,6 +1486,18 @@ namespace copper_server::resources {
             load_file_armorTrimMaterial(file_path, id);
         else if (type == "wolf_variant")
             load_file_wolfVariant(file_path, id);
+        else if (type == "cat_variant")
+            load_file_catVariant(file_path, id);
+        else if (type == "chicken_variant")
+            load_file_chickenVariant(file_path, id);
+        else if (type == "cow_variant")
+            load_file_cowVariant(file_path, id);
+        else if (type == "frog_variant")
+            load_file_frogVariant(file_path, id);
+        else if (type == "pig_variant")
+            load_file_pigVariant(file_path, id);
+        else if (type == "wolf_sound_variant")
+            load_file_wolfSoundVariant(file_path, id);
         else if (type == "worldgen/biome")
             load_file_biomes(file_path, id);
         else if (type == "worldgen/configured_carver")
@@ -1209,123 +1549,298 @@ namespace copper_server::resources {
     }
 
     void load_blocks() {
-        auto parsed = boost::json::parse(resources::registry::blocks);
+        {
+            auto block_properties = boost::json::parse(resources::registry::block_properties).as_array();
+            base_objects::static_block_data::all_properties.reserve(block_properties.size());
+            for (auto& item : block_properties) {
+                auto hash = item.at("hash_key").to_number<int32_t>();
+                auto name = item.at("enum_name").as_string();
+                auto ser_name = item.at("serialized_name").as_string();
+                auto type = item.at("type").as_string();
 
-        base_objects::block::access_full_block_data(std::function(
-            [&](
-                std::vector<std::shared_ptr<base_objects::static_block_data>>& full_block_data_,
-                std::unordered_map<std::string, std::shared_ptr<base_objects::static_block_data>>& named_full_block_data
-            ) {
-                size_t usable = 30000;
-                full_block_data_.resize(usable);
-                for (auto&& [name, decl] : parsed.as_object()) {
-                    std::unordered_map<std::string, std::unordered_set<std::string>> properties_def;
-                    if (decl.as_object().contains("properties")) {
-                        for (auto&& [prop_name, prop] : decl.at("properties").as_object()) {
-                            std::unordered_set<std::string> prop_list;
-                            for (auto&& prop_val : prop.as_array())
-                                prop_list.insert((std::string)prop_val.as_string());
-                            properties_def[(std::string)prop_name] = std::move(prop_list);
-                        }
-                    }
-
-                    decltype(base_objects::static_block_data::assigned_states) associated_states;
-                    std::optional<base_objects::block_id_t> default_associated_state;
-                    for (auto&& state : decl.at("states").as_array()) {
-                        auto&& state_ = state.as_object();
-                        base_objects::block_id_t id = as_uint(state_.at("id"));
-
-                        std::unordered_map<std::string, std::string> state_properties;
-                        if (state_.contains("properties")) {
-                            for (auto&& [prop_name, prop] : state_.at("properties").as_object())
-                                state_properties[prop_name] = (std::string)prop.as_string();
-                        }
-
-                        if (state_.contains("default")) {
-                            if (state_.at("default").as_bool())
-                                default_associated_state = id;
-                        }
-                        associated_states.insert({id, std::move(state_properties)});
-                    }
-
-                    auto data = std::make_shared<base_objects::static_block_data>();
-
-
-                    for (auto& [id, _unused] : associated_states) {
-                        if (full_block_data_[id] != nullptr) {
-                            throw std::runtime_error("Duplicate block id: " + std::to_string(id));
-                        }
-                        full_block_data_[id] = data;
-                    }
-                    if (named_full_block_data.contains((std::string)name))
-                        throw std::runtime_error("Duplicate block name: " + (std::string)name);
-
-
-                    data->name = name;
-                    data->default_state = default_associated_state.value_or(associated_states.left.begin()->first);
-                    data->states = std::move(properties_def);
-                    data->assigned_states = std::move(associated_states);
-                    data->defintion = util::conversions::json::from_json(decl.at("definition"));
-
-                    named_full_block_data[(std::string)name] = std::move(data);
-                }
-
-                for (auto it = full_block_data_.rbegin(); it != full_block_data_.rend(); ++it) {
-                    if (*it != nullptr)
-                        break;
-                    --usable;
-                }
-                full_block_data_.resize(usable);
-                for (auto it = full_block_data_.begin(); it != full_block_data_.end(); ++it) {
-                    if (*it == nullptr) {
-                        throw std::runtime_error("Gap between block definitions");
-                    }
-                }
-                full_block_data_.shrink_to_fit();
+                if (type == "boolean") {
+                    base_objects::static_block_data::all_properties[hash] = {"true", "false"};
+                    base_objects::static_block_data::assigned_property_name.insert({hash, (std::string)ser_name});
+                } else if (type == "int") {
+                    auto min = item.at("min").to_number<int32_t>();
+                    auto max = item.at("max").to_number<int32_t>();
+                    std::unordered_set<std::string> values;
+                    for (int i = min; i <= max; i++)
+                        values.insert(std::to_string(i));
+                    base_objects::static_block_data::all_properties[hash] = std::move(values);
+                    base_objects::static_block_data::assigned_property_name.insert({hash, (std::string)ser_name});
+                } else if (type == "enum") {
+                    auto values = item.at("values").as_array();
+                    std::unordered_set<std::string> values_set;
+                    for (auto&& value : values)
+                        values_set.insert((std::string)value.as_string());
+                    base_objects::static_block_data::all_properties[hash] = std::move(values_set);
+                    base_objects::static_block_data::assigned_property_name.insert({hash, (std::string)ser_name});
+                } else
+                    throw std::runtime_error("Unknown type: " + std::string(type));
             }
-        ));
+        }
+
+        std::string tmp;
+        {
+            boost::iostreams::filtering_istream filter;
+            boost::iostreams::array_source source(resources::registry::blocks.data(), resources::registry::blocks.size());
+            filter.push(boost::iostreams::zstd_decompressor());
+            filter.push(source);
+            std::ostringstream buffer;
+            buffer << filter.rdbuf();
+            tmp = std::move(buffer).str();
+        }
+        std::stringstream ss(std::move(tmp));
+        enbt::io_helper::value_read_stream read_stream(ss);
+        read_stream.peek_at("shapes", [](auto& shapes) {
+            shapes.iterate(
+                [](auto size) {
+                    base_objects::static_block_data::all_shapes.reserve(size);
+                },
+                [&](auto& shape) {
+                    auto item = shape.read();
+                    auto& min = item.at("min");
+                    auto& max = item.at("max");
+                    base_objects::static_block_data::all_shapes.push_back(
+                        base_objects::shape_data{
+                            .min_x = min.at(0),
+                            .min_y = min.at(1),
+                            .min_z = min.at(2),
+                            .max_x = max.at(0),
+                            .max_y = max.at(1),
+                            .max_z = max.at(2)
+                        }
+                    );
+                }
+            );
+        });
+
+
+        read_stream.peek_at("block_entity_types", [](auto& block_entity_types) {
+            block_entity_types.iterate(
+                [](auto size) {
+                    base_objects::static_block_data::block_entity_types.reserve(size);
+                },
+                [&](auto& item) {
+                    base_objects::static_block_data::block_entity_types.push_back((std::string)item.read());
+                }
+            );
+        });
+
+        read_stream.peek_at("blocks", [&](enbt::io_helper::value_read_stream& blocks) {
+            base_objects::block::access_full_block_data(std::function([&](list_array<std::shared_ptr<base_objects::static_block_data>>& full_block_data_, std::unordered_map<std::string, std::shared_ptr<base_objects::static_block_data>>& named_full_block_data) {
+                blocks.iterate([&](enbt::io_helper::value_read_stream& decl) {
+                    std::shared_ptr<base_objects::static_block_data> default_state_data = std::make_shared<base_objects::static_block_data>();
+                    list_array<base_objects::block_id_t> init_states;
+                    std::shared_ptr<base_objects::static_block_data::map_of_states> associated_states = std::make_shared<base_objects::static_block_data::map_of_states>();
+                    base_objects::block_id_t default_state = 0;
+                    bool has_default_state = false;
+
+
+                    decl.iterate([&](std::string_view name, enbt::io_helper::value_read_stream& item) {
+                        if (name == "name") {
+                            default_state_data->name = "minecraft:" + item.read().as_string();
+                            if (named_full_block_data.contains(default_state_data->name))
+                                throw std::runtime_error("Duplicate block name: " + default_state_data->name);
+                        } else if (name == "id")
+                            default_state_data->general_block_id = item.read();
+                        else if (name == "translation_key")
+                            default_state_data->translation_key = item.read().as_string();
+                        else if (name == "slipperiness")
+                            default_state_data->slipperiness = item.read();
+                        else if (name == "velocity_multiplier")
+                            default_state_data->velocity_multiplier = item.read();
+                        else if (name == "jump_velocity_multiplier")
+                            default_state_data->jump_velocity_multiplier = item.read();
+                        else if (name == "hardness")
+                            default_state_data->hardness = item.read();
+                        else if (name == "blast_resistance")
+                            default_state_data->blast_resistance = item.read();
+                        else if (name == "item_id")
+                            default_state_data->default_drop_item_id = item.read();
+                        else if (name == "map_color_rgb")
+                            default_state_data->map_color_rgb = item.read();
+                        else if (name == "loot_table")
+                            *(default_state_data->loot_table = std::make_shared<enbt::compound>()) = item.read();
+                        else if (name == "properties") {
+                            std::vector<int32_t> properties;
+                            item.iterate(
+                                [&properties](auto size) { properties.reserve(size); },
+                                [&properties](enbt::io_helper::value_read_stream& item) { properties.push_back(item.read()); }
+                            );
+                            default_state_data->allowed_properties = std::move(properties);
+                        } else if (name == "states") {
+                            item.iterate(
+                                [&](auto size) { init_states.reserve(size); },
+                                [&](enbt::io_helper::value_read_stream& decl) {
+                                    std::shared_ptr<base_objects::static_block_data> block_data = std::make_shared<base_objects::static_block_data>();
+                                    base_objects::block_id_t block_data_id = 0;
+                                    block_data->opacity = 255;
+#define ARGS__d [[maybe_unused]] base_objects::block_id_t &default_state, [[maybe_unused]] bool &has_default_state, [[maybe_unused]] list_array<std::shared_ptr<base_objects::static_block_data>>&full_block_data_, [[maybe_unused]] std::shared_ptr<base_objects::static_block_data>&block_data, [[maybe_unused]] base_objects::block_id_t &block_data_id, [[maybe_unused]] enbt::io_helper::value_read_stream &item
+#define ARGS__pass default_state, has_default_state, full_block_data_, block_data, block_data_id, item
+
+                                    static std::unordered_map<std::string, void (*)(ARGS__d)> map{
+                                        {"id", [](ARGS__d) {
+                                             base_objects::block_id_t id = block_data_id = item.read();
+                                             block_data->current_state = id;
+                                             if (id >= full_block_data_.size()) {
+                                                 if (full_block_data_.reserved() == 0)
+                                                     full_block_data_.reserve(id);
+                                                 full_block_data_.resize(id + 1);
+                                             }
+                                             auto& ref = full_block_data_.at(id);
+                                             if (ref)
+                                                 throw std::runtime_error("Duplicate block id: " + std::to_string(id));
+                                             ref = block_data;
+                                             if (!has_default_state) {
+                                                 default_state = id;
+                                                 has_default_state = true;
+                                             }
+                                         }},
+                                        {"state_flags", [](ARGS__d) {
+                                             // AIR = 0b00000001
+                                             // BURNABLE = 0b00000010
+                                             // TOOL_REQUIRED = 0b00000100
+                                             // SIDED_TRANSPARENCY = 0b00001000
+                                             // REPLACEABLE = 0b00010000
+                                             // IS_LIQUID = 0b00100000
+                                             // IS_SOLID = 0b01000000
+                                             // IS_FULL_CUBE = 0b10000000
+                                             int32_t states = item.read();
+                                             block_data->is_air = states & 0b00000001;
+                                             block_data->is_burnable = states & 0b00000010;
+                                             block_data->is_tool_required = states & 0b00000100;
+                                             block_data->is_replaceable = states & 0b00010000;
+                                             block_data->is_liquid = states & 0b00100000;
+                                             block_data->is_solid = states & 0b01000000;
+                                             block_data->is_full_cube = states & 0b10000000;
+                                         }},
+                                        {"side_flags", [](ARGS__d) {
+                                             //DOWN_SIDE_SOLID = 0b00000001;
+                                             //UP_SIDE_SOLID = 0b00000010;
+                                             //NORTH_SIDE_SOLID = 0b00000100;
+                                             //SOUTH_SIDE_SOLID = 0b00001000;
+                                             //WEST_SIDE_SOLID = 0b00010000;
+                                             //EAST_SIDE_SOLID = 0b00100000;
+                                             //DOWN_CENTER_SOLID = 0b01000000;
+                                             //UP_CENTER_SOLID = 0b10000000;
+                                             int32_t states = item.read();
+                                             block_data->transparent_sides.down_side_solid = states & 0b00000001;
+                                             block_data->transparent_sides.up_side_solid = states & 0b00000010;
+                                             block_data->transparent_sides.north_side_solid = states & 0b00000100;
+                                             block_data->transparent_sides.south_side_solid = states & 0b00001000;
+                                             block_data->transparent_sides.west_side_solid = states & 0b00010000;
+                                             block_data->transparent_sides.east_side_solid = states & 0b00100000;
+                                             block_data->transparent_sides.down_center_solid = states & 0b01000000;
+                                             block_data->transparent_sides.up_center_solid = states & 0b10000000;
+                                         }},
+                                        {"opacity", [](ARGS__d) { block_data->opacity = item.read(); }},
+                                        {"instrument", [](ARGS__d) { block_data->instrument = item.read().as_string(); }},
+                                        {"luminance", [](ARGS__d) { block_data->luminance = item.read(); }},
+                                        {"emits_redstone", [](ARGS__d) { block_data->is_emits_redstone = item.read(); }},
+                                        {"piston_behavior", [](ARGS__d) { block_data->piston_behavior = item.read().as_string(); }},
+                                        {"hardness", [](ARGS__d) { block_data->hardness = item.read(); }},
+                                        {"has_random_ticks", [](ARGS__d) { block_data->has_random_ticks = item.read(); }},
+                                        {"has_comparator_output", [](ARGS__d) { block_data->has_comparator_output = item.read(); }},
+                                        {"default_state_id", [](ARGS__d) {
+                                             default_state = item.read();
+                                             block_data->is_default_state = true;
+                                             has_default_state = true;
+                                         }},
+                                        {"properties", [](ARGS__d) {
+                                             std::unordered_map<std::string, std::string> properties;
+                                             item.iterate([&](auto size) { properties.reserve(size); }, [&](const std::string& name, enbt::io_helper::value_read_stream& item) { properties[name] = item.read().as_string(); });
+                                             block_data->current_properties = std::move(properties);
+                                         }},
+                                        {"collision_shapes", [](ARGS__d) {
+                                             item.iterate(
+                                                 [&](auto size) { block_data->collision_shapes.reserve(size); },
+                                                 [&](enbt::io_helper::value_read_stream& item) { block_data->collision_shapes.push_back(&base_objects::static_block_data::all_shapes.at(item.read())); }
+                                             );
+                                         }},
+                                        {"block_entity_type", [](ARGS__d) {
+                                             block_data->is_block_entity = true;
+                                             block_data->block_entity_id = item.read();
+                                         }},
+                                        {"outline_shapes", [](ARGS__d) { item.skip(); }},
+                                    };
+
+                                    decl.iterate([&](const std::string& name, enbt::io_helper::value_read_stream& item) {
+                                        map.at(name)(ARGS__pass);
+                                    });
+                                    init_states.push_back(block_data_id);
+#undef ARGS__d
+#undef ARGS__pass
+                                }
+                            );
+                        }
+                    });
+
+                    for (auto& state : init_states) {
+                        auto& block_data = full_block_data_.at(state);
+                        block_data->assigned_states_to_properties = associated_states;
+                        block_data->default_state = default_state;
+
+                        block_data->name = default_state_data->name;
+                        block_data->general_block_id = default_state_data->general_block_id;
+                        block_data->translation_key = default_state_data->translation_key;
+                        block_data->slipperiness = default_state_data->slipperiness;
+                        block_data->velocity_multiplier = default_state_data->velocity_multiplier;
+                        block_data->jump_velocity_multiplier = default_state_data->jump_velocity_multiplier;
+                        block_data->hardness = default_state_data->hardness;
+                        block_data->blast_resistance = default_state_data->blast_resistance;
+                        block_data->default_drop_item_id = default_state_data->default_drop_item_id;
+                        block_data->map_color_rgb = default_state_data->map_color_rgb;
+                        block_data->loot_table = default_state_data->loot_table;
+                        block_data->allowed_properties = default_state_data->allowed_properties;
+                    }
+                    named_full_block_data[(std::string)default_state_data->name] = full_block_data_.at(default_state);
+                });
+
+                for (auto it = full_block_data_.begin(); it != full_block_data_.end(); ++it) {
+                    if (*it == nullptr)
+                        throw std::runtime_error("Gap between block definitions");
+                }
+                full_block_data_.commit();
+            }));
+        });
     }
 
     void load_items() {
         auto parsed = boost::json::parse(resources::registry::items);
-        std::unordered_set<std::string> filter;
-        auto& to_filter = internal_compatibility_versions.at(api::configuration::get().protocol.allowed_versions_processed.min()).at("disabled_items").as_array();
-        filter.reserve(to_filter.size());
-        for (auto&& item : to_filter)
-            filter.insert((std::string)item.as_string());
 
         for (auto&& [name, decl] : parsed.as_object()) {
-            if (filter.contains(name))
-                continue;
-            base_objects::static_slot_data slot_data;
-            slot_data.id = name;
-            std::unordered_map<std::string, base_objects::slot_component::unified> components;
-            for (auto& [name, value] : decl.as_object().at("components").as_object())
-                components[name] = base_objects::slot_component::parse_component(name, conversions::json::from_json(value));
-            slot_data.default_components = std::move(components);
-            base_objects::slot_data::add_slot_data(std::move(slot_data));
+            base_objects::static_slot_data slot;
+            slot.id = name;
+            std::unordered_map<int32_t, base_objects::component> components;
+            for (auto& [component_name, value] : decl.as_object().at("components").as_object()) {
+                auto component = base_objects::component::parse_component(component_name, conversions::json::from_json(value));
+                auto id = component.get_id();
+                components[id] = std::move(component);
+            }
+            slot.default_components = std::move(components);
+            base_objects::slot_data::add_slot_data(std::move(slot));
         }
     }
 
     void prepare_versions() {
-        std::unordered_map<uint32_t, std::string_view> internal_protocol_aliases = {
-            {765, resources::registry::protocol::_765},
-            {766, resources::registry::protocol::_766},
-            {767, resources::registry::protocol::_767},
-            {768, resources::registry::protocol::_768},
-        };
-        latest_protocol_version
-            = api::configuration::get().protocol.allowed_versions_processed.for_each(
-                                                                               [&](uint32_t version) {
-                                                                                   auto res = util::conversions::json::from_json(boost::json::parse(internal_protocol_aliases.at(version)));
-                                                                                   registers::individual_registers[version] = std::move(res);
-                                                                               }
-            ).max();
+
+        auto res = util::conversions::json::from_json(boost::json::parse(resources::registry::protocol));
+        for (auto& it : res.as_compound()) {
+            auto entries = it.second.at("entries").as_compound();
+            enbt::fixed_array invert(entries.size());
+
+            for (auto& [key, value] : it.second.at("entries").as_compound())
+                invert.set(value.at("protocol_id"), key);
+
+            it.second["proto_invert"] = std::move(invert);
+        }
+        registers::current_protocol_id = 772;
+        registers::current_protocol_registers = std::move(res);
     }
 
-    using tags_obj = std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>>>;
-
-    void __prepare_tags(tags_obj& tmp_obj, boost::json::object& parsed, const std::string& type, const std::string& namespace_, const std::string& tag) {
+    void __prepare_tags(boost::json::object& parsed, const std::string& type, const std::string& namespace_, const std::string& tag) {
         for (auto&& [name, decl] : parsed) {
             auto& obj = decl.as_object();
             if (name.ends_with(".json")) {
@@ -1333,108 +1848,160 @@ namespace copper_server::resources {
                     auto& values = obj.contains("values") ? obj.at("values") : obj.at("root");
                     if (values.is_array()) {
                         bool replace = obj.contains("replace") ? obj.at("replace").as_bool() : false;
-                        auto& items = tmp_obj[type][namespace_][tag + ":" + (std::string)name.substr(0, name.size() - 5)];
-                        if (replace)
-                            items.clear();
+                        std::string computed_tag = tag;
+                        if (computed_tag.size())
+                            computed_tag += "/";
+                        computed_tag += (std::string)std::string_view(name).substr(0, name.size() - 5);
+                        list_array<std::string> res;
                         for (auto&& value : values.get_array())
-                            items.push_back((std::string)value.as_string());
+                            res.push_back((std::string)value.as_string());
+                        api::tags::add_tag(type, namespace_ + ":" + tag, res, !replace);
                         continue;
                     }
                 }
             } else
-                __prepare_tags(tmp_obj, obj, type, namespace_, tag + ":" + (std::string)name);
+                __prepare_tags(obj, type + "/" + (std::string)name, namespace_, tag);
         }
     }
 
     void prepare_tags(boost::json::object& parsed, const std::string& namespace_) {
-        tags_obj tmp_obj = registers::tags;
         for (auto&& [type, decl] : parsed)
-            __prepare_tags(tmp_obj, decl.get_object(), type, namespace_, "");
+            __prepare_tags(decl.get_object(), type, namespace_, "");
+    }
 
-        registers::tags = tmp_obj;
-        for (auto&& [type, decl] : tmp_obj) {
-            for (auto&& [namespace_, decl] : decl) {
-                for (auto&& [tag, decl] : decl) {
-                    list_array<std::string> resolved_items;
-                    for (auto& item : decl) {
-                        if (item.starts_with("#")) {
-                            resolved_items.push_back(unfold_tag(type, item).where([](const std::string& tag) {
-                                return !tag.starts_with("#");
-                            }));
+    void process_item_(boost::json::object& decl, const std::string& namespace_, void (*fn)(js_object&&, const std::string&, bool send_via_network_body), bool send_via_network_body) {
+        for (auto& [id, value] : decl) {
+            if (id.ends_with(".json")) {
+                std::string _id = namespace_ + (std::string)std::string_view(id).substr(0, id.size() - 5);
+                fn(js_object::get_object(value), _id, send_via_network_body);
+            } else
+                process_item_(value.as_object(), namespace_ + std::string(id), fn, send_via_network_body);
+        }
+    }
+
+    void process_item_(boost::json::object& decl, const std::string& namespace_, void (*fn)(boost::json::object&, const std::string&, bool send_via_network_body), bool send_via_network_body) {
+        for (auto& [id, value] : decl) {
+            if (id.ends_with(".json")) {
+                std::string _id = namespace_ + (std::string)std::string_view(id).substr(0, id.size() - 5);
+                fn(value.as_object(), _id, send_via_network_body);
+            } else
+                process_item_(value.as_object(), namespace_ + std::string(id), fn, send_via_network_body);
+        }
+    }
+
+    void process_item(js_value& decl, const std::string& namespace_, void (*fn)(js_object&&, const std::string&, bool send_via_network_body), bool send_via_network_body) {
+        process_item_(decl.get().as_object(), namespace_ + ":", fn, send_via_network_body);
+    }
+
+    void process_item(js_value& decl, const std::string& namespace_, void (*fn)(boost::json::object&, const std::string&, bool send_via_network_body), bool send_via_network_body) {
+        process_item_(decl.get().as_object(), namespace_ + ":", fn, send_via_network_body);
+    }
+
+    void process_pack(boost::json::object& parsed, const std::string& namespace_, const std::string& id, bool allowed_pack_nest, bool send_via_network_body) {
+        auto pack_data = js_object::get_object(parsed);
+        if (pack_data.contains("tags"))
+            prepare_tags(pack_data["tags"].get().as_object(), namespace_);
+        for (auto&& [name, decl] : pack_data) {
+            if (name == "banner_pattern")
+                process_item(decl, namespace_, load_file_bannerPattern, send_via_network_body);
+            else if (name == "chat_type")
+                process_item(decl, namespace_, load_file_chatType, send_via_network_body);
+            else if (name == "damage_type")
+                process_item(decl, namespace_, load_file_damageType, send_via_network_body);
+            else if (name == "dimension_type")
+                process_item(decl, namespace_, load_file_dimensionType, send_via_network_body);
+            else if (name == "enchantment")
+                process_item(decl, namespace_, load_file_enchantment, send_via_network_body);
+            else if (name == "enchantment_provider")
+                process_item(decl, namespace_, load_file_enchantment_provider, send_via_network_body);
+            else if (name == "instrument")
+                process_item(decl, namespace_, load_file_instrument, send_via_network_body);
+            //else if (name == "jukebox_song")
+            //    process_item(decl, namespace_, load_file_jukebox_song, send_via_network_body);
+            //else if (name == "loot_table")
+            //    process_item(decl, namespace_, load_file_loot_table, send_via_network_body);
+            else if (name == "painting_variant")
+                process_item(decl, namespace_, load_file_paintingVariant, send_via_network_body);
+            //else if (name == "recipe")
+            //    process_item(decl, namespace_, load_file_recipe, send_via_network_body);
+            //else if (name == "structure")
+            //    process_item(decl, namespace_, load_file_structure, send_via_network_body);
+            //else if (name == "trial_spawner")
+            //    process_item(decl, namespace_, load_file_trial_spawner, send_via_network_body);
+            else if (name == "trim_material")
+                process_item(decl, namespace_, load_file_armorTrimMaterial, send_via_network_body);
+            else if (name == "trim_pattern")
+                process_item(decl, namespace_, load_file_armorTrimPattern, send_via_network_body);
+            else if (name == "wolf_variant")
+                process_item(decl, namespace_, load_file_wolfVariant, send_via_network_body);
+            else if (name == "cat_variant")
+                process_item(decl, namespace_, load_file_catVariant, send_via_network_body);
+            else if (name == "chicken_variant")
+                process_item(decl, namespace_, load_file_chickenVariant, send_via_network_body);
+            else if (name == "cow_variant")
+                process_item(decl, namespace_, load_file_cowVariant, send_via_network_body);
+            else if (name == "frog_variant")
+                process_item(decl, namespace_, load_file_frogVariant, send_via_network_body);
+            else if (name == "pig_variant")
+                process_item(decl, namespace_, load_file_pigVariant, send_via_network_body);
+            else if (name == "wolf_sound_variant")
+                process_item(decl, namespace_, load_file_wolfSoundVariant, send_via_network_body);
+            else if (name == "worldgen") {
+                for (auto&& [wg_name, wg_decl] : js_object::get_object(decl)) {
+                    if (wg_name == "biome")
+                        process_item(wg_decl, namespace_, load_file_biomes, send_via_network_body);
+                }
+            } else if (allowed_pack_nest) {
+                if (name == "datapacks") {
+                    auto& enabled_features = api::configuration::get().game_play.enabled_features;
+                    for (auto&& [dp_name, dp_decl] : js_object::get_object(decl)) {
+                        auto pack_id = std::string(dp_name);
+                        auto decl_obj = js_object::get_object(dp_decl);
+                        if (decl_obj.contains("pack.mcmeta")) {
+                            auto pack_meta = js_object::get_object(decl_obj["pack.mcmeta"]);
+                            if (pack_meta.contains("features")) {
+                                auto features = js_object::get_object(pack_meta["features"]);
+                                if (features.contains("enabled")) {
+                                    auto enabled = js_array::get_array(features["enabled"]);
+                                    bool not_enabled = false;
+                                    for (auto&& feature : enabled) {
+                                        if (!enabled_features.contains(feature)) {
+                                            not_enabled = true;
+                                            break;
+                                        }
+                                    }
+                                    if (not_enabled && !enabled.empty())
+                                        continue; //skip datapack
+                                }
+                            }
+
+                            if (pack_meta.contains("pack")) {
+                                auto pack = js_object::get_object(pack_meta["pack"]);
+                                if (pack.contains("pack_format")) {
+                                    auto pack_format = (int64_t)pack["pack_format"];
+                                    if (pack_format != 61) {
+                                        log::error("resource_load", "Unsupported pack format: " + std::to_string(pack_format) + " for child datapack: " + namespace_ + "->" + pack_id);
+                                        continue;
+                                    }
+                                }
+                            }
+
+                            if (pack_meta.contains("data")) {
+                                auto in_pack_data = js_object::get_object(pack_meta["data"]);
+                                for (auto&& [in_pack_name, in_pack_decl] : in_pack_data)
+                                    process_pack(in_pack_decl, in_pack_name, pack_id, false, send_via_network_body);
+                            } else
+                                loaded_packs_.push_back({.namespace_ = "minecraft", .id = pack_id, .version = "1.21.8"});
                         }
                     }
-                    decl = std::move(resolved_items.commit());
                 }
             }
         }
-
-        registers::tags = std::move(tmp_obj);
+        loaded_packs_.push_back({.namespace_ = namespace_, .id = id, .version = "1.21.8"});
     }
 
-    void process_item_(boost::json::object& decl, const std::string& namespace_, void (*fn)(js_object&&, const std::string&)) {
-        for (auto& [id, value] : decl) {
-            if (id.ends_with(".json")) {
-                std::string _id = namespace_ + std::string(id.substr(0, id.size() - 5));
-                fn(js_object::get_object(value), _id);
-            } else
-                process_item_(value.as_object(), namespace_ + std::string(id), fn);
-        }
-    }
-
-    void process_item_(boost::json::object& decl, const std::string& namespace_, void (*fn)(boost::json::object&, const std::string&)) {
-        for (auto& [id, value] : decl) {
-            if (id.ends_with(".json")) {
-                std::string _id = namespace_ + std::string(id.substr(0, id.size() - 5));
-                fn(value.as_object(), _id);
-            } else
-                process_item_(value.as_object(), namespace_ + std::string(id), fn);
-        }
-    }
-
-    void process_item(js_value& decl, const std::string& namespace_, void (*fn)(js_object&&, const std::string&)) {
-        process_item_(decl.get().as_object(), namespace_ + ":", fn);
-    }
-
-    void process_item(js_value& decl, const std::string& namespace_, void (*fn)(boost::json::object&, const std::string&)) {
-        process_item_(decl.get().as_object(), namespace_ + ":", fn);
-    }
-
-    void process_pack(boost::json::object& parsed, const std::string& namespace_, bool allowed_pack_nest) {
-        auto data = js_object::get_object(parsed);
-        if (data.contains("tags"))
-            prepare_tags(data["tags"].get().as_object(), namespace_);
-        for (auto&& [name, decl] : data) {
-            if (name == "banner_pattern")
-                process_item(decl, namespace_, load_file_bannerPattern);
-            else if (name == "painting_variant")
-                process_item(decl, namespace_, load_file_paintingVariant);
-            else if (name == "damage_type")
-                process_item(decl, namespace_, load_file_damageType);
-            else if (name == "dimension_type")
-                process_item(decl, namespace_, load_file_dimensionType);
-            else if (name == "wolf_variant")
-                process_item(decl, namespace_, load_file_wolfVariant);
-            else if (name == "trim_material")
-                process_item(decl, namespace_, load_file_armorTrimMaterial);
-            else if (name == "trim_pattern")
-                process_item(decl, namespace_, load_file_armorTrimPattern);
-            else if (name == "enchantment")
-                process_item(decl, namespace_, load_file_enchantment);
-            else if (name == "enchantment_provider")
-                process_item(decl, namespace_, load_file_enchantment_provider);
-            else if (name == "chat_type")
-                process_item(decl, namespace_, load_file_chatType);
-            else if (name == "worldgen") {
-                for (auto&& [name, decl] : js_object::get_object(decl)) {
-                    if (name == "biome")
-                        process_item(decl, namespace_, load_file_biomes);
-                }
-            }
-        }
-    }
-
-    void process_pack(boost::json::object& parsed, const std::string& namespace_) {
-        process_pack(parsed, namespace_, false);
+    void process_pack(boost::json::object& parsed, const std::string& namespace_, const std::string& id) {
+        process_pack(parsed, namespace_, id, false, true);
     }
 
     void ___recursive_merge_json(boost::json::object& out, const std::filesystem::directory_entry& file);
@@ -1460,35 +2027,76 @@ namespace copper_server::resources {
             ___recursive_merge_json__file(out, file);
     }
 
-    void process_pack(const std::filesystem::path& folder_path_to_data_without_namespace, const std::string& namespace_) {
+    void process_pack(const std::filesystem::path& folder_path_to_data_with_namespace, const std::string& namespace_, const std::string& id) {
         boost::json::value value = boost::json::object();
         auto& obj = value.get_object();
-        for (auto& entry : std::filesystem::directory_iterator(folder_path_to_data_without_namespace)) {
+        for (auto& entry : std::filesystem::directory_iterator(folder_path_to_data_with_namespace)) {
             auto& inner = (obj[entry.path().filename().string()] = boost::json::object()).get_object();
             ___recursive_merge_json(inner, entry);
         }
-        process_pack(obj, namespace_);
+        process_pack(obj, namespace_, id, false, true);
     }
 
-    void process_pack(const std::filesystem::path& folder_path_to_data) {
-        for (auto& entry : std::filesystem::directory_iterator(folder_path_to_data)) {
+    void process_pack(const std::filesystem::path& folder_path_to_data_packs) {
+        auto& enabled_features = api::configuration::get().game_play.enabled_features;
+        for (auto& entry : std::filesystem::directory_iterator(folder_path_to_data_packs)) {
+            auto& path = entry.path();
+            std::string id = path.stem().string();
             if (entry.is_directory()) {
-                auto& path = entry.path();
-                std::string namespace_ = path.stem().string();
-                process_pack(path, namespace_);
+                auto pack_meta_result = try_read_json_file(path / "pack.mcmeta");
+                if (!pack_meta_result)
+                    throw std::runtime_error("Failed to read datapack: " + path.string());
+                auto pack_meta = js_object::get_object(*pack_meta_result);
+                if (pack_meta.contains("features")) {
+                    auto features = js_object::get_object(pack_meta["features"]);
+                    if (features.contains("enabled")) {
+                        auto enabled = js_array::get_array(features["enabled"]);
+                        bool not_enabled = false;
+                        for (auto&& feature : enabled) {
+                            if (!enabled_features.contains(feature)) {
+                                not_enabled = true;
+                                break;
+                            }
+                        }
+                        if (not_enabled && !enabled.empty())
+                            continue; //skip datapack
+                    }
+                }
+
+                if (pack_meta.contains("pack")) {
+                    auto pack = js_object::get_object(pack_meta["pack"]);
+                    if (pack.contains("pack_format")) {
+                        auto pack_format = (int64_t)pack["pack_format"];
+                        if (pack_format != 61) {
+                            log::error("resource_load", "Unsupported pack format: " + std::to_string(pack_format) + " for datapack: " + path.string());
+                            continue;
+                        }
+                    }
+                }
+
+                if (std::filesystem::exists(path / "data")) {
+                    for (auto& data_entry : std::filesystem::directory_iterator(path / "data")) {
+                        if (data_entry.is_directory()) {
+                            auto& data_path = data_entry.path();
+                            std::string namespace_ = data_path.stem().string();
+                            process_pack(data_path, namespace_, id);
+                        }
+                    }
+                }
+            } else if (path.extension() == ".zip") {
+                //TODO process zip file
             }
         }
     }
 
     void prepare_built_in_pack() {
         auto parsed = boost::json::parse(resources::data);
-        process_pack(parsed.as_object(), "minecraft");
+        process_pack(parsed.as_object(), "minecraft", "core", true, false);
     }
 
     void __initialization__versions_inital() { //skips items assignation
-        auto& latest_version = registers::individual_registers.at(latest_protocol_version);
         {
-            auto current_effect = latest_version.at("minecraft:mob_effect").at("entries").as_compound();
+            auto current_effect = registers::current_protocol_registers.at("minecraft:mob_effect").at("entries").as_compound();
             for (auto& [name, decl] : current_effect)
                 registers::effects[name] = effect{name, (uint32_t)decl.at("protocol_id")};
             {
@@ -1501,10 +2109,25 @@ namespace copper_server::resources {
                 }
             }
         }
+
         {
-            auto current_potion = latest_version.at("minecraft:potion").at("entries").as_compound();
-            for (auto& [name, decl] : current_potion)
-                registers::potions[name] = potion{name, (uint32_t)decl.at("protocol_id")};
+            {
+                auto parsed = boost::json::parse(resources::registry::potion);
+                for (auto&& [name, decl] : parsed.as_object()) {
+                    auto checked_decl = decl.as_object();
+                    auto full_name = "minecraft:" + (std::string)name;
+                    std::vector<base_objects::id_mob_effect> potion_effects;
+                    for (auto&& item : checked_decl.at("effects").as_array())
+                        potion_effects.push_back(item.to_number<uint32_t>());
+
+                    registers::potions[full_name] = potion{
+                        .name = full_name,
+                        .id = checked_decl.at("id").to_number<uint32_t>(),
+                        .effects = std::move(potion_effects),
+                        .recipe = {}
+                    };
+                }
+            }
             {
                 registers::potions_cache.resize(registers::potions.size());
                 auto it = registers::potions.begin();
@@ -1514,11 +2137,22 @@ namespace copper_server::resources {
                     ++it;
                 }
             }
+            {
+                auto parsed = boost::json::parse(resources::registry::potion_recipes);
+                for (auto& decl : parsed.as_array()) {
+                    auto& obj_decl = decl.as_object();
+                    uint32_t input = obj_decl.at("input").to_number<uint32_t>();
+                    uint32_t item = obj_decl.at("item").to_number<uint32_t>();
+                    uint32_t output = obj_decl.at("output").to_number<uint32_t>();
+                    registers::potions_cache.at(input)->second.recipe[item] = output;
+                }
+            }
         }
         {
-            auto attribute = latest_version.at("minecraft:attribute").at("entries").as_compound();
-            for (auto& [name, decl] : attribute)
-                registers::attributes[name] = item_attribute{name, (uint32_t)decl.at("protocol_id")};
+            auto reg_attributes = boost::json::parse(resources::registry::attributes);
+            auto current_attribute = registers::current_protocol_registers.at("minecraft:attribute").at("entries").as_compound();
+            for (auto& [name, decl] : current_attribute)
+                registers::attributes[name] = attribute{name, (uint32_t)decl.at("protocol_id"), reg_attributes.at(name).to_number<double>()};
             {
                 registers::attributes_cache.resize(registers::attributes.size());
                 auto it = registers::attributes.begin();
@@ -1529,127 +2163,41 @@ namespace copper_server::resources {
                 }
             }
         }
-
-        for (auto& [proto_id, decl] : registers::individual_registers) {
-            for (auto& [name, decl] : decl.at("minecraft:mob_effect").at("entries").as_compound()) {
-                auto it = registers::effects.find(name);
-                if (it != registers::effects.end()) {
-                    it->second.protocol[proto_id] = (uint32_t)decl.at("protocol_id");
-                    effect::protocol_aliases[proto_id][it->second.id] = it->second.id;
-                }
-            }
-            for (auto& [name, decl] : decl.at("minecraft:potion").at("entries").as_compound()) {
-                auto it = registers::potions.find(name);
-                if (it != registers::potions.end()) {
-                    it->second.protocol[proto_id] = (uint32_t)decl.at("protocol_id");
-                    potion::protocol_aliases[proto_id][it->second.id] = it->second.id;
-                }
-            }
-            for (auto& [name, decl] : decl.at("minecraft:attribute").at("entries").as_compound()) {
-                auto it = registers::attributes.find(name);
-                if (it != registers::attributes.end()) {
-                    it->second.protocol[proto_id] = (uint32_t)decl.at("protocol_id");
-                    item_attribute::protocol_aliases[proto_id][it->second.id] = it->second.id;
-                }
-            }
-            {
-                auto current_registry_blocks = decl.at("minecraft:block").at("entries").as_compound();
-                auto& proto_data = base_objects::static_block_data::internal_block_aliases_protocol[proto_id];
-                for (auto& [name, decl] : current_registry_blocks)
-                    proto_data[name] = (uint32_t)decl.at("protocol_id");
-            }
-            if (proto_id != 768) { //TODO update entities for 768
-                auto& proto_data = base_objects::entity_data::internal_entity_aliases_protocol[proto_id];
-                for (auto& [name, decl] : decl.at("minecraft:entity_type").at("entries").as_compound())
-                    proto_data[name] = (uint32_t)decl.at("protocol_id");
-            }
-        }
-        //set aliases
-
-        for (auto& [proto_id, decl] : internal_compatibility_versions) {
-            auto it = base_objects::entity_data::internal_entity_aliases_protocol.find(proto_id);
-            if (it == base_objects::entity_data::internal_entity_aliases_protocol.end())
-                continue;
-            auto& proto_data = it->second;
-            for (auto& [name, id] : decl.at("protocol_entity_aliases").as_object())
-                proto_data[name] = proto_data.at(std::string(id.as_string()));
-        }
-
-        {
-            std::unordered_map<std::string, std::string> filter;
-            {
-                auto tmp = boost::json::parse(resources::registry::compatibility::block_aliases).as_object();
-                filter.reserve(tmp.size());
-                for (auto& [match, replace] : tmp)
-                    filter[match] = std::string(replace.as_string());
-            }
-
-            base_objects::block::access_full_block_data(
-                [&](auto& arr, auto& ignore) {
-                    for (auto& block : arr) {
-                        for (auto& [match, replace] : filter) {
-                            auto res = processor::process_match(block->name, match, replace);
-                            if (res)
-                                block->block_aliases.push_back(std::move(*res));
-                        }
-                    }
-                }
-            );
-        }
-        base_objects::static_block_data::initialize_blocks();
-        base_objects::entity_data::initialize_entities();
     }
 
     void __initialization__versions_post() {
-        for (auto& [proto_id, decl] : registers::individual_registers)
-            for (auto& [name, decl] : decl.at("minecraft:item").at("entries").as_compound())
-                base_objects::static_slot_data::internal_item_aliases_protocol[proto_id][name] = (uint32_t)decl.at("protocol_id");
-        //set aliases
-
-        {
-            std::unordered_map<std::string, std::string> filter;
-            {
-                auto tmp = boost::json::parse(resources::registry::compatibility::item_aliases).as_object();
-                filter.reserve(tmp.size());
-                for (auto& [match, replace] : tmp)
-                    filter[match] = std::string(replace.as_string());
-            }
-
-            base_objects::slot_data::enumerate_slot_data(
-                [&](auto& item) {
-                    auto& name = item.id;
-                    auto& item_aliases = item.item_aliases;
-
-                    for (auto& [match, replace] : filter) {
-                        auto res = processor::process_match(name, match, replace);
-                        if (res)
-                            item_aliases.push_back(std::move(*res));
-                    }
-                }
-            );
-        }
-
-        for (auto&& item : internal_compatibility_versions.at(api::configuration::get().protocol.allowed_versions_processed.min()).at("disabled_armor_trim_patterns").as_array())
-            registers::armorTrimPatterns.erase((std::string)item.as_string());
-
-        base_objects::static_slot_data::initialize_items();
     }
 
     void initialize() {
-        internal_compatibility_versions = {
-            {765, boost::json::parse(resources::registry::compatibility::versions::_765).as_object()},
-            {766, boost::json::parse(resources::registry::compatibility::versions::_766).as_object()},
-            {767, boost::json::parse(resources::registry::compatibility::versions::_767).as_object()},
-            {768, boost::json::parse(resources::registry::compatibility::versions::_768).as_object()},
-        };
-        initialize_entities();
-        load_blocks();
-        prepare_built_in_pack();
         prepare_versions();
+        auto parsed_items = boost::json::parse(resources::registry::items);
+        {
+            for (auto&& [name, decl] : parsed_items.as_object()) {
+                base_objects::static_slot_data slot;
+                slot.id = "minecraft:" + std::string(name);
+                base_objects::slot_data::add_slot_data(std::move(slot));
+            }
+        }
         __initialization__versions_inital();
-        load_items();
+        load_blocks();
+        initialize_entities();
+        prepare_built_in_pack();
+        base_objects::entity_data::initialize_entities();
+        {
+            //complete initialization
+
+            for (auto&& [name, decl] : parsed_items.as_object()) {
+
+                std::unordered_map<int32_t, base_objects::component> components;
+                for (auto& [component_name, value] : decl.as_object().at("components").as_object()) {
+                    auto component = base_objects::component::parse_component(component_name, conversions::json::from_json(value));
+                    auto id = component.get_id();
+                    components[id] = std::move(component);
+                }
+                base_objects::slot_data::get_slot_data("minecraft:" + std::string(name)).default_components = std::move(components);
+            }
+        }
         __initialization__versions_post();
         load_registers_complete();
-        internal_compatibility_versions.clear();
     }
 }

@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_STORAGE_PERMISSIONS_MANAGER
 #define SRC_STORAGE_PERMISSIONS_MANAGER
 #include <filesystem>
@@ -32,8 +40,9 @@ namespace copper_server::storage {
 
     public:
         permissions_manager(const std::filesystem::path& base_path);
-        bool has_rights(const std::string& action_name, const base_objects::client_data_holder& client);
+        bool has_rights(const std::string& action_name, const base_objects::SharedClientData& client);
         bool has_action(const std::string& action_name) const;
+        bool has_action_limits(const std::string& action_name) const;
         bool has_permission(const std::string& permission_name) const;
         bool has_group(const std::string& group_name) const;
 
@@ -50,6 +59,7 @@ namespace copper_server::storage {
         void add_permission(base_objects::permissions_object permission);
         void remove_permission(const std::string& permission_tag);
 
+        bool is_in_group(const std::string& group_name, const base_objects::SharedClientData& client);
         void add_group(const base_objects::permission_group& group);
         void remove_group(const std::string& group_name);
         //permission_tags can also accept direct actions name with prefix 'action:'

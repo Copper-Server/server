@@ -13,3 +13,6 @@
 [submodule "tools/vcpkg"]
 	path = tools/vcpkg
 	url = https://github.com/microsoft/vcpkg.git
+[submodule "tools/extractor"]
+	path = tools/extractor
+	url = https://github.com/Melnytskyi/Extractor.git

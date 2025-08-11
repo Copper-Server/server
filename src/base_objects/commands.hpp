@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_BASE_OBJECTS_COMMANDS
 #define SRC_BASE_OBJECTS_COMMANDS
 #include <functional>
@@ -15,14 +23,24 @@
 
 namespace copper_server::base_objects {
     struct command_exception {
-        std::exception_ptr exception;
+        std::string what;
         size_t pos = 0;
-        command_exception(std::exception_ptr exception, size_t pos)
-            : exception(exception), pos(pos) {}
+
+        command_exception(const char* what, size_t pos)
+            : what(what), pos(pos) {}
+
+        command_exception(std::string_view what, size_t pos)
+            : what(what), pos(pos) {}
+
+        command_exception(std::string&& what, size_t pos)
+            : what(std::move(what)), pos(pos) {}
+
+        command_exception(const std::string& what, size_t pos)
+            : what(what), pos(pos) {}
     };
 
     struct command_context {
-        client_data_holder executor;
+        SharedClientData& executor;
         enbt::compound other_data;
         //for player, position, rotation, motion, and world_id automatically copied to other_data
         //command result must be set in other_data at "result" value
@@ -30,13 +48,13 @@ namespace copper_server::base_objects {
         void apply_executor_data();
 
         command_context(const client_data_holder& executor, bool apply_data = true)
-            : executor(executor) {
+            : executor(*executor) {
             if (apply_data)
                 apply_executor_data();
         }
 
-        command_context(client_data_holder&& executor, bool apply_data = true)
-            : executor(std::move(executor)) {
+        command_context(SharedClientData& executor, bool apply_data = true)
+            : executor(executor) {
             if (apply_data)
                 apply_executor_data();
         }
@@ -139,6 +157,9 @@ namespace copper_server::base_objects {
 
         int32_t get_child(list_array<command>& commands_nodes, const std::string& name);
 
+        packets::command_node build_node(bool is_root = false) const;
+
+
         command(const char* name)
             : name(name), suggestions("") {}
 
@@ -180,9 +201,10 @@ namespace copper_server::base_objects {
              })}
         };
         list_array<command> command_nodes;
-        list_array<uint8_t> graph_cache;
-        bool graph_ready;
-        void remove(size_t id);
+        size_t changes_id = 0;
+        void collect_child(int32_t id);
+        void remove_links(int32_t id);
+        void remove(int32_t id);
 
     public:
         friend class command_browser;
@@ -204,13 +226,13 @@ namespace copper_server::base_objects {
         void execute_command_from(const std::string& command_string, command& cmd, command_context&);
         list_array<std::string> request_suggestions(const std::string& command, command_context&);
 
-        const list_array<uint8_t>& compile_to_graph();
-        bool is_graph_fresh() const;
-
         bool belongs(command* command);
 
         //every command refrence after this command become invalid, even when created by plugins in OnCommandsLoad, bc. of the commit command for optimization
         void reload_commands();
+
+        size_t get_changes_id() const;
+        const list_array<command>& get_nodes() const;
 
 
         std::optional<parser> parse_string(command_parser&& config, const std::string& string);

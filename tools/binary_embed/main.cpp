@@ -1,6 +1,20 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
+#include "../../library/enbt/io_tools.hpp"
+#include "../../library/enbt/senbt.hpp"
+#include <boost/iostreams/filter/zstd.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <sstream>
+#include <stacktrace>
 
 struct resource_location {
     std::string namespace_open;
@@ -91,21 +105,20 @@ int direct_resource(const resource_location& location, const std::filesystem::pa
            "#include \""
         << location.output_path.filename().string() + ".hpp\"\n";
     out << location.namespace_open
-        << "const char __" << location.name << "[] = {";
+        << "const unsigned char __" << location.name << "[] = {";
     unsigned char c;
     if (skip_empty) {
         while (in.get(reinterpret_cast<char&>(c))) {
             if (c == ' ' || c == '\r' || c == '\n' || c == '\t')
                 continue;
-            out << "0x" << std::hex << static_cast<int>(c) << ", ";
+            out << "0x" << std::hex << static_cast<int>((uint8_t)c) << ", ";
         }
-
     } else
         while (in.get(reinterpret_cast<char&>(c)))
-            out << "0x" << std::hex << static_cast<int>(c) << ", ";
+            out << "0x" << std::hex << static_cast<int>((uint8_t)c) << ", ";
     out << "};\n";
 
-    out << "const std::string_view " << location.name << "(__" << location.name << ", sizeof(__" << location.name << "));\n";
+    out << "const std::string_view " << location.name << "((char*)__" << location.name << ", sizeof(__" << location.name << "));\n";
     out << location.namespace_close;
 
 
@@ -163,72 +176,6 @@ int ___recursive_merge_json(std::ofstream& out, const std::filesystem::directory
         return ___recursive_merge_json__file(out, file);
     return 0;
 }
-
-//int ___recursive_merge_json(std::ofstream& out, const std::filesystem::path& file) {
-//    for (const auto& f : std::filesystem::directory_iterator(file))
-//        if (auto it = ___recursive_merge_json(out, f); it != 0)
-//            return it;
-//    return 0;
-//}
-//int ___recursive_merge_json(std::ofstream& out, const std::filesystem::directory_entry& file);
-//
-//int ___recursive_merge_json__file(std::ofstream& out, const std::filesystem::directory_entry& file) {
-//    constexpr int key_delim = ':';
-//    constexpr int key_scope = '"';
-//
-//    std::ifstream in(file.path(), std::ios::binary);
-//    if (!in) {
-//        std::cerr << "Error opening input file: " << file.path() << "\n";
-//        return 1;
-//    }
-//    std::string key = file.path().filename().string();
-//
-//    out << "0x" << std::hex << key_scope;
-//    for (auto& c : key)
-//        out << ", 0x" << std::hex << static_cast<int>(c);
-//    out << ", 0x" << std::hex << key_scope << ", 0x" << std::hex << key_delim << ", ";
-//    unsigned char c;
-//    while (in.get(reinterpret_cast<char&>(c)))
-//        out << "0x" << std::hex << static_cast<int>(c) << ", ";
-//    return 0;
-//}
-//
-//int ___recursive_merge_json__directory(std::ofstream& out, const std::filesystem::directory_entry& file) {
-//    constexpr int scope_begin = '{';
-//    constexpr int scope_end = '}';
-//    constexpr int key_delim = ':';
-//    constexpr int key_scope = '"';
-//    constexpr int scope_comma = ',';
-//    std::string key = file.path().filename().string();
-//
-//    out << "0x" << std::hex << scope_begin << ", 0x" << std::hex << key_scope;
-//    for (auto& c : key)
-//        out << ", 0x" << std::hex << static_cast<int>(c);
-//    out << ", 0x" << std::hex << key_scope << ", 0x" << std::hex << key_delim << ", 0x" << std::hex << scope_begin << ", ";
-//
-//
-//    for (const auto& f : std::filesystem::directory_iterator(file.path())) {
-//        if (auto it = ___recursive_merge_json(out, f); it != 0) {
-//            if (it == 2)
-//                continue;
-//            return it;
-//        }
-//        out << "0x" << std::hex << scope_comma << ", ";
-//    }
-//
-//    out << "0x" << std::hex << scope_end << ", ";
-//    return 0;
-//}
-//
-//int ___recursive_merge_json(std::ofstream& out, const std::filesystem::directory_entry& file) {
-//    if (file.is_directory())
-//        return ___recursive_merge_json__directory(out, file);
-//    else
-//        return ___recursive_merge_json__file(out, file);
-//    return 0;
-//}
-//
-
 
 int ___recursive_merge_json(std::ofstream& out, const std::filesystem::path& file) {
     out << "{";
@@ -295,13 +242,13 @@ int merge_json_resource(const resource_location& location, const std::filesystem
            "#include \""
         << location.output_path.filename().string() + ".hpp\"\n";
     out << location.namespace_open
-        << "const char __" << location.name << "[] = {";
+        << "const unsigned char __" << location.name << "[] = {";
     unsigned char c;
     while (in.get(reinterpret_cast<char&>(c)))
-        out << "0x" << std::hex << static_cast<int>(c) << ", ";
+        out << "0x" << std::hex << static_cast<int>((uint8_t)c) << ", ";
     out << "};\n";
 
-    out << "const std::string_view " << location.name << "(__" << location.name << ", sizeof(__" << location.name << "));\n";
+    out << "const std::string_view " << location.name << "((char*)__" << location.name << ", sizeof(__" << location.name << "));\n";
     out << location.namespace_close;
 
 
@@ -312,25 +259,201 @@ int merge_json_resource(const resource_location& location, const std::filesystem
     header << location.namespace_close;
 
     std::cout << "Resource built successfully: " << location.full_name << std::endl;
+    return 0;
 }
 
-int main(int argc, char* argv[]) {
-    if (argc != 5) {
-        std::cerr << "Usage: " << argv[0] << " <direct/json/merge_json> <project namespace> <input resource> <base_output_path>\n";
+int senbt_resource(const resource_location& location, const std::filesystem::path& input_file, bool compress) {
+    std::filesystem::path output_file = location.output_path.parent_path() / (location.output_path.filename().string() + ".cpp");
+    std::filesystem::path header_file = location.output_path.parent_path() / (location.output_path.filename().string() + ".hpp");
+
+    auto file_change_time = std::filesystem::last_write_time(input_file);
+
+    std::filesystem::create_directories(output_file.parent_path());
+
+    if (std::filesystem::exists(output_file) && std::filesystem::exists(header_file)) {
+        auto output_file_time = std::filesystem::last_write_time(output_file);
+        auto header_file_time = std::filesystem::last_write_time(header_file);
+        if (file_change_time < output_file_time && file_change_time < header_file_time)
+            return 0;
+    }
+
+    std::cout << "Building resource: " << location.full_name << std::endl;
+
+    std::ifstream in(input_file, std::ios::binary);
+    if (!in) {
+        std::cerr << "Error opening input file: " << input_file << "\n";
+        return 1;
+    }
+    std::string senbt_data{std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+
+    std::stringstream ss;
+    {
+        boost::iostreams::filtering_ostream filter;
+        if (compress)
+            filter.push(boost::iostreams::zstd_compressor());
+        filter.push(ss);
+        enbt::io_helper::write_token(filter, senbt::parse(senbt_data));
+        filter.flush();
+        ss.flush();
+    }
+    if (ss.bad()) {
+        std::cerr << "Problem reading file: " << output_file << "\n";
         return 1;
     }
 
+
+    std::ofstream out(output_file, std::ios::binary);
+    if (!out) {
+        std::cerr << "Error opening output file: " << output_file << "\n";
+        return 1;
+    }
+
+    std::ofstream header(header_file, std::ios::binary);
+    if (!header) {
+        std::cerr << "Error opening header file: " << header_file << "\n";
+        return 1;
+    }
+
+    out << "//!Autogenerated file, do not modify\n"
+           "#include \""
+        << location.output_path.filename().string() + ".hpp\"\n";
+    out << location.namespace_open
+        << "const unsigned char __" << location.name << "[] = {";
+    unsigned char c;
+    for (auto c : ss.str())
+        out << "0x" << std::hex << static_cast<int>((uint8_t)c) << ", ";
+    out << "};\n";
+
+    out << "const std::string_view " << location.name << "((char*)__" << location.name << ", sizeof(__" << location.name << "));\n";
+    out << location.namespace_close;
+
+
+    header << "//!Autogenerated file, do not modify\n";
+    header << "#pragma once\n#include <string>\n";
+    header << location.namespace_open
+           << "extern const std::string_view " << location.name << ";\n";
+    header << location.namespace_close;
+
+    std::cout << "Resource built successfully: " << location.full_name << std::endl;
+    return 0;
+}
+
+int ___recursive_merge_senbt(std::ofstream& out, const std::filesystem::directory_entry& file);
+
+int ___recursive_merge_senbt__file(std::ofstream& out, const std::filesystem::directory_entry& file) {
+    std::ifstream in(file.path(), std::ios::binary);
+    if (!in) {
+        std::cerr << "Error opening input file: " << file.path() << "\n";
+        return 1;
+    }
+    unsigned char c;
+    while (in.get(reinterpret_cast<char&>(c))) {
+        if (c == ' ' || c == '\r' || c == '\n' || c == '\t')
+            continue;
+        out << c;
+    }
+    return 0;
+}
+
+int ___recursive_merge_senbt__directory(std::ofstream& out, const std::filesystem::directory_entry& file) {
+    out << "{";
+    bool begin = true;
+    for (const auto& f : std::filesystem::directory_iterator(file.path())) {
+        if (!begin)
+            out << ", ";
+        begin = false;
+        if (auto it = ___recursive_merge_senbt(out, f); it != 0) {
+            if (it == 2)
+                continue;
+            return it;
+        }
+    }
+    out << "}";
+    return 0;
+}
+
+int ___recursive_merge_senbt(std::ofstream& out, const std::filesystem::directory_entry& file) {
+    std::string key = file.path().filename().string();
+    out << "\"" << key << "\": ";
+    if (file.is_directory())
+        return ___recursive_merge_senbt__directory(out, file);
+    else
+        return ___recursive_merge_senbt__file(out, file);
+    return 0;
+}
+
+int ___recursive_merge_senbt(std::ofstream& out, const std::filesystem::path& file) {
+    out << "{";
+    bool begin = true;
+    for (const auto& f : std::filesystem::directory_iterator(file)) {
+        if (!begin)
+            out << ", ";
+        begin = false;
+        if (auto it = ___recursive_merge_senbt(out, f); it != 0)
+            return it;
+    }
+    out << "}";
+    return 0;
+}
+
+int merge_senbt_resource(const resource_location& location, const std::filesystem::path& input_file, bool compress) {
+    std::filesystem::path tmp_file = location.output_path.parent_path() / (location.output_path.filename().string() + "_tmp.enbt");
+    std::filesystem::path output_file = location.output_path.parent_path() / (location.output_path.filename().string() + ".cpp");
+    std::filesystem::path header_file = location.output_path.parent_path() / (location.output_path.filename().string() + ".hpp");
+
+    auto file_change_time = std::filesystem::last_write_time(input_file);
+
+    std::filesystem::create_directories(output_file.parent_path());
+
+    if (std::filesystem::exists(output_file) && std::filesystem::exists(header_file)) {
+        auto output_file_time = std::filesystem::last_write_time(output_file);
+        auto header_file_time = std::filesystem::last_write_time(header_file);
+        if (file_change_time < output_file_time && file_change_time < header_file_time)
+            return 0;
+    }
+
+    {
+        std::ofstream out(tmp_file, std::ios::binary | std::ios::trunc);
+        if (!out) {
+            std::cerr << "Error opening output file: " << tmp_file << "\n";
+            return 1;
+        }
+
+        if (auto it = ___recursive_merge_senbt(out, input_file); it != 0)
+            return it;
+    }
+    return senbt_resource(location, tmp_file, compress);
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 5 && argc != 6) {
+        std::cerr << "Usage: " << argv[0] << " <direct/json/merge_json/senbt/merge_senbt> <project namespace> <input resource> <base_output_path> [compressed]\n";
+        return 1;
+    }
+    bool compressed = false;
+    if (argc == 6)
+        compressed = (strcmp(argv[5], "compressed") == 0);
+
     std::filesystem::path input_file = argv[3];
     resource_location location = resource_location_extractor(argv[2], input_file, argv[4]);
-
-    if (strcmp(argv[1], "direct") == 0)
-        return direct_resource(location, input_file);
-    else if (strcmp(argv[1], "json") == 0)
-        return direct_resource(location, input_file, true);
-    else if (strcmp(argv[1], "merge_json") == 0)
-        return merge_json_resource(location, input_file);
-    else {
-        std::cerr << "Unknown command: " << argv[1] << "\n";
+    try {
+        if (strcmp(argv[1], "direct") == 0)
+            return direct_resource(location, input_file);
+        else if (strcmp(argv[1], "json") == 0)
+            return direct_resource(location, input_file, true);
+        else if (strcmp(argv[1], "merge_json") == 0)
+            return merge_json_resource(location, input_file);
+        else if (strcmp(argv[1], "senbt") == 0)
+            return senbt_resource(location, input_file, compressed);
+        else if (strcmp(argv[1], "merge_senbt") == 0)
+            return merge_senbt_resource(location, input_file, compressed);
+        else {
+            std::cerr << "Unknown command: " << argv[1] << "\n";
+            return 1;
+        }
+    } catch (const std::exception& ex) {
+        std::cout << "Failed to build resource: " << location.full_name << ", unexected error: " << ex.what()
+                  << ", stack trace " << std::stacktrace::current() << std::endl;
         return 1;
     }
 

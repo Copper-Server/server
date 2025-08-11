@@ -1,0 +1,698 @@
+{
+  "speed": {
+    "id": 0,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.speed",
+    "name": "Speed",
+    "category": "BENEFICIAL",
+    "rgb": 3402751,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": [
+      {
+        "name": "movement_speed",
+        "operation": "ADD_MULTIPLIED_TOTAL",
+        "value": 0.20000000298023224
+      }
+    ]
+  },
+  "slowness": {
+    "id": 1,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.slowness",
+    "name": "Slowness",
+    "category": "HARMFUL",
+    "rgb": 9154528,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": [
+      {
+        "name": "movement_speed",
+        "operation": "ADD_MULTIPLIED_TOTAL",
+        "value": -0.15000000596046448
+      }
+    ]
+  },
+  "haste": {
+    "id": 2,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.haste",
+    "name": "Haste",
+    "category": "BENEFICIAL",
+    "rgb": 14270531,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": [
+      {
+        "name": "attack_speed",
+        "operation": "ADD_MULTIPLIED_TOTAL",
+        "value": 0.10000000149011612
+      }
+    ]
+  },
+  "mining_fatigue": {
+    "id": 3,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.mining_fatigue",
+    "name": "Mining Fatigue",
+    "category": "HARMFUL",
+    "rgb": 4866583,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": [
+      {
+        "name": "attack_speed",
+        "operation": "ADD_MULTIPLIED_TOTAL",
+        "value": -0.10000000149011612
+      }
+    ]
+  },
+  "strength": {
+    "id": 4,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.strength",
+    "name": "Strength",
+    "category": "BENEFICIAL",
+    "rgb": 16762624,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": [
+      {
+        "name": "attack_damage",
+        "operation": "ADD_VALUE",
+        "value": 3.0
+      }
+    ]
+  },
+  "instant_health": {
+    "id": 5,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": true,
+    "translation_key": "effect.minecraft.instant_health",
+    "name": "Instant Health",
+    "category": "BENEFICIAL",
+    "rgb": 16262179,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "instant_damage": {
+    "id": 6,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": true,
+    "translation_key": "effect.minecraft.instant_damage",
+    "name": "Instant Damage",
+    "category": "HARMFUL",
+    "rgb": 11101546,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "jump_boost": {
+    "id": 7,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.jump_boost",
+    "name": "Jump Boost",
+    "category": "BENEFICIAL",
+    "rgb": 16646020,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": [
+      {
+        "name": "safe_fall_distance",
+        "operation": "ADD_VALUE",
+        "value": 1.0
+      }
+    ]
+  },
+  "nausea": {
+    "id": 8,
+    "fade_in_ticks": 150,
+    "fade_out_ticks": 20,
+    "fade_out_threshold_ticks": 60,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.nausea",
+    "name": "Nausea",
+    "category": "HARMFUL",
+    "rgb": 5578058,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "regeneration": {
+    "id": 9,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.regeneration",
+    "name": "Regeneration",
+    "category": "BENEFICIAL",
+    "rgb": 13458603,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "resistance": {
+    "id": 10,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.resistance",
+    "name": "Resistance",
+    "category": "BENEFICIAL",
+    "rgb": 9520880,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "fire_resistance": {
+    "id": 11,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.fire_resistance",
+    "name": "Fire Resistance",
+    "category": "BENEFICIAL",
+    "rgb": 16750848,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "water_breathing": {
+    "id": 12,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.water_breathing",
+    "name": "Water Breathing",
+    "category": "BENEFICIAL",
+    "rgb": 10017472,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "invisibility": {
+    "id": 13,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.invisibility",
+    "name": "Invisibility",
+    "category": "BENEFICIAL",
+    "rgb": 16185078,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": [
+      {
+        "name": "waypoint_transmit_range",
+        "operation": "ADD_MULTIPLIED_TOTAL",
+        "value": -1.0
+      }
+    ]
+  },
+  "blindness": {
+    "id": 14,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.blindness",
+    "name": "Blindness",
+    "category": "HARMFUL",
+    "rgb": 2039587,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "night_vision": {
+    "id": 15,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.night_vision",
+    "name": "Night Vision",
+    "category": "BENEFICIAL",
+    "rgb": 12779366,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "hunger": {
+    "id": 16,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.hunger",
+    "name": "Hunger",
+    "category": "HARMFUL",
+    "rgb": 5797459,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "weakness": {
+    "id": 17,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.weakness",
+    "name": "Weakness",
+    "category": "HARMFUL",
+    "rgb": 4738376,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": [
+      {
+        "name": "attack_damage",
+        "operation": "ADD_VALUE",
+        "value": -4.0
+      }
+    ]
+  },
+  "poison": {
+    "id": 18,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.poison",
+    "name": "Poison",
+    "category": "HARMFUL",
+    "rgb": 8889187,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "wither": {
+    "id": 19,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.wither",
+    "name": "Wither",
+    "category": "HARMFUL",
+    "rgb": 7561558,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "health_boost": {
+    "id": 20,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.health_boost",
+    "name": "Health Boost",
+    "category": "BENEFICIAL",
+    "rgb": 16284963,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": [
+      {
+        "name": "max_health",
+        "operation": "ADD_VALUE",
+        "value": 4.0
+      }
+    ]
+  },
+  "absorption": {
+    "id": 21,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.absorption",
+    "name": "Absorption",
+    "category": "BENEFICIAL",
+    "rgb": 2445989,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": [
+      {
+        "name": "max_absorption",
+        "operation": "ADD_VALUE",
+        "value": 4.0
+      }
+    ]
+  },
+  "saturation": {
+    "id": 22,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": true,
+    "translation_key": "effect.minecraft.saturation",
+    "name": "Saturation",
+    "category": "BENEFICIAL",
+    "rgb": 16262179,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "glowing": {
+    "id": 23,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.glowing",
+    "name": "Glowing",
+    "category": "NEUTRAL",
+    "rgb": 9740385,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "levitation": {
+    "id": 24,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.levitation",
+    "name": "Levitation",
+    "category": "HARMFUL",
+    "rgb": 13565951,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "luck": {
+    "id": 25,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.luck",
+    "name": "Luck",
+    "category": "BENEFICIAL",
+    "rgb": 5882118,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": [
+      {
+        "name": "luck",
+        "operation": "ADD_VALUE",
+        "value": 1.0
+      }
+    ]
+  },
+  "unluck": {
+    "id": 26,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.unluck",
+    "name": "Bad Luck",
+    "category": "HARMFUL",
+    "rgb": 12624973,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": [
+      {
+        "name": "luck",
+        "operation": "ADD_VALUE",
+        "value": -1.0
+      }
+    ]
+  },
+  "slow_falling": {
+    "id": 27,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.slow_falling",
+    "name": "Slow Falling",
+    "category": "BENEFICIAL",
+    "rgb": 15978425,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "conduit_power": {
+    "id": 28,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.conduit_power",
+    "name": "Conduit Power",
+    "category": "BENEFICIAL",
+    "rgb": 1950417,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "dolphins_grace": {
+    "id": 29,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.dolphins_grace",
+    "name": "Dolphin's Grace",
+    "category": "BENEFICIAL",
+    "rgb": 8954814,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "bad_omen": {
+    "id": 30,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.bad_omen",
+    "name": "Bad Omen",
+    "category": "NEUTRAL",
+    "rgb": 745784,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "hero_of_the_village": {
+    "id": 31,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.hero_of_the_village",
+    "name": "Hero of the Village",
+    "category": "BENEFICIAL",
+    "rgb": 4521796,
+    "is_beneficial": true,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "darkness": {
+    "id": 32,
+    "fade_in_ticks": 22,
+    "fade_out_ticks": 22,
+    "fade_out_threshold_ticks": 22,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.darkness",
+    "name": "Darkness",
+    "category": "HARMFUL",
+    "rgb": 2696993,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "trial_omen": {
+    "id": 33,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.trial_omen",
+    "name": "Trial Omen",
+    "category": "NEUTRAL",
+    "rgb": 1484454,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "raid_omen": {
+    "id": 34,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.raid_omen",
+    "name": "Raid Omen",
+    "category": "NEUTRAL",
+    "rgb": 14565464,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "wind_charged": {
+    "id": 35,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.wind_charged",
+    "name": "Wind Charged",
+    "category": "HARMFUL",
+    "rgb": 12438015,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "weaving": {
+    "id": 36,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.weaving",
+    "name": "Weaving",
+    "category": "HARMFUL",
+    "rgb": 7891290,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "oozing": {
+    "id": 37,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.oozing",
+    "name": "Oozing",
+    "category": "HARMFUL",
+    "rgb": 10092451,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  },
+  "infested": {
+    "id": 38,
+    "fade_in_ticks": 0,
+    "fade_out_ticks": 0,
+    "fade_out_threshold_ticks": 0,
+    "is_instant": false,
+    "translation_key": "effect.minecraft.infested",
+    "name": "Infested",
+    "category": "HARMFUL",
+    "rgb": 9214860,
+    "is_beneficial": false,
+    "required_features": [
+      "minecraft:vanilla"
+    ],
+    "attribute_modifiers": []
+  }
+}

@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_MOJANG_API_SESSION_SERVER
 #define SRC_MOJANG_API_SESSION_SERVER
 #include <chrono>
@@ -7,19 +15,6 @@
 
 namespace mojang::api {
     class session_server {
-        static enbt::raw_uuid generateOfflineUUID() {
-            static std::random_device rd;
-            static std::mt19937_64 gen(rd());
-            static std::uniform_int_distribution<uint64_t> dis;
-            uint64_t data[2]{dis(gen), dis(gen)};
-            uint8_t* ptr = (uint8_t*)data;
-
-            enbt::raw_uuid result{ptr[0], ptr[1], ptr[2], ptr[3], ptr[4], ptr[5], ptr[6], ptr[7], ptr[8], ptr[9], ptr[10], ptr[11], ptr[12], ptr[13], ptr[14], ptr[15]};
-            //set version to 3
-            result.data[6] = (result.data[6] & 0x0F) | 0x30;
-            return result;
-        }
-
     public:
         struct player_data {
             struct property {

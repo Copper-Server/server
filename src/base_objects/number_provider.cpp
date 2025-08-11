@@ -1,4 +1,11 @@
-
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #include <random>
 #include <src/base_objects/number_provider.hpp>
 
@@ -54,10 +61,10 @@ namespace copper_server::base_objects {
                     return std::uniform_real_distribution<float>(arg->get_min_inclusive_float(), arg->get_max_exclusive_float())(engine);
                 } else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, number_provider_clamped_normal*>) {
                     auto engine = std::default_random_engine();
-                    return std::clamp<float>(std::normal_distribution<float>(arg->mean, arg->deviation)(engine), arg->min, arg->max);
+                    return std::clamp<float>(std::normal_distribution<float>(arg->mean, arg->deviation)(engine), (float)arg->min, (float)arg->max);
                 } else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, number_provider_trapezoid*>) {
                     auto engine = std::default_random_engine();
-                    return std::clamp<float>(std::uniform_real_distribution<float>(arg->min, arg->max)(engine), arg->min, arg->max);
+                    return std::clamp<float>(std::uniform_real_distribution<float>((float)arg->min, (float)arg->max)(engine), (float)arg->min, (float)arg->max);
                 } else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, number_provider_clamped*>)
                     return std::clamp<float>(arg->source.get_float(), arg->get_min_inclusive_float(), arg->get_max_inclusive_float());
                 else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, number_provider_weighted_list*>) {
@@ -77,7 +84,7 @@ namespace copper_server::base_objects {
                     return std::clamp<float>(std::uniform_real_distribution<float>(arg->get_min_inclusive_float(), arg->get_max_exclusive_float())(engine), arg->get_min_inclusive_float(), arg->get_max_exclusive_float());
                 } else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, number_provider_binomial*>) {
                     auto engine = std::default_random_engine();
-                    return std::binomial_distribution<int32_t>(arg->n.get_int(), arg->p.get_int())(engine);
+                    return (float)std::binomial_distribution<int32_t>(arg->n.get_int(), arg->p.get_int())(engine);
                 }
                 //else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, number_provider_score*>)
                 //    return arg->source.get_float();
@@ -102,7 +109,7 @@ namespace copper_server::base_objects {
                     return std::uniform_int_distribution<int32_t>(arg->get_min_inclusive_int(), arg->get_max_exclusive_int())(engine);
                 } else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, number_provider_clamped_normal*>) {
                     auto engine = std::default_random_engine();
-                    return std::clamp<int32_t>(std::normal_distribution<float>(arg->mean, arg->deviation)(engine), arg->min, arg->max);
+                    return std::clamp<int32_t>((int32_t)std::normal_distribution<float>(arg->mean, arg->deviation)(engine), arg->min, arg->max);
                 } else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, number_provider_trapezoid*>) {
                     auto engine = std::default_random_engine();
                     return std::clamp<int32_t>(std::uniform_int_distribution<int32_t>(arg->min, arg->max)(engine), arg->min, arg->max);
@@ -150,10 +157,10 @@ namespace copper_server::base_objects {
                     return std::uniform_real_distribution<float>(arg->get_min_inclusive_float(), arg->get_max_exclusive_float())(engine);
                 } else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, number_provider_clamped_normal*>) {
                     auto engine = std::default_random_engine();
-                    return std::clamp<float>(std::normal_distribution<float>(arg->mean, arg->deviation)(engine), arg->min, arg->max);
+                    return std::clamp<float>(std::normal_distribution<float>(arg->mean, arg->deviation)(engine), (float)arg->min, (float)arg->max);
                 } else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, number_provider_trapezoid*>) {
                     auto engine = std::default_random_engine();
-                    return std::clamp<float>(std::uniform_real_distribution<float>(arg->min, arg->max)(engine), arg->min, arg->max);
+                    return std::clamp<float>(std::uniform_real_distribution<float>((float)arg->min, (float)arg->max)(engine), (float)arg->min, (float)arg->max);
                 } else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, number_provider_clamped*>)
                     return std::clamp<float>(arg->source.get_float(other_data), arg->get_min_inclusive_float(), arg->get_max_inclusive_float());
                 else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, number_provider_weighted_list*>) {
@@ -173,7 +180,7 @@ namespace copper_server::base_objects {
                     return std::clamp<float>(std::uniform_real_distribution<float>(arg->get_min_inclusive_float(), arg->get_max_exclusive_float())(engine), arg->get_min_inclusive_float(), arg->get_max_exclusive_float());
                 } else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, number_provider_binomial*>) {
                     auto engine = std::default_random_engine();
-                    return std::binomial_distribution<int32_t>(arg->n.get_int(other_data), arg->p.get_int(other_data))(engine);
+                    return (float)std::binomial_distribution<int32_t>(arg->n.get_int(other_data), arg->p.get_int(other_data))(engine);
                 }
                 //else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, number_provider_score*>)
                 //    return arg->source.get_float(other_data);
@@ -198,7 +205,7 @@ namespace copper_server::base_objects {
                     return std::uniform_int_distribution<int32_t>(arg->get_min_inclusive_int(), arg->get_max_exclusive_int())(engine);
                 } else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, number_provider_clamped_normal*>) {
                     auto engine = std::default_random_engine();
-                    return std::clamp<int32_t>(std::normal_distribution<float>(arg->mean, arg->deviation)(engine), arg->min, arg->max);
+                    return std::clamp<int32_t>((int32_t)std::normal_distribution<float>(arg->mean, arg->deviation)(engine), arg->min, arg->max);
                 } else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, number_provider_trapezoid*>) {
                     auto engine = std::default_random_engine();
                     return std::clamp<int32_t>(std::uniform_int_distribution<int32_t>(arg->min, arg->max)(engine), arg->min, arg->max);

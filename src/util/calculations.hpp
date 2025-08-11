@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_UTIL_CALCULATIONS
 #define SRC_UTIL_CALCULATIONS
 #include <cmath>
@@ -18,6 +26,34 @@ namespace copper_server::util {
         bool operator!=(const XYZ& comp) {
             return x != comp.x || y != comp.y || z != comp.z;
         }
+
+        XYZ& operator+=(const XYZ& other) {
+            x += other.x;
+            y += other.y;
+            z += other.z;
+            return *this;
+        }
+
+        XYZ& operator-=(const XYZ& other) {
+            x -= other.x;
+            y -= other.y;
+            z -= other.z;
+            return *this;
+        }
+
+        XYZ& operator*=(const XYZ& other) {
+            x *= other.x;
+            y *= other.y;
+            z *= other.z;
+            return *this;
+        }
+
+        XYZ& operator/=(const XYZ& other) {
+            x /= other.x;
+            y /= other.y;
+            z /= other.z;
+            return *this;
+        }
     };
 
     typedef XYZ<double> VECTOR;
@@ -34,6 +70,30 @@ namespace copper_server::util {
         bool operator!=(const XY& comp) const {
             return x != comp.x || y != comp.y;
         }
+
+        XY& operator+=(const XY& other) {
+            x += other.x;
+            y += other.y;
+            return *this;
+        }
+
+        XY& operator-=(const XY& other) {
+            x -= other.x;
+            y -= other.y;
+            return *this;
+        }
+
+        XY& operator*=(const XY& other) {
+            x *= other.x;
+            y *= other.y;
+            return *this;
+        }
+
+        XY& operator/=(const XY& other) {
+            x /= other.x;
+            y /= other.y;
+            return *this;
+        }
     };
 
     typedef XY<double> ANGLE;
@@ -49,6 +109,30 @@ namespace copper_server::util {
         bool operator!=(const ANGLE_DEG& comp) {
             return x != comp.x || y != comp.y;
         }
+
+        ANGLE_DEG& operator+=(const ANGLE_DEG& other) {
+            x += other.x;
+            y += other.y;
+            return *this;
+        }
+
+        ANGLE_DEG& operator-=(const ANGLE_DEG& other) {
+            x -= other.x;
+            y -= other.y;
+            return *this;
+        }
+
+        ANGLE_DEG& operator*=(const ANGLE_DEG& other) {
+            x *= other.x;
+            y *= other.y;
+            return *this;
+        }
+
+        ANGLE_DEG& operator/=(const ANGLE_DEG& other) {
+            x /= other.x;
+            y /= other.y;
+            return *this;
+        }
     };
 
     struct ANGLE_RAD {
@@ -61,6 +145,30 @@ namespace copper_server::util {
 
         bool operator!=(const ANGLE_RAD& comp) {
             return x != comp.x || y != comp.y;
+        }
+
+        ANGLE_RAD& operator+=(const ANGLE_RAD& other) {
+            x += other.x;
+            y += other.y;
+            return *this;
+        }
+
+        ANGLE_RAD& operator-=(const ANGLE_RAD& other) {
+            x -= other.x;
+            y -= other.y;
+            return *this;
+        }
+
+        ANGLE_RAD& operator*=(const ANGLE_RAD& other) {
+            x *= other.x;
+            y *= other.y;
+            return *this;
+        }
+
+        ANGLE_RAD& operator/=(const ANGLE_RAD& other) {
+            x /= other.x;
+            y /= other.y;
+            return *this;
         }
     };
 
@@ -92,6 +200,8 @@ namespace copper_server::util {
     VECTOR normalize(VECTOR val);
     VECTOR strength(VECTOR val, double mult);
     VECTOR weak(VECTOR val, double div);
+
+    ANGLE_DEG direction(VECTOR p0, VECTOR p1);
 
 
     double rad_to_deg180(double val);

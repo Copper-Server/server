@@ -1,25 +1,51 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_BASE_OBJECTS_PLAYER
 #define SRC_BASE_OBJECTS_PLAYER
 #include <cstdint>
 #include <library/enbt/enbt.hpp>
-#include <src/base_objects/entity.hpp>
+#include <library/list_array.hpp>
+#include <src/base_objects/atomic_holder.hpp>
 #include <string>
 
 namespace copper_server::base_objects {
+    struct entity;
+    using entity_ref = atomic_holder<entity>;
+
     class player {
     public:
         struct Abilities {
-            union Flags {
-                struct {
-                    bool invulnerable : 1;
-                    bool flying : 1;
-                    bool allow_flying : 1;
-                    bool creative_mode : 1;
-                    bool flying_speed : 1;
-                    bool walking_speed : 1;
-                };
+            struct Flags {
+                bool invulnerable : 1;
+                bool flying : 1;
+                bool allow_flying : 1;
+                bool creative_mode : 1;
+                bool flying_speed : 1;
+                bool walking_speed : 1;
 
-                uint8_t mask = 0;
+                inline void set(uint8_t raw) {
+                    union u_t {
+                        Flags flag;
+                        uint8_t r;
+                    } u{.r = raw};
+
+                    *this = u.flag;
+                }
+
+                inline uint8_t get() const {
+                    union u_t {
+                        Flags flag;
+                        uint8_t r;
+                    } u{.flag = *this};
+
+                    return u.r;
+                }
             } flags;
 
             float flying_speed = 0.05f;
@@ -45,7 +71,16 @@ namespace copper_server::base_objects {
             std::string world_id;
         };
 
+        struct OwnRespawnLocation {
+            int32_t x = 0;
+            int32_t y = 0;
+            int32_t z = 0;
+            float angle = 0;
+            std::string world_id;
+        };
+
         std::optional<DeathLocation> last_death_location;
+        std::optional<OwnRespawnLocation> own_respawn_location;
 
         list_array<std::string> permission_groups;
 
@@ -60,28 +95,10 @@ namespace copper_server::base_objects {
         enbt::compound local_data;
 
         player& operator=(const player& other) = delete;
+        player& operator=(player&& other);
 
-        player& operator=(player&& other) {
-            abilities = std::move(other.abilities);
-            world_id = std::move(other.world_id);
-            player_name = std::move(other.player_name);
-            hardcore_hearts = other.hardcore_hearts;
-            reduced_debug_info = other.reduced_debug_info;
-            show_death_screen = other.show_death_screen;
-            op_level = other.op_level;
-            gamemode = other.gamemode;
-            prev_gamemode = other.prev_gamemode;
-            last_death_location = other.last_death_location;
-            permission_groups = std::move(other.permission_groups);
-            permissions = std::move(other.permissions);
-            instant_granted_actions = std::move(other.instant_granted_actions);
-            assigned_entity = std::move(other.assigned_entity);
-            local_data = std::move(other.local_data);
-            return *this;
-        }
-
-        player() = default;
-        ~player() = default;
+        player();
+        ~player();
     };
 }
 

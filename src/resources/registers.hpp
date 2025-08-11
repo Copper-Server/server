@@ -1,7 +1,17 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_RESOURCES_REGISTERS
 #define SRC_RESOURCES_REGISTERS
 #include <boost/json/value.hpp>
 #include <filesystem>
+#include <library/list_array.hpp>
+#include <src/base_objects/data_packs/known_pack.hpp>
 
 namespace copper_server::resources {
     void initialize_entities();
@@ -10,12 +20,13 @@ namespace copper_server::resources {
     void prepare_built_in_pack();
 
     //processes whole pack data,
-    //tags always processed first, correctly handles replace flag and eats circular dependencies without problem, ignores unregistered tags
+    //tags always processed first, correctly handles replace flag and processes circular dependencies without problem
     //! Thread unsafe, should be called from wrapped api instead
-    void process_pack(const std::filesystem::path& folder_path_to_data);
-    void process_pack(const std::filesystem::path& folder_path_to_data_without_namespace, const std::string& namespace_);
-    void process_pack(boost::json::object& memory, const std::string& namespace_);
+    void process_pack(const std::filesystem::path& folder_path_to_data_packs);
+    void process_pack(const std::filesystem::path& folder_path_to_data_with_namespace, const std::string& namespace_, const std::string& id);
+    void process_pack(boost::json::object& memory, const std::string& namespace_, const std::string& id);
 
+    list_array<base_objects::data_packs::known_pack> loaded_packs();
     //Accepts types:
     // advancement,
     // banner_pattern,
@@ -28,11 +39,17 @@ namespace copper_server::resources {
     // loot_table,
     // painting_variant,
     // recipe,
-    // tag/[the tag type], // like from file data/<namespace>/tags/<function>/<name>.json // the `function` is the tag type
-    // tags/[the tag type],
+    // tag/[the tag entry], // like from file data/<namespace>/tags/<entry>/<name>.json // the `entry` is the tag entry
+    // tags/[the tag entry],
     // trim_pattern,
     // trim_material,
     // wolf_variant,
+    // wolf_sound_variant,
+    // cat_variant,
+    // chicken_variant,
+    // cow_variant,
+    // frog_variant,
+    // pig_variant,
     // worldgen/biome,
     // worldgen/configured_carver,
     // worldgen/configured_feature,

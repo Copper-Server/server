@@ -1,5 +1,13 @@
-
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #include <format>
+#include <library/fast_task/include/files.hpp>
 #include <src/log.hpp>
 #include <src/util/json_helpers.hpp>
 
@@ -7,12 +15,18 @@ namespace copper_server::util {
     std::optional<boost::json::object> try_read_json_file(const std::filesystem::path& file_path) {
         boost::json::object data;
         {
-            std::ifstream file(file_path);
+            fast_task::files::async_iofstream file(
+                file_path,
+                fast_task::files::open_mode::read,
+                fast_task::files::on_open_action::open,
+                fast_task::files::_sync_flags{}
+            );
             if (file.is_open()) {
+                if (!std::filesystem::file_size(file_path))
+                    return data;
                 boost::system::error_code ec;
                 auto result = boost::json::parse(file, ec);
                 data = result.is_object() ? std::move(result).as_object() : boost::json::object{{"root", std::move(result)}};
-                file.close();
                 if (ec) {
                     if (ec.message() == "incomplete JSON")
                         if (std::filesystem::is_empty(file_path))
@@ -31,6 +45,8 @@ namespace copper_server::util {
     std::optional<boost::json::object> try_read_json_file(std::string_view from_memory) {
         boost::json::object data;
         {
+            if (from_memory.empty())
+                return data;
             boost::system::error_code ec;
             auto result = boost::json::parse(from_memory, ec);
             data = result.is_object() ? std::move(result).as_object() : boost::json::object{{"root", std::move(result)}};
@@ -46,13 +62,13 @@ namespace copper_server::util {
     }
 
     void pretty_print(std::ostream& os, const boost::json::value& jv, std::string* indent) {
-        std::string indent_;
+        std::string indent_ = "\n";
         if (!indent)
             indent = &indent_;
 
         switch (jv.kind()) {
         case boost::json::kind::object: {
-            os << "{\n";
+            os << "{";
             indent->append(4, ' ');
 
             std::vector<boost::json::string> keys;
@@ -68,15 +84,18 @@ namespace copper_server::util {
             for (auto const& k : keys) {
                 os << *indent << boost::json::serialize(k) << ": ";
                 pretty_print(os, jv.at(k), indent);
-                os << (++i == n ? "\n" : ",\n");
+                os << (++i == n ? "" : ",");
             }
 
             indent->resize(indent->size() - 4);
-            os << *indent << "}";
+            if (n > 0)
+                os << *indent << "}";
+            else
+                os << "}";
             break;
         }
         case boost::json::kind::array: {
-            os << "[\n";
+            os << "[";
             indent->append(4, ' ');
 
             auto const& a = jv.get_array();
@@ -86,11 +105,14 @@ namespace copper_server::util {
             for (auto const& v : a) {
                 os << *indent;
                 pretty_print(os, v, indent);
-                os << (++i == n ? "\n" : ",\n");
+                os << (++i == n ? "" : ",");
             }
 
             indent->resize(indent->size() - 4);
-            os << *indent << "]";
+            if (n > 0)
+                os << *indent << "]";
+            else
+                os << "]";
             break;
         }
 
@@ -100,7 +122,7 @@ namespace copper_server::util {
         }
         }
 
-        if (indent->empty())
+        if (*indent == "\n")
             os << "\n";
     }
 

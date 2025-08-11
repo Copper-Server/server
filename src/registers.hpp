@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_REGISTERS
 #define SRC_REGISTERS
 #include <library/enbt/enbt.hpp>
@@ -5,10 +13,10 @@
 #include <src/base_objects/chat.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/base_objects/float_provider.hpp>
+#include <src/base_objects/id_registry.hpp>
 #include <src/base_objects/number_provider.hpp>
-#include <src/base_objects/particle_data.hpp>
 #include <src/base_objects/position.hpp>
-#include <src/base_objects/slot.hpp>
+#include <src/base_objects/recipe.hpp>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -17,31 +25,44 @@
 namespace copper_server {
     namespace registers {
 #pragma region CLIENT/SERVER
+
         struct IntegerDistribution {
             std::string type;
             enbt::value value;
+
+            enbt::compound get_enbt() const {
+                enbt::compound distribution;
+                if (value.is_compound()) {
+                    distribution = value;
+                    distribution["type"] = type;
+                } else {
+                    distribution["type"] = type;
+                    distribution["value"] = value;
+                }
+                return distribution;
+            }
         };
 
         struct Advancement {
             struct Display {
                 struct Icon {
-                    std::string item;
+                    base_objects::item_id_t item;
                     std::string nbt;
                 };
 
                 Icon icon;
-                std::string title;
+                Chat title;
                 std::string frame;
                 std::string background;
-                std::string description;
+                Chat description;
                 bool show_toast;
                 bool announce_to_chat;
                 bool hidden;
             };
 
             struct Rewards {
-                std::vector<std::string> recipes;
-                std::vector<std::string> loot;
+                std::vector<base_objects::id_recipe> recipes;
+                std::vector<base_objects::id_loot_table> loot;
                 int32_t experience = 0;
                 std::string function;
             };
@@ -51,34 +72,47 @@ namespace copper_server {
             enbt::compound criteria;
             std::vector<std::vector<std::string>> requirements;
             Rewards rewards;
+            bool send_via_network_body = true;
             bool sends_telemetry_event = false;
         };
 
-        using JukeboxSong = base_objects::slot_component::jukebox_playable::jukebox_extended;
+        struct JukeboxSong {
+            struct custom {
+                base_objects::id_sound_event sound_id;
+                std::optional<float> fixed_range;
+            };
+
+            std::variant<base_objects::id_sound_event, custom> sound_event;
+            int32_t comparator_output;
+            int32_t length_in_seconds;
+            Chat description;
+
+            uint32_t id;
+            bool send_via_network_body = true;
+        };
 
         struct ArmorTrimMaterial {
-            std::string asset_name;
-            std::string ingredient;
-            std::unordered_map<std::string, std::string> override_armor_materials; //leather, chainmail, iron, gold, diamond, turtle, netherite
             std::variant<std::string, Chat> description;
-            float item_model_index;
+            std::string asset_name;
             uint32_t id;
             bool allow_override = false;
+            bool send_via_network_body = true;
         };
 
         struct ArmorTrimPattern {
             std::string asset_id;
-            std::string template_item;
+            base_objects::item_id_t template_item;
             std::variant<std::string, Chat> description;
+            uint32_t id;
             bool decal;
             bool allow_override = false;
-            uint32_t id;
+            bool send_via_network_body = true;
         };
 
         struct Biome {
             struct Particle {
                 struct {
-                    std::string type;
+                    base_objects::id_particle_type type;
                     enbt::value options;
                 } options;
 
@@ -86,31 +120,32 @@ namespace copper_server {
             };
 
             struct AmbientSound {
-                std::string sound;
+                base_objects::id_sound_event sound;
                 float range;
             };
 
             struct MoodSound {
-                std::string sound;
+                base_objects::id_sound_event sound;
                 int32_t tick_delay = 6000;
-                int32_t block_search_extend = 8;
+                int32_t block_search_extent = 8;
                 double offset = 2.0;
             };
 
             struct AdditionsSound {
-                std::string sound;
+                base_objects::id_sound_event sound;
                 double tick_chance;
             };
 
             struct Music {
-                std::string sound;
+                base_objects::id_sound_event sound;
                 int32_t min_delay = 12000;
                 int32_t max_delay = 24000;
                 bool replace_current_music = true;
+                float music_weight = 1;
             };
 
             struct SpawnersValue {
-                std::string type;
+                base_objects::id_sound_event type;
                 uint32_t max_count;
                 uint32_t min_count;
                 uint32_t weight;
@@ -141,7 +176,7 @@ namespace copper_server {
                 std::optional<std::variant<std::string, AmbientSound>> ambient_sound;
                 std::optional<MoodSound> mood_sound;
                 std::optional<AdditionsSound> additions_sound;
-                std::optional<Music> music;
+                std::vector<Music> music;
             } effects;
 
             //server side:
@@ -164,6 +199,7 @@ namespace copper_server {
             std::unordered_map<std::string, SpawnCostsValue> spawn_costs;
 
             double creature_spawn_probability = 0;
+            bool send_via_network_body = true;
         };
 
         struct ChatType {
@@ -178,6 +214,7 @@ namespace copper_server {
 
             uint32_t id;
             bool allow_override = false;
+            bool send_via_network_body = true;
         };
 
         struct DamageType {
@@ -211,6 +248,7 @@ namespace copper_server {
             uint32_t id;
 
             bool allow_override = false;
+            bool send_via_network_body = true;
         };
 
         struct DimensionType {
@@ -236,17 +274,40 @@ namespace copper_server {
 
 
             bool allow_override : 1 = false;
+            bool send_via_network_body : 1 = true;
             uint32_t id;
         };
 
         struct WolfVariant {
-            std::string wild_texture;
-            std::string tame_texture;
-            std::string angry_texture;
-            list_array<std::string> biomes;
+            enbt::compound assets;
+            enbt::dynamic_array spawn_conditions;
 
             uint32_t id;
             bool allow_override = false;
+            bool send_via_network_body = true;
+        };
+
+        struct EntityVariant {
+            std::string asset_id;
+            std::optional<std::string> model;
+            enbt::dynamic_array spawn_conditions;
+
+            uint32_t id;
+            bool allow_override = false;
+            bool send_via_network_body = true;
+        };
+
+        struct WolfSoundVariant {
+            base_objects::id_sound_event ambient_sound;
+            base_objects::id_sound_event death_sound;
+            base_objects::id_sound_event growl_sound;
+            base_objects::id_sound_event hurt_sound;
+            base_objects::id_sound_event pant_sound;
+            base_objects::id_sound_event whine_sound;
+
+            uint32_t id;
+            bool allow_override = false;
+            bool send_via_network_body = true;
         };
 
         struct BannerPattern {
@@ -255,45 +316,44 @@ namespace copper_server {
 
             uint32_t id;
             bool allow_override = false;
+            bool send_via_network_body = true;
         };
 
         struct PaintingVariant {
+            Chat title;
+            Chat author;
             std::string asset_id;
             uint32_t height;
             uint32_t width;
 
             uint32_t id;
             bool allow_override = false;
+            bool send_via_network_body = true;
+        };
+
+        struct Instrument {
+            struct custom {
+                base_objects::id_sound_event sound_name;
+                std::optional<float> fixed_range;
+            };
+
+            std::variant<base_objects::id_sound_event, custom> sound_event;
+            float use_duration;
+            float range;
+            Chat description;
+
+            uint32_t id;
+            bool send_via_network_body = true;
         };
 
 #pragma endregion
 #pragma region server
 
-        struct EntityType {
-            std::string id;
-            virtual std::string GetName() = 0;
-
-            //bunch ai stuff and other
-            //...
-        };
-
-        struct ItemType {
-            std::string id;
-            uint8_t max_count;
-        };
-
-        struct BlockPalette {
-            uint16_t id : 15;
-
-
-            std::string full_id;
-        };
-
         struct enchantment {
             Chat description;
             std::variant<std::string, std::vector<std::string>, std::nullptr_t> exclusive_set;
-            std::variant<std::string, std::vector<std::string>> supported_items;
-            std::variant<std::string, std::vector<std::string>> primary_items;
+            std::variant<base_objects::id_item, std::vector<base_objects::id_item>> supported_items;
+            std::variant<base_objects::id_item, std::vector<base_objects::id_item>> primary_items;
             std::vector<std::string> slots;
             std::unordered_map<std::string, enbt::value> effects; //TODO create api for custom effects
 
@@ -312,23 +372,26 @@ namespace copper_server {
             uint8_t max_level;
 
             uint32_t id;
+            bool send_via_network_body = true;
+        };
+
+        struct enchantment_provider {
+            enbt::compound data;
+
+            uint32_t id;
+            bool send_via_network_body = true;
         };
 
         struct effect {
             std::string name;
             uint32_t id;
-
-            std::unordered_map<int32_t, int32_t> protocol;                                              //protocol -> protocol effect id
-            static std::unordered_map<int32_t, std::unordered_map<int32_t, uint32_t>> protocol_aliases; //protocol -> protocol effect id -> internal id
         };
 
         struct potion {
             std::string name;
             uint32_t id;
-            std::vector<uint32_t> effects;
-
-            std::unordered_map<int32_t, int32_t> protocol;                                              //protocol -> protocol effect id
-            static std::unordered_map<int32_t, std::unordered_map<int32_t, uint32_t>> protocol_aliases; //protocol -> protocol effect id -> internal id
+            std::vector<base_objects::id_mob_effect> effects;
+            std::unordered_map<base_objects::id_item, base_objects::id_potion> recipe;
         };
 
         struct item_modifier {
@@ -347,6 +410,9 @@ namespace copper_server {
             std::vector<enbt::compound> functions;
             std::string type; //default: generic // used to filter loot context
             std::optional<std::string> random_sequence;
+
+            uint32_t id;
+            bool send_via_network_body = true;
         };
 
         namespace world_gen {
@@ -410,7 +476,7 @@ namespace copper_server {
                 bool legacy_random_source;
 
                 struct state {
-                    std::string name;
+                    base_objects::block name; //in json there string
                     std::unordered_map<std::string, std::string> properties;
                 };
 
@@ -522,7 +588,7 @@ namespace copper_server {
 
             struct flat_level_generator_preset {
                 struct layer {
-                    std::string block;
+                    base_objects::block block;
                     int32_t height;
                 };
 
@@ -542,13 +608,12 @@ namespace copper_server {
             };
         }
 
-        struct item_attribute {
+        struct attribute {
             std::string name;
             uint32_t id;
-
-            std::unordered_map<int32_t, int32_t> protocol;                                              //protocol -> protocol effect id, can be undefined
-            static std::unordered_map<int32_t, std::unordered_map<int32_t, uint32_t>> protocol_aliases; //protocol -> protocol effect id -> internal id, can be undefined
+            double default_value;
         };
+
 #pragma endregion
         //CLIENT/SERVER
         extern std::unordered_map<std::string, ArmorTrimMaterial> armorTrimMaterials;
@@ -557,9 +622,16 @@ namespace copper_server {
         extern std::unordered_map<std::string, ChatType> chatTypes;
         extern std::unordered_map<std::string, DamageType> damageTypes;
         extern std::unordered_map<std::string, DimensionType> dimensionTypes;
+        extern std::unordered_map<std::string, WolfSoundVariant> wolfSoundVariants;
         extern std::unordered_map<std::string, WolfVariant> wolfVariants;
+        extern std::unordered_map<std::string, EntityVariant> catVariants;
+        extern std::unordered_map<std::string, EntityVariant> chickenVariants;
+        extern std::unordered_map<std::string, EntityVariant> cowVariants;
+        extern std::unordered_map<std::string, EntityVariant> pigVariants;
+        extern std::unordered_map<std::string, EntityVariant> frogVariants;
         extern std::unordered_map<std::string, BannerPattern> bannerPatterns;
         extern std::unordered_map<std::string, PaintingVariant> paintingVariants;
+        extern std::unordered_map<std::string, Instrument> instruments;
 
         extern list_array<std::unordered_map<std::string, ArmorTrimMaterial>::iterator> armorTrimMaterials_cache;
         extern list_array<std::unordered_map<std::string, ArmorTrimPattern>::iterator> armorTrimPatterns_cache;
@@ -567,22 +639,40 @@ namespace copper_server {
         extern list_array<std::unordered_map<std::string, ChatType>::iterator> chatTypes_cache;
         extern list_array<std::unordered_map<std::string, DamageType>::iterator> damageTypes_cache;
         extern list_array<std::unordered_map<std::string, DimensionType>::iterator> dimensionTypes_cache;
+        extern list_array<std::unordered_map<std::string, WolfSoundVariant>::iterator> wolfSoundVariants_cache;
         extern list_array<std::unordered_map<std::string, WolfVariant>::iterator> wolfVariants_cache;
+        extern list_array<std::unordered_map<std::string, EntityVariant>::iterator> catVariants_cache;
+        extern list_array<std::unordered_map<std::string, EntityVariant>::iterator> chickenVariants_cache;
+        extern list_array<std::unordered_map<std::string, EntityVariant>::iterator> cowVariants_cache;
+        extern list_array<std::unordered_map<std::string, EntityVariant>::iterator> pigVariants_cache;
+        extern list_array<std::unordered_map<std::string, EntityVariant>::iterator> frogVariants_cache;
         extern list_array<std::unordered_map<std::string, BannerPattern>::iterator> bannerPatterns_cache;
         extern list_array<std::unordered_map<std::string, PaintingVariant>::iterator> paintingVariants_cache;
+        extern list_array<std::unordered_map<std::string, Instrument>::iterator> instruments_cache;
 
 
         //SERVER
         extern std::unordered_map<std::string, Advancement> advancements;
 
 
-        extern std::unordered_map<std::string, item_attribute> attributes;
+        extern std::unordered_map<std::string, attribute> attributes;
         extern list_array<decltype(attributes)::iterator> attributes_cache;
 
         extern std::unordered_map<std::string, JukeboxSong> jukebox_songs;
+        extern list_array<decltype(jukebox_songs)::iterator> jukebox_songs_cache;
 
 
-        extern std::unordered_map<uint32_t, enbt::compound> individual_registers;
+        extern enbt::compound current_protocol_registers;
+        extern uint32_t current_protocol_id;
+
+        enbt::value& view_registry_entries(const std::string& registry);
+        enbt::value& view_registry_proto_invert(const std::string& registry);
+        int32_t view_reg_pro_id(const std::string& registry, const std::string& item);
+        std::string_view view_reg_pro_name(const std::string& registry, int32_t id);
+        list_array<int32_t> convert_reg_pro_id(const std::string& registry, const list_array<std::string>& item);
+        list_array<int32_t> convert_reg_pro_id(const std::string& registry, const std::vector<std::string>& item);
+        list_array<std::string> convert_reg_pro_name(const std::string& registry, const list_array<int32_t>& item);
+        list_array<std::string> convert_reg_pro_name(const std::string& registry, const std::vector<int32_t>& item);
 
 
         extern std::unordered_map<std::string, potion> potions;
@@ -594,18 +684,14 @@ namespace copper_server {
 
         extern std::unordered_map<std::string, enchantment> enchantments;
         extern list_array<decltype(enchantments)::iterator> enchantments_cache;
-        extern std::unordered_map<std::string, enbt::compound> enchantment_providers;
+        extern std::unordered_map<std::string, enchantment_provider> enchantment_providers;
+        extern list_array<decltype(enchantment_providers)::iterator> enchantment_providers_cache;
 
         extern std::unordered_map<std::string, loot_table_item> loot_table;
         extern list_array<decltype(loot_table)::iterator> loot_table_cache;
 
-        extern std::unordered_map<int32_t, ItemType*> itemList;
-        extern std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, list_array<std::string>>>> tags; //[type][namespace][tag][values]   values can't contain other tags, parsers must resolve them
-        extern std::string default_namespace;                                                                                                   //minecraft
-
-
-        const list_array<std::string>& unfold_tag(const std::string& type, const std::string& namespace_, const std::string& tag);
-        const list_array<std::string>& unfold_tag(const std::string& type, const std::string& tag);
+        extern std::unordered_map<std::string, base_objects::recipe> recipe_table;
+        extern list_array<decltype(recipe_table)::iterator> recipe_table_cache;
     }
 }
 

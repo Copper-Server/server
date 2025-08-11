@@ -1,8 +1,15 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_UTIL_JSON_HELPERS
 #define SRC_UTIL_JSON_HELPERS
 #include <boost/json.hpp>
 #include <filesystem>
-#include <fstream>
 
 namespace copper_server::util {
     inline std::string to_string(boost::json::kind type_kind) {
@@ -147,7 +154,7 @@ namespace copper_server::util {
         }
 
         bool is_integral() const noexcept {
-            return obj.is_int64() | obj.is_uint64();
+            return obj.is_int64() || obj.is_uint64();
         }
 
         operator std::string() {
@@ -162,7 +169,7 @@ namespace copper_server::util {
         operator boost::json::string&() {
             try {
                 return obj.as_string();
-            } catch (const boost::system::system_error& err) {
+            } catch (const boost::system::system_error&) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::string), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
             }
@@ -172,7 +179,7 @@ namespace copper_server::util {
 
             try {
                 return obj.as_object();
-            } catch (const boost::system::system_error& err) {
+            } catch (const boost::system::system_error&) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::object), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
             }
@@ -190,7 +197,7 @@ namespace copper_server::util {
         operator bool() const {
             try {
                 return obj.as_bool();
-            } catch (const boost::system::system_error& err) {
+            } catch (const boost::system::system_error&) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::bool_), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
             }
@@ -198,14 +205,8 @@ namespace copper_server::util {
 
         operator int64_t() const {
             try {
-                if (obj.is_uint64())
-                    if (obj.as_uint64() <= INT64_MAX)
-                        return obj.as_uint64();
-                    else
-                        throw std::runtime_error(std::format("Excepted signed integer at {}.", path));
-                else
-                    return obj.as_int64();
-            } catch (const boost::system::system_error& err) {
+                return obj.to_number<int64_t>();
+            } catch (const boost::system::system_error&) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::int64), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
             }
@@ -213,14 +214,8 @@ namespace copper_server::util {
 
         operator uint64_t() const {
             try {
-                if (obj.is_int64())
-                    if (obj.as_int64() >= 0)
-                        return obj.as_int64();
-                    else
-                        throw std::runtime_error(std::format("Excepted unsigned integer at {}.", path));
-                else
-                    return obj.as_uint64();
-            } catch (const boost::system::system_error& err) {
+                return obj.to_number<uint64_t>();
+            } catch (const boost::system::system_error&) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::uint64), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
             }
@@ -228,7 +223,7 @@ namespace copper_server::util {
 
         operator int32_t() const {
             int64_t val = operator int64_t();
-            if (int32_t check_overflow = val; val == check_overflow)
+            if (int32_t check_overflow = (int32_t)val; val == check_overflow)
                 return check_overflow;
             else {
                 auto text = std::format("Value at {} is too big for int32", path);
@@ -238,7 +233,7 @@ namespace copper_server::util {
 
         operator int16_t() const {
             int64_t val = operator int64_t();
-            if (int16_t check_overflow = val; val == check_overflow)
+            if (int16_t check_overflow = (int16_t)val; val == check_overflow)
                 return check_overflow;
             else {
                 auto text = std::format("Value at {} is too big for int16", path);
@@ -248,7 +243,7 @@ namespace copper_server::util {
 
         operator int8_t() const {
             int64_t val = operator int64_t();
-            if (int8_t check_overflow = val; val == check_overflow)
+            if (int8_t check_overflow = (int8_t)val; val == check_overflow)
                 return check_overflow;
             else {
                 auto text = std::format("Value at {} is too big for int8", path);
@@ -258,7 +253,7 @@ namespace copper_server::util {
 
         operator uint32_t() const {
             uint64_t val = operator uint64_t();
-            if (uint32_t check_overflow = val; val == check_overflow)
+            if (uint32_t check_overflow = (uint32_t)val; val == check_overflow)
                 return check_overflow;
             else {
                 auto text = std::format("Value at {} is too big for uint32", path);
@@ -268,7 +263,7 @@ namespace copper_server::util {
 
         operator uint16_t() const {
             uint64_t val = operator uint64_t();
-            if (uint16_t check_overflow = val; val == check_overflow)
+            if (uint16_t check_overflow = (uint16_t)val; val == check_overflow)
                 return check_overflow;
             else {
                 auto text = std::format("Value at {} is too big for uint16", path);
@@ -278,7 +273,7 @@ namespace copper_server::util {
 
         operator uint8_t() const {
             uint64_t val = operator uint64_t();
-            if (uint8_t check_overflow = val; val == check_overflow)
+            if (uint8_t check_overflow = (uint8_t)val; val == check_overflow)
                 return check_overflow;
             else {
                 auto text = std::format("Value at {} is too big for uint8", path);
@@ -288,8 +283,8 @@ namespace copper_server::util {
 
         operator float() const {
             try {
-                return obj.as_double();
-            } catch (const boost::system::system_error& err) {
+                return obj.to_number<float>();
+            } catch (const boost::system::system_error&) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::double_), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
             }
@@ -297,8 +292,8 @@ namespace copper_server::util {
 
         operator double() const {
             try {
-                return obj.as_double();
-            } catch (const boost::system::system_error& err) {
+                return obj.to_number<float>();
+            } catch (const boost::system::system_error&) {
                 auto text = std::format("Excepted {} at {} but got {}", util::to_string(boost::json::kind::double_), path, util::to_string(obj.kind()));
                 throw std::runtime_error(text);
             }
@@ -451,13 +446,13 @@ namespace copper_server::util {
 
         public:
             js_iterator(boost::json::object::iterator iterator, std::string& inner_path)
-                : iterator(iterator), inner_path(inner_path) {}
+                : inner_path(inner_path), iterator(iterator) {}
 
             js_iterator(const js_iterator& iterator)
-                : iterator(iterator.iterator), inner_path(iterator.inner_path) {}
+                : inner_path(iterator.inner_path), iterator(iterator.iterator) {}
 
             js_iterator(js_iterator&& iterator)
-                : iterator(std::move(iterator.iterator)), inner_path(iterator.inner_path) {}
+                : inner_path(iterator.inner_path), iterator(std::move(iterator.iterator)) {}
 
             std::pair<boost::json::string_view, js_value> operator*() {
                 return {iterator->key(), js_value(inner_path + ":" + iterator->key_c_str(), iterator->value())};
@@ -584,13 +579,13 @@ namespace copper_server::util {
 
         public:
             js_iterator(boost::json::array::iterator iterator, boost::json::array::iterator beginning, std::string& inner_path)
-                : iterator(iterator), beginning(beginning), inner_path(inner_path) {}
+                : inner_path(inner_path), beginning(beginning), iterator(iterator) {}
 
             js_iterator(const js_iterator& iterator)
-                : iterator(iterator.iterator), beginning(iterator.beginning), inner_path(iterator.inner_path) {}
+                : inner_path(iterator.inner_path), beginning(iterator.beginning), iterator(iterator.iterator) {}
 
             js_iterator(js_iterator&& iterator)
-                : iterator(std::move(iterator.iterator)), beginning(iterator.beginning), inner_path(iterator.inner_path) {}
+                : inner_path(iterator.inner_path), beginning(iterator.beginning), iterator(std::move(iterator.iterator)) {}
 
             js_value operator*() {
                 return js_value(inner_path + "[" + std::to_string(iterator - beginning) + "]", *iterator);

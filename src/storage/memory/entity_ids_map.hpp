@@ -1,84 +1,64 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_STORAGE_MEMORY_ENTITY_IDS_MAP
 #define SRC_STORAGE_MEMORY_ENTITY_IDS_MAP
-#include <boost/bimap.hpp>
 #include <library/enbt/enbt.hpp>
 #include <library/fast_task.hpp>
-#include <random>
 #include <shared_mutex>
+#include <src/base_objects/atomic_holder.hpp>
 
+namespace copper_server::base_objects {
+    struct entity;
+    struct SharedClientData;
+    using entity_ref = atomic_holder<entity>;
+}
 namespace copper_server::storage::memory {
+    //this storage utilizes only positive values and leaves negative for plugin usage
+    // negative ids may used for breaking block animation
+    //
+    //this means the theoretical maximum of entities is INT32_MAX
     class entity_ids_map_storage {
-        boost::bimap<int32_t, enbt::raw_uuid> ids;
+        struct id_s {
+            std::vector<int32_t> id;
+            enbt::raw_uuid uuid;
+            base_objects::entity_ref assigned_entity;
+        };
+
+        using id_sp = std::shared_ptr<id_s>;
+
+        std::unordered_map<int32_t, id_sp> ids_l;
+        std::unordered_map<enbt::raw_uuid, id_sp> ids_r;
         fast_task::task_mutex mutex;
-        int32_t id_allocator = 0;
+        int32_t id_allocator;
+
+        int32_t id_increment();
+        uint8_t allocate_special(uint8_t required_ids);
 
     public:
+        entity_ids_map_storage();
+        ~entity_ids_map_storage();
         //generates random UUID allocates, guarantees uniqueness
-        [[nodiscard]] std::pair<int32_t, enbt::raw_uuid> allocate_id() {
-            enbt::raw_uuid uuid = enbt::raw_uuid::generate_v4();
-            std::unique_lock lock(mutex);
-            if (ids.size() == INT32_MAX)
-                throw std::runtime_error("Too many registered UUID's, can't allocate more");
-            while (ids.right.find(uuid) != ids.right.end())
-                uuid = enbt::raw_uuid::generate_v4();
-            while (ids.left.find(id_allocator) != ids.left.end())
-                id_allocator++;
-            ids.left.insert({id_allocator, uuid});
-            return {id_allocator, uuid};
-        }
-
-        [[nodiscard]] int32_t allocate_id(const enbt::raw_uuid& uuid) {
-            std::unique_lock lock(mutex);
-            if (ids.size() == INT32_MAX)
-                throw std::runtime_error("Too many registered UUID's, can't allocate more");
-            if (ids.right.find(uuid) != ids.right.end())
-                throw std::invalid_argument("UUID already registered");
-            while (ids.left.find(id_allocator) != ids.left.end())
-                id_allocator++;
-            ids.left.insert({id_allocator, uuid});
-            return id_allocator++;
-        }
-
-        void remove_id(int32_t id) {
-            std::unique_lock lock(mutex);
-            ids.left.erase(id);
-        }
-
-        [[nodiscard]] int32_t remove_id(const enbt::raw_uuid& uuid) {
-            std::unique_lock lock(mutex);
-            auto it = ids.right.find(uuid);
-            if (it == ids.right.end())
-                return -1;
-            int32_t id = it->second;
-            ids.right.erase(it);
-            return id;
-        }
-
-        [[nodiscard]] int32_t get_id(const enbt::raw_uuid& uuid) {
-            std::unique_lock lock(mutex);
-            auto it = ids.right.find(uuid);
-            if (it == ids.right.end())
-                return -1;
-            return it->second;
-        }
-
-        [[nodiscard]] enbt::raw_uuid get_uuid(int32_t id) {
-            std::unique_lock lock(mutex);
-            auto it = ids.left.find(id);
-            if (it == ids.left.end())
-                return enbt::raw_uuid();
-            return it->second;
-        }
-
-        [[nodiscard]] bool has_id(int32_t id) {
-            std::unique_lock lock(mutex);
-            return ids.left.find(id) != ids.left.end();
-        }
-
-        [[nodiscard]] bool has_uuid(const enbt::raw_uuid& uuid) {
-            std::unique_lock lock(mutex);
-            return ids.right.find(uuid) != ids.right.end();
-        }
+        [[nodiscard]] std::pair<int32_t, enbt::raw_uuid> allocate_id();
+        [[nodiscard]] std::pair<int32_t, enbt::raw_uuid> allocate_special_sequence(uint8_t required_ids);
+        [[nodiscard]] int32_t allocate_id(const enbt::raw_uuid& uuid);
+        [[nodiscard]] int32_t allocate_special_sequence(const enbt::raw_uuid& uuid, uint8_t required_ids);
+        void remove_id(int32_t id);
+        [[nodiscard]] int32_t remove_id(const enbt::raw_uuid& uuid);
+        [[nodiscard]] int32_t get_id(const enbt::raw_uuid& uuid);
+        [[nodiscard]] enbt::raw_uuid get_uuid(int32_t id);
+        void assign_entity(int32_t id, base_objects::entity_ref entity);
+        void assign_entity(const enbt::raw_uuid& uuid, base_objects::entity_ref entity);
+        [[nodiscard]] base_objects::entity_ref get_entity(int32_t id);
+        [[nodiscard]] base_objects::entity_ref get_entity(const enbt::raw_uuid& uuid);
+        [[nodiscard]] bool has_id(int32_t id);
+        [[nodiscard]] bool has_uuid(const enbt::raw_uuid& uuid);
+        void apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(base_objects::entity&)>&& callback);
     };
 }
 #endif /* SRC_STORAGE_MEMORY_ENTITY_IDS_MAP */

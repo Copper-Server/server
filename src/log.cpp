@@ -1,15 +1,102 @@
+/*
+ * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #include <commandline.h>
 #include <iostream>
 #include <library/fast_task.hpp>
+#include <library/fast_task/include/files.hpp>
 #include <library/list_array.hpp>
 #include <mutex>
+#include <src/api/console.hpp>
 #include <src/base_objects/events/event.hpp>
 #include <src/log.hpp>
 #include <src/util/task_management.hpp>
 
 namespace copper_server::log {
-    namespace commands {
-        base_objects::events::event<std::string> on_command;
+
+    std::string log_levels_names[(int)level::__max] = {
+        "info",
+        "warn",
+        "error",
+        "fatal",
+        "debug_error",
+        "debug",
+    };
+
+    namespace file {
+        fast_task::protected_value<std::shared_ptr<fast_task::files::async_iofstream>> handle;
+
+        void set_handle(std::filesystem::path path) {
+            handle.set(
+                [&path](auto& value) {
+                    value = std::make_shared<fast_task::files::async_iofstream>(
+                        path,
+                        fast_task::files::open_mode::append,
+                        fast_task::files::on_open_action::open,
+                        fast_task::files::_sync_flags{}
+                    );
+                }
+            );
+        }
+
+        void clear_handle() {
+            handle.set([](auto& value) { value = nullptr; });
+        }
+
+        std::atomic_bool log_levels_switch[(int)level::__max]{
+            true, //info
+            true, //warn
+            true, //error
+            true, //fatal
+            true, //debug_error
+            true, //debug
+        };
+
+        void print(log::level level, std::string_view source, std::string_view message) {
+            auto duration = std::chrono::system_clock::now().time_since_epoch();
+
+            auto years = std::chrono::duration_cast<std::chrono::years>(duration);
+            duration -= years;
+            auto months = std::chrono::duration_cast<std::chrono::months>(duration);
+            duration -= months;
+            auto days = std::chrono::duration_cast<std::chrono::days>(duration);
+            duration -= days;
+            auto hours = std::chrono::duration_cast<std::chrono::hours>(duration);
+            duration -= hours;
+            auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
+            duration -= minutes;
+            auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration);
+            duration -= seconds;
+            auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(duration);
+            duration -= milliseconds;
+            auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(duration);
+            duration -= microseconds;
+            auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration);
+
+            handle.get([&](auto& handle) {
+                if (!log_levels_switch[(int)level] || !handle)
+                    return;
+                auto line = "[" + std::to_string(days.count()) + "/" + std::to_string(months.count()) + "/" + std::to_string(years.count()) + "] ["
+                            + std::to_string(hours.count()) + ":" + std::to_string(minutes.count()) + ":" + std::to_string(seconds.count()) + " " + std::to_string(milliseconds.count()) + "." + std::to_string(microseconds.count()) + "." + std::to_string(nanoseconds.count()) + "] ["
+                            + log_levels_names[(int)level] + "] ["
+                            + std::string(source) + "] ";
+                std::string alignment(line.size(), ' ');
+                alignment[0] = '\n';
+                auto aligned_message = list_array<char>(message)
+                                           .replace('\t', "    ", 4)
+                                           .replace('\n', alignment.data(), line.size())
+                                           .push_front(list_array<char>(line))
+                                           .push_back('\n')
+                                           .to_container<std::string>();
+
+                *handle << aligned_message << std::flush;
+            });
+        }
     }
 
     namespace console {
@@ -30,14 +117,7 @@ namespace copper_server::log {
             {170, 128, 0},   //debug_error
             {0, 128, 0},     //debug
         };
-        std::string log_levels_names[(int)level::__max] = {
-            "info",
-            "warn",
-            "error",
-            "fatal",
-            "debug_error",
-            "debug",
-        };
+
 
         fast_task::task_rw_mutex console_mutex;
 
@@ -68,28 +148,43 @@ namespace copper_server::log {
         }
     } // namespace console
 
+    struct log_event_data {
+        level l;
+        std::string source;
+        std::string message;
+    };
+
+    fast_task::task_query q(1);
+
+    void log_event(log_event_data&& data) {
+        q.add(std::make_shared<fast_task::task>([data = std::move(data)]() {
+            console::print(data.l, data.source, data.message);
+            file::print(data.l, data.source, data.message);
+        }));
+    }
+
     void info(std::string_view source, std::string_view message) {
-        console::print(level::info, source, message);
+        log_event(log_event_data{level::info, std::string(source), std::string(message)});
     }
 
     void error(std::string_view source, std::string_view message) {
-        console::print(level::error, source, message);
+        log_event(log_event_data{level::error, std::string(source), std::string(message)});
     }
 
     void warn(std::string_view source, std::string_view message) {
-        console::print(level::warn, source, message);
+        log_event(log_event_data{level::warn, std::string(source), std::string(message)});
     }
 
     void debug(std::string_view source, std::string_view message) {
-        console::print(level::debug, source, message);
+        log_event(log_event_data{level::debug, std::string(source), std::string(message)});
     }
 
     void debug_error(std::string_view source, std::string_view message) {
-        console::print(level::debug_error, source, message);
+        log_event(log_event_data{level::debug_error, std::string(source), std::string(message)});
     }
 
     void fatal(std::string_view source, std::string_view message) {
-        console::print(level::fatal, source, message);
+        log_event(log_event_data{level::fatal, std::string(source), std::string(message)});
     }
 
     void clear() {
@@ -108,6 +203,53 @@ namespace copper_server::log {
         return console::log_levels_switch[(int)level];
     }
 
+    void disable_log_file_level(level level) {
+        file::log_levels_switch[(int)level] = false;
+    }
+
+    void enable_log_file_level(level level) {
+        file::log_levels_switch[(int)level] = true;
+    }
+
+    bool is_enabled_file(level level) {
+        return file::log_levels_switch[(int)level];
+    }
+
+    void set_log_folder(std::filesystem::path path) {
+        std::filesystem::create_directories(path);
+        auto duration = std::chrono::system_clock::now().time_since_epoch();
+        auto years = std::chrono::duration_cast<std::chrono::years>(duration);
+        duration -= years;
+        auto months = std::chrono::duration_cast<std::chrono::months>(duration);
+        duration -= months;
+        auto days = std::chrono::duration_cast<std::chrono::days>(duration);
+        duration -= days;
+        auto hours = std::chrono::duration_cast<std::chrono::hours>(duration);
+        duration -= hours;
+        auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
+        duration -= minutes;
+        auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration);
+        duration -= seconds;
+        std::filesystem::path file;
+        do {
+            file = path
+                   / ("log_"
+                      + std::to_string(years.count())
+                      + "_" + std::to_string(months.count())
+                      + "_" + std::to_string(days.count())
+                      + "_" + std::to_string(hours.count())
+                      + "_" + std::to_string(minutes.count())
+                      + "_" + std::to_string(seconds.count())
+                      + ".txt");
+        } while (std::filesystem::exists(file));
+
+        file::set_handle(file);
+    }
+
+    void disable_log_folder() {
+        file::clear_handle();
+    }
+
     namespace commands {
         bool is_inited() {
             fast_task::read_lock lock(console::console_mutex);
@@ -124,12 +266,14 @@ namespace copper_server::log {
                 auto command = cmd.get_command();
                 if (command.ends_with('\r'))
                     command = command.substr(0, command.size() - 1);
-                on_command.async_notify(command);
+                api::console::on_command.async_notify(command);
             };
+            q.enable();
         }
 
         void deinit() {
             fast_task::write_lock lock(console::console_mutex);
+            q.disable();
             console::cmd.reset();
         }
 
