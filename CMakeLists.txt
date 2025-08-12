@@ -21,6 +21,7 @@ FILE(GLOB REFLECTION_FILES CONFIGURE_DEPENDS
   src/base_objects/component.hpp
   src/base_objects/dye_color.hpp
   src/base_objects/packets_help.hpp
+  src/base_objects/parsers.hpp
   src/util/calculations.hpp
 )
 FILE(GLOB RESOURCE_FILES CONFIGURE_DEPENDS
@@ -35,7 +36,7 @@ list(FILTER RESOURCE_FILES EXCLUDE REGEX ".*/data/.*")
 build_resource_merge_json("copper_server" "${CMAKE_CURRENT_SOURCE_DIR}/resources/data" "out/built_resources" compressed)
 build_resources("copper_server" "out/built_resources" "${RESOURCE_FILES}" RESOURCE_FILES_include RESOURCE_FILES_build compressed)
 create_resources_header("resources" "${RESOURCE_FILES_include}")
-create_reflect_map("${CMAKE_CURRENT_SOURCE_DIR}/src/util/reflect_fns.hpp" "${REFLECTION_FILES}")
+create_reflect_map("${CMAKE_CURRENT_SOURCE_DIR}/src/util/reflect" "${REFLECTION_FILES}")
 
 
 IF(MSVC)
@@ -77,7 +78,7 @@ include_directories(${Boost_INCLUDE_DIRS} ${CC_INCLUDE_DIR} ${ZLIB_INCLUDE_DIRS}
 
 
 IF(MSVC)
-  SET(CMAKE_CXX_FLAGS "/EHsc")
+  SET(CMAKE_CXX_FLAGS "/EHa")
   add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 ENDIF(MSVC)
 add_executable(CopperServer ${SRCFILES} ${RESOURCE_FILES_build})

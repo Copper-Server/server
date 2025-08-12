@@ -157,9 +157,6 @@ namespace copper_server::base_objects {
 
         int32_t get_child(list_array<command>& commands_nodes, const std::string& name);
 
-        packets::command_node build_node(bool is_root = false) const;
-
-
         command(const char* name)
             : name(name), suggestions("") {}
 
@@ -181,19 +178,9 @@ namespace copper_server::base_objects {
               suggestions(suggestions) {}
     };
 
-    class command_custom_parser {
-    public:
-        std::vector<parser> native_predicates;
-        command_suggestion suggestions_provider;
-
-        virtual parsers::custom_virtual parse(parsers::command::custom_virtual& cfg, std::string& part, std::string& path) = 0;
-        virtual std::string name() = 0;
-    };
-
     using named_suggestion_provider = std::function<list_array<std::string>(command& cmd, const std::string& name, const std::string& current, command_context&)>;
 
     class command_manager {
-        std::unordered_map<std::string, std::shared_ptr<command_custom_parser>> custom_parsers;
         std::unordered_map<std::string, named_suggestion_provider> named_suggestion_providers = {
             {"minecraft:ask_server",
              named_suggestion_provider([](command& cmd, const std::string&, const std::string&, command_context&) -> list_array<std::string> {
@@ -216,11 +203,6 @@ namespace copper_server::base_objects {
         //minecraft:ask_server already registered to prevent stack overflow and cannot be redefined
         void register_named_suggestion_provider(const std::string& name, const named_suggestion_provider& provider);
         void remove_named_suggestion_provider(const std::string& name);
-
-
-        void register_parser(const std::shared_ptr<command_custom_parser>& parser);
-        command_custom_parser& get_parser(const std::string& name);
-        void unregister_parser(const std::string& name);
 
         void execute_command(const std::string& command_string, command_context&);
         void execute_command_from(const std::string& command_string, command& cmd, command_context&);
@@ -253,7 +235,7 @@ namespace copper_server::base_objects {
         command_browser(command_browser&& browser) noexcept;
 
         command_browser add_child(command&& command);
-        command_browser add_child(command&& command, command_parser pred);
+        command_browser add_child(command&& command, command_parser&& pred);
         command_browser add_child(command_browser& command);
         bool remove_child(const std::string& name);
         list_array<command_browser> get_childs();
@@ -300,6 +282,7 @@ namespace copper_server::base_objects {
             : manager(browser.manager) {}
 
         command_browser add_child(command&& command);
+        command_browser add_child(command&& command, command_parser&& pred);
         bool remove_child(const std::string& name);
 
         list_array<command_browser> get_childs();

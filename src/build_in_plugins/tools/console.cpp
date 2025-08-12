@@ -40,7 +40,7 @@ namespace copper_server::build_in_plugins {
     }
 
     struct console : public PluginAutoRegister<"tools/console", console> {
-        base_objects::virtual_client console_data{api::players::allocate_player(), "Console", "Console"};
+        base_objects::virtual_client console_data{api::players::allocate_player(), "console", "console"};
 
         void OnLoad(const PluginRegistrationPtr&) override {
             api::console::register_virtual_client(console_data);
@@ -79,9 +79,9 @@ namespace copper_server::build_in_plugins {
                                 log::info("message", "[" + it.sender.to_ansi_console() + " -> " + it.target_name->to_ansi_console() + "] " + it.message.to_ansi_console());
                         } else if constexpr (std::is_same_v<T, api::packets::client_bound::play::system_chat>) {
                             if (!it.is_overlay)
-                                log::info("system", it.content.to_ansi_console());
+                                log::info("console", it.content.to_ansi_console());
                             else
-                                log::info("overlay", it.content.to_ansi_console());
+                                log::info("console [overlay]", it.content.to_ansi_console());
                         }
                     },
                     packet
@@ -103,17 +103,17 @@ namespace copper_server::build_in_plugins {
                     error_place[error_place.size() - 1] = '\t';
                     if (ex.pos != -1)
                         error_place[ex.pos] = '^';
-                    log::error("command", error_message + error_place + ex.what);
-                        return false;
+                    log::error("console", error_message + error_place + ex.what);
+                    return false;
                 } catch (const std::exception& ex) {
-                    log::error("command", command + "\n Failed to execute command, reason:\n\t" + ex.what());
+                    log::error("console", command + "\n Failed to execute command, reason:\n\t" + ex.what());
                     return false;
                 }
-                log::info("command", command);
+                log::info("console", command);
                 return true;
             });
 
-            log::info("Console", "console registered.");
+            log::info("console", "console registered.");
         }
 
         void OnUnload(const PluginRegistrationPtr&) override {
@@ -133,7 +133,7 @@ namespace copper_server::build_in_plugins {
                     auto& enable
                         = _log
                               .add_child("enable")
-                              .add_child({"<log level>"}, cmd_pred_string::quotable_phrase)
+                              .add_child({"log level"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                               .set_callback({"command.console.log.enable", {"console"}}, [](const list_array<predicate>& args, base_objects::command_context&) {
                                   auto& level = std::get<pred_string>(args[0]).value;
                                   if (level == "info")
@@ -158,7 +158,7 @@ namespace copper_server::build_in_plugins {
                     auto& disable
                         = _log
                               .add_child("disable")
-                              .add_child({"<log level>"}, cmd_pred_string::quotable_phrase)
+                              .add_child({"log level"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                               .set_callback({"command.console.log.disable", {"console"}}, [](const list_array<predicate>& args, base_objects::command_context&) {
                                   auto& level = std::get<pred_string>(args[0]).value;
                                   if (level == "info")

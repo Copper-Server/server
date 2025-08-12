@@ -137,9 +137,9 @@ namespace copper_server {
             namespace play {
                 commands build_commands(const base_objects::command_manager& manager) {
                     commands commanands{.nodes = {}, .root_index = 0};
-                    bool is_root = true;
                     auto& command_nodes = manager.get_nodes();
                     commanands.nodes.reserve(command_nodes.size());
+                    size_t i = 0;
                     for (auto& command : command_nodes) {
                         commands::node node;
                         node.children = command.childs.convert<var_int32>();
@@ -150,21 +150,19 @@ namespace copper_server {
                         if (api::permissions::has_action_limits(command.action_name))
                             node.flags_values.set(commands::node::is_restricted{});
                         if (command.has_suggestion()) {
-                            node.flags_values.set(
-                                commands::node::suggestions_type{
-                                    .name = command.is_named_suggestion()
-                                                ? command.get_named_suggestion()
-                                                : "minecraft:ask_server"
-                                }
-                            );
+                            if (command.is_named_suggestion()) {
+                                if (command.get_named_suggestion().size())
+                                    node.flags_values.set(commands::node::suggestions_type{.name = command.get_named_suggestion()});
+                            } else
+                                node.flags_values.set(commands::node::suggestions_type{.name = "minecraft:ask_server"});
                         }
-                        if (is_root) {
+                        if (0 == i++) {
                             node.flags_values.set(commands::node::root_node{});
-                            is_root = false;
                         } else if (command.argument_predicate) {
-                            //TODO
+                            node.flags_values.set(commands::node::argument_node{.name = command.name, .type = *command.argument_predicate});
                         } else
                             node.flags_values.set(commands::node::literal_node{.name = command.name});
+                        commanands.nodes.push_back(std::move(node));
                     }
                     return commanands;
                 }

@@ -170,11 +170,11 @@ namespace copper_server::build_in_plugins {
                 {
                     group
                         .add_child("add")
-                        .add_child("<name>", cmd_pred_string::quotable_phrase)
+                        .add_child("name", cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                         .set_callback("command.permissions.group.add", [](const list_array<predicate>& args, base_objects::command_context&) {
                             api::permissions::add_group({std::get<pred_string>(args[0]).value, {}});
                         })
-                        .add_child("<values>", cmd_pred_string::greedy_phrase)
+                        .add_child("values", cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                         .set_callback("command.permissions.group.add:with_values", [](const list_array<predicate>& args, base_objects::command_context&) {
                             auto permissions = list_array<char>(std::get<pred_string>(args[1]).value).split_by(' ').convert<std::string>([](const list_array<char>& a) {
                                 return std::string(a.data(), a.size());
@@ -185,7 +185,7 @@ namespace copper_server::build_in_plugins {
             }
             {
                 browser.add_child("op")
-                    .add_child({"<player>", "op player", "/op <player>"}, cmd_pred_string::greedy_phrase)
+                    .add_child({"player", "op player", "/op player"}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                     .set_callback("command.op", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto& player_name = std::get<pred_string>(args[0]).value;
                         if (op_list.contains(player_name)) {
@@ -208,7 +208,7 @@ namespace copper_server::build_in_plugins {
             }
             {
                 browser.add_child("deop")
-                    .add_child({"<player>", "deop player", "/deop <player>"}, cmd_pred_string::greedy_phrase)
+                    .add_child({"player", "deop player", "/deop player"}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                     .set_callback("command.deop", [this](const list_array<predicate>& args, base_objects::command_context&) {
                         auto& player_name = std::get<pred_string>(args[0]).value;
                         op_list.remove(player_name);

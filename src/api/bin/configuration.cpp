@@ -55,6 +55,9 @@ namespace copper_server::api::configuration {
         cfg.world.name = (std::string)world["name"].or_apply(cfg.world.name);
         cfg.world.seed = world["seed"].or_apply(cfg.world.seed).to_text();
         cfg.world.type = (std::string)world["type"].or_apply(cfg.world.type);
+        if (!cfg.world.type.contains(':'))
+            cfg.world.type = "minecraft:" + cfg.world.type;
+        cfg.world.generator_type = (std::string)world["generator_type"].or_apply(cfg.world.generator_type);
         cfg.world.unload_speed = world["unload_speed"].or_apply(cfg.world.unload_speed);
         cfg.world.auto_save = world["auto_save"].or_apply(cfg.world.auto_save);
         {

@@ -107,10 +107,9 @@ namespace copper_server::storage {
 
     bool permissions_manager::has_action_limits(const std::string& action_name) const {
         return protected_values.get([&](const protected_values_t& values) {
-            bool pass_if_noting = values.check_mode == permission_check_mode::all_or_noting || values.check_mode == permission_check_mode::any_or_noting;
             auto item = values.actions.find(action_name);
             if (item == values.actions.end())
-                return pass_if_noting;
+                return !(values.check_mode == permission_check_mode::all_or_noting || values.check_mode == permission_check_mode::any_or_noting);
             else
                 return !item->second.empty();
         });

@@ -12,6 +12,12 @@
 #include <src/base_objects/slot.hpp>
 #include <src/log.hpp>
 #include <src/util/reflect.hpp>
+#include <src/util/reflect/calculations.hpp>
+#include <src/util/reflect/component.hpp>
+#include <src/util/reflect/dye_color.hpp>
+#include <src/util/reflect/packets.hpp>
+#include <src/util/reflect/packets_help.hpp>
+#include <src/util/reflect/parsers.hpp>
 #include <tuple>
 
 namespace copper_server::api::packets {
@@ -419,11 +425,11 @@ namespace copper_server::api::packets {
         } else if constexpr (is_list_array_fixed<T>) {
             if (value.size() != T::required_size)
                 throw std::overflow_error("The list_array size not equal required one.");
-            if (need_preprocess_result_v<typename T::value_type>)
+            if constexpr (need_preprocess_result_v<typename T::value_type>)
                 for (auto& it : value)
                     preprocess_structure(context, it, prev);
         } else if constexpr (is_std_array<T> || is_template_base_of<_list_array_impl::list_array, T>) {
-            if (need_preprocess_result_v<typename T::value_type>)
+            if constexpr (need_preprocess_result_v<typename T::value_type>)
                 for (auto& it : value)
                     preprocess_structure(context, it, prev);
         } else if constexpr (is_string_sized<T>) {
@@ -432,11 +438,11 @@ namespace copper_server::api::packets {
         } else if constexpr (is_list_array_sized<T>) {
             if (value.size() > T::max_size)
                 throw std::overflow_error("The list_array size is over the limit.");
-            if (need_preprocess_result_v<typename T::value_type>)
+            if constexpr (need_preprocess_result_v<typename T::value_type>)
                 for (auto& it : value.value)
                     preprocess_structure(context, it, prev);
         } else if constexpr (is_template_base_of<std::optional, T>) {
-            if (need_preprocess_result_v<typename T::value_type>)
+            if constexpr (need_preprocess_result_v<typename T::value_type>)
                 if (value)
                     preprocess_structure(context, *value, prev);
         } else if constexpr (is_limited_num<T>) {
@@ -445,34 +451,34 @@ namespace copper_server::api::packets {
             if (value.value < T::check_min)
                 throw std::underflow_error("The value is too low");
         } else if constexpr (is_template_base_of<value_optional, T>) {
-            if (need_preprocess_result_v<typename T::value_type>)
+            if constexpr (need_preprocess_result_v<typename T::value_type>)
                 if (value.rest)
                     preprocess_structure(context, *value.rest, prev);
         } else if constexpr (is_flags_list_from<T> || is_template_base_of<flags_list, T>) {
             value.for_each([&]<class IT>(IT& it) {
-                if (need_preprocess_result_v<IT>)
+                if constexpr (need_preprocess_result_v<IT>)
                     preprocess_structure(context, it, prev);
             });
         } else if constexpr (is_template_base_of<enum_switch, T> || is_template_base_of<partial_enum_switch, T>) {
             std::visit(
                 [&]<class IT>(IT& it) {
-                    if (need_preprocess_result_v<IT>)
+                    if constexpr (need_preprocess_result_v<IT>)
                         preprocess_structure(context, it, prev);
                 },
                 value
             );
         } else if constexpr (is_template_base_of<base_objects::box, T>) {
-            if (need_preprocess_result_v<typename T::value_type>)
+            if constexpr (need_preprocess_result_v<typename T::value_type>)
                 preprocess_structure(context, *value, prev);
         } else if constexpr (is_template_base_of<base_objects::depends_next, T> || is_template_base_of<sized_entry, T> || is_template_base_of<packet_compress, T>) {
-            if (need_preprocess_result_v<typename T::value_type>)
+            if constexpr (need_preprocess_result_v<typename T::value_type>)
                 preprocess_structure(context, value.value, prev);
         }
 
         else if constexpr (is_template_base_of<or_, T> || is_template_base_of<bool_or, T>) {
             std::visit(
                 [&]<class Y>(Y& it) {
-                    if (need_preprocess_result_v<Y>)
+                    if constexpr (need_preprocess_result_v<Y>)
                         preprocess_structure(context, it, prev);
                 },
                 value
@@ -528,7 +534,7 @@ namespace copper_server::api::packets {
                 if (!process_next)
                     return;
                 using I = std::decay_t<decltype(item)>;
-                if (need_preprocess_result_v<I>)
+                if constexpr (need_preprocess_result_v<I>)
                     preprocess_structure(context, item, value);
                 if constexpr (could_be_preprocessed<I, T>)
                     item.preprocess(value);
@@ -542,12 +548,6 @@ namespace copper_server::api::packets {
     template <class T>
     void serialize_packet(base_objects::network::response& res, base_objects::SharedClientData& context, T& value) {
         using Type = std::decay_t<T>;
-        if (need_preprocess_result_v<Type>) {
-            preprocess_structure(context, value, value);
-            if constexpr (could_be_preprocessed<Type, Type>)
-                value.preprocess(value);
-        }
-
         if constexpr (is_packet<Type>) {
             base_objects::network::response::item it;
             it.write_id(Type::packet_id::value);
@@ -580,13 +580,53 @@ namespace copper_server::api::packets {
         }
     }
 
+    template <class T>
+    void make_preprocess_packet_(base_objects::SharedClientData& context, T& value) {
+        using Type = std::decay_t<T>;
+        if constexpr (need_preprocess_result_v<Type>) {
+            preprocess_structure(context, value, value);
+            if constexpr (could_be_preprocessed<Type, Type>)
+                value.preprocess(value);
+        }
+    }
+
+    void make_preprocess_packet(base_objects::SharedClientData& context, client_bound_packet& packet) {
+        std::visit(
+            [&](auto& mode) {
+                return std::visit(
+                    [&](auto& it) {
+                        make_preprocess_packet_(context, it);
+                    },
+                    mode
+                );
+            },
+            packet
+        );
+    }
+
+    void make_preprocess_packet(base_objects::SharedClientData& context, server_bound_packet& packet) {
+        std::visit(
+            [&](auto& mode) {
+                return std::visit(
+                    [&](auto& it) {
+                        make_preprocess_packet_(context, it);
+                    },
+                    mode
+                );
+            },
+            packet
+        );
+    }
+
     bool send(SharedClientData& client, client_bound_packet&& packet) {
+        make_preprocess_packet(client, packet);
+        if (__internal::visit_packet_viewer(packet, client))
+            return false;
+
         if (debugging_enabled) {
             auto id = client.get_session() ? client.get_session()->id : -1;
             log::debug("protocol", "client_bound:client_id: " + std::to_string(id) + "\n" + stringize_packet(packet));
         }
-        if (__internal::visit_packet_viewer(packet, client))
-            return false;
         bool sw_status = false;
         bool sw_login = false;
         bool sw_configuration = false;
@@ -628,6 +668,24 @@ namespace copper_server::api::packets {
     }
 
     base_objects::network::response internal_encode(SharedClientData& client, client_bound_packet&& packet) {
+        make_preprocess_packet(client, packet);
+        return std::visit(
+            [&client](auto& mode) -> base_objects::network::response {
+                return std::visit(
+                    [&client](auto& it) -> base_objects::network::response {
+                        base_objects::network::response res;
+                        serialize_packet(res, client, it);
+                        return res;
+                    },
+                    mode
+                );
+            },
+            packet
+        );
+    }
+
+    base_objects::network::response internal_encode(SharedClientData& client, server_bound_packet&& packet) {
+        make_preprocess_packet(client, packet);
         return std::visit(
             [&client](auto& mode) -> base_objects::network::response {
                 return std::visit(
@@ -644,36 +702,12 @@ namespace copper_server::api::packets {
     }
 
     base_objects::network::response encode(client_bound_packet&& packet) {
-        return std::visit(
-            [](auto& mode) -> base_objects::network::response {
-                return std::visit(
-                    [](auto& it) -> base_objects::network::response {
-                        SharedClientData client;
-                        base_objects::network::response res;
-                        serialize_packet(res, client, it);
-                        return res;
-                    },
-                    mode
-                );
-            },
-            packet
-        );
+        SharedClientData client;
+        return internal_encode(client, std::move(packet));
     }
 
     base_objects::network::response encode(server_bound_packet&& packet) {
-        return std::visit(
-            [](auto& mode) -> base_objects::network::response {
-                return std::visit(
-                    [](auto& it) -> base_objects::network::response {
-                        SharedClientData client;
-                        base_objects::network::response res;
-                        serialize_packet(res, client, it);
-                        return res;
-                    },
-                    mode
-                );
-            },
-            packet
-        );
+        SharedClientData client;
+        return internal_encode(client, std::move(packet));
     }
 }

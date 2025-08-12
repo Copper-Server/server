@@ -21,13 +21,7 @@
 namespace copper_server::build_in_plugins::network::tcp::client_handler {
     struct tcp_configuration : public PluginAutoRegister<"network/tcp_configuration", tcp_configuration> {
         struct extra_data_t {
-            enum class load_state_e {
-                to_init,
-                await_known_packs,
-                await_processing,
-                done
-            } load_state
-                = load_state_e::to_init;
+            bool packs_requested = false;
             keep_alive_solution ka_solution;
             list_array<PluginRegistrationPtr> active_plugins{};
 
@@ -478,10 +472,12 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
         }
 
         static void make_finish(base_objects::SharedClientData& client) {
-            if (extra_data_t::get(client).active_plugins.empty()) {
-                if (client.packets_state.pending_resource_packs.empty()) {
-                    extra_data_t::get(client).load_state = extra_data_t::load_state_e::done;
-                    client << api::packets::client_bound::configuration::finish_configuration{};
+            auto& data = extra_data_t::get(client);
+            if (data.packs_requested) {
+                if (data.active_plugins.empty()) {
+                    if (client.packets_state.pending_resource_packs.empty()) {
+                        client << api::packets::client_bound::configuration::finish_configuration{};
+                    }
                 }
             }
         }
@@ -497,73 +493,66 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             using select_known_packs = api::packets::server_bound::configuration::select_known_packs;
             using custom_click_action = api::packets::server_bound::configuration::custom_click_action;
 
-            api::packets::register_viewer_client_bound<client_bound_resource_pack>([](client_bound_resource_pack&& packet, base_objects::SharedClientData& client) {
+            api::packets::register_viewer_client_bound<client_bound_resource_pack>([](const client_bound_resource_pack& packet, base_objects::SharedClientData& client) {
                 client.packets_state.pending_resource_packs[packet.uuid] = {.required = packet.forced};
+                return false;
             });
             api::packets::register_server_bound_processor<client_information>([](client_information&& packet, base_objects::SharedClientData& client) {
-                if (extra_data_t::get(client).load_state == extra_data_t::load_state_e::to_init) {
-                    client.locale = packet.locale.value;
-                    client.view_distance = (uint8_t)std::min<uint32_t>(packet.view_distance, api::configuration::get().game_play.view_distance);
-                    client.chat_mode = (base_objects::SharedClientData::ChatMode)packet.chat_mode.value;
-                    client.enable_chat_colors = packet.enable_chat_colors;
-                    client.skin_parts.mask = packet.displayed_skin_parts.get();
-                    client.main_hand = (base_objects::SharedClientData::MainHand)packet.main_hand.value;
-                    client.enable_filtering = packet.enable_text_filtering;
-                    client.allow_server_listings = packet.allow_server_listings;
-                    client.particle_status = (base_objects::SharedClientData::ParticleStatus)packet.particle_status.value;
-                    if (client.get_session())
-                        client.get_session()->request_buffer(api::configuration::get().protocol.buffer);
-                    extra_data_t::get(client).load_state = extra_data_t::load_state_e::await_known_packs;
-                    extra_data_t::get(client).ka_solution.set_callback([](int64_t res, base_objects::SharedClientData& client) {
-                        client << api::packets::client_bound::configuration::keep_alive{.keep_alive_id = (uint64_t)res};
-                    });
-                    client << api::packets::client_bound::configuration::select_known_packs{
-                        .packs = resources::loaded_packs()
-                                     .convert_fn([](auto& it) {
-                                         return api::packets::client_bound::configuration::select_known_packs::pack{
-                                             .pack_namespace = it.namespace_,
-                                             .id = it.id,
-                                             .version = it.version
-                                         };
-                                     })
-                    };
-                    extra_data_t::get(client).ka_solution.make_keep_alive_packet();
-                } else
-                    client << api::packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 0"};
+                client.locale = packet.locale.value;
+                client.view_distance = (uint8_t)std::min<uint32_t>(packet.view_distance, api::configuration::get().game_play.view_distance);
+                client.chat_mode = (base_objects::SharedClientData::ChatMode)packet.chat_mode.value;
+                client.enable_chat_colors = packet.enable_chat_colors;
+                client.skin_parts.mask = packet.displayed_skin_parts.get();
+                client.main_hand = (base_objects::SharedClientData::MainHand)packet.main_hand.value;
+                client.enable_filtering = packet.enable_text_filtering;
+                client.allow_server_listings = packet.allow_server_listings;
+                client.particle_status = (base_objects::SharedClientData::ParticleStatus)packet.particle_status.value;
+                if (client.get_session())
+                    client.get_session()->request_buffer(api::configuration::get().protocol.buffer);
+                auto& data = extra_data_t::get(client);
+                data.ka_solution.set_callback([](int64_t res, base_objects::SharedClientData& client) {
+                    client << api::packets::client_bound::configuration::keep_alive{.keep_alive_id = (uint64_t)res};
+                });
+                client << api::packets::client_bound::configuration::select_known_packs{
+                    .packs = resources::loaded_packs()
+                                 .convert_fn([](auto& it) {
+                                     return api::packets::client_bound::configuration::select_known_packs::pack{
+                                         .pack_namespace = it.namespace_,
+                                         .id = it.id,
+                                         .version = it.version
+                                     };
+                                 })
+                };
+                data.packs_requested = true;
+                data.ka_solution.start();
             });
             api::packets::register_server_bound_processor<cookie_response>([](cookie_response&& packet, base_objects::SharedClientData& client) {
-                if (extra_data_t::get(client).load_state == extra_data_t::load_state_e::await_processing) {
-                    if (auto plugin = pluginManagement.get_bind_cookies(PluginManagement::registration_on::configuration, packet.key); plugin)
-                        if (plugin->OnConfigurationCookie(plugin, packet.key, packet.payload ? *packet.payload : list_array<uint8_t>{}, client)) {
-                            extra_data_t::get(client).active_plugins.remove(plugin);
-                            make_finish(client);
-                        }
-                } else
-                    client << api::packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 2"};
-            });
-            api::packets::register_server_bound_processor<custom_payload>([](custom_payload&& packet, base_objects::SharedClientData& client) {
-                if (extra_data_t::get(client).load_state == extra_data_t::load_state_e::await_processing) {
-                    auto it = pluginManagement.get_bind_plugin(PluginManagement::registration_on::configuration, packet.channel);
-                    if (it != nullptr)
-                        packet.payload.commit();
-                    if (it->OnConfigurationHandle(it, packet.channel, packet.payload, client)) {
-                        extra_data_t::get(client).active_plugins.remove(it);
+                if (auto plugin = pluginManagement.get_bind_cookies(PluginManagement::registration_on::configuration, packet.key); plugin)
+                    if (plugin->OnConfigurationCookie(plugin, packet.key, packet.payload ? *packet.payload : list_array<uint8_t>{}, client)) {
+                        extra_data_t::get(client).active_plugins.remove(plugin);
                         make_finish(client);
                     }
-                } else
-                    client << api::packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 2"};
             });
-            api::packets::register_viewer_server_bound<api::packets::server_bound::configuration::finish_configuration>([](api::packets::server_bound::configuration::finish_configuration&&, base_objects::SharedClientData& client) {
-                if (extra_data_t::get(client).load_state == extra_data_t::load_state_e::done) {
+            api::packets::register_server_bound_processor<custom_payload>([](custom_payload&& packet, base_objects::SharedClientData& client) {
+                auto it = pluginManagement.get_bind_plugin(PluginManagement::registration_on::configuration, packet.channel);
+                if (it != nullptr)
+                    packet.payload.commit();
+                if (it->OnConfigurationHandle(it, packet.channel, packet.payload, client)) {
+                    extra_data_t::get(client).active_plugins.remove(it);
+                    make_finish(client);
+                }
+            });
+            api::packets::register_viewer_server_bound<api::packets::server_bound::configuration::finish_configuration>([](const api::packets::server_bound::configuration::finish_configuration&, base_objects::SharedClientData& client) {
+                if (extra_data_t::get(client).packs_requested) {
                     if (extra_data_t::get(client).active_plugins.empty()) {
                         if (client.packets_state.pending_resource_packs.empty())
                             return false;
                         else
-                            client << api::packets::client_bound::play::disconnect{.reason = "Pending resource packs"};
+                            client << api::packets::client_bound::play::disconnect{.reason = "Pending resource packs."};
                     } else
-                        client << api::packets::client_bound::play::disconnect{.reason = "Invalid protocol state, 3"};
+                        client << api::packets::client_bound::play::disconnect{.reason = "Requested more data."};
                 } else
-                    client << api::packets::client_bound::play::disconnect{.reason = "Invalid protocol state, 3"};
+                    client << api::packets::client_bound::play::disconnect{.reason = "Nope, gimme packs!"};
                 return true;
             });
             api::packets::register_server_bound_processor<keep_alive>([](keep_alive&& packet, base_objects::SharedClientData& client) {
@@ -594,19 +583,15 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 }
             });
             api::packets::register_server_bound_processor<select_known_packs>([](select_known_packs&& packet, base_objects::SharedClientData& client) {
-                if (extra_data_t::get(client).load_state == extra_data_t::load_state_e::await_known_packs) {
-                    send_registry_data(client);
-                    send_tags(client);
-                    extra_data_t::get(client).load_state = extra_data_t::load_state_e::await_processing;
-                    pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::configuration, [&client, &packet](PluginRegistrationPtr plugin) {
-                        if (!plugin->OnConfiguration(client)) {
-                            if (!plugin->OnConfiguration_gotKnownPacks(client, packet))
-                                extra_data_t::get(client).active_plugins.push_back(plugin);
-                        }
-                    });
-                    make_finish(client);
-                } else
-                    client << api::packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 1"};
+                send_registry_data(client);
+                send_tags(client);
+                pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::configuration, [&client, &packet](PluginRegistrationPtr plugin) {
+                    if (!plugin->OnConfiguration(client)) {
+                        if (!plugin->OnConfiguration_gotKnownPacks(client, packet))
+                            extra_data_t::get(client).active_plugins.push_back(plugin);
+                    }
+                });
+                make_finish(client);
             });
             api::packets::register_server_bound_processor<custom_click_action>([](custom_click_action&& packet, base_objects::SharedClientData& client) {
                 api::dialogs::pass_dialog(packet.id, client, std::move(packet.payload));

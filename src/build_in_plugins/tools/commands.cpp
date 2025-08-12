@@ -39,7 +39,7 @@ namespace copper_server::build_in_plugins {
                     .set_callback("command.help", [browser](const list_array<predicate>&, base_objects::command_context& context) {
                         context.executor << api::client::play::system_chat{.content = "help for all commands:\n" + browser.get_documentation()};
                     })
-                    .add_child({"[command]", "returns help for command", "/help [command]"}, cmd_pred_string::greedy_phrase)
+                    .add_child({"command", "returns help for command", "/help command"}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                     .set_callback("command.help", [browser](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto command = browser.open(std::get<pred_string>(args[0]).value);
                         if (!command.is_valid())

@@ -68,8 +68,8 @@ namespace copper_server::base_objects {
             return res;
         }
 
-        std::optional<parsers::block> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::block& cfg, std::string& part, std::string& path) {
-            parsers::block res;
+        std::optional<parsers::block_state> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::block_state& cfg, std::string& part, std::string& path) {
+            parsers::block_state res;
             auto id = part;
             next_token(part, path);
             try {
@@ -91,6 +91,15 @@ namespace copper_server::base_objects {
             }
             return res;
         }
+
+        std::optional<parsers::block_predicate> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::block_predicate& cfg, std::string& part, std::string& path) {
+            return std::nullopt;
+        }
+
+        std::optional<parsers::style> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::style& cfg, std::string& part, std::string& path) {
+            return std::nullopt;
+        }
+
 
         std::optional<parsers::color> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::color& cfg, std::string& part, [[maybe_unused]] std::string& path) {
             if (part == "white")
@@ -127,6 +136,10 @@ namespace copper_server::base_objects {
                 return parsers::color::black;
             else
                 return std::nullopt;
+        }
+
+        std::optional<parsers::hex_color> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::hex_color& cfg, std::string& part, [[maybe_unused]] std::string& path) {
+            return std::nullopt;
         }
 
         std::optional<parsers::block_pos> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::block_pos& cfg, std::string& part, std::string& path) {
@@ -208,13 +221,9 @@ namespace copper_server::base_objects {
 
             std::string begin = part.substr(0, pos);
             std::string end = part.substr(pos + 1);
-            if (begin.empty())
-                res.without_begin = true;
-            else
+            if (!begin.empty())
                 res.begin = std::stof(begin);
-            if (end.empty())
-                res.without_end = true;
-            else
+            if (!end.empty())
                 res.end = std::stof(end);
             return res;
         }
@@ -261,18 +270,14 @@ namespace copper_server::base_objects {
 
             std::string begin = part.substr(0, pos);
             std::string end = part.substr(pos + 1);
-            if (begin.empty())
-                res.without_begin = true;
-            else
+            if (!begin.empty())
                 res.begin = std::stoi(begin);
-            if (end.empty())
-                res.without_end = true;
-            else
+            if (!end.empty())
                 res.end = std::stoi(end);
             return res;
         }
 
-        std::optional<parsers::item> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::item& cfg, [[maybe_unused]] std::string& part, [[maybe_unused]] std::string& path) {
+        std::optional<parsers::item_stack> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::item_stack& cfg, [[maybe_unused]] std::string& part, [[maybe_unused]] std::string& path) {
             return {}; //TODO
         }
 
@@ -280,7 +285,11 @@ namespace copper_server::base_objects {
             return {}; //TODO
         }
 
-        std::optional<parsers::item_stack> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::item_stack& cfg, [[maybe_unused]] std::string& part, [[maybe_unused]] std::string& path) {
+        std::optional<parsers::item_predicate> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::item_predicate& cfg, [[maybe_unused]] std::string& part, [[maybe_unused]] std::string& path) {
+            return {}; //TODO
+        }
+
+        std::optional<parsers::item_slots> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::item_slots& cfg, [[maybe_unused]] std::string& part, [[maybe_unused]] std::string& path) {
             return {}; //TODO
         }
 
@@ -288,7 +297,7 @@ namespace copper_server::base_objects {
             return {}; //TODO
         }
 
-        std::optional<parsers::nbt> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::nbt& cfg, [[maybe_unused]] std::string& part, [[maybe_unused]] std::string& path) {
+        std::optional<parsers::nbt_tag> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::nbt_tag& cfg, [[maybe_unused]] std::string& part, [[maybe_unused]] std::string& path) {
             return {}; //TODO
         }
 
@@ -355,6 +364,10 @@ namespace copper_server::base_objects {
             return {}; //TODO
         }
 
+        std::optional<parsers::resource_selector> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::resource_selector& cfg, [[maybe_unused]] std::string& part, [[maybe_unused]] std::string& path) {
+            return {}; //TODO
+        }
+
         std::optional<parsers::rotation> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::rotation& cfg, [[maybe_unused]] std::string& part, [[maybe_unused]] std::string& path) {
             return {}; //TODO
         }
@@ -367,12 +380,8 @@ namespace copper_server::base_objects {
             return {}; //TODO
         }
 
-        std::optional<parsers::state> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::state& cfg, [[maybe_unused]] std::string& part, [[maybe_unused]] std::string& path) {
-            return {}; //TODO
-        }
-
         std::optional<parsers::string> parse([[maybe_unused]] command_manager& manager, parsers::command::string& cfg, std::string& part, std::string& path) {
-            switch (cfg) {
+            switch (cfg.type.value) {
             case parsers::command::string::single_word:
                 return parsers::string(part);
             case parsers::command::string::quotable_phrase:
@@ -441,6 +450,22 @@ namespace copper_server::base_objects {
             return {}; //TODO
         }
 
+        std::optional<parsers::loot_table> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::loot_table& cfg, [[maybe_unused]] std::string& part, [[maybe_unused]] std::string& path) {
+            return {}; //TODO
+        }
+
+        std::optional<parsers::loot_modifier> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::loot_modifier& cfg, [[maybe_unused]] std::string& part, [[maybe_unused]] std::string& path) {
+            return {}; //TODO
+        }
+
+        std::optional<parsers::loot_predicate> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::loot_predicate& cfg, [[maybe_unused]] std::string& part, [[maybe_unused]] std::string& path) {
+            return {}; //TODO
+        }
+
+        std::optional<parsers::dialog> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::dialog& cfg, [[maybe_unused]] std::string& part, [[maybe_unused]] std::string& path) {
+            return {}; //TODO
+        }
+
         std::optional<parsers::template_mirror> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::template_mirror& cfg, std::string& part, [[maybe_unused]] std::string& path) {
             if (part == "none")
                 return parsers::template_mirror::none;
@@ -481,7 +506,7 @@ namespace copper_server::base_objects {
             } catch (const std::out_of_range&) {
                 return std::nullopt;
             }
-            if (value < cfg.min)
+            if (value < cfg.min_ticks)
                 return std::nullopt;
             return parsers::time{value};
         }
@@ -551,12 +576,16 @@ namespace copper_server::base_objects {
         std::optional<parsers::_double> parse([[maybe_unused]] command_manager& manager, parsers::command::_double& cfg, std::string& part, [[maybe_unused]] std::string& path) {
             try {
                 double value = std::stod(part);
-                if (cfg.min)
-                    if (value < *cfg.min)
-                        return std::nullopt;
-                if (cfg.max)
-                    if (value > *cfg.max)
-                        return std::nullopt;
+                bool valid = true;
+                cfg.flags.for_each([&]<class T>(const T& it) {
+                    if constexpr (std::is_same_v<parsers::command::_double::min, T>) {
+                        if (it.value && value < it.value)
+                            valid = false;
+                    } else if (it.value && value > it.value)
+                        valid = false;
+                });
+                if (!valid)
+                    return std::nullopt;
                 return parsers::_double{value};
             }
 
@@ -568,12 +597,16 @@ namespace copper_server::base_objects {
         std::optional<parsers::_float> parse([[maybe_unused]] command_manager& manager, parsers::command::_float& cfg, [[maybe_unused]] std::string& part, [[maybe_unused]] std::string& path) {
             try {
                 float value = std::stof(part);
-                if (cfg.min)
-                    if (value < *cfg.min)
-                        return std::nullopt;
-                if (cfg.max)
-                    if (value > *cfg.max)
-                        return std::nullopt;
+                bool valid = true;
+                cfg.flags.for_each([&]<class T>(const T& it) {
+                    if constexpr (std::is_same_v<parsers::command::_float::min, T>) {
+                        if (it.value && value < it.value)
+                            valid = false;
+                    } else if (it.value && value > it.value)
+                        valid = false;
+                });
+                if (!valid)
+                    return std::nullopt;
                 return parsers::_float{value};
             } catch (...) {
                 return std::nullopt;
@@ -583,12 +616,16 @@ namespace copper_server::base_objects {
         std::optional<parsers::_integer> parse([[maybe_unused]] command_manager& manager, parsers::command::_integer& cfg, std::string& part, [[maybe_unused]] std::string& path) {
             try {
                 int32_t value = std::stoi(part);
-                if (cfg.min)
-                    if (value < *cfg.min)
-                        return std::nullopt;
-                if (cfg.max)
-                    if (value > *cfg.max)
-                        return std::nullopt;
+                bool valid = true;
+                cfg.flags.for_each([&]<class T>(const T& it) {
+                    if constexpr (std::is_same_v<parsers::command::_integer::min, T>) {
+                        if (it.value && value < it.value)
+                            valid = false;
+                    } else if (it.value && value > it.value)
+                        valid = false;
+                });
+                if (!valid)
+                    return std::nullopt;
                 return parsers::_integer{value};
             } catch (...) {
                 return std::nullopt;
@@ -598,20 +635,21 @@ namespace copper_server::base_objects {
         std::optional<parsers::_long> parse([[maybe_unused]] command_manager& manager, parsers::command::_long& cfg, std::string& part, [[maybe_unused]] std::string& path) {
             try {
                 int64_t value = std::stoll(part);
-                if (cfg.min)
-                    if (value < *cfg.min)
-                        return std::nullopt;
-                if (cfg.max)
-                    if (value > *cfg.max)
-                        return std::nullopt;
+                bool valid = true;
+                cfg.flags.for_each([&]<class T>(const T& it) {
+                    if constexpr (std::is_same_v<parsers::command::_long::min, T>) {
+                        if (it.value && value < it.value)
+                            valid = false;
+                    } else if (it.value && value > it.value)
+                        valid = false;
+                });
+                if (!valid)
+                    return std::nullopt;
+
                 return parsers::_long{value};
             } catch (...) {
                 return std::nullopt;
             }
-        }
-
-        std::optional<parsers::custom_virtual> parse(command_manager& manager, parsers::command::custom_virtual& cfg, std::string& part, std::string& path) {
-            return manager.get_parser(cfg.value->name()).parse(cfg, part, path);
         }
     }
 
@@ -656,148 +694,6 @@ namespace copper_server::base_objects {
             }
             return get_child(command_nodes, child_name);
         }
-    }
-
-    static void build_parser(base_objects::packets::command_node& node, const base_objects::command_parser& command) {
-        using namespace base_objects;
-        std::visit(
-            [&](auto& it) {
-                using T = std::decay_t<decltype(it)>;
-                if constexpr (std::is_same_v<T, parsers::command::_bool>) {
-                    node.parser_id = packets::command_node::parsers::brigadier_bool;
-                } else if constexpr (
-                    std::is_same_v<T, parsers::command::_double>
-                    || std::is_same_v<T, parsers::command::_float>
-                    || std::is_same_v<T, parsers::command::_integer>
-                    || std::is_same_v<T, parsers::command::_long>
-                ) {
-                    if (std::is_same_v<T, parsers::command::_double>)
-                        node.parser_id = packets::command_node::parsers::brigadier_double;
-                    else if (std::is_same_v<T, parsers::command::_float>)
-                        node.parser_id = packets::command_node::parsers::brigadier_float;
-                    else if (std::is_same_v<T, parsers::command::_integer>)
-                        node.parser_id = packets::command_node::parsers::brigadier_integer;
-                    else if (std::is_same_v<T, parsers::command::_long>)
-                        node.parser_id = packets::command_node::parsers::brigadier_long;
-                    packets::command_node::properties_t prop;
-                    uint8_t flags = 0;
-                    if (it.min) {
-                        prop.min = *it.min;
-                        flags &= 1;
-                    }
-                    if (it.max) {
-                        prop.min = *it.max;
-                        flags &= 2;
-                    }
-                    prop.flags = flags;
-                    node.properties = prop;
-                } else if constexpr (std::is_same_v<T, parsers::command::string>) {
-                    node.parser_id = packets::command_node::parsers::brigadier_string;
-                    node.properties = {.flags = (uint8_t)it};
-                } else if constexpr (std::is_same_v<T, parsers::command::angle>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_angle;
-                } else if constexpr (std::is_same_v<T, parsers::command::block>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_block_predicate;
-                } else if constexpr (std::is_same_v<T, parsers::command::color>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_color;
-                } else if constexpr (std::is_same_v<T, parsers::command::column_pos>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_column_pos;
-                } else if constexpr (std::is_same_v<T, parsers::command::component>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_component;
-                } else if constexpr (std::is_same_v<T, parsers::command::dimension>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_dimension;
-                } else if constexpr (std::is_same_v<T, parsers::command::entity>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_entity;
-                    node.properties = {.flags = (int(it.only_one_entity) | (int(it.only_player_entity) << 1))};
-                } else if constexpr (std::is_same_v<T, parsers::command::entity_anchor>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_entity_anchor;
-                } else if constexpr (std::is_same_v<T, parsers::command::heightmap>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_heightmap;
-                } else if constexpr (std::is_same_v<T, parsers::command::item>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_item_predicate;
-                } else if constexpr (std::is_same_v<T, parsers::command::item_slot>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_item_slot;
-                } else if constexpr (std::is_same_v<T, parsers::command::item_stack>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_item_stack;
-                } else if constexpr (std::is_same_v<T, parsers::command::message>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_message;
-                } else if constexpr (std::is_same_v<T, parsers::command::nbt_compound_tag>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_nbt_tag;
-                } else if constexpr (std::is_same_v<T, parsers::command::nbt_path>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_nbt_path;
-                } else if constexpr (std::is_same_v<T, parsers::command::nbt>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_nbt;
-                } else if constexpr (std::is_same_v<T, parsers::command::objective>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_objective;
-                } else if constexpr (std::is_same_v<T, parsers::command::objective_criteria>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_objective_criteria;
-                } else if constexpr (std::is_same_v<T, parsers::command::operation>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_operation;
-                } else if constexpr (std::is_same_v<T, parsers::command::particle>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_particle;
-                } else if constexpr (std::is_same_v<T, parsers::command::resource>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_resource;
-                    node.properties = {.registry = it.suggestion_registry};
-                } else if constexpr (std::is_same_v<T, parsers::command::resource_key>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_resource_key;
-                    node.properties = {.registry = it.suggestion_registry};
-                } else if constexpr (std::is_same_v<T, parsers::command::resource_location>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_resource_location;
-                } else if constexpr (std::is_same_v<T, parsers::command::resource_or_tag>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_resource_or_tag;
-                    node.properties = {.registry = it.suggestion_registry};
-                } else if constexpr (std::is_same_v<T, parsers::command::rotation>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_rotation;
-                } else if constexpr (std::is_same_v<T, parsers::command::score_holder>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_score_holder;
-                } else if constexpr (std::is_same_v<T, parsers::command::team>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_team;
-                } else if constexpr (std::is_same_v<T, parsers::command::template_mirror>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_template_mirror;
-                } else if constexpr (std::is_same_v<T, parsers::command::time>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_time;
-                } else if constexpr (std::is_same_v<T, parsers::command::uuid>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_uuid;
-                } else if constexpr (std::is_same_v<T, parsers::command::vec2>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_vec2;
-                } else if constexpr (std::is_same_v<T, parsers::command::vec3>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_vec3;
-                } else if constexpr (std::is_same_v<T, parsers::command::custom_virtual>) {
-                    node.parser_id = packets::command_node::parsers::brigadier_string;
-                    node.properties = {.flags = (uint8_t)parsers::command::string::single_word};
-                } else if constexpr (std::is_same_v<T, parsers::command::block_pos>) {
-                    node.parser_id = packets::command_node::parsers::minecraft_block_pos;
-                } else {
-                    assert((false && __LINE__ && __FILE__ " Failed to convert command predicate to parser"));
-                }
-            },
-            command
-        );
-    }
-
-    packets::command_node command::build_node(bool is_root) const {
-        packets::command_node result;
-        result.name = name;
-        if (redirect) {
-            result.flags.has_redirect = true;
-            result.redirect_node = redirect->target_command;
-        }
-        if (has_suggestion()) {
-            result.flags.has_suggestion = true;
-            result.suggestion_type = is_custom_suggestion() ? "minecraft:ask_server" : get_named_suggestion();
-        }
-        result.flags.is_executable = (bool)executable;
-
-        bool is_argument = (bool)argument_predicate;
-        if (is_root) {
-            result.flags.node_type = packets::command_node::node_type::root;
-            return result;
-        } else if (is_argument) {
-            result.flags.node_type = packets::command_node::node_type::argument;
-            build_parser(result, *argument_predicate);
-        } else
-            result.flags.node_type = packets::command_node::node_type::literal;
-        return result;
     }
 
     int32_t get_index(list_array<command>& command_nodes, const std::string& path, int32_t current_ = 0) {
@@ -997,22 +893,6 @@ namespace copper_server::base_objects {
             return;
         else
             named_suggestion_providers.erase(name);
-    }
-
-    void command_manager::register_parser(const std::shared_ptr<command_custom_parser>& parser) {
-        if (parser)
-            custom_parsers[parser->name()] = parser;
-    }
-
-    command_custom_parser& command_manager::get_parser(const std::string& name) {
-        auto it = custom_parsers.find(name);
-        if (it == custom_parsers.end())
-            throw std::runtime_error("Parser not found");
-        return *it->second;
-    }
-
-    void command_manager::unregister_parser(const std::string& name) {
-        custom_parsers.erase(name);
     }
 
     void command_manager::execute_command(const std::string& command_string, command_context& data) {
@@ -1238,6 +1118,11 @@ namespace copper_server::base_objects {
         return command_browser(manager, int32_t(manager.command_nodes.size() - 1));
     }
 
+    command_browser command_root_browser::add_child(command&& command, command_parser&& pred) {
+        command.argument_predicate = std::move(pred);
+        return add_child(std::move(command));
+    }
+
     bool command_root_browser::remove_child(const std::string& name) {
         auto id = manager.command_nodes.find_if([&](const command& cmd) {
             return cmd.name == name;
@@ -1348,8 +1233,8 @@ namespace copper_server::base_objects {
         return command_browser(manager, int32_t(manager.command_nodes.size() - 1));
     }
 
-    command_browser command_browser::add_child(command&& command, command_parser pred) {
-        command.argument_predicate = pred;
+    command_browser command_browser::add_child(command&& command, command_parser&& pred) {
+        command.argument_predicate = std::move(pred);
         return add_child(std::move(command));
     }
 

@@ -68,7 +68,7 @@ namespace copper_server::build_in_plugins {
             {
                 auto allowlist = browser.add_child({"allowlist", "", ""});
                 allowlist.add_child({"add", "", ""})
-                    .add_child({"<player>", "add player to allowlist", "/allowlist add <player>"}, cmd_pred_string::quotable_phrase)
+                    .add_child({"player", "add player to allowlist", "/allowlist add player"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                     .set_callback("command.allowlist.add", [this](const list_array<predicate>& args, base_objects::command_context& context) -> void {
                         auto& player_name = std::get<pred_string>(args[0]).value;
                         if (player_name.contains("\n"))
@@ -82,7 +82,7 @@ namespace copper_server::build_in_plugins {
                         context.executor << api::client::play::system_chat{.content = {"Player " + player_name + " added to allowlist"}};
                     });
                 allowlist.add_child({"remove", "", ""})
-                    .add_child({"<player>", "remove player from allowlist", "/allowlist remove <player>"}, cmd_pred_string::quotable_phrase)
+                    .add_child({"player", "remove player from allowlist", "/allowlist remove player"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                     .set_callback("command.allowlist.remove", [this](const list_array<predicate>& args, base_objects::command_context& context) -> void {
                         auto& player_name = std::get<pred_string>(args[0]).value;
                         if (player_name.contains("\n"))
@@ -120,7 +120,7 @@ namespace copper_server::build_in_plugins {
                         }
                     });
                 allowlist.add_child({"mode"})
-                    .add_child({"<mode>", "set allowlist mode", "/allowlist mode block|allow|off"}, cmd_pred_string::quotable_phrase)
+                    .add_child({"mode", "set allowlist mode", "/allowlist mode block|allow|off"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                     .set_callback("command.allowlist.mode", [](const list_array<predicate>& args, base_objects::command_context& context) -> void {
                         auto& mode = std::get<pred_string>(args[0]).value;
                         if (mode == "block")

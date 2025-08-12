@@ -1,4 +1,4 @@
-if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed.exe)
+if(${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/main.cpp IS_NEWER_THAN ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed.exe)
     message(STATUS "Configuring binary_embed tool...")
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out)
 
@@ -28,7 +28,7 @@ if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed.exe)
 
     message(STATUS "binary_embed tool built successfully")
 endif()
-if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map.exe)
+if(${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/main.cpp IS_NEWER_THAN ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map.exe)
     message(STATUS "Configuring reflect_map tool...")
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out)
 

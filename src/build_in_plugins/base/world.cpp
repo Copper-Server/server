@@ -198,7 +198,7 @@ namespace copper_server::build_in_plugins {
                     } else if (world.world_name == "nether") {
                         world.generator_id = "nether";
                     } else {
-                        world.generator_id = api::configuration::get().world.type;
+                        world.generator_id = api::configuration::get().world.generator_type;
                         for (auto& [name, value] : api::configuration::get().world.generator_settings)
                             world.world_generator_data[name] = value;
                     }
@@ -321,8 +321,8 @@ namespace copper_server::build_in_plugins {
     using pred_angle = base_objects::parsers::angle;
     using cmd_pred_angle = base_objects::parsers::command::angle;
 
-    using pred_block = base_objects::parsers::block;
-    using cmd_pred_block = base_objects::parsers::command::block;
+    using pred_block = base_objects::parsers::block_state;
+    using cmd_pred_block = base_objects::parsers::command::block_state;
 
     using pred_entity = base_objects::parsers::entity;
     using cmd_pred_entity = base_objects::parsers::command::entity;
@@ -397,7 +397,7 @@ namespace copper_server::build_in_plugins {
                             context.executor << api::client::play::system_chat{.content = message};
                         } else {
                             worlds_storage.create(name, [&](storage::world_data& world) {
-                                world.load(settings.as_compound());
+                                world.load(settings);
                             });
                             Chat message("World created: " + name);
                             message.SetColor("green");
@@ -420,8 +420,8 @@ namespace copper_server::build_in_plugins {
             }
             {
                 auto remove = worlds.add_child("remove");
-                auto world_id = remove.add_child("<world_id>", cmd_pred_int());
-                auto world_name = remove.add_child("<world_name>", cmd_pred_string());
+                auto world_id = remove.add_child("world_id", cmd_pred_int());
+                auto world_name = remove.add_child("world_name", cmd_pred_string());
 
                 world_id
                     .set_callback("command.world.remove", [this](const list_array<predicate>& args, base_objects::command_context& context) {
@@ -451,8 +451,8 @@ namespace copper_server::build_in_plugins {
                 auto base = worlds.add_child("base");
                 {
                     auto set = base.add_child("set");
-                    auto world_id = set.add_child("<world_id>", cmd_pred_int());
-                    auto world_name = set.add_child("<world_name>", cmd_pred_string());
+                    auto world_id = set.add_child("world_id", cmd_pred_int());
+                    auto world_name = set.add_child("world_name", cmd_pred_string());
                     world_id
                         .set_callback("command.world.base.set", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                             int32_t id = std::get<pred_int>(args[0]).value;
@@ -486,8 +486,8 @@ namespace copper_server::build_in_plugins {
             }
             {
                 auto load = worlds.add_child("load");
-                auto world_id = load.add_child("<world_id>", cmd_pred_int());
-                auto world_name = load.add_child("<world_name>", cmd_pred_string());
+                auto world_id = load.add_child("world_id", cmd_pred_int());
+                auto world_name = load.add_child("world_name", cmd_pred_string());
                 world_id
                     .set_callback("command.world.load", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         int32_t id = std::get<pred_int>(args[0]).value;
@@ -522,8 +522,8 @@ namespace copper_server::build_in_plugins {
             }
             {
                 auto save = worlds.add_child("save");
-                auto world_id = save.add_child("<world_id>", cmd_pred_int());
-                auto world_name = save.add_child("<world_name>", cmd_pred_string());
+                auto world_id = save.add_child("world_id", cmd_pred_int());
+                auto world_name = save.add_child("world_name", cmd_pred_string());
                 world_id
                     .set_callback("command.world.save", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         int32_t id = std::get<pred_int>(args[0]).value;
@@ -579,8 +579,8 @@ namespace copper_server::build_in_plugins {
             }
             {
                 auto unload = worlds.add_child("unload");
-                auto world_id = unload.add_child("<world_id>", cmd_pred_int());
-                auto world_name = unload.add_child("<world_name>", cmd_pred_string());
+                auto world_id = unload.add_child("world_id", cmd_pred_int());
+                auto world_name = unload.add_child("world_name", cmd_pred_string());
                 world_id
                     .set_callback("command.world.unload", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         int32_t id = std::get<pred_int>(args[0]).value;
@@ -624,7 +624,7 @@ namespace copper_server::build_in_plugins {
             }
             {
                 auto get_id = worlds.add_child("get_id");
-                auto world_name = get_id.add_child("<world_name>", cmd_pred_string());
+                auto world_name = get_id.add_child("world_name", cmd_pred_string());
                 world_name
                     .set_callback("command.world.get_id", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         const std::string id = std::get<pred_string>(args[0]).value;
@@ -643,7 +643,7 @@ namespace copper_server::build_in_plugins {
             }
             {
                 auto get_name = worlds.add_child("get_name");
-                auto world_id = get_name.add_child("<world_id>", cmd_pred_int());
+                auto world_id = get_name.add_child("world_id", cmd_pred_int());
                 world_id
                     .set_callback("command.world.get_name", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         int32_t id = std::get<pred_int>(args[0]).value;
@@ -1298,7 +1298,7 @@ namespace copper_server::build_in_plugins {
 
             biome.set_callback("command.setbiome", [&](const list_array<predicate>& args, base_objects::command_context& context) {
                 auto pos = std::get<pred_block_pos>(args[0]);
-                auto biome = std::get<pred_resource_key>(args[1]).location;
+                auto biome = std::get<pred_resource_key>(args[1]).value;
                 base_objects::id_worldgen__biome real_biome = biome;
 
                 if (pos.x_relative)
@@ -1315,7 +1315,7 @@ namespace copper_server::build_in_plugins {
             biome_box.set_callback("command.setbiome", [&](const list_array<predicate>& args, base_objects::command_context& context) {
                 auto pos = std::get<pred_block_pos>(args[0]);
                 auto pos_2 = std::get<pred_block_pos>(args[1]);
-                auto biome = std::get<pred_resource_key>(args[2]).location;
+                auto biome = std::get<pred_resource_key>(args[2]).value;
                 base_objects::id_worldgen__biome real_biome = biome;
 
                 if (pos.x_relative)

@@ -16,39 +16,19 @@
 struct EnumInfo {
     std::string qualified_name;
     std::vector<std::pair<std::string, std::string>> values; // (name, value)
+    bool is_class_enum = false;
+    bool is_struct_enum = false;
 };
 
-/**
- * @brief Helper function to trim leading and trailing whitespace from a std::string_view.
- * @param sv The string_view to trim.
- * @return A new, trimmed string_view.
- */
 constexpr std::string_view trim_view(std::string_view sv) {
     const auto first = sv.find_first_not_of(" \t\n\r");
     if (first == std::string_view::npos) {
-        return {}; // Return an empty view if the string is all whitespace
+        return {};
     }
     const auto last = sv.find_last_not_of(" \t\n\r");
     return sv.substr(first, last - first + 1);
 }
 
-/**
- * @brief Refactors a C++ template parameter string to be more readable and concise.
- *
- * This function improves upon the original by using std::string_view for efficient,
- * allocation-free parsing and a single-pass approach to build the result. This enhances
- * both readability by simplifying the logic and performance by reducing overhead.
- *
- * Transformations performed:
- * 1. Removes `class` and `typename` keywords.
- * 2. Normalizes parameter packs from `... Name` to `Name...`.
- * 3. Extracts only the parameter name from a full declaration (e.g., `const T& name` -> `name`).
- * 4. Keeps type-only parameters (e.g., `T` -> `T`).
- *
- * @param str The template parameter string to modify in-place.
- * Example Input:  "class T, const T& min, class ...Args"
- * Example Output: "T, min, Args..."
- */
 void prepare_template_entry(const std::unordered_set<std::string>& concepts, std::string& str) {
     if (str.empty()) {
         return;
@@ -205,7 +185,6 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
         bool in_struct = false;
         bool in_enum = false;
         bool in_template = false;
-        bool enum_class = false;
         bool template_defined = false;
         bool skipping_function_body = false;
         int enum_brace_depth = 0;
@@ -216,8 +195,7 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
         std::vector<std::vector<std::string>> fields_stack;
         std::vector<std::string> struct_stack;
         std::vector<std::string> namespace_stack;
-        std::vector<std::string> output_funcs;
-        std::vector<EnumInfo> enums;
+        std::vector<std::string> cached_output;
         EnumInfo current_enum;
 
         auto build_fn = [&]() {
@@ -243,8 +221,8 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
                 std::string tmpl_arg_pass = struct_name.substr(bar1 + 1, bar2 - bar1 - 1);
                 prepare_template_entry(concepts_set, tmpl_arg_pass);
                 ltrim(tmpl_arg_pass);
-                tmpl_type = struct_name.substr(bar2 + 1) + "<" + tmpl_arg_pass + ">";
-                real_struct_name = tmpl_type;
+                tmpl_type = struct_name.substr(bar2 + 1);
+                real_struct_name = tmpl_type + "<" + tmpl_arg_pass + ">";
             } else
                 tmpl_decl = "template<class FN>";
 
@@ -362,10 +340,37 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
                     func << s << "::";
                 func << real_struct_name << "\"; }\n";
             }
-            output_funcs.push_back(func.str());
+
+            //fields_count
+            if (!is_template) {
+                func << "template<>consteval size_t fields_count<";
+                for (const auto& ns : namespace_stack)
+                    if (!ns.empty())
+                        func << ns << "::";
+                for (const auto& s : struct_stack)
+                    func << s << "::";
+                func << real_struct_name << ">() { return " << fields.size() << "; }\n";
+            }
+
+            cached_output.push_back(func.str());
         };
 
+        auto build_enum = [&]() {
+            std::ostringstream enm;
+            auto& e = current_enum;
+            enm << "template<>struct enum_data<" << e.qualified_name << "> {";
+            enm << "using item = std::pair<std::string_view, " << e.qualified_name << ">;\n";
 
+            enm << "static constexpr inline std::array<item, " << e.values.size() << "> values = {";
+            for (size_t i = 0; i < e.values.size(); ++i)
+                enm << "item{\"" << e.values[i].first << "\", " << e.qualified_name << "::" << e.values[i].first << "}" << (i < e.values.size() - 1 ? ", " : "");
+            enm << "};";
+            enm << "};\n";
+            enm << "template<>consteval std::string_view type_name<" << e.qualified_name << ">() { return \"" << e.qualified_name << "\"; }\n";
+            cached_output.push_back(enm.str());
+        };
+
+        std::cerr << header_path << "\n";
         std::istringstream iss(std::move(ss.str()));
         while (std::getline(iss, line)) {
             ltrim(line);
@@ -436,7 +441,8 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
                         // Not a function body, rewind
                         if (iss.good())
                             iss.seekg(prev_pos);
-                        std::cerr << peek_line << std::endl;
+                        if constexpr (debug_out)
+                            std::cerr << "skipped line: " << peek_line << std::endl;
                     }
                 } else {
                     skipping_function_body = true;
@@ -479,6 +485,8 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
                 enum_brace_depth += std::count(line.begin(), line.end(), '{');
                 enum_brace_depth -= std::count(line.begin(), line.end(), '}');
                 // Parse enum values
+                if (size_t comment = line.find("//"); comment != std::string::npos) // Remove trailing comment if any
+                    line = line.substr(0, comment);
                 std::string enum_line = line;
                 ltrim(enum_line);
                 rtrim(enum_line);
@@ -504,7 +512,7 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
                 }
                 if (enum_brace_depth <= 0 && line.find('}') != std::string::npos && line.find(';') != std::string::npos) {
                     // End of enum
-                    enums.push_back(current_enum);
+                    build_enum();
                     current_enum = EnumInfo{};
                     in_enum = false;
                 }
@@ -520,13 +528,12 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
                 enum_brace_depth -= std::count(line.begin(), line.end(), '}');
                 // Parse enum name
                 size_t name_start = std::string("enum ").size();
-                enum_class = false;
                 if (line.find("class ", name_start) == name_start) {
                     name_start += std::string("class ").size();
-                    enum_class = true;
+                    current_enum.is_class_enum = true;
                 } else if (line.find("struct ", name_start) == name_start) {
                     name_start += std::string("struct ").size();
-                    enum_class = true;
+                    current_enum.is_struct_enum = true;
                 }
                 size_t name_end = line.find_first_of(":{", name_start);
                 if (name_end == std::string::npos)
@@ -548,8 +555,7 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
                 current_enum.values.clear();
                 // If enum is one-liner, exit immediately
                 if (enum_brace_depth <= 0 && line.find('}') != std::string::npos && line.find(';') != std::string::npos) {
-
-                    enums.push_back(current_enum);
+                    build_enum();
                     current_enum = EnumInfo{};
                     in_enum = false;
                 }
@@ -614,11 +620,13 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
                 rtrim(check_struct_name);
 
                 if (check_struct_name.find('<') != std::string::npos || check_struct_name.find('>') != std::string::npos) {
-                    std::cerr << "Skipping struct with template parameters: " << check_struct_name << std::endl;
-                    std::cerr << "namespace_stack ";
-                    for (auto& it : namespace_stack)
-                        std::cerr << it << "::";
-                    std::cerr << std::endl;
+                    if constexpr (debug_out) {
+                        std::cerr << "Skipping struct with template parameters: " << check_struct_name << std::endl;
+                        std::cerr << "namespace_stack ";
+                        for (auto& it : namespace_stack)
+                            std::cerr << it << "::";
+                        std::cerr << std::endl;
+                    }
 
                     template_params.clear();
                     in_template = false;
@@ -686,11 +694,20 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
                     rtrim(line);
 
                     std::string field;
-                    size_t colon = line.find(" : ");
-                    if (colon != std::string::npos) { //bit field
+                    if (size_t colon = line.find(" : "); colon != std::string::npos) { //bit field
                         size_t name_end = line.find_last_not_of(" \t", colon - 1);
                         size_t name_start = line.find_last_of(" \t", name_end);
-                        field = line.substr(name_start + 1, name_end - name_start);
+                        if (name_start != std::string::npos)
+                            field = line.substr(name_start + 1, name_end - name_start);
+                        else
+                            field = line.substr(0, name_end);
+                    } else if (size_t array = line.find("["); array != std::string::npos) { //array field
+                        size_t name_end = line.find_last_not_of(" \t", array - 1);
+                        size_t name_start = line.find_last_of(" \t", name_end);
+                        if (name_start != std::string::npos)
+                            field = line.substr(name_start + 1, name_end - name_start);
+                        else
+                            field = line.substr(0, name_end);
                     } else {
                         size_t last = line.find_last_not_of(" \t");
                         if (last != std::string::npos) {
@@ -724,24 +741,10 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
         if (!struct_name.empty()) {
             std::cerr << "struct " << struct_name << " \n";
         }
-        if (!template_params.empty()) {
+        if (!template_params.empty())
             std::cerr << "template_params " << template_params << " \n";
-        }
-        output_file << "// Generated code for header: " << header_path << "\n";
-        // Output all generated functions
-        for (const auto& f : output_funcs)
-            output_file << f;
-        for (const auto& e : enums) {
-            output_file << "template<>struct enum_data<" << e.qualified_name << "> {";
-            output_file << "using item = std::pair<std::string_view, " << e.qualified_name << ">;\n";
-
-            output_file << "static constexpr inline std::array<item, " << e.values.size() << "> values = {";
-            for (size_t i = 0; i < e.values.size(); ++i)
-                output_file << "item{\"" << e.values[i].first << "\", " << e.qualified_name << "::" << e.values[i].first << "}" << (i < e.values.size() - 1 ? ", " : "");
-            output_file << "};";
-            output_file << "};\n";
-            output_file << "template<>consteval std::string_view type_name<" << e.qualified_name << ">() { return \"" << e.qualified_name << "\"; }\n";
-        }
+        for (const auto& out : cached_output)
+            output_file << out;
     } catch (const std::exception& ex) {
         std::cerr << "Failed to build resource: " << header_path << ", unexected error: " << ex.what()
                   << ", stack trace " << std::stacktrace::current() << std::endl;
@@ -754,20 +757,35 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
     return 0;
 }
 
+struct need_to_update {
+    std::filesystem::path header;
+    std::filesystem::path output;
+};
+
 int main(int argc, char* argv[]) {
     if (argc != 3) {
-        std::cerr << "Usage: " << argv[0] << " <output> <headers>\n"
+        std::cerr << "Usage: " << argv[0] << " <output_path> <headers>\n"
                   << std::endl;
         return 1;
     }
     std::filesystem::path output_path = argv[1];
+    std::filesystem::create_directories(output_path);
+    std::vector<std::filesystem::path> outputs;
     std::vector<std::filesystem::path> headers;
+
+
+    std::vector<need_to_update> to_update;
+
     {
         std::string_view headers_ = argv[2];
         while (headers_.size()) {
             auto next = headers_.find(' ');
             if (next != headers_.npos) {
                 headers.emplace_back(headers_.substr(0, next));
+                {
+                    std::filesystem::path output = output_path / headers.back().filename();
+                    outputs.emplace_back(std::move(output));
+                }
                 headers_ = headers_.substr(next + 1);
             } else {
                 headers.emplace_back(headers_);
@@ -776,14 +794,24 @@ int main(int argc, char* argv[]) {
         }
     }
     if (std::filesystem::exists(output_path)) {
+        auto tool_last_write = std::filesystem::last_write_time(argv[0]);
         try {
-            bool need_update = false;
-            for (const auto& header_path : headers) {
-                need_update = std::filesystem::last_write_time(header_path) > std::filesystem::last_write_time(output_path);
-                if (need_update)
-                    break;
+            size_t max = headers.size();
+            for (size_t i = 0; i < max; ++i) {
+                bool need_update = !std::filesystem::exists(outputs[i]);
+                if (!need_update) {
+                    auto output_last_w = std::filesystem::last_write_time(outputs[i]);
+                    need_update = std::filesystem::last_write_time(headers[i]) > output_last_w || output_last_w < tool_last_write;
+                }
+
+                if (need_update) {
+                    need_to_update update;
+                    update.header = std::move(headers[i]);
+                    update.output = std::move(outputs[i]);
+                    to_update.emplace_back(std::move(update));
+                }
             }
-            if (!need_update) {
+            if (to_update.empty()) {
                 std::cout << "reflect_map: all done." << std::endl;
                 return 0;
             }
@@ -791,27 +819,25 @@ int main(int argc, char* argv[]) {
             std::cerr << "Failed to get headers and output last_write time, reason: " << err.what();
             return 1;
         }
+        headers.clear();
+        outputs.clear();
     }
 
-    std::ofstream output_file(output_path, std::ios::trunc);
-    if (!output_file) {
-        std::cerr << "Failed to open output file: " << output_path << std::endl;
-        return 1;
-    }
-    output_file << "// Generated by reflect_map tool\n";
-    output_file << "#pragma once\n";
-    output_file << "#include <string>\n";
-    output_file << "namespace copper_server::reflect{\n";
-    output_file << "template<class T>consteval std::string_view type_name();\n";
-    output_file << "template<class T>struct enum_data{};\n";
-    output_file << "template<class T>struct for_each_type_s{};\n";
-    output_file << "template<class T>struct for_each_type_with_name_s{};\n";
-    for (const auto& header_path : headers)
-        if (process_file(output_file, header_path))
+    for (auto& [header, output] : to_update) {
+        std::cout << "reflect_map: processing " << header << " -> " << output << std::endl;
+        std::ofstream output_file(output, std::ios::trunc);
+        if (!output_file) {
+            std::cerr << "Failed to open output file: " << output << std::endl;
             return 1;
-    output_file << "template<class T, class FN>constexpr void for_each_type(FN&& fn){for_each_type_s<T>::each(std::move(fn));}\n";
-    output_file << "template<class T, class FN>constexpr void for_each_type_with_name(FN&& fn){for_each_type_with_name_s<T>::each(std::move(fn));}\n";
-    output_file << "}\n";
+        }
+        output_file << "// Generated by reflect_map tool\n";
+        output_file << "#pragma once\n";
+        output_file << "#include <string>\n";
+        output_file << "namespace copper_server::reflect{\n";
+        if (process_file(output_file, header))
+            return 1;
+        output_file << "}\n";
+    }
     std::cout << "reflect_map: complete." << std::endl;
     return 0;
 }

@@ -25,7 +25,7 @@ namespace copper_server::build_in_plugins {
                 .channel = "minecraft:brand",
                 .payload = r.data
             };
-            return false;
+            return client.client_brand.size();
         }
 
         bool OnConfigurationHandle(const PluginRegistrationPtr& _, const std::string& chanel, const list_array<uint8_t>& data, base_objects::SharedClientData& client) override {

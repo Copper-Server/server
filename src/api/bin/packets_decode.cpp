@@ -9,9 +9,15 @@
 #include <src/api/network/tcp.hpp>
 #include <src/api/packets.hpp>
 #include <src/base_objects/shared_client_data.hpp>
+#include <src/log.hpp>
 #include <src/util/readers.hpp>
 #include <src/util/reflect.hpp>
-#include <src/log.hpp>
+#include <src/util/reflect/calculations.hpp>
+#include <src/util/reflect/component.hpp>
+#include <src/util/reflect/dye_color.hpp>
+#include <src/util/reflect/packets.hpp>
+#include <src/util/reflect/packets_help.hpp>
+#include <src/util/reflect/parsers.hpp>
 
 namespace copper_server::api::packets {
     extern bool debugging_enabled;

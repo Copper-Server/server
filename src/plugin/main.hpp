@@ -273,13 +273,14 @@ namespace copper_server {
     class PluginHandlingFixer {};
 
     template <class Self>
-    struct PluginHandlingFixer<Self, true> : public PluginRegistration {};
-
-    template <class Self>
-    struct PluginHandlingFixer<Self, false> : public PluginRegistration {
+    struct PluginHandlingFixer<Self, true> : public PluginRegistration {
         bool OnConfiguration_gotKnownPacks(base_objects::SharedClientData&, const api::packets::server_bound::configuration::select_known_packs&) override {
             return false;
         }
+    };
+
+    template <class Self>
+    struct PluginHandlingFixer<Self, false> : public PluginRegistration {
     };
 
     template <class Self>

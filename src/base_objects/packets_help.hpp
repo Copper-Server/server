@@ -125,7 +125,7 @@ namespace copper_server::base_objects {
     };
 
     template <class T, class R>
-    static constexpr bool could_be_preprocessed = requires(R& it) { T::preprocess(it); };
+    static constexpr bool could_be_preprocessed = requires(T& v, R& it) { v.preprocess(it); };
 
     struct identifier {
         std::string value;
@@ -783,9 +783,13 @@ namespace copper_server::base_objects {
 
         enum_switch() : base() {}
 
-        enum_switch(const enum_switch& v) : base((const base&)v) {}
+        enum_switch(const enum_switch& v) {
+            *this = v;
+        }
 
-        enum_switch(enum_switch&& v) : base(std::move((base&)v)) {}
+        enum_switch(enum_switch&& v) {
+            *this = std::move(v);
+        }
 
         enum_switch(std::variant<Ty...>&& v) {
             *this = std::move(v);
@@ -795,10 +799,20 @@ namespace copper_server::base_objects {
             *this = v;
         }
 
+        enum_switch(std::convertible_to<std::variant<Ty...>> auto&& v) {
+            *this = std::move(v);
+        }
+
+        enum_switch(const std::convertible_to<std::variant<Ty...>> auto& v) {
+            *this = v;
+        }
+
         enum_switch& operator=(const enum_switch& v);
         enum_switch& operator=(enum_switch&& v);
         enum_switch& operator=(std::variant<Ty...>&& v);
         enum_switch& operator=(const std::variant<Ty...>& v);
+        enum_switch& operator=(std::convertible_to<std::variant<Ty...>> auto&& v);
+        enum_switch& operator=(const std::convertible_to<std::variant<Ty...>> auto& v);
 
         template <class FN>
         constexpr static void get_enum(size_t id, FN&& fn) {
@@ -843,6 +857,18 @@ namespace copper_server::base_objects {
 
     template <class ValueType, class... Ty>
     enum_switch<ValueType, Ty...>& enum_switch<ValueType, Ty...>::operator=(const std::variant<Ty...>& v) {
+        (base&)* this = v;
+        return *this;
+    }
+
+    template <class ValueType, class... Ty>
+    enum_switch<ValueType, Ty...>& enum_switch<ValueType, Ty...>::operator=(std::convertible_to<std::variant<Ty...>> auto&& v) {
+        (base&)* this = std::move(v);
+        return *this;
+    }
+
+    template <class ValueType, class... Ty>
+    enum_switch<ValueType, Ty...>& enum_switch<ValueType, Ty...>::operator=(const std::convertible_to<std::variant<Ty...>> auto& v) {
         (base&)* this = v;
         return *this;
     }
@@ -990,8 +1016,14 @@ namespace copper_server::base_objects {
 
         void preprocess(Source& source) {
             source.*source_name = 0;
-            for (auto& [id, value] : values)
-                source.*source_name |= (decltype(value)::flag_value::value & decltype(value)::flag_mask::value);
+            for (auto& [id, value] : values) {
+                std::visit(
+                    [&]<class T>(T& it) {
+                        source.*source_name |= (T::flag_value::value & T::flag_mask::value);
+                    },
+                    value
+                );
+            }
             pre_process_result = source.*source_name;
         }
 

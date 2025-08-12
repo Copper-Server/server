@@ -6,11 +6,14 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/packets.hpp> //for reflection //TODO change reflect_map to be more abstract;
+#include <src/api/packets.hpp>
 #include <src/base_objects/component.hpp>
 #include <src/base_objects/slot.hpp>
-#include <src/util/calculations.hpp> //for reflection //TODO change reflect_map to be more abstract;
 #include <src/util/reflect.hpp>
+#include <src/util/reflect/component.hpp>
+#include <src/util/reflect/dye_color.hpp>
+#include <src/util/reflect/packets.hpp>
+#include <src/util/reflect/packets_help.hpp>
 
 namespace copper_server::base_objects {
 

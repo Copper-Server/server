@@ -16,6 +16,7 @@
 #include <src/base_objects/network/response.hpp>
 #include <src/base_objects/packets_help.hpp>
 #include <src/base_objects/pallete_container.hpp>
+#include <src/base_objects/parsers.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/slot.hpp>
 #include <src/util/calculations.hpp>
@@ -727,15 +728,7 @@ namespace copper_server {
                 };
 
                 struct commands : public packet<0x10> {
-
                     struct node {
-                        uint8_t flags;
-                        list_array<var_int32> children;
-
-                        struct redirect_node : public flag_item<8, 0x8, 0> {
-                            var_int32 node;
-                        };
-
                         struct root_node : public flag_item<0, 0x3, 1> {};
 
                         struct literal_node : public flag_item<1, 0x3, 1> {
@@ -744,233 +737,14 @@ namespace copper_server {
 
                         struct argument_node : public flag_item<2, 0x3, 1> {
                             string_sized<32767> name;
-
-                            template <class T>
-                            struct Min : public flag_item<1, 1, 0> {
-                                T val;
-                            };
-
-                            template <class T>
-                            struct Max : public flag_item<2, 2, 1> {
-                                T val;
-                            };
-
-                            template <class T>
-                            using min_max = flags_list<uint8_t, Min<T>, Max<T>>;
-
-                            struct brigadier__bool : public enum_item<0> {};
-
-                            struct brigadier__float : public enum_item<1> {
-                                min_max<float> values;
-                            };
-
-                            struct brigadier__double : public enum_item<2> {
-                                min_max<double> values;
-                            };
-
-                            struct brigadier__integer : public enum_item<3> {
-                                min_max<int32_t> values;
-                            };
-
-                            struct brigadier__long : public enum_item<4> {
-                                min_max<int64_t> values;
-                            };
-
-                            struct brigadier__string : public enum_item<5> {
-                                enum class behavior_e : uint8_t {
-                                    single_word = 0,
-                                    quotable_phrase = 1,
-                                    greedy_phrase = 2
-                                };
-                                using enum behavior_e;
-
-                                enum_as<behavior_e, var_int32> behavior;
-                            };
-
-                            struct brigadier__entity : public enum_item<6> {
-
-                                struct only_one_entity : public flag_item<1, 1, -1> {};
-
-                                struct only_players : public flag_item<2, 2, -1> {};
-
-                                flags_list<uint8_t, only_one_entity, only_players> flag;
-                            };
-
-                            struct minecraft__game_profile : public enum_item<7> {};
-
-                            struct minecraft__block_pos : public enum_item<8> {};
-
-                            struct minecraft__column_pos : public enum_item<9> {};
-
-                            struct minecraft__vec3 : public enum_item<10> {};
-
-                            struct minecraft__vec2 : public enum_item<11> {};
-
-                            struct minecraft__block_state : public enum_item<12> {};
-
-                            struct minecraft__block_predicate : public enum_item<13> {};
-
-                            struct minecraft__item_stack : public enum_item<14> {};
-
-                            struct minecraft__item_predicate : public enum_item<15> {};
-
-                            struct minecraft__color : public enum_item<16> {};
-
-                            struct minecraft__hex_color : public enum_item<17> {};
-
-                            struct minecraft__component : public enum_item<18> {};
-
-                            struct minecraft__style : public enum_item<19> {};
-
-                            struct minecraft__message : public enum_item<20> {};
-
-                            struct minecraft__nbt_compound_tag : public enum_item<21> {};
-
-                            struct minecraft__nbt_tag : public enum_item<22> {};
-
-                            struct minecraft__nbt_path : public enum_item<23> {};
-
-                            struct minecraft__objective : public enum_item<24> {};
-
-                            struct minecraft__objective_criteria : public enum_item<25> {};
-
-                            struct minecraft__operation : public enum_item<26> {};
-
-                            struct minecraft__particle : public enum_item<27> {};
-
-                            struct minecraft__angle : public enum_item<28> {};
-
-                            struct minecraft__rotation : public enum_item<29> {};
-
-                            struct minecraft__scoreboard_slot : public enum_item<30> {};
-
-                            struct minecraft__score_holder : public enum_item<31> {};
-
-                            struct minecraft__swizzle : public enum_item<32> {};
-
-                            struct minecraft__team : public enum_item<33> {};
-
-                            struct minecraft__item_slot : public enum_item<34> {};
-
-                            struct minecraft__item_slots : public enum_item<35> {};
-
-                            struct minecraft__resource_location : public enum_item<36> {};
-
-                            struct minecraft__function : public enum_item<37> {};
-
-                            struct minecraft__entity_anchor : public enum_item<38> {};
-
-                            struct minecraft__int_range : public enum_item<39> {};
-
-                            struct minecraft__float_range : public enum_item<40> {};
-
-                            struct minecraft__dimension : public enum_item<41> {};
-
-                            struct minecraft__gamemode : public enum_item<42> {};
-
-                            struct minecraft__time : public enum_item<43> {
-                                int32_t min_duration;
-                            };
-
-                            struct minecraft__resource_or_tag : public enum_item<44> {
-                                identifier registry;
-                            };
-
-                            struct minecraft__resource_or_tag_key : public enum_item<45> {
-                                identifier registry;
-                            };
-
-                            struct minecraft__resource : public enum_item<46> {
-                                identifier registry;
-                            };
-
-                            struct minecraft__resource_key : public enum_item<47> {
-                                identifier registry;
-                            };
-
-                            struct minecraft__resource_selector : public enum_item<48> {
-                                identifier registry;
-                            };
-
-                            struct minecraft__template_mirror : public enum_item<49> {};
-
-                            struct minecraft__template_rotation : public enum_item<50> {};
-
-                            struct minecraft__heightmap : public enum_item<51> {};
-
-                            struct minecraft__loot_table : public enum_item<52> {};
-
-                            struct minecraft__loot_predicate : public enum_item<53> {};
-
-                            struct minecraft__loot_modifier : public enum_item<54> {};
-
-                            struct minecraft__dialog : public enum_item<55> {};
-
-                            struct minecraft__uuid : public enum_item<56> {};
-
-                            enum_switch<
-                                var_int32::command_argument_type,
-                                brigadier__bool,
-                                brigadier__float,
-                                brigadier__double,
-                                brigadier__integer,
-                                brigadier__long,
-                                brigadier__string,
-                                brigadier__entity,
-                                minecraft__game_profile,
-                                minecraft__block_pos,
-                                minecraft__column_pos,
-                                minecraft__vec3,
-                                minecraft__vec2,
-                                minecraft__block_state,
-                                minecraft__block_predicate,
-                                minecraft__item_stack,
-                                minecraft__item_predicate,
-                                minecraft__color,
-                                minecraft__hex_color,
-                                minecraft__component,
-                                minecraft__style,
-                                minecraft__message,
-                                minecraft__nbt_compound_tag,
-                                minecraft__nbt_tag,
-                                minecraft__nbt_path,
-                                minecraft__objective,
-                                minecraft__objective_criteria,
-                                minecraft__operation,
-                                minecraft__particle,
-                                minecraft__angle,
-                                minecraft__rotation,
-                                minecraft__scoreboard_slot,
-                                minecraft__score_holder,
-                                minecraft__swizzle,
-                                minecraft__team,
-                                minecraft__item_slot,
-                                minecraft__item_slots,
-                                minecraft__resource_location,
-                                minecraft__function,
-                                minecraft__entity_anchor,
-                                minecraft__int_range,
-                                minecraft__float_range,
-                                minecraft__dimension,
-                                minecraft__gamemode,
-                                minecraft__time,
-                                minecraft__resource_or_tag,
-                                minecraft__resource_or_tag_key,
-                                minecraft__resource,
-                                minecraft__resource_key,
-                                minecraft__resource_selector,
-                                minecraft__template_mirror,
-                                minecraft__template_rotation,
-                                minecraft__heightmap,
-                                minecraft__loot_table,
-                                minecraft__loot_predicate,
-                                minecraft__loot_modifier,
-                                minecraft__dialog,
-                                minecraft__uuid>
-                                type;
+                            base_objects::command_parser type;
                         };
 
                         struct is_executable : public flag_item<0x04, 0x04, -1> {};
+
+                        struct redirect_node : public flag_item<8, 0x8, 0> {
+                            var_int32 node;
+                        };
 
                         struct suggestions_type : public flag_item<0x10, 0x10, 2> {
                             identifier name;
@@ -978,9 +752,11 @@ namespace copper_server {
 
                         struct is_restricted : public flag_item<0x20, 0x20, -2> {};
 
+                        int8_t flags;
+                        list_array<var_int32> children;
                         flags_list_from<
                             node,
-                            uint8_t,
+                            int8_t,
                             &node::flags,
                             literal_node,
                             root_node,
@@ -3506,6 +3282,7 @@ namespace copper_server {
 
         bool send(base_objects::SharedClientData& client, client_bound_packet&&);
         base_objects::network::response internal_encode(base_objects::SharedClientData& client, client_bound_packet&&);
+        base_objects::network::response internal_encode(base_objects::SharedClientData& client, server_bound_packet&&);
         base_objects::network::response encode(client_bound_packet&& packet);
         base_objects::network::response encode(server_bound_packet&& packet);
 
@@ -3583,14 +3360,20 @@ namespace copper_server {
             return __internal::register_client_viewer(
                 mode,
                 Packet::packet_id::value,
-                [&](auto& packet, auto& client) {
+                [fn](auto& mode, auto& client) {
                     return std::visit(
-                        [&fn, &client](auto& it) -> bool {
-                            if constexpr (std::is_same_v<Packet, std::decay_t<decltype(it)>>)
-                                return fn(it, client);
-                            return true;
+                        [&fn, &client](auto&& packet) {
+                            return std::visit(
+                                [&fn, &client](auto&& it) {
+                                    if constexpr (std::is_same_v<Packet, std::decay_t<decltype(it)>>)
+                                        return fn(it, client);
+                                    else
+                                        return true;
+                                },
+                                packet
+                            );
                         },
-                        packet
+                        mode
                     );
                 }
             );
@@ -3620,14 +3403,20 @@ namespace copper_server {
             return __internal::register_server_viewer(
                 mode,
                 Packet::packet_id::value,
-                [&](auto& packet, auto& client) {
+                [fn](auto& mode, auto& client) {
                     return std::visit(
-                        [&fn, &client](auto& it) -> bool {
-                            if constexpr (std::is_same_v<Packet, std::decay_t<decltype(it)>>)
-                                return fn(it, client);
-                            return true;
+                        [&fn, &client](auto&& packet) {
+                            return std::visit(
+                                [&fn, &client](auto&& it) {
+                                    if constexpr (std::is_same_v<Packet, std::decay_t<decltype(it)>>)
+                                        return fn(it, client);
+                                    else
+                                        return true;
+                                },
+                                packet
+                            );
                         },
-                        packet
+                        mode
                     );
                 }
             );
@@ -3657,13 +3446,18 @@ namespace copper_server {
             return __internal::register_server_processor(
                 mode,
                 Packet::packet_id::value,
-                [&](auto&& packet, auto& context) {
+                [fn](auto&& mode, auto& client) {
                     std::visit(
-                        [&fn, &context](auto&& it) {
-                            if constexpr (std::is_same_v<Packet, std::decay_t<decltype(it)>>)
-                                fn(std::move(it), context);
+                        [&fn, &client](auto&& packet) {
+                            std::visit(
+                                [&fn, &client](auto&& it) {
+                                    if constexpr (std::is_same_v<Packet, std::decay_t<decltype(it)>>)
+                                        fn(std::move(it), client);
+                                },
+                                packet
+                            );
                         },
-                        packet
+                        mode
                     );
                 }
             );

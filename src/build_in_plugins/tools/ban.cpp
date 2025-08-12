@@ -63,7 +63,7 @@ namespace copper_server::build_in_plugins {
             using cmd_pred_string = base_objects::parsers::command::string;
             {
                 browser.add_child({"ban", "", ""})
-                    .add_child({"<player>", "ban player", "/ban <player>"}, cmd_pred_string::quotable_phrase)
+                    .add_child({"player", "ban player", "/ban player"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                     .set_callback("command.ban", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto& player_name = std::get<pred_string>(args[0]).value;
                         if (api::ban::on_ban({player_name, context.executor.name, ""}))
@@ -76,7 +76,7 @@ namespace copper_server::build_in_plugins {
                         banned_players.add(player_name, {});
                         context.executor << api::client::play::system_chat{.content = {"Player " + player_name + " has been banned."}};
                     })
-                    .add_child({"[reason]", "ban player with reason", "/ban <player> [reason]"}, cmd_pred_string::greedy_phrase)
+                    .add_child({"reason", "ban player with reason", "/ban player reason"}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                     .set_callback("command.ban:reason", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto& player_name = std::get<pred_string>(args[0]).value;
                         auto& reason = std::get<pred_string>(args[1]).value;
@@ -92,7 +92,7 @@ namespace copper_server::build_in_plugins {
             }
             {
                 auto& pardon = browser.add_child({"pardon", "", ""})
-                                   .add_child({"<player>", "pardon player", "/pardon <player>"}, cmd_pred_string::quotable_phrase)
+                                   .add_child({"player", "pardon player", "/pardon player"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                                    .set_callback("command.pardon", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                                        auto& player_name = std::get<pred_string>(args[0]).value;
                                        if (api::ban::on_pardon({player_name, context.executor.name, ""}))
@@ -154,7 +154,7 @@ namespace copper_server::build_in_plugins {
 
                     players
                         .add_child({"contains", "", ""})
-                        .add_child({"<player>", "returns if the player in list", "/banlist players contains <player>"}, cmd_pred_string::quotable_phrase)
+                        .add_child({"player", "returns if the player in list", "/banlist players contains player"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                         .set_callback("command.banlist.players.contains", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                             auto& player_name = std::get<pred_string>(args[0]).value;
                             context.executor << api::client::play::system_chat{.content = {"Player " + player_name + (banned_players.contains(player_name) ? " is in the list." : " is not in the list.")}};
@@ -203,7 +203,7 @@ namespace copper_server::build_in_plugins {
 
                     ips
                         .add_child({"contains", "", ""})
-                        .add_child({"<player>", "returns if IP in list", "/banlist ips contains <ip>"}, cmd_pred_string::quotable_phrase)
+                        .add_child({"player", "returns if IP in list", "/banlist ips contains ip"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                         .set_callback("command.banlist.ips.contains", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                             auto& ip = std::get<pred_string>(args[0]).value;
                             context.executor << api::client::play::system_chat{.content = {"IP " + ip + (banned_players.contains(ip) ? " is in the list." : " is not in the list.")}};
@@ -212,7 +212,7 @@ namespace copper_server::build_in_plugins {
             }
             {
                 browser.add_child({"ban-ip"})
-                    .add_child({"<ip>", "ban ip", "/ban-ip <ip>"}, cmd_pred_string::quotable_phrase)
+                    .add_child({"ip", "ban ip", "/ban-ip ip"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                     .set_callback("command.ban-ip", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto& ip = std::get<pred_string>(args[0]).value;
                         api::ban::on_ban_ip({ip, context.executor.name, ""});
@@ -224,7 +224,7 @@ namespace copper_server::build_in_plugins {
                         banned_ips.add(ip, {});
                         context.executor << api::client::play::system_chat{.content = {"IP " + ip + " has been banned."}};
                     })
-                    .add_child({"[reason]", "ban ip with reason", "/ban-ip <ip> [reason]"}, cmd_pred_string::greedy_phrase)
+                    .add_child({"reason", "ban ip with reason", "/ban-ip ip reason"}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                     .set_callback("command.ban-ip:reason", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto& ip = std::get<pred_string>(args[0]).value;
                         auto& reason = std::get<pred_string>(args[1]).value;
@@ -239,7 +239,7 @@ namespace copper_server::build_in_plugins {
             }
             {
                 auto& pardon_ip = browser.add_child({"pardon-ip"})
-                                      .add_child({"<ip>", "pardon ip", "/pardon-ip <ip>"}, cmd_pred_string::quotable_phrase)
+                                      .add_child({"ip", "pardon ip", "/pardon-ip ip"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                                       .set_callback("command.pardon-ip", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                                           auto& ip = std::get<pred_string>(args[0]).value;
                                           api::ban::on_pardon_ip({ip, context.executor.name, ""});

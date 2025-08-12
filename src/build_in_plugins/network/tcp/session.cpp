@@ -26,6 +26,8 @@ namespace copper_server::build_in_plugins::network::tcp {
     }
 
     session::~session() noexcept {
+        if (chandler)
+            delete chandler;
         if (_sharedData) {
             try {
                 api::players::handlers::on_disconnect.await_notify(shared_data_ref());
@@ -33,12 +35,10 @@ namespace copper_server::build_in_plugins::network::tcp {
             }
             api::players::remove_player(shared_data_ref());
         }
-        if (chandler)
-            delete chandler;
     }
 
     base_objects::client_data_holder& session::shared_data_ref() {
-        return _sharedData ? _sharedData : _sharedData = api::players::allocate_player();
+        return _sharedData ? _sharedData : _sharedData = api::players::allocate_player(this);
     }
 
     base_objects::SharedClientData& session::shared_data() {

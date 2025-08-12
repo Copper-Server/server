@@ -6,9 +6,5 @@
     [x] Make interface for entity
     [x] Change world_data to handle entities
     [ ] Use new interface in player and add handlers 
-        [ ] Implement chunk encoding and send to player
-
-
-[x] Fix file corruption for async streams
-[x] Get rid of multiple protocols support, lend it to plugins
-   [ ] fully implement comfortable packets api which would use only one protocol
+        [x] Implement chunk encoding and send to player
+        [ ] Check interface

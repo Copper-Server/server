@@ -22,11 +22,11 @@
 
 namespace copper_server::api::configuration {
     struct ServerConfiguration {
-
         struct World {
             std::string name = "overworld";
             std::string seed = "0";
-            std::string type = "default";
+            std::string type = "minecraft:overworld";
+            std::string generator_type = "default";
             std::string saving_mode = "zstd"; //allowed modes is 'zstd' and 'raw'
 
             size_t unload_speed = 10; //max 10 chunks per tick and per world

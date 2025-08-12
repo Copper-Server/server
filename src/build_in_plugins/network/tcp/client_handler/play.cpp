@@ -131,6 +131,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                             plugin->PlayerLeft(*hold);
                         });
                     }
+                    [[maybe_unused]] auto _ = api::entity_id_map::remove_id(hold->data->uuid);
                 }
                 return false;
             });

@@ -10,238 +10,208 @@
 #define SRC_BASE_OBJECTS_PARSERS
 #include <cstdint>
 #include <library/enbt/enbt.hpp>
+#include <src/base_objects/packets_help.hpp>
 #include <string>
 #include <unordered_map>
 
 namespace copper_server::base_objects {
     namespace parsers {
         namespace command {
-            class custom_virtual_base {
-            public:
-                virtual ~custom_virtual_base() {}
+            struct _bool : public enum_item<0> {};
 
-                virtual std::string name() = 0;
-                virtual custom_virtual_base* make_copy() const = 0;
+            struct _float : public enum_item<1> {
+                struct min : public flag_item<1, 1, 1> {
+                    float value;
+                };
+
+                struct max : public flag_item<2, 2, 2> {
+                    float value;
+                };
+
+                flags_list<int8_t, min, max> flags;
             };
 
-            struct custom_virtual {
-                custom_virtual_base* value;
+            struct _double : public enum_item<2> {
+                struct min : public flag_item<1, 1, 1> {
+                    double value;
+                };
 
-                custom_virtual(custom_virtual_base* value)
-                    : value(value) {}
+                struct max : public flag_item<2, 2, 2> {
+                    double value;
+                };
 
-                ~custom_virtual() {
-                    if (value)
-                        delete value;
-                }
-
-                custom_virtual(custom_virtual&& other)
-                    : value(other.value) {
-                    other.value = nullptr;
-                }
-
-                custom_virtual(const custom_virtual& other)
-                    : value(other.value->make_copy()) {}
-
-                custom_virtual& operator=(custom_virtual&& other) {
-                    std::swap(value, other.value);
-                    return *this;
-                }
-
-                custom_virtual& operator=(const custom_virtual& other) {
-                    value = other.value->make_copy();
-                    return *this;
-                }
+                flags_list<int8_t, min, max> flags;
             };
 
-            struct _bool {};
+            struct _integer : public enum_item<3> {
+                struct min : public flag_item<1, 1, 1> {
+                    int32_t value;
+                };
 
-            struct _double {
-                std::optional<double> min;
-                std::optional<double> max;
+                struct max : public flag_item<2, 2, 2> {
+                    int32_t value;
+                };
+
+                flags_list<int8_t, min, max> flags;
             };
 
-            struct _float {
-                std::optional<float> min;
-                std::optional<float> max;
+            struct _long : public enum_item<4> {
+                struct min : public flag_item<1, 1, 1> {
+                    int64_t value;
+                };
+
+                struct max : public flag_item<2, 2, 2> {
+                    int64_t value;
+                };
+
+                flags_list<int8_t, min, max> flags;
             };
 
-            struct _integer {
-                std::optional<int32_t> min;
-                std::optional<int32_t> max;
+            struct string : public enum_item<5> {
+                enum class type_e : uint8_t {
+                    single_word = 0,
+                    quotable_phrase = 1,
+                    greedy_phrase = 2,
+                };
+                using enum type_e;
+
+                enum_as<type_e, var_int32> type;
             };
 
-            struct _long {
-                std::optional<int64_t> min;
-                std::optional<int64_t> max;
+            struct entity : public enum_item<6> {
+                enum class flags_f : int8_t {
+                    only_one_entity = 0,
+                    only_player_entity = 1
+                };
+                using enum flags_f;
+                enum_as_flag<flags_f, int8_t> flag;
             };
 
-            enum class string : uint8_t {
-                single_word = 0,
-                quotable_phrase = 1,
-                greedy_phrase = 2,
-            };
+            struct game_profile : public enum_item<7> {};
 
-            struct angle {
-            };
+            struct block_pos : public enum_item<8> {};
 
-            struct block {
-            };
+            struct column_pos : public enum_item<9> {};
 
-            struct state {
-            };
+            struct vec2 : public enum_item<10> {};
 
-            struct color {
-            };
+            struct vec3 : public enum_item<11> {};
 
-            struct block_pos {
-            };
+            struct block_state : public enum_item<12> {};
 
-            struct column_pos {
-            };
+            struct block_predicate : public enum_item<13> {};
 
-            struct component {};
+            struct item_stack : public enum_item<14> {};
 
-            struct dimension {};
+            struct item_predicate : public enum_item<15> {};
 
-            struct entity {
-                bool only_one_entity : 1;
-                bool only_player_entity : 1;
-            };
+            struct color : public enum_item<16> {};
 
-            struct entity_anchor {
-            };
+            struct hex_color : public enum_item<17> {};
 
-            struct float_range {
-            };
+            struct component : public enum_item<18> {};
 
-            struct function {};
+            struct style : public enum_item<19> {};
 
-            struct game_profile {
-            };
+            struct message : public enum_item<20> {};
 
-            struct gamemode {
-            };
+            struct nbt_compound_tag : public enum_item<21> {};
 
-            struct heightmap {
-            };
+            struct nbt_tag : public enum_item<22> {};
 
-            struct int_range {
-            };
+            struct nbt_path : public enum_item<23> {};
 
-            struct item {
-            };
+            struct objective : public enum_item<24> {};
 
-            struct item_slot {
-            };
+            struct objective_criteria : public enum_item<25> {};
 
-            struct item_stack {
-            };
+            struct operation : public enum_item<26> {};
 
-            struct message {};
+            struct particle : public enum_item<27> {};
 
-            struct nbt_compound_tag {};
+            struct angle : public enum_item<28> {};
 
-            struct nbt_path {};
+            struct rotation : public enum_item<29> {};
 
-            struct nbt {};
+            struct scoreboard_slot : public enum_item<30> {};
 
-            struct objective {};
-
-            struct objective_criteria {};
-
-            struct operation {
-            };
-
-            struct particle {
-            };
-
-            struct resource {
-                std::string suggestion_registry;
-            };
-
-            struct resource_key {
-                std::string suggestion_registry;
-            };
-
-            struct resource_location {};
-
-            struct resource_or_tag {
-                std::string suggestion_registry;
-            };
-
-            struct resource_or_tag_key {
-                std::string suggestion_registry;
-            };
-
-            struct rotation {
-            };
-
-            struct score_holder {
+            struct score_holder : public enum_item<31> {
                 bool allow_multiple;
             };
 
-            struct scoreboard_slot {};
+            struct swizzle : public enum_item<32> {};
 
-            struct swizzle {
+            struct team : public enum_item<33> {};
+
+            struct item_slot : public enum_item<34> {};
+
+            struct item_slots : public enum_item<35> {};
+
+            struct resource_location : public enum_item<36> {};
+
+            struct function : public enum_item<37> {};
+
+            struct entity_anchor : public enum_item<38> {};
+
+            struct int_range : public enum_item<39> {};
+
+            struct float_range : public enum_item<40> {};
+
+            struct dimension : public enum_item<41> {};
+
+            struct gamemode : public enum_item<42> {};
+
+            struct time : public enum_item<43> {
+                int32_t min_ticks;
             };
 
-            struct team {
+            struct resource_or_tag : public enum_item<44> {
+                identifier suggestion_registry;
             };
 
-            struct template_mirror {
+            struct resource_or_tag_key : public enum_item<45> {
+                identifier suggestion_registry;
             };
 
-            struct template_rotation {
+            struct resource : public enum_item<46> {
+                identifier suggestion_registry;
             };
 
-            struct time {
-                int32_t min;
+            struct resource_key : public enum_item<47> {
+                identifier suggestion_registry;
             };
 
-            struct uuid {};
-
-            struct vec2 {
+            struct resource_selector : public enum_item<48> {
+                identifier suggestion_registry;
             };
 
-            struct vec3 {
-            };
-        };
+            struct template_mirror : public enum_item<49> {};
 
-        class custom_virtual_base {
-        public:
-            virtual ~custom_virtual_base() {}
+            struct template_rotation : public enum_item<50> {};
 
-            virtual std::string name() = 0;
-        };
+            struct heightmap : public enum_item<51> {};
 
-        struct custom_virtual {
-            custom_virtual_base* value;
+            struct loot_table : public enum_item<52> {};
 
-            custom_virtual(custom_virtual_base* value)
-                : value(value) {}
+            struct loot_predicate : public enum_item<53> {};
 
-            ~custom_virtual() {
-                if (value)
-                    delete value;
-            }
+            struct loot_modifier : public enum_item<54> {};
 
-            custom_virtual(custom_virtual&& other)
-                : value(other.value) {
-                other.value = nullptr;
-            }
-        };
+            struct dialog : public enum_item<55> {};
+
+            struct uuid : public enum_item<56> {};
+        }
 
         struct _bool {
             bool value;
         };
 
-        struct _double {
-            double value;
-        };
-
         struct _float {
             float value;
+        };
+
+        struct _double {
+            double value;
         };
 
         struct _integer {
@@ -257,22 +227,67 @@ namespace copper_server::base_objects {
             //
         };
 
-        struct angle {
-            float yaw;
-            bool relative = false;
+        struct entity {
+            enum class type_t : uint8_t {
+                name,
+                selector,
+                uuid,
+            };
+
+            std::string value;
+            type_t type;
         };
 
-        struct block {
+        struct game_profile {
+            enum class type_t : uint8_t {
+                name,
+                selector,
+                uuid,
+            };
+            std::string string;
+            type_t type;
+        };
+
+        struct block_pos {
+            int64_t x;
+            int64_t y;
+            int64_t z;
+            bool x_relative = false;
+            bool y_relative = false;
+            bool z_relative = false;
+        };
+
+        struct column_pos {
+            float x;
+            float z;
+            bool x_relative = false;
+            bool z_relative = false;
+        };
+
+        struct vec2 {
+            float v[2];
+            bool relative[2]{false, false};
+        };
+
+        struct vec3 {
+            float v[3];
+            bool relative[3]{false, false, false};
+        };
+
+        struct block_state {
             std::string block_id;
             std::unordered_map<std::string, std::string> states;
             enbt::value data_tags;
         };
 
-        struct state {
-            std::string block_id;
-            std::unordered_map<std::string, std::string> states;
-            //enbt::value data_tags;still parsed but ignored
+        struct block_predicate {}; //TODO
+
+        struct item_stack {
+            std::string value;
+            enbt::value data_tags;
         };
+
+        struct item_predicate {}; //TODO
 
         enum class color : uint8_t {
             white = 0,
@@ -293,116 +308,28 @@ namespace copper_server::base_objects {
             black = 15,
         };
 
-        struct block_pos {
-            int64_t x;
-            int64_t y;
-            int64_t z;
-            bool x_relative = false;
-            bool y_relative = false;
-            bool z_relative = false;
+        struct hex_color {
+            int32_t rgb;
         };
 
-        struct column_pos {
-            float x;
-            float z;
-            bool x_relative = false;
-            bool z_relative = false;
-        };
+        struct component {}; //TODO
 
-        struct component {
-            std::string json_value;
-        };
-
-        struct dimension {
-            std::string string;
-        };
-
-        struct entity {
-            std::string value;
-
-            enum class type_t : uint8_t {
-                name,
-                selector,
-                uuid,
-            } type;
-        };
-
-        enum class entity_anchor : uint8_t {
-            eyes,
-            feet,
-        };
-
-        struct float_range {
-            float begin;
-            float end;
-            bool without_begin;
-            bool without_end;
-        };
-
-        struct function {
-            std::string string;
-        };
-
-        struct game_profile {
-            std::string string;
-
-            enum class type_t : uint8_t {
-                name,
-                selector,
-                uuid,
-            } type;
-        };
-
-        enum class gamemode : uint8_t {
-            survival,
-            creative,
-            adventure,
-            spectator,
-        };
-
-        enum class heightmap : uint8_t {
-            world_surface,
-            motion_blocking,
-            motion_blocking_no_leaves,
-            ocean_floor,
-        };
-
-        struct int_range {
-            int32_t begin;
-            int32_t end;
-            bool without_begin;
-            bool without_end;
-        };
-
-        struct item {
-            std::string value;
-            enbt::value data_tags;
-        };
-
-        struct item_slot {
-            std::optional<std::string> container;
-            std::optional<int32_t> number;
-        };
-
-        struct item_stack {
-            std::string value;
-            enbt::value data_tags;
-        };
+        struct style {}; //TODO
 
         struct message {
-            std::string value; //can contain selector
+            std::string str;
         };
 
         struct nbt_compound_tag {
-            enbt::value nbt;
+            enbt::compound nbt;
+        };
+
+        struct nbt_tag {
+            enbt::value any_nbt;
         };
 
         struct nbt_path {
             std::string path;
-        };
-
-        struct nbt {
-            enbt::value any_nbt;
         };
 
         struct objective {
@@ -425,7 +352,8 @@ namespace copper_server::base_objects {
             maximum,        //>
         };
 
-        struct particle {
+        struct particle { //TODO update
+
             struct block {
                 std::string block_id;
                 std::unordered_map<std::string, std::string> states;
@@ -495,45 +423,18 @@ namespace copper_server::base_objects {
                 particle;
         };
 
-        struct resource {
-            std::string location;
-        };
-
-        struct resource_key {
-            std::string location;
-        };
-
-        struct resource_location {
-            std::string location;
-        };
-
-        struct resource_or_tag {
-            struct resource {
-                std::string value;
-            };
-
-            struct tag {
-                std::string value;
-            };
-
-            std::variant<resource, tag> value;
-        };
-
-        struct resource_or_tag_key {
-            struct resource {
-                std::string value;
-            };
-
-            struct tag_key {
-                std::string value;
-            };
-
-            std::variant<resource, tag_key> value;
+        struct angle {
+            float yaw;
+            bool relative = false;
         };
 
         struct rotation {
             double yaw;
             double pitch;
+        };
+
+        struct scoreboard_slot {
+            std::string value;
         };
 
         struct score_holder {
@@ -555,10 +456,6 @@ namespace copper_server::base_objects {
             std::variant<selector, name, uuid, anything> value;
         };
 
-        struct scoreboard_slot {
-            std::string value;
-        };
-
         struct swizzle {
             enum class coord : uint8_t {
                 undefined,
@@ -576,17 +473,47 @@ namespace copper_server::base_objects {
             std::string value;
         };
 
-        enum class template_mirror : uint8_t {
-            none,
-            front_back,
-            left_right,
+        struct item_slot {
+            std::optional<std::string> container;
+            std::optional<int32_t> number;
         };
 
-        enum class template_rotation : uint8_t {
-            none,                //0
-            clockwise_90,        //90
-            counterclockwise_90, //270
-            _180,                //180
+        struct item_slots {
+            list_array<item_slot> slots;
+        };
+
+        struct resource_location {
+            std::string value;
+        };
+
+        struct function {
+            std::string value;
+        };
+
+        enum class entity_anchor : uint8_t {
+            eyes,
+            feet,
+        };
+
+        struct int_range {
+            std::optional<int32_t> begin;
+            std::optional<int32_t> end;
+        };
+
+        struct float_range {
+            std::optional<float> begin;
+            std::optional<float> end;
+        };
+
+        struct dimension {
+            std::string string;
+        };
+
+        enum class gamemode : uint8_t {
+            survival,
+            creative,
+            adventure,
+            spectator,
         };
 
         struct time {
@@ -601,109 +528,178 @@ namespace copper_server::base_objects {
             //0  int64_t
         };
 
+        struct resource_or_tag {
+            std::string value;
+        };
+
+        struct resource_or_tag_key {
+            std::string value;
+        };
+
+        struct resource {
+            std::string value;
+        };
+
+        struct resource_key {
+            std::string value;
+        };
+
+        struct resource_selector {
+            std::string value;
+        };
+
+        enum class template_mirror : uint8_t {
+            none,
+            front_back,
+            left_right,
+        };
+
+        enum class template_rotation : uint8_t {
+            none,                //0
+            clockwise_90,        //90
+            counterclockwise_90, //270
+            _180,                //180
+        };
+
+        enum class heightmap : uint8_t {
+            world_surface,
+            motion_blocking,
+            motion_blocking_no_leaves,
+            ocean_floor,
+        };
+
+        struct loot_table {}; //TODO
+
+        struct loot_predicate {}; //TODO
+
+        struct loot_modifier {}; //TODO
+
+        struct dialog {}; //TODO
+
         struct uuid {
             enbt::raw_uuid value;
-        };
-
-        struct vec2 {
-            float v[2];
-            bool relative[2]{false, false};
-        };
-
-        struct vec3 {
-            float v[3];
-            bool relative[3]{false, false, false};
         };
     }
 
     using parser = std::variant<
         parsers::_bool,
-        parsers::_double,
         parsers::_float,
+        parsers::_double,
         parsers::_integer,
         parsers::_long,
         parsers::string,
-        parsers::angle,
-        parsers::block,
-        parsers::color,
+        parsers::entity,
+        parsers::game_profile,
         parsers::block_pos,
         parsers::column_pos,
-        parsers::component,
-        parsers::dimension,
-        parsers::entity,
-        parsers::entity_anchor,
-        parsers::heightmap,
-        parsers::item,
-        parsers::item_slot,
+        parsers::vec2,
+        parsers::vec3,
+        parsers::block_state,
+        parsers::block_predicate,
         parsers::item_stack,
+        parsers::item_predicate,
+        parsers::color,
+        parsers::hex_color,
+        parsers::component,
+        parsers::style,
         parsers::message,
         parsers::nbt_compound_tag,
+        parsers::nbt_tag,
         parsers::nbt_path,
-        parsers::nbt,
         parsers::objective,
         parsers::objective_criteria,
         parsers::operation,
         parsers::particle,
+        parsers::angle,
+        parsers::rotation,
+        parsers::scoreboard_slot,
+        parsers::score_holder,
+        parsers::swizzle,
+        parsers::team,
+        parsers::item_slot,
+        parsers::item_slots,
+        parsers::resource_location,
+        parsers::function,
+        parsers::entity_anchor,
+        parsers::int_range,
+        parsers::float_range,
+        parsers::dimension,
+        parsers::gamemode,
+        parsers::time,
+        parsers::resource_or_tag,
+        parsers::resource_or_tag_key,
         parsers::resource,
         parsers::resource_key,
-        parsers::resource_location,
-        parsers::resource_or_tag,
-        parsers::rotation,
-        parsers::score_holder,
-        parsers::team,
+        parsers::resource_selector,
         parsers::template_mirror,
-        parsers::time,
-        parsers::uuid,
-        parsers::vec2,
-        parsers::vec3,
-        parsers::custom_virtual
+        parsers::template_rotation,
+        parsers::heightmap,
+        parsers::loot_table,
+        parsers::loot_predicate,
+        parsers::loot_modifier,
+        parsers::dialog,
+        parsers::uuid>;
 
-        >;
 
-
-    using command_parser = std::variant<
+    using command_parser = enum_switch<
+        var_int32,
         parsers::command::_bool,
-        parsers::command::_double,
         parsers::command::_float,
+        parsers::command::_double,
         parsers::command::_integer,
         parsers::command::_long,
         parsers::command::string,
-        parsers::command::angle,
-        parsers::command::block,
-        parsers::command::color,
+        parsers::command::entity,
+        parsers::command::game_profile,
         parsers::command::block_pos,
         parsers::command::column_pos,
-        parsers::command::component,
-        parsers::command::dimension,
-        parsers::command::entity,
-        parsers::command::entity_anchor,
-        parsers::command::heightmap,
-        parsers::command::item,
-        parsers::command::item_slot,
+        parsers::command::vec2,
+        parsers::command::vec3,
+        parsers::command::block_state,
+        parsers::command::block_predicate,
         parsers::command::item_stack,
+        parsers::command::item_predicate,
+        parsers::command::color,
+        parsers::command::hex_color,
+        parsers::command::component,
+        parsers::command::style,
         parsers::command::message,
         parsers::command::nbt_compound_tag,
+        parsers::command::nbt_tag,
         parsers::command::nbt_path,
-        parsers::command::nbt,
         parsers::command::objective,
         parsers::command::objective_criteria,
         parsers::command::operation,
         parsers::command::particle,
+        parsers::command::angle,
+        parsers::command::rotation,
+        parsers::command::scoreboard_slot,
+        parsers::command::score_holder,
+        parsers::command::swizzle,
+        parsers::command::team,
+        parsers::command::item_slot,
+        parsers::command::item_slots,
+        parsers::command::resource_location,
+        parsers::command::function,
+        parsers::command::entity_anchor,
+        parsers::command::int_range,
+        parsers::command::float_range,
+        parsers::command::dimension,
+        parsers::command::gamemode,
+        parsers::command::time,
+        parsers::command::resource_or_tag,
+        parsers::command::resource_or_tag_key,
         parsers::command::resource,
         parsers::command::resource_key,
-        parsers::command::resource_location,
-        parsers::command::resource_or_tag,
-        parsers::command::rotation,
-        parsers::command::score_holder,
-        parsers::command::team,
+        parsers::command::resource_selector,
         parsers::command::template_mirror,
-        parsers::command::time,
-        parsers::command::uuid,
-        parsers::command::vec2,
-        parsers::command::vec3,
-        parsers::command::custom_virtual>;
-
-    parser parse();
+        parsers::command::template_rotation,
+        parsers::command::heightmap,
+        parsers::command::loot_table,
+        parsers::command::loot_predicate,
+        parsers::command::loot_modifier,
+        parsers::command::dialog,
+        parsers::command::uuid>;
 }
 
 #endif /* SRC_BASE_OBJECTS_PARSERS */

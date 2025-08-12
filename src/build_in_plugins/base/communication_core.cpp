@@ -66,7 +66,7 @@ namespace copper_server::build_in_plugins {
             using cmd_pred_string = base_objects::parsers::command::string;
             using cmd_pred_entity = base_objects::parsers::command::entity;
             browser.add_child("broadcast")
-                .add_child({"<message>", "broadcast <message>", "Broadcast a message to all players"}, cmd_pred_string::greedy_phrase)
+                .add_child({"message", "broadcast message", "Broadcast a message to all players"}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                 .set_callback("command.broadcast", [](const list_array<predicate>& args, base_objects::command_context& _) {
                     auto msg = Chat::parseToChat(std::get<pred_string>(args[0]).value);
                     api::players::iterate_online([&msg](base_objects::SharedClientData& context) {
@@ -75,8 +75,8 @@ namespace copper_server::build_in_plugins {
                     });
                 });
             browser.add_child("msg")
-                .add_child("<target>", cmd_pred_string::quotable_phrase)
-                .add_child({"<message>", "msg <target> <message>", "Send private message to specified player"}, cmd_pred_string::greedy_phrase)
+                .add_child("target", cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
+                .add_child({"message", "msg target message", "Send private message to specified player"}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                 .set_callback("command.msg", [](const list_array<predicate>& args, base_objects::command_context& context) {
                     auto target = api::players::get_player(std::get<pred_string>(args[0]).value);
                     if (!target) {
@@ -88,7 +88,7 @@ namespace copper_server::build_in_plugins {
                     *target << api::client::play::system_chat{.content = {"From " + context.executor.name + ": ", message}};
                 });
             browser.add_child("chat")
-                .add_child({"<message>", "chat <message>", "Send message to chat"}, cmd_pred_string::greedy_phrase)
+                .add_child({"message", "chat message", "Send message to chat"}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                 .set_callback("command.chat", [](const list_array<predicate>& args, base_objects::command_context& context) {
                     auto msg = Chat{"[" + context.executor.name + "] ", Chat::parseToChat(std::get<pred_string>(args[0]).value)};
                     api::players::iterate_online([&msg](base_objects::SharedClientData& context) {
@@ -101,7 +101,7 @@ namespace copper_server::build_in_plugins {
                     context.executor << api::client::play::system_chat{.content = "You are " + context.executor.name};
                 });
             browser.add_child("tellraw")
-                .add_child({"<message>", "tellraw <message>", "Broadcast raw message for everyone."}, cmd_pred_string::greedy_phrase)
+                .add_child({"message", "tellraw message", "Broadcast raw message for everyone."}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                 .set_callback("command.tellraw", [](const list_array<predicate>& args, base_objects::command_context& _) {
                     auto msg = Chat::fromStr(std::get<pred_string>(args[0]).value);
                     api::players::iterate_online([&msg](base_objects::SharedClientData& context) {
@@ -112,8 +112,8 @@ namespace copper_server::build_in_plugins {
             {
                 auto title = browser
                                  .add_child("title")
-                                 .add_child("<target>", cmd_pred_entity{.only_one_entity = false, .only_player_entity = true});
-                title.add_child({"clear", "title <target> clear", "Clear title"})
+                                 .add_child("target", cmd_pred_entity{.flag = cmd_pred_entity::only_player_entity});
+                title.add_child({"clear", "title target clear", "Clear title"})
                     .set_callback("command.title.clear", [](const list_array<predicate>&, base_objects::command_context&) {
                         //TODO
                         //api::players::iterate_online([&context](base_objects::SharedClientData& context) {

@@ -10,6 +10,12 @@
 #include <src/api/packets.hpp>
 #include <src/base_objects/slot.hpp>
 #include <src/util/reflect.hpp>
+#include <src/util/reflect/calculations.hpp>
+#include <src/util/reflect/component.hpp>
+#include <src/util/reflect/dye_color.hpp>
+#include <src/util/reflect/packets.hpp>
+#include <src/util/reflect/packets_help.hpp>
+#include <src/util/reflect/parsers.hpp>
 
 namespace copper_server::api::packets {
     using namespace base_objects;
@@ -76,23 +82,34 @@ namespace copper_server::api::packets {
         template <class T>
         void serialize_array(std::string& res, size_t spacing, const T& value) {
             list_array<std::string> res_tmp;
-            res_tmp.reserve(value.size());
+            res_tmp.resize(value.size());
             size_t i = 0;
             for (auto&& it : value)
                 serialize_entry(res_tmp[i++], spacing + 4, it);
             bool one_line = true;
             for (auto& it : res_tmp)
-                if (it.size() > 10)
+                if (it.size() > 10 || it.contains('\n'))
                     one_line = false;
             if (one_line) {
                 res += "[";
-                for (auto& it : res_tmp)
+                bool has_prev = false;
+                for (auto& it : res_tmp) {
+                    if (has_prev)
+                        res += ',';
+                    has_prev = true;
                     res += std::move(it);
+                }
                 res += "]";
             } else {
+                std::string sp(spacing + 4, ' ');
+                bool has_prev = false;
                 res += "[\n";
-                for (auto& it : res_tmp)
-                    res += std::move(it);
+                for (auto& it : res_tmp) {
+                    if (has_prev)
+                        res += ",\n";
+                    has_prev = true;
+                    res += sp + std::move(it);
+                }
                 res += "\n" + std::string(spacing, ' ') + "]";
             }
         }
@@ -126,6 +143,8 @@ namespace copper_server::api::packets {
                     res += "null";
             } else if constexpr (std::is_same_v<position, Type>)
                 res += "{.x = " + std::to_string(value.x) + ".z = " + std::to_string(value.z) + ".y = " + std::to_string(value.y) + "}";
+            else if constexpr (std::is_same_v<bool, Type>)
+                res += value ? "true" : "false";
             else if constexpr (std::is_arithmetic_v<Type>)
                 res += std::to_string(value);
             else if constexpr (std::is_same_v<std::string, Type>)
@@ -207,32 +226,48 @@ namespace copper_server::api::packets {
             } else if constexpr (is_template_base_of<std::unique_ptr, Type>) {
                 serialize_entry(res, spacing, *value);
             } else if constexpr (is_template_base_of<flags_list, Type>) {
-                res += "{ ";
-                serialize_entry(res, spacing, value.flag);
+                res += "{\n" + std::string(spacing + 4, ' ');
+                serialize_entry(res, spacing + 4, value.flag);
                 res += ": {";
+                bool has_prev = false;
                 value.for_each_in_order([&](auto& it) {
-                    res += "\n" + std::string(spacing, ' ');
+                    if (has_prev)
+                        res += ',';
+                    has_prev = true;
+                    res += "\n" + std::string(spacing + 4, ' ');
                     serialize_entry(res, spacing + 4, it);
                 });
-                res += "}}";
+                if (has_prev)
+                    res += "\n" + std::string(spacing + 4, ' ') + "}\n" + std::string(spacing, ' ') + "}";
+                else
+                    res += "}\n" + std::string(spacing, ' ') + "}";
             } else if constexpr (is_flags_list_from<Type>) {
                 res += "{";
+                bool has_prev = false;
                 value.for_each_in_order([&](auto& it) {
-                    res += "\n" + std::string(spacing, ' ');
+                    if (has_prev)
+                        res += ',';
+                    has_prev = true;
+                    res += "\n" + std::string(spacing + 4, ' ');
                     serialize_entry(res, spacing + 4, it);
                 });
-                res += "}";
+                if (has_prev)
+                    res += "\n" + std::string(spacing, ' ') + "}";
+                else
+                    res += "}";
             } else if constexpr (is_template_base_of<value_optional, Type>) {
-                res += "{";
                 if (value.rest && value.v) {
+                    res += "{\n" + std::string(spacing + 4, ' ');
                     serialize_entry(res, spacing + 4, value.v);
                     res += ":";
-                    serialize_entry(res, spacing + 4, *value.rest);
+                    serialize_entry(res, spacing + 8, *value.rest);
+                    res += "\n" + std::string(spacing, ' ') + "}";
                 } else {
+                    res += "{";
                     decltype(value.v) tmp{0};
                     serialize_entry(res, spacing + 4, tmp);
+                    res += "}";
                 }
-                res += "}";
             } else if constexpr (
                 is_template_base_of<sized_entry, Type>
                 || is_template_base_of<any_of, Type>
@@ -248,6 +283,10 @@ namespace copper_server::api::packets {
             } else {
                 bool process_next = true;
                 bool processed = false;
+                if constexpr (is_packet<Type>)
+                    res += std::string(reflect::get_pretty_type_name<Type>()) + "<" + std::to_string(Type::packet_id::value) + "> {";
+                else
+                    res += std::string(reflect::get_pretty_type_name<Type>()) + " {";
                 reflect::for_each_field_with_name(value, [&res, spacing, &process_next, &processed](auto& item, auto name) {
                     if (process_next) {
                         if (processed)
@@ -259,6 +298,10 @@ namespace copper_server::api::packets {
                             process_next = (bool)item.value;
                     }
                 });
+                if (processed)
+                    res += "\n" + std::string(spacing, ' ') + "}";
+                else
+                    res += "}";
             }
         }
 
@@ -266,9 +309,7 @@ namespace copper_server::api::packets {
         void serialize_packet(std::string& res, size_t spacing, T& value) {
             using Type = std::decay_t<T>;
             if constexpr (is_packet<Type>) {
-                res += std::string(reflect::get_pretty_type_name<Type>()) + "<" + std::to_string(Type::packet_id::value) + "> {\n " + std::string(spacing, ' ');
                 serialize_entry(res, spacing, value);
-                res += std::string(spacing, ' ') + "}";
             } else if constexpr (std::is_base_of_v<compound_packet, Type>) {
                 res += std::string(reflect::get_pretty_type_name<Type>()) + "<compound> {";
                 bool processed = false;

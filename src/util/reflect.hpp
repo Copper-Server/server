@@ -8,10 +8,37 @@
  */
 #ifndef SRC_UTIL_REFLECT
 #define SRC_UTIL_REFLECT
-#include "reflect_fns.hpp"
 #include <charconv>
 
 namespace copper_server::reflect {
+
+    template <class T>
+    consteval std::string_view type_name();
+
+    template <class T>
+    consteval size_t fields_count() {
+        return 0;
+    }
+
+    template <class T>
+    struct enum_data {};
+
+    template <class T>
+    struct for_each_type_s {};
+
+    template <class T>
+    struct for_each_type_with_name_s {};
+
+    template <class T, class FN>
+    constexpr void for_each_type(FN&& fn) {
+        for_each_type_s<T>::each(std::move(fn));
+    }
+
+    template <class T, class FN>
+    constexpr void for_each_type_with_name(FN&& fn) {
+        for_each_type_with_name_s<T>::each(std::move(fn));
+    }
+
     template <class T>
     consteval std::string_view type_name() {
 #if defined(__clang__) || defined(__GNUC__)

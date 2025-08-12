@@ -115,7 +115,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                     client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 0").ToStr()}};
                     return;
                 }
-
+                client.data = std::make_shared<mojang::api::session_server::player_data>();
                 client.data->uuid = packet.uuid;
                 auto player = api::players::get_player(packet.name);
                 if (player) {

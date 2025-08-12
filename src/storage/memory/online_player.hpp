@@ -106,7 +106,7 @@ namespace copper_server::storage::memory {
             size_t i = 0;
             for (auto& p : players) {
                 if (p == player) {
-                    if (bool(p->packets_state.state & base_objects::SharedClientData::packets_state_t::protocol_state::initialization))
+                    if (!bool(p->packets_state.state & base_objects::SharedClientData::packets_state_t::protocol_state::initialization))
                         --online;
                     players.erase(i);
                     return;
@@ -120,7 +120,7 @@ namespace copper_server::storage::memory {
             size_t i = 0;
             for (auto& p : players) {
                 if (p->name == player) {
-                    if (bool(p->packets_state.state & base_objects::SharedClientData::packets_state_t::protocol_state::initialization) && p->canBeRemoved())
+                    if (!bool(p->packets_state.state & base_objects::SharedClientData::packets_state_t::protocol_state::initialization) && p->canBeRemoved())
                         --online;
                     players.erase(i);
                     return;
