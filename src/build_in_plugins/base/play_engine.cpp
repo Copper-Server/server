@@ -6,9 +6,9 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/api/client.hpp>
 #include <src/api/command.hpp>
 #include <src/api/entity_id_map.hpp>
-#include <src/api/client.hpp>
 #include <src/api/players.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/entity.hpp>
@@ -553,7 +553,14 @@ namespace copper_server::build_in_plugins {
             proc.on_tick = [](base_objects::entity& self) {
                 if (self.assigned_player) {
                     if (self.current_world()) {
+                        if (!self.assigned_player->packets_state.is_play_initialized) {
+                            self.assigned_player->packets_state.is_play_initialized = true;
+                            *self.assigned_player << api::packets::client_bound::play::game_event{
+                                .event = {api::packets::client_bound::play::game_event::wait_for_level_chunks{}},
+                            };
+                        }
                         //TODO implement batching
+                        bool make_tick = false;
                         self.get_syncing_data().for_each_processing([&](int64_t chunk_x, int64_t chunk_z, bool loaded) {
                             if (!loaded) {
                                 auto chunk = self.current_world()->request_chunk_data_weak(chunk_x, chunk_z);
@@ -563,8 +570,30 @@ namespace copper_server::build_in_plugins {
                                         self.get_syncing_data().mark_chunk(chunk_x, chunk_z, true);
                                     }
                                 }
-                            }
+                            } else
+                                make_tick = true;
                         });
+                        if (make_tick) {
+                            if (!self.assigned_player->packets_state.is_play_fully_initialized) {
+                                self.assigned_player->packets_state.is_play_fully_initialized = true;
+                                auto& p_data = self.assigned_player->player_data;
+                                auto [yaw, pitch] = util::to_yaw_pitch(p_data.assigned_entity->rotation);
+                                *self.assigned_player << api::client::play::player_position{
+                                    .teleport_id = 0, //TODO replace with automatic id
+                                    .x = p_data.assigned_entity->position.x,
+                                    .y = p_data.assigned_entity->position.y,
+                                    .z = p_data.assigned_entity->position.z,
+                                    .velocity_x = p_data.assigned_entity->motion.x,
+                                    .velocity_y = p_data.assigned_entity->motion.y,
+                                    .velocity_z = p_data.assigned_entity->motion.z,
+                                    .yaw = (float)yaw,
+                                    .pitch = (float)pitch,
+                                    .flags = api::packets::teleport_flags{}
+                                };
+                            }
+                            if (!self.current_world()->ticking_frozen)
+                                *self.assigned_player << api::client::play::ticking_step{.steps = 1};
+                        }
                     }
                 }
             };
@@ -575,6 +604,10 @@ namespace copper_server::build_in_plugins {
         PlayEngine() {}
 
         ~PlayEngine() noexcept {}
+
+        void OnInitialization(const PluginRegistrationPtr& _) override {
+            base_objects::entity_data::register_entity_world_processor(make_processor(), "minecraft:player");
+        }
 
         void OnLoad(const PluginRegistrationPtr& _) override {
             process_chat_command_id = api::packets::register_server_bound_processor<api::packets::server_bound::play::chat_command>([](api::packets::server_bound::play::chat_command&& packet, base_objects::SharedClientData& client) {
@@ -605,7 +638,6 @@ namespace copper_server::build_in_plugins {
                     };
                 }
             });
-            base_objects::entity_data::register_entity_world_processor(make_processor(), "minecraft:player");
         }
 
         void OnUnload(const PluginRegistrationPtr& _) override {

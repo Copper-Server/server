@@ -268,16 +268,6 @@ namespace copper_server::storage {
                                         need_recalculate_light_block_light = false;
                                     } catch (...) {
                                     }
-                                } else if (name == "entities") {
-                                    self.iterate(
-                                        [&](std::uint64_t len) {
-                                            sub_chunk_data->stored_entities.reserve(len);
-                                        },
-                                        [&](enbt::io_helper::value_read_stream& self) {
-                                            auto res = base_objects::entity::load_from_enbt(self.read().as_compound());
-                                            world.register_entity(res);
-                                        }
-                                    );
                                 } else if (name == "block_entities") {
                                     self.iterate(
                                         [&](std::uint64_t len) {
@@ -318,6 +308,16 @@ namespace copper_server::storage {
                             });
                             sub_chunk_data->need_to_recalculate_light = need_recalculate_light_block_light || need_recalculate_light_sky_light;
                             sub_chunks.push_back(std::move(*sub_chunk_data));
+                        }
+                    );
+                } else if (name == "entities") {
+                    self.iterate(
+                        [&](std::uint64_t len) {
+                            stored_entities.reserve(len);
+                        },
+                        [&](enbt::io_helper::value_read_stream& self) {
+                            auto res = base_objects::entity::load_from_enbt(self.read().as_compound());
+                            world.register_entity(res);
                         }
                     );
                 } else if (name == "queried_for_tick") {
@@ -554,14 +554,14 @@ namespace copper_server::storage {
                                       enbt::io_helper::serialization_write(sub_chunk.block_light.light_map, stream);
                                   });
                               }
-                              compound.write("entities", [&](enbt::io_helper::value_write_stream& stream) {
-                                  auto entities = stream.write_array(sub_chunk.stored_entities.size());
-                                  for (auto& [id, entity] : sub_chunk.stored_entities) {
-                                      if (entity->const_data().is_saveable)
-                                          entities.write(entity->copy_to_enbt());
-                                  }
-                              });
                           });
+                      })
+                      .write("entities", [&](enbt::io_helper::value_write_stream& stream) {
+                          auto entities = stream.write_array(stored_entities.size());
+                          for (auto& [id, entity] : stored_entities) {
+                              if (entity->const_data().is_saveable)
+                                  entities.write(entity->copy_to_enbt());
+                          }
                       })
                       .write("queried_for_tick", [&](enbt::io_helper::value_write_stream& stream) {
                           stream.write_array(queried_for_tick.size()).iterable(queried_for_tick, [&](auto& item, enbt::io_helper::value_write_stream& stream) {
@@ -667,9 +667,8 @@ namespace copper_server::storage {
     }
 
     void chunk_data::for_each_entity(std::function<void(base_objects::entity_ref& entity)> func) {
-        for (auto& sub_chunk : sub_chunks)
-            for (auto& [id, entity] : sub_chunk.stored_entities)
-                func(entity);
+        for (auto& [id, entity] : stored_entities)
+            func(entity);
     }
 
     void chunk_data::for_each_block_entity(std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
@@ -692,12 +691,6 @@ namespace copper_server::storage {
                 pos.z = _pos & 0xF;
                 func(sub_chunks[local_y].blocks[pos.x][pos.y][pos.z], data);
             }
-    }
-
-    void chunk_data::for_each_entity(uint64_t sub_chunk_y, std::function<void(base_objects::entity_ref& entity)> func) {
-        if (sub_chunk_y < sub_chunks.size())
-            for (auto& [id, entity] : sub_chunks[sub_chunk_y].stored_entities)
-                func(entity);
     }
 
     void chunk_data::for_each_sub_chunk(std::function<void(sub_chunk_data& sub_chunk)> func) {
@@ -755,13 +748,11 @@ namespace copper_server::storage {
             sub_chunk.blocks[block_pos.x][local][block_pos.z].tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, block_pos.x, (uint8_t)local, block_pos.z, false);
         }
 
+        if (load_level <= 31)
+            for (auto& [id, entity] : stored_entities)
+                entity->tick();
         uint64_t sub_chunk_y = 0;
         for (auto& sub_chunk : sub_chunks) {
-            if (load_level <= 31)
-                for (auto& [id, entity] : sub_chunk.stored_entities)
-                    entity->tick();
-
-
             auto max_random_tick_per_sub_chunk = random_tick_speed;
             while (sub_chunk.has_tickable_blocks && max_random_tick_per_sub_chunk) {
                 union {
@@ -2103,15 +2094,6 @@ namespace copper_server::storage {
                     chunk->second->for_each_entity(func);
     }
 
-    void world_data::for_each_entity(int64_t chunk_x, int64_t chunk_y_raw, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func) {
-        TO_WORLD_POS_CHUNK(chunk_y, chunk_y_raw);
-        std::unique_lock lock(mutex);
-        if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
-            if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
-                if (chunk->second)
-                    chunk->second->for_each_entity(chunk_y, func);
-    }
-
     void world_data::for_each_block_entity(base_objects::cubic_bounds_chunk bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
@@ -2210,11 +2192,6 @@ namespace copper_server::storage {
 
     void world_data::for_each_entity_at(int64_t global_x, int64_t global_z, std::function<void(const base_objects::entity_ref& entity)> func) {
         for_each_entity(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z), func);
-    }
-
-    void world_data::for_each_entity_at(int64_t global_x, int64_t global_y_raw, int64_t global_z, std::function<void(const base_objects::entity_ref& entity)> func) {
-        TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
-        for_each_entity(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z), convert_chunk_global_pos(global_y), func);
     }
 
     void world_data::for_each_block_entity_at(int64_t global_x, int64_t global_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
@@ -2735,16 +2712,20 @@ namespace copper_server::storage {
             loading_tickets.erase(id);
         });
 
-        for (auto& [id, entity] : to_load_entities) {
-            auto chunk = request_chunk_data_weak_gen((int64_t)convert_chunk_global_pos(entity->position.x), (int64_t)convert_chunk_global_pos(entity->position.z));
-            if (chunk) {
-                if ((*chunk)->generator_stage == 0xFF) {
-                    TO_WORLD_POS_GLOBAL(y_level, entity->position.y);
-                    (*chunk)->sub_chunks[convert_chunk_global_pos(y_level)].stored_entities.insert({id, entity});
+        {
+            list_array<uint64_t> loaded_entities;
+            for (auto& [id, entity] : to_load_entities) {
+                auto chunk = request_chunk_data_weak_gen((int64_t)convert_chunk_global_pos(entity->position.x), (int64_t)convert_chunk_global_pos(entity->position.z));
+                if (chunk) {
+                    if ((*chunk)->generator_stage == 0xFF) {
+                        if ((*chunk)->stored_entities.insert({id, entity}).second)
+                            loaded_entities.push_back(id);
+                    }
                 }
             }
+            for (auto id : loaded_entities)
+                to_load_entities.erase(id);
         }
-        to_load_entities.clear();
         lock.unlock();
         tick_counter++;
         if (!profiling.enable_world_profiling) {
@@ -3057,12 +3038,6 @@ namespace copper_server::storage {
             world->for_each_entity(chunk_x, chunk_z, func);
     }
 
-    void worlds_data::for_each_entity(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func) {
-        std::unique_lock lock(mutex);
-        for (auto& [id, world] : cached_worlds)
-            world->for_each_entity(chunk_x, chunk_y, chunk_z, func);
-    }
-
     void worlds_data::for_each_entity(int32_t world_id, std::function<void(const base_objects::entity_ref& entity)> func) {
         std::unique_lock lock(mutex);
         if (auto world = cached_worlds.find(world_id); world == cached_worlds.end())
@@ -3077,14 +3052,6 @@ namespace copper_server::storage {
             load(world_id)->for_each_entity(chunk_x, chunk_z, func);
         else
             world->second->for_each_entity(chunk_x, chunk_z, func);
-    }
-
-    void worlds_data::for_each_entity(int32_t world_id, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func) {
-        std::unique_lock lock(mutex);
-        if (auto world = cached_worlds.find(world_id); world == cached_worlds.end())
-            load(world_id)->for_each_entity(chunk_x, chunk_y, chunk_z, func);
-        else
-            world->second->for_each_entity(chunk_x, chunk_y, chunk_z, func);
     }
 
     void worlds_data::for_each_world(std::function<void(int32_t id, world_data& world)> func) {

@@ -31,7 +31,7 @@ namespace copper_server::storage {
         fast_task::files::async_iofstream file(
             path,
             fast_task::files::open_mode::read,
-            fast_task::files::on_open_action::open,
+            fast_task::files::on_open_action::open_exists,
             fast_task::files::_sync_flags{}
         );
         if (!file.is_open()) {

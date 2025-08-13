@@ -6,6 +6,7 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/api/configuration.hpp>
 #include <src/log.hpp>
 #include <src/plugin/main.hpp>
 
@@ -204,7 +205,8 @@ namespace copper_server {
 
     void PluginManagement::autoRegister() {
         for (auto& [name, plugin] : __internal__::registration_list()) {
-            registerPlugin(name, plugin->construct());
+            if (!api::configuration::get().disabled_plugins.contains(name))
+                registerPlugin(name, plugin->construct());
         }
         __internal__::registration_list().clear();
     }

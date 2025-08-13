@@ -24,7 +24,7 @@ namespace copper_server::build_in_plugins::world_generators {
             if (sub_chunk_y != 0) {
                 return {};
             } else {
-                enbt::fixed_array x_dim(16);
+                enbt::fixed_array blocks(16);
                 for (uint8_t x = 0; x < 16; x++) {
                     enbt::fixed_array y_dim(16);
                     for (uint8_t y = 0; y < 16; y++) {
@@ -35,10 +35,22 @@ namespace copper_server::build_in_plugins::world_generators {
                         }
                         y_dim.set(y, std::move(z_dim));
                     }
-                    x_dim.set(x, std::move(y_dim));
+                    blocks.set(x, std::move(y_dim));
+                }
+                enbt::fixed_array biomes(4);
+                for (uint8_t x = 0; x < 4; x++) {
+                    enbt::fixed_array y_dim(4);
+                    for (uint8_t y = 0; y < 4; y++) {
+                        enbt::simple_array_ui32 z_dim(4);
+                        for (uint8_t z = 0; z < 4; z++)
+                            z_dim[z] = 0;
+                        y_dim.set(y, std::move(z_dim));
+                    }
+                    biomes.set(x, std::move(y_dim));
                 }
                 return {
-                    {"blocks", std::move(x_dim)}
+                    {"blocks", std::move(blocks)},
+                    {"biomes", std::move(biomes)}
                 };
             }
         }

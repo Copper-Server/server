@@ -169,6 +169,9 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                                                : std::nullopt;
 
 
+                client.packets_state.is_fully_initialized = false;
+                client.packets_state.is_play_initialized = false;
+                client.packets_state.is_play_fully_initialized = false;
                 auto [world_id, world_name] = api::world::prepare_world(client);
 
                 api::world::get(world_id, [&](storage::world_data& data) {
@@ -227,6 +230,8 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 };
                 client << api::client::play::set_held_slot{.slot = client.player_data.assigned_entity->get_selected_item()};
                 client.player_data.assigned_entity->set_experience(client.player_data.assigned_entity->get_experience());
+                api::world::register_entity(world_id, client.player_data.assigned_entity);
+
 
                 for (auto& plugin : client.compatible_plugins)
                     plugin->OnPlay_initialize_compatible(client);
@@ -234,22 +239,6 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::play, [&](auto&& plugin) {
                     plugin->OnPlay_initialize(client);
                 });
-
-                client.packets_state.is_fully_initialized = false;
-                client.packets_state.is_play_fully_initialized = false;
-                auto [yaw, pitch] = util::to_yaw_pitch(client.player_data.assigned_entity->rotation);
-                client << api::client::play::player_position{
-                    .teleport_id = 0, //TODO replace with automatic id
-                    .x = client.player_data.assigned_entity->position.x,
-                    .y = client.player_data.assigned_entity->position.y,
-                    .z = client.player_data.assigned_entity->position.z,
-                    .velocity_x = client.player_data.assigned_entity->motion.x,
-                    .velocity_y = client.player_data.assigned_entity->motion.y,
-                    .velocity_z = client.player_data.assigned_entity->motion.z,
-                    .yaw = (float)yaw,
-                    .pitch = (float)pitch,
-                    .flags = api::packets::teleport_flags{}
-                };
             });
 
             api::packets::register_server_bound_processor<accept_teleportation>([]([[maybe_unused]] accept_teleportation&& packet, base_objects::SharedClientData& client) {
@@ -330,7 +319,6 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             });
 
             api::packets::register_server_bound_processor<client_tick_end>([](client_tick_end&&, base_objects::SharedClientData& client) {
-                client << api::client::play::ticking_step{};
             });
 
             api::packets::register_server_bound_processor<client_information>([](client_information&& packet, base_objects::SharedClientData& client) {

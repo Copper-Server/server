@@ -44,12 +44,6 @@ namespace copper_server::api::configuration {
             conflict_type = t::prevent_join;
     }
 
-    void merge_configs_query(ServerConfiguration& cfg, js_object& data) {
-        auto query = js_object::get_object(data["query"]);
-        cfg.query.enabled = query["enabled"].or_apply(cfg.query.enabled);
-        cfg.query.port = query["port"].or_apply(cfg.query.port);
-    }
-
     void merge_configs_world(ServerConfiguration& cfg, js_object& data) {
         auto world = js_object::get_object(data["world"]);
         cfg.world.name = (std::string)world["name"].or_apply(cfg.world.name);
@@ -307,8 +301,14 @@ namespace copper_server::api::configuration {
         data["plugins"] = util::conversions::json::to_json(cfg.plugins);
     }
 
-    void merge_configs_disabled_plugins(ServerConfiguration& cfg, js_object& data) {
-        if (data.contains("disabled_plugins")) {
+    void merge_configs_disabled_plugins(ServerConfiguration& cfg, js_object& data, bool load) {
+        if (load) {
+            auto disabled_plugins = js_array::get_array(data["disabled_plugins"].or_apply(boost::json::array{}));
+            cfg.disabled_plugins.clear();
+            cfg.disabled_plugins.reserve(disabled_plugins.size());
+            for (auto&& name : disabled_plugins)
+                cfg.disabled_plugins.emplace((std::string)name);
+        } else if (data.contains("disabled_plugins")) {
             auto& disabled_plugins = (data["disabled_plugins"]).get().get_array();
             disabled_plugins.clear();
             disabled_plugins.reserve(cfg.disabled_plugins.size());
@@ -317,8 +317,7 @@ namespace copper_server::api::configuration {
         }
     }
 
-    void merge_configs(ServerConfiguration& cfg, js_object& data, bool process = false) {
-        merge_configs_query(cfg, data);
+    void merge_configs(ServerConfiguration& cfg, js_object& data, bool load = false) {
         merge_configs_world(cfg, data);
         merge_configs_game_play(cfg, data);
         merge_configs_protocol(cfg, data);
@@ -328,9 +327,9 @@ namespace copper_server::api::configuration {
         merge_configs_server(cfg, data);
         merge_configs_allowed_dimensions(cfg, data);
         merge_configs_plugins(cfg, data);
-        merge_configs_disabled_plugins(cfg, data);
+        merge_configs_disabled_plugins(cfg, data, load);
 
-        if (process)
+        if (load)
             merge_configs__process__status_favicon_path(cfg);
     }
 

@@ -27,8 +27,7 @@ namespace copper_server::base_objects {
         struct sub_chunk_data {
             base_objects::block blocks[16][16][16];
             int32_t biomes[4][4][4];
-            std::unordered_map<uint16_t, enbt::value> block_entities;               //0xXYZ => block_entity
-            std::unordered_map<uint64_t, base_objects::entity_ref> stored_entities; //uses id from world
+            std::unordered_map<uint16_t, enbt::value> block_entities; //0xXYZ => block_entity
 
 
             base_objects::world::light_data sky_light;

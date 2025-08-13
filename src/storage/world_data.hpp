@@ -89,6 +89,7 @@ namespace copper_server::storage {
     public:
         base_objects::world::height_maps height_maps;
         std::vector<base_objects::world::sub_chunk_data> sub_chunks;
+        std::unordered_map<uint64_t, base_objects::entity_ref> stored_entities; //uses id from world
 
         //instead of using negative values for priority, schedule ticks in reverse order
         // -1 == 1, -2 == 2, etc... means higher value == lower priority
@@ -105,7 +106,6 @@ namespace copper_server::storage {
         void update_height_map();
 
         void for_each_entity(std::function<void(base_objects::entity_ref& entity)> func);
-        void for_each_entity(uint64_t local_y, std::function<void(base_objects::entity_ref& entity)> func);
 
         void for_each_block_entity(std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
         void for_each_block_entity(uint64_t local_y, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
@@ -480,7 +480,6 @@ namespace copper_server::storage {
         void for_each_entity(base_objects::spherical_bounds_chunk bounds, std::function<void(base_objects::entity_ref& entity)> func);
         void for_each_entity(base_objects::spherical_bounds_chunk_out bounds, std::function<void(base_objects::entity_ref& entity)> func);
         void for_each_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
-        void for_each_entity(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
         void for_each_block_entity(base_objects::cubic_bounds_chunk bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
         void for_each_block_entity(base_objects::cubic_bounds_chunk_radius bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
         void for_each_block_entity(base_objects::cubic_bounds_chunk_radius_out bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
@@ -496,7 +495,6 @@ namespace copper_server::storage {
         void for_each_entity(base_objects::spherical_bounds_block bounds, std::function<void(base_objects::entity_ref& entity)> func);
         void for_each_entity(base_objects::spherical_bounds_block_out bounds, std::function<void(base_objects::entity_ref& entity)> func);
         void for_each_entity_at(int64_t global_x, int64_t global_z, std::function<void(const base_objects::entity_ref& entity)> func);
-        void for_each_entity_at(int64_t global_x, int64_t global_y, int64_t global_z, std::function<void(const base_objects::entity_ref& entity)> func);
         void for_each_block_entity_at(int64_t global_x, int64_t global_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
         void for_each_block_entity_at(int64_t global_x, int64_t global_y, int64_t global_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
 
@@ -550,14 +548,14 @@ namespace copper_server::storage {
 #pragma region Communication
         void entity_init(base_objects::entity&);
 
-        void entity_teleport(base_objects::entity&, util::VECTOR new_pos);
-        void entity_move(base_objects::entity&, util::VECTOR move);
+        void entity_teleport(base_objects::entity&, util::VECTOR new_pos); //TODO update chunk with it
+        void entity_move(base_objects::entity&, util::VECTOR move);        //TODO update chunk with it
         void entity_look_changes(base_objects::entity&, util::ANGLE_DEG new_rotation);
         void entity_rotation_changes(base_objects::entity&, util::ANGLE_DEG new_rotation);
-        void entity_motion_changes(base_objects::entity&, util::VECTOR new_motion);
+        void entity_motion_changes(base_objects::entity&, util::VECTOR new_motion); //TODO update chunk with it
 
-        void entity_rides(base_objects::entity&, size_t other_entity_id);
-        void entity_leaves_ride(base_objects::entity&, size_t other_entity_id);
+        void entity_rides(base_objects::entity&, size_t other_entity_id);       //TODO update chunk with it
+        void entity_leaves_ride(base_objects::entity&, size_t other_entity_id); //TODO update chunk with it
 
         void entity_attach(base_objects::entity&, size_t other_entity_id);
         void entity_detach(base_objects::entity&, size_t other_entity_id);
@@ -584,8 +582,8 @@ namespace copper_server::storage {
         void entity_add_effect(base_objects::entity&, uint32_t id, uint32_t duration, uint8_t amplifier = 1, bool ambient = false, bool show_particles = true, bool show_icon = true, bool use_blend = false);
         void entity_remove_effect(base_objects::entity&, uint32_t id);
 
-        void entity_death(base_objects::entity&);
-        void entity_deinit(base_objects::entity&);
+        void entity_death(base_objects::entity&);  //TODO update chunk with it
+        void entity_deinit(base_objects::entity&); //TODO update chunk with it
 
 
         void notify_block_event(const base_objects::world::block_action& action, int64_t x, int64_t y, int64_t z);
@@ -703,11 +701,9 @@ namespace copper_server::storage {
 
         void for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func);
         void for_each_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
-        void for_each_entity(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
 
         void for_each_entity(int32_t world_id, std::function<void(const base_objects::entity_ref& entity)> func);
         void for_each_entity(int32_t world_id, int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
-        void for_each_entity(int32_t world_id, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
 
         void for_each_world(std::function<void(int32_t id, world_data& world)> func);
 

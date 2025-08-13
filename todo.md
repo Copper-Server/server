@@ -6,5 +6,5 @@
     [x] Make interface for entity
     [x] Change world_data to handle entities
     [ ] Use new interface in player and add handlers 
-        [x] Implement chunk encoding and send to player
-        [ ] Check interface
+        [ ] Implement chunk encoding and send to player
+            [ ] fix encoding

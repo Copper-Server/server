@@ -130,8 +130,18 @@ namespace copper_server::api::world {
         auto id = get_worlds().get_id(client_ref.player_data.world_id);
         bool set_new_data = false;
         if (id == (int32_t)-1) {
-            id = get_worlds().base_world_id;
-            set_new_data = true;
+            using enum_ = api::configuration::ServerConfiguration::World::world_not_found_for_client_e;
+            switch (api::configuration::get().world.world_not_found_for_client) {
+            case enum_::kick:
+                throw std::runtime_error("World with id " + client_ref.player_data.world_id + " does not exists.");
+            case enum_::transfer_to_default:
+            case enum_::request_plugin_or_default:
+            default:
+                id = get_worlds().base_world_id;
+                client_ref.player_data.world_id = get_worlds().get_name(id);
+                set_new_data = true;
+                break;
+            }
         }
         auto world = get_worlds().get(id);
 
@@ -159,19 +169,8 @@ namespace copper_server::api::world {
 
     void sync_settings(base_objects::SharedClientData& client_ref) {
         auto id = get_worlds().get_id(client_ref.player_data.world_id);
-        if (id == -1) {
-            using enum_ = api::configuration::ServerConfiguration::World::world_not_found_for_client_e;
-            switch (api::configuration::get().world.world_not_found_for_client) {
-            case enum_::kick:
-                throw std::runtime_error("World with id " + client_ref.player_data.world_id + " does not exists.");
-            case enum_::transfer_to_default:
-            case enum_::request_plugin_or_default:
-            default:
-                id = get_default_world_id();
-                client_ref.player_data.world_id = get_worlds().get_name(id);
-                break;
-            }
-        }
+        if (id == -1)
+            throw std::runtime_error("World with id " + client_ref.player_data.world_id + " does not exists.");
         auto world = get_worlds().get(id);
 
         client_ref << api::packets::client_bound::play::initialize_border{
@@ -195,8 +194,6 @@ namespace copper_server::api::world {
         } << api::packets::client_bound::play::set_default_spawn_position{
             .location = {(int32_t)world->spawn_data.x, (int32_t)world->spawn_data.y, (int32_t)world->spawn_data.z},
             .angle = world->spawn_data.angle,
-        } << api::packets::client_bound::play::game_event{
-            .event = {api::packets::client_bound::play::game_event::wait_for_level_chunks{}},
         };
     }
 

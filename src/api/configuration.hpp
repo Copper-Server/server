@@ -142,11 +142,6 @@ namespace copper_server::api::configuration {
             bool enforce_secure_profile = true; //enables signature signing for chat messages using mojang's service
         } mojang;
 
-        struct Query {
-            uint16_t port = 25545;
-            bool enabled = false;
-        } query;
-
         struct Status {
             std::string server_name = "Copper Server";
             std::string description = "The C++ Minecraft server!";
@@ -187,7 +182,7 @@ namespace copper_server::api::configuration {
         //allows custom plugin settings
         enbt::compound plugins;
 
-        list_array<std::string> disabled_plugins;
+        std::unordered_set<std::string> disabled_plugins;
 
         //allowed dimensions to visit to player without the `action.world.transfer.disallowed` permission
         //if empty then this setting ignored

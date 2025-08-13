@@ -103,9 +103,10 @@ namespace copper_server {
                 std::chrono::time_point<std::chrono::system_clock> pong_timer;
                 int32_t keep_alive_ping_ms = 0;
                 int32_t protocol_version = -1;
-                bool is_transferred = true;
+                bool is_transferred = false;
                 bool is_fully_initialized = false;
                 bool is_play_fully_initialized = false;
+                bool is_play_initialized = false;
                 std::atomic_int32_t local_chat_counter;
                 static inline std::atomic_int32_t global_chat_counter;
 
