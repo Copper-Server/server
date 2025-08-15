@@ -245,31 +245,19 @@ namespace copper_server::api::packets {
                         res.write_var32_check(it.palette.size());
                         for (auto& i : it.palette)
                             res.write_var32(i);
-                        auto data = it.data.get();
-                        uint8_t padding = data.size() % 8;
-                        res.write_direct(std::move(data));
-                        while (padding--)
-                            res.write_value((uint8_t)0);
+                        res.write_direct(std::move(it.data.get()));
                     } else if constexpr (std::is_same_v<base_objects::pallete_container_single, IT>) {
                         res.write_value((uint8_t)0);
                         res.write_var32(it.id_of_palette);
                     } else if constexpr (std::is_same_v<base_objects::pallete_data, IT>) {
                         res.write_value((uint8_t)it.bits_per_entry);
-                        auto data = it.get();
-                        uint8_t padding = data.size() % 8;
-                        res.write_direct(std::move(data));
-                        while (padding--)
-                            res.write_value((uint8_t)0);
+                        res.write_direct(std::move(it.get()));
                     }
                 },
                 value.compile()
             );
         } else if constexpr (std::is_same_v<base_objects::pallete_data_height_map, Type>) {
-            auto data = value.get();
-            uint8_t padding = data.size() % 8;
-            res.write_direct(std::move(data));
-            while (padding--)
-                res.write_value((uint8_t)0);
+            res.write_array(std::move(value.get()));
         } else if constexpr (is_template_base_of<list_array_depend, Type>) {
             size_t siz = value.size();
             size_t i = 1;

@@ -18,6 +18,7 @@
 #include <src/base_objects/entity.hpp>
 #include <src/log.hpp>
 #include <src/mojang/api/hash256.hpp>
+#include <src/registers.hpp>
 #include <src/storage/world_data.hpp>
 #include <src/util/task_management.hpp>
 
@@ -434,7 +435,7 @@ namespace copper_server::storage {
     bool chunk_data::load(const enbt::compound_const_ref& chunk_data, uint64_t tick_counter, world_data& world) {
         if (!chunk_data.contains("sub_chunks"))
             return false;
-        auto sub_chunks_ref = chunk_data["sub_chunks"].as_fixed_array();
+        auto sub_chunks_ref = chunk_data["sub_chunks"].as_array();
 
         sub_chunks.reserve(sub_chunks_ref.size());
         for (auto& sub_chunk : sub_chunks_ref) {
@@ -446,13 +447,13 @@ namespace copper_server::storage {
                 load_block_data(blocks, sub_chunk_data->blocks, sub_chunk_data->has_tickable_blocks);
             }
             if (sub_chunk.contains("entities")) {
-                for (auto& entity : sub_chunk["entities"].as_fixed_array()) {
+                for (auto& entity : sub_chunk["entities"].as_array()) {
                     auto entity_ref = base_objects::entity::load_from_enbt(entity.as_compound());
                     world.register_entity(entity_ref);
                 }
             }
             if (sub_chunk.contains("block_entities")) {
-                for (auto& block_entity : sub_chunk["block_entities"].as_fixed_array()) {
+                for (auto& block_entity : sub_chunk["block_entities"].as_array()) {
                     base_objects::local_block_pos local_pos;
                     const enbt::value& nbt = block_entity["data"];
                     local_pos.x = block_entity["x"];
@@ -473,7 +474,7 @@ namespace copper_server::storage {
 
         sub_chunks.resize(world.get_chunk_y_count());
         if (chunk_data.contains("queried_for_tick")) {
-            auto queried_for_tick_ref = chunk_data["queried_for_tick"].as_fixed_array();
+            auto queried_for_tick_ref = chunk_data["queried_for_tick"].as_array();
             queried_for_tick.reserve(queried_for_tick_ref.size());
             for (auto& inner : queried_for_tick_ref) {
                 list_array<std::pair<uint64_t, base_objects::chunk_block_pos>> queried_for_tick_tmp;
@@ -486,7 +487,15 @@ namespace copper_server::storage {
                 queried_for_tick.push_back(queried_for_tick_tmp.take());
             }
         }
-
+        if (chunk_data.contains("queried_for_liquid_tick")) {
+            auto queried_for_liquid_tick_ref = chunk_data["queried_for_liquid_tick"].as_array();
+            queried_for_liquid_tick.reserve(queried_for_liquid_tick_ref.size());
+            for (auto& inner : queried_for_liquid_tick_ref) {
+                base_objects::chunk_block_pos block_pos{inner.at("x"), inner.at("y"), inner.at("z")};
+                uint32_t duration = inner.at("duration");
+                queried_for_liquid_tick.push_back({duration + tick_counter, block_pos});
+            }
+        }
 
         if (chunk_data.contains("generator_stage"))
             generator_stage = chunk_data["generator_stage"];
@@ -496,7 +505,7 @@ namespace copper_server::storage {
         return true;
     }
 
-    bool chunk_data::save(const std::filesystem::path& path, uint64_t tick_counter, world_data& _) {
+    bool chunk_data::save(const std::filesystem::path& path, uint64_t tick_counter, world_data& world) {
         if (api::configuration::get().server.world_debug_mode)
             return false;
         std::filesystem::create_directories(path.parent_path());
@@ -559,8 +568,9 @@ namespace copper_server::storage {
                       .write("entities", [&](enbt::io_helper::value_write_stream& stream) {
                           auto entities = stream.write_array(stored_entities.size());
                           for (auto& [id, entity] : stored_entities) {
-                              if (entity->const_data().is_saveable)
-                                  entities.write(entity->copy_to_enbt());
+                              if (entity->current_world() == &world)
+                                  if (entity->const_data().is_saveable)
+                                      entities.write(entity->copy_to_enbt());
                           }
                       })
                       .write("queried_for_tick", [&](enbt::io_helper::value_write_stream& stream) {
@@ -573,6 +583,16 @@ namespace copper_server::storage {
                                   compound.write("z", block_pos.z);
                                   compound.write("duration", till_tick - tick_counter);
                               });
+                          });
+                      })
+                      .write("queried_for_liquid_tick", [&](enbt::io_helper::value_write_stream& stream) {
+                          stream.write_array(queried_for_tick.size()).iterable(queried_for_liquid_tick, [&](auto& item, enbt::io_helper::value_write_stream& stream) {
+                              auto& [till_tick, block_pos] = item;
+                              auto compound = stream.write_compound();
+                              compound.write("x", block_pos.x);
+                              compound.write("y", block_pos.y);
+                              compound.write("z", block_pos.z);
+                              compound.write("duration", till_tick - tick_counter);
                           });
                       })
                       .write("height_maps", [&](enbt::io_helper::value_write_stream& stream) {
@@ -716,7 +736,7 @@ namespace copper_server::storage {
         queried_for_liquid_tick.push_back({on_tick, base_objects::chunk_block_pos{local_x, uint8_t(global_y & 15), local_z}});
     }
 
-    void chunk_data::tick(world_data& world, size_t random_tick_speed, std::mt19937& random_engine, [[maybe_unused]] std::chrono::high_resolution_clock::time_point current_time) {
+    void chunk_data::tick(chunk_tick_result& rr, world_data& world, size_t random_tick_speed, std::mt19937& random_engine, [[maybe_unused]] std::chrono::high_resolution_clock::time_point current_time) {
         if (load_level > 32)
             return;
 
@@ -748,9 +768,19 @@ namespace copper_server::storage {
             sub_chunk.blocks[block_pos.x][local][block_pos.z].tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, block_pos.x, (uint8_t)local, block_pos.z, false);
         }
 
-        if (load_level <= 31)
-            for (auto& [id, entity] : stored_entities)
-                entity->tick();
+        if (load_level <= 31) {
+            for (auto& [id, entity] : stored_entities) {
+                if (entity->world_syncing_data) {
+                    if (entity->current_world() == &world) {
+                        entity->tick();
+                        continue;
+                    }
+                }
+                rr.unrelated_entities.push_back(id);
+            }
+            for (auto id : rr.unrelated_entities)
+                stored_entities.erase(id);
+        }
         uint64_t sub_chunk_y = 0;
         for (auto& sub_chunk : sub_chunks) {
             auto max_random_tick_per_sub_chunk = random_tick_speed;
@@ -1425,6 +1455,16 @@ namespace copper_server::storage {
         return res;
     }
 
+    void world_data::set_world_type(std::string_view type) {
+        if (!world_type.empty())
+            throw std::runtime_error("World type already been set.");
+        world_type = std::string(type);
+        auto& type_data = registers::dimensionTypes.at(world_type);
+        chunk_y_count = type_data.height / 16;
+        world_y_offset = type_data.min_y;
+        world_y_chunk_offset = type_data.min_y ? type_data.min_y / 16 : 0;
+    }
+
     void world_data::set_seed(int32_t seed) {
         world_seed = seed;
         mojang::api::hash256 hash;
@@ -1450,7 +1490,7 @@ namespace copper_server::storage {
         wandering_trader_spawn_chance = load_from_nbt.at("wandering_trader_spawn_chance");
         wandering_trader_spawn_delay = load_from_nbt.at("wandering_trader_spawn_delay");
         world_name = (std::string)load_from_nbt.at("world_name");
-        world_type = (std::string)load_from_nbt.at("world_type");
+        set_world_type((std::string)load_from_nbt.at("world_type"));
         light_processor_id = (std::string)load_from_nbt.at("light_processor_id");
         generator_id = (std::string)load_from_nbt.at("generator_id");
 
@@ -1486,8 +1526,6 @@ namespace copper_server::storage {
         current_weather = base_objects::weather::from_string(load_from_nbt.at("current_weather"));
 
         internal_version = load_from_nbt.at("internal_version");
-        chunk_y_count = load_from_nbt.at("chunk_y_count");
-        world_y_offset = load_from_nbt.at("world_y_offset");
         difficulty = load_from_nbt.at("difficulty");
         default_gamemode = load_from_nbt.at("default_gamemode");
         difficulty_locked = load_from_nbt.at("difficulty_locked");
@@ -1570,8 +1608,6 @@ namespace copper_server::storage {
         world_data_file["current_weather"] = current_weather.to_string();
 
         world_data_file["internal_version"] = internal_version;
-        world_data_file["chunk_y_count"] = chunk_y_count;
-        world_data_file["world_y_offset"] = world_y_offset;
         world_data_file["difficulty"] = difficulty;
         world_data_file["default_gamemode"] = default_gamemode;
         world_data_file["difficulty_locked"] = difficulty_locked;
@@ -2606,10 +2642,15 @@ namespace copper_server::storage {
     void world_data::unregister_entity(base_objects::entity_ref& entity) {
         std::unique_lock lock(mutex);
         if (entity->world_syncing_data) {
+            auto [x, y, z] = entity->position;
+            auto assigned_world_id = entity->world_syncing_data->assigned_world_id;
             entity_deinit(*entity);
-            entities.erase(entity->world_syncing_data->assigned_world_id);
-            to_load_entities.erase(entity->world_syncing_data->assigned_world_id);
+            entities.erase(assigned_world_id);
+            to_load_entities.erase(assigned_world_id);
             entity->world_syncing_data = std::nullopt;
+            get_chunk_at((int64_t)x, (int64_t)z, [assigned_world_id](chunk_data& chunk) {
+                chunk.stored_entities.erase(assigned_world_id);
+            });
         }
     }
 
@@ -2657,9 +2698,12 @@ namespace copper_server::storage {
                             expired = true;
                     } else if constexpr (std::is_same_v<T, base_objects::world::loading_point_ticket::entity_bound_ticket>) {
                         if (auto it = entities.find(expr.id); it != entities.end()) {
-                            if (it->second->world_syncing_data)
-                                ticket.point = it->second->world_syncing_data->processing_region;
-                            else
+                            if (it->second->world_syncing_data) {
+                                if (it->second->current_world() == this)
+                                    ticket.point = it->second->world_syncing_data->processing_region;
+                                else
+                                    expired = true;
+                            } else
                                 expired = true;
                         } else
                             expired = true;
@@ -2713,7 +2757,7 @@ namespace copper_server::storage {
         });
 
         {
-            list_array<uint64_t> loaded_entities;
+            list_array<size_t> loaded_entities;
             for (auto& [id, entity] : to_load_entities) {
                 auto chunk = request_chunk_data_weak_gen((int64_t)convert_chunk_global_pos(entity->position.x), (int64_t)convert_chunk_global_pos(entity->position.z));
                 if (chunk) {
@@ -2728,16 +2772,29 @@ namespace copper_server::storage {
         }
         lock.unlock();
         tick_counter++;
+        chunk_tick_result rr;
         if (!profiling.enable_world_profiling) {
             to_tick_chunks.for_each([&](auto&& chunk) {
-                chunk->tick(*this, random_tick_speed, random_engine, current_time);
+                chunk->tick(rr, *this, random_tick_speed, random_engine, current_time);
+                for (auto id : rr.unrelated_entities)
+                    entities.erase(id);
+                rr.unrelated_entities.clear();
             });
         } else {
             profiling.chunk_target_to_load = target_load_count;
             const auto tick_speed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::duration<double>(1) / ticks_per_second);
             auto tick_local_time = std::chrono::high_resolution_clock::now();
             to_tick_chunks.for_each([&](auto&& chunk) {
-                chunk->tick(*this, random_tick_speed, random_engine, current_time);
+                chunk->tick(rr, *this, random_tick_speed, random_engine, current_time);
+                if (!profiling.chunk_removed_unrelated_entity)
+                    for (auto id : rr.unrelated_entities)
+                        entities.erase(id);
+                else
+                    for (auto id : rr.unrelated_entities) {
+                        auto entity = entities.find(id);
+                        profiling.chunk_removed_unrelated_entity(*this, chunk->chunk_x, chunk->chunk_z, id, entity != entities.end() ? entity->second : nullptr);
+                    }
+                rr.unrelated_entities.clear();
 
                 auto actual_time = std::chrono::high_resolution_clock::now();
                 auto current_tick_speed = std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);

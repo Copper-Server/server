@@ -122,13 +122,18 @@ namespace copper_server::build_in_plugins {
         log::warn("World", message);
     }
 
-    int32_t java_string_hash(std::string_view view) {
-        int32_t hash = 0, multiplier = 1;
-        for (ptrdiff_t i = view.size() - 1; i >= 0; i--) {
-            hash += view[i] * multiplier;
-            multiplier = (multiplier << 5) - multiplier;
+    int32_t world_seed_or_java_hash(const std::string& str) {
+        auto is_num = str.find_first_not_of("0123456789") == std::string::npos;
+        if (is_num)
+            return std::stoi(str);
+        else {
+            int32_t hash = 0, multiplier = 1;
+            for (ptrdiff_t i = str.size() - 1; i >= 0; i--) {
+                hash += str[i] * multiplier;
+                multiplier = (multiplier << 5) - multiplier;
+            }
+            return hash;
         }
-        return hash;
     }
 
     class WorldManagementPlugin : public PluginAutoRegister<"base/world_manager", WorldManagementPlugin> {
@@ -190,14 +195,16 @@ namespace copper_server::build_in_plugins {
             std::list<std::shared_ptr<fast_task::task>> tasks;
             for (auto& it : api::configuration::get().allowed_dimensions) {
                 api::world::pre_load_world(it, [&](storage::world_data& world) {
-                    world.world_type = api::configuration::get().world.type;
-                    world.set_seed(java_string_hash(api::configuration::get().world.seed));
+                    world.set_seed(world_seed_or_java_hash(api::configuration::get().world.seed));
                     world.light_processor_id = "default";
                     if (world.world_name == "end") {
                         world.generator_id = "end";
+                        world.set_world_type("minecraft:the_end");
                     } else if (world.world_name == "nether") {
                         world.generator_id = "nether";
+                        world.set_world_type("minecraft:the_nether");
                     } else {
+                        world.set_world_type(api::configuration::get().world.type);
                         world.generator_id = api::configuration::get().world.generator_type;
                         for (auto& [name, value] : api::configuration::get().world.generator_settings)
                             world.world_generator_data[name] = value;
@@ -266,7 +273,7 @@ namespace copper_server::build_in_plugins {
             fast_task::task::await_multiple(tasks, false, true);
         }
 
-        void OnUnload(const PluginRegistrationPtr&) override {
+        void OnPostUnload(const PluginRegistrationPtr&) override {
             log::info("World", "saving worlds...");
             if (world_ticking) {
                 world_ticking->await_notify_cancel();

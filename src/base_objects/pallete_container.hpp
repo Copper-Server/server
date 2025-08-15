@@ -16,7 +16,7 @@
 
 namespace copper_server::base_objects {
     struct pallete_data {
-        bit_list_array<> data;
+        bit_list_array<uint64_t> data;
         size_t bits_per_entry : 6;
 
         pallete_data() : bits_per_entry(0){}
@@ -40,6 +40,22 @@ namespace copper_server::base_objects {
                 throw std::out_of_range("value is too large for the given bits_per_entry");
             for (size_t i = 0; i < bits_per_entry; i++)
                 data.push_back((value >> i) & 1);
+        }
+
+        //allows plugins to modify pallete
+        constexpr void modify(size_t index, size_t value) {
+            size_t real_index = bits_per_entry * index;
+            for (size_t i = 0; i < bits_per_entry; i++)
+                data.set(i + real_index, (value >> i) & 1);
+        }
+
+        constexpr size_t get(size_t index) {
+            size_t real_index = bits_per_entry * index;
+            size_t value = 0;
+            size_t bits = 0;
+            for (size_t i = 0; i < bits_per_entry; i++)
+                value |= size_t(data.at(real_index + i)) << bits++;
+            return value;
         }
 
         template <class FN>
@@ -75,12 +91,12 @@ namespace copper_server::base_objects {
             }
         }
 
-        constexpr const list_array<uint8_t>& get() {
+        constexpr list_array<uint64_t>& get() {
             data.commit();
             return data.data();
         }
 
-        constexpr const list_array<uint8_t>& get() const {
+        constexpr const list_array<uint64_t>& get() const {
             return data.data();
         }
 
@@ -102,41 +118,72 @@ namespace copper_server::base_objects {
         pallete_container_indirect(uint8_t bits_per_entry) : bits_per_entry(bits_per_entry), data(bits_per_entry) {}
     };
 
-    struct pallete_container {
+    class pallete_container {
         uint8_t bits_per_entry;
-        std::unordered_set<int32_t> unique_pallete;
+        std::unordered_map<int32_t, size_t> unique_pallete;
         list_array<int32_t> data;
         bool is_biomes_mode;
 
+    public:
         static inline constexpr auto max_indirect_biomes = 0x5;
         static inline constexpr auto max_indirect_blocks = 0xFF;
+
+        static inline constexpr auto size_biomes = 64;
+        static inline constexpr auto size_blocks = 4096;
+
         pallete_container():bits_per_entry(0), is_biomes_mode(false){}
         pallete_container(size_t max_items, bool is_biomes) : bits_per_entry(pallete_data::bits_for_max(max_items)), is_biomes_mode(is_biomes) {}
 
-        constexpr void add(size_t value) {
-            if (value >= (size_t(1) << bits_per_entry))
+        void add(int32_t value) {
+            if (value >= (int32_t(1) << bits_per_entry))
                 throw std::out_of_range("value is too large for the given bits_per_entry");
 
-            data.push_back((int32_t)value);
+            data.push_back(value);
 
             if (is_biomes_mode) {
                 if (unique_pallete.size() <= max_indirect_biomes)
-                    unique_pallete.insert((int32_t)value);
+                    unique_pallete[value]++;
             } else if (unique_pallete.size() <= max_indirect_blocks)
-                unique_pallete.insert((int32_t)value);
+                unique_pallete[value]++;
+        }
+
+        int32_t at(size_t index) const {
+            return data.at(index);
+        }
+
+        int32_t operator[](size_t index) const {
+            return data[index];
+        }
+
+        int32_t set(size_t index, int32_t value) {
+            auto old_v = data[index];
+
+            auto res = --unique_pallete[old_v];
+            if (res == 0)
+                unique_pallete.erase(old_v);
+            data[index] = value;
+
+            if (is_biomes_mode) {
+                if (unique_pallete.size() <= max_indirect_biomes)
+                    unique_pallete[value]++;
+            } else if (unique_pallete.size() <= max_indirect_blocks)
+                unique_pallete[value]++;
+            return old_v;
         }
 
         std::variant<pallete_container_single, pallete_container_indirect, pallete_data> compile() && {
             if (unique_pallete.size() == 1) {
                 pallete_container_single res;
-                res.id_of_palette = *unique_pallete.begin();
+                res.id_of_palette = unique_pallete.begin()->first;
                 data.clear();
                 unique_pallete.clear();
                 return res;
             } else if ((is_biomes_mode && unique_pallete.size() <= max_indirect_biomes) || (!is_biomes_mode && unique_pallete.size() <= max_indirect_blocks)) {
                 pallete_container_indirect res(pallete_data::bits_for_max(unique_pallete.size()));
                 std::unordered_map<int32_t, size_t> map;
-                res.palette = to_list_array(unique_pallete);
+                res.palette.reserve(unique_pallete.size());
+                for (auto [id, count] : unique_pallete)
+                    res.palette.push_back(id);
                 res.palette.for_each([&map](auto it, size_t index) {
                     map[(int32_t)it] = index;
                 });
@@ -158,12 +205,14 @@ namespace copper_server::base_objects {
         std::variant<pallete_container_single, pallete_container_indirect, pallete_data> compile() const& {
             if (unique_pallete.size() == 1) {
                 pallete_container_single res;
-                res.id_of_palette = *unique_pallete.begin();
+                res.id_of_palette = unique_pallete.begin()->first;
                 return res;
             } else if ((is_biomes_mode && unique_pallete.size() <= max_indirect_biomes) || (!is_biomes_mode && unique_pallete.size() <= max_indirect_blocks)) {
                 pallete_container_indirect res(pallete_data::bits_for_max(unique_pallete.size()));
                 std::unordered_map<int32_t, size_t> map;
-                res.palette = to_list_array(unique_pallete);
+                res.palette.reserve(unique_pallete.size());
+                for (auto [id, count] : unique_pallete)
+                    res.palette.push_back(id);
                 res.palette.for_each([&map](auto it, size_t index) {
                     map[(int32_t)it] = index;
                 });
@@ -185,18 +234,27 @@ namespace copper_server::base_objects {
                 [this](auto& it) {
                     using T = std::decay_t<decltype(it)>;
                     if constexpr (std::is_same_v<T, pallete_container_single>) {
-                        add(it.id_of_palette);
+                        if (is_biomes_mode)
+                            for (size_t i = 0; i < size_biomes; i++)
+                                add(it.id_of_palette);
+                        else
+                            for (size_t i = 0; i < size_blocks; i++)
+                                add(it.id_of_palette);
                     } else if constexpr (std::is_same_v<T, pallete_container_indirect>) {
                         it.data.for_each([this, &it](size_t val) {
                             add(it.palette[val]);
                         });
                     } else
                         it.for_each([this](size_t val) {
-                            add(val);
+                            add((int32_t)val);
                         });
                 },
                 vars
             );
+        }
+
+        size_t size() const {
+            return is_biomes_mode ? size_biomes : size_blocks;
         }
     };
 

@@ -533,7 +533,7 @@ namespace copper_server::build_in_plugins {
                     if (self.current_world()) {
                         auto& player_data = self.assigned_player->player_data;
                         *self.assigned_player << api::client::play::respawn{
-                            .dimension_type = registers::dimensionTypes.at(new_world.world_type).id,
+                            .dimension_type = registers::dimensionTypes.at(new_world.get_world_type()).id,
                             .dimension_name = new_world.world_name,
                             .seed_hashed = new_world.get_hashed_seed(),
                             .gamemode = player_data.gamemode,

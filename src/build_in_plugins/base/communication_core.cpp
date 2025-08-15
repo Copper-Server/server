@@ -8,6 +8,7 @@
  */
 #include <library/list_array.hpp>
 #include <src/api/client.hpp>
+#include <src/api/configuration.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/log.hpp>
@@ -17,6 +18,11 @@
 namespace copper_server::build_in_plugins {
     //provides and manages chat system
     struct CommunicationCorePlugin : public PluginAutoRegister<"base/communication_core", CommunicationCorePlugin> {
+
+        void OnInitialization(const PluginRegistrationPtr&) override {
+            api::configuration::get() ^ "communication_core" ^ "on_unload_message" |= enbt::compound{{"text", "The server closing."}};
+        }
+
         void OnLoad(const PluginRegistrationPtr& _) override {
             register_event(api::players::calls::on_player_kick, base_objects::events::priority::low, [](const api::players::personal<Chat>& message) {
                 switch (message.player->packets_state.state) {
@@ -58,6 +64,29 @@ namespace copper_server::build_in_plugins {
                 return false;
             });
             log::info("Communication Core", "chat handlers registered.");
+        }
+
+        void OnUnload(const PluginRegistrationPtr& _) override {
+            auto msg = Chat::fromEnbt(api::configuration::get() ^ "communication_core" ^ "on_unload_message");
+            api::players::iterate_players([&msg](auto& it) {
+                switch (it.packets_state.state) {
+                case base_objects::SharedClientData::packets_state_t::protocol_state::handshake:
+                case base_objects::SharedClientData::packets_state_t::protocol_state::initialization:
+                case base_objects::SharedClientData::packets_state_t::protocol_state::status:
+                    it.sendPacket(base_objects::network::response::disconnect());
+                    break;
+                case base_objects::SharedClientData::packets_state_t::protocol_state::login:
+                    it << api::client::login::login_disconnect{.reason = {msg.ToStr()}};
+                    break;
+                case base_objects::SharedClientData::packets_state_t::protocol_state::configuration:
+                    it << api::client::configuration::disconnect{.reason = msg};
+                    break;
+                case base_objects::SharedClientData::packets_state_t::protocol_state::play:
+                    it << api::client::configuration::disconnect{.reason = msg};
+                    break;
+                }
+                return false;
+            });
         }
 
         void OnCommandsLoad(const PluginRegistrationPtr& _, base_objects::command_root_browser& browser) override {

@@ -74,6 +74,6 @@ int main() {
         return 1;
     }
     log::info("Initializer thread", "Loading complete.");
-    fast_task::scheduler::await_end_tasks(true);
+    fast_task::scheduler::await_end_tasks(false);
     return 0;
 }

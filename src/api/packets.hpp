@@ -1115,10 +1115,10 @@ namespace copper_server {
                 };
 
                 struct level_chunk_with_light : public packet<0x27> {
-
                     struct height_map {
                         enum class type_e : uint8_t {
                             world_surface = 1,
+                            ocean_floor = 3,
                             motion_blocking = 4,
                             motion_blocking_no_leaves = 5,
                         };

@@ -80,6 +80,10 @@ namespace copper_server::storage {
     class world_data;
     class worlds_data;
 
+    struct chunk_tick_result {
+        list_array<size_t> unrelated_entities;
+    };
+
     class chunk_data {
         friend world_data;
         bool load(const std::filesystem::path& chunk_z, uint64_t tick_counter, world_data& world);
@@ -118,7 +122,7 @@ namespace copper_server::storage {
         void query_for_liquid_tick(uint8_t local_x, uint64_t local_y, uint8_t local_z, uint64_t on_tick);
 
 
-        void tick(world_data& world, size_t random_tick_speed, std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time);
+        void tick(chunk_tick_result& rr, world_data& world, size_t random_tick_speed, std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time);
 
 
         //generator functions
@@ -313,10 +317,11 @@ namespace copper_server::storage {
         base_objects::atomic_holder<chunk_generator>& get_generator();
         base_objects::atomic_holder<chunk_light_processor>& get_light_processor();
 
+        std::string world_type;
         int32_t internal_version = 0;
-        uint16_t chunk_y_count = 20;      // == (320 / 16), do not change this config
-        int16_t world_y_chunk_offset = 0; //calculated_from(world_y_offset)
-        int16_t world_y_offset = 0;
+        int32_t chunk_y_count = 24;       //calculated_from(world_type)
+        int32_t world_y_chunk_offset = 0; //calculated_from(world_y_offset)
+        int32_t world_y_offset = 0;       //calculated_from(world_type)
 
 
         void __set_block_silent(const base_objects::full_block_data& block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
@@ -324,21 +329,28 @@ namespace copper_server::storage {
         void __update_block(int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode, base_objects::block_id_t);
 
     public:
-        uint16_t get_chunk_y_count() const {
+        int32_t get_chunk_y_count() const {
             return chunk_y_count;
         }
 
-        int16_t get_world_y_chunk_offset() const {
+        int32_t get_world_y_chunk_offset() const {
             return world_y_chunk_offset;
         }
 
-        int16_t get_world_y_offset() const {
+        int32_t get_world_y_offset() const {
             return world_y_offset;
         }
 
         uint64_t get_hashed_seed() const {
             return hashed_seed_value;
         }
+
+        const std::string& get_world_type() const {
+            return world_type;
+        }
+
+        //use only in initialization
+        void set_world_type(std::string_view type);
 
         void set_seed(int32_t seed);
 
@@ -370,7 +382,6 @@ namespace copper_server::storage {
         int32_t wandering_trader_spawn_delay = 0;
         int32_t world_seed = 0;
         std::string world_name;
-        std::string world_type;
         std::string light_processor_id;
         std::string generator_id;
         std::unordered_map<size_t, base_objects::world::loading_point_ticket> loading_tickets;
@@ -634,6 +645,7 @@ namespace copper_server::storage {
             std::function<void(world_data& world, chunk_data&)> chunk_loaded;
             std::function<void(world_data& world, int64_t chunk_x, int64_t chunk_z)> chunk_load_failed;
             std::function<void(world_data& world, int64_t chunk_x, int64_t chunk_z)> chunk_unloaded;
+            std::function<void(world_data& world, int64_t chunk_x, int64_t chunk_z, size_t asingned_world_id, base_objects::entity_ref en)> chunk_removed_unrelated_entity; //entity could be unassigned if its been removed, but not in chunk
 
             std::atomic_size_t chunk_generator_counter = 0; //generating in process
             std::atomic_size_t chunk_load_counter = 0; //load in process

@@ -116,6 +116,9 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                             plugin->PlayerLeave(*hold);
                         });
                     }
+                    auto& p_data = hold->player_data;
+                    if (p_data.assigned_entity->current_world())
+                        api::world::unregister_entity(p_data.assigned_entity->current_world()->world_id, p_data.assigned_entity);
 
                     auto data = players_data.get_player_data(hold->data->uuid_str);
                     data.player = std::move(hold->player_data);
@@ -137,9 +140,9 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             });
             api::packets::register_server_bound_processor<api::packets::server_bound::configuration::finish_configuration>([this](api::packets::server_bound::configuration::finish_configuration&&, base_objects::SharedClientData& client) {
                 extra_data_t::get(client).ka_solution.set_callback([](int64_t res, base_objects::SharedClientData& client) {
-                    client << api::packets::client_bound::configuration::keep_alive{.keep_alive_id = (uint64_t)res};
+                    client << api::packets::client_bound::play::keep_alive{.keep_alive_id = (uint64_t)res};
                 });
-                extra_data_t::get(client).ka_solution.make_keep_alive_packet();
+                extra_data_t::get(client).ka_solution.start();
 
                 auto client_ref = api::players::get_player(client);
                 {
@@ -182,7 +185,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     do_limited_crafting = data.world_game_rules.contains("doLimitedCrafting") ? (bool)data.world_game_rules["doLimitedCrafting"] : false;
                     difficulty = data.difficulty;
                     difficulty_locked = data.difficulty_locked;
-                    world_type = registers::dimensionTypes.at(data.world_type).id;
+                    world_type = registers::dimensionTypes.at(data.get_world_type()).id;
                 });
                 auto player_entity_id = api::entity_id_map::allocate_id(client.data->uuid);
                 api::entity_id_map::assign_entity(player_entity_id, client.player_data.assigned_entity);

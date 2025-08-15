@@ -246,8 +246,7 @@ namespace copper_server::api::packets {
             value.bits_per_entry = base_objects::pallete_data::bits_for_max(get_size_source_value(context, size_source::get_world_blocks_height));
             auto size = value.bits_per_entry * 256;
             size += size % 8;
-            auto range = stream.range_read(size);
-            value.data.data() = list_array<uint8_t>(range.data_read(), range.size_read());
+            value.data.data() = stream.read_array<uint64_t>(int32_t(size / 8));
         } else if constexpr (is_template_base_of<list_array_depend, Type>) {
             bool has_next = false;
             do {
