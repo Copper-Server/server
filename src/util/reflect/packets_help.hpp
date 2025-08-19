@@ -885,4 +885,32 @@ template<class T, class FN>constexpr void for_each_field_with_name([[maybe_unuse
 template<class T, class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::ignored<T>& obj, [[maybe_unused]] FN&& fn){
   fn(obj.value, "value");
 }
+template<class T, util::CTS id, class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::ordered_id<T, id>& obj, [[maybe_unused]] FN&& fn){
+  fn(obj.value);
+  fn(obj.is_valid);
+}
+template<class T, util::CTS id, class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::ordered_id<T, id>& obj, [[maybe_unused]] FN&& fn){
+  fn(obj.value);
+  fn(obj.is_valid);
+}
+template<class T, util::CTS id>struct for_each_type_s<copper_server::base_objects::ordered_id<T, id>> {
+template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
+  fn.template operator()<decltype(std::declval<copper_server::base_objects::ordered_id<T, id>>().value)>();
+  fn.template operator()<decltype(std::declval<copper_server::base_objects::ordered_id<T, id>>().is_valid)>();
+}
+};
+template<class T, util::CTS id>struct for_each_type_with_name_s<copper_server::base_objects::ordered_id<T, id>> {
+template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
+  fn.template operator()<decltype(std::declval<copper_server::base_objects::ordered_id<T, id>>().value)>("value");
+  fn.template operator()<decltype(std::declval<copper_server::base_objects::ordered_id<T, id>>().is_valid)>("is_valid");
+}
+};
+template<class T, util::CTS id, class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::base_objects::ordered_id<T, id>& obj, [[maybe_unused]] FN&& fn){
+  fn(obj.value, "value");
+  fn(obj.is_valid, "is_valid");
+}
+template<class T, util::CTS id, class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::ordered_id<T, id>& obj, [[maybe_unused]] FN&& fn){
+  fn(obj.value, "value");
+  fn(obj.is_valid, "is_valid");
+}
 }

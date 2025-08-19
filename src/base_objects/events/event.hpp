@@ -215,9 +215,23 @@ namespace copper_server::base_objects::events {
         event()
             : gen(rd()) {}
 
+        bool empty() const {
+            std::lock_guard<fast_task::task_mutex> lock(mutex);
+            return can_skip();
+        }
+
     private:
-        bool can_skip() {
-            return heigh_priority.empty() && upper_avg_priority.empty() && avg_priority.empty() && lower_avg_priority.empty() && low_priority.empty() && async_heigh_priority.empty() && async_upper_avg_priority.empty() && async_avg_priority.empty() && async_lower_avg_priority.empty() && async_low_priority.empty();
+        bool can_skip() const {
+            return heigh_priority.empty()
+                   && upper_avg_priority.empty()
+                   && avg_priority.empty()
+                   && lower_avg_priority.empty()
+                   && low_priority.empty()
+                   && async_heigh_priority.empty()
+                   && async_upper_avg_priority.empty()
+                   && async_avg_priority.empty()
+                   && async_lower_avg_priority.empty()
+                   && async_low_priority.empty();
         }
 
         fast_task::task_mutex mutex;

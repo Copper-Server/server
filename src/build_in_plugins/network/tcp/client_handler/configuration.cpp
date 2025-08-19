@@ -20,17 +20,24 @@
 
 namespace copper_server::build_in_plugins::network::tcp::client_handler {
     struct tcp_configuration : public PluginAutoRegister<"network/tcp_configuration", tcp_configuration> {
+        struct ResourcePackData {
+            bool required : 1 = false;
+        };
+
         struct extra_data_t {
             bool packs_requested = false;
             keep_alive_solution ka_solution;
             list_array<PluginRegistrationPtr> active_plugins{};
+            std::unordered_map<enbt::raw_uuid, ResourcePackData> pending_resource_packs;
 
             static extra_data_t& get(base_objects::SharedClientData& client) {
-                if (!client.packets_state.extra_data) {
-                    auto allocated = new extra_data_t{.ka_solution = client.get_session()};
-                    client.packets_state.extra_data = std::shared_ptr<void>((void*)allocated, [](void* d) { delete reinterpret_cast<extra_data_t*>(d); });
-                }
-                return *reinterpret_cast<extra_data_t*>(client.packets_state.extra_data.get());
+                return *client.packets_state.internal_data.set([&](auto& data) {
+                    if (!data.extra_data) {
+                        auto allocated = new extra_data_t{.ka_solution = client.get_session()};
+                        data.extra_data = std::shared_ptr<void>((void*)allocated, [](void* d) { delete reinterpret_cast<extra_data_t*>(d); });
+                    }
+                    return reinterpret_cast<extra_data_t*>(data.extra_data.get());
+                });
             }
         };
 
@@ -475,12 +482,13 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             auto& data = extra_data_t::get(client);
             if (data.packs_requested) {
                 if (data.active_plugins.empty()) {
-                    if (client.packets_state.pending_resource_packs.empty()) {
+                    if (data.pending_resource_packs.empty()) {
                         client << api::packets::client_bound::configuration::finish_configuration{};
                     }
                 }
             }
         }
+
 
         void OnRegister(const PluginRegistrationPtr&) override {
             using client_information = api::packets::server_bound::configuration::client_information;
@@ -493,11 +501,11 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             using select_known_packs = api::packets::server_bound::configuration::select_known_packs;
             using custom_click_action = api::packets::server_bound::configuration::custom_click_action;
 
-            api::packets::register_viewer_client_bound<client_bound_resource_pack>([](const client_bound_resource_pack& packet, base_objects::SharedClientData& client) {
-                client.packets_state.pending_resource_packs[packet.uuid] = {.required = packet.forced};
+            register_packet_viewer([](const client_bound_resource_pack& packet, base_objects::SharedClientData& client) {
+                extra_data_t::get(client).pending_resource_packs[packet.uuid] = {.required = packet.forced};
                 return false;
             });
-            api::packets::register_server_bound_processor<client_information>([](client_information&& packet, base_objects::SharedClientData& client) {
+            register_packet_processor([](client_information&& packet, base_objects::SharedClientData& client) {
                 client.locale = packet.locale.value;
                 client.view_distance = (uint8_t)std::min<uint32_t>(packet.view_distance, api::configuration::get().game_play.view_distance);
                 client.chat_mode = (base_objects::SharedClientData::ChatMode)packet.chat_mode.value;
@@ -526,14 +534,14 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 data.packs_requested = true;
                 data.ka_solution.start();
             });
-            api::packets::register_server_bound_processor<cookie_response>([](cookie_response&& packet, base_objects::SharedClientData& client) {
+            register_packet_processor([](cookie_response&& packet, base_objects::SharedClientData& client) {
                 if (auto plugin = pluginManagement.get_bind_cookies(PluginManagement::registration_on::configuration, packet.key); plugin)
                     if (plugin->OnConfigurationCookie(plugin, packet.key, packet.payload ? *packet.payload : list_array<uint8_t>{}, client)) {
                         extra_data_t::get(client).active_plugins.remove(plugin);
                         make_finish(client);
                     }
             });
-            api::packets::register_server_bound_processor<custom_payload>([](custom_payload&& packet, base_objects::SharedClientData& client) {
+            register_packet_processor([](custom_payload&& packet, base_objects::SharedClientData& client) {
                 auto it = pluginManagement.get_bind_plugin(PluginManagement::registration_on::configuration, packet.channel);
                 if (it != nullptr)
                     packet.payload.commit();
@@ -542,10 +550,10 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     make_finish(client);
                 }
             });
-            api::packets::register_viewer_server_bound<api::packets::server_bound::configuration::finish_configuration>([](const api::packets::server_bound::configuration::finish_configuration&, base_objects::SharedClientData& client) {
+            register_packet_viewer([](const api::packets::server_bound::configuration::finish_configuration&, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).packs_requested) {
                     if (extra_data_t::get(client).active_plugins.empty()) {
-                        if (client.packets_state.pending_resource_packs.empty())
+                        if (extra_data_t::get(client).pending_resource_packs.empty())
                             return false;
                         else
                             client << api::packets::client_bound::play::disconnect{.reason = "Pending resource packs."};
@@ -555,20 +563,26 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     client << api::packets::client_bound::play::disconnect{.reason = "Nope, gimme packs!"};
                 return true;
             });
-            api::packets::register_server_bound_processor<keep_alive>([](keep_alive&& packet, base_objects::SharedClientData& client) {
+            register_packet_processor([](keep_alive&& packet, base_objects::SharedClientData& client) {
                 auto delay = extra_data_t::get(client).ka_solution.got_valid_keep_alive((int64_t)packet.keep_alive_id);
                 client.packets_state.keep_alive_ping_ms = (int32_t)std::min<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(delay).count(), INT32_MAX);
             });
-            api::packets::register_server_bound_processor<pong>([](pong&&, base_objects::SharedClientData& client) {
-                client.ping = std::chrono::duration_cast<std::chrono::milliseconds>(client.packets_state.pong_timer - std::chrono::system_clock::now());
+            register_packet_viewer([](api::packets::client_bound::play::ping&, base_objects::SharedClientData& client) {
+                client.packets_state.pong_timer = std::chrono::system_clock::now();
+                return true;
             });
-            api::packets::register_server_bound_processor<resource_pack>([](resource_pack&& packet, base_objects::SharedClientData& client) {
-                auto res = client.packets_state.pending_resource_packs.find(packet.uuid);
-                if (res != client.packets_state.pending_resource_packs.end()) {
+            register_packet_processor([](pong&& packet, base_objects::SharedClientData& client) {
+                if (packet.ping_request_id.is_valid)
+                    client.ping = std::chrono::duration_cast<std::chrono::milliseconds>(client.packets_state.pong_timer - std::chrono::system_clock::now());
+            });
+            register_packet_processor([](resource_pack&& packet, base_objects::SharedClientData& client) {
+                auto& data = extra_data_t::get(client);
+                auto res = data.pending_resource_packs.find(packet.uuid);
+                if (res != data.pending_resource_packs.end()) {
                     switch (packet.result.value) {
                     case resource_pack::result_e::success:
                         client.packets_state.active_resource_packs.insert(packet.uuid);
-                        client.packets_state.pending_resource_packs.erase(res);
+                        data.pending_resource_packs.erase(res);
                         break;
                     case resource_pack::result_e::accepted:
                     case resource_pack::result_e::downloaded:
@@ -577,12 +591,12 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         if (res->second.required)
                             client << api::packets::client_bound::configuration::disconnect{.reason = "Resource pack is required"};
                         else
-                            client.packets_state.pending_resource_packs.erase(res);
+                            data.pending_resource_packs.erase(res);
                     }
                     make_finish(client);
                 }
             });
-            api::packets::register_server_bound_processor<select_known_packs>([](select_known_packs&& packet, base_objects::SharedClientData& client) {
+            register_packet_processor([](select_known_packs&& packet, base_objects::SharedClientData& client) {
                 send_registry_data(client);
                 send_tags(client);
                 pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::configuration, [&client, &packet](PluginRegistrationPtr plugin) {
@@ -593,7 +607,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 });
                 make_finish(client);
             });
-            api::packets::register_server_bound_processor<custom_click_action>([](custom_click_action&& packet, base_objects::SharedClientData& client) {
+            register_packet_processor([](custom_click_action&& packet, base_objects::SharedClientData& client) {
                 api::dialogs::pass_dialog(packet.id, client, std::move(packet.payload));
             });
         }

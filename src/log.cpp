@@ -6,7 +6,9 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <chrono>
 #include <commandline.h>
+#include <format>
 #include <iostream>
 #include <library/fast_task.hpp>
 #include <library/fast_task/include/files.hpp>
@@ -40,6 +42,10 @@ namespace copper_server::log {
                         fast_task::files::on_open_action::open,
                         fast_task::files::_sync_flags{}
                     );
+                    if (value->bad()) {
+                        log::error("log", "Failed to set log file.");
+                        value = nullptr;
+                    }
                 }
             );
         }
@@ -57,32 +63,12 @@ namespace copper_server::log {
             true, //debug
         };
 
-        void print(log::level level, std::string_view source, std::string_view message) {
-            auto duration = std::chrono::system_clock::now().time_since_epoch();
-
-            auto years = std::chrono::duration_cast<std::chrono::years>(duration);
-            duration -= years;
-            auto months = std::chrono::duration_cast<std::chrono::months>(duration);
-            duration -= months;
-            auto days = std::chrono::duration_cast<std::chrono::days>(duration);
-            duration -= days;
-            auto hours = std::chrono::duration_cast<std::chrono::hours>(duration);
-            duration -= hours;
-            auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
-            duration -= minutes;
-            auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration);
-            duration -= seconds;
-            auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(duration);
-            duration -= milliseconds;
-            auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(duration);
-            duration -= microseconds;
-            auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration);
-
+        void print(std::chrono::local_time<std::chrono::system_clock::duration> now, log::level level, std::string_view source, std::string_view message) {
             handle.get([&](auto& handle) {
                 if (!log_levels_switch[(int)level] || !handle)
                     return;
-                auto line = "[" + std::to_string(days.count()) + "/" + std::to_string(months.count()) + "/" + std::to_string(years.count()) + "] ["
-                            + std::to_string(hours.count()) + ":" + std::to_string(minutes.count()) + ":" + std::to_string(seconds.count()) + " " + std::to_string(milliseconds.count()) + "." + std::to_string(microseconds.count()) + "." + std::to_string(nanoseconds.count()) + "] ["
+                auto line = "[" + std::format("{:%Y-%m-%d}", now) + "] ["
+                            + std::format("{:%H-%M-%S}", now) + "] ["
                             + log_levels_names[(int)level] + "] ["
                             + std::string(source) + "] ";
                 std::string alignment(line.size(), ' ');
@@ -152,6 +138,7 @@ namespace copper_server::log {
         level l;
         std::string source;
         std::string message;
+        std::chrono::local_time<std::chrono::system_clock::duration> now = std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
     };
 
     fast_task::task_query q(1);
@@ -159,7 +146,7 @@ namespace copper_server::log {
     void log_event(log_event_data&& data) {
         q.add(std::make_shared<fast_task::task>([data = std::move(data)]() {
             console::print(data.l, data.source, data.message);
-            file::print(data.l, data.source, data.message);
+            file::print(data.now, data.l, data.source, data.message);
         }));
     }
 
@@ -217,30 +204,10 @@ namespace copper_server::log {
 
     void set_log_folder(std::filesystem::path path) {
         std::filesystem::create_directories(path);
-        auto duration = std::chrono::system_clock::now().time_since_epoch();
-        auto years = std::chrono::duration_cast<std::chrono::years>(duration);
-        duration -= years;
-        auto months = std::chrono::duration_cast<std::chrono::months>(duration);
-        duration -= months;
-        auto days = std::chrono::duration_cast<std::chrono::days>(duration);
-        duration -= days;
-        auto hours = std::chrono::duration_cast<std::chrono::hours>(duration);
-        duration -= hours;
-        auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
-        duration -= minutes;
-        auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration);
-        duration -= seconds;
         std::filesystem::path file;
         do {
-            file = path
-                   / ("log_"
-                      + std::to_string(years.count())
-                      + "_" + std::to_string(months.count())
-                      + "_" + std::to_string(days.count())
-                      + "_" + std::to_string(hours.count())
-                      + "_" + std::to_string(minutes.count())
-                      + "_" + std::to_string(seconds.count())
-                      + ".txt");
+            const auto now = std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
+            file = path / ("log_" + std::format("{:%Y_%m_%d__%H_%M_%OS}", now) + ".txt");
         } while (std::filesystem::exists(file));
 
         file::set_handle(file);

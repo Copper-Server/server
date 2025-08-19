@@ -19,7 +19,6 @@
 namespace copper_server::build_in_plugins {
     //handles clients with play state, allows players to access world and other things through api
     class PlayEngine : public PluginAutoRegister<"base/play_engine", PlayEngine> {
-        base_objects::events::event_register_id process_chat_command_id;
         fast_task::task_mutex messages_order;
         list_array<std::array<uint8_t, 256>> lastset_messages;
 
@@ -579,7 +578,6 @@ namespace copper_server::build_in_plugins {
                                 auto& p_data = self.assigned_player->player_data;
                                 auto [yaw, pitch] = util::to_yaw_pitch(p_data.assigned_entity->rotation);
                                 *self.assigned_player << api::client::play::player_position{
-                                    .teleport_id = 0, //TODO replace with automatic id
                                     .x = p_data.assigned_entity->position.x,
                                     .y = p_data.assigned_entity->position.y,
                                     .z = p_data.assigned_entity->position.z,
@@ -609,8 +607,8 @@ namespace copper_server::build_in_plugins {
             base_objects::entity_data::register_entity_world_processor(make_processor(), "minecraft:player");
         }
 
-        void OnLoad(const PluginRegistrationPtr& _) override {
-            process_chat_command_id = api::packets::register_server_bound_processor<api::packets::server_bound::play::chat_command>([](api::packets::server_bound::play::chat_command&& packet, base_objects::SharedClientData& client) {
+        void OnRegister(const PluginRegistrationPtr& _) override {
+            register_packet_processor([](api::packets::server_bound::play::chat_command&& packet, base_objects::SharedClientData& client) {
                 base_objects::command_context context(client, true);
                 try {
                     api::command::get_manager().execute_command(packet.command, context);
@@ -638,10 +636,6 @@ namespace copper_server::build_in_plugins {
                     };
                 }
             });
-        }
-
-        void OnUnload(const PluginRegistrationPtr& _) override {
-            api::packets::unregister_server_bound_processor(process_chat_command_id);
         }
 
         void OnCommandsLoadComplete(const std::shared_ptr<PluginRegistration>&, base_objects::command_root_browser& root) override {

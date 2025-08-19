@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <library/list_array.hpp>
 #include <src/base_objects/id_registry.hpp>
+#include <src/util/cts.hpp>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -1282,6 +1283,39 @@ namespace copper_server::base_objects {
         }
 
         auto operator<=>(const ignored& other) const = default;
+    };
+
+    template <class T, util::CTS id>
+    struct ordered_id {
+        static inline const std::string id_source{id.data};
+        T value;
+        bool is_valid = true;
+
+        constexpr ordered_id() : value() {}
+
+        constexpr ordered_id(T e) : value(e) {}
+
+        constexpr ordered_id(const ordered_id& c) : value(c.value), is_valid(c.is_valid) {}
+
+        constexpr ordered_id(ordered_id&& m) : value(std::move(m.value)), is_valid(m.is_valid) {}
+
+        constexpr ordered_id& operator=(const ordered_id& c) {
+            value = c.value;
+            is_valid = c.is_valid;
+            return *this;
+        }
+
+        constexpr ordered_id& operator=(ordered_id&& m) {
+            value = m.value;
+            is_valid = m.is_valid;
+            return *this;
+        }
+
+        constexpr auto operator<=>(const ordered_id& other) const = default;
+
+        constexpr operator bool() const {
+            return value;
+        }
     };
 }
 

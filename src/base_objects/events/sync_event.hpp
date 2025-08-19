@@ -12,17 +12,21 @@
 #include <random>
 #include <src/base_objects/events/base_event.hpp>
 #include <src/base_objects/events/priority.hpp>
+#include <src/util/templates.hpp>
 #include <unordered_map>
 
 namespace copper_server::base_objects::events {
-
-
-    template <typename... Args>
+    template <class... Args>
     struct sync_event : public base_event {
         using function = std::function<bool(Args...)>;
 
         event_register_id operator+=(function func) {
             return join(func);
+        }
+
+        template <class Fn>
+        event_register_id operator+=(Fn&& func) {
+            return join(util::convertible_function<bool, Args...>::make_proxy_from_callable(std::forward<Fn>(func)));
         }
 
         bool operator()(Args... args) {
@@ -43,6 +47,11 @@ namespace copper_server::base_objects::events {
                 return addOne(low_priority, func);
             }
             throw std::runtime_error("Invalid priority");
+        }
+
+        template <class Fn>
+        event_register_id join(Fn&& func, priority priority = priority::avg) {
+            return join(util::convertible_function<bool, Args...>::make_proxy_from_callable(std::forward<Fn>(func)), priority);
         }
 
         bool leave(event_register_id func, priority priority = priority::avg) {
@@ -90,8 +99,16 @@ namespace copper_server::base_objects::events {
         sync_event()
             : gen(rd()) {}
 
+        bool empty() const {
+            return heigh_priority.empty()
+                   && upper_avg_priority.empty()
+                   && avg_priority.empty()
+                   && lower_avg_priority.empty()
+                   && low_priority.empty();
+        }
+
     private:
-        std::random_device rd;
+        static inline std::random_device rd;
         std::mt19937 gen;
         std::unordered_map<uint64_t, function> heigh_priority;
         std::unordered_map<uint64_t, function> upper_avg_priority;
@@ -124,6 +141,136 @@ namespace copper_server::base_objects::events {
                     return true;
             return false;
         }
+    };
+
+    template <typename... Args>
+    struct sync_event_no_cancel : public base_event {
+        using function = std::function<void(Args...)>;
+
+        event_register_id operator+=(function func) {
+            return join(func);
+        }
+
+        template <class Fn>
+        event_register_id operator+=(Fn&& func) {
+            return join(util::convertible_function<void, Args...>::make_proxy_from_callable(std::forward<Fn>(func)));
+        }
+
+        void operator()(Args... args) {
+            notify(std::forward<Args>(args)...);
+        }
+
+        event_register_id join(function func, priority _ = priority::avg) {
+            std::uniform_int_distribution<uint64_t> dis;
+            event_register_id id;
+            do {
+                id.id = dis(gen);
+            } while (regs.find(id.id) != regs.end());
+            regs[id.id] = func;
+            return id;
+        }
+
+        template <class Fn>
+        event_register_id join(Fn&& func, priority _ = priority::avg) {
+            return join(util::convertible_function<void, Args...>::make_proxy_from_callable(std::forward<Fn>(func)));
+        }
+
+        bool leave(event_register_id func) {
+            return (bool)regs.erase(func.id);
+        }
+
+        bool leave(event_register_id func, priority, bool) override {
+            return leave(func);
+        }
+
+        void notify(Args... args) {
+            for (auto& [_, func] : regs)
+                func(std::forward<Args>(args)...);
+        }
+
+        void clear() {
+            regs.clear();
+        }
+
+        sync_event_no_cancel()
+            : gen(rd()) {}
+
+        bool empty() const {
+            return regs.empty();
+        }
+
+    private:
+        static inline std::random_device rd;
+        std::mt19937 gen;
+        std::unordered_map<uint64_t, function> regs;
+    };
+
+    template <typename... Args>
+    struct sync_event_single : public base_event {
+        using function = std::function<void(Args...)>;
+
+        event_register_id operator+=(function func) {
+            return join(func);
+        }
+
+        template <class Fn>
+        event_register_id operator+=(Fn&& func) {
+            return join(util::convertible_function<void, Args...>::make_proxy_from_callable(std::forward<Fn>(func)));
+        }
+
+        void operator()(Args... args) {
+            notify(std::forward<Args>(args)...);
+        }
+
+        event_register_id join(function func, priority _ = priority::avg) {
+            if (fun)
+                throw std::runtime_error("The event already registered.");
+            std::uniform_int_distribution<uint64_t> dis;
+            event_register_id id{.id = dis(gen)};
+            fun = func;
+            curr_id = id.id;
+            return id;
+        }
+
+        template <class Fn>
+        event_register_id join(Fn&& func, priority _ = priority::avg) {
+            return join(util::convertible_function<void, Args...>::make_proxy_from_callable(std::forward<Fn>(func)));
+        }
+
+        bool leave(event_register_id func) {
+            if (fun)
+                if (curr_id == func.id) {
+                    fun = nullptr;
+                    return true;
+                }
+
+            return false;
+        }
+
+        bool leave(event_register_id func, priority, bool) override {
+            return leave(func);
+        }
+
+        void notify(Args... args) {
+            fun(std::forward<Args>(args)...);
+        }
+
+        void clear() {
+            fun = nullptr;
+        }
+
+        sync_event_single()
+            : gen(rd()) {}
+
+        bool empty() const {
+            return !fun;
+        }
+
+    private:
+        static inline std::random_device rd;
+        function fun;
+        std::mt19937 gen;
+        uint64_t curr_id = 0;
     };
 }
 #endif /* SRC_BASE_OBJECTS_EVENTS_SYNC_EVENT */

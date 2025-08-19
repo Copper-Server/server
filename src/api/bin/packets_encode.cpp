@@ -21,8 +21,6 @@
 #include <tuple>
 
 namespace copper_server::api::packets {
-    extern bool debugging_enabled;
-
     using namespace base_objects;
     template <template <auto...> class Base, auto... Ts>
     void value_test(Base<Ts...>&);
@@ -84,7 +82,7 @@ namespace copper_server::api::packets {
     consteval bool need_preprocess_result() {
         if constexpr (contains_type_v<T, VisitedTypes...>) {
             return false;
-        } else if constexpr (requires_check<T>)
+        } else if constexpr (requires_check<T> || is_tvalue_template_base_of<ordered_id, T>)
             return true;
         else if constexpr (
             is_std_array<T>
@@ -382,6 +380,8 @@ namespace copper_server::api::packets {
             res.write_direct(value.data());
         } else if constexpr (is_id_source<Type> || is_template_base_of<base_objects::depends_next, T>) {
             serialize_entry(res, context, value.value);
+        } else if constexpr (is_tvalue_template_base_of<ordered_id, Type>) {
+            serialize_entry(res, context, value.value);
         } else {
             bool process_next = true;
             reflect::for_each_field(value, [&value, &res, &context, &process_next]<class IT>(IT& item) {
@@ -516,6 +516,11 @@ namespace copper_server::api::packets {
         } else if constexpr (std::is_same_v<bit_list_array<uint64_t>, T>) {
         } else if constexpr (is_convertible_to_packet_form<T>) {
         } else if constexpr (is_id_source<T>) {
+        } else if constexpr (is_tvalue_template_base_of<ordered_id, T>) {
+            value.value = context.packets_state.internal_data.set([](auto& data) {
+                return ++data.id_tracker[T::id_source];
+            });
+            value.is_valid = true;
         } else {
             bool process_next = true;
             reflect::for_each_field(value, [&value, &context, &process_next](auto& item) {
@@ -610,11 +615,6 @@ namespace copper_server::api::packets {
         make_preprocess_packet(client, packet);
         if (__internal::visit_packet_viewer(packet, client))
             return false;
-
-        if (debugging_enabled) {
-            auto id = client.get_session() ? client.get_session()->id : -1;
-            log::debug("protocol", "client_bound:client_id: " + std::to_string(id) + "\n" + stringize_packet(packet));
-        }
         bool sw_status = false;
         bool sw_login = false;
         bool sw_configuration = false;
@@ -626,6 +626,8 @@ namespace copper_server::api::packets {
                         [&]<class P>(P& it) -> base_objects::network::response {
                             base_objects::network::response res;
                             serialize_packet(res, client, it);
+                            if constexpr (std::is_base_of_v<disconnect_after, P>)
+                                res.do_disconnect_after_send = true;
                             if constexpr (std::is_base_of_v<switches_to::status, P>)
                                 sw_status = true;
                             else if constexpr (std::is_base_of_v<switches_to::login, P>)

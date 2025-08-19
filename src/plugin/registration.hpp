@@ -33,12 +33,39 @@ namespace copper_server {
         struct select_known_packs;
     }
 
+    namespace api::packets::events {
+        template <class Packet>
+        auto& viewer();
+        template <class Packet>
+        auto& viewer_post_send();
+        template <class Packet>
+        auto& processor();
+    }
+
+    namespace __internal {
+        template <class Ret, class Arg0, class... Rest>
+        Arg0 first_argument_helper(Ret (*)(Arg0, Rest...));
+
+        template <class Ret, class Fn, class Arg0, class... Rest>
+        Arg0 first_argument_helper(Ret (Fn::*)(Arg0, Rest...));
+
+        template <class Ret, class Fn, class Arg0, class... Rest>
+        Arg0 first_argument_helper(Ret (Fn::*)(Arg0, Rest...) const);
+
+        template <class Fn>
+        decltype(first_argument_helper(&Fn::operator())) first_argument_helper(Fn);
+
+        template <class T>
+        using first_argument_type = std::decay_t<decltype(first_argument_helper(std::declval<T>()))>;
+    }
+
     class PluginRegistration {
         struct event_auto_cleanup_t {
             base_objects::events::base_event* event_obj;
             base_objects::events::event_register_id id;
             base_objects::events::priority priority;
             bool async_mode;
+            bool load_state;
         };
 
         list_array<event_auto_cleanup_t> cleanup_list;
@@ -49,39 +76,70 @@ namespace copper_server {
         virtual void initializer(const std::shared_ptr<PluginRegistration>&) {};
         virtual void deinitializer(const std::shared_ptr<PluginRegistration>&) {};
 
-        template <class... Args>
-        void register_event(base_objects::events::sync_event<Args...>& event_ref, base_objects::events::sync_event<Args...>::function&& fn) {
-            cleanup_list.push_back({&event_ref, event_ref.join(base_objects::events::priority::avg, false, std::move(fn)), base_objects::events::priority::avg, false});
+        void register_packet_processor(auto&& fn) {
+            register_event(api::packets::events::processor<__internal::first_argument_type<decltype(fn)>>(), std::move(fn));
+        }
+
+        void register_packet_post_send_viewer(auto&& fn) {
+            register_event(api::packets::events::viewer_post_send<__internal::first_argument_type<decltype(fn)>>(), std::move(fn));
+        }
+
+        void register_packet_viewer(auto&& fn) {
+            register_event(api::packets::events::viewer<__internal::first_argument_type<decltype(fn)>>(), std::move(fn));
         }
 
         template <class... Args>
+        void register_event(base_objects::events::sync_event<Args...>& event_ref, auto&& fn) {
+            cleanup_list.push_back({&event_ref, event_ref.join(std::move(fn), base_objects::events::priority::avg), base_objects::events::priority::avg, false, is_loaded});
+        }
+
+        template <class... Args>
+        void register_event(base_objects::events::sync_event_no_cancel<Args...>& event_ref, auto&& fn) {
+            cleanup_list.push_back({&event_ref, event_ref.join(std::move(fn)), base_objects::events::priority::avg, false, is_loaded});
+        }
+
+        template <class... Args>
+        void register_event(base_objects::events::sync_event_single<Args...>& event_ref, auto&& fn) {
+            cleanup_list.push_back({&event_ref, event_ref.join(std::move(fn)), base_objects::events::priority::avg, false, is_loaded});
+        }
+
+
+        template <class... Args>
         void register_event(base_objects::events::sync_event<Args...>& event_ref, base_objects::events::priority priority, base_objects::events::sync_event<Args...>::function&& fn) {
-            cleanup_list.push_back({&event_ref, event_ref.join(priority, false, std::move(fn)), priority, false});
+            cleanup_list.push_back({&event_ref, event_ref.join(std::move(fn), priority), priority, false, is_loaded});
         }
 
         template <class T>
         void register_event(base_objects::events::event<T>& event_ref, base_objects::events::event<T>::function&& fn) {
-            cleanup_list.push_back({&event_ref, event_ref.join(base_objects::events::priority::avg, false, std::move(fn)), base_objects::events::priority::avg, false});
+            cleanup_list.push_back({&event_ref, event_ref.join(base_objects::events::priority::avg, false, std::move(fn)), base_objects::events::priority::avg, false, is_loaded});
         }
 
         template <class T>
         void register_event(base_objects::events::event<T>& event_ref, base_objects::events::priority priority, base_objects::events::event<T>::function&& fn) {
-            cleanup_list.push_back({&event_ref, event_ref.join(priority, false, std::move(fn)), priority, false});
+            cleanup_list.push_back({&event_ref, event_ref.join(priority, false, std::move(fn)), priority, false, is_loaded});
         }
 
         template <class T>
         void register_event(base_objects::events::event<T>& event_ref, base_objects::events::priority priority, bool async_mode, base_objects::events::event<T>::function&& fn) {
-            cleanup_list.push_back({&event_ref, event_ref.join(priority, async_mode, std::move(fn)), priority, async_mode});
+            cleanup_list.push_back({&event_ref, event_ref.join(priority, async_mode, std::move(fn)), priority, async_mode, is_loaded});
         }
 
         void clean_up_registered_events() {
-            cleanup_list.take().for_each([](event_auto_cleanup_t&& leave_data) {
+            cleanup_list.remove_if([](const event_auto_cleanup_t& leave_data) {
+                if (leave_data.load_state)
+                    leave_data.event_obj->leave(leave_data.id, leave_data.priority, leave_data.async_mode);
+                return leave_data.load_state;
+            });
+        }
+
+        void clean_up_all_events() {
+            cleanup_list.take().for_each([](const event_auto_cleanup_t& leave_data) {
                 leave_data.event_obj->leave(leave_data.id, leave_data.priority, leave_data.async_mode);
             });
         }
 
         virtual ~PluginRegistration() noexcept {
-            clean_up_registered_events();
+            clean_up_all_events();
         }
 
         struct login_response {

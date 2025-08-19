@@ -92,23 +92,30 @@ namespace copper_server {
                 = ParticleStatus::ALL;
             player& player_data;
 
-            struct ResourcePackData {
-                bool required : 1 = false;
-            };
-
+            //here all fields should not be modified by plugins, except plugins implementing protocol(read allowed for all)
             struct packets_state_t {
-                std::shared_ptr<void> extra_data; //here stored custom handler data, cleared after switching to other state
+                struct unordered_track {
+                    std::unordered_set<int32_t> valid_ids;
+                    std::optional<int32_t> latest;
+                };
+
+                struct internal_data_t {
+                    std::unordered_map<std::string, int32_t> id_tracker;
+                    std::unordered_map<std::string, unordered_track> unordered_id_tracker;
+                    std::shared_ptr<void> extra_data; //here stored custom handler data, cleared after switching to other state
+                };
+
+                fast_task::protected_value<internal_data_t> internal_data;
+
                 std::unordered_set<enbt::raw_uuid> active_resource_packs;
-                std::unordered_map<enbt::raw_uuid, ResourcePackData> pending_resource_packs;
                 std::chrono::time_point<std::chrono::system_clock> pong_timer;
-                int32_t keep_alive_ping_ms = 0;
+                std::atomic_int32_t keep_alive_ping_ms = 0;
+                std::atomic_int32_t local_chat_counter = 0;
                 int32_t protocol_version = -1;
                 bool is_transferred = false;
                 bool is_fully_initialized = false;
                 bool is_play_fully_initialized = false;
                 bool is_play_initialized = false;
-                std::atomic_int32_t local_chat_counter;
-                static inline std::atomic_int32_t global_chat_counter;
 
 
                 enum class protocol_state : uint8_t {

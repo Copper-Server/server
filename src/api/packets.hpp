@@ -79,6 +79,7 @@ namespace copper_server {
         using base_objects::optional_var_int32;
         using base_objects::optional_var_int64;
         using base_objects::or_;
+        using base_objects::ordered_id;
         using base_objects::packet;
         using base_objects::packet_compress;
         using base_objects::partial_enum_switch;
@@ -433,7 +434,7 @@ namespace copper_server {
                 };
 
                 struct ping : public packet<0x05> {
-                    int32_t ping_request_id;
+                    ordered_id<int32_t, "ping"> ping_request_id;
                 };
 
                 struct reset_chat : public packet<0x06> {};
@@ -1614,7 +1615,7 @@ namespace copper_server {
                 };
 
                 struct player_position : public packet<0x41> {
-                    var_int32 teleport_id;
+                    ordered_id<var_int32, "sync/player_position"> teleport_id;
                     double x;
                     double y;
                     double z;
@@ -1959,21 +1960,20 @@ namespace copper_server {
                         enum_as<collision_rule_e, var_int32> collision_rule;
                         var_int32 team_color;
                         Chat prefix;
-                        Chat sufix;
+                        Chat suffix;
                         list_array<string_sized<32767>> entries;
                     };
 
                     struct remove : public enum_item<1> {};
 
                     struct update : public enum_item<2> {
-
                         Chat display_name;
                         enum_as_flag<friendly_f, int8_t> friendly;
                         enum_as<name_tag_visibility_e, var_int32> name_tag_visibility;
                         enum_as<collision_rule_e, var_int32> collision_rule;
                         var_int32 team_color;
                         Chat prefix;
-                        Chat sufix;
+                        Chat suffix;
                     };
 
                     struct add_entries : public enum_item<3> {
@@ -2082,7 +2082,7 @@ namespace copper_server {
                 };
 
                 struct tag_query : public packet<0x74> {
-                    var_int32 tag_query_id;
+                    var_int32 tag_query_id; //managed by client
                     enbt::value nbt;
                 };
 
@@ -2593,7 +2593,7 @@ namespace copper_server {
                 };
 
                 struct pong : public packet<0x05> {
-                    int32_t ping_request_id;
+                    ordered_id<int32_t, "ping"> ping_request_id;
                 };
 
                 struct resource_pack : public packet<0x06> {
@@ -2644,11 +2644,11 @@ namespace copper_server {
 
             namespace play {
                 struct accept_teleportation : public packet<0x00> {
-                    var_int32 teleport_id;
+                    ordered_id<var_int32, "sync/player_position"> teleport_id;
                 };
 
                 struct block_entity_tag_query : public packet<0x01> {
-                    var_int32 tag_query_id;
+                    var_int32 tag_query_id; //managed by client
                     position location;
                 };
 
@@ -2758,7 +2758,7 @@ namespace copper_server {
                 };
 
                 struct command_suggestion : public packet<0x0E> {
-                    var_int32 suggestion_transaction_id;
+                    var_int32 suggestion_transaction_id; //managed by client
                     string_sized<32500> command_text;
                 };
 
@@ -2828,7 +2828,7 @@ namespace copper_server {
                 };
 
                 struct entity_tag_query : public packet<0x18> {
-                    var_int32 tag_query_id;
+                    var_int32 tag_query_id; //managed by client
                     var_int32 entity_id;
                 };
 
@@ -3325,226 +3325,154 @@ namespace copper_server {
         std::string stringize_packet(const client_bound_packet&);
         std::string stringize_packet(const server_bound_packet&);
 
-        void set_debug_mode(bool enabled);
-
         namespace __internal {
-            base_objects::events::event_register_id register_client_viewer(uint8_t mode, size_t id, base_objects::events::sync_event<client_bound_packet&, base_objects::SharedClientData&>::function&&);
-            base_objects::events::event_register_id register_server_viewer(uint8_t mode, size_t id, base_objects::events::sync_event<server_bound_packet&, base_objects::SharedClientData&>::function&&);
-            base_objects::events::event_register_id register_viewer_post_send_client_bound(uint8_t mode, size_t id, std::function<void(client_bound_packet&, base_objects::SharedClientData&)>&&);
-            base_objects::events::event_register_id register_server_processor(uint8_t mode, size_t id, std::function<void(server_bound_packet&&, base_objects::SharedClientData&)>&&);
+            base_objects::events::sync_event<client_bound::status_packet&, base_objects::SharedClientData&>& client_viewer_s(size_t id);
+            base_objects::events::sync_event<client_bound::login_packet&, base_objects::SharedClientData&>& client_viewer_l(size_t id);
+            base_objects::events::sync_event<client_bound::configuration_packet&, base_objects::SharedClientData&>& client_viewer_c(size_t id);
+            base_objects::events::sync_event<client_bound::play_packet&, base_objects::SharedClientData&>& client_viewer_p(size_t id);
 
-            void unregister_client_viewer(uint8_t mode, size_t id, base_objects::events::event_register_id);
-            void unregister_server_viewer(uint8_t mode, size_t id, base_objects::events::event_register_id);
-            void unregister_viewer_post_send_client_bound(uint8_t mode, size_t id, base_objects::events::event_register_id);
-            void unregister_server_processor(base_objects::events::event_register_id);
+            base_objects::events::sync_event<client_bound::status_packet&, base_objects::SharedClientData&>& client_viewer_mode_s();
+            base_objects::events::sync_event<client_bound::login_packet&, base_objects::SharedClientData&>& client_viewer_mode_l();
+            base_objects::events::sync_event<client_bound::configuration_packet&, base_objects::SharedClientData&>& client_viewer_mode_c();
+            base_objects::events::sync_event<client_bound::play_packet&, base_objects::SharedClientData&>& client_viewer_mode_p();
+            base_objects::events::sync_event<client_bound_packet&, base_objects::SharedClientData&>& client_viewer_mode();
+
+            base_objects::events::sync_event<server_bound::handshake_packet&, base_objects::SharedClientData&>& server_viewer_h(size_t id);
+            base_objects::events::sync_event<server_bound::status_packet&, base_objects::SharedClientData&>& server_viewer_s(size_t id);
+            base_objects::events::sync_event<server_bound::login_packet&, base_objects::SharedClientData&>& server_viewer_l(size_t id);
+            base_objects::events::sync_event<server_bound::configuration_packet&, base_objects::SharedClientData&>& server_viewer_c(size_t id);
+            base_objects::events::sync_event<server_bound::play_packet&, base_objects::SharedClientData&>& server_viewer_p(size_t id);
+
+            base_objects::events::sync_event<server_bound::handshake_packet&, base_objects::SharedClientData&>& server_viewer_mode_h();
+            base_objects::events::sync_event<server_bound::status_packet&, base_objects::SharedClientData&>& server_viewer_mode_s();
+            base_objects::events::sync_event<server_bound::login_packet&, base_objects::SharedClientData&>& server_viewer_mode_l();
+            base_objects::events::sync_event<server_bound::configuration_packet&, base_objects::SharedClientData&>& server_viewer_mode_c();
+            base_objects::events::sync_event<server_bound::play_packet&, base_objects::SharedClientData&>& server_viewer_mode_p();
+            base_objects::events::sync_event<server_bound_packet&, base_objects::SharedClientData&>& server_viewer_mode();
+
+            base_objects::events::sync_event_no_cancel<client_bound::status_packet&, base_objects::SharedClientData&>& client_post_send_viewer_s(size_t id);
+            base_objects::events::sync_event_no_cancel<client_bound::login_packet&, base_objects::SharedClientData&>& client_post_send_viewer_l(size_t id);
+            base_objects::events::sync_event_no_cancel<client_bound::configuration_packet&, base_objects::SharedClientData&>& client_post_send_viewer_c(size_t id);
+            base_objects::events::sync_event_no_cancel<client_bound::play_packet&, base_objects::SharedClientData&>& client_post_send_viewer_p(size_t id);
+
+            base_objects::events::sync_event_no_cancel<client_bound::status_packet&, base_objects::SharedClientData&>& client_post_send_viewer_mode_s();
+            base_objects::events::sync_event_no_cancel<client_bound::login_packet&, base_objects::SharedClientData&>& client_post_send_viewer_mode_l();
+            base_objects::events::sync_event_no_cancel<client_bound::configuration_packet&, base_objects::SharedClientData&>& client_post_send_viewer_mode_c();
+            base_objects::events::sync_event_no_cancel<client_bound::play_packet&, base_objects::SharedClientData&>& client_post_send_viewer_mode_p();
+            base_objects::events::sync_event_no_cancel<client_bound_packet&, base_objects::SharedClientData&>& client_post_send_viewer_mode();
+
+            base_objects::events::sync_event_single<server_bound::handshake_packet&&, base_objects::SharedClientData&>& server_processor_h(size_t id);
+            base_objects::events::sync_event_single<server_bound::status_packet&&, base_objects::SharedClientData&>& server_processor_s(size_t id);
+            base_objects::events::sync_event_single<server_bound::login_packet&&, base_objects::SharedClientData&>& server_processor_l(size_t id);
+            base_objects::events::sync_event_single<server_bound::configuration_packet&&, base_objects::SharedClientData&>& server_processor_c(size_t id);
+            base_objects::events::sync_event_single<server_bound::play_packet&&, base_objects::SharedClientData&>& server_processor_p(size_t id);
         }
 
-        template <class Packet>
-            requires(
-                std::is_constructible_v<client_bound::status_packet, Packet>
-                || std::is_constructible_v<client_bound::login_packet, Packet>
-                || std::is_constructible_v<client_bound::configuration_packet, Packet>
-                || std::is_constructible_v<client_bound::play_packet, Packet>
-            )
-        base_objects::events::event_register_id register_viewer_client_bound(auto&& fn) {
-            uint8_t mode;
-            if constexpr (std::is_constructible_v<client_bound::status_packet, Packet>) {
-                mode = 0;
-            } else if constexpr (std::is_constructible_v<client_bound::login_packet, Packet>) {
-                mode = 1;
-            } else if constexpr (std::is_constructible_v<client_bound::configuration_packet, Packet>) {
-                mode = 2;
-            } else
-                mode = 3;
+        namespace events {
+            template <class Packet>
+                requires(
+                    std::is_constructible_v<server_bound_packet, Packet>
+                    || std::is_constructible_v<client_bound_packet, Packet>
+                    || std::is_constructible_v<server_bound::handshake_packet, Packet>
+                    || std::is_constructible_v<server_bound::status_packet, Packet>
+                    || std::is_constructible_v<server_bound::login_packet, Packet>
+                    || std::is_constructible_v<server_bound::configuration_packet, Packet>
+                    || std::is_constructible_v<server_bound::play_packet, Packet>
+                    || std::is_constructible_v<client_bound::status_packet, Packet>
+                    || std::is_constructible_v<client_bound::login_packet, Packet>
+                    || std::is_constructible_v<client_bound::configuration_packet, Packet>
+                    || std::is_constructible_v<client_bound::play_packet, Packet>
+                )
+            auto& viewer() {
+                if constexpr (std::is_same_v<server_bound_packet, Packet>) {
+                    return __internal::server_viewer_mode();
+                } else if constexpr (std::is_same_v<server_bound::handshake_packet, Packet>) {
+                    return __internal::server_viewer_mode_h();
+                } else if constexpr (std::is_same_v<server_bound::status_packet, Packet>) {
+                    return __internal::server_viewer_mode_s();
+                } else if constexpr (std::is_same_v<server_bound::login_packet, Packet>) {
+                    return __internal::server_viewer_mode_l();
+                } else if constexpr (std::is_same_v<server_bound::configuration_packet, Packet>) {
+                    return __internal::server_viewer_mode_c();
+                } else if constexpr (std::is_same_v<server_bound::play_packet, Packet>) {
+                    return __internal::server_viewer_mode_p();
+                } else if constexpr (std::is_constructible_v<server_bound::handshake_packet, Packet>) {
+                    return __internal::server_viewer_h(Packet::packet_id::value);
+                } else if constexpr (std::is_constructible_v<server_bound::status_packet, Packet>) {
+                    return __internal::server_viewer_s(Packet::packet_id::value);
+                } else if constexpr (std::is_constructible_v<server_bound::login_packet, Packet>) {
+                    return __internal::server_viewer_l(Packet::packet_id::value);
+                } else if constexpr (std::is_constructible_v<server_bound::configuration_packet, Packet>) {
+                    return __internal::server_viewer_c(Packet::packet_id::value);
+                } else if constexpr (std::is_constructible_v<server_bound::play_packet, Packet>) {
+                    return __internal::server_viewer_p(Packet::packet_id::value);
+                } else if constexpr (std::is_same_v<client_bound_packet, Packet>) {
+                    return __internal::client_viewer_mode();
+                } else if constexpr (std::is_same_v<client_bound::status_packet, Packet>) {
+                    return __internal::client_viewer_mode_s();
+                } else if constexpr (std::is_same_v<client_bound::login_packet, Packet>) {
+                    return __internal::client_viewer_mode_l();
+                } else if constexpr (std::is_same_v<client_bound::configuration_packet, Packet>) {
+                    return __internal::client_viewer_mode_c();
+                } else if constexpr (std::is_same_v<client_bound::play_packet, Packet>) {
+                    return __internal::client_viewer_mode_p();
+                } else if constexpr (std::is_constructible_v<client_bound::status_packet, Packet>) {
+                    return __internal::client_viewer_s(Packet::packet_id::value);
+                } else if constexpr (std::is_constructible_v<client_bound::login_packet, Packet>) {
+                    return __internal::client_viewer_l(Packet::packet_id::value);
+                } else if constexpr (std::is_constructible_v<client_bound::configuration_packet, Packet>) {
+                    return __internal::client_viewer_c(Packet::packet_id::value);
+                } else
+                    return __internal::client_viewer_p(Packet::packet_id::value);
+            }
 
-            return __internal::register_client_viewer(
-                mode,
-                Packet::packet_id::value,
-                [fn](auto& mode, auto& client) {
-                    return std::visit(
-                        [&fn, &client](auto&& packet) {
-                            return std::visit(
-                                [&fn, &client](auto&& it) {
-                                    if constexpr (std::is_same_v<Packet, std::decay_t<decltype(it)>>)
-                                        return fn(it, client);
-                                    else
-                                        return true;
-                                },
-                                packet
-                            );
-                        },
-                        mode
-                    );
+            template <class Packet>
+                requires(
+                    std::is_same_v<client_bound_packet, Packet>
+                    || std::is_constructible_v<client_bound::status_packet, Packet>
+                    || std::is_constructible_v<client_bound::login_packet, Packet>
+                    || std::is_constructible_v<client_bound::configuration_packet, Packet>
+                    || std::is_constructible_v<client_bound::play_packet, Packet>
+                )
+            auto& viewer_post_send() {
+                if constexpr (std::is_same_v<client_bound_packet, Packet>) {
+                    return __internal::client_post_send_viewer_mode();
+                } else if constexpr (std::is_same_v<client_bound::status_packet, Packet>) {
+                    return __internal::client_post_send_viewer_mode_s();
+                } else if constexpr (std::is_same_v<client_bound::login_packet, Packet>) {
+                    return __internal::client_post_send_viewer_mode_l();
+                } else if constexpr (std::is_same_v<client_bound::configuration_packet, Packet>) {
+                    return __internal::client_post_send_viewer_mode_c();
+                } else if constexpr (std::is_same_v<client_bound::play_packet, Packet>) {
+                    return __internal::client_post_send_viewer_mode_p();
+                } else if constexpr (std::is_constructible_v<client_bound::status_packet, Packet>) {
+                    return __internal::client_post_send_viewer_s(Packet::packet_id::value);
+                } else if constexpr (std::is_constructible_v<client_bound::login_packet, Packet>) {
+                    return __internal::client_post_send_viewer_l(Packet::packet_id::value);
+                } else if constexpr (std::is_constructible_v<client_bound::configuration_packet, Packet>) {
+                    return __internal::client_post_send_viewer_c(Packet::packet_id::value);
+                } else
+                    return __internal::client_post_send_viewer_p(Packet::packet_id::value);
+            }
+
+            template <class Packet>
+            auto& processor() {
+                if constexpr (std::is_constructible_v<server_bound::handshake_packet, Packet>) {
+                    return __internal::server_processor_h(Packet::packet_id::value);
+                } else if constexpr (std::is_constructible_v<server_bound::status_packet, Packet>) {
+                    return __internal::server_processor_s(Packet::packet_id::value);
+                } else if constexpr (std::is_constructible_v<server_bound::login_packet, Packet>) {
+                    return __internal::server_processor_l(Packet::packet_id::value);
+                } else if constexpr (std::is_constructible_v<server_bound::configuration_packet, Packet>) {
+                    return __internal::server_processor_c(Packet::packet_id::value);
+                } else if constexpr (std::is_constructible_v<server_bound::play_packet, Packet>) {
+                    return __internal::server_processor_p(Packet::packet_id::value);
                 }
-            );
+            }
+
+            extern base_objects::events::sync_event<base_objects::SharedClientData&> client_state_changed;
         }
-
-        template <class Packet>
-            requires(
-                std::is_constructible_v<server_bound::handshake_packet, Packet>
-                || std::is_constructible_v<server_bound::status_packet, Packet>
-                || std::is_constructible_v<server_bound::login_packet, Packet>
-                || std::is_constructible_v<server_bound::configuration_packet, Packet>
-                || std::is_constructible_v<server_bound::play_packet, Packet>
-            )
-        base_objects::events::event_register_id register_viewer_server_bound(auto&& fn) {
-            uint8_t mode;
-            if constexpr (std::is_constructible_v<server_bound::handshake_packet, Packet>) {
-                mode = 0;
-            } else if constexpr (std::is_constructible_v<server_bound::status_packet, Packet>) {
-                mode = 1;
-            } else if constexpr (std::is_constructible_v<server_bound::login_packet, Packet>) {
-                mode = 2;
-            } else if constexpr (std::is_constructible_v<server_bound::configuration_packet, Packet>) {
-                mode = 3;
-            } else
-                mode = 4;
-
-            return __internal::register_server_viewer(
-                mode,
-                Packet::packet_id::value,
-                [fn](auto& mode, auto& client) {
-                    return std::visit(
-                        [&fn, &client](auto&& packet) {
-                            return std::visit(
-                                [&fn, &client](auto&& it) {
-                                    if constexpr (std::is_same_v<Packet, std::decay_t<decltype(it)>>)
-                                        return fn(it, client);
-                                    else
-                                        return true;
-                                },
-                                packet
-                            );
-                        },
-                        mode
-                    );
-                }
-            );
-        }
-
-        template <class Packet>
-            requires(
-                std::is_constructible_v<server_bound::handshake_packet, Packet>
-                || std::is_constructible_v<server_bound::status_packet, Packet>
-                || std::is_constructible_v<server_bound::login_packet, Packet>
-                || std::is_constructible_v<server_bound::configuration_packet, Packet>
-                || std::is_constructible_v<server_bound::play_packet, Packet>
-            )
-        base_objects::events::event_register_id register_server_bound_processor(auto&& fn) {
-            uint8_t mode;
-            if constexpr (std::is_constructible_v<server_bound::handshake_packet, Packet>) {
-                mode = 0;
-            } else if constexpr (std::is_constructible_v<server_bound::status_packet, Packet>) {
-                mode = 1;
-            } else if constexpr (std::is_constructible_v<server_bound::login_packet, Packet>) {
-                mode = 2;
-            } else if constexpr (std::is_constructible_v<server_bound::configuration_packet, Packet>) {
-                mode = 3;
-            } else
-                mode = 4;
-
-            return __internal::register_server_processor(
-                mode,
-                Packet::packet_id::value,
-                [fn](auto&& mode, auto& client) {
-                    std::visit(
-                        [&fn, &client](auto&& packet) {
-                            std::visit(
-                                [&fn, &client](auto&& it) {
-                                    if constexpr (std::is_same_v<Packet, std::decay_t<decltype(it)>>)
-                                        fn(std::move(it), client);
-                                },
-                                packet
-                            );
-                        },
-                        mode
-                    );
-                }
-            );
-        }
-
-        template <class Packet>
-            requires(
-                std::is_constructible_v<client_bound::status_packet, Packet>
-                || std::is_constructible_v<client_bound::login_packet, Packet>
-                || std::is_constructible_v<client_bound::configuration_packet, Packet>
-                || std::is_constructible_v<client_bound::play_packet, Packet>
-            )
-        void unregister_viewer_post_send_client_bound(base_objects::events::event_register_id id) {
-            uint8_t mode;
-            if constexpr (std::is_constructible_v<client_bound::status_packet, Packet>) {
-                mode = 0;
-            } else if constexpr (std::is_constructible_v<client_bound::login_packet, Packet>) {
-                mode = 1;
-            } else if constexpr (std::is_constructible_v<client_bound::configuration_packet, Packet>) {
-                mode = 2;
-            } else
-                mode = 3;
-
-            return __internal::unregister_viewer_post_send_client_bound(mode, Packet::packet_id::value, id);
-        }
-
-        template <class Packet>
-            requires(
-                std::is_constructible_v<client_bound::status_packet, Packet>
-                || std::is_constructible_v<client_bound::login_packet, Packet>
-                || std::is_constructible_v<client_bound::configuration_packet, Packet>
-                || std::is_constructible_v<client_bound::play_packet, Packet>
-            )
-        void unregister_viewer_client_bound(base_objects::events::event_register_id id) {
-            uint8_t mode;
-            if constexpr (std::is_constructible_v<client_bound::status_packet, Packet>) {
-                mode = 0;
-            } else if constexpr (std::is_constructible_v<client_bound::login_packet, Packet>) {
-                mode = 1;
-            } else if constexpr (std::is_constructible_v<client_bound::configuration_packet, Packet>) {
-                mode = 2;
-            } else
-                mode = 3;
-
-            return __internal::unregister_client_viewer(
-                mode,
-                Packet::packet_id::value,
-                id
-            );
-        }
-
-        //could be registered only once packet
-        template <class Packet>
-            requires(
-                std::is_constructible_v<server_bound::handshake_packet, Packet>
-                || std::is_constructible_v<server_bound::status_packet, Packet>
-                || std::is_constructible_v<server_bound::login_packet, Packet>
-                || std::is_constructible_v<server_bound::configuration_packet, Packet>
-                || std::is_constructible_v<server_bound::play_packet, Packet>
-            )
-        void unregister_viewer_server_bound(base_objects::events::event_register_id id) {
-            uint8_t mode;
-            if constexpr (std::is_constructible_v<server_bound::handshake_packet, Packet>) {
-                mode = 0;
-            } else if constexpr (std::is_constructible_v<server_bound::status_packet, Packet>) {
-                mode = 1;
-            } else if constexpr (std::is_constructible_v<server_bound::login_packet, Packet>) {
-                mode = 2;
-            } else if constexpr (std::is_constructible_v<server_bound::configuration_packet, Packet>) {
-                mode = 3;
-            } else
-                mode = 4;
-
-            return __internal::unregister_server_viewer(
-                mode,
-                Packet::packet_id,
-                id
-            );
-        }
-
-        inline void unregister_server_bound_processor(base_objects::events::event_register_id id) {
-            __internal::unregister_server_processor(id);
-        }
-
-        extern base_objects::events::sync_event<base_objects::SharedClientData&> client_state_changed;
     }
-
 }
 
 inline copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::api::packets::client_bound_packet&& packet) {

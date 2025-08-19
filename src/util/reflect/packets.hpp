@@ -8160,7 +8160,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::
   fn(obj.collision_rule);
   fn(obj.team_color);
   fn(obj.prefix);
-  fn(obj.sufix);
+  fn(obj.suffix);
   fn(obj.entries);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_player_team::create& obj, [[maybe_unused]] FN&& fn){
@@ -8170,7 +8170,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_se
   fn(obj.collision_rule);
   fn(obj.team_color);
   fn(obj.prefix);
-  fn(obj.sufix);
+  fn(obj.suffix);
   fn(obj.entries);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::set_player_team::create> {
@@ -8181,7 +8181,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::create>().collision_rule)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::create>().team_color)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::create>().prefix)>();
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::create>().sufix)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::create>().suffix)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::create>().entries)>();
 }
 };
@@ -8193,7 +8193,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::create>().collision_rule)>("collision_rule");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::create>().team_color)>("team_color");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::create>().prefix)>("prefix");
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::create>().sufix)>("sufix");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::create>().suffix)>("suffix");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::create>().entries)>("entries");
 }
 };
@@ -8204,7 +8204,7 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
   fn(obj.collision_rule, "collision_rule");
   fn(obj.team_color, "team_color");
   fn(obj.prefix, "prefix");
-  fn(obj.sufix, "sufix");
+  fn(obj.suffix, "suffix");
   fn(obj.entries, "entries");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_player_team::create& obj, [[maybe_unused]] FN&& fn){
@@ -8214,7 +8214,7 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
   fn(obj.collision_rule, "collision_rule");
   fn(obj.team_color, "team_color");
   fn(obj.prefix, "prefix");
-  fn(obj.sufix, "sufix");
+  fn(obj.suffix, "suffix");
   fn(obj.entries, "entries");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::set_player_team::create>() { return "copper_server::api::packets::client_bound::play::set_player_team::create"; }
@@ -8244,7 +8244,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::
   fn(obj.collision_rule);
   fn(obj.team_color);
   fn(obj.prefix);
-  fn(obj.sufix);
+  fn(obj.suffix);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_player_team::update& obj, [[maybe_unused]] FN&& fn){
   fn(obj.display_name);
@@ -8253,7 +8253,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_se
   fn(obj.collision_rule);
   fn(obj.team_color);
   fn(obj.prefix);
-  fn(obj.sufix);
+  fn(obj.suffix);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::set_player_team::update> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
@@ -8263,7 +8263,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::update>().collision_rule)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::update>().team_color)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::update>().prefix)>();
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::update>().sufix)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::update>().suffix)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::set_player_team::update> {
@@ -8274,7 +8274,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::update>().collision_rule)>("collision_rule");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::update>().team_color)>("team_color");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::update>().prefix)>("prefix");
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::update>().sufix)>("sufix");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_player_team::update>().suffix)>("suffix");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::set_player_team::update& obj, [[maybe_unused]] FN&& fn){
@@ -8284,7 +8284,7 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
   fn(obj.collision_rule, "collision_rule");
   fn(obj.team_color, "team_color");
   fn(obj.prefix, "prefix");
-  fn(obj.sufix, "sufix");
+  fn(obj.suffix, "suffix");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_player_team::update& obj, [[maybe_unused]] FN&& fn){
   fn(obj.display_name, "display_name");
@@ -8293,7 +8293,7 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
   fn(obj.collision_rule, "collision_rule");
   fn(obj.team_color, "team_color");
   fn(obj.prefix, "prefix");
-  fn(obj.sufix, "sufix");
+  fn(obj.suffix, "suffix");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::set_player_team::update>() { return "copper_server::api::packets::client_bound::play::set_player_team::update"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::set_player_team::update>() { return 7; }

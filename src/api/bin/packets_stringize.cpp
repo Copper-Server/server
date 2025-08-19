@@ -273,11 +273,12 @@ namespace copper_server::api::packets {
                 || is_template_base_of<any_of, Type>
                 || is_template_base_of<packet_compress, Type>
                 || is_limited_num<Type>
-                || is_id_source<Type>
             )
                 serialize_entry(res, spacing, value.value);
             else if constexpr (is_bitset_fixed<Type>) {
                 serialize_array(res, spacing, value.value.data());
+            } else if constexpr (is_id_source<Type>) {
+                res += value.to_string();
             } else if constexpr (std::is_same_v<bit_list_array<uint64_t>, Type>) {
                 serialize_array(res, spacing, value.data());
             } else {

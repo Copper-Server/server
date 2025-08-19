@@ -30,14 +30,16 @@ namespace copper_server::build_in_plugins::network::tcp {
             int32_t plugin_query_id = 0;
 
             static extra_data_t& get(base_objects::SharedClientData& client) {
-                if (!client.packets_state.extra_data) {
-                    auto allocated = new extra_data_t{};
-                    client.packets_state.extra_data = std::shared_ptr<void>((void*)allocated, [](void* d) { delete reinterpret_cast<extra_data_t*>(d); });
-                    pluginManagement.inspect_plugin_bind(PluginManagement::registration_on::login, [&allocated](const std::pair<std::string, PluginRegistrationPtr>& it) {
-                        allocated->plugins_query.push_back(it);
-                    });
-                }
-                return *reinterpret_cast<extra_data_t*>(client.packets_state.extra_data.get());
+                return *client.packets_state.internal_data.set([&](auto& data) {
+                    if (!data.extra_data) {
+                        auto allocated = new extra_data_t{};
+                        data.extra_data = std::shared_ptr<void>((void*)allocated, [](void* d) { delete reinterpret_cast<extra_data_t*>(d); });
+                        pluginManagement.inspect_plugin_bind(PluginManagement::registration_on::login, [&allocated](const std::pair<std::string, PluginRegistrationPtr>& it) {
+                            allocated->plugins_query.push_back(it);
+                        });
+                    }
+                    return reinterpret_cast<extra_data_t*>(data.extra_data.get());
+                });
             }
         };
 
@@ -110,7 +112,8 @@ namespace copper_server::build_in_plugins::network::tcp {
             using custom_query_answer = api::packets::server_bound::login::custom_query_answer;
             using key = api::packets::server_bound::login::key;
             using login_acknowledged = api::packets::server_bound::login::login_acknowledged;
-            api::packets::register_server_bound_processor<hello>([](hello&& packet, base_objects::SharedClientData& client) {
+
+            register_packet_processor([](hello&& packet, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).stage != 0) {
                     client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 0").ToStr()}};
                     return;
@@ -154,7 +157,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                 } else
                     switch_to_plugin_processing_stage(client);
             });
-            api::packets::register_server_bound_processor<cookie_response>([](cookie_response&& packet, base_objects::SharedClientData& client) {
+            register_packet_processor([](cookie_response&& packet, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).stage == 2) {
                     if (auto plugin = pluginManagement.get_bind_cookies(PluginManagement::registration_on::login, packet.key); plugin) {
                         auto response = plugin->OnLoginCookie(plugin, packet.key, packet.payload ? *packet.payload : list_array<uint8_t>{}, !!packet.payload, client);
@@ -163,7 +166,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                 } else
                     client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 2").ToStr()}};
             });
-            api::packets::register_server_bound_processor<custom_query_answer>([](custom_query_answer&& packet, base_objects::SharedClientData& client) {
+            register_packet_processor([](custom_query_answer&& packet, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).stage == 2) {
                     if ((int32_t)packet.query_message_id == extra_data_t::get(client).plugin_query_id)
                         ++extra_data_t::get(client).plugin_query_id;
@@ -186,7 +189,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                 } else
                     client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 2").ToStr()}};
             });
-            api::packets::register_server_bound_processor<key>([](key&& packet, base_objects::SharedClientData& client) {
+            register_packet_processor([](key&& packet, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).stage == 1) {
                     auto vft = to_list_array(packet.verify_token);
                     if (!api::network::tcp::decrypt_data(vft)) {
@@ -217,7 +220,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                 } else
                     client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 1").ToStr()}};
             });
-            api::packets::register_server_bound_processor<login_acknowledged>([](login_acknowledged&&, base_objects::SharedClientData&) {});
+            register_packet_processor([](login_acknowledged&&, base_objects::SharedClientData&) {});
         }
     };
 }
