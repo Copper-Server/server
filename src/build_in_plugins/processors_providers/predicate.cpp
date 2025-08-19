@@ -163,10 +163,10 @@ namespace copper_server::build_in_plugins::processors_providers {
         }
 
         if (predicate.contains("location")) {
-            if (!entity->world_syncing_data)
+            if (!entity->current_world())
                 return false;
             auto location = predicate["location"].as_compound();
-            if (!__location_check(location, entity->position, entity->rotation, *entity->world_syncing_data->world))
+            if (!__location_check(location, entity->position, entity->rotation, *entity->current_world()))
                 return false;
         }
 
@@ -199,22 +199,22 @@ namespace copper_server::build_in_plugins::processors_providers {
         }
 
         if (predicate.contains("stepping_on")) {
-            if (!entity->world_syncing_data)
+            if (!entity->current_world())
                 return false;
             auto stepping_on = predicate["stepping_on"].as_compound();
-            if (!__location_check(stepping_on, entity->position, entity->rotation, *entity->world_syncing_data->world))
+            if (!__location_check(stepping_on, entity->position, entity->rotation, *entity->current_world()))
                 return false;
         }
 
         if (predicate.contains("movement_affected_by")) {
-            if (!entity->world_syncing_data)
+            if (!entity->current_world())
                 return false;
             auto movement_affected_by = predicate["movement_affected_by"].as_compound();
             if (!__location_check(
                     movement_affected_by,
                     {entity->position.x, entity->position.y - 0.5, entity->position.z},
                     entity->rotation,
-                    *entity->world_syncing_data->world
+                    *entity->current_world()
                 ))
                 return false;
         }

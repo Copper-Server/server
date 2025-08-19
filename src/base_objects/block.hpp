@@ -158,10 +158,10 @@ namespace copper_server {
             }
 
             tick_opt resolve_tickable() const {
-                if (on_tick)
-                    return tick_opt::block_tickable;
                 if (as_entity_on_tick)
                     return tick_opt::entity_tickable;
+                if (on_tick)
+                    return tick_opt::block_tickable;
                 return tick_opt::no_tick;
             }
 

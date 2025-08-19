@@ -367,17 +367,17 @@ namespace copper_server::base_objects {
                 entities = entities.take().where([check_z, dz = *dz](auto& entity) {
                     return entity->hitboxes_touching_z(check_z, dz);
                 });
-            if (flags.nearest)
-                entities.push_back(
-                    entities
-                        .take()
-                        .sort([&](auto& prev, auto& next) {
-                            auto dif_prev = prev->position.x - check_x + prev->position.z - check_z + prev->position.z - check_z;
-                            auto dif_next = next->position.x - check_x + next->position.z - check_z + next->position.z - check_z;
-                            return dif_prev < dif_next;
-                        })
-                        .take_back()
-                );
+            if (flags.nearest) {
+                auto res = entities.min_index([pos = util::VECTOR(check_x, check_y, check_z)](auto& ent) {
+                    return util::distance_sq(pos, ent->position);
+                });
+                if (res != entities.npos)
+                    entities.push_back(
+                        entities
+                            .take()
+                            .take(res)
+                    );
+            }
         } else if (!flags.self) {
             api::world::iterate([&](auto _, storage::world_data& world) {
                 world.for_each_entity([&entities](auto& entity) {
@@ -557,10 +557,8 @@ namespace copper_server::base_objects {
                     check_z = *z;
 
                 entities
-                    .sort([&](auto& prev, auto& next) {
-                        auto dif_prev = prev->position.x - check_x + prev->position.y - check_y + prev->position.z - check_z;
-                        auto dif_next = next->position.x - check_x + next->position.y - check_y + next->position.z - check_z;
-                        return dif_prev < dif_next;
+                    .sort([pos = util::VECTOR(check_x, check_y, check_z)](auto& prev, auto& next) {
+                        return util::distance_sq(pos, prev->position) < util::distance_sq(pos, next->position);
                     });
                 break;
             }
@@ -576,10 +574,8 @@ namespace copper_server::base_objects {
                     check_z = *z;
 
                 entities
-                    .sort([&](auto& prev, auto& next) {
-                        auto dif_prev = prev->position.x - check_x + prev->position.y - check_y + prev->position.z - check_z;
-                        auto dif_next = next->position.x - check_x + next->position.y - check_y + next->position.z - check_z;
-                        return dif_prev > dif_next;
+                    .sort([pos = util::VECTOR(check_x, check_y, check_z)](auto& prev, auto& next) {
+                        return util::distance_sq(pos, prev->position) > util::distance_sq(pos, next->position);
                     });
                 break;
             }

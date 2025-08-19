@@ -51,31 +51,6 @@ namespace copper_server::storage {
         uint8_t z : 4;
     };
 
-    struct on_tick_state {
-        using block_callback = std::function<void(base_objects::block_id_t id, int64_t x, int64_t y, int64_t z)>;
-        using entity_callback = std::function<void(const base_objects::entity_ref& entity, int64_t x, int64_t y, int64_t z)>;
-
-        struct on_block_event {
-            block_callback callback;
-            uint8_t max_distance;
-        };
-
-        struct on_entity_event {
-            entity_callback callback;
-            uint8_t max_distance;
-        };
-
-        world_data& current_world;
-
-        std::unordered_map<base_objects::block_id_t, list_array<on_block_event>> handle_on_block_tick;
-        std::unordered_map<base_objects::block_id_t, list_array<on_block_event>> handle_on_block_placed;
-        std::unordered_map<base_objects::block_id_t, list_array<on_block_event>> handle_on_block_exists;
-        std::unordered_map<base_objects::block_id_t, list_array<block_callback>> handle_stand_on_active_block; //lava, water, magma, etc...
-
-
-        void on_block_tick(base_objects::block_id_t id, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z);
-    };
-
 
     class world_data;
     class worlds_data;
@@ -99,6 +74,7 @@ namespace copper_server::storage {
         // -1 == 1, -2 == 2, etc... means higher value == lower priority
         list_array<list_array<std::pair<uint64_t, base_objects::chunk_block_pos>>> queried_for_tick;
         list_array<std::pair<uint64_t, base_objects::chunk_block_pos>> queried_for_liquid_tick;
+        std::chrono::milliseconds tick_speed{0};
         const int64_t chunk_x, chunk_z;
         uint8_t load_level = 44;
         uint8_t resume_gen_level = 255; //if load_level would be lower or equal than this, then generation would be resumed, used by generators
@@ -108,8 +84,6 @@ namespace copper_server::storage {
 
         void update_height_map_on(uint8_t local_x, uint64_t local_y, uint8_t local_z);
         void update_height_map();
-
-        void for_each_entity(std::function<void(base_objects::entity_ref& entity)> func);
 
         void for_each_block_entity(std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
         void for_each_block_entity(uint64_t local_y, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
@@ -121,8 +95,19 @@ namespace copper_server::storage {
         void query_for_tick(uint8_t local_x, uint64_t local_y, uint8_t local_z, uint64_t on_tick, int8_t priority = -1);
         void query_for_liquid_tick(uint8_t local_x, uint64_t local_y, uint8_t local_z, uint64_t on_tick);
 
-
-        void tick(chunk_tick_result& rr, world_data& world, size_t random_tick_speed, std::mt19937& random_engine, std::chrono::high_resolution_clock::time_point current_time);
+        void tick_players_sleep(chunk_tick_result& rr, world_data& world);
+        void tick_scheduled_blocks(chunk_tick_result& rr, world_data& world);
+        void tick_scheduled_fluids(chunk_tick_result& rr, world_data& world);
+        void tick_raid(chunk_tick_result& rr, world_data& world);
+        void tick_spawn_mobs(chunk_tick_result& rr, world_data& world);
+        void tick_ice_snow(chunk_tick_result& rr, world_data& world);
+        void tick_random_ticks(chunk_tick_result& rr, world_data& world, size_t random_tick_speed, std::mt19937& random_engine);
+        void tick_poi(chunk_tick_result& rr, world_data& world);
+        void tick_block_event(chunk_tick_result& rr, world_data& world);
+        void tick_dragon(chunk_tick_result& rr, world_data& world);
+        void tick_entity(chunk_tick_result& rr, world_data& world, std::mt19937& random_engine);
+        void tick_block_entity(chunk_tick_result& rr, world_data& world);
+        void tick_game_event(chunk_tick_result& rr, world_data& world);
 
 
         //generator functions
@@ -328,6 +313,17 @@ namespace copper_server::storage {
         void __set_block_silent(base_objects::full_block_data&& block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
         void __update_block(int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode, base_objects::block_id_t);
 
+
+        void tick_run_local_functions(); //tick/load
+
+        void tick_broadcast_time();
+
+        void tick_update_world_border();
+        void tick_update_weather();
+        void tick_update_day_light();
+        void tick_run_local_scheduled_commands();
+
+
     public:
         int32_t get_chunk_y_count() const {
             return chunk_y_count;
@@ -404,8 +400,7 @@ namespace copper_server::storage {
         double border_warning_blocks = 5;
         double border_warning_time = 15;
         int64_t day_time = 0;
-        int64_t time = 0;
-        uint64_t random_tick_speed = 3;
+        int32_t time = 0;
         uint64_t ticks_per_second = 20;
         int32_t portal_teleport_boundary = 29999984;
 
@@ -413,10 +408,10 @@ namespace copper_server::storage {
         std::chrono::milliseconds world_lifetime = std::chrono::seconds(50);
 
 
-        int32_t clear_weather_time = 0;
-        int32_t weather_time = 0;
+        uint32_t clear_weather_time = 0;
+        uint32_t weather_time = 0;
         base_objects::weather current_weather = base_objects::weather::clear;
-
+        void sync_weather(); //notifies entities
 
         int8_t difficulty = 0;
         uint8_t default_gamemode = 0;
@@ -637,6 +632,7 @@ namespace copper_server::storage {
 
 
             bool enable_world_profiling = false; //calls profiling callbacks
+            bool sync_profiling = false;
 
             std::function<void(world_data& world, int64_t chunk_x, int64_t chunk_z, std::chrono::milliseconds tick_time)> chunk_speedometer_callback = nullptr;
             std::function<void(world_data& world, int64_t chunk_x, int64_t chunk_z, std::chrono::milliseconds tick_time)> slow_chunk_tick_callback = nullptr;
@@ -645,7 +641,6 @@ namespace copper_server::storage {
             std::function<void(world_data& world, chunk_data&)> chunk_loaded;
             std::function<void(world_data& world, int64_t chunk_x, int64_t chunk_z)> chunk_load_failed;
             std::function<void(world_data& world, int64_t chunk_x, int64_t chunk_z)> chunk_unloaded;
-            std::function<void(world_data& world, int64_t chunk_x, int64_t chunk_z, size_t asingned_world_id, base_objects::entity_ref en)> chunk_removed_unrelated_entity; //entity could be unassigned if its been removed, but not in chunk
 
             std::atomic_size_t chunk_generator_counter = 0; //generating in process
             std::atomic_size_t chunk_load_counter = 0; //load in process

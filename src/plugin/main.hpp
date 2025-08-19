@@ -46,7 +46,8 @@ namespace copper_server {
                 )
                     register_configuration(tmp_);
                 if (
-                    &T::OnPlay_initialize != &PluginRegistration::OnPlay_initialize
+                    &T::OnPlay_pre_initialize != &PluginRegistration::OnPlay_pre_initialize
+                    || &T::OnPlay_initialize != &PluginRegistration::OnPlay_initialize
                     || &T::OnPlay_initialize_compatible != &PluginRegistration::OnPlay_initialize_compatible
                     || &T::OnPlay_post_initialize != &PluginRegistration::OnPlay_post_initialize
                     || &T::OnPlay_post_initialize_compatible != &PluginRegistration::OnPlay_post_initialize_compatible

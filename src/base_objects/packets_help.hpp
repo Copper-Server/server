@@ -874,6 +874,47 @@ namespace copper_server::base_objects {
         return *this;
     }
 
+    template <class header, class... Ty>
+    struct enum_set {
+        std::tuple<list_array<header>, list_array<Ty>...> values;
+        using header_t = header;
+
+        template <class T>
+        void push(T&& mov) {
+            std::get<list_array<std::decay_t<T>>>(values).push_back(std::move(mov));
+        }
+
+        template <class T>
+        void push(const T& mov) {
+            std::get<list_array<std::decay_t<T>>>(values).push_back(mov);
+        }
+
+        template <class T>
+        void push() {
+            std::get<list_array<std::decay_t<T>>>(values).push_back(T{});
+        }
+
+        template <class T>
+        bool has() const {
+            return std::get<list_array<std::decay_t<T>>>(values).size();
+        }
+
+        template <class T>
+        list_array<T>& get() & {
+            return std::get<list_array<std::decay_t<T>>>(values);
+        }
+
+        template <class T>
+        const list_array<T>& get() const& {
+            return std::get<list_array<std::decay_t<T>>>(values);
+        }
+
+        template <class T>
+        list_array<T> get() && {
+            return std::move(std::get<list_array<std::decay_t<T>>>(values));
+        }
+    };
+
     template <class T>
     static constexpr bool is_flag_item = requires {
         T::flag_value::value;

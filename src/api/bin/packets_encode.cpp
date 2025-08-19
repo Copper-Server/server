@@ -157,6 +157,14 @@ namespace copper_server::api::packets {
         } else if constexpr (std::is_same_v<bit_list_array<uint64_t>, T>) {
         } else if constexpr (is_convertible_to_packet_form<T>) {
         } else if constexpr (is_id_source<T>) {
+        } else if constexpr (is_template_base_of<enum_set, T>) {
+            using Tupple_T = std::decay_t<decltype(std::declval<T>().values)>;
+            bool res = false;
+            util::for_each_type<Tupple_T>::each([&]<class T_Elem>() {
+                if constexpr (need_preprocess_result<typename T_Elem::value_type, T, VisitedTypes...>())
+                    res = true;
+            });
+            return res;
         } else {
             bool res = false;
             reflect::for_each_type<T>([&]<class I>() {
@@ -243,19 +251,19 @@ namespace copper_server::api::packets {
                         res.write_var32_check(it.palette.size());
                         for (auto& i : it.palette)
                             res.write_var32(i);
-                        res.write_direct(std::move(it.data.get()));
+                        res.write_direct(it.data.get());
                     } else if constexpr (std::is_same_v<base_objects::pallete_container_single, IT>) {
                         res.write_value((uint8_t)0);
                         res.write_var32(it.id_of_palette);
                     } else if constexpr (std::is_same_v<base_objects::pallete_data, IT>) {
                         res.write_value((uint8_t)it.bits_per_entry);
-                        res.write_direct(std::move(it.get()));
+                        res.write_direct(it.get());
                     }
                 },
                 value.compile()
             );
         } else if constexpr (std::is_same_v<base_objects::pallete_data_height_map, Type>) {
-            res.write_array(std::move(value.get()));
+            res.write_array(value.get());
         } else if constexpr (is_template_base_of<list_array_depend, Type>) {
             size_t siz = value.size();
             size_t i = 1;
@@ -382,6 +390,44 @@ namespace copper_server::api::packets {
             serialize_entry(res, context, value.value);
         } else if constexpr (is_tvalue_template_base_of<ordered_id, Type>) {
             serialize_entry(res, context, value.value);
+        } else if constexpr (is_template_base_of<enum_set, Type>) {
+            using Tupple_T = std::decay_t<decltype(value.values)>;
+            {
+                bit_list_array<uint8_t> bit(std::tuple_size_v<Tupple_T> - 1); //except header
+                size_t i = 0;
+                util::for_each_type<Tupple_T>::each([&]<class T_Elem>() {
+                    if constexpr (!std::is_same_v<typename T_Elem::value_type, Type::header_t>) {
+                        if (value.template has<typename T_Elem::value_type>())
+                            bit[i] = true;
+                        i++;
+                    }
+                });
+                res.write_direct(std::move(bit).data());
+            }
+            std::optional<size_t> check;
+            util::for_each_type<Tupple_T>::each([&check, &value]<class T_Elem>() {
+                auto siz = value.template get<typename T_Elem::value_type>().size();
+                if (siz == 0) //skip unset
+                    return;
+                if (!check)
+                    check = siz;
+                else if (*check != siz)
+                    throw std::runtime_error("enum_set supposed to have same count of elements");
+            });
+            if (check) {
+                size_t siz = *check;
+                if (siz)
+                    if (!value.template has<typename Type::header_t>())
+                        throw std::runtime_error("enum_set supposed to have headers");
+                res.write_var32_check(siz);
+                for (size_t i = 0; i < siz; i++) {
+                    util::for_each_type<Tupple_T>::each([&]<class T_Elem>() {
+                        if (value.template has<typename T_Elem::value_type>())
+                            serialize_entry(res, context, value.template get<typename T_Elem::value_type>()[i]);
+                    });
+                }
+            } else
+                res.write_var32(0);
         } else {
             bool process_next = true;
             reflect::for_each_field(value, [&value, &res, &context, &process_next]<class IT>(IT& item) {
@@ -521,6 +567,14 @@ namespace copper_server::api::packets {
                 return ++data.id_tracker[T::id_source];
             });
             value.is_valid = true;
+        } else if constexpr (is_template_base_of<enum_set, T>) {
+            using Tupple_T = std::decay_t<decltype(value.values)>;
+            util::for_each_type<Tupple_T>::each([&]<class T_Elem>() {
+                if constexpr (need_preprocess_result_v<typename T_Elem::value_type>) {
+                    if (value.template has<typename T_Elem::value_type>())
+                        preprocess_structure(context, value.template get<typename T_Elem::value_type>(), value);
+                }
+            });
         } else {
             bool process_next = true;
             reflect::for_each_field(value, [&value, &context, &process_next](auto& item) {
@@ -612,6 +666,8 @@ namespace copper_server::api::packets {
     }
 
     bool send(SharedClientData& client, client_bound_packet&& packet) {
+        if (!client.is_active())
+            return false;
         make_preprocess_packet(client, packet);
         if (__internal::visit_packet_viewer(packet, client))
             return false;

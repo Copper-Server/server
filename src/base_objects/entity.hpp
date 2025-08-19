@@ -18,6 +18,7 @@
 #include <src/base_objects/entity/event.hpp>
 #include <src/base_objects/events/sync_event.hpp>
 #include <src/base_objects/slot.hpp>
+#include <src/base_objects/weather.hpp>
 #include <src/base_objects/world/block_action.hpp>
 #include <src/util/calculations.hpp>
 #include <stdint.h>
@@ -45,6 +46,7 @@ namespace copper_server {
         struct block_entity_ref;
         struct const_block_entity_ref;
 
+        //TODO Feat: allow edit some entity properties in config
         struct entity_data {
             list_array<std::string> entity_aliases; //string entity ids(checks from first to last, if none found in `initialize_entities()` throws) implicitly uses id first
             std::string id;
@@ -202,6 +204,9 @@ namespace copper_server {
                 void (*on_change_world)(entity& self, storage::world_data& new_world) = nullptr;
 
                 void (*on_tick)(entity& self) = nullptr;
+
+                void (*sync_time)(entity& self, uint32_t time, int64_t day_time) = nullptr;
+                void (*weather_change)(entity& self, uint32_t weather_time, base_objects::weather) = nullptr;
             };
 
             std::shared_ptr<world_processor> processor;
@@ -285,11 +290,22 @@ namespace copper_server {
                 uint64_t assigned_world_id = (uint64_t)-1;
                 storage::world_data* world = nullptr;
                 uint32_t attached_to_distance = 0;
+                uint32_t inactivity_counter = 0;
                 uint16_t keep_alive_ticks = 0; //used for handling entity animation
                 bool on_ground : 1 = true;
                 bool is_sleeping : 1 = false;
                 bool is_sneaking : 1 = false;
                 bool is_sprinting : 1 = false;
+                bool inactivity_immune : 1 = false; //set if entity type is wither or if nbt set {PersistenceRequired: 1b}
+                bool despawn_immune : 1 = false;    //set if entity is not despawning naturally
+                enum class state_e : uint8_t {      //this controls inactivity_counter and their ai
+                    init = 0,
+                    player_near,
+                    player_far,
+                    no_player,             //outside player zone
+                    scheduled_for_despawn, //after second chance no_player or inactivity_counter reached entitys max counter
+                } state : 2
+                    = state_e::init;
 
                 bool mark_chunk(int64_t pos_x, int64_t pos_z, bool loaded) {
                     if (pos_x > INT32_MAX || pos_x < INT32_MIN || pos_z > INT32_MAX || pos_z < INT32_MIN)
@@ -397,19 +413,13 @@ namespace copper_server {
             util::ANGLE_DEG rotation;
             bounding bounds;
 
-            std::optional<world_syncing> world_syncing_data;
+            world_syncing world_syncing_data;
             list_array<client_data_holder> spectating_players;
             client_data_holder assigned_player;
 
             int32_t protocol_id;
 
             storage::world_data* current_world() const;
-
-            world_syncing& get_syncing_data() {
-                if (!world_syncing_data)
-                    throw std::runtime_error("World syncing data is not initialized for entity " + id.to_string());
-                return *world_syncing_data;
-            }
 
             //nbt {
             //  float health = 20;

@@ -57,6 +57,7 @@ namespace copper_server {
         using base_objects::enum_as;
         using base_objects::enum_as_flag;
         using base_objects::enum_item;
+        using base_objects::enum_set;
         using base_objects::enum_switch;
         using base_objects::flag_item;
         using base_objects::flags_list;
@@ -1494,7 +1495,6 @@ namespace copper_server {
                 };
 
                 struct player_chat : public packet<0x3A> {
-
                     struct previous_message {
                         value_optional<var_int32, std::array<uint8_t, 256>> message_id_or_signature;
                     };
@@ -1517,6 +1517,7 @@ namespace copper_server {
                     list_array_sized<previous_message, 20> previous_messages;
                     std::optional<Chat> unsigned_content = std::nullopt;
                     enum_switch<var_int32, no_filter, fully_filtered, partially_filtered> filter;
+                    or_<var_int32::chat_type, chat_type> type;
                     Chat sender_name;
                     std::optional<Chat> target_name = std::nullopt;
                 };
@@ -1537,8 +1538,7 @@ namespace copper_server {
                 };
 
                 struct player_info_update : public packet<0x3F> {
-
-                    struct add_player : public flag_item<0x1, 0x1, 1> {
+                    struct add_player {
                         string_sized<16> name;
 
                         struct property {
@@ -1550,39 +1550,43 @@ namespace copper_server {
                         list_array_sized<property, 16> properties;
                     };
 
-                    struct initialize_chat : public flag_item<0x2, 0x2, 2> {
+                    struct initialize_chat {
                         enbt::raw_uuid chat_session_id;
                         uint64_t pub_key_expiries_timestamp;
                         list_array_fixed<uint8_t, 512> public_key;
                         list_array_fixed<uint8_t, 4096> public_signature;
                     };
 
-                    struct set_gamemode : public flag_item<0x4, 0x4, 3> {
+                    struct set_gamemode {
                         var_int32 gamemode;
                     };
 
-                    struct listed : public flag_item<0x8, 0x8, 4> {
+                    struct listed {
                         bool should;
                     };
 
-                    struct set_ping : public flag_item<0x10, 0x10, 5> {
+                    struct set_ping {
                         var_int32 milliseconds;
                     };
 
-                    struct set_display_name : public flag_item<0x20, 0x20, 6> {
+                    struct set_display_name {
                         std::optional<Chat> name = std::nullopt;
                     };
 
-                    struct set_list_priority : public flag_item<0x40, 0x40, 7> {
-                        var_int32 level;
-                    };
-
-                    struct set_hat_visible : public flag_item<0x80, 0x80, 8> {
+                    struct set_hat_visible {
                         bool visible;
                     };
 
-                    using action = flags_list<
-                        uint16_t,
+                    struct set_list_priority {
+                        var_int32 level;
+                    };
+
+                    struct header {
+                        enbt::raw_uuid uuid;
+                    };
+
+                    enum_set<
+                        header,
                         add_player,
                         initialize_chat,
                         set_gamemode,
@@ -1590,9 +1594,8 @@ namespace copper_server {
                         set_ping,
                         set_display_name,
                         set_list_priority,
-                        set_hat_visible>;
-
-                    list_array<action> actions;
+                        set_hat_visible>
+                        actions;
                 };
 
                 struct player_look_at : public packet<0x40> {
@@ -2690,7 +2693,7 @@ namespace copper_server {
                 };
 
                 struct chat : public packet<0x08> {
-                    string_sized<256> command;
+                    string_sized<256> message;
                     uint64_t timestamp;
                     uint64_t salt;
                     std::optional<std::array<uint8_t, 256>> signature = std::nullopt;

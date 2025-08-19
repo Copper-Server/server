@@ -18,6 +18,7 @@
 #include <src/util/reflect/packets.hpp>
 #include <src/util/reflect/packets_help.hpp>
 #include <src/util/reflect/parsers.hpp>
+#include <src/util/templates.hpp>
 
 namespace copper_server::api::packets {
     using namespace base_objects;
@@ -83,7 +84,6 @@ namespace copper_server::api::packets {
 
     template <class type>
     concept requires_check = is_limited_num<type> || is_string_sized<type> || is_list_array_sized<type> || is_list_array_fixed<type> || is_value_template_base_of<no_size, type>;
-
 
     struct processor_handle_data {
         uint8_t mode;
@@ -399,6 +399,26 @@ namespace copper_server::api::packets {
                 auto it = data.id_tracker.find(Type::id_source);
                 return it != data.id_tracker.end() ? ((decltype(value.value))it->second) == value.value : false;
             });
+        } else if constexpr (is_template_base_of<enum_set, Type>) {
+            using Tupple_T = std::decay_t<decltype(value.values)>;
+            bit_list_array<uint8_t> bit(std::tuple_size_v<Tupple_T>);
+            for (size_t i = 0; i < bit.size(); i++)
+                bit.data()[i] = stream.read_value<uint8_t>();
+            static constexpr auto type_table = []<size_t... I>(std::index_sequence<I...>) {
+                return std::array<void (*)(SharedClientData& context, ArrayStream& stream, T& value, Prev_T* prev), sizeof...(I)>{
+                    [](SharedClientData& context, ArrayStream& stream, T& value, Prev_T* prev) {
+                        using DT = std::tuple_element_t<I, Tupple_T>::value_type;
+                        DT v{};
+                        decode_entry(context, stream, v, prev);
+                        value.push(std::move(v));
+                    }...
+                };
+            }(std::make_index_sequence<std::tuple_size_v<Tupple_T>>());
+            size_t siz = stream.read_var<int32_t>();
+            for (size_t i = 0; i < siz; i++)
+                for (size_t j = 0; j < std::tuple_size_v<Tupple_T>; j++)
+                    if (bit.at(i) || j == 0) //j==0 is for header
+                        type_table[i + 1](context, stream, value, prev);
         } else {
             bool process_next = true;
             reflect::for_each_field(value, [&](auto& item) {

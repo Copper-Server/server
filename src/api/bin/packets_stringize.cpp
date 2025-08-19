@@ -281,6 +281,46 @@ namespace copper_server::api::packets {
                 res += value.to_string();
             } else if constexpr (std::is_same_v<bit_list_array<uint64_t>, Type>) {
                 serialize_array(res, spacing, value.data());
+            } else if constexpr (is_template_base_of<enum_set, Type>) {
+                using Tupple_T = std::decay_t<decltype(value.values)>;
+                bool processed = false;
+                bool it_processed = false;
+                res += "[";
+                std::optional<size_t> check;
+                util::for_each_type<Tupple_T>::each([&check, &value]<class T_Elem>() {
+                    auto siz = value.template get<typename T_Elem::value_type>().size();
+                    if (!check)
+                        check = siz;
+                    else if (*check != siz)
+                        throw std::runtime_error("enum_set supposed to have same count of elements");
+                });
+
+                if (check) {
+                    size_t siz = *check;
+                    if (siz)
+                        if (!value.template has<typename Type::header_t>())
+                            throw std::runtime_error("enum_set supposed to have headers");
+                    for (size_t i = 0; i < siz; i++) {
+                        if (it_processed)
+                            res += ",";
+                        res += "\n" + std::string(spacing + 4, ' ') + "{";
+                        util::for_each_type<Tupple_T>::each([&]<class T_Elem>() {
+                            if (!value.template has<typename T_Elem::value_type>())
+                                return;
+                            if (processed)
+                                res += ",";
+                            res += "\n" + std::string(spacing + 8, ' ');
+                            serialize_entry(res, spacing + 8, value.template get<typename T_Elem::value_type>()[i]);
+                            processed = true;
+                        });
+                        res += "\n" + std::string(spacing + 4, ' ') + "}";
+                        it_processed = true;
+                    }
+                }
+                if (processed)
+                    res += "\n" + std::string(spacing, ' ') + "]";
+                else
+                    res += "]";
             } else {
                 bool process_next = true;
                 bool processed = false;

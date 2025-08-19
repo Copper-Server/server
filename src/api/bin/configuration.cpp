@@ -108,8 +108,6 @@ namespace copper_server::api::configuration {
         cfg.game_play.player_idle_timeout = game_play["player_idle_timeout"].or_apply(cfg.game_play.player_idle_timeout);
         cfg.game_play.hardcore = game_play["hardcore"].or_apply(cfg.game_play.hardcore);
         cfg.game_play.pvp = game_play["pvp"].or_apply(cfg.game_play.pvp);
-        cfg.game_play.spawn_animals = game_play["spawn_animals"].or_apply(cfg.game_play.spawn_animals);
-        cfg.game_play.spawn_monsters = game_play["spawn_monsters"].or_apply(cfg.game_play.spawn_monsters);
         cfg.game_play.allow_flight = game_play["allow_flight"].or_apply(cfg.game_play.allow_flight);
         cfg.game_play.sync_chunk_writes = game_play["sync_chunk_writes"].or_apply(cfg.game_play.sync_chunk_writes);
         cfg.game_play.enable_command_block = game_play["enable_command_block"].or_apply(cfg.game_play.enable_command_block);
@@ -126,6 +124,8 @@ namespace copper_server::api::configuration {
             for (auto& it : cfg.game_play.enabled_features)
                 enabled_features.push_back((boost::json::string)it);
         }
+        cfg.game_play.entity.spawn_animals = game_play["spawn_animals"].or_apply(cfg.game_play.entity.spawn_animals);
+        cfg.game_play.entity.spawn_monsters = game_play["spawn_monsters"].or_apply(cfg.game_play.entity.spawn_monsters);
     }
 
     void merge_configs_protocol(ServerConfiguration& cfg, js_object& data) {

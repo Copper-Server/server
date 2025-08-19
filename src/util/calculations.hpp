@@ -210,6 +210,13 @@ namespace copper_server::util {
     double rad_to_deg360(double val);
     double deg_to_rad360(double val);
 
+    inline double distance_sq(const VECTOR& p0, const VECTOR& p1) {
+        return (p0.x - p1.x) * (p0.x - p1.x) + (p0.y - p1.y) * (p0.y - p1.y) + (p0.z - p1.z) * (p0.z - p1.z);
+    }
+
+    inline double distance(const VECTOR& p0, const VECTOR& p1) { //recommended to use squared distance
+        return std::sqrt(distance_sq(p0, p1));
+    }
 
     YAW_PITCH to_yaw_pitch(ANGLE_DEG val);
     YAW_PITCH to_yaw_pitch(ANGLE_RAD val);

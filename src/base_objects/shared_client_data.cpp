@@ -9,6 +9,7 @@
 #include <src/api/network/tcp.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
+
 namespace copper_server::base_objects {
 
     SharedClientData::SharedClientData(api::network::tcp::session* ss, void* assigned_data, std::function<void(base_objects::SharedClientData& self, base_objects::network::response&&)> special_callback)
@@ -20,5 +21,10 @@ namespace copper_server::base_objects {
 
     SharedClientData::~SharedClientData() {
         delete &player_data;
+    }
+
+    bool SharedClientData::is_active() const {
+        return special_callback ? true : ss ? ss->is_active()
+                                            : false;
     }
 }

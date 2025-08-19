@@ -177,6 +177,9 @@ namespace copper_server {
                 return res;
             }
 
+            //returns true if client could accept packets (works for virtual and real)
+            bool is_active() const;
+
         private:
             void send_indirect(base_objects::network::response&&);
             friend struct virtual_client;

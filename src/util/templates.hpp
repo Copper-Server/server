@@ -24,6 +24,37 @@ namespace copper_server::util{
     template <template <class...> class Base, class Derived>
     constexpr bool is_template_base_of<Base, Derived, std::void_t<decltype(__internal::test<Base>(std::declval<Derived&>()))>> = true;
 
+    template <class A>
+    struct for_each_type {
+        static constexpr auto each(auto&& fn) {
+            fn.template operator()<A>();
+        }
+    };
+
+    template <class... Args>
+    struct for_each_type<std::variant<Args...>> {
+        static constexpr void each(auto&& lambda) {
+            (
+                [&]() {
+                    lambda.template operator()<Args>();
+                }(),
+                ...
+            );
+        }
+    };
+
+    template <class... Args>
+    struct for_each_type<std::tuple<Args...>> {
+        static constexpr void each(auto&& lambda) {
+            (
+                [&]() {
+                    lambda.template operator()<Args>();
+                }(),
+                ...
+            );
+        }
+    };
+
     template <class T>
     struct function_traits;
 

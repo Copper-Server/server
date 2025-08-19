@@ -569,8 +569,9 @@ namespace copper_server::storage {
                           auto entities = stream.write_array(stored_entities.size());
                           for (auto& [id, entity] : stored_entities) {
                               if (entity->current_world() == &world)
-                                  if (entity->const_data().is_saveable)
-                                      entities.write(entity->copy_to_enbt());
+                                  if (entity->world_syncing_data.assigned_world_id == id)
+                                      if (entity->const_data().is_saveable)
+                                          entities.write(entity->copy_to_enbt());
                           }
                       })
                       .write("queried_for_tick", [&](enbt::io_helper::value_write_stream& stream) {
@@ -686,11 +687,6 @@ namespace copper_server::storage {
         }
     }
 
-    void chunk_data::for_each_entity(std::function<void(base_objects::entity_ref& entity)> func) {
-        for (auto& [id, entity] : stored_entities)
-            func(entity);
-    }
-
     void chunk_data::for_each_block_entity(std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
         for (auto& sub_chunk : sub_chunks)
             for (auto& [_pos, data] : sub_chunk.block_entities) {
@@ -736,7 +732,12 @@ namespace copper_server::storage {
         queried_for_liquid_tick.push_back({on_tick, base_objects::chunk_block_pos{local_x, uint8_t(global_y & 15), local_z}});
     }
 
-    void chunk_data::tick(chunk_tick_result& rr, world_data& world, size_t random_tick_speed, std::mt19937& random_engine, [[maybe_unused]] std::chrono::high_resolution_clock::time_point current_time) {
+    void chunk_data::tick_players_sleep(chunk_tick_result& rr, world_data& world) {
+        if (load_level > 32)
+            return;
+    }
+
+    void chunk_data::tick_scheduled_blocks(chunk_tick_result& rr, world_data& world) {
         if (load_level > 32)
             return;
 
@@ -754,7 +755,11 @@ namespace copper_server::storage {
                 sub_chunk.blocks[block_pos.x][local][block_pos.z].tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, block_pos.x, (uint8_t)local, block_pos.z, false);
             }
         }
+    }
 
+    void chunk_data::tick_scheduled_fluids(chunk_tick_result& rr, world_data& world) {
+        if (load_level > 32)
+            return;
         for (
             auto& [till, block_pos] :
             queried_for_liquid_tick.take([&world](auto& it) {
@@ -767,20 +772,27 @@ namespace copper_server::storage {
 
             sub_chunk.blocks[block_pos.x][local][block_pos.z].tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, block_pos.x, (uint8_t)local, block_pos.z, false);
         }
+    }
 
-        if (load_level <= 31) {
-            for (auto& [id, entity] : stored_entities) {
-                if (entity->world_syncing_data) {
-                    if (entity->current_world() == &world) {
-                        entity->tick();
-                        continue;
-                    }
-                }
-                rr.unrelated_entities.push_back(id);
-            }
-            for (auto id : rr.unrelated_entities)
-                stored_entities.erase(id);
-        }
+    void chunk_data::tick_raid(chunk_tick_result& rr, world_data& world) { //TODO
+        if (load_level > 32)
+            return;
+    }
+
+    void chunk_data::tick_spawn_mobs(chunk_tick_result& rr, world_data& world) { //TODO
+        if (load_level > 32)
+            return;
+    }
+
+    void chunk_data::tick_ice_snow(chunk_tick_result& rr, world_data& world) { //TODO
+        if (load_level > 32)
+            return;
+    }
+
+    void chunk_data::tick_random_ticks(chunk_tick_result& rr, world_data& world, size_t random_tick_speed, std::mt19937& random_engine) {
+        if (load_level > 32)
+            return;
+
         uint64_t sub_chunk_y = 0;
         for (auto& sub_chunk : sub_chunks) {
             auto max_random_tick_per_sub_chunk = random_tick_speed;
@@ -796,12 +808,122 @@ namespace copper_server::storage {
                 } pos;
 
                 pos.value = random_engine();
-                if (sub_chunk.blocks[pos.dec.x][pos.dec.y][pos.dec.z].tickable != base_objects::block::tick_opt::no_tick)
-                    sub_chunk.blocks[pos.dec.x][pos.dec.y][pos.dec.z].tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, pos.dec.x, pos.dec.y, pos.dec.z, true);
+                if (sub_chunk.blocks[pos.dec.x][pos.dec.y][pos.dec.z].is_tickable())
+                    if (sub_chunk.blocks[pos.dec.x][pos.dec.y][pos.dec.z].tickable == base_objects::block::tick_opt::block_tickable)
+                        sub_chunk.blocks[pos.dec.x][pos.dec.y][pos.dec.z].tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, pos.dec.x, pos.dec.y, pos.dec.z, true);
                 --max_random_tick_per_sub_chunk;
             }
             sub_chunk_y++;
         }
+    }
+
+    void chunk_data::tick_poi(chunk_tick_result& rr, world_data& world) { //TODO
+        if (load_level > 32)
+            return;
+    }
+
+    void chunk_data::tick_block_event(chunk_tick_result& rr, world_data& world) { //TODO
+        if (load_level > 32)
+            return;
+    }
+
+    void chunk_data::tick_dragon(chunk_tick_result& rr, world_data& world) { //TODO
+        if (load_level > 32)
+            return;
+    }
+
+    void chunk_data::tick_entity(chunk_tick_result& rr, world_data& world, std::mt19937& random_engine) {
+        auto max_inactivity = api::configuration::get().game_play.entity.despawn.despawn_after_inactivity;
+        auto despawn_chance = api::configuration::get().game_play.entity.despawn.despawn_chance;
+        std::normal_distribution<> dis(0.0, 1.0);
+        for (auto& [id, entity] : stored_entities) {
+            if (entity->current_world() == &world) {
+                auto& sd = entity->world_syncing_data;
+                if (sd.assigned_world_id == id) {
+                    if (entity->is_player() || entity->assigned_player)
+                        ; //skip check
+                    else if (sd.despawn_immune)
+                        ; //skip check
+                    else if (sd.state == base_objects::entity::world_syncing::state_e::scheduled_for_despawn) {
+                        world.unregister_entity(entity);
+                        rr.unrelated_entities.push_back(id);
+                    } else if (sd.state == base_objects::entity::world_syncing::state_e::no_player) {
+                        sd.state = base_objects::entity::world_syncing::state_e::scheduled_for_despawn;
+                    } else if (sd.inactivity_counter > max_inactivity) {
+                        if (dis(random_engine) >= despawn_chance)
+                            sd.state = base_objects::entity::world_syncing::state_e::scheduled_for_despawn;
+                    } else
+                        sd.state = base_objects::entity::world_syncing::state_e::no_player;
+
+                    if (entity->is_player())
+                        world.for_each_entity(
+                            base_objects::spherical_bounds_block{
+                                (int64_t)entity->position.x,
+                                (int64_t)entity->position.y,
+                                (int64_t)entity->position.z,
+                                api::configuration::get().game_play.entity.despawn_mobs_outside
+                            },
+                            [&entity, t_m_r = api::configuration::get().game_play.entity.squared_values.tick_mobs_in_range](auto& mark_entity) {
+                                if (mark_entity->is_player())
+                                    return;
+                                auto& sd = mark_entity->world_syncing_data;
+                                if (sd.despawn_immune || sd.inactivity_immune)
+                                    return;
+                                switch (sd.state) {
+                                case base_objects::entity::world_syncing::state_e::init:
+                                case base_objects::entity::world_syncing::state_e::no_player: {
+                                    auto dist_sq = util::distance_sq(entity->position, mark_entity->position); //how to be with fish? fish has different despawn range
+                                    sd.state = dist_sq > t_m_r ? base_objects::entity::world_syncing::state_e::player_far : base_objects::entity::world_syncing::state_e::player_near;
+                                    if (sd.state == base_objects::entity::world_syncing::state_e::player_near)
+                                        sd.inactivity_counter = 0;
+                                    else
+                                        ++sd.inactivity_counter;
+                                    break;
+                                }
+                                default:
+                                    break;
+                                }
+                            }
+                        );
+                    if (load_level > 31)
+                        continue;
+
+                    if (!entity->ride_entity) {
+                        entity->tick();
+                        for (auto& ride_entity : entity->ride_by_entity)
+                            ride_entity->tick();
+                    }
+                    continue;
+                }
+            }
+            rr.unrelated_entities.push_back(id);
+        }
+        for (auto id : rr.unrelated_entities)
+            stored_entities.erase(id);
+    }
+
+    void chunk_data::tick_block_entity(chunk_tick_result& rr, world_data& world) {
+        if (load_level > 32)
+            return;
+        uint64_t y = 0;
+        for (auto& sub_chunk : sub_chunks) {
+            for (auto& [_pos, data] : sub_chunk.block_entities) {
+                base_objects::local_block_pos pos;
+                pos.x = _pos >> 8;
+                pos.y = (_pos >> 4) & 0xF;
+                pos.z = _pos & 0xF;
+
+                if (sub_chunk.blocks[pos.x][pos.y][pos.z].is_tickable())
+                    if (sub_chunk.blocks[pos.x][pos.y][pos.z].tickable == base_objects::block::tick_opt::block_tickable)
+                        sub_chunk.blocks[pos.x][pos.y][pos.z].tick(world, sub_chunk, chunk_x, y, chunk_z, pos.x, pos.y, pos.z, false);
+            }
+            ++y;
+        }
+    }
+
+    void chunk_data::tick_game_event(chunk_tick_result& rr, world_data& world) { //TODO
+        if (load_level > 32)
+            return;
     }
 
     //generator functions
@@ -1011,47 +1133,50 @@ namespace copper_server::storage {
     }
 
     template <auto fun, class... Args>
-    inline void entity_notify_block(auto& entities, auto& self, auto x, auto y, auto z, Args&&... args) {
+    inline void entity_notify_block(auto world, auto& entities, auto& self, auto x, auto y, auto z, Args&&... args) {
         auto chunk_x = convert_chunk_global_pos(x);
         auto chunk_z = convert_chunk_global_pos(z);
         for (auto& [id, entity] : entities) {
             if (&*entity != &self) {
                 auto processor = entity->const_data().processor;
-                if (entity->world_syncing_data && processor)
-                    if (entity->world_syncing_data->processing_region.in_bounds(chunk_x, chunk_z))
-                        ((*processor).*fun)(*entity, self, x, y, z, std::forward<Args>(args)...);
+                if (processor && entity->world_syncing_data.world == world)
+                    if ((*processor).*fun)
+                        if (entity->world_syncing_data.processing_region.in_bounds(chunk_x, chunk_z))
+                            ((*processor).*fun)(*entity, self, x, y, z, std::forward<Args>(args)...);
             }
         }
     }
 
     template <auto fun, class... Args>
-    inline void entity_notify_change(auto& entities, auto& self, Args&&... args) {
+    inline void entity_notify_change(auto world, auto& entities, auto& self, Args&&... args) {
         auto chunk_x = convert_chunk_global_pos(self.position.x);
         auto chunk_z = convert_chunk_global_pos(self.position.z);
         for (auto& [id, entity] : entities) {
             if (&*entity != &self) {
                 auto processor = entity->const_data().processor;
-                if (entity->world_syncing_data && processor)
-                    if (entity->world_syncing_data->processing_region.in_bounds((int64_t)chunk_x, (int64_t)chunk_z))
-                        ((*processor).*fun)(*entity, self, std::forward<Args>(args)...);
+                if (processor && entity->world_syncing_data.world == world)
+                    if ((*processor).*fun)
+                        if (entity->world_syncing_data.processing_region.in_bounds((int64_t)chunk_x, (int64_t)chunk_z))
+                            ((*processor).*fun)(*entity, self, std::forward<Args>(args)...);
             }
         }
     }
 
     template <auto fun, class... Args>
-    inline void entity_notify_change_all(auto& entities, auto& self, Args&&... args) {
+    inline void entity_notify_change_all(auto world, auto& entities, auto& self, Args&&... args) {
         auto chunk_x = convert_chunk_global_pos(self.position.x);
         auto chunk_z = convert_chunk_global_pos(self.position.z);
         for (auto& [id, entity] : entities) {
             auto processor = entity->const_data().processor;
-            if (entity->world_syncing_data && processor)
-                if (entity->world_syncing_data->processing_region.in_bounds((int64_t)chunk_x, (int64_t)chunk_z))
-                    ((*processor).*fun)(*entity, self, std::forward<Args>(args)...);
+            if (processor && entity->world_syncing_data.world == world)
+                if ((*processor).*fun)
+                    if (entity->world_syncing_data.processing_region.in_bounds((int64_t)chunk_x, (int64_t)chunk_z))
+                        ((*processor).*fun)(*entity, self, std::forward<Args>(args)...);
         }
     }
 
     template <auto fun, class... Args>
-    void entity_notify_change_w_e(auto& entities, auto& self, auto other_entity_id, Args&&... args) {
+    void entity_notify_change_w_e(auto world, auto& entities, auto& self, auto other_entity_id, Args&&... args) {
         auto other_entity_it = entities.find(other_entity_id);
         if (other_entity_it == entities.end())
             throw std::runtime_error("Entity not registered on world");
@@ -1060,21 +1185,23 @@ namespace copper_server::storage {
         auto& other_entity = other_entity_it->second;
         for (auto& [id, entity] : entities) {
             auto processor = entity->const_data().processor;
-            if (entity->world_syncing_data && processor)
-                if (entity->world_syncing_data->processing_region.in_bounds((int64_t)chunk_x, (int64_t)chunk_z))
-                    ((*processor).*fun)(*entity, self, other_entity, std::forward<Args>(args)...);
+            if (processor && entity->world_syncing_data.world == world)
+                if ((*processor).*fun)
+                    if (entity->world_syncing_data.processing_region.in_bounds((int64_t)chunk_x, (int64_t)chunk_z))
+                        ((*processor).*fun)(*entity, self, other_entity, std::forward<Args>(args)...);
         }
     }
 
     template <auto fun, class... Args>
-    void world_notify(auto& entities, auto x, auto z, Args&&... args) {
+    void world_notify(auto world, auto& entities, auto x, auto z, Args&&... args) {
         auto chunk_x = convert_chunk_global_pos(x);
         auto chunk_z = convert_chunk_global_pos(z);
         for (auto& [id, entity] : entities) {
             auto processor = entity->const_data().processor;
-            if (entity->world_syncing_data && processor) {
-                if (entity->world_syncing_data->processing_region.in_bounds(chunk_x, chunk_z))
-                    ((*processor).*fun)(*entity, std::forward<Args>(args)...);
+            if (processor && entity->world_syncing_data.world == world) {
+                if ((*processor).*fun)
+                    if (entity->world_syncing_data.processing_region.in_bounds(chunk_x, chunk_z))
+                        ((*processor).*fun)(*entity, std::forward<Args>(args)...);
             }
         }
     }
@@ -1088,8 +1215,8 @@ namespace copper_server::storage {
         auto chunk_z = convert_chunk_global_pos(self.position.z);
         for (auto& [id, entity] : entities) {
             auto processor = entity->const_data().processor;
-            if (entity->world_syncing_data && processor) {
-                if (entity->world_syncing_data->processing_region.in_bounds((int64_t)chunk_x, (int64_t)chunk_z))
+            if (processor && entity->world_syncing_data.world == this) {
+                if (entity->world_syncing_data.processing_region.in_bounds((int64_t)chunk_x, (int64_t)chunk_z))
                     processor->entity_init(*entity, self);
             }
         }
@@ -1099,39 +1226,41 @@ namespace copper_server::storage {
 
     void world_data::entity_teleport(base_objects::entity& self, util::VECTOR new_pos) {
         std::unique_lock lock(mutex);
-        entity_notify_change<&ew_processor::entity_teleport>(entities, self, new_pos);
+        entity_notify_change<&ew_processor::entity_teleport>(this, entities, self, new_pos);
         if (enable_entity_light_source_updates)
             get_light_processor()->process_entity_light_source(*this, self, new_pos);
     }
 
     void world_data::entity_move(base_objects::entity& self, util::VECTOR move) {
         std::unique_lock lock(mutex);
-        entity_notify_change<&ew_processor::entity_move>(entities, self, move);
+        entity_notify_change<&ew_processor::entity_move>(this, entities, self, move);
         if (enable_entity_light_source_updates)
             get_light_processor()->process_entity_light_source(*this, self, move);
     }
 
     void world_data::entity_look_changes(base_objects::entity& self, util::ANGLE_DEG new_rotation) {
         std::unique_lock lock(mutex);
-        entity_notify_change<&ew_processor::entity_look_changes>(entities, self, new_rotation);
+        entity_notify_change<&ew_processor::entity_look_changes>(this, entities, self, new_rotation);
         if (enable_entity_light_source_updates_include_rot)
             get_light_processor()->process_entity_light_source_rot(*this, self, new_rotation);
     }
 
     void world_data::entity_rotation_changes(base_objects::entity& self, util::ANGLE_DEG new_rotation) {
         std::unique_lock lock(mutex);
-        entity_notify_change<&ew_processor::entity_rotation_changes>(entities, self, new_rotation);
+        entity_notify_change<&ew_processor::entity_rotation_changes>(this, entities, self, new_rotation);
     }
 
     void world_data::entity_motion_changes(base_objects::entity& self, util::VECTOR new_motion) {
         std::unique_lock lock(mutex);
-        entity_notify_change<&ew_processor::entity_motion_changes>(entities, self, new_motion);
+        entity_notify_change<&ew_processor::entity_motion_changes>(this, entities, self, new_motion);
     }
 
     void world_data::entity_rides(base_objects::entity& self, size_t other_entity_id) {
-        std::unique_lock lock(mutex);
-        entities.at(other_entity_id)->ride_by_entity.push_back(entities.at(self.world_syncing_data->assigned_world_id));
-        entity_notify_change_w_e<&ew_processor::entity_rides>(entities, self, other_entity_id);
+        if (self.world_syncing_data.world == this) {
+            std::unique_lock lock(mutex);
+            entities.at(other_entity_id)->ride_by_entity.push_back(entities.at(self.world_syncing_data.assigned_world_id));
+            entity_notify_change_w_e<&ew_processor::entity_rides>(this, entities, self, other_entity_id);
+        }
     }
 
     void world_data::entity_leaves_ride(base_objects::entity& self, size_t other_entity_id) {
@@ -1139,61 +1268,61 @@ namespace copper_server::storage {
         entities.at(other_entity_id)->ride_by_entity.remove_if([&self](auto& it) {
             return &*it == &self;
         });
-        entity_notify_change_w_e<&ew_processor::entity_leaves_ride>(entities, self, other_entity_id);
+        entity_notify_change_w_e<&ew_processor::entity_leaves_ride>(this, entities, self, other_entity_id);
     }
 
     void world_data::entity_attach(base_objects::entity& self, size_t other_entity_id) {
         std::unique_lock lock(mutex);
-        entity_notify_change_w_e<&ew_processor::entity_attach>(entities, self, other_entity_id);
+        entity_notify_change_w_e<&ew_processor::entity_attach>(this, entities, self, other_entity_id);
     }
 
     void world_data::entity_detach(base_objects::entity& self, size_t other_entity_id) {
         std::unique_lock lock(mutex);
-        entity_notify_change_w_e<&ew_processor::entity_detach>(entities, self, other_entity_id);
+        entity_notify_change_w_e<&ew_processor::entity_detach>(this, entities, self, other_entity_id);
     }
 
     void world_data::entity_damage(base_objects::entity& self, float health, int32_t type_id, std::optional<util::VECTOR> pos) {
-        entity_notify_change_all<&ew_processor::entity_damage>(entities, self, health, type_id, pos);
+        entity_notify_change_all<&ew_processor::entity_damage>(this, entities, self, health, type_id, pos);
     }
 
     void world_data::entity_damage(base_objects::entity& self, float health, int32_t type_id, base_objects::entity_ref& source, std::optional<util::VECTOR> pos) {
-        entity_notify_change_all<&ew_processor::entity_damage_with_source>(entities, self, health, type_id, source, pos);
+        entity_notify_change_all<&ew_processor::entity_damage_with_source>(this, entities, self, health, type_id, source, pos);
     }
 
     void world_data::entity_damage(base_objects::entity& self, float health, int32_t type_id, base_objects::entity_ref& source, base_objects::entity_ref& source_direct, std::optional<util::VECTOR> pos) {
-        entity_notify_change_all<&ew_processor::entity_damage_with_sources>(entities, self, health, type_id, source, source_direct, pos);
+        entity_notify_change_all<&ew_processor::entity_damage_with_sources>(this, entities, self, health, type_id, source, source_direct, pos);
     }
 
     void world_data::entity_attack(base_objects::entity& self, size_t other_entity_id) {
         std::unique_lock lock(mutex);
-        entity_notify_change_w_e<&ew_processor::entity_attack>(entities, self, other_entity_id);
+        entity_notify_change_w_e<&ew_processor::entity_attack>(this, entities, self, other_entity_id);
     }
 
     void world_data::entity_iteract(base_objects::entity& self, size_t other_entity_id) {
         std::unique_lock lock(mutex);
-        entity_notify_change_w_e<&ew_processor::entity_iteract>(entities, self, other_entity_id);
+        entity_notify_change_w_e<&ew_processor::entity_iteract>(this, entities, self, other_entity_id);
     }
 
     void world_data::entity_iteract(base_objects::entity& self, int64_t x, int64_t y, int64_t z) {
         std::unique_lock lock(mutex);
-        entity_notify_block<&ew_processor::entity_iteract_block>(entities, self, x, y, z);
+        entity_notify_block<&ew_processor::entity_iteract_block>(this, entities, self, x, y, z);
     }
 
     void world_data::entity_break(base_objects::entity& self, int64_t x, int64_t y, int64_t z, uint8_t state) {
         if (state > 9)
             return;
         std::unique_lock lock(mutex);
-        entity_notify_block<&ew_processor::entity_break>(entities, self, x, y, z, state);
+        entity_notify_block<&ew_processor::entity_break>(this, entities, self, x, y, z, state);
     }
 
     void world_data::entity_cancel_break(base_objects::entity& self, int64_t x, int64_t y, int64_t z) {
         std::unique_lock lock(mutex);
-        entity_notify_block<&ew_processor::entity_cancel_break>(entities, self, x, y, z);
+        entity_notify_block<&ew_processor::entity_cancel_break>(this, entities, self, x, y, z);
     }
 
     void world_data::entity_finish_break(base_objects::entity& self, int64_t x, int64_t y, int64_t z) {
         std::unique_lock lock(mutex);
-        entity_notify_block<&ew_processor::entity_finish_break>(entities, self, x, y, z);
+        entity_notify_block<&ew_processor::entity_finish_break>(this, entities, self, x, y, z);
     }
 
     void world_data::entity_place(base_objects::entity& self, bool is_main_hand, int64_t x, int64_t y, int64_t z, base_objects::block block) {
@@ -1201,8 +1330,8 @@ namespace copper_server::storage {
         for (auto& [id, entity] : entities)
             if (&*entity != &self) {
                 auto processor = entity->const_data().processor;
-                if (entity->world_syncing_data && processor) {
-                    if (entity->world_syncing_data->processing_region.in_bounds(convert_chunk_global_pos(x), convert_chunk_global_pos(z)))
+                if (processor && entity->world_syncing_data.world == this) {
+                    if (entity->world_syncing_data.processing_region.in_bounds(convert_chunk_global_pos(x), convert_chunk_global_pos(z)))
                         processor->entity_place_block(*entity, self, is_main_hand, x, y, z, block);
                 }
             }
@@ -1213,8 +1342,8 @@ namespace copper_server::storage {
         for (auto& [id, entity] : entities)
             if (&*entity != &self) {
                 auto processor = entity->const_data().processor;
-                if (entity->world_syncing_data && processor) {
-                    if (entity->world_syncing_data->processing_region.in_bounds(convert_chunk_global_pos(x), convert_chunk_global_pos(z)))
+                if (processor && entity->world_syncing_data.world == this) {
+                    if (entity->world_syncing_data.processing_region.in_bounds(convert_chunk_global_pos(x), convert_chunk_global_pos(z)))
                         processor->entity_place_block_entity(self, *entity, is_main_hand, x, y, z, block);
                 }
             }
@@ -1222,59 +1351,59 @@ namespace copper_server::storage {
 
     void world_data::entity_animation(base_objects::entity& self, base_objects::entity_animation animation) {
         std::unique_lock lock(mutex);
-        entity_notify_change<&ew_processor::entity_animation>(entities, self, animation);
+        entity_notify_change<&ew_processor::entity_animation>(this, entities, self, animation);
     }
 
     void world_data::entity_event(base_objects::entity& self, base_objects::entity_event status) {
-        entity_notify_change<&ew_processor::entity_event>(entities, self, status);
+        entity_notify_change<&ew_processor::entity_event>(this, entities, self, status);
     }
 
     void world_data::entity_add_effect(base_objects::entity& self, uint32_t effect_id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) {
-        entity_notify_change_all<&ew_processor::entity_add_effect>(entities, self, effect_id, duration, amplifier, ambient, show_particles, show_icon, use_blend);
+        entity_notify_change_all<&ew_processor::entity_add_effect>(this, entities, self, effect_id, duration, amplifier, ambient, show_particles, show_icon, use_blend);
     }
 
     void world_data::entity_remove_effect(base_objects::entity& self, uint32_t effect_id) {
-        entity_notify_change_all<&ew_processor::entity_remove_effect>(entities, self, effect_id);
+        entity_notify_change_all<&ew_processor::entity_remove_effect>(this, entities, self, effect_id);
     }
 
     void world_data::entity_death(base_objects::entity& self) {
         std::unique_lock lock(mutex);
-        entity_notify_change<&ew_processor::entity_death>(entities, self);
+        entity_notify_change<&ew_processor::entity_death>(this, entities, self);
     }
 
     void world_data::entity_deinit(base_objects::entity& self) {
         std::unique_lock lock(mutex);
-        entity_notify_change<&ew_processor::entity_deinit>(entities, self);
+        entity_notify_change<&ew_processor::entity_deinit>(this, entities, self);
     }
 
     void world_data::notify_block_event(const base_objects::world::block_action& action, int64_t x, int64_t y, int64_t z) {
         std::unique_lock lock(mutex);
-        world_notify<&ew_processor::notify_block_event>(entities, x, z, action, x, y, z);
+        world_notify<&ew_processor::notify_block_event>(this, entities, x, z, action, x, y, z);
     }
 
     void world_data::notify_block_change(int64_t x, int64_t y, int64_t z, base_objects::block block) {
         std::unique_lock lock(mutex);
-        world_notify<&ew_processor::notify_block_change>(entities, x, z, x, y, z, block);
+        world_notify<&ew_processor::notify_block_change>(this, entities, x, z, x, y, z, block);
     }
 
     void world_data::notify_block_change(int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block) {
         std::unique_lock lock(mutex);
-        world_notify<&ew_processor::notify_block_entity_change>(entities, x, z, x, y, z, block);
+        world_notify<&ew_processor::notify_block_entity_change>(this, entities, x, z, x, y, z, block);
     }
 
     void world_data::notify_block_destroy_change(int64_t x, int64_t y, int64_t z, base_objects::block block) {
         std::unique_lock lock(mutex);
-        world_notify<&ew_processor::notify_block_destroy_change>(entities, x, z, x, y, z, block);
+        world_notify<&ew_processor::notify_block_destroy_change>(this, entities, x, z, x, y, z, block);
     }
 
     void world_data::notify_block_destroy_change(int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block) {
         std::unique_lock lock(mutex);
-        world_notify<&ew_processor::notify_block_entity_destroy_change>(entities, x, z, x, y, z, block);
+        world_notify<&ew_processor::notify_block_entity_destroy_change>(this, entities, x, z, x, y, z, block);
     }
 
     void world_data::notify_biome_change(int64_t x, int64_t y, int64_t z, uint32_t biome_id) {
         std::unique_lock lock(mutex);
-        world_notify<&ew_processor::notify_biome_change>(entities, x, z, x, y, z, biome_id);
+        world_notify<&ew_processor::notify_biome_change>(this, entities, x, z, x, y, z, biome_id);
     }
 
     void world_data::notify_sub_chunk(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z) {
@@ -1285,8 +1414,8 @@ namespace copper_server::storage {
             [this, chunk_x, chunk_y, chunk_z](auto& sub_chunk) {
                 for (auto& [id, entity] : entities) {
                     auto processor = entity->const_data().processor;
-                    if (entity->world_syncing_data && processor) {
-                        if (entity->world_syncing_data->processing_region.in_bounds(chunk_x, chunk_z))
+                    if (processor && entity->world_syncing_data.world == this) {
+                        if (entity->world_syncing_data.processing_region.in_bounds(chunk_x, chunk_z))
                             processor->notify_sub_chunk(*entity, chunk_x, chunk_y, chunk_z, sub_chunk);
                     }
                 }
@@ -1301,8 +1430,8 @@ namespace copper_server::storage {
             [this, chunk_x, chunk_z](auto& chunk) {
                 for (auto& [id, entity] : entities) {
                     auto processor = entity->const_data().processor;
-                    if (entity->world_syncing_data && processor) {
-                        if (entity->world_syncing_data->processing_region.in_bounds(chunk_x, chunk_z))
+                    if (processor && entity->world_syncing_data.world == this) {
+                        if (entity->world_syncing_data.processing_region.in_bounds(chunk_x, chunk_z))
                             processor->notify_chunk(*entity, chunk_x, chunk_z, chunk);
                     }
                 }
@@ -1318,8 +1447,8 @@ namespace copper_server::storage {
             [this, chunk_x, chunk_y, chunk_z](auto& sub_chunk) {
                 for (auto& [id, entity] : entities) {
                     auto processor = entity->const_data().processor;
-                    if (entity->world_syncing_data && processor) {
-                        if (entity->world_syncing_data->processing_region.in_bounds(chunk_x, chunk_z))
+                    if (processor && entity->world_syncing_data.world == this) {
+                        if (entity->world_syncing_data.processing_region.in_bounds(chunk_x, chunk_z))
                             processor->notify_sub_chunk_light(*entity, chunk_x, chunk_y, chunk_z, sub_chunk);
                     }
                 }
@@ -1334,8 +1463,8 @@ namespace copper_server::storage {
             [this, chunk_x, chunk_z](auto& chunk) {
                 for (auto& [id, entity] : entities) {
                     auto processor = entity->const_data().processor;
-                    if (entity->world_syncing_data && processor) {
-                        if (entity->world_syncing_data->processing_region.in_bounds(chunk_x, chunk_z))
+                    if (processor && entity->world_syncing_data.world == this) {
+                        if (entity->world_syncing_data.processing_region.in_bounds(chunk_x, chunk_z))
                             processor->notify_chunk_light(*entity, chunk_x, chunk_z, chunk);
                     }
                 }
@@ -1351,8 +1480,8 @@ namespace copper_server::storage {
             [this, chunk_x, chunk_y, chunk_z](auto& sub_chunk) {
                 for (auto& [id, entity] : entities) {
                     auto processor = entity->const_data().processor;
-                    if (entity->world_syncing_data && processor) {
-                        if (entity->world_syncing_data->processing_region.in_bounds(chunk_x, chunk_z))
+                    if (processor && entity->world_syncing_data.world == this) {
+                        if (entity->world_syncing_data.processing_region.in_bounds(chunk_x, chunk_z))
                             processor->notify_sub_chunk_blocks(*entity, chunk_x, chunk_y, chunk_z, sub_chunk);
                     }
                 }
@@ -1367,8 +1496,8 @@ namespace copper_server::storage {
             [this, chunk_x, chunk_z](auto& chunk) {
                 for (auto& [id, entity] : entities) {
                     auto processor = entity->const_data().processor;
-                    if (entity->world_syncing_data && processor) {
-                        if (entity->world_syncing_data->processing_region.in_bounds(chunk_x, chunk_z))
+                    if (processor && entity->world_syncing_data.world == this) {
+                        if (entity->world_syncing_data.processing_region.in_bounds(chunk_x, chunk_z))
                             processor->notify_chunk_blocks(*entity, chunk_x, chunk_z, chunk);
                     }
                 }
@@ -1417,6 +1546,58 @@ namespace copper_server::storage {
         }
     }
 
+    void world_data::tick_run_local_functions() {
+        //TODO get custom function tag #copper_server:tick/0 or #copper_server:load/overworld
+    }
+
+    void world_data::tick_broadcast_time() {
+        if (tick_counter % 20 == 0) {
+            for (auto& [id, entity] : entities) {
+                auto processor = entity->const_data().processor;
+                if (processor && entity->world_syncing_data.world == this) {
+                    if (processor->sync_time)
+                        processor->sync_time(*entity, time, day_time);
+                }
+            }
+        }
+    }
+
+    void world_data::tick_update_world_border() {
+        //TODO
+    }
+
+    void world_data::tick_update_weather() {
+        if (world_game_rules["doWeatherCycle"]) {
+            if (weather_time > 0){
+                --weather_time;
+                if (weather_time==0){
+                    current_weather = base_objects::weather::clear;
+                    sync_weather();
+                }
+            } else if (clear_weather_time > 0){
+                --clear_weather_time;
+            } else if (weather_time == 0 && clear_weather_time == 0) {
+                std::mt19937_64 gen(std::random_device{}());
+                std::uniform_int_distribution<uint16_t> dis_x(0, 1);
+                current_weather = dis_x(gen) ? base_objects::weather::rain : base_objects::weather::thunder;//TODO get real chances
+                sync_weather();
+            }
+        }
+    }
+
+    void world_data::tick_update_day_light() {
+        if (world_game_rules["doDaylightCycle"]) {
+            if (time / 24'000) {
+                day_time += time / 24'000;
+                time = 0;
+            } else
+                ++time;
+        }
+    }
+
+    void world_data::tick_run_local_scheduled_commands() {
+        //TODO
+    }
     template <class T>
     enbt::fixed_array to_fixed_array(const std::vector<T>& vec) {
         enbt::fixed_array _enabled_datapacks(vec.size());
@@ -1514,7 +1695,6 @@ namespace copper_server::storage {
         border_warning_time = load_from_nbt.at("border_warning_time");
         day_time = load_from_nbt.at("day_time");
         time = load_from_nbt.at("time");
-        random_tick_speed = load_from_nbt.at("random_tick_speed");
         ticks_per_second = load_from_nbt.at("ticks_per_second");
         portal_teleport_boundary = load_from_nbt.at("portal_teleport_boundary");
         ticking_frozen = load_from_nbt.at("ticking_frozen");
@@ -1596,7 +1776,6 @@ namespace copper_server::storage {
         world_data_file["border_warning_time"] = border_warning_time;
         world_data_file["day_time"] = day_time;
         world_data_file["time"] = time;
-        world_data_file["random_tick_speed"] = random_tick_speed;
         world_data_file["ticks_per_second"] = ticks_per_second;
         world_data_file["portal_teleport_boundary"] = portal_teleport_boundary;
         world_data_file["ticking_frozen"] = ticking_frozen;
@@ -1643,6 +1822,16 @@ namespace copper_server::storage {
         return (std::string)(std::string)senbt::parse(res)["world_name"];
     }
 
+    void world_data::sync_weather() {
+        std::unique_lock lock(mutex);
+        for (auto& [id, entity] : entities) {
+            auto processor = entity->const_data().processor;
+            if (processor && entity->world_syncing_data.world == this) {
+                if (processor->weather_change)
+                    processor->weather_change(*entity, weather_time, current_weather);
+            }
+        }
+    }
     world_data::world_data(int32_t world_id, const std::filesystem::path& path)
         : path(path), world_id(world_id) {
         world_game_rules["reducedDebugInfo"] = api::configuration::get().game_play.reduced_debug_screen;
@@ -2068,8 +2257,11 @@ namespace copper_server::storage {
 
     void world_data::for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func) {
         std::unique_lock lock(mutex);
-        for (auto& [x, entity] : entities)
-            func(entity);
+        for (auto& [id, entity] : entities) {
+            if (entity->current_world() == this)
+                if (entity->world_syncing_data.assigned_world_id == id)
+                    func(entity);
+        }
     }
 
     void world_data::for_each_entity(base_objects::cubic_bounds_chunk bounds, std::function<void(base_objects::entity_ref& entity)> func) {
@@ -2078,7 +2270,10 @@ namespace copper_server::storage {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
                 if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
                     if (chunk->second)
-                        chunk->second->for_each_entity(func);
+                        for (auto& [id, entity] : chunk->second->stored_entities)
+                            if (entity->current_world() == this)
+                                if (entity->world_syncing_data.assigned_world_id == id)
+                                    func(entity);
         });
     }
 
@@ -2088,7 +2283,10 @@ namespace copper_server::storage {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
                 if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
                     if (chunk->second)
-                        chunk->second->for_each_entity(func);
+                        for (auto& [id, entity] : chunk->second->stored_entities)
+                            if (entity->current_world() == this)
+                                if (entity->world_syncing_data.assigned_world_id == id)
+                                    func(entity);
         });
     }
 
@@ -2098,7 +2296,10 @@ namespace copper_server::storage {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
                 if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
                     if (chunk->second)
-                        chunk->second->for_each_entity(func);
+                        for (auto& [id, entity] : chunk->second->stored_entities)
+                            if (entity->current_world() == this)
+                                if (entity->world_syncing_data.assigned_world_id == id)
+                                    func(entity);
         });
     }
 
@@ -2108,7 +2309,10 @@ namespace copper_server::storage {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
                 if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
                     if (chunk->second)
-                        chunk->second->for_each_entity(func);
+                        for (auto& [id, entity] : chunk->second->stored_entities)
+                            if (entity->current_world() == this)
+                                if (entity->world_syncing_data.assigned_world_id == id)
+                                    func(entity);
         });
     }
 
@@ -2118,7 +2322,10 @@ namespace copper_server::storage {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
                 if (auto chunk = x_axis->second.find(z); chunk != x_axis->second.end())
                     if (chunk->second)
-                        chunk->second->for_each_entity(func);
+                        for (auto& [id, entity] : chunk->second->stored_entities)
+                            if (entity->current_world() == this)
+                                if (entity->world_syncing_data.assigned_world_id == id)
+                                    func(entity);
         });
     }
 
@@ -2127,7 +2334,10 @@ namespace copper_server::storage {
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
                 if (chunk->second)
-                    chunk->second->for_each_entity(func);
+                    for (auto& [id, entity] : chunk->second->stored_entities)
+                        if (entity->current_world() == this)
+                            if (entity->world_syncing_data.assigned_world_id == id)
+                                func(entity);
     }
 
     void world_data::for_each_block_entity(base_objects::cubic_bounds_chunk bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
@@ -2616,7 +2826,7 @@ namespace copper_server::storage {
     }
 
     void world_data::register_entity(base_objects::entity_ref& entity) {
-        if (entity->world_syncing_data)
+        if (entity->current_world() != nullptr)
             throw std::runtime_error("Entity already registered in another world");
         std::unique_lock lock(mutex);
         uint64_t id = local_entity_id_generator++;
@@ -2625,13 +2835,13 @@ namespace copper_server::storage {
 
         base_objects::cubic_bounds_chunk_radius processing_region((int64_t)entity->position.x, (int64_t)entity->position.z, entity->const_data().max_track_distance);
 
-        entity->world_syncing_data = std::make_optional<base_objects::entity::world_syncing>(
+        entity->world_syncing_data = base_objects::entity::world_syncing(
             bit_list_array(),
             processing_region,
             id,
             this
         );
-        entity->world_syncing_data->flush_processing();
+        entity->world_syncing_data.flush_processing();
         entities[id] = entity;
         to_load_entities[id] = entity;
         entity_init(*entity);
@@ -2641,16 +2851,12 @@ namespace copper_server::storage {
 
     void world_data::unregister_entity(base_objects::entity_ref& entity) {
         std::unique_lock lock(mutex);
-        if (entity->world_syncing_data) {
-            auto [x, y, z] = entity->position;
-            auto assigned_world_id = entity->world_syncing_data->assigned_world_id;
+        if (entity->current_world() == this) {
+            auto assigned_world_id = entity->world_syncing_data.assigned_world_id;
             entity_deinit(*entity);
             entities.erase(assigned_world_id);
             to_load_entities.erase(assigned_world_id);
-            entity->world_syncing_data = std::nullopt;
-            get_chunk_at((int64_t)x, (int64_t)z, [assigned_world_id](chunk_data& chunk) {
-                chunk.stored_entities.erase(assigned_world_id);
-            });
+            entity->world_syncing_data.world = nullptr;
         }
     }
 
@@ -2698,12 +2904,9 @@ namespace copper_server::storage {
                             expired = true;
                     } else if constexpr (std::is_same_v<T, base_objects::world::loading_point_ticket::entity_bound_ticket>) {
                         if (auto it = entities.find(expr.id); it != entities.end()) {
-                            if (it->second->world_syncing_data) {
-                                if (it->second->current_world() == this)
-                                    ticket.point = it->second->world_syncing_data->processing_region;
-                                else
-                                    expired = true;
-                            } else
+                            if (it->second->current_world() == this)
+                                ticket.point = it->second->world_syncing_data.processing_region;
+                            else
                                 expired = true;
                         } else
                             expired = true;
@@ -2770,63 +2973,248 @@ namespace copper_server::storage {
             for (auto id : loaded_entities)
                 to_load_entities.erase(id);
         }
-        lock.unlock();
         tick_counter++;
+        size_t random_tick_speed = world_game_rules["randomTickSpeed"];
         chunk_tick_result rr;
         if (!profiling.enable_world_profiling) {
+            tick_run_local_functions(); //tick/load
+            tick_broadcast_time();
+            tick_update_world_border();
+            tick_update_weather();
+            tick_update_day_light();
+            tick_run_local_scheduled_commands();
             to_tick_chunks.for_each([&](auto&& chunk) {
-                chunk->tick(rr, *this, random_tick_speed, random_engine, current_time);
+                chunk->tick_players_sleep(rr, *this);
                 for (auto id : rr.unrelated_entities)
                     entities.erase(id);
                 rr.unrelated_entities.clear();
             });
+            to_tick_chunks.for_each([&](auto&& chunk) {
+                chunk->tick_scheduled_blocks(rr, *this);
+            });
+            to_tick_chunks.for_each([&](auto&& chunk) {
+                chunk->tick_raid(rr, *this);
+            });
+            to_tick_chunks.for_each([&](auto&& chunk) {
+                chunk->tick_spawn_mobs(rr, *this);
+            });
+            to_tick_chunks.for_each([&](auto&& chunk) {
+                chunk->tick_ice_snow(rr, *this);
+            });
+            to_tick_chunks.for_each([&](auto&& chunk) {
+                chunk->tick_random_ticks(rr, *this, random_tick_speed, random_engine);
+            });
+            to_tick_chunks.for_each([&](auto&& chunk) {
+                chunk->tick_poi(rr, *this);
+                for (auto id : rr.unrelated_entities)
+                    entities.erase(id);
+                rr.unrelated_entities.clear();
+            });
+            to_tick_chunks.for_each([&](auto&& chunk) {
+                chunk->tick_block_event(rr, *this);
+            });
+            to_tick_chunks.for_each([&](auto&& chunk) {
+                chunk->tick_dragon(rr, *this);
+                for (auto id : rr.unrelated_entities)
+                    entities.erase(id);
+                rr.unrelated_entities.clear();
+            });
+            to_tick_chunks.for_each([&](auto&& chunk) {
+                chunk->tick_entity(rr, *this, random_engine);
+                for (auto id : rr.unrelated_entities)
+                    entities.erase(id);
+                rr.unrelated_entities.clear();
+            });
+            to_tick_chunks.for_each([&](auto&& chunk) {
+                chunk->tick_block_entity(rr, *this);
+            });
+            to_tick_chunks.for_each([&](auto&& chunk) {
+                chunk->tick_game_event(rr, *this);
+            });
+            lock.unlock();
         } else {
             profiling.chunk_target_to_load = target_load_count;
             const auto tick_speed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::duration<double>(1) / ticks_per_second);
-            auto tick_local_time = std::chrono::high_resolution_clock::now();
-            to_tick_chunks.for_each([&](auto&& chunk) {
-                chunk->tick(rr, *this, random_tick_speed, random_engine, current_time);
-                if (!profiling.chunk_removed_unrelated_entity)
+
+            tick_run_local_functions(); //tick/load
+            tick_broadcast_time();
+            tick_update_world_border();
+            tick_update_weather();
+            tick_update_day_light();
+            tick_run_local_scheduled_commands();
+            if (profiling.chunk_speedometer_callback || profiling.slow_chunk_tick_callback) {
+                auto tick_local_time = std::chrono::high_resolution_clock::now();
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_players_sleep(rr, *this);
                     for (auto id : rr.unrelated_entities)
                         entities.erase(id);
-                else
-                    for (auto id : rr.unrelated_entities) {
-                        auto entity = entities.find(id);
-                        profiling.chunk_removed_unrelated_entity(*this, chunk->chunk_x, chunk->chunk_z, id, entity != entities.end() ? entity->second : nullptr);
-                    }
-                rr.unrelated_entities.clear();
-
-                auto actual_time = std::chrono::high_resolution_clock::now();
-                auto current_tick_speed = std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
-                auto slow_chunk_threshold = tick_speed * profiling.slow_chunk_tick_callback_threshold;
-                if (slow_chunk_threshold < current_tick_speed)
+                    rr.unrelated_entities.clear();
+                    auto actual_time = std::chrono::high_resolution_clock::now();
+                    chunk->tick_speed = std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
+                    tick_local_time = actual_time;
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_scheduled_blocks(rr, *this);
+                    auto actual_time = std::chrono::high_resolution_clock::now();
+                    chunk->tick_speed += std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
+                    tick_local_time = actual_time;
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_raid(rr, *this);
+                    auto actual_time = std::chrono::high_resolution_clock::now();
+                    chunk->tick_speed += std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
+                    tick_local_time = actual_time;
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_spawn_mobs(rr, *this);
+                    auto actual_time = std::chrono::high_resolution_clock::now();
+                    chunk->tick_speed += std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
+                    tick_local_time = actual_time;
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_ice_snow(rr, *this);
+                    auto actual_time = std::chrono::high_resolution_clock::now();
+                    chunk->tick_speed += std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
+                    tick_local_time = actual_time;
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_random_ticks(rr, *this, random_tick_speed, random_engine);
+                    auto actual_time = std::chrono::high_resolution_clock::now();
+                    chunk->tick_speed += std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
+                    tick_local_time = actual_time;
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_poi(rr, *this);
+                    for (auto id : rr.unrelated_entities)
+                        entities.erase(id);
+                    rr.unrelated_entities.clear();
+                    auto actual_time = std::chrono::high_resolution_clock::now();
+                    chunk->tick_speed += std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
+                    tick_local_time = actual_time;
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_block_event(rr, *this);
+                    auto actual_time = std::chrono::high_resolution_clock::now();
+                    chunk->tick_speed += std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
+                    tick_local_time = actual_time;
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_dragon(rr, *this);
+                    for (auto id : rr.unrelated_entities)
+                        entities.erase(id);
+                    rr.unrelated_entities.clear();
+                    auto actual_time = std::chrono::high_resolution_clock::now();
+                    chunk->tick_speed += std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
+                    tick_local_time = actual_time;
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_entity(rr, *this, random_engine);
+                    for (auto id : rr.unrelated_entities)
+                        entities.erase(id);
+                    rr.unrelated_entities.clear();
+                    auto actual_time = std::chrono::high_resolution_clock::now();
+                    chunk->tick_speed += std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
+                    tick_local_time = actual_time;
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_block_entity(rr, *this);
+                    auto actual_time = std::chrono::high_resolution_clock::now();
+                    chunk->tick_speed += std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
+                    tick_local_time = actual_time;
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_game_event(rr, *this);
+                    auto actual_time = std::chrono::high_resolution_clock::now();
+                    chunk->tick_speed += std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
+                    tick_local_time = actual_time;
+                });
+            } else {
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_players_sleep(rr, *this);
+                    for (auto id : rr.unrelated_entities)
+                        entities.erase(id);
+                    rr.unrelated_entities.clear();
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_scheduled_blocks(rr, *this);
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_raid(rr, *this);
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_spawn_mobs(rr, *this);
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_ice_snow(rr, *this);
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_random_ticks(rr, *this, random_tick_speed, random_engine);
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_poi(rr, *this);
+                    for (auto id : rr.unrelated_entities)
+                        entities.erase(id);
+                    rr.unrelated_entities.clear();
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_block_event(rr, *this);
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_dragon(rr, *this);
+                    for (auto id : rr.unrelated_entities)
+                        entities.erase(id);
+                    rr.unrelated_entities.clear();
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_entity(rr, *this, random_engine);
+                    for (auto id : rr.unrelated_entities)
+                        entities.erase(id);
+                    rr.unrelated_entities.clear();
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_block_entity(rr, *this);
+                });
+                to_tick_chunks.for_each([&](auto&& chunk) {
+                    chunk->tick_game_event(rr, *this);
+                });
+            }
+            if (!profiling.sync_profiling)
+                lock.unlock();
+            if (profiling.chunk_speedometer_callback || profiling.slow_chunk_tick_callback)
+                to_tick_chunks.for_each([&, slow_chunk_threshold = tick_speed * profiling.slow_chunk_tick_callback_threshold](auto&& chunk) {
                     if (profiling.slow_chunk_tick_callback)
-                        profiling.slow_chunk_tick_callback(*this, chunk->chunk_x, chunk->chunk_z, current_tick_speed);
-                tick_local_time = actual_time;
-                if (profiling.chunk_speedometer_callback)
-                    profiling.chunk_speedometer_callback(*this, chunk->chunk_x, chunk->chunk_z, current_tick_speed);
-            });
+                        if (slow_chunk_threshold < chunk->tick_speed)
+                            profiling.slow_chunk_tick_callback(*this, chunk->chunk_x, chunk->chunk_z, chunk->tick_speed);
+                    if (profiling.chunk_speedometer_callback)
+                        profiling.chunk_speedometer_callback(*this, chunk->chunk_x, chunk->chunk_z, chunk->tick_speed);
+                });
             if (profiling.chunk_speedometer_callback)
                 profiling.chunk_speedometer_callback(*this, INT64_MAX, INT64_MAX, std::chrono::milliseconds(0));
-            ++profiling.got_ticks;
+
+            auto tick_local_time = std::chrono::high_resolution_clock::now();
             auto current_tick_speed = tick_local_time - current_time;
-            if (tick_local_time - profiling.last_tick >= std::chrono::seconds(1)) {
-                auto elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(tick_local_time - profiling.last_tick).count();
-                profiling.tps_for_world = profiling.got_ticks / elapsed;
-                if (profiling.got_tps_update)
+            if (profiling.got_tps_update) {
+                ++profiling.got_ticks;
+                if (tick_local_time - profiling.last_tick >= std::chrono::seconds(1)) {
+                    auto elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(tick_local_time - profiling.last_tick).count();
+                    profiling.tps_for_world = profiling.got_ticks / elapsed;
                     profiling.got_tps_update(*this);
-                profiling.last_tick = tick_local_time;
-                profiling.got_ticks = 0;
+                    profiling.last_tick = tick_local_time;
+                    profiling.got_ticks = 0;
+                }
             }
 
-            auto slow_world_threshold = tick_speed * profiling.slow_world_tick_callback_threshold;
-            if (slow_world_threshold < current_tick_speed)
-                if (profiling.slow_world_tick_callback)
+            if (profiling.slow_world_tick_callback) {
+                auto slow_world_threshold = tick_speed * profiling.slow_world_tick_callback_threshold;
+                if (slow_world_threshold < current_tick_speed)
                     profiling.slow_world_tick_callback(*this, std::chrono::duration_cast<std::chrono::milliseconds>(current_tick_speed));
+            }
         }
-        if (tick_counter % api::configuration::get().world.auto_save == 0) {
-            save_chunks();
-        }
+
+        auto as = api::configuration::get().world.auto_save;
+        if (as)
+            if (tick_counter % as == 0)
+                save_chunks();
     }
 
     bool world_data::collect_unused_data(std::chrono::high_resolution_clock::time_point current_time, size_t& unload_limit) {

@@ -8,6 +8,7 @@
  */
 #include <src/api/client.hpp>
 #include <src/api/command.hpp>
+#include <src/api/configuration.hpp>
 #include <src/api/entity_id_map.hpp>
 #include <src/api/players.hpp>
 #include <src/api/world.hpp>
@@ -20,7 +21,23 @@ namespace copper_server::build_in_plugins {
     //handles clients with play state, allows players to access world and other things through api
     class PlayEngine : public PluginAutoRegister<"base/play_engine", PlayEngine> {
         fast_task::task_mutex messages_order;
-        list_array<std::array<uint8_t, 256>> lastset_messages;
+        list_array<std::variant<int32_t, std::array<uint8_t, 256>>> latest_messages;
+
+        void add_message(std::array<uint8_t, 256>&& val) {
+            latest_messages.push_back(std::move(val));
+            if (latest_messages.size() > 20)
+                latest_messages.pop_front();
+        }
+
+        void add_message(int32_t val) {
+            latest_messages.push_back(std::move(val));
+            if (latest_messages.size() > 20)
+                latest_messages.pop_front();
+        }
+
+        bool signature_check() {
+            return true;
+        }
 
         static std::shared_ptr<base_objects::entity_data::world_processor> make_processor() {
             base_objects::entity_data::world_processor proc;
@@ -281,7 +298,7 @@ namespace copper_server::build_in_plugins {
             proc.notify_biome_change = [](base_objects::entity& self, int64_t x, [[maybe_unused]] int64_t y, int64_t z, [[maybe_unused]] uint32_t biome_id) {
                 if (self.assigned_player) {
                     if (self.current_world()) {
-                        if (self.get_syncing_data().chunk_processed(x, z))
+                        if (self.world_syncing_data.chunk_processed(x, z))
                             self.current_world()->get_chunk_at(x, z, [&self](storage::chunk_data& chunk) {
                                 *self.assigned_player << api::client::play::chunks_biomes::create(chunk);
                             });
@@ -290,7 +307,7 @@ namespace copper_server::build_in_plugins {
             };
             proc.notify_block_change = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, const base_objects::block& block) {
                 if (self.assigned_player) {
-                    if (self.get_syncing_data().chunk_processed(x, z))
+                    if (self.world_syncing_data.chunk_processed(x, z))
                         *self.assigned_player << api::client::play::block_update{
                             .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                             .block = block.id
@@ -300,7 +317,7 @@ namespace copper_server::build_in_plugins {
             proc.notify_block_destroy_change = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, const base_objects::block& block) {
                 if (self.assigned_player)
                     if (self.current_world()) {
-                        if (self.get_syncing_data().chunk_processed(x, z)) {
+                        if (self.world_syncing_data.chunk_processed(x, z)) {
                             int32_t block_id = 0;
                             self.current_world()->get_block(
                                 x,
@@ -328,7 +345,7 @@ namespace copper_server::build_in_plugins {
             };
             proc.notify_block_entity_change = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block_entity) {
                 if (self.assigned_player) {
-                    if (self.get_syncing_data().chunk_processed(x, z)) {
+                    if (self.world_syncing_data.chunk_processed(x, z)) {
                         *self.assigned_player << api::client::play::block_update{
                             .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                             .block = block_entity.block.id
@@ -344,7 +361,7 @@ namespace copper_server::build_in_plugins {
             proc.notify_block_entity_destroy_change = [](base_objects::entity& self, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block_entity) {
                 if (self.assigned_player)
                     if (self.current_world()) {
-                        if (self.get_syncing_data().chunk_processed(x, z)) {
+                        if (self.world_syncing_data.chunk_processed(x, z)) {
                             int32_t block_id = 0;
                             self.current_world()->get_block(
                                 x,
@@ -372,7 +389,7 @@ namespace copper_server::build_in_plugins {
             };
             proc.notify_block_event = [](base_objects::entity& self, const base_objects::world::block_action& action, int64_t x, int64_t y, int64_t z) {
                 if (self.assigned_player) {
-                    if (self.get_syncing_data().chunk_processed(x, z)) {
+                    if (self.world_syncing_data.chunk_processed(x, z)) {
                         std::visit(
                             [x, y, z, &self](auto& it) mutable {
                                 using T = std::decay_t<decltype(it)>;
@@ -468,36 +485,36 @@ namespace copper_server::build_in_plugins {
                 }
             };
             proc.notify_chunk = [](base_objects::entity& self, int64_t x, int64_t z, const storage::chunk_data& chunk) {
-                if (self.assigned_player) {
-                    if (self.get_syncing_data().chunk_in_bounds(x, z)) {
-                        //TODO implement batching
-                        *self.assigned_player << api::client::play::level_chunk_with_light::create(chunk, *self.current_world());
-                        self.get_syncing_data().mark_chunk(x, z, true);
-                    }
-                }
+                //if (self.assigned_player) {
+                //    if (self.world_syncing_data.chunk_in_bounds(x, z)) {
+                //        //TODO implement batching
+                //        *self.assigned_player << api::client::play::level_chunk_with_light::create(chunk, *self.current_world());
+                //        self.world_syncing_data.mark_chunk(x, z, true);
+                //    }
+                //}
             };
             proc.notify_chunk_blocks = [](base_objects::entity& self, int64_t x, int64_t z, const storage::chunk_data& chunk) {
                 if (self.assigned_player) {
-                    if (self.get_syncing_data().chunk_in_bounds(x, z)) {
+                    if (self.world_syncing_data.chunk_in_bounds(x, z)) {
                         //TODO implement batching
                         *self.assigned_player << api::client::play::level_chunk_with_light::create(chunk, *self.current_world());
-                        self.get_syncing_data().mark_chunk(x, z, true);
+                        self.world_syncing_data.mark_chunk(x, z, true);
                     }
                 }
             };
             proc.notify_chunk_light = [](base_objects::entity& self, int64_t x, int64_t z, const storage::chunk_data& chunk) {
                 if (self.assigned_player)
-                    if (self.get_syncing_data().chunk_in_bounds(x, z))
+                    if (self.world_syncing_data.chunk_in_bounds(x, z))
                         *self.assigned_player << api::client::play::light_update::create(chunk);
             };
             proc.notify_sub_chunk = [](base_objects::entity& self, int64_t x, [[maybe_unused]] int64_t y, int64_t z, [[maybe_unused]] const base_objects::world::sub_chunk_data& chunk) {
                 if (self.assigned_player) {
-                    if (self.get_syncing_data().chunk_in_bounds(x, z)) {
+                    if (self.world_syncing_data.chunk_in_bounds(x, z)) {
                         if (self.current_world()) {
                             self.current_world()->get_chunk_at(x, z, [&](auto& chunk) {
                                 //TODO implement batching
                                 *self.assigned_player << api::client::play::level_chunk_with_light::create(chunk, *self.current_world());
-                                self.get_syncing_data().mark_chunk(x, z, true);
+                                self.world_syncing_data.mark_chunk(x, z, true);
                             });
                         }
                     }
@@ -505,12 +522,12 @@ namespace copper_server::build_in_plugins {
             };
             proc.notify_sub_chunk_blocks = [](base_objects::entity& self, int64_t x, [[maybe_unused]] int64_t y, int64_t z, [[maybe_unused]] const base_objects::world::sub_chunk_data& chunk) { //TODO use api::client::play::section_blocks_update
                 if (self.assigned_player) {
-                    if (self.get_syncing_data().chunk_in_bounds(x, z)) {
+                    if (self.world_syncing_data.chunk_in_bounds(x, z)) {
                         if (self.current_world()) {
                             self.current_world()->get_chunk_at(x, z, [&](auto& chunk) {
                                 //TODO implement batching
                                 *self.assigned_player << api::client::play::level_chunk_with_light::create(chunk, *self.current_world());
-                                self.get_syncing_data().mark_chunk(x, z, true);
+                                self.world_syncing_data.mark_chunk(x, z, true);
                             });
                         }
                     }
@@ -518,7 +535,7 @@ namespace copper_server::build_in_plugins {
             };
             proc.notify_sub_chunk_light = [](base_objects::entity& self, int64_t x, [[maybe_unused]] int64_t y, int64_t z, [[maybe_unused]] const base_objects::world::sub_chunk_data& chunk) {
                 if (self.assigned_player) {
-                    if (self.get_syncing_data().chunk_in_bounds(x, z)) {
+                    if (self.world_syncing_data.chunk_in_bounds(x, z)) {
                         if (self.current_world()) {
                             self.current_world()->get_chunk_at(x, z, [&](auto& chunk) {
                                 *self.assigned_player << api::client::play::light_update::create(chunk);
@@ -544,7 +561,7 @@ namespace copper_server::build_in_plugins {
                             .sea_level = new_world.world_generator_data.contains("sea_level") ? (bool)new_world.world_generator_data["sea_level"] : 60,
                             .flags = api::client::play::respawn::keep_attributes | api::client::play::respawn::keep_metadata
                         };
-                        self.get_syncing_data().flush_processing();
+                        self.world_syncing_data.flush_processing();
                     }
                 }
             };
@@ -560,13 +577,13 @@ namespace copper_server::build_in_plugins {
                         }
                         //TODO implement batching
                         bool make_tick = false;
-                        self.get_syncing_data().for_each_processing([&](int64_t chunk_x, int64_t chunk_z, bool loaded) {
-                            if (!loaded) {
+                        self.world_syncing_data.for_each_processing([&](int64_t chunk_x, int64_t chunk_z, bool loaded) {
+                            if (!loaded && self.current_world()) {
                                 auto chunk = self.current_world()->request_chunk_data_weak(chunk_x, chunk_z);
                                 if (chunk) {
                                     if ((*chunk)->generator_stage == 0xFF) {
                                         *self.assigned_player << api::client::play::level_chunk_with_light::create(**chunk, *self.current_world());
-                                        self.get_syncing_data().mark_chunk(chunk_x, chunk_z, true);
+                                        self.world_syncing_data.mark_chunk(chunk_x, chunk_z, true);
                                     }
                                 }
                             } else
@@ -575,22 +592,22 @@ namespace copper_server::build_in_plugins {
                         if (make_tick) {
                             if (!self.assigned_player->packets_state.is_play_fully_initialized) {
                                 self.assigned_player->packets_state.is_play_fully_initialized = true;
-                                auto& p_data = self.assigned_player->player_data;
-                                auto [yaw, pitch] = util::to_yaw_pitch(p_data.assigned_entity->rotation);
+                                auto [yaw, pitch] = util::to_yaw_pitch(self.rotation);
                                 *self.assigned_player << api::client::play::player_position{
-                                    .x = p_data.assigned_entity->position.x,
-                                    .y = p_data.assigned_entity->position.y,
-                                    .z = p_data.assigned_entity->position.z,
-                                    .velocity_x = p_data.assigned_entity->motion.x,
-                                    .velocity_y = p_data.assigned_entity->motion.y,
-                                    .velocity_z = p_data.assigned_entity->motion.z,
+                                    .x = self.position.x,
+                                    .y = self.position.y,
+                                    .z = self.position.z,
+                                    .velocity_x = self.motion.x,
+                                    .velocity_y = self.motion.y,
+                                    .velocity_z = self.motion.z,
                                     .yaw = (float)yaw,
                                     .pitch = (float)pitch,
                                     .flags = api::packets::teleport_flags{}
                                 };
                             }
-                            if (!self.current_world()->ticking_frozen)
-                                *self.assigned_player << api::client::play::ticking_step{.steps = 1};
+                            if (self.current_world())
+                                if (!self.current_world()->ticking_frozen)
+                                    *self.assigned_player << api::client::play::ticking_step{.steps = 1};
                         }
                     }
                 }
@@ -636,6 +653,94 @@ namespace copper_server::build_in_plugins {
                     };
                 }
             });
+            register_packet_processor([](api::packets::server_bound::play::chat_session_update&& packet, base_objects::SharedClientData& client) {
+                using piu = api::client::play::player_info_update;
+                piu new_data;
+                new_data.actions.push(piu::header{client.data->uuid});
+                new_data.actions.push(
+                    piu::initialize_chat{
+                        .chat_session_id = packet.uuid,
+                        .pub_key_expiries_timestamp = packet.expiries_at,
+                        .public_key = packet.public_key,
+                        .public_signature = packet.key_signature
+                    }
+                );
+                api::players::iterate_online([&new_data, &client](base_objects::SharedClientData& oclient) {
+                    if (&oclient != &client)
+                        oclient << piu{new_data};
+                    return false;
+                });
+            });
+            register_packet_processor([this](api::packets::server_bound::play::chat&& packet, base_objects::SharedClientData& client) {
+                if (client.chat_mode != base_objects::SharedClientData::ChatMode::ENABLED) {
+                    //TODO notchain server allows to send if chat_mode == COMMANDS_ONLY, add setting to allow it
+                    static Chat ch = []() {
+                        Chat res;
+                        res.SetTranslation("chat.disabled.options");
+                        return res;
+                    }();
+                    client << api::packets::client_bound::play::system_chat{.content = ch};
+                    return;
+                }
+                bool allow_chat_reports = !api::configuration::get().server.prevent_chat_reports;
+                std::unique_lock lock(messages_order);
+                if (api::configuration::get().mojang.enforce_secure_profile)
+                    if (!signature_check()) //TODO
+                        return;
+                api::packets::client_bound::play::player_chat msg;
+                static int32_t glob_index = 0;
+                msg.global_index = glob_index++;
+                msg.sender = client.data->uuid;
+                if (allow_chat_reports)
+                    msg.signature = packet.signature;
+                msg.message = std::move(packet.message);
+                msg.timestamp = packet.timestamp;
+                msg.salt = packet.salt;
+                if (allow_chat_reports) {
+                    msg.previous_messages.reserve(latest_messages.size());
+                    for (auto& it : latest_messages) {
+                        std::visit(
+                            [&]<class T>(T& item) {
+                                if constexpr (std::is_same_v<T, int32_t>)
+                                    msg.previous_messages.push_back({.message_id_or_signature = {item + 1}});
+                                else
+                                    msg.previous_messages.push_back({.message_id_or_signature = {0, item}});
+                            },
+                            it
+                        );
+                    }
+                }
+                //TODO api call to modify unsigned content
+                //msg.unsigned_content = {packet.message};
+
+                //TODO add filter
+                msg.filter = api::packets::client_bound::play::player_chat::no_filter{};
+                msg.sender_name = client.name; //TODO add api call to add custom names
+                msg.type = base_objects::var_int32::chat_type{"minecraft:chat"};
+
+                if (allow_chat_reports) {
+                    if (packet.signature)
+                        add_message(std::move(*packet.signature));
+                    else
+                        add_message(msg.global_index); //is there should be global or local id?
+                }
+
+                api::players::iterate_online([&msg, &client](base_objects::SharedClientData& oclient) {
+                    if (oclient.chat_mode == base_objects::SharedClientData::ChatMode::ENABLED) {
+                        api::packets::client_bound::play::player_chat personal{msg};
+                        personal.index = oclient.packets_state.local_chat_counter++;
+                        oclient << std::move(personal);
+                    }
+                    return false;
+                });
+            });
+
+            register_packet_processor([]([[maybe_unused]] api::packets::server_bound::play::chat_ack&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+                //TODO
+            });
+            register_packet_processor([]([[maybe_unused]] api::packets::server_bound::play::chat_command_signed&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+                //TODO
+            });
         }
 
         void OnCommandsLoadComplete(const std::shared_ptr<PluginRegistration>&, base_objects::command_root_browser& root) override {
@@ -646,13 +751,10 @@ namespace copper_server::build_in_plugins {
             });
         }
 
-        void PlayerJoined(base_objects::SharedClientData& client_ref) override {
+        static void push_player_info_action(api::client::play::player_info_update& res, base_objects::SharedClientData& client_ref) {
             using piu = api::client::play::player_info_update;
-            base_objects::network::response response = base_objects::network::response::empty();
-
-            list_array<piu::action> all_players;
-            piu::action new_player;
-            new_player.set(
+            res.actions.push(piu::header{client_ref.data->uuid});
+            res.actions.push(
                 piu::add_player{
                     .name = client_ref.name,
                     .properties
@@ -666,32 +768,28 @@ namespace copper_server::build_in_plugins {
                           })
                 }
             );
-            all_players.push_back(new_player);
+            res.actions.push(piu::listed{.should = client_ref.allow_server_listings});
+            res.actions.push(piu::set_gamemode{.gamemode = client_ref.player_data.gamemode});
+            res.actions.push(piu::set_hat_visible{.visible = client_ref.skin_parts.data.hat_enabled});
+            res.actions.push(piu::set_ping{.milliseconds = (int32_t)client_ref.ping.count()});
+        }
 
+        void OnPlay_pre_initialize(base_objects::SharedClientData& client_ref) override {
+            using piu = api::client::play::player_info_update;
+            base_objects::network::response response = base_objects::network::response::empty();
+
+            piu all_players;
+            piu new_player;
+            push_player_info_action(new_player, client_ref);
             api::players::iterate_online([&new_player, &all_players, &client_ref](base_objects::SharedClientData& client) {
                 if (&client != &client_ref && !client.is_virtual) {
-                    piu::action act;
-                    act.set(
-                        piu::add_player{
-                            .name = client.name,
-                            .properties
-                            = to_list_array(client.data->properties)
-                                  .convert_fn([](auto&& mojang) {
-                                      return piu::add_player::property{
-                                          .name = std::move(mojang.name),
-                                          .value = std::move(mojang.value),
-                                          .signature = std::move(mojang.signature)
-                                      };
-                                  })
-                        }
-                    );
-                    all_players.push_back(std::move(act));
-                    client << piu{.actions{new_player}};
+                    push_player_info_action(all_players, client);
+                    client << piu{new_player};
                 }
                 return false;
             });
-            client_ref << piu{.actions{all_players.take()}};
-            client_ref << piu{.actions{std::move(new_player)}};
+            client_ref << std::move(all_players);
+            client_ref << std::move(new_player);
         }
 
         void PlayerLeave(base_objects::SharedClientData& client_ref) override {

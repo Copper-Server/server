@@ -30,7 +30,7 @@ namespace copper_server::api::configuration {
             std::string saving_mode = "zstd"; //allowed modes is 'zstd' and 'raw'
 
             size_t unload_speed = 10; //max 10 chunks per tick and per world
-            size_t auto_save = 6000;
+            size_t auto_save = 6000;  //0 to disable
 
             struct {
                 int64_t x = 0;
@@ -61,12 +61,33 @@ namespace copper_server::api::configuration {
             uint32_t player_idle_timeout = 2000; //ms
             bool hardcore = false;
             bool pvp = true;
-            bool spawn_animals = true;
-            bool spawn_monsters = true;
             bool allow_flight = true;
             bool sync_chunk_writes = false;
             bool enable_command_block = false;
             bool reduced_debug_screen = false;
+
+            struct {
+                bool spawn_animals = true;
+                bool spawn_monsters = true;
+                double enable_spawners = 16;
+                double spawn_mobs_in_range = 24;
+                double tick_mobs_in_range = 32;
+                double despawn_mobs_outside = 128;
+
+                struct {
+                    uint32_t despawn_after_inactivity = 30 * 20;
+                    uint32_t high_light_penalty = 2; //1 + 2
+                    float despawn_chance = 1.0f / 800;
+                    uint8_t high_light_value = 12;
+                } despawn{};
+
+                struct { //
+                    double enable_spawners = 16 * 16;
+                    double spawn_mobs_in_range = 24 * 24;
+                    double tick_mobs_in_range = 32 * 32;
+                    double despawn_mobs_outside = 128 * 128;
+                } /*[[computed_from(entity)]] [runtime]*/ squared_values{};
+            } entity{};
         } game_play;
 
         struct Protocol {

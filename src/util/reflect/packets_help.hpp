@@ -747,6 +747,28 @@ template<class ValueType, class... Ty, class FN>constexpr void for_each_field_wi
 }
 template<class ValueType, class... Ty, class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::enum_switch<ValueType, Ty...>& obj, [[maybe_unused]] FN&& fn){
 }
+template<class header, class... Ty, class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::enum_set<header, Ty...>& obj, [[maybe_unused]] FN&& fn){
+  fn(obj.values);
+}
+template<class header, class... Ty, class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::enum_set<header, Ty...>& obj, [[maybe_unused]] FN&& fn){
+  fn(obj.values);
+}
+template<class header, class... Ty>struct for_each_type_s<copper_server::base_objects::enum_set<header, Ty...>> {
+template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
+  fn.template operator()<decltype(std::declval<copper_server::base_objects::enum_set<header, Ty...>>().values)>();
+}
+};
+template<class header, class... Ty>struct for_each_type_with_name_s<copper_server::base_objects::enum_set<header, Ty...>> {
+template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
+  fn.template operator()<decltype(std::declval<copper_server::base_objects::enum_set<header, Ty...>>().values)>("values");
+}
+};
+template<class header, class... Ty, class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::base_objects::enum_set<header, Ty...>& obj, [[maybe_unused]] FN&& fn){
+  fn(obj.values, "values");
+}
+template<class header, class... Ty, class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::enum_set<header, Ty...>& obj, [[maybe_unused]] FN&& fn){
+  fn(obj.values, "values");
+}
 template<class flag_type, class... Ty, class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::flags_list<flag_type, Ty...>& obj, [[maybe_unused]] FN&& fn){
   fn(obj.flag);
   fn(obj.values);

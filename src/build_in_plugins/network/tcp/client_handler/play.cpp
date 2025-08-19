@@ -235,7 +235,12 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 };
                 client << api::client::play::set_held_slot{.slot = client.player_data.assigned_entity->get_selected_item()};
                 client.player_data.assigned_entity->set_experience(client.player_data.assigned_entity->get_experience());
+                pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::play, [&](auto&& plugin) {
+                    plugin->OnPlay_pre_initialize(client);
+                });
+
                 api::world::register_entity(world_id, client.player_data.assigned_entity);
+                client.player_data.assigned_entity->world_syncing_data.update_render_distance(client.view_distance);
 
 
                 for (auto& plugin : client.compatible_plugins)
@@ -290,24 +295,6 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 //TODO
             });
 
-            register_packet_processor([]([[maybe_unused]] chat_ack&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-
-            //register_packet_processor([](chat_command&& packet, base_objects::SharedClientData& client) { //processed by play_engine
-            //});
-
-            register_packet_processor([]([[maybe_unused]] chat_command_signed&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-
-            register_packet_processor([]([[maybe_unused]] chat&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-
-            register_packet_processor([]([[maybe_unused]] chat_session_update&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
 
             register_packet_processor([]([[maybe_unused]] chunk_batch_received&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
@@ -338,7 +325,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 client.particle_status = (base_objects::SharedClientData::ParticleStatus)packet.particle_status.get();
 
                 if (client.player_data.assigned_entity)
-                    client.player_data.assigned_entity->get_syncing_data().update_render_distance(client.view_distance);
+                    client.player_data.assigned_entity->world_syncing_data.update_render_distance(client.view_distance);
             });
 
             register_packet_processor([](command_suggestion&& packet, base_objects::SharedClientData& client) {

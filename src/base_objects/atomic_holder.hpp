@@ -26,6 +26,8 @@ namespace copper_server::base_objects {
                 if (--(*ref_count) == 0) {
                     delete ref_count;
                     delete data;
+                    data = nullptr;
+                    ref_count = nullptr;
                 }
             }
         }

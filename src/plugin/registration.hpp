@@ -245,6 +245,8 @@ namespace copper_server {
 
         virtual void OnPlayCookie(const std::shared_ptr<PluginRegistration>&, const std::string&, const list_array<uint8_t>&, base_objects::SharedClientData&) {}
 
+        virtual void OnPlay_pre_initialize(base_objects::SharedClientData&) {} //world is not available
+
         virtual void OnPlay_initialize(base_objects::SharedClientData&) {}
 
         virtual void OnPlay_initialize_compatible(base_objects::SharedClientData&) {}

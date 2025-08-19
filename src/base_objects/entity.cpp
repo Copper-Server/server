@@ -93,8 +93,9 @@ namespace copper_server {
         entity::entity() {}
 
         entity::~entity() {}
+
         storage::world_data* entity::current_world() const {
-            return world_syncing_data ? world_syncing_data->world : nullptr;
+            return world_syncing_data.world;
         }
 
         entity_ref entity::copy() const {
@@ -117,8 +118,9 @@ namespace copper_server {
             res["entity_id"] = entity_id;
             res["id"] = id;
             res["died"] = died;
-            if (world_syncing_data)
-                res["bound_world"] = world_syncing_data->world->world_name;
+
+            if (world_syncing_data.world)
+                res["bound_world"] = world_syncing_data.world->world_name;
 
             if (inventory.size()) {
                 enbt::compound inventory_enbt;
@@ -260,19 +262,17 @@ namespace copper_server {
         }
 
         void entity::tick() {
-            if (world_syncing_data) {
-                if (attached_to)
-                    resolve_entity(*attached_to);
+            if (attached_to)
+                resolve_entity(*attached_to);
 
-                for (auto& it : attached)
-                    resolve_entity(it);
+            for (auto& it : attached)
+                resolve_entity(it);
 
-                auto proc = const_data().processor;
-                if (proc)
-                    if (proc->on_tick)
-                        proc->on_tick(*this);
-                reduce_effects(hidden_effects, active_effects);
-            }
+            auto proc = const_data().processor;
+            if (proc)
+                if (proc->on_tick)
+                    proc->on_tick(*this);
+            reduce_effects(hidden_effects, active_effects);
         }
 
         bool entity::kill() {
@@ -280,22 +280,25 @@ namespace copper_server {
                 return false;
 
             died = true;
-            if (world_syncing_data)
-                world_syncing_data->world->entity_death(*this);
+
+            if (world_syncing_data.world)
+                world_syncing_data.world->entity_death(*this);
             return true;
         }
 
         void entity::force_kill() {
             const_data().pre_death_callback(*this, true);
             died = true;
-            if (world_syncing_data)
-                world_syncing_data->world->entity_death(*this);
+
+            if (world_syncing_data.world)
+                world_syncing_data.world->entity_death(*this);
         }
 
         void entity::erase() {
             died = true;
-            if (world_syncing_data)
-                world_syncing_data->world->entity_deinit(*this);
+
+            if (world_syncing_data.world)
+                world_syncing_data.world->entity_deinit(*this);
         }
 
         bool entity::is_died() {
@@ -333,7 +336,7 @@ namespace copper_server {
                 api::world::get((std::string)nbt["bound_world"], [&](storage::world_data& it) {
                     it.register_entity(res);
                 });
-                if (!res->world_syncing_data)
+                if (!res->world_syncing_data.world)
                     throw std::runtime_error("World " + (std::string)nbt["bound_world"] + " not found.");
             };
             try {
@@ -341,8 +344,8 @@ namespace copper_server {
                 if (creation_callback)
                     creation_callback(res, nbt);
             } catch (...) {
-                if (res->world_syncing_data)
-                    res->world_syncing_data->world->unregister_entity(res);
+                if (res->world_syncing_data.world)
+                    res->world_syncing_data.world->unregister_entity(res);
                 throw;
             }
 
@@ -419,7 +422,8 @@ namespace copper_server {
                 res->ride_by_entity.reserve(ride_by_entity.size());
                 for (auto& value : ride_by_entity) {
                     auto ride_entity = entity::load_from_enbt(value.as_compound());
-                    res->world_syncing_data->world->register_entity(ride_entity);
+                    if (res->world_syncing_data.world)
+                        res->world_syncing_data.world->register_entity(ride_entity);
                     ride_entity->set_ride_entity(res);
                 }
             }
@@ -452,24 +456,24 @@ namespace copper_server {
         }
 
         void entity::teleport(util::VECTOR pos) {
-            if (world_syncing_data)
-                world_syncing_data->world->entity_teleport(*this, pos);
+            if (world_syncing_data.world)
+                world_syncing_data.world->entity_teleport(*this, pos);
             position = pos;
         }
 
         void entity::teleport(util::VECTOR pos, float yaw, float pitch) {
-            if (world_syncing_data) {
-                world_syncing_data->world->entity_teleport(*this, pos);
-                world_syncing_data->world->entity_rotation_changes(*this, {yaw, pitch});
+            if (world_syncing_data.world) {
+                world_syncing_data.world->entity_teleport(*this, pos);
+                world_syncing_data.world->entity_rotation_changes(*this, {yaw, pitch});
             }
             position = pos;
             rotation = {yaw, pitch};
         }
 
         void entity::teleport(util::VECTOR pos, float yaw, float pitch, bool on_ground) {
-            if (world_syncing_data) {
-                world_syncing_data->world->entity_teleport(*this, pos);
-                world_syncing_data->world->entity_rotation_changes(*this, {yaw, pitch});
+            if (world_syncing_data.world) {
+                world_syncing_data.world->entity_teleport(*this, pos);
+                world_syncing_data.world->entity_rotation_changes(*this, {yaw, pitch});
             }
             position = pos;
             rotation = {yaw, pitch};
@@ -477,24 +481,26 @@ namespace copper_server {
         }
 
         void entity::set_ride_entity(entity_ref entity) {
-            if (entity && world_syncing_data) {
-                if (entity->world_syncing_data->world == world_syncing_data->world) {
-                    world_syncing_data->world->entity_rides(*this, entity->world_syncing_data->assigned_world_id);
-                    ride_entity = entity;
-                    return;
+            if (entity)
+                if (world_syncing_data.world) {
+                    if (entity->world_syncing_data.world == world_syncing_data.world) {
+                        world_syncing_data.world->entity_rides(*this, entity->world_syncing_data.assigned_world_id);
+                        ride_entity = entity;
+                        return;
+                    }
                 }
-            }
             ride_entity = std::nullopt;
         }
 
         void entity::remove_ride_entity() {
-            if (ride_entity && world_syncing_data) {
-                if ((*ride_entity)->world_syncing_data->world == world_syncing_data->world) {
-                    world_syncing_data->world->entity_leaves_ride(*this, (*ride_entity)->world_syncing_data->assigned_world_id);
-                    ride_entity = std::nullopt;
-                    return;
+            if (ride_entity)
+                if (world_syncing_data.world) {
+                    if ((*ride_entity)->world_syncing_data.world == world_syncing_data.world) {
+                        world_syncing_data.world->entity_leaves_ride(*this, (*ride_entity)->world_syncing_data.assigned_world_id);
+                        ride_entity = std::nullopt;
+                        return;
+                    }
                 }
-            }
             ride_entity = std::nullopt;
         }
 
@@ -513,66 +519,66 @@ namespace copper_server {
                 if (effect.amplifier >= amplifier) {
                     if (effect.duration < duration)
                         hidden_effects[id_].push_back(to_add_effect);
-                    if (world_syncing_data)
-                        world_syncing_data->world->entity_add_effect(*this, id_, duration, amplifier, ambient, show_particles, show_icon, use_blend);
+                    if (world_syncing_data.world)
+                        world_syncing_data.world->entity_add_effect(*this, id_, duration, amplifier, ambient, show_particles, show_icon, use_blend);
                     return;
                 } else
                     hidden_effects[id_].push_back(effect);
             }
             active_effects[id_] = to_add_effect;
-            if (world_syncing_data)
-                world_syncing_data->world->entity_add_effect(*this, id_, duration, amplifier, ambient, show_particles, show_icon, use_blend);
+            if (world_syncing_data.world)
+                world_syncing_data.world->entity_add_effect(*this, id_, duration, amplifier, ambient, show_particles, show_icon, use_blend);
         }
 
         void entity::remove_effect(uint32_t id_) {
             active_effects.erase(id_);
             hidden_effects.erase(id_);
-            if (world_syncing_data)
-                world_syncing_data->world->entity_remove_effect(*this, id_);
+            if (world_syncing_data.world)
+                world_syncing_data.world->entity_remove_effect(*this, id_);
         }
 
         void entity::remove_all_effects() {
-            if (world_syncing_data)
+            if (world_syncing_data.world)
                 for (auto& [id_, effect] : active_effects)
-                    world_syncing_data->world->entity_remove_effect(*this, id_);
+                    world_syncing_data.world->entity_remove_effect(*this, id_);
             active_effects.clear();
             hidden_effects.clear();
         }
 
         bool entity::is_sleeping() const {
-            return world_syncing_data ? world_syncing_data->is_sleeping : false;
+            return world_syncing_data.is_sleeping;
         }
 
         bool entity::is_on_ground() const {
-            return world_syncing_data ? world_syncing_data->on_ground : false;
+            return world_syncing_data.on_ground;
         }
 
         bool entity::is_sneaking() const {
-            return world_syncing_data ? world_syncing_data->is_sneaking : false;
+            return world_syncing_data.is_sneaking;
         }
 
         bool entity::is_sprinting() const {
-            return world_syncing_data ? world_syncing_data->is_sprinting : false;
+            return world_syncing_data.is_sprinting;
         }
 
         void entity::set_sleeping(bool sleeping) {
-            if (world_syncing_data)
-                world_syncing_data->is_sleeping = sleeping;
+            if (world_syncing_data.world)
+                world_syncing_data.is_sleeping = sleeping;
         }
 
         void entity::set_on_ground(bool on_ground) {
-            if (world_syncing_data)
-                world_syncing_data->on_ground = on_ground;
+            if (world_syncing_data.world)
+                world_syncing_data.on_ground = on_ground;
         }
 
         void entity::set_sneaking(bool sneaking) {
-            if (world_syncing_data)
-                world_syncing_data->is_sneaking = sneaking;
+            if (world_syncing_data.world)
+                world_syncing_data.is_sneaking = sneaking;
         }
 
         void entity::set_sprinting(bool sprinting) {
-            if (world_syncing_data)
-                world_syncing_data->is_sprinting = sprinting;
+            if (world_syncing_data.world)
+                world_syncing_data.is_sprinting = sprinting;
         }
 
         float entity::get_health() const {
@@ -601,20 +607,23 @@ namespace copper_server {
         }
 
         void entity::damage(float health, int32_t type_id, std::optional<util::VECTOR> pos) {
-            if (world_syncing_data)
-                world_syncing_data->world->entity_damage(*this, health, type_id, pos);
+            world_syncing_data.inactivity_counter = 0;
+            if (world_syncing_data.world)
+                world_syncing_data.world->entity_damage(*this, health, type_id, pos);
             reduce_health(health);
         }
 
         void entity::damage(float health, int32_t type_id, entity_ref& source, std::optional<util::VECTOR> pos) {
-            if (world_syncing_data)
-                world_syncing_data->world->entity_damage(*this, health, type_id, source, pos);
+            world_syncing_data.inactivity_counter = 0;
+            if (world_syncing_data.world)
+                world_syncing_data.world->entity_damage(*this, health, type_id, source, pos);
             reduce_health(health);
         }
 
         void entity::damage(float health, int32_t type_id, entity_ref& source, entity_ref& source_direct, std::optional<util::VECTOR> pos) {
-            if (world_syncing_data)
-                world_syncing_data->world->entity_damage(*this, health, type_id, source, source_direct, pos);
+            world_syncing_data.inactivity_counter = 0;
+            if (world_syncing_data.world)
+                world_syncing_data.world->entity_damage(*this, health, type_id, source, source_direct, pos);
             reduce_health(health);
         }
 
@@ -850,11 +859,8 @@ namespace copper_server {
 
         void entity::look_at(const entity_ref& entity) {
             if (entity) {
-                if (entity->world_syncing_data && world_syncing_data) {
-                    if (entity->world_syncing_data->world == world_syncing_data->world) {
-                        look_at(entity->position);
-                    }
-                }
+                if (entity->world_syncing_data.world == world_syncing_data.world)
+                    look_at(entity->position);
             }
         }
 
@@ -864,9 +870,8 @@ namespace copper_server {
 
         void entity::set_motion(util::VECTOR mot) {
             motion = mot;
-            if (world_syncing_data)
-                if (world_syncing_data->world)
-                    world_syncing_data->world->entity_motion_changes(*this, mot);
+            if (world_syncing_data.world)
+                world_syncing_data.world->entity_motion_changes(*this, mot);
         }
 
         void entity::add_motion(util::VECTOR mot) {
@@ -879,9 +884,8 @@ namespace copper_server {
 
         void entity::set_rotation(util::ANGLE_DEG rot) {
             rotation = rot;
-            if (world_syncing_data)
-                if (world_syncing_data->world)
-                    world_syncing_data->world->entity_rotation_changes(*this, rot);
+            if (world_syncing_data.world)
+                world_syncing_data.world->entity_rotation_changes(*this, rot);
         }
 
         void entity::add_rotation(util::ANGLE_DEG rot) {
@@ -894,9 +898,8 @@ namespace copper_server {
 
         void entity::set_head_rotation(util::ANGLE_DEG rot) {
             head_rotation = rot;
-            if (world_syncing_data)
-                if (world_syncing_data->world)
-                    world_syncing_data->world->entity_look_changes(*this, rot);
+            if (world_syncing_data.world)
+                world_syncing_data.world->entity_look_changes(*this, rot);
         }
 
         void entity::add_head_rotation(util::ANGLE_DEG rot) {
