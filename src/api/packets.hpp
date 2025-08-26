@@ -1346,24 +1346,24 @@ namespace copper_server {
                             swamp_hut = 33,
                             trial_chambers = 34,
                         };
-                        enum_as<type_e, var_int32> type;
-                        limited_num<int8_t, -128, 127> x;
-                        limited_num<int8_t, -128, 127> z;
-                        limited_num<int8_t, 0, 15> dir;
+                        enum_as<type_e, var_int32> type = type_e::white_arrow;
+                        limited_num<int8_t, -128, 127> x = {0};
+                        limited_num<int8_t, -128, 127> z = {0};
+                        limited_num<int8_t, 0, 15> dir = {0};
                         std::optional<Chat> name = std::nullopt;
                     };
 
                     struct color_patch {
                         depends_next<uint8_t> columns;
-                        uint8_t rows;
-                        uint8_t x;
-                        uint8_t z;
+                        uint8_t rows = 0;
+                        uint8_t x = 0;
+                        uint8_t z = 0;
                         list_array_no_size<uint8_t, &color_patch::columns, &color_patch::rows> data; //255 color pallete
                     };
 
                     var_int32 map_id;
-                    int8_t scale;
-                    bool is_locked;
+                    int8_t scale = 0;
+                    bool is_locked = false;
                     std::optional<list_array<icon>> icons = std::nullopt;
                     color_patch patch;
                 };
@@ -1380,13 +1380,13 @@ namespace copper_server {
                         trade_item input_0;
                         slot output;
                         std::optional<trade_item> input_1 = std::nullopt;
-                        bool trade_disabled;
-                        int trade_uses;
-                        int max_trade_uses;
-                        int xp;
-                        int special_price;
-                        float price_multiplier;
-                        int demand;
+                        bool trade_disabled = false;
+                        int trade_uses = 0;
+                        int max_trade_uses = 0;
+                        int xp = 0;
+                        int special_price = 0;
+                        float price_multiplier = 0.0f;
+                        int demand = 0;
                     };
 
                     var_int32 window_id;
@@ -2779,7 +2779,7 @@ namespace copper_server {
 
                         struct component {
                             var_int32::data_component_type type;
-                            int32_t crc32_hash;
+                            int32_t crc32_hash  =0;
                         };
 
                         list_array<component> add_components;
@@ -2787,7 +2787,7 @@ namespace copper_server {
                     };
 
                     struct changed_slot {
-                        short slot;
+                        short slot = 0;
                         std::optional<hashed_slot_data> data = std::nullopt;
                     };
 

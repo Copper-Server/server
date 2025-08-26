@@ -55,17 +55,17 @@ namespace copper_server {
             std::string spawn_group;
 
             bounding base_bounds;
-            float eye_height;
+            float eye_height = 0.0f;
 
-            float acceleration; // block\tick
-            float drag_vertical;
-            float drag_horizontal;
-            float terminal_velocity;
+            float acceleration = 0.0f; // block\tick
+            float drag_vertical = 0.0f;
+            float drag_horizontal = 0.0f;
+            float terminal_velocity = 0.0f;
 
             int32_t max_track_distance = 0;
             int32_t track_tick_interval = 0;
 
-            uint16_t entity_id;
+            uint16_t entity_id = 0;
 
             bool drag_applied_after_acceleration = false;
             bool is_summonable = false;
@@ -76,15 +76,15 @@ namespace copper_server {
 
             struct living_entity_data_t {
                 int32_t inventory_size = 0;
-                float base_health;
-                float step_height;
+                float base_health = 0.0f;
+                float step_height = 0.0f;
                 uint16_t max_air = 300;
                 bool can_avoid_traps = false;
                 bool can_be_hit_by_projectile = true;
-                bool can_freeze;
-                bool can_hit;
-                bool is_collidable;
-                bool is_attackable;
+                bool can_freeze = false;
+                bool can_hit = false;
+                bool is_collidable = false;
+                bool is_attackable = false;
 
                 struct brain_task {
                     std::string name;
@@ -212,7 +212,7 @@ namespace copper_server {
             std::shared_ptr<world_processor> processor;
 
             struct metadata_sync {
-                uint8_t index;
+                uint8_t index =0;
 
                 enum class type_t : uint8_t {
                     byte,
@@ -251,7 +251,7 @@ namespace copper_server {
                     vector3,
                     quaternion,
                 };
-                type_t type;
+                type_t type = type_t::byte;
             };
 
             std::unordered_map<std::string, metadata_sync> metadata;

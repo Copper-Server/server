@@ -31,13 +31,16 @@ namespace copper_server::base_objects {
         client->packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::play;
         client->special_callback = [this](base_objects::SharedClientData& _, network::response&& resp) {
             resp.data.for_each([&](base_objects::network::response::item& it) {
+                if (!packet_processor)
+                    return;
                 if (it.data.empty())
                     return;
                 ArrayStream arr(it.data.data(), it.data.size());
                 packet_processor(api::packets::decode_client_play(*client, arr));
             });
             if (resp.is_disconnect())
-                requested_disconnect();
+                if (requested_disconnect)
+                    requested_disconnect();
         };
     }
 

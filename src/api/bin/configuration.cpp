@@ -521,4 +521,7 @@ namespace copper_server::api::configuration {
     std::string get_item(const std::string& config_item_path) {
         return get().get(config_item_path);
     }
+
+    void apply_preset(const std::string& preset) {
+    }
 }

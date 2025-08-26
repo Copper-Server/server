@@ -550,9 +550,8 @@ namespace copper_server::base_objects::events {
                 tasks.push_back(task);
                 fast_task::scheduler::start(task);
             }
-            lock.unlock();
+            fast_task::relock_guard relock(lock);
             fast_task::task::await_multiple(tasks, true, true);
-            lock.lock();
             return result;
         }
 
@@ -561,11 +560,10 @@ namespace copper_server::base_objects::events {
             fns.reserve(map.size());
             for (auto& [id, func] : map)
                 fns.push_back(func);
-            lock.unlock();
+            fast_task::relock_guard relock(lock);
             for (auto& [id, func] : map)
                 if (func())
                     return true;
-            lock.lock();
             return false;
         }
     };

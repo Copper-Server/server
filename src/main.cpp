@@ -32,6 +32,7 @@ int main() {
             log::error("Initializer thread", "An error occurred while unregistering plugins");
         }
         log::commands::deinit();
+        fast_task::scheduler::await_end_tasks(false);
         fast_task::scheduler::shut_down();
     });
     try {

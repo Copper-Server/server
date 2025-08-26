@@ -107,7 +107,7 @@ namespace copper_server::base_objects {
 
     struct pallete_container_single {
         const uint8_t bits_per_entry = 0;
-        int32_t id_of_palette;
+        int32_t id_of_palette = 0;
     };
 
     struct pallete_container_indirect {

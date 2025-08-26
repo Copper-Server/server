@@ -26,10 +26,10 @@ namespace copper_server::api::packets {
 
 
     template <template <auto...> class Base, auto... Ts>
-    void value_test(Base<Ts...>&);
+    void value_test(Base<Ts...>&) {}
 
     template <template <class, auto...> class Base, class T, auto... Ts>
-    void tvalue_test(Base<T, Ts...>&);
+    void tvalue_test(Base<T, Ts...>&) {}
 
 
     template <template <auto...> class, class, class = void>
@@ -114,6 +114,8 @@ namespace copper_server::api::packets {
             }
         }
 
+#pragma warning(push)
+#pragma warning(disable : 4702)
         template <class T>
         void serialize_entry(std::string& res, size_t spacing, const T& value) {
             using Type = std::decay_t<T>;
@@ -345,6 +347,8 @@ namespace copper_server::api::packets {
                     res += "}";
             }
         }
+
+#pragma warning(pop)
 
         template <class T>
         void serialize_packet(std::string& res, size_t spacing, T& value) {

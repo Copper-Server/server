@@ -232,6 +232,7 @@ namespace copper_server::api::configuration {
 
     void set_item(const std::string& config_item_path, const std::string& value); //accepts json
     std::string get_item(const std::string& config_item_path);                    //returns json
+    void apply_preset(const std::string& preset);
 
     extern base_objects::events::event<void> updated;
 }

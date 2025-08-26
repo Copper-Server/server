@@ -42,6 +42,8 @@ namespace copper_server::base_objects {
 
     public:
         number_provider();
+        number_provider(number_provider&&) noexcept;
+        number_provider(const number_provider&);
         number_provider(const number_provider_constant& value);
         number_provider(const number_provider_uniform& value);
         number_provider(const number_provider_clamped_normal& value);
@@ -56,13 +58,14 @@ namespace copper_server::base_objects {
         ~number_provider();
 
 
+        number_provider& operator=(number_provider&&) noexcept;
+        number_provider& operator=(const number_provider&);
+
         float get_float() const;
         int32_t get_int() const;
 
-        //for context
-        float get_float(const enbt::compound_const_ref& other_data) const;
-        //for context
-        int32_t get_int(const enbt::compound_const_ref& other_data) const;
+
+        static number_provider parse_provider(const enbt::value& value);
     };
 
     struct number_provider_constant {

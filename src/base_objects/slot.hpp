@@ -25,13 +25,13 @@ namespace copper_server::api::packets {
 namespace copper_server::base_objects {
     struct static_slot_data {
         struct alias_data {
-            uint32_t local_id;
+            uint32_t local_id = 0;
             std::string local_named_id;
         };
 
         std::string id;
         std::unordered_map<int32_t, component> default_components;
-        int32_t internal_id;
+        int32_t internal_id = 0;
 
         enbt::compound server_side;
 

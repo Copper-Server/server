@@ -656,8 +656,10 @@ namespace copper_server::storage {
         uint64_t local_y_block = (sub_chunks.size() - 1) * 16;
         auto& leaves = api::tags::unfold_tag(api::tags::builtin_entry::block, "minecraft:block/leaves");
         auto end = sub_chunks.rend();
+        size_t block_i = 0;
         for (auto beg = sub_chunks.rbegin(); beg != end; beg++) {
             auto& schunk = *beg;
+            local_y_block = block_i * 16;
             for (uint8_t x = 0; x < 16; x++) {
                 for (int8_t y = 15; y >= 0; y--) {
                     for (uint8_t z = 0; z < 16; z++) {
@@ -2574,7 +2576,6 @@ namespace copper_server::storage {
 
     void world_data::sub_chunk_updated(int64_t chunk_x, int64_t chunk_y_raw, int64_t chunk_z) {
         std::unique_lock lock(mutex);
-        TO_WORLD_POS_CHUNK(chunk_y, chunk_y_raw)
         get_light_processor()->process_sub_chunk(*this, chunk_x, chunk_y_raw, chunk_z);
     }
 
@@ -2924,11 +2925,11 @@ namespace copper_server::storage {
                         return;
                     local_x.insert(z);
                     ++target_load_count;
-                    auto res = request_chunk_data(x, z);
-                    if (res->is_ready()) {
-                        res->get()->load_level = std::min<uint8_t>(res->get()->load_level, ticket.level);
-                        if (res->get()->load_level < 33)
-                            to_tick_chunks.push_back(res->get());
+                    auto res = request_chunk_data_weak_gen(x, z);
+                    if (res) {
+                        res.value()->load_level = std::min<uint8_t>(res.value()->load_level, ticket.level);
+                        if (res.value()->load_level < 33)
+                            to_tick_chunks.push_back(res.value());
                     }
                 });
                 uint8_t propagation = 44 - ticket.level;
@@ -2943,14 +2944,17 @@ namespace copper_server::storage {
                                 return;
                             local_x.insert(z);
                             ++target_load_count;
-                            auto res = request_chunk_data(x, z);
-                            if (res->is_ready()) {
-                                res->get()->load_level = (uint8_t)std::min<int64_t>(res->get()->load_level, set_load_level);
-                                if (res->get()->load_level < 32)
-                                    to_tick_chunks.push_back(res->get());
+                            auto res = request_chunk_data_weak_gen(x, z);
+                            if (res) {
+                                res.value()->load_level = (uint8_t)std::min<int64_t>(res.value()->load_level, set_load_level);
+                                if (res.value()->load_level < 32)
+                                    to_tick_chunks.push_back(res.value());
                             }
-                        } else if (set_load_level <= 44)
-                            request_chunk_gen(x, z);
+                        } else if (set_load_level <= 44) {
+                            auto res = request_chunk_data_weak_gen(x, z);
+                            if (res)
+                                res.value()->load_level = (uint8_t)std::min<int64_t>(res.value()->load_level, set_load_level);
+                        }
                     });
                 }
             }

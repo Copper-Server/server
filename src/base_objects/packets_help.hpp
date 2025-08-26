@@ -137,7 +137,8 @@ namespace copper_server::base_objects {
 
         constexpr identifier(const std::string& value) : value(value) {}
 
-        constexpr identifier(identifier&& value) : value(std::move(value.value)) {}
+        constexpr identifier(identifier&& value) noexcept
+            : value(std::move(value.value)) {}
 
         constexpr identifier(const identifier& value) : value(value.value) {}
 
@@ -146,7 +147,7 @@ namespace copper_server::base_objects {
         template <size_t siz>
         constexpr identifier(const char (&value)[siz]) : value(value) {}
 
-        constexpr identifier& operator=(identifier&& other) {
+        constexpr identifier& operator=(identifier&& other) noexcept {
             value = std::move(other.value);
             return *this;
         }

@@ -22,7 +22,7 @@ namespace mojang::api {
 
         static void two_complement(hashed_array& data) {
             bool carry = true;
-            for (size_t i = DIGEST_LENGTH - 1; i >= 0; i--) {
+            for (ptrdiff_t i = DIGEST_LENGTH - 1; i >= 0; i--) {
                 data[i] = ~data[i];
                 if (carry) {
                     carry = data[i] == 0xff;

@@ -15,6 +15,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <src/base_objects/number_provider.hpp>
 
 #include <boost/bimap.hpp>
 #include <boost/bimap/unordered_set_of.hpp>
@@ -51,6 +52,7 @@ namespace copper_server {
         public:
             std::shared_ptr<enbt::compound> loot_table;
             std::vector<shape_data*> collision_shapes;
+            std::vector<shape_data*> outline_shapes;
             std::string instrument;
             std::string piston_behavior;
             std::string name;
@@ -93,6 +95,20 @@ namespace copper_server {
                 bool up_center_solid : 1 = false;
             } transparent_sides;
 
+            struct flammable_t {
+                float spread_chance;
+                float burn_chance;
+            };
+
+            std::optional<flammable_t> flammable;
+
+            struct ore_data_t {
+                number_provider experience;
+            };
+
+            std::optional<ore_data_t> ore_data;
+
+
             bool can_explode(float explode_strength) const {
                 return blast_resistance < explode_strength;
             }
@@ -123,7 +139,8 @@ namespace copper_server {
                 block_tickable,
                 entity_tickable,
                 no_tick
-            } tickable;
+            } tickable
+                = tick_opt::undefined;
 
             bool is_tickable() const {
                 switch (tickable) {
@@ -214,7 +231,7 @@ namespace copper_server {
                   current_properties(copy.current_properties),
                   block_aliases(copy.block_aliases) {}
 
-            static_block_data(static_block_data&& copy)
+            static_block_data(static_block_data&& copy) noexcept
                 : loot_table(std::move(copy.loot_table)),
                   collision_shapes(std::move(copy.collision_shapes)),
                   instrument(std::move(copy.instrument)),

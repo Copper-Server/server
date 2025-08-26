@@ -500,10 +500,10 @@ namespace copper_server::base_objects {
         struct blocks_attacks : public enum_item<33> {
 
             struct damage_reductions {
-                float horizontal_block_angle;
+                float horizontal_block_angle = 0.0f;
                 std::optional<id_set<var_int32::damage_type>> damage_kind = std::nullopt;
-                float base;
-                float factor;
+                float base = 0.0f;
+                float factor = 1.0f;
                 bool operator==(const damage_reductions& other) const = default;
             };
 

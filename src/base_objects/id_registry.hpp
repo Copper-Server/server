@@ -100,7 +100,7 @@ namespace copper_server::base_objects {
     struct id_source {
         using underlying_type = Value;
         using reg_source = std::integral_constant<registry_source, source>;
-        Value value;
+        Value value{};
 
         constexpr id_source() {}
 
@@ -112,7 +112,8 @@ namespace copper_server::base_objects {
 
         constexpr id_source(const id_source& value) : value(value.value) {}
 
-        constexpr id_source(id_source&& value) : value(std::move(value.value)) {}
+        constexpr id_source(id_source&& value) noexcept
+            : value(std::move(value.value)) {}
 
         constexpr id_source(std::string_view value) : value((Value)to_registry_source_value(source, std::string(value))) {}
 
@@ -128,7 +129,7 @@ namespace copper_server::base_objects {
             return *this;
         }
 
-        constexpr id_source& operator=(id_source&& other) {
+        constexpr id_source& operator=(id_source&& other) noexcept {
             value = std::move(other.value);
             return *this;
         }

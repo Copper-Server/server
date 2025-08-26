@@ -51,6 +51,12 @@ namespace copper_server::build_in_plugins {
                         else
                             context.executor << api::client::play::system_chat{.content = "Config value: " + value};
                     });
+                _config
+                    .add_child("use_preset")
+                    .add_child({"name", "applies preset for confing", "/config use_preset name"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
+                    .set_callback({"command.config.use_preset", {"console"}}, [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                        api::configuration::apply_preset(std::get<pred_string>(args[0]).value);
+                    });
             }
         }
     };
