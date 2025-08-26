@@ -304,16 +304,10 @@ namespace copper_server::base_objects::network {
     }
 
     response::response(const list_array<item>& response_bytes, size_t valid_till, bool disconnect, bool disconnect_after_send)
-        : valid_till(valid_till) {
-        data = response_bytes;
-        do_disconnect = disconnect;
-        do_disconnect_after_send = disconnect_after_send;
+        : valid_till(valid_till), data(response_bytes), do_disconnect(disconnect), do_disconnect_after_send(disconnect_after_send) {
     }
 
     response::response(list_array<item>&& response_bytes, size_t valid_till, bool disconnect, bool disconnect_after_send)
-        : valid_till(valid_till) {
-        data = std::move(response_bytes);
-        do_disconnect = disconnect;
-        do_disconnect_after_send = disconnect_after_send;
+        : valid_till(valid_till), data(std::move(response_bytes)), do_disconnect(disconnect), do_disconnect_after_send(disconnect_after_send) {
     }
 }

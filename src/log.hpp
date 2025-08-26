@@ -45,7 +45,7 @@ namespace copper_server::log {
     void enable_log_file_level(level);
     bool is_enabled_file(level);
 
-    void set_log_folder(std::filesystem::path);
+    void set_log_folder(const std::filesystem::path&);
     void disable_log_folder();
 
     namespace commands {

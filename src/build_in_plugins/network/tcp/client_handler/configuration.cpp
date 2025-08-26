@@ -164,11 +164,11 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                             effects["water_fog_color"] = it.effects.water_fog_color;
                             effects["sky_color"] = it.effects.sky_color;
                             if (it.effects.foliage_color)
-                                effects["foliage_color"] = it.effects.foliage_color.value();
+                                effects["foliage_color"] = *it.effects.foliage_color;
                             if (it.effects.grass_color)
-                                effects["grass_color"] = it.effects.grass_color.value();
+                                effects["grass_color"] = *it.effects.grass_color;
                             if (it.effects.grass_color_modifier)
-                                effects["grass_color_modifier"] = it.effects.grass_color_modifier.value();
+                                effects["grass_color_modifier"] = *it.effects.grass_color_modifier;
                             if (it.effects.particle) {
                                 enbt::compound particle;
                                 particle["probability"] = it.effects.particle->probability;
@@ -331,7 +331,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         else
                             element["monster_spawn_light_level"] = std::get<registers::IntegerDistribution>(it.monster_spawn_light_level).get_enbt();
                         if (it.fixed_time)
-                            element["fixed_time"] = it.fixed_time.value();
+                            element["fixed_time"] = *it.fixed_time;
                         element["infiniburn"] = it.infiniburn;
                         element["effects"] = it.effects;
                         element["coordinate_scale"] = it.coordinate_scale;
@@ -407,7 +407,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         enbt::compound element;
                         element["asset_id"] = it.asset_id;
                         if (it.model)
-                            element["model"] = it.model.value();
+                            element["model"] = *it.model;
                         element["spawn_conditions"] = it.spawn_conditions;
                         return element;
                     });
@@ -419,7 +419,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         enbt::compound element;
                         element["asset_id"] = it.asset_id;
                         if (it.model)
-                            element["model"] = it.model.value();
+                            element["model"] = *it.model;
                         element["spawn_conditions"] = it.spawn_conditions;
                         return element;
                     });
@@ -431,7 +431,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         enbt::compound element;
                         element["asset_id"] = it.asset_id;
                         if (it.model)
-                            element["model"] = it.model.value();
+                            element["model"] = *it.model;
                         element["spawn_conditions"] = it.spawn_conditions;
                         return element;
                     });
@@ -443,7 +443,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         enbt::compound element;
                         element["asset_id"] = it.asset_id;
                         if (it.model)
-                            element["model"] = it.model.value();
+                            element["model"] = *it.model;
                         element["spawn_conditions"] = it.spawn_conditions;
                         return element;
                     });
@@ -455,7 +455,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         enbt::compound element;
                         element["asset_id"] = it.asset_id;
                         if (it.model)
-                            element["model"] = it.model.value();
+                            element["model"] = *it.model;
                         element["spawn_conditions"] = it.spawn_conditions;
                         return element;
                     });
@@ -543,6 +543,11 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             });
             register_packet_processor([](custom_payload&& packet, base_objects::SharedClientData& client) {
                 auto it = pluginManagement.get_bind_plugin(PluginManagement::registration_on::configuration, packet.channel);
+                if (it == nullptr) {
+                    extra_data_t::get(client).active_plugins.remove(it);
+                    make_finish(client);
+                    return;
+                }
                 if (it != nullptr)
                     packet.payload.commit();
                 if (it->OnConfigurationHandle(it, packet.channel, packet.payload, client)) {

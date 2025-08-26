@@ -41,7 +41,7 @@ namespace copper_server::base_objects {
 
         other_data["motion_x"] = mot.x;
         other_data["motion_y"] = mot.y;
-        other_data["motion_y"] = mot.y;
+        other_data["motion_z"] = mot.z;
     }
 
     void next_token(std::string& part, std::string& path) {
@@ -70,7 +70,7 @@ namespace copper_server::base_objects {
 
         std::optional<parsers::block_state> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::block_state& cfg, std::string& part, std::string& path) {
             parsers::block_state res;
-            auto id = part;
+            //auto id = part;
             next_token(part, path);
             try {
                 //auto& block_data = base_objects::block::get_block(id);
@@ -732,23 +732,9 @@ namespace copper_server::base_objects {
             parser_data.registry = std::nullopt;
             break;
         }
-        case packets::command_node::parsers::brigadier_string: {
-            if (!parser_data.flags)
-                parser_data.flags = 0;
-            parser_data.min = std::nullopt;
-            parser_data.max = std::nullopt;
-            parser_data.registry = std::nullopt;
-            break;
-        }
+        case packets::command_node::parsers::brigadier_string:
+        case packets::command_node::parsers::minecraft_score_holder:
         case packets::command_node::parsers::minecraft_entity: {
-            if (!parser_data.flags)
-                parser_data.flags = 0;
-            parser_data.min = std::nullopt;
-            parser_data.max = std::nullopt;
-            parser_data.registry = std::nullopt;
-            break;
-        }
-        case packets::command_node::parsers::minecraft_score_holder: {
             if (!parser_data.flags)
                 parser_data.flags = 0;
             parser_data.min = std::nullopt;
@@ -835,7 +821,7 @@ namespace copper_server::base_objects {
                 cmd.childs.erase(id);
                 auto begin = cmd.childs_cache.begin();
                 auto end = cmd.childs_cache.end();
-                for (; begin != end; begin++)
+                for (; begin != end; ++begin)
                     if (begin->second == id) {
                         cmd.childs_cache.erase(begin);
                         break;
@@ -1390,7 +1376,7 @@ namespace copper_server::base_objects {
 
         auto old_childs = manager.command_nodes[current_id].childs;
         auto& new_command = manager.command_nodes[current_id] = std::move(_command);
-        new_command.childs = old_childs;
+        new_command.childs = std::move(old_childs);
         manager.changes_id++;
 
         *reinterpret_cast<command**>(&current_command) = &new_command;

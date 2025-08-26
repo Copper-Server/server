@@ -73,7 +73,7 @@ namespace copper_server::api::configuration {
             };
             if (!allowed_modes.contains(saving_mode))
                 saving_mode = "zstd";
-            cfg.world.saving_mode = saving_mode;
+            cfg.world.saving_mode = std::move(saving_mode);
         }
         {
             static std::unordered_map<std::string, ServerConfiguration::World::world_not_found_for_client_e> world_not_found_for_client_from_str = {

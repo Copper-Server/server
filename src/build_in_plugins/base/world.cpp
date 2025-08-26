@@ -35,7 +35,7 @@ namespace copper_server::build_in_plugins {
     void end_chunk_speed_report_collecting(
         const std::filesystem::path& path,
         const std::string& world_name,
-        list_array<list_array<chunk_speed_data>> collected_data,
+        list_array<list_array<chunk_speed_data>>&& collected_data,
         base_objects::client_data_holder executor
     ) {
         try {
@@ -195,7 +195,8 @@ namespace copper_server::build_in_plugins {
             std::list<std::shared_ptr<fast_task::task>> tasks;
             for (auto& it : api::configuration::get().allowed_dimensions) {
                 api::world::pre_load_world(it, [&](storage::world_data& world) {
-                    world.set_seed(world_seed_or_java_hash(api::configuration::get().world.seed));
+                    auto& cfg_world = api::configuration::get().world;
+                    world.set_seed(world_seed_or_java_hash(cfg_world.seed));
                     world.light_processor_id = "default";
                     if (world.world_name == "end") {
                         world.generator_id = "end";
@@ -204,9 +205,9 @@ namespace copper_server::build_in_plugins {
                         world.generator_id = "nether";
                         world.set_world_type("minecraft:the_nether");
                     } else {
-                        world.set_world_type(api::configuration::get().world.type);
-                        world.generator_id = api::configuration::get().world.generator_type;
-                        for (auto& [name, value] : api::configuration::get().world.generator_settings)
+                        world.set_world_type(cfg_world.type);
+                        world.generator_id = cfg_world.generator_type;
+                        for (auto& [name, value] : cfg_world.generator_settings)
                             world.world_generator_data[name] = value;
                     }
                     log::info("World", it + " initialized.");

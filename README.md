@@ -19,3 +19,7 @@ The easiest way to compile is by using an IDE that supports `CMakePresets.json`.
 NOT AN OFFICIAL MINECRAFT SERVER IMPLEMENTATION. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT
 
 the `resources` folder is not licensed and does not belong to anyone associated with maintainer/s of this repository, all data here is generated using data generators and custom extractors.
+
+## SAST Tools
+
+[PVS-Studio](https://pvs-studio.com/en/pvs-studio/?utm_source=website&utm_medium=github&utm_campaign=open_source) - static analyzer for C, C++, C#, and Java code.

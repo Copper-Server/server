@@ -202,7 +202,7 @@ namespace copper_server::log {
         return file::log_levels_switch[(int)level];
     }
 
-    void set_log_folder(std::filesystem::path path) {
+    void set_log_folder(const std::filesystem::path& path) {
         std::filesystem::create_directories(path);
         std::filesystem::path file;
         do {

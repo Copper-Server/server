@@ -65,7 +65,7 @@ namespace copper_server {
 
         template <class T, util::CTS name>
         static_registry<T, name>::proxy::proxy() {
-            registration_list().push_back({name.data, std::make_shared<delayed_construct<T>>()});
+            registration_list().emplace_back(name.data, std::make_shared<delayed_construct<T>>());
         }
 
         template <class T, util::CTS name>

@@ -13,6 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(Boost_NO_WARN_NEW_VERSIONS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+add_compile_definitions(tasks_enable_preemptive_scheduler_preview=false)
 
 add_subdirectory(tools)
 message(STATUS "Building resources")
@@ -41,9 +42,9 @@ create_reflect_map("${CMAKE_CURRENT_SOURCE_DIR}/src/util/reflect" "${REFLECTION_
 
 IF(MSVC)
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>") #I hate using this for library/commandline. Its just breaks, COMMANDLINE_LIBTYPE and COMMANDLINE_SHARED_LIBS are just not working as excepted
-  string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-  string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
-  string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
+  #string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+  #string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
+  #string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
 ENDIF(MSVC)
 
 set(ENABLE_BOOST_PREPROCESSOR ON)
@@ -90,7 +91,6 @@ IF(MSVC)
   target_compile_options(CopperServer PUBLIC /wd4717)
   target_compile_options(CopperServer PUBLIC /sdl)
   target_compile_options(CopperServer PUBLIC /bigobj)
-  target_compile_options(CopperServer PRIVATE /utf-8)
   target_compile_options(CopperServer PUBLIC /GF)
   add_compile_definitions(_DISABLE_VECTOR_ANNOTATION)
   add_compile_definitions(_DISABLE_STRING_ANNOTATION)

@@ -22,12 +22,12 @@ namespace copper_server::base_objects {
     public:
         struct Abilities {
             struct Flags {
-                bool invulnerable : 1;
-                bool flying : 1;
-                bool allow_flying : 1;
-                bool creative_mode : 1;
-                bool flying_speed : 1;
-                bool walking_speed : 1;
+                bool invulnerable : 1 = false;
+                bool flying : 1 = false;
+                bool allow_flying : 1 = false;
+                bool creative_mode : 1 = false;
+                bool flying_speed : 1 = false;
+                bool walking_speed : 1 = false;
 
                 inline void set(uint8_t raw) {
                     union u_t {

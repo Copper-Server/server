@@ -253,7 +253,7 @@ namespace copper_server::base_objects {
     struct limited_num {
         static constexpr inline T check_min = min;
         static constexpr inline T check_max = max;
-        T value;
+        T value = {};
         auto operator<=>(const limited_num& other) const = default;
     };
 
@@ -730,7 +730,7 @@ namespace copper_server::base_objects {
         }
 
         operator double() {
-            return (value * 360) / (3.14159265358979323846 * 2);
+            return (value * 360.0) / (3.14159265358979323846 * 2);
         }
 
         auto operator<=>(const Angle& other) const = default;

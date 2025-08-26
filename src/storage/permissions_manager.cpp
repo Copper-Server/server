@@ -185,7 +185,7 @@ namespace copper_server::storage {
         });
     }
 
-    void permissions_manager::add_permission(base_objects::permissions_object permission) {
+    void permissions_manager::add_permission(base_objects::permissions_object&& permission) {
         protected_values.set([&](protected_values_t& values) {
             values.permissions[permission.permission_tag] = std::move(permission);
         });

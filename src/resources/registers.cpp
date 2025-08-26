@@ -117,7 +117,6 @@ namespace copper_server::resources {
 
     void registers_reset() {
         biomes.clear();
-        biomes.clear();
         chatTypes.clear();
         armorTrimPatterns.clear();
         armorTrimMaterials.clear();
@@ -135,7 +134,6 @@ namespace copper_server::resources {
         enchantments.clear();
         enchantment_providers.clear();
         instruments.clear();
-        biomes_cache.clear();
         biomes_cache.clear();
         chatTypes_cache.clear();
         armorTrimPatterns_cache.clear();
@@ -302,13 +300,13 @@ namespace copper_server::resources {
                     auto sensors = obj.at("brain_sensors").as_array();
                     living_data.brain_sensors.reserve(sensors.size());
                     for (auto& sensor : sensors)
-                        living_data.brain_sensors.push_back((std::string)sensor.as_string());
+                        living_data.brain_sensors.emplace_back((std::string)sensor.as_string());
                 }
                 {
                     auto memories = obj.at("brain_memories").as_array();
                     living_data.brain_memories.reserve(memories.size());
                     for (auto& memory : memories)
-                        living_data.brain_memories.push_back((std::string)memory.as_string());
+                        living_data.brain_memories.emplace_back((std::string)memory.as_string());
                 }
                 entity_data.living_entity_data = std::move(living_data);
             }
@@ -519,7 +517,7 @@ namespace copper_server::resources {
                     js_array arr = js_array::get_array(values);
                     res.reserve(arr.size());
                     for (auto&& it : arr)
-                        res.push_back(it);
+                        res.emplace_back(it);
                 }
             }
         }
@@ -531,8 +529,8 @@ namespace copper_server::resources {
                 std::vector<std::string> feature;
                 feature.reserve(feature_js.size());
                 for (auto&& it : feature_js)
-                    feature.push_back(it);
-                bio.features.push_back(feature);
+                    feature.emplace_back(it);
+                bio.features.emplace_back(std::move(feature));
             }
         }
         {
@@ -548,7 +546,7 @@ namespace copper_server::resources {
                     value.weight = category_value["weight"];
                     value.weight = category_value["minCount"];
                     value.weight = category_value["maxCount"];
-                    category.push_back(value);
+                    category.emplace_back(std::move(value));
                 }
             }
         }
@@ -571,7 +569,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_biomes(js_object::get_object(res.value()), id);
+        load_file_biomes(js_object::get_object(*res), id);
     }
 
     ChatType::Decoration to_decoration(js_value&& json) {
@@ -587,7 +585,7 @@ namespace copper_server::resources {
                 std::vector<std::string> parameters;
                 parameters.reserve(params_.size());
                 for (auto&& chat_ : params_)
-                    parameters.push_back((std::string)chat_);
+                    parameters.emplace_back((std::string)chat_);
                 decoration.parameters = std::move(parameters);
             } else
                 decoration.parameters = (std::string)params;
@@ -637,29 +635,6 @@ namespace copper_server::resources {
                     int32_t min_inclusive = obj.at("min_inclusive");
                     int32_t max_inclusive = obj.at("max_inclusive");
                     return base_objects::number_provider_clamped_normal(mean, deviation, min_inclusive, max_inclusive);
-                } else if (type == "uniform") {
-                    std::variant<int32_t, float> min;
-                    std::variant<int32_t, float> max;
-
-                    if (obj.contains("min")) {
-                        auto min_ = obj["min"];
-                        min = min_.is_integral() ? (int32_t)min_ : (float)min_;
-                    } else if (obj.contains("min_inclusive")) {
-                        auto min_ = obj["min_inclusive"];
-                        min = min_.is_integral() ? (int32_t)min_ : (float)min_;
-                    } else
-                        min = std::numeric_limits<int32_t>::min();
-
-                    if (obj.contains("max")) {
-                        auto max_ = obj["max"];
-                        max = max_.is_integral() ? (int32_t)max_ : (float)max_;
-                    } else if (obj.contains("max_inclusive")) {
-                        auto max_ = obj["max_inclusive"];
-                        max = max_.is_integral() ? (int32_t)max_ : (float)max_;
-                    } else
-                        max = std::numeric_limits<int32_t>::max();
-
-                    return base_objects::number_provider_uniform(min, max);
                 } else if (type == "clamped") {
                     std::variant<int32_t, float> min;
                     std::variant<int32_t, float> max;
@@ -694,7 +669,7 @@ namespace copper_server::resources {
                     for (auto&& val : values_js) {
                         auto value_js = js_object::get_object(val);
                         auto weight = value_js.contains("weight") ? value_js["weight"] : 1.0;
-                        values.push_back({read_number_provider(value_js.at("data")), weight});
+                        values.emplace_back(read_number_provider(value_js.at("data")), weight);
                     }
                     return base_objects::number_provider_weighted_list(values);
                 } else if (type == "biased_to_bottom") {
@@ -768,7 +743,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        js_object type_js = js_object::get_object(res.value());
+        js_object type_js = js_object::get_object(*res);
         ChatType type;
         if (type_js.contains("chat"))
             type.chat = to_decoration(type_js["chat"]);
@@ -817,8 +792,8 @@ namespace copper_server::resources {
                 std::vector<std::string> requirements;
                 requirements.reserve(requirements_js.size());
                 for (auto&& req : requirements_js)
-                    requirements.push_back(req);
-                advancement.requirements.push_back(requirements);
+                    requirements.emplace_back(req);
+                advancement.requirements.emplace_back(std::move(requirements));
             }
         }
         if (advancement_js.contains("rewards")) {
@@ -827,13 +802,13 @@ namespace copper_server::resources {
                 auto recipes_js = js_array::get_array(rewards_js["recipes"]);
                 advancement.rewards.recipes.reserve(rewards_js.size());
                 for (auto&& req : recipes_js)
-                    advancement.rewards.recipes.push_back((std::string)req);
+                    advancement.rewards.recipes.emplace_back((std::string)req);
             }
             if (rewards_js.contains("loot")) {
                 auto loot_js = js_array::get_array(rewards_js["loot"]);
                 advancement.rewards.loot.reserve(rewards_js.size());
                 for (auto&& req : loot_js)
-                    advancement.rewards.loot.push_back((std::string)req);
+                    advancement.rewards.loot.emplace_back((std::string)req);
             }
             if (rewards_js.contains("experience"))
                 advancement.rewards.experience = rewards_js["experience"];
@@ -851,7 +826,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_advancements(js_object::get_object(res.value()), id);
+        load_file_advancements(js_object::get_object(*res), id);
     }
 
     void load_file_jukebox_song(js_object&& song_js, const std::string& id, bool send_via_network_body = true) {
@@ -880,7 +855,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_jukebox_song(js_object::get_object(res.value()), id);
+        load_file_jukebox_song(js_object::get_object(*res), id);
     }
 
     void load_file_loot_table(js_object&& loot_table_js, const std::string& id, bool send_via_network_body = true) {
@@ -899,7 +874,7 @@ namespace copper_server::resources {
             for (auto&& function : functions) {
                 enbt::compound comp;
                 comp = util::conversions::json::from_json(function.get());
-                item.functions.push_back(comp);
+                item.functions.emplace_back(comp);
             }
         }
 
@@ -914,7 +889,7 @@ namespace copper_server::resources {
                     auto ref = res.as_array();
                     pool_.conditions.reserve(ref.size());
                     for (auto& it : ref)
-                        pool_.conditions.push_back(it.as_compound());
+                        pool_.conditions.emplace_back(it.as_compound());
                 }
                 if (pool.contains("bonus_rolls"))
                     pool_.bonus_rolls = read_number_provider(pool["bonus_rolls"]);
@@ -925,7 +900,7 @@ namespace copper_server::resources {
                     for (auto&& function : functions) {
                         enbt::compound comp;
                         comp = util::conversions::json::from_json(function.get());
-                        pool_.functions.push_back(comp);
+                        pool_.functions.emplace_back(comp);
                     }
                 }
                 pool_.rolls = read_number_provider(pool.at("rolls"));
@@ -934,9 +909,9 @@ namespace copper_server::resources {
                 for (auto&& entry : entries) {
                     enbt::compound comp;
                     comp = util::conversions::json::from_json(entry.get());
-                    pool_.entries.push_back(comp);
+                    pool_.functions.emplace_back(std::move(comp));
                 }
-                item.pools.push_back(std::move(pool_));
+                item.pools.emplace_back(std::move(pool_));
             }
         }
 
@@ -951,7 +926,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_loot_table(js_object::get_object(res.value()), id);
+        load_file_loot_table(js_object::get_object(*res), id);
     }
 
     void load_file_armorTrimPattern(js_object&& pattern_js, const std::string& id, bool send_via_network_body = true) {
@@ -975,7 +950,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_armorTrimPattern(js_object::get_object(res.value()), id);
+        load_file_armorTrimPattern(js_object::get_object(*res), id);
     }
 
     void load_file_armorTrimMaterial(js_object&& material_js, const std::string& id, bool send_via_network_body = true) {
@@ -998,7 +973,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_armorTrimMaterial(js_object::get_object(res.value()), id);
+        load_file_armorTrimMaterial(js_object::get_object(*res), id);
     }
 
     void load_file_wolfVariant(js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
@@ -1015,7 +990,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_wolfVariant(js_object::get_object(res.value()), id);
+        load_file_wolfVariant(js_object::get_object(*res), id);
     }
 
     void load_file_entityVariant(std::unordered_map<std::string, EntityVariant>& map, const std::string& key, js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
@@ -1034,7 +1009,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_entityVariant(map, key, js_object::get_object(res.value()), id);
+        load_file_entityVariant(map, key, js_object::get_object(*res), id);
     }
 
 #define LOAD_FILE_ENTITY_VARIANT(name)                                                                                 \
@@ -1069,7 +1044,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_wolfSoundVariant(js_object::get_object(res.value()), id);
+        load_file_wolfSoundVariant(js_object::get_object(*res), id);
     }
 
     void load_file_dimensionType(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
@@ -1116,7 +1091,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_dimensionType(js_object::get_object(res.value()), id);
+        load_file_dimensionType(js_object::get_object(*res), id);
     }
 
     void load_file_enchantment(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
@@ -1130,7 +1105,7 @@ namespace copper_server::resources {
         auto slots = js_array::get_array(type_js.at("slots"));
         type.slots.reserve(slots.size());
         for (auto&& slot : slots)
-            type.slots.push_back(slot);
+            type.slots.emplace_back(slot);
         if (type_js.contains("exclusive_set")) {
             if (type_js.at("exclusive_set").is_string())
                 type.exclusive_set = type_js.at("exclusive_set");
@@ -1139,7 +1114,7 @@ namespace copper_server::resources {
                 std::vector<std::string> exclusive_set;
                 exclusive_set.reserve(exclusive_set_js.size());
                 for (auto&& set : exclusive_set_js)
-                    exclusive_set.push_back(set);
+                    exclusive_set.emplace_back(set);
                 type.exclusive_set = std::move(exclusive_set);
             }
         }
@@ -1150,7 +1125,7 @@ namespace copper_server::resources {
             std::vector<base_objects::id_item> supported_items;
             supported_items.reserve(supported_items_js.size());
             for (auto&& set : supported_items_js)
-                supported_items.push_back((std::string)set);
+                supported_items.emplace_back((std::string)set);
             type.supported_items = std::move(supported_items);
         }
         if (type_js.contains("primary_items")) {
@@ -1161,7 +1136,7 @@ namespace copper_server::resources {
                 std::vector<base_objects::id_item> primary_items;
                 primary_items.reserve(primary_items_js.size());
                 for (auto&& set : primary_items_js)
-                    primary_items.push_back((std::string)set);
+                    primary_items.emplace_back((std::string)set);
                 type.primary_items = std::move(primary_items);
             }
         }
@@ -1187,7 +1162,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_enchantment(js_object::get_object(res.value()), id);
+        load_file_enchantment(js_object::get_object(*res), id);
     }
 
     void load_file_enchantment_provider(boost::json::object& type_js, const std::string& id, bool send_via_network_body = true) {
@@ -1216,7 +1191,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_instrument(js_object::get_object(res.value()), id);
+        load_file_instrument(js_object::get_object(*res), id);
     }
 
     void load_file_enchantment_provider(const std::filesystem::path& file_path, const std::string& id) {
@@ -1224,7 +1199,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_enchantment_provider(res.value(), id);
+        load_file_enchantment_provider(*res, id);
     }
 
     void load_file_damageType(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
@@ -1281,7 +1256,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_damageType(js_object::get_object(res.value()), id);
+        load_file_damageType(js_object::get_object(*res), id);
     }
 
     void load_file_bannerPattern(js_object&& pattern_js, const std::string& id, bool send_via_network_body = true) {
@@ -1298,7 +1273,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_bannerPattern(js_object::get_object(res.value()), id);
+        load_file_bannerPattern(js_object::get_object(*res), id);
     }
 
     void load_file_paintingVariant(js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
@@ -1316,7 +1291,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_paintingVariant(js_object::get_object(res.value()), id);
+        load_file_paintingVariant(js_object::get_object(*res), id);
     }
 
     void load_file_recipe(js_object&& variant_js, const std::string& id, [[maybe_unused]] bool send_via_network_body = true) {
@@ -1332,7 +1307,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_recipe(js_object::get_object(res.value()), id);
+        load_file_recipe(js_object::get_object(*res), id);
     }
 
     void apply_tags(js_value val, const std::string& type, const std::string& namespace_, const std::string& path_, bool replace) {
@@ -1345,7 +1320,7 @@ namespace copper_server::resources {
                 auto tag_ = js_object::get_object(tag);
                 the_tag = (std::string)tag_.at("id");
             }
-            result.push_back(the_tag);
+            result.emplace_back(std::move(the_tag));
         }
         api::tags::add_tag(type, namespace_ + ":" + path_, result, !replace);
     }
@@ -1366,7 +1341,7 @@ namespace copper_server::resources {
         auto res = try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_tags(js_object::get_object(res.value()), type, namespace_, path_);
+        load_file_tags(js_object::get_object(*res), type, namespace_, path_);
     }
 
     void load_register_file(std::string_view memory, const std::string& namespace_, const std::string& path_, const std::string& type) {
@@ -1554,9 +1529,9 @@ namespace copper_server::resources {
             base_objects::static_block_data::all_properties.reserve(block_properties.size());
             for (auto& item : block_properties) {
                 auto hash = item.at("hash_key").to_number<int32_t>();
-                auto name = item.at("enum_name").as_string();
-                auto ser_name = item.at("serialized_name").as_string();
-                auto type = item.at("type").as_string();
+                //auto& name = item.at("enum_name").as_string();
+                auto& ser_name = item.at("serialized_name").as_string();
+                auto& type = item.at("type").as_string();
 
                 if (type == "boolean") {
                     base_objects::static_block_data::all_properties[hash] = {"true", "false"};
@@ -1566,14 +1541,14 @@ namespace copper_server::resources {
                     auto max = item.at("max").to_number<int32_t>();
                     std::unordered_set<std::string> values;
                     for (int i = min; i <= max; i++)
-                        values.insert(std::to_string(i));
+                        values.emplace(std::to_string(i));
                     base_objects::static_block_data::all_properties[hash] = std::move(values);
                     base_objects::static_block_data::assigned_property_name.insert({hash, (std::string)ser_name});
                 } else if (type == "enum") {
                     auto values = item.at("values").as_array();
                     std::unordered_set<std::string> values_set;
                     for (auto&& value : values)
-                        values_set.insert((std::string)value.as_string());
+                        values_set.emplace((std::string)value.as_string());
                     base_objects::static_block_data::all_properties[hash] = std::move(values_set);
                     base_objects::static_block_data::assigned_property_name.insert({hash, (std::string)ser_name});
                 } else
@@ -1598,7 +1573,7 @@ namespace copper_server::resources {
                         auto item = shape.read();
                         auto& min = item.at("min");
                         auto& max = item.at("max");
-                        base_objects::static_block_data::all_shapes.push_back(
+                        base_objects::static_block_data::all_shapes.emplace_back(
                             base_objects::shape_data{
                                 .min_x = min.at(0),
                                 .min_y = min.at(1),
@@ -1616,7 +1591,7 @@ namespace copper_server::resources {
                         base_objects::static_block_data::block_entity_types.reserve(size);
                     },
                     [&](auto& item) {
-                        base_objects::static_block_data::block_entity_types.push_back((std::string)item.read());
+                        base_objects::static_block_data::block_entity_types.emplace_back((std::string)item.read());
                     }
                 );
             } else if (name == "blocks") {
@@ -1662,7 +1637,7 @@ namespace copper_server::resources {
                                 std::vector<int32_t> properties;
                                 item.iterate(
                                     [&properties](auto size) { properties.reserve(size); },
-                                    [&properties](enbt::io_helper::value_read_stream& item) { properties.push_back(item.read()); }
+                                    [&properties](enbt::io_helper::value_read_stream& item) { properties.emplace_back(item.read()); }
                                 );
                                 default_state_data->allowed_properties = std::move(properties);
                             } else if (name == "flammable") {
@@ -1734,14 +1709,15 @@ namespace copper_server::resources {
                                                  //DOWN_CENTER_SOLID = 0b01000000;
                                                  //UP_CENTER_SOLID = 0b10000000;
                                                  int32_t states = item.read();
-                                                 block_data->transparent_sides.down_side_solid = states & 0b00000001;
-                                                 block_data->transparent_sides.up_side_solid = states & 0b00000010;
-                                                 block_data->transparent_sides.north_side_solid = states & 0b00000100;
-                                                 block_data->transparent_sides.south_side_solid = states & 0b00001000;
-                                                 block_data->transparent_sides.west_side_solid = states & 0b00010000;
-                                                 block_data->transparent_sides.east_side_solid = states & 0b00100000;
-                                                 block_data->transparent_sides.down_center_solid = states & 0b01000000;
-                                                 block_data->transparent_sides.up_center_solid = states & 0b10000000;
+                                                 auto& sides = block_data->transparent_sides;
+                                                 sides.down_side_solid = states & 0b00000001;
+                                                 sides.up_side_solid = states & 0b00000010;
+                                                 sides.north_side_solid = states & 0b00000100;
+                                                 sides.south_side_solid = states & 0b00001000;
+                                                 sides.west_side_solid = states & 0b00010000;
+                                                 sides.east_side_solid = states & 0b00100000;
+                                                 sides.down_center_solid = states & 0b01000000;
+                                                 sides.up_center_solid = states & 0b10000000;
                                              }},
                                             {"opacity", [](ARGS__d) { block_data->opacity = item.read(); }},
                                             {"instrument", [](ARGS__d) { block_data->instrument = item.read().as_string(); }},
@@ -1764,7 +1740,7 @@ namespace copper_server::resources {
                                             {"collision_shapes", [](ARGS__d) {
                                                  item.iterate(
                                                      [&](auto size) { collision_shapes.reserve(size); },
-                                                     [&](enbt::io_helper::value_read_stream& item) { collision_shapes.push_back(item.read()); }
+                                                     [&](enbt::io_helper::value_read_stream& item) { collision_shapes.emplace_back(item.read()); }
                                                  );
                                              }},
                                             {"block_entity_type", [](ARGS__d) {
@@ -1774,7 +1750,7 @@ namespace copper_server::resources {
                                             {"outline_shapes", [](ARGS__d) {
                                                  item.iterate(
                                                      [&](auto size) { outline_shapes.reserve(size); },
-                                                     [&](enbt::io_helper::value_read_stream& item) { outline_shapes.push_back(item.read()); }
+                                                     [&](enbt::io_helper::value_read_stream& item) { outline_shapes.emplace_back(item.read()); }
                                                  );
                                              }},
                                         };
@@ -1890,7 +1866,7 @@ namespace copper_server::resources {
                         computed_tag += (std::string)std::string_view(name).substr(0, name.size() - 5);
                         list_array<std::string> res;
                         for (auto&& value : values.get_array())
-                            res.push_back((std::string)value.as_string());
+                            res.emplace_back((std::string)value.as_string());
                         api::tags::add_tag(type, namespace_ + ":" + tag, res, !replace);
                         continue;
                     }

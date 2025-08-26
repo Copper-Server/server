@@ -17,11 +17,11 @@
 namespace copper_server {
     struct Chat {
         struct clickEventS {
-            char* open_url;
-            char* run_command;
-            char* suggest_command;
-            uint32_t* change_page;
-            char* copy_to_clipboard;
+            char* open_url = nullptr;
+            char* run_command = nullptr;
+            char* suggest_command = nullptr;
+            uint32_t* change_page = nullptr;
+            char* copy_to_clipboard = nullptr;
 
             ~clickEventS() {
                 if (open_url)
@@ -48,16 +48,16 @@ namespace copper_server {
             struct show_itemS {
                 std::optional<std::string> tag;
                 std::string id;
-                int32_t count;
-            }* show_item;
+                int32_t count = 0;
+            }* show_item = nullptr;
 
             struct show_entityS {
                 std::optional<std::string> name;
                 std::string type;
                 std::string id;
-            }* show_entity;
+            }* show_entity = nullptr;
 
-            char* show_text;
+            char* show_text = nullptr;
 
             ~hoverEventS() {
                 if (show_text)

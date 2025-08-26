@@ -85,11 +85,11 @@ namespace copper_server::storage {
         void update_height_map_on(uint8_t local_x, uint64_t local_y, uint8_t local_z);
         void update_height_map();
 
-        void for_each_block_entity(std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
-        void for_each_block_entity(uint64_t local_y, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
+        void for_each_block_entity(const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(uint64_t local_y, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
 
-        void for_each_sub_chunk(std::function<void(base_objects::world::sub_chunk_data& sub_chunk)> func);
-        void get_sub_chunk(uint64_t local_y, std::function<void(base_objects::world::sub_chunk_data& sub_chunk)> func);
+        void for_each_sub_chunk(const std::function<void(base_objects::world::sub_chunk_data& sub_chunk)>& func);
+        void get_sub_chunk(uint64_t local_y, const std::function<void(base_objects::world::sub_chunk_data& sub_chunk)>& func);
 
         //priority accepts only negative values
         void query_for_tick(uint8_t local_x, uint64_t local_y, uint8_t local_z, uint64_t on_tick, int8_t priority = -1);
@@ -292,7 +292,7 @@ namespace copper_server::storage {
         std::chrono::high_resolution_clock::time_point last_usage;
 
         FuturePtr<base_objects::atomic_holder<chunk_data>> create_chunk_generate_future(base_objects::atomic_holder<chunk_data>& chunk);
-        FuturePtr<base_objects::atomic_holder<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback, std::function<void()> fault);
+        FuturePtr<base_objects::atomic_holder<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback, const std::function<void()>& fault);
         FuturePtr<base_objects::atomic_holder<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z);
         void make_save(int64_t chunk_x, int64_t chunk_z, bool also_unload);
         void make_save(int64_t chunk_x, int64_t chunk_z, chunk_row::iterator, bool also_unload);
@@ -444,8 +444,8 @@ namespace copper_server::storage {
         std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak(int64_t chunk_x, int64_t chunk_z);      //if chunk loaded returns it, else - std::nullopt
         std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak_sync(int64_t chunk_x, int64_t chunk_z); //if chunk exists returns it, else - std::nullopt
         void request_chunk_gen(int64_t chunk_x, int64_t chunk_z);                                                              //generates chunk if it does not exists
-        bool request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback);
-        void request_chunk_data(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback, std::function<void()> fault);
+        bool request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback);
+        void request_chunk_data(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback, const std::function<void()>& fault);
 
         void save_chunks(bool unload = false);
         void await_save_chunks();
@@ -464,45 +464,45 @@ namespace copper_server::storage {
         void regenerate_chunk_at(int64_t global_x, int64_t global_z);
         void reset_light_data_at(int64_t global_x, int64_t global_z);
 
-        void for_each_chunk(std::function<void(chunk_data& chunk)> func);
-        void for_each_chunk(base_objects::cubic_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func);
-        void for_each_chunk(base_objects::spherical_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func);
-        void for_each_sub_chunk(int64_t chunk_x, int64_t chunk_z, std::function<void(base_objects::world::sub_chunk_data& chunk)> func);
-        void get_sub_chunk(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, std::function<void(base_objects::world::sub_chunk_data& chunk)> func);
-        void get_chunk(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> func);
+        void for_each_chunk(const std::function<void(chunk_data& chunk)>& func);
+        void for_each_chunk(base_objects::cubic_bounds_chunk bounds, const std::function<void(chunk_data& chunk)>& func);
+        void for_each_chunk(base_objects::spherical_bounds_chunk bounds, const std::function<void(chunk_data& chunk)>& func);
+        void for_each_sub_chunk(int64_t chunk_x, int64_t chunk_z, const std::function<void(base_objects::world::sub_chunk_data& chunk)>& func);
+        void get_sub_chunk(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const std::function<void(base_objects::world::sub_chunk_data& chunk)>& func);
+        void get_chunk(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& func);
 
 
-        void for_each_chunk(base_objects::cubic_bounds_block bounds, std::function<void(chunk_data& chunk)> func);
-        void for_each_chunk(base_objects::spherical_bounds_block bounds, std::function<void(chunk_data& chunk)> func);
-        void for_each_sub_chunk_at(int64_t global_x, int64_t global_z, std::function<void(base_objects::world::sub_chunk_data& chunk)> func);
-        void get_sub_chunk_at(int64_t global_x, int64_t global_y, int64_t global_z, std::function<void(base_objects::world::sub_chunk_data& chunk)> func);
-        void get_chunk_at(int64_t global_y, int64_t global_z, std::function<void(chunk_data& chunk)> func);
+        void for_each_chunk(base_objects::cubic_bounds_block bounds, const std::function<void(chunk_data& chunk)>& func);
+        void for_each_chunk(base_objects::spherical_bounds_block bounds, const std::function<void(chunk_data& chunk)>& func);
+        void for_each_sub_chunk_at(int64_t global_x, int64_t global_z, const std::function<void(base_objects::world::sub_chunk_data& chunk)>& func);
+        void get_sub_chunk_at(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::world::sub_chunk_data& chunk)>& func);
+        void get_chunk_at(int64_t global_y, int64_t global_z, const std::function<void(chunk_data& chunk)>& func);
 
 
-        void for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func);
-        void for_each_entity(base_objects::cubic_bounds_chunk bounds, std::function<void(base_objects::entity_ref& entity)> func);
-        void for_each_entity(base_objects::cubic_bounds_chunk_radius bounds, std::function<void(base_objects::entity_ref& entity)> func);
-        void for_each_entity(base_objects::cubic_bounds_chunk_radius_out bounds, std::function<void(base_objects::entity_ref& entity)> func);
-        void for_each_entity(base_objects::spherical_bounds_chunk bounds, std::function<void(base_objects::entity_ref& entity)> func);
-        void for_each_entity(base_objects::spherical_bounds_chunk_out bounds, std::function<void(base_objects::entity_ref& entity)> func);
-        void for_each_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
-        void for_each_block_entity(base_objects::cubic_bounds_chunk bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
-        void for_each_block_entity(base_objects::cubic_bounds_chunk_radius bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
-        void for_each_block_entity(base_objects::cubic_bounds_chunk_radius_out bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
-        void for_each_block_entity(base_objects::spherical_bounds_chunk bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
-        void for_each_block_entity(base_objects::spherical_bounds_chunk_out bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
-        void for_each_block_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
-        void for_each_block_entity(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
+        void for_each_entity(const std::function<void(const base_objects::entity_ref& entity)>& func);
+        void for_each_entity(base_objects::cubic_bounds_chunk bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
+        void for_each_entity(base_objects::cubic_bounds_chunk_radius bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
+        void for_each_entity(base_objects::cubic_bounds_chunk_radius_out bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
+        void for_each_entity(base_objects::spherical_bounds_chunk bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
+        void for_each_entity(base_objects::spherical_bounds_chunk_out bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
+        void for_each_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(const base_objects::entity_ref& entity)>& func);
+        void for_each_block_entity(base_objects::cubic_bounds_chunk bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(base_objects::cubic_bounds_chunk_radius bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(base_objects::cubic_bounds_chunk_radius_out bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(base_objects::spherical_bounds_chunk bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(base_objects::spherical_bounds_chunk_out bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
 
 
-        void for_each_entity(base_objects::cubic_bounds_block bounds, std::function<void(base_objects::entity_ref& entity)> func);
-        void for_each_entity(base_objects::cubic_bounds_block_radius bounds, std::function<void(base_objects::entity_ref& entity)> func);
-        void for_each_entity(base_objects::cubic_bounds_block_radius_out bounds, std::function<void(base_objects::entity_ref& entity)> func);
-        void for_each_entity(base_objects::spherical_bounds_block bounds, std::function<void(base_objects::entity_ref& entity)> func);
-        void for_each_entity(base_objects::spherical_bounds_block_out bounds, std::function<void(base_objects::entity_ref& entity)> func);
-        void for_each_entity_at(int64_t global_x, int64_t global_z, std::function<void(const base_objects::entity_ref& entity)> func);
-        void for_each_block_entity_at(int64_t global_x, int64_t global_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
-        void for_each_block_entity_at(int64_t global_x, int64_t global_y, int64_t global_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func);
+        void for_each_entity(base_objects::cubic_bounds_block bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
+        void for_each_entity(base_objects::cubic_bounds_block_radius bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
+        void for_each_entity(base_objects::cubic_bounds_block_radius_out bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
+        void for_each_entity(base_objects::spherical_bounds_block bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
+        void for_each_entity(base_objects::spherical_bounds_block_out bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
+        void for_each_entity_at(int64_t global_x, int64_t global_z, const std::function<void(const base_objects::entity_ref& entity)>& func);
+        void for_each_block_entity_at(int64_t global_x, int64_t global_z, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
+        void for_each_block_entity_at(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
 
 
         //priority accepts only negative values, doesn't work for unloaded chunks
@@ -512,15 +512,15 @@ namespace copper_server::storage {
         void set_block(const base_objects::full_block_data& block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
         void set_block(base_objects::full_block_data&& block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
         void remove_block(int64_t global_x, int64_t global_y, int64_t global_z);
-        void get_block(int64_t global_x, int64_t global_y, int64_t global_z, std::function<void(base_objects::block& block)> func, std::function<void(base_objects::block& block, enbt::value& extended_data)> block_entity);
-        void query_block(int64_t global_x, int64_t global_y, int64_t global_z, std::function<void(base_objects::block& block)> func, std::function<void(base_objects::block& block, enbt::value& extended_data)> block_entity, std::function<void()> fault);
+        void get_block(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block& block)>& func, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& block_entity);
+        void query_block(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block& block)>& func, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& block_entity, const std::function<void()>& fault);
 
         void block_updated(int64_t global_x, int64_t global_y, int64_t global_z);
         void chunk_updated(int64_t chunk_x, int64_t chunk_z);
         void sub_chunk_updated(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z);
 
 
-        void locked(std::function<void(world_data& self)> func);
+        void locked(const std::function<void(world_data& self)>& func);
 
         void set_block_range(base_objects::cubic_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks, block_set_mode mode = block_set_mode::replace);
         void set_block_range(base_objects::cubic_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks, block_set_mode mode = block_set_mode::replace);
@@ -535,8 +535,8 @@ namespace copper_server::storage {
         void set_biome_range(base_objects::spherical_bounds_block bounds, const list_array<int32_t>& biomes);
         void set_biome_range(base_objects::spherical_bounds_block bounds, list_array<int32_t>&& biomes);
 
-        void get_height_maps(int64_t chunk_x, int64_t chunk_z, std::function<void(base_objects::world::height_maps& height_maps)> func);
-        void get_height_maps_at(int64_t chunk_x, int64_t chunk_z, std::function<void(base_objects::world::height_maps& height_maps)> func);
+        void get_height_maps(int64_t chunk_x, int64_t chunk_z, const std::function<void(base_objects::world::height_maps& height_maps)>& func);
+        void get_height_maps_at(int64_t chunk_x, int64_t chunk_z, const std::function<void(base_objects::world::height_maps& height_maps)>& func);
 
         void register_entity(base_objects::entity_ref& entity);
         void unregister_entity(base_objects::entity_ref& entity);
@@ -700,19 +700,19 @@ namespace copper_server::storage {
         void unload_all();
         void erase(int32_t world_id);
 
-        void locked(std::function<void()> func);
-        void locked(std::function<void(worlds_data& self)> func);
+        void locked(const std::function<void()>& func);
+        void locked(const std::function<void(worlds_data& self)>& func);
 
         int32_t create(const std::string& name);
-        int32_t create(const std::string& name, std::function<void(world_data& world)> init);
+        int32_t create(const std::string& name, const std::function<void(world_data& world)>& init);
 
-        void for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func);
-        void for_each_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
+        void for_each_entity(const std::function<void(const base_objects::entity_ref& entity)>& func);
+        void for_each_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(const base_objects::entity_ref& entity)>& func);
 
-        void for_each_entity(int32_t world_id, std::function<void(const base_objects::entity_ref& entity)> func);
-        void for_each_entity(int32_t world_id, int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func);
+        void for_each_entity(int32_t world_id, const std::function<void(const base_objects::entity_ref& entity)>& func);
+        void for_each_entity(int32_t world_id, int64_t chunk_x, int64_t chunk_z, const std::function<void(const base_objects::entity_ref& entity)>& func);
 
-        void for_each_world(std::function<void(int32_t id, world_data& world)> func);
+        void for_each_world(const std::function<void(int32_t id, world_data& world)>& func);
 
         void apply_tick(std::chrono::high_resolution_clock::time_point current_time);
     };

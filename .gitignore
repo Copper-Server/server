@@ -11,3 +11,4 @@ tools/*/out
 tools/*.exe
 built_resources/
 resources/include.hpp
+.PVS-Studio

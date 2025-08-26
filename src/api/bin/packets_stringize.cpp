@@ -291,6 +291,8 @@ namespace copper_server::api::packets {
                 std::optional<size_t> check;
                 util::for_each_type<Tupple_T>::each([&check, &value]<class T_Elem>() {
                     auto siz = value.template get<typename T_Elem::value_type>().size();
+                    if (siz == 0) //skip unset
+                        return;
                     if (!check)
                         check = siz;
                     else if (*check != siz)

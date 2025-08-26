@@ -83,11 +83,11 @@ namespace copper_server {
             };
 
             std::variant<base_objects::id_sound_event, custom> sound_event;
-            int32_t comparator_output;
-            int32_t length_in_seconds;
+            int32_t comparator_output = 0;
+            int32_t length_in_seconds = 0;
             Chat description;
 
-            uint32_t id;
+            uint32_t id = 0;
             bool send_via_network_body = true;
         };
 
@@ -314,7 +314,7 @@ namespace copper_server {
             std::string asset_id;
             std::string translation_key;
 
-            uint32_t id;
+            uint32_t id = 0;
             bool allow_override = false;
             bool send_via_network_body = true;
         };
@@ -323,10 +323,10 @@ namespace copper_server {
             Chat title;
             Chat author;
             std::string asset_id;
-            uint32_t height;
-            uint32_t width;
+            uint32_t height = 0;
+            uint32_t width = 0;
 
-            uint32_t id;
+            uint32_t id = 0;
             bool allow_override = false;
             bool send_via_network_body = true;
         };
@@ -338,11 +338,11 @@ namespace copper_server {
             };
 
             std::variant<base_objects::id_sound_event, custom> sound_event;
-            float use_duration;
-            float range;
+            float use_duration = 0.0f;
+            float range = 0.0f;
             Chat description;
 
-            uint32_t id;
+            uint32_t id = 0;
             bool send_via_network_body = true;
         };
 
@@ -358,38 +358,38 @@ namespace copper_server {
             std::unordered_map<std::string, enbt::value> effects; //TODO create api for custom effects
 
             struct {
-                int32_t base;
-                int32_t per_level_above_first;
+                int32_t base = 0;
+                int32_t per_level_above_first = 0;
             } min_cost;
 
             struct {
-                int32_t base;
-                int32_t per_level_above_first;
+                int32_t base = 0;
+                int32_t per_level_above_first = 0;
             } max_cost;
 
-            int32_t anvil_cost;
-            int32_t weight;
-            uint8_t max_level;
+            int32_t anvil_cost = 0;
+            int32_t weight = 0;
+            uint8_t max_level = 0;
 
-            uint32_t id;
+            uint32_t id = 0;
             bool send_via_network_body = true;
         };
 
         struct enchantment_provider {
             enbt::compound data;
 
-            uint32_t id;
+            uint32_t id = 0;
             bool send_via_network_body = true;
         };
 
         struct effect {
             std::string name;
-            uint32_t id;
+            uint32_t id = 0;
         };
 
         struct potion {
             std::string name;
-            uint32_t id;
+            uint32_t id = 0;
             std::vector<base_objects::id_mob_effect> effects;
             std::unordered_map<base_objects::id_item, base_objects::id_potion> recipe;
         };
@@ -411,7 +411,7 @@ namespace copper_server {
             std::string type; //default: generic // used to filter loot context
             std::optional<std::string> random_sequence;
 
-            uint32_t id;
+            uint32_t id = 0;
             bool send_via_network_body = true;
         };
 
@@ -422,19 +422,19 @@ namespace copper_server {
                 std::string type;
 
                 struct {
-                    float probability;
+                    float probability = 0.0f;
                     enbt::compound y; //number provider
 
                     struct {
-                        int32_t absolute;
-                        int32_t above_bottom;
-                        int32_t below_top;
+                        int32_t absolute = 0;
+                        int32_t above_bottom = 0;
+                        int32_t below_top = 0;
                     } lava_level;
 
                     std::variant<std::string, std::vector<std::string>> replaceable;
 
                     struct Debug_settings {
-                        bool debug;
+                        bool debug = false;
 
                         struct state {
                             std::string name;
@@ -464,16 +464,16 @@ namespace copper_server {
             };
 
             struct noise {
-                int32_t firstOctave;
+                int32_t firstOctave = 0;
                 std::vector<double> amplitudes;
             };
 
             struct noise_settings {
-                int32_t sea_level;
-                bool disable_mob_generation;
-                bool ore_veins_enabled;
-                bool aquifers_enabled;
-                bool legacy_random_source;
+                int32_t sea_level = 0;
+                bool disable_mob_generation = false;
+                bool ore_veins_enabled = false;
+                bool aquifers_enabled = false;
+                bool legacy_random_source = false;
 
                 struct state {
                     base_objects::block name; //in json there string
@@ -485,8 +485,8 @@ namespace copper_server {
 
                 struct spawn_target_v {
                     struct temperature_value {
-                        float min;
-                        float max;
+                        float min = 0.0f;
+                        float max = 0.0f;
                     };
 
                     using variants = std::variant<temperature_value, std::vector<temperature_value>, float>;
@@ -496,16 +496,16 @@ namespace copper_server {
                     variants erosion;
                     variants weirdness;
                     variants depth;
-                    float offset;
+                    float offset = 0.0f;
                 };
 
                 std::vector<spawn_target_v> spawn_target;
 
                 struct {
-                    int32_t min_y;
-                    int32_t height;
-                    int32_t size_horizontal;
-                    int32_t size_vertical;
+                    int32_t min_y = 0;
+                    int32_t height = 0;
+                    int32_t size_horizontal = 0;
+                    int32_t size_vertical = 0;
                 } noise;
 
                 enbt::compound noise_router;
@@ -525,9 +525,9 @@ namespace copper_server {
                 struct spawn_override {
                     struct spawn {
                         std::string type;
-                        int32_t weight;
-                        int32_t min_count;
-                        int32_t max_count;
+                        int32_t weight = 0;
+                        int32_t min_count = 0;
+                        int32_t max_count = 0;
                     };
 
                     std::string bounding_box;
@@ -546,12 +546,12 @@ namespace copper_server {
                 std::vector<std::variant<std::string, structure>> structures;
 
                 struct {
-                    int32_t salt;
+                    int32_t salt = 0;
                     float frequency = 1.0;
                     std::string frequency_reduction_method = "default";
 
                     struct {
-                        int32_t chunk_count;
+                        int32_t chunk_count = 0;
                         std::string other_set;
                     } exclusion_zone;
 
@@ -564,7 +564,7 @@ namespace copper_server {
 
             struct template_pool {
                 struct element {
-                    int32_t weight;
+                    int32_t weight = 0;
 
                     struct {
                         std::string element_type;
@@ -589,7 +589,7 @@ namespace copper_server {
             struct flat_level_generator_preset {
                 struct layer {
                     base_objects::block block;
-                    int32_t height;
+                    int32_t height = 0;
                 };
 
                 std::string display;
@@ -610,8 +610,8 @@ namespace copper_server {
 
         struct attribute {
             std::string name;
-            uint32_t id;
-            double default_value;
+            uint32_t id = 0;
+            double default_value = 0.0;
         };
 
 #pragma endregion

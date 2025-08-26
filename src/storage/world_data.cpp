@@ -620,7 +620,7 @@ namespace copper_server::storage {
         auto& leaves = api::tags::unfold_tag(api::tags::builtin_entry::block, "minecraft:block/leaves");
         auto end = sub_chunks.rend();
 
-        for (auto beg = sub_chunks.rbegin(); beg != end; beg++) {
+        for (auto beg = sub_chunks.rbegin(); beg != end; ++beg) {
             if (to_skip) {
                 --to_skip;
                 continue;
@@ -657,7 +657,7 @@ namespace copper_server::storage {
         auto& leaves = api::tags::unfold_tag(api::tags::builtin_entry::block, "minecraft:block/leaves");
         auto end = sub_chunks.rend();
         size_t block_i = 0;
-        for (auto beg = sub_chunks.rbegin(); beg != end; beg++) {
+        for (auto beg = sub_chunks.rbegin(); beg != end; ++beg) {
             auto& schunk = *beg;
             local_y_block = block_i * 16;
             for (uint8_t x = 0; x < 16; x++) {
@@ -689,7 +689,7 @@ namespace copper_server::storage {
         }
     }
 
-    void chunk_data::for_each_block_entity(std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+    void chunk_data::for_each_block_entity(const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func) {
         for (auto& sub_chunk : sub_chunks)
             for (auto& [_pos, data] : sub_chunk.block_entities) {
                 base_objects::local_block_pos pos;
@@ -700,7 +700,7 @@ namespace copper_server::storage {
             }
     }
 
-    void chunk_data::for_each_block_entity(uint64_t local_y, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+    void chunk_data::for_each_block_entity(uint64_t local_y, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func) {
         if (local_y < sub_chunks.size())
             for (auto& [_pos, data] : sub_chunks[local_y].block_entities) {
                 base_objects::local_block_pos pos;
@@ -711,12 +711,12 @@ namespace copper_server::storage {
             }
     }
 
-    void chunk_data::for_each_sub_chunk(std::function<void(sub_chunk_data& sub_chunk)> func) {
+    void chunk_data::for_each_sub_chunk(const std::function<void(sub_chunk_data& sub_chunk)>& func) {
         for (auto& sub_chunk : sub_chunks)
             func(sub_chunk);
     }
 
-    void chunk_data::get_sub_chunk(uint64_t sub_chunk_y, std::function<void(sub_chunk_data& sub_chunk)> func) {
+    void chunk_data::get_sub_chunk(uint64_t sub_chunk_y, const std::function<void(sub_chunk_data& sub_chunk)>& func) {
         if (sub_chunk_y < sub_chunks.size())
             func(sub_chunks[sub_chunk_y]);
     }
@@ -1098,7 +1098,7 @@ namespace copper_server::storage {
                 }
             } else {
                 chunk->load_level = 34;
-                get_light_processor();
+                get_light_processor(); //cache light proc
                 uint64_t y = chunk->sub_chunks.size();
                 auto end = chunk->sub_chunks.rend();
                 bool done_process = false;
@@ -1578,7 +1578,7 @@ namespace copper_server::storage {
                 }
             } else if (clear_weather_time > 0){
                 --clear_weather_time;
-            } else if (weather_time == 0 && clear_weather_time == 0) {
+            } else {
                 std::mt19937_64 gen(std::random_device{}());
                 std::uniform_int_distribution<uint16_t> dis_x(0, 1);
                 current_weather = dis_x(gen) ? base_objects::weather::rain : base_objects::weather::thunder;//TODO get real chances
@@ -1589,7 +1589,7 @@ namespace copper_server::storage {
 
     void world_data::tick_update_day_light() {
         if (world_game_rules["doDaylightCycle"]) {
-            if (time / 24'000) {
+            if (time / 24'000 != 0) {
                 day_time += time / 24'000;
                 time = 0;
             } else
@@ -1936,7 +1936,7 @@ namespace copper_server::storage {
         );
     }
 
-    FuturePtr<base_objects::atomic_holder<chunk_data>> world_data::create_chunk_load_future(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback, std::function<void()> fault) {
+    FuturePtr<base_objects::atomic_holder<chunk_data>> world_data::create_chunk_load_future(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback, const std::function<void()>& fault) {
         if (profiling.enable_world_profiling)
             ++profiling.chunk_load_counter;
         return Future<base_objects::atomic_holder<chunk_data>>::start(
@@ -2055,7 +2055,7 @@ namespace copper_server::storage {
         }
     }
 
-    bool world_data::request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback) {
+    bool world_data::request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto z_axis = x_axis->second.find(chunk_z); z_axis != x_axis->second.end())
@@ -2077,7 +2077,7 @@ namespace copper_server::storage {
         }
     }
 
-    void world_data::request_chunk_data(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> callback, std::function<void()> fault) {
+    void world_data::request_chunk_data(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback, const std::function<void()>& fault) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
@@ -2177,7 +2177,7 @@ namespace copper_server::storage {
         reset_light_data(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z));
     }
 
-    void world_data::for_each_chunk(std::function<void(chunk_data& chunk)> func) {
+    void world_data::for_each_chunk(const std::function<void(chunk_data& chunk)>& func) {
         std::unique_lock lock(mutex);
         for (auto& [x, x_axis] : chunks)
             for (auto& [z, chunk] : x_axis)
@@ -2186,7 +2186,7 @@ namespace copper_server::storage {
                         func(*chunk);
     }
 
-    void world_data::for_each_chunk(base_objects::cubic_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func) {
+    void world_data::for_each_chunk(base_objects::cubic_bounds_chunk bounds, const std::function<void(chunk_data& chunk)>& func) {
         std::unique_lock lock(mutex);
         for (int64_t x = bounds.x1; x <= bounds.x2; x++)
             for (int64_t z = bounds.z1; z <= bounds.z2; z++)
@@ -2197,7 +2197,7 @@ namespace copper_server::storage {
                                 func(*chunk->second);
     }
 
-    void world_data::for_each_chunk(base_objects::spherical_bounds_chunk bounds, std::function<void(chunk_data& chunk)> func) {
+    void world_data::for_each_chunk(base_objects::spherical_bounds_chunk bounds, const std::function<void(chunk_data& chunk)>& func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
@@ -2208,7 +2208,7 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::for_each_sub_chunk(int64_t chunk_x, int64_t chunk_z, std::function<void(sub_chunk_data& chunk)> func) {
+    void world_data::for_each_sub_chunk(int64_t chunk_x, int64_t chunk_z, const std::function<void(sub_chunk_data& chunk)>& func) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
@@ -2217,7 +2217,7 @@ namespace copper_server::storage {
                         chunk->second->for_each_sub_chunk(func);
     }
 
-    void world_data::get_sub_chunk(int64_t chunk_x, int64_t chunk_y_raw, int64_t chunk_z, std::function<void(sub_chunk_data& chunk)> func) {
+    void world_data::get_sub_chunk(int64_t chunk_x, int64_t chunk_y_raw, int64_t chunk_z, const std::function<void(sub_chunk_data& chunk)>& func) {
         std::unique_lock lock(mutex);
         TO_WORLD_POS_CHUNK(chunk_y, chunk_y_raw);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
@@ -2227,7 +2227,7 @@ namespace copper_server::storage {
                         chunk->second->get_sub_chunk(chunk_y, func);
     }
 
-    void world_data::get_chunk(int64_t chunk_x, int64_t chunk_z, std::function<void(chunk_data& chunk)> func) {
+    void world_data::get_chunk(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& func) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
@@ -2236,28 +2236,28 @@ namespace copper_server::storage {
                         func(*chunk->second);
     }
 
-    void world_data::for_each_chunk(base_objects::cubic_bounds_block bounds, std::function<void(chunk_data& chunk)> func) {
+    void world_data::for_each_chunk(base_objects::cubic_bounds_block bounds, const std::function<void(chunk_data& chunk)>& func) {
         for_each_chunk((base_objects::cubic_bounds_chunk)bounds, func);
     }
 
-    void world_data::for_each_chunk(base_objects::spherical_bounds_block bounds, std::function<void(chunk_data& chunk)> func) {
+    void world_data::for_each_chunk(base_objects::spherical_bounds_block bounds, const std::function<void(chunk_data& chunk)>& func) {
         for_each_chunk((base_objects::spherical_bounds_chunk)bounds, func);
     }
 
-    void world_data::for_each_sub_chunk_at(int64_t global_x, int64_t global_z, std::function<void(sub_chunk_data& chunk)> func) {
+    void world_data::for_each_sub_chunk_at(int64_t global_x, int64_t global_z, const std::function<void(sub_chunk_data& chunk)>& func) {
         for_each_sub_chunk(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z), func);
     }
 
-    void world_data::get_sub_chunk_at(int64_t global_x, int64_t global_y_raw, int64_t global_z, std::function<void(sub_chunk_data& chunk)> func) {
+    void world_data::get_sub_chunk_at(int64_t global_x, int64_t global_y_raw, int64_t global_z, const std::function<void(sub_chunk_data& chunk)>& func) {
         TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
         get_sub_chunk(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_y), convert_chunk_global_pos(global_z), func);
     }
 
-    void world_data::get_chunk_at(int64_t global_x, int64_t global_z, std::function<void(chunk_data& chunk)> func) {
+    void world_data::get_chunk_at(int64_t global_x, int64_t global_z, const std::function<void(chunk_data& chunk)>& func) {
         get_chunk(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z), func);
     }
 
-    void world_data::for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func) {
+    void world_data::for_each_entity(const std::function<void(const base_objects::entity_ref& entity)>& func) {
         std::unique_lock lock(mutex);
         for (auto& [id, entity] : entities) {
             if (entity->current_world() == this)
@@ -2266,7 +2266,7 @@ namespace copper_server::storage {
         }
     }
 
-    void world_data::for_each_entity(base_objects::cubic_bounds_chunk bounds, std::function<void(base_objects::entity_ref& entity)> func) {
+    void world_data::for_each_entity(base_objects::cubic_bounds_chunk bounds, const std::function<void(base_objects::entity_ref& entity)>& func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
@@ -2279,7 +2279,7 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::for_each_entity(base_objects::cubic_bounds_chunk_radius bounds, std::function<void(base_objects::entity_ref& entity)> func) {
+    void world_data::for_each_entity(base_objects::cubic_bounds_chunk_radius bounds, const std::function<void(base_objects::entity_ref& entity)>& func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
@@ -2292,7 +2292,7 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::for_each_entity(base_objects::cubic_bounds_chunk_radius_out bounds, std::function<void(base_objects::entity_ref& entity)> func) {
+    void world_data::for_each_entity(base_objects::cubic_bounds_chunk_radius_out bounds, const std::function<void(base_objects::entity_ref& entity)>& func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
@@ -2305,7 +2305,7 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::for_each_entity(base_objects::spherical_bounds_chunk bounds, std::function<void(base_objects::entity_ref& entity)> func) {
+    void world_data::for_each_entity(base_objects::spherical_bounds_chunk bounds, const std::function<void(base_objects::entity_ref& entity)>& func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
@@ -2318,7 +2318,7 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::for_each_entity(base_objects::spherical_bounds_chunk_out bounds, std::function<void(base_objects::entity_ref& entity)> func) {
+    void world_data::for_each_entity(base_objects::spherical_bounds_chunk_out bounds, const std::function<void(base_objects::entity_ref& entity)>& func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
@@ -2331,7 +2331,7 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::for_each_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func) {
+    void world_data::for_each_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(const base_objects::entity_ref& entity)>& func) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto chunk = x_axis->second.find(chunk_z); chunk != x_axis->second.end())
@@ -2342,7 +2342,7 @@ namespace copper_server::storage {
                                 func(entity);
     }
 
-    void world_data::for_each_block_entity(base_objects::cubic_bounds_chunk bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+    void world_data::for_each_block_entity(base_objects::cubic_bounds_chunk bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
@@ -2352,7 +2352,7 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::for_each_block_entity(base_objects::cubic_bounds_chunk_radius bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+    void world_data::for_each_block_entity(base_objects::cubic_bounds_chunk_radius bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
@@ -2362,7 +2362,7 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::for_each_block_entity(base_objects::cubic_bounds_chunk_radius_out bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+    void world_data::for_each_block_entity(base_objects::cubic_bounds_chunk_radius_out bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
@@ -2372,7 +2372,7 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::for_each_block_entity(base_objects::spherical_bounds_chunk bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+    void world_data::for_each_block_entity(base_objects::spherical_bounds_chunk bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
@@ -2382,7 +2382,7 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::for_each_block_entity(base_objects::spherical_bounds_chunk_out bounds, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+    void world_data::for_each_block_entity(base_objects::spherical_bounds_chunk_out bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
@@ -2392,61 +2392,61 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::for_each_block_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+    void world_data::for_each_block_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func) {
         std::unique_lock lock(mutex);
         get_chunk(chunk_x, chunk_z, [&](auto& chunk) { chunk.for_each_block_entity(func); });
     }
 
-    void world_data::for_each_block_entity(int64_t chunk_x, int64_t chunk_y_raw, int64_t chunk_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+    void world_data::for_each_block_entity(int64_t chunk_x, int64_t chunk_y_raw, int64_t chunk_z, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func) {
         TO_WORLD_POS_CHUNK(chunk_y, chunk_y_raw);
         std::unique_lock lock(mutex);
         get_chunk(chunk_x, chunk_z, [&](auto& chunk) { chunk.for_each_block_entity(chunk_y, func); });
     }
 
-    void world_data::for_each_entity(base_objects::cubic_bounds_block bounds, std::function<void(base_objects::entity_ref& entity)> func) {
+    void world_data::for_each_entity(base_objects::cubic_bounds_block bounds, const std::function<void(base_objects::entity_ref& entity)>& func) {
         for_each_entity((base_objects::cubic_bounds_chunk)bounds, [&](auto& entity) {
             if (bounds.in_bounds((int64_t)entity->position.x, (int64_t)entity->position.y, (int64_t)entity->position.z))
                 func(entity);
         });
     }
 
-    void world_data::for_each_entity(base_objects::cubic_bounds_block_radius bounds, std::function<void(base_objects::entity_ref& entity)> func) {
+    void world_data::for_each_entity(base_objects::cubic_bounds_block_radius bounds, const std::function<void(base_objects::entity_ref& entity)>& func) {
         for_each_entity((base_objects::cubic_bounds_chunk_radius)bounds, [&](auto& entity) {
             if (bounds.in_bounds((int64_t)entity->position.x, (int64_t)entity->position.y, (int64_t)entity->position.z))
                 func(entity);
         });
     }
 
-    void world_data::for_each_entity(base_objects::cubic_bounds_block_radius_out bounds, std::function<void(base_objects::entity_ref& entity)> func) {
+    void world_data::for_each_entity(base_objects::cubic_bounds_block_radius_out bounds, const std::function<void(base_objects::entity_ref& entity)>& func) {
         for_each_entity((base_objects::cubic_bounds_chunk_radius_out)bounds, [&](auto& entity) {
             if (bounds.in_bounds((int64_t)entity->position.x, (int64_t)entity->position.y, (int64_t)entity->position.z))
                 func(entity);
         });
     }
 
-    void world_data::for_each_entity(base_objects::spherical_bounds_block bounds, std::function<void(base_objects::entity_ref& entity)> func) {
+    void world_data::for_each_entity(base_objects::spherical_bounds_block bounds, const std::function<void(base_objects::entity_ref& entity)>& func) {
         for_each_entity((base_objects::spherical_bounds_chunk)bounds, [&](auto& entity) {
             if (bounds.in_bounds((int64_t)entity->position.x, (int64_t)entity->position.y, (int64_t)entity->position.z))
                 func(entity);
         });
     }
 
-    void world_data::for_each_entity(base_objects::spherical_bounds_block_out bounds, std::function<void(base_objects::entity_ref& entity)> func) {
+    void world_data::for_each_entity(base_objects::spherical_bounds_block_out bounds, const std::function<void(base_objects::entity_ref& entity)>& func) {
         for_each_entity((base_objects::spherical_bounds_chunk_out)bounds, [&](auto& entity) {
             if (bounds.in_bounds((int64_t)entity->position.x, (int64_t)entity->position.y, (int64_t)entity->position.z))
                 func(entity);
         });
     }
 
-    void world_data::for_each_entity_at(int64_t global_x, int64_t global_z, std::function<void(const base_objects::entity_ref& entity)> func) {
+    void world_data::for_each_entity_at(int64_t global_x, int64_t global_z, const std::function<void(const base_objects::entity_ref& entity)>& func) {
         for_each_entity(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z), func);
     }
 
-    void world_data::for_each_block_entity_at(int64_t global_x, int64_t global_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+    void world_data::for_each_block_entity_at(int64_t global_x, int64_t global_z, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func) {
         for_each_block_entity(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z), func);
     }
 
-    void world_data::for_each_block_entity_at(int64_t global_x, int64_t global_y_raw, int64_t global_z, std::function<void(base_objects::block& block, enbt::value& extended_data)> func) {
+    void world_data::for_each_block_entity_at(int64_t global_x, int64_t global_y_raw, int64_t global_z, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func) {
         TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
         for_each_block_entity(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z), convert_chunk_global_pos(global_y), func);
     }
@@ -2530,14 +2530,14 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::get_block(int64_t global_x, int64_t global_y_raw, int64_t global_z, std::function<void(base_objects::block& block)> func, std::function<void(base_objects::block& block, enbt::value& extended_data)> block_entity) {
+    void world_data::get_block(int64_t global_x, int64_t global_y_raw, int64_t global_z, const std::function<void(base_objects::block& block)>& func, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& block_entity) {
         TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
         get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
             sub_chunk.get_block(global_x & 15, global_y & 15, global_z & 15, func, block_entity);
         });
     }
 
-    void world_data::query_block(int64_t global_x, int64_t global_y_raw, int64_t global_z, std::function<void(base_objects::block& block)> func, std::function<void(base_objects::block& block, enbt::value& extended_data)> block_entity, std::function<void()> fault) {
+    void world_data::query_block(int64_t global_x, int64_t global_y_raw, int64_t global_z, const std::function<void(base_objects::block& block)>& func, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& block_entity, const std::function<void()>& fault) {
         TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
         request_chunk_data(
             global_x >> 4,
@@ -2579,7 +2579,7 @@ namespace copper_server::storage {
         get_light_processor()->process_sub_chunk(*this, chunk_x, chunk_y_raw, chunk_z);
     }
 
-    void world_data::locked(std::function<void(world_data& self)> func) {
+    void world_data::locked(const std::function<void(world_data& self)>& func) {
         std::unique_lock lock(mutex);
         func(*this);
     }
@@ -2814,13 +2814,13 @@ namespace copper_server::storage {
         }
     }
 
-    void world_data::get_height_maps(int64_t chunk_x, int64_t chunk_z, std::function<void(base_objects::world::height_maps& height_maps)> func) {
+    void world_data::get_height_maps(int64_t chunk_x, int64_t chunk_z, const std::function<void(base_objects::world::height_maps& height_maps)>& func) {
         get_chunk(chunk_x, chunk_z, [&](chunk_data& chunk) {
             func(chunk.height_maps);
         });
     }
 
-    void world_data::get_height_maps_at(int64_t global_x, int64_t global_z, std::function<void(base_objects::world::height_maps& height_maps)> func) {
+    void world_data::get_height_maps_at(int64_t global_x, int64_t global_z, const std::function<void(base_objects::world::height_maps& height_maps)>& func) {
         get_chunk_at(global_x, global_z, [&](chunk_data& chunk) {
             func(chunk.height_maps);
         });
@@ -3448,7 +3448,7 @@ namespace copper_server::storage {
         return id;
     }
 
-    int32_t worlds_data::create(const std::string& name, std::function<void(world_data& world)> init) {
+    int32_t worlds_data::create(const std::string& name, const std::function<void(world_data& world)>& init) {
         std::unique_lock lock(mutex);
         if (get_id(name) != -1)
             throw std::runtime_error("World with name " + name + " already exists.");
@@ -3465,29 +3465,29 @@ namespace copper_server::storage {
         return id;
     }
 
-    void worlds_data::locked(std::function<void()> func) {
+    void worlds_data::locked(const std::function<void()>& func) {
         std::unique_lock lock(mutex);
         func();
     }
 
-    void worlds_data::locked(std::function<void(worlds_data& self)> func) {
+    void worlds_data::locked(const std::function<void(worlds_data& self)>& func) {
         std::unique_lock lock(mutex);
         func(*this);
     }
 
-    void worlds_data::for_each_entity(std::function<void(const base_objects::entity_ref& entity)> func) {
+    void worlds_data::for_each_entity(const std::function<void(const base_objects::entity_ref& entity)>& func) {
         std::unique_lock lock(mutex);
         for (auto& [id, world] : cached_worlds)
             world->for_each_entity(func);
     }
 
-    void worlds_data::for_each_entity(int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func) {
+    void worlds_data::for_each_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(const base_objects::entity_ref& entity)>& func) {
         std::unique_lock lock(mutex);
         for (auto& [id, world] : cached_worlds)
             world->for_each_entity(chunk_x, chunk_z, func);
     }
 
-    void worlds_data::for_each_entity(int32_t world_id, std::function<void(const base_objects::entity_ref& entity)> func) {
+    void worlds_data::for_each_entity(int32_t world_id, const std::function<void(const base_objects::entity_ref& entity)>& func) {
         std::unique_lock lock(mutex);
         if (auto world = cached_worlds.find(world_id); world == cached_worlds.end())
             load(world_id)->for_each_entity(func);
@@ -3495,7 +3495,7 @@ namespace copper_server::storage {
             world->second->for_each_entity(func);
     }
 
-    void worlds_data::for_each_entity(int32_t world_id, int64_t chunk_x, int64_t chunk_z, std::function<void(const base_objects::entity_ref& entity)> func) {
+    void worlds_data::for_each_entity(int32_t world_id, int64_t chunk_x, int64_t chunk_z, const std::function<void(const base_objects::entity_ref& entity)>& func) {
         std::unique_lock lock(mutex);
         if (auto world = cached_worlds.find(world_id); world == cached_worlds.end())
             load(world_id)->for_each_entity(chunk_x, chunk_z, func);
@@ -3503,7 +3503,7 @@ namespace copper_server::storage {
             world->second->for_each_entity(chunk_x, chunk_z, func);
     }
 
-    void worlds_data::for_each_world(std::function<void(int32_t id, world_data& world)> func) {
+    void worlds_data::for_each_world(const std::function<void(int32_t id, world_data& world)>& func) {
         std::unique_lock lock(mutex);
         for (auto& [id, world] : cached_worlds)
             func(id, *world);

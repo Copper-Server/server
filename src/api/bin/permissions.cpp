@@ -83,10 +83,10 @@ namespace copper_server::api::permissions {
         perm->remove_requirement(action_name, permission_tag);
     }
 
-    void add_permission(base_objects::permissions_object permission) {
+    void add_permission(base_objects::permissions_object&& permission) {
         if (perm == nullptr)
             return;
-        perm->add_permission(permission);
+        perm->add_permission(std::move(permission));
     }
 
     void remove_permission(const std::string& permission_tag) {

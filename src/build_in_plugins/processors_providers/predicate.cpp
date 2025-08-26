@@ -247,7 +247,7 @@ namespace copper_server::build_in_plugins::processors_providers {
                 if (!diff_min_max(movement["horizontal_speed"], std::sqrt(entity->motion.x * entity->motion.x + entity->motion.z * entity->motion.z)))
                     return false;
 
-            if (movement.contains("horizontal_speed"))
+            if (movement.contains("vertical_speed"))
                 if (!diff_min_max(movement["vertical_speed"], entity->motion.y))
                     return false;
 

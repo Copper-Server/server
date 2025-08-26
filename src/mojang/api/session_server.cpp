@@ -12,7 +12,7 @@
 #include <src/util/conversions.hpp>
 
 namespace mojang::api {
-    const std::shared_ptr<session_server::player_data> session_server::hasJoined(const std::string& username, const std::string& serverId, bool online_mode, bool cache_result) {
+    std::shared_ptr<session_server::player_data> session_server::hasJoined(const std::string& username, const std::string& serverId, bool online_mode, bool cache_result) {
         auto cache_key = cache.find(username);
         if (cache_key != cache.end()) {
             if (!cache_key->second->online_data)

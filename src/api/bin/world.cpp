@@ -143,10 +143,11 @@ namespace copper_server::api::world {
                 break;
             }
         }
-        auto world = get_worlds().get(id);
 
         if (set_new_data) {
-            base_objects::cubic_bounds_block_radius rs{world->spawn_data.x, 0, world->spawn_data.z, world->spawn_data.radius};
+            auto world = get_worlds().get(id);
+            auto& sp_dat = world->spawn_data;
+            base_objects::cubic_bounds_block_radius rs{sp_dat.x, 0, sp_dat.z, sp_dat.radius};
             auto [x, y, z] = rs.random_point();
             int64_t pos_y = 0;
             world->get_height_maps_at(x, z, [&](base_objects::world::height_maps& height_maps) {
@@ -158,10 +159,11 @@ namespace copper_server::api::world {
 
             client_ref.player_data.world_id = get_worlds().get(id)->world_name;
 
-            client_ref.player_data.assigned_entity->position.x = 0.5 + (double)x;
-            client_ref.player_data.assigned_entity->position.y = (double)pos_y;
-            client_ref.player_data.assigned_entity->position.z = 0.5 + (double)z;
-            client_ref.player_data.assigned_entity->rotation = {0, 0};
+            auto& ass_ent = client_ref.player_data.assigned_entity;
+            ass_ent->position.x = 0.5 + (double)x;
+            ass_ent->position.y = (double)pos_y;
+            ass_ent->position.z = 0.5 + (double)z;
+            ass_ent->rotation = {0, 0};
         }
 
         return {id, client_ref.player_data.world_id};

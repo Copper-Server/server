@@ -25,16 +25,16 @@ namespace copper_server::util {
         template <class Target, class T>
         void insertValue(T val, size_t max = sizeof(T));
         void insertString(const char* val, size_t max);
-        void IntegerInsert(enbt::value& val, bool typ_ins);
-        void FloatingInsert(enbt::value& val, bool typ_ins);
-        void BuildCompoundItem(const std::string& c_name, enbt::value& comp, bool compress);
-        void BuildCompound(const std::string& c_name, enbt::value& comp, bool compress, bool in_array);
+        void IntegerInsert(const enbt::value& val, bool typ_ins);
+        void FloatingInsert(const enbt::value& val, bool typ_ins);
+        void BuildCompoundItem(const std::string& c_name, const enbt::value& comp, bool compress);
+        void BuildCompound(const std::string& c_name, const enbt::value& comp, bool compress, bool in_array);
         void InsertType(enbt::type_id t);
-        void BuildBaseIntArray(int32_t len, enbt::value& arr, enbt::type_id base_id);
-        void BuildSimpleIntArray(int32_t len, enbt::value& arr, enbt::type_id base_id);
-        void BuildArray(int32_t len, enbt::value& arr, enbt::type_id base_id, bool compress);
-        void BuildArray(enbt::value& enbt, bool insert_type, bool compress);
-        void RecursiveBuilder(enbt::value& enbt, bool insert_type, const std::string& name, bool compress, bool in_array);
+        void BuildBaseIntArray(int32_t len, const enbt::value& arr, enbt::type_id base_id);
+        void BuildSimpleIntArray(int32_t len, const enbt::value& arr, enbt::type_id base_id);
+        void BuildArray(int32_t len, const enbt::value& arr, enbt::type_id base_id, bool compress);
+        void BuildArray(const enbt::value& enbt, bool insert_type, bool compress);
+        void RecursiveBuilder(const enbt::value& enbt, bool insert_type, const std::string& name, bool compress, bool in_array);
 #pragma endregion
 #pragma region NBT_TO_ENBT
 

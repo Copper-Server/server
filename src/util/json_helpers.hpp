@@ -481,7 +481,7 @@ namespace copper_server::util {
             }
 
             auto operator==(const js_iterator& other) {
-                return iterator != other.iterator;
+                return iterator == other.iterator;
             }
         };
 
@@ -614,7 +614,7 @@ namespace copper_server::util {
             }
 
             auto operator==(const js_iterator& other) {
-                return iterator != other.iterator;
+                return iterator == other.iterator;
             }
         };
 

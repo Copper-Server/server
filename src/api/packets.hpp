@@ -1347,9 +1347,9 @@ namespace copper_server {
                             trial_chambers = 34,
                         };
                         enum_as<type_e, var_int32> type = type_e::white_arrow;
-                        limited_num<int8_t, -128, 127> x = {0};
-                        limited_num<int8_t, -128, 127> z = {0};
-                        limited_num<int8_t, 0, 15> dir = {0};
+                        limited_num<int8_t, -128, 127> x;
+                        limited_num<int8_t, -128, 127> z;
+                        limited_num<int8_t, 0, 15> dir;
                         std::optional<Chat> name = std::nullopt;
                     };
 
@@ -1512,8 +1512,8 @@ namespace copper_server {
                     var_int32 index;
                     std::optional<std::array<uint8_t, 256>> signature = std::nullopt;
                     string_sized<256> message;
-                    uint64_t timestamp;
-                    uint64_t salt;
+                    uint64_t timestamp = 0;
+                    uint64_t salt = 0;
                     list_array_sized<previous_message, 20> previous_messages;
                     std::optional<Chat> unsigned_content = std::nullopt;
                     enum_switch<var_int32, no_filter, fully_filtered, partially_filtered> filter;
@@ -1661,14 +1661,14 @@ namespace copper_server {
                 };
 
                 struct recipe_book_settings : public packet<0x45> {
-                    bool crafting_recipe_open;
-                    bool crafting_recipe_filter_active;
-                    bool smelting_recipe_open;
-                    bool smelting_recipe_filter_active;
-                    bool blast_recipe_open;
-                    bool blast_recipe_filter_active;
-                    bool smoker_recipe_open;
-                    bool smoker_recipe_filter_active;
+                    bool crafting_recipe_open = false;
+                    bool crafting_recipe_filter_active = false;
+                    bool smelting_recipe_open = false;
+                    bool smelting_recipe_filter_active = false;
+                    bool blast_recipe_open = false;
+                    bool blast_recipe_filter_active = false;
+                    bool smoker_recipe_open = false;
+                    bool smoker_recipe_filter_active = false;
                 };
 
                 struct remove_entities : public packet<0x46> {
@@ -1693,7 +1693,7 @@ namespace copper_server {
                     enbt::raw_uuid uuid;
                     string_sized<32767> url;
                     string_sized<40> hash; //0 or 40, other values waste bandwidth
-                    bool forced;
+                    bool forced = false;
                     std::optional<Chat> prompt_message = std::nullopt;
                 };
 
@@ -1706,11 +1706,11 @@ namespace copper_server {
 
                     var_int32::dimension_type dimension_type;
                     identifier dimension_name;
-                    uint64_t seed_hashed;
+                    uint64_t seed_hashed = 0;
                     enum_as<gamemode_e, uint8_t> gamemode;
                     enum_as<optional_gamemode_e, int8_t> previous_gamemode;
-                    bool is_debug;
-                    bool is_flat;
+                    bool is_debug = false;
+                    bool is_flat = false;
                     std::optional<death_location_t> death_location = std::nullopt;
                     var_int32 portal_cooldown;
                     var_int32 sea_level;
@@ -2779,7 +2779,7 @@ namespace copper_server {
 
                         struct component {
                             var_int32::data_component_type type;
-                            int32_t crc32_hash  =0;
+                            int32_t crc32_hash = 0;
                         };
 
                         list_array<component> add_components;
@@ -2794,7 +2794,7 @@ namespace copper_server {
                     var_int32 window_id;
                     var_int32 state_id;
                     short slot;
-                    int8_t button;
+                    int8_t button = 0;
                     var_int32 mode;
                     list_array_sized<changed_slot, 128> changed;
                     std::optional<hashed_slot_data> carry_item = std::nullopt;
@@ -2807,7 +2807,7 @@ namespace copper_server {
                 struct container_slot_state_changed : public packet<0x13> {
                     var_int32 slot_id;
                     var_int32 window_id;
-                    bool state;
+                    bool state = false;
                 };
 
                 struct cookie_response : public packet<0x14> {
@@ -2856,21 +2856,21 @@ namespace copper_server {
                     };
 
                     enum_switch<var_int32, interact_, attack, interact_at> type;
-                    bool sneak_key_pressed;
+                    bool sneak_key_pressed = false;
                 };
 
                 struct jigsaw_generate : public packet<0x1A> {
                     position location;
                     var_int32 levels;
-                    bool keep_jigsaws;
+                    bool keep_jigsaws = false;
                 };
 
                 struct keep_alive : public packet<0x1B> {
-                    uint64_t id;
+                    uint64_t id = 0;
                 };
 
                 struct lock_difficulty : public packet<0x1C> {
-                    bool is_locked;
+                    bool is_locked = false;
                 };
 
                 struct move_player_pos : public packet<0x1D> {
@@ -2880,9 +2880,9 @@ namespace copper_server {
                     };
                     using enum flags_f;
 
-                    double x;
-                    double y;
-                    double z;
+                    double x = 0.0;
+                    double y = 0.0;
+                    double z = 0.0;
                     enum_as_flag<flags_f, int8_t> flags;
                 };
 
@@ -2893,11 +2893,11 @@ namespace copper_server {
                     };
                     using enum flags_f;
 
-                    double x;
-                    double y;
-                    double z;
-                    float yaw;
-                    float pitch;
+                    double x = 0.0;
+                    double y = 0.0;
+                    double z = 0.0;
+                    float yaw = 0.0f;
+                    float pitch = 0.0f;
                     enum_as_flag<flags_f, int8_t> flags;
                 };
 
@@ -2908,8 +2908,8 @@ namespace copper_server {
                     };
                     using enum flags_f;
 
-                    float yaw;
-                    float pitch;
+                    float yaw = 0.0f;
+                    float pitch = 0.0f;
                     enum_as_flag<flags_f, int8_t> flags;
                 };
 
@@ -2924,37 +2924,37 @@ namespace copper_server {
                 };
 
                 struct move_vehicle : public packet<0x21> {
-                    double x;
-                    double y;
-                    double z;
-                    float yaw;
-                    float pitch;
-                    bool on_ground;
+                    double x = 0.0;
+                    double y = 0.0;
+                    double z = 0.0;
+                    float yaw = 0.0f;
+                    float pitch = 0.0f;
+                    bool on_ground = false;
                 };
 
                 struct paddle_boat : public packet<0x22> {
-                    bool left_paddle_turning;
-                    bool right_paddle_turning;
+                    bool left_paddle_turning = false;
+                    bool right_paddle_turning = false;
                 };
 
                 struct pick_item_from_block : public packet<0x23> {
                     position location;
-                    bool include_data;
+                    bool include_data = false;
                 };
 
                 struct pick_item_from_entity : public packet<0x24> {
                     var_int32 entity_id;
-                    bool include_data;
+                    bool include_data = false;
                 };
 
                 struct ping_request : public packet<0x25> {
-                    uint64_t payload;
+                    uint64_t payload = 0;
                 };
 
                 struct place_recipe : public packet<0x26> {
                     var_int32 windows_id;
                     var_int32::recipe recipe_id;
-                    bool make_all;
+                    bool make_all = false;
                 };
 
                 struct player_abilities : public packet<0x27> {
@@ -3022,7 +3022,7 @@ namespace copper_server {
                 struct player_loaded : public packet<0x2B> {};
 
                 struct pong : public packet<0x2C> {
-                    int32_t id;
+                    int32_t id = 0;
                 };
 
                 struct recipe_book_change_settings : public packet<0x2D> {
@@ -3035,8 +3035,8 @@ namespace copper_server {
                     using enum book_type_e;
 
                     enum_as<book_type_e, var_int32> book_type;
-                    bool book_open;
-                    bool filter_active;
+                    bool book_open = false;
+                    bool filter_active = false;
                 };
 
                 struct recipe_book_seen_recipe : public packet<0x2E> {
@@ -3084,7 +3084,7 @@ namespace copper_server {
                 };
 
                 struct set_carried_item : public packet<0x34> {
-                    short slot;
+                    short slot = 0;
                 };
 
                 struct set_command_block : public packet<0x35> {
@@ -3110,11 +3110,11 @@ namespace copper_server {
                 struct set_command_minecart : public packet<0x36> {
                     var_int32 entity_id;
                     string_sized<32767> command;
-                    bool track_output;
+                    bool track_output = 0;
                 };
 
                 struct set_creative_mode_slot : public packet<0x37> {
-                    short slot;
+                    short slot = 0;
                     struct slot item;
                 };
 
@@ -3232,7 +3232,7 @@ namespace copper_server {
                     var_int32 size_y;
                     var_int32 size_z;
                     enum_as<rotation_e, var_int32> rotation;
-                    bool ignore_entities;
+                    bool ignore_entities = false;
                     enum_as<status_e, var_int32> status;
                     std::optional<Chat> error_message = std::nullopt;
                 };
@@ -3248,8 +3248,8 @@ namespace copper_server {
                     limited_num<float, 0.0f, 1.0f> cursor_x;
                     limited_num<float, 0.0f, 1.0f> cursor_y;
                     limited_num<float, 0.0f, 1.0f> cursor_z;
-                    bool inside_block;
-                    bool world_border_hit;
+                    bool inside_block = false;
+                    bool world_border_hit = false;
                     var_int32 block_sequence_id;
                 };
 
@@ -3260,8 +3260,8 @@ namespace copper_server {
                     };
                     enum_as<hand_e, var_int32> hand;
                     var_int32 block_sequence_id;
-                    float yaw;
-                    float pitch;
+                    float yaw = 0.0f;
+                    float pitch = 0.0f;
                 };
 
                 struct custom_click_action : public packet<0x41> {

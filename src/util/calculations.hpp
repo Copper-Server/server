@@ -139,33 +139,33 @@ namespace copper_server::util {
         double x;
         double y;
 
-        bool operator==(const ANGLE_RAD& comp) {
+        bool operator==(ANGLE_RAD comp) {
             return x == comp.x && y == comp.y;
         }
 
-        bool operator!=(const ANGLE_RAD& comp) {
+        bool operator!=(ANGLE_RAD comp) {
             return x != comp.x || y != comp.y;
         }
 
-        ANGLE_RAD& operator+=(const ANGLE_RAD& other) {
+        ANGLE_RAD& operator+=(ANGLE_RAD other) {
             x += other.x;
             y += other.y;
             return *this;
         }
 
-        ANGLE_RAD& operator-=(const ANGLE_RAD& other) {
+        ANGLE_RAD& operator-=(ANGLE_RAD other) {
             x -= other.x;
             y -= other.y;
             return *this;
         }
 
-        ANGLE_RAD& operator*=(const ANGLE_RAD& other) {
+        ANGLE_RAD& operator*=(ANGLE_RAD other) {
             x *= other.x;
             y *= other.y;
             return *this;
         }
 
-        ANGLE_RAD& operator/=(const ANGLE_RAD& other) {
+        ANGLE_RAD& operator/=(ANGLE_RAD other) {
             x /= other.x;
             y /= other.y;
             return *this;

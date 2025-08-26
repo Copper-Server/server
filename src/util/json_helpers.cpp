@@ -74,7 +74,7 @@ namespace copper_server::util {
             std::vector<boost::json::string> keys;
 
             for (auto const& v : jv.get_object()) {
-                keys.push_back(v.key());
+                keys.emplace_back(v.key());
             }
 
             std::sort(keys.begin(), keys.end());

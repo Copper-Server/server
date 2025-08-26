@@ -96,7 +96,7 @@ namespace copper_server::base_objects {
             std::string_view selected = view.substr(2, close - 1);
             view = view.substr(close + 1);
             list_array<char>(selected)
-                .where([](char ch) { return ch != ' ' || ch != '\n' || ch != '\t' || ch != '\r'; })
+                .where([](char ch) { return ch != ' ' && ch != '\n' && ch != '\t' && ch != '\r'; })
                 .split_by(',')
                 .for_each([&](list_array<char>&& str) {
                     std::string converted = str.to_container<std::string>();
@@ -419,7 +419,7 @@ namespace copper_server::base_objects {
 
         if (level) {
             if (level->is_inverted) {
-                if (level->min && level->min)
+                if (level->min && level->max)
                     entities = entities.take().where([&](auto& entity) {
                         return entity->get_level() < level->min && entity->get_level() < level->max;
                     });
@@ -432,7 +432,7 @@ namespace copper_server::base_objects {
                         return entity->get_level() > level->max;
                     });
             } else {
-                if (level->min && level->min)
+                if (level->min && level->max)
                     entities = entities.take().where([&](auto& entity) {
                         return entity->get_level() >= level->min && entity->get_level() >= level->max;
                     });
@@ -448,7 +448,7 @@ namespace copper_server::base_objects {
         }
         if (x_rotation) {
             if (x_rotation->is_inverted) {
-                if (x_rotation->min && x_rotation->min)
+                if (x_rotation->min && x_rotation->max)
                     entities = entities.take().where([&](auto& entity) {
                         return entity->rotation.x < x_rotation->min && entity->rotation.x < x_rotation->max;
                     });
@@ -461,7 +461,7 @@ namespace copper_server::base_objects {
                         return entity->rotation.x > x_rotation->max;
                     });
             } else {
-                if (x_rotation->min && x_rotation->min)
+                if (x_rotation->min && x_rotation->max)
                     entities = entities.take().where([&](auto& entity) {
                         return entity->rotation.x >= x_rotation->min && entity->rotation.x >= x_rotation->max;
                     });
@@ -477,7 +477,7 @@ namespace copper_server::base_objects {
         }
         if (y_rotation) {
             if (y_rotation->is_inverted) {
-                if (y_rotation->min && y_rotation->min)
+                if (y_rotation->min && y_rotation->max)
                     entities = entities.take().where([&](auto& entity) {
                         return entity->rotation.y < y_rotation->min && entity->rotation.y > y_rotation->max;
                     });
@@ -490,7 +490,7 @@ namespace copper_server::base_objects {
                         return entity->rotation.y > y_rotation->max;
                     });
             } else {
-                if (y_rotation->min && y_rotation->min)
+                if (y_rotation->min && y_rotation->max)
                     entities = entities.take().where([&](auto& entity) {
                         return entity->rotation.y >= y_rotation->min && entity->rotation.y >= y_rotation->max;
                     });

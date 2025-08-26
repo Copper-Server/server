@@ -122,18 +122,18 @@ namespace copper_server::build_in_plugins {
                 allowlist.add_child({"mode"})
                     .add_child({"mode", "set allowlist mode", "/allowlist mode block|allow|off"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                     .set_callback("command.allowlist.mode", [](const list_array<predicate>& args, base_objects::command_context& context) -> void {
-                        auto& mode = std::get<pred_string>(args[0]).value;
-                        if (mode == "block")
+                        auto& new_mode = std::get<pred_string>(args[0]).value;
+                        if (new_mode == "block")
                             api::allowlist::on_mode_change(api::allowlist::allowlist_mode::block);
-                        else if (mode == "allow")
+                        else if (new_mode == "allow")
                             api::allowlist::on_mode_change(api::allowlist::allowlist_mode::allow);
-                        else if (mode == "off")
+                        else if (new_mode == "off")
                             api::allowlist::on_mode_change(api::allowlist::allowlist_mode::off);
                         else {
                             context.executor << api::client::play::system_chat{.content = {"Usage: /allowlist mode block|allow|off"}};
                             return;
                         }
-                        context.executor << api::client::play::system_chat{.content = {"Allowlist mode set to " + mode}};
+                        context.executor << api::client::play::system_chat{.content = {"Allowlist mode set to " + new_mode}};
                     });
             }
         }

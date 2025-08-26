@@ -13,7 +13,7 @@
 namespace copper_server {
     void unregisterEvery(PluginRegistrationPtr& plugin, std::unordered_map<std::string, PluginRegistrationPtr>& container) {
         for (
-            std::unordered_map<std::string, PluginRegistrationPtr>::iterator it;
+            std::unordered_map<std::string, PluginRegistrationPtr>::iterator it = container.begin();
             it != container.end();
             it = std::find_if(container.begin(), container.end(), [&plugin](auto& item) {
                 return item.second == plugin;

@@ -421,7 +421,7 @@ namespace copper_server::base_objects {
         };
 
         struct use_cooldown : public enum_item<23> {
-            float seconds;
+            float seconds = 0.0f;
             std::optional<identifier> cooldown_group = std::nullopt;
             bool operator==(const use_cooldown& other) const = default;
         };
@@ -472,9 +472,9 @@ namespace copper_server::base_objects {
             std::optional<identifier> model = std::nullopt;
             std::optional<identifier> overlay = std::nullopt;
             std::optional<id_set<var_int32::entity_type>> allowed_entities = std::nullopt;
-            bool dispensable;
-            bool swappable;
-            bool reduces_durability_on_damage;
+            bool dispensable = false;
+            bool swappable = false;
+            bool reduces_durability_on_damage = false;
             bool operator==(const equippable& other) const = default;
         };
 
@@ -507,12 +507,12 @@ namespace copper_server::base_objects {
                 bool operator==(const damage_reductions& other) const = default;
             };
 
-            float block_delay;
-            float disable_cooldown_scale;
+            float block_delay = 0.0f;
+            float disable_cooldown_scale = 0.0f;
             list_array<damage_reductions> reductions;
-            float item_damage_threshold;
-            float item_damage_base;
-            float item_damage_factor;
+            float item_damage_threshold = 0.0f;
+            float item_damage_base = 0.0f;
+            float item_damage_factor = 0.0f;
             std::optional<identifier> bypassed_by = std::nullopt;
             std::optional<or_<var_int32::sound_event, sound_event>> block_sound = std::nullopt;
             std::optional<or_<var_int32::sound_event, sound_event>> disable_sound = std::nullopt;

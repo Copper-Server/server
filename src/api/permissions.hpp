@@ -29,7 +29,7 @@ namespace copper_server::api::permissions {
     void add_requirement(const std::string& action_name, const std::string& permission_tag);
     void remove_requirement(const std::string& action_name, const std::string& permission_tag);
 
-    void add_permission(base_objects::permissions_object permission);
+    void add_permission(base_objects::permissions_object&& permission);
     void remove_permission(const std::string& permission_tag);
 
     bool is_in_group(const std::string& group_name, const base_objects::SharedClientData& client);

@@ -411,7 +411,7 @@ namespace copper_server::base_objects {
 
             for (int64_t i = start_x; i <= end_x; i++)
                 for (int64_t j = start_z; j <= end_z; j++)
-                    if (((i - x) * (i - x) + (j - z) * (j - z)) <= radius2)
+                    if (double((i - x) * (i - x) + (j - z) * (j - z)) <= radius2)
                         fn(i, j);
         }
 
@@ -504,7 +504,7 @@ namespace copper_server::base_objects {
             for (int64_t i = start_x; i <= end_x; i++)
                 for (int64_t j = start_y; j <= end_y; j++)
                     for (int64_t k = start_z; k <= end_z; k++)
-                        if (((i - x) * (i - x) + (j - y) * (j - y) + (k - z) * (k - z)) <= radius2)
+                        if (double((i - x) * (i - x) + (j - y) * (j - y) + (k - z) * (k - z)) <= radius2)
                             fn(i, j, k);
         }
 

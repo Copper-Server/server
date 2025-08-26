@@ -28,7 +28,7 @@ namespace copper_server::build_in_plugins {
             register_event(api::players::handlers::on_disconnect, base_objects::events::priority::high, [this](const base_objects::client_data_holder& client) {
                 if (client)
                     if (debug_mode && client->get_session())
-                        app_item("client_disconnected {}" + '\n', client->get_session()->id);
+                        app_item("client_disconnected {}\n", client->get_session()->id);
                 return false;
             });
             register_packet_post_send_viewer([this](api::packets::client_bound_packet& packet, base_objects::SharedClientData& client) {

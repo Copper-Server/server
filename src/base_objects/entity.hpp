@@ -54,7 +54,7 @@ namespace copper_server {
             std::string translation_resource_key;
             std::string spawn_group;
 
-            bounding base_bounds;
+            bounding base_bounds{0.0, 0.0};
             float eye_height = 0.0f;
 
             float acceleration = 0.0f; // block\tick
@@ -160,9 +160,9 @@ namespace copper_server {
                 void (*entity_attach)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
                 void (*entity_detach)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
 
-                void (*entity_damage)(entity& self, entity&, float health, int32_t type_id, const std::optional<util::VECTOR>& pos);
-                void (*entity_damage_with_source)(entity& self, entity&, float health, int32_t type_id, base_objects::entity_ref& source, const std::optional<util::VECTOR>& pos);
-                void (*entity_damage_with_sources)(entity& self, entity&, float health, int32_t type_id, base_objects::entity_ref& source, base_objects::entity_ref& source_direct, const std::optional<util::VECTOR>& pos);
+                void (*entity_damage)(entity& self, entity&, float health, int32_t type_id, const std::optional<util::VECTOR>& pos) = nullptr;
+                void (*entity_damage_with_source)(entity& self, entity&, float health, int32_t type_id, base_objects::entity_ref& source, const std::optional<util::VECTOR>& pos) = nullptr;
+                void (*entity_damage_with_sources)(entity& self, entity&, float health, int32_t type_id, base_objects::entity_ref& source, base_objects::entity_ref& source_direct, const std::optional<util::VECTOR>& pos) = nullptr;
 
                 void (*entity_attack)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
                 void (*entity_iteract)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
@@ -275,8 +275,8 @@ namespace copper_server {
 
         struct entity {
             struct effect {
-                uint32_t duration;
-                uint32_t id;
+                uint32_t duration = 0;
+                uint32_t id = 0;
                 uint8_t amplifier : 8 = 1;
                 bool ambient : 1 = false;
                 bool particles : 1 = true;

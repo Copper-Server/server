@@ -38,7 +38,7 @@ namespace copper_server::build_in_plugins {
                     *message.player << api::client::configuration::disconnect{.reason = message.data};
                     break;
                 case base_objects::SharedClientData::packets_state_t::protocol_state::play:
-                    *message.player << api::client::configuration::disconnect{.reason = message.data};
+                    *message.player << api::client::play::disconnect{.reason = message.data};
                     break;
                 }
                 return false;
@@ -58,7 +58,7 @@ namespace copper_server::build_in_plugins {
                     *message.player << api::client::configuration::disconnect{.reason = message.data};
                     break;
                 case base_objects::SharedClientData::packets_state_t::protocol_state::play:
-                    *message.player << api::client::configuration::disconnect{.reason = message.data};
+                    *message.player << api::client::play::disconnect{.reason = message.data};
                     break;
                 }
                 return false;
@@ -82,7 +82,7 @@ namespace copper_server::build_in_plugins {
                     it << api::client::configuration::disconnect{.reason = msg};
                     break;
                 case base_objects::SharedClientData::packets_state_t::protocol_state::play:
-                    it << api::client::configuration::disconnect{.reason = msg};
+                    it << api::client::play::disconnect{.reason = msg};
                     break;
                 }
                 return false;

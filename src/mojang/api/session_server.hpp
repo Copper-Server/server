@@ -34,7 +34,7 @@ namespace mojang::api {
         std::unordered_map<std::string, std::shared_ptr<player_data>> cache;
         std::chrono::system_clock::duration cache_duration = std::chrono::minutes(20);
 
-        const std::shared_ptr<player_data> hasJoined(const std::string& username, const std::string& serverId, bool online_mode, bool cache_result = true);
+        std::shared_ptr<player_data> hasJoined(const std::string& username, const std::string& serverId, bool online_mode, bool cache_result = true);
     };
 }
 #endif /* SRC_MOJANG_API_SESSION_SERVER */

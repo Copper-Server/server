@@ -233,6 +233,8 @@ namespace copper_server::base_objects {
         command_browser(command_manager& manager, const std::string& path);
         command_browser(command_browser& browser, const std::string& path);
         command_browser(command_browser&& browser) noexcept;
+        command_browser& operator=(command_browser&&) = delete;
+        command_browser& operator=(command_browser&) = delete;
 
         command_browser add_child(command&& command);
         command_browser add_child(command&& command, command_parser&& pred);
@@ -280,6 +282,9 @@ namespace copper_server::base_objects {
 
         command_root_browser(const command_root_browser& browser) noexcept
             : manager(browser.manager) {}
+
+        command_root_browser& operator=(command_root_browser&&) = delete;
+        command_root_browser& operator=(command_root_browser&) = delete;
 
         command_browser add_child(command&& command);
         command_browser add_child(command&& command, command_parser&& pred);
