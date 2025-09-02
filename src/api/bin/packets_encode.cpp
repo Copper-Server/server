@@ -6,11 +6,11 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/api/log.hpp>
 #include <src/api/network/tcp.hpp>
 #include <src/api/packets.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/base_objects/slot.hpp>
-#include <src/log.hpp>
 #include <src/util/reflect.hpp>
 #include <src/util/reflect/calculations.hpp>
 #include <src/util/reflect/component.hpp>
@@ -156,7 +156,7 @@ namespace copper_server::api::packets {
         } else if constexpr (is_template_base_of<id_set, T>) {
         } else if constexpr (std::is_same_v<bit_list_array<uint64_t>, T>) {
         } else if constexpr (is_convertible_to_packet_form<T>) {
-        } else if constexpr (is_id_source<T>) {
+        } else if constexpr (api::id::is_source<T>) {
         } else if constexpr (is_template_base_of<enum_set, T>) {
             using Tupple_T = std::decay_t<decltype(std::declval<T>().values)>;
             bool res = false;
@@ -386,7 +386,7 @@ namespace copper_server::api::packets {
         } else if constexpr (std::is_same_v<bit_list_array<uint64_t>, Type>) {
             res.write_var32_check(value.data().size());
             res.write_direct(value.data());
-        } else if constexpr (is_id_source<Type> || is_template_base_of<base_objects::depends_next, T>) {
+        } else if constexpr (api::id::is_source<Type> || is_template_base_of<base_objects::depends_next, T>) {
             serialize_entry(res, context, value.value);
         } else if constexpr (is_tvalue_template_base_of<ordered_id, Type>) {
             serialize_entry(res, context, value.value);
@@ -561,7 +561,7 @@ namespace copper_server::api::packets {
         } else if constexpr (is_template_base_of<id_set, T>) {
         } else if constexpr (std::is_same_v<bit_list_array<uint64_t>, T>) {
         } else if constexpr (is_convertible_to_packet_form<T>) {
-        } else if constexpr (is_id_source<T>) {
+        } else if constexpr (api::id::is_source<T>) {
         } else if constexpr (is_tvalue_template_base_of<ordered_id, T>) {
             value.value = context.packets_state.internal_data.set([](auto& data) {
                 return ++data.id_tracker[T::id_source];

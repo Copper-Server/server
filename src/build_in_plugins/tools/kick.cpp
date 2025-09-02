@@ -9,11 +9,11 @@
 #include <src/api/client.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/console.hpp>
+#include <src/api/log.hpp>
 #include <src/api/permissions.hpp>
 #include <src/api/players.hpp>
 #include <src/api/server.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/log.hpp>
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins {

@@ -66,6 +66,7 @@ namespace copper_server::base_objects {
 
 
         static number_provider parse_provider(const enbt::value& value);
+        enbt::value get_enbt() const;
     };
 
     struct number_provider_constant {

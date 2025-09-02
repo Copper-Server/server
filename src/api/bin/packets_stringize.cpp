@@ -279,7 +279,7 @@ namespace copper_server::api::packets {
                 serialize_entry(res, spacing, value.value);
             else if constexpr (is_bitset_fixed<Type>) {
                 serialize_array(res, spacing, value.value.data());
-            } else if constexpr (is_id_source<Type>) {
+            } else if constexpr (api::id::is_source<Type>) {
                 res += value.to_string();
             } else if constexpr (std::is_same_v<bit_list_array<uint64_t>, Type>) {
                 serialize_array(res, spacing, value.data());

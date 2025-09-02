@@ -9,9 +9,9 @@
 #include <src/api/configuration.hpp>
 #include <src/api/packets.hpp>
 #include <src/api/players.hpp>
+#include <src/api/registers.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/plugin/main.hpp>
-#include <src/registers.hpp>
 #include <src/util/conversions.hpp>
 
 namespace copper_server::build_in_plugins::network::tcp {
@@ -65,8 +65,8 @@ namespace copper_server::build_in_plugins::network::tcp {
         }
 
         static std::string build_response(base_objects::SharedClientData& client) {
-            int32_t protocol_version = client.packets_state.protocol_version == (int32_t)registers::current_protocol_id
-                                           ? registers::current_protocol_id
+            int32_t protocol_version = client.packets_state.protocol_version == (int32_t)api::registers::current_protocol_id
+                                           ? api::registers::current_protocol_id
                                            : 0;
 
             std::string res = "{"

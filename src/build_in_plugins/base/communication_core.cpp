@@ -9,9 +9,9 @@
 #include <library/list_array.hpp>
 #include <src/api/client.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/log.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/log.hpp>
 #include <src/plugin/main.hpp>
 #include <src/storage/memory/online_player.hpp>
 
@@ -63,7 +63,7 @@ namespace copper_server::build_in_plugins {
                 }
                 return false;
             });
-            log::info("Communication Core", "chat handlers registered.");
+            api::log::info("Communication Core", "chat handlers registered.");
         }
 
         void OnUnload(const PluginRegistrationPtr& _) override {

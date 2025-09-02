@@ -19,7 +19,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::_bool& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::_bool>() { return "copper_server::base_objects::parsers::command::_bool"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::_bool>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::_float::min& obj, [[maybe_unused]] FN&& fn){
   fn(obj.value);
 }
@@ -379,7 +378,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::game_profile& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::game_profile>() { return "copper_server::base_objects::parsers::command::game_profile"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::game_profile>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::block_pos& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::block_pos& obj, [[maybe_unused]] FN&& fn){
@@ -397,7 +395,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::block_pos& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::block_pos>() { return "copper_server::base_objects::parsers::command::block_pos"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::block_pos>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::column_pos& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::column_pos& obj, [[maybe_unused]] FN&& fn){
@@ -415,7 +412,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::column_pos& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::column_pos>() { return "copper_server::base_objects::parsers::command::column_pos"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::column_pos>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::vec2& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::vec2& obj, [[maybe_unused]] FN&& fn){
@@ -433,7 +429,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::vec2& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::vec2>() { return "copper_server::base_objects::parsers::command::vec2"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::vec2>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::vec3& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::vec3& obj, [[maybe_unused]] FN&& fn){
@@ -451,7 +446,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::vec3& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::vec3>() { return "copper_server::base_objects::parsers::command::vec3"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::vec3>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::block_state& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::block_state& obj, [[maybe_unused]] FN&& fn){
@@ -469,7 +463,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::block_state& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::block_state>() { return "copper_server::base_objects::parsers::command::block_state"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::block_state>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::block_predicate& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::block_predicate& obj, [[maybe_unused]] FN&& fn){
@@ -487,7 +480,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::block_predicate& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::block_predicate>() { return "copper_server::base_objects::parsers::command::block_predicate"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::block_predicate>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::item_stack& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::item_stack& obj, [[maybe_unused]] FN&& fn){
@@ -505,7 +497,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::item_stack& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::item_stack>() { return "copper_server::base_objects::parsers::command::item_stack"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::item_stack>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::item_predicate& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::item_predicate& obj, [[maybe_unused]] FN&& fn){
@@ -523,7 +514,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::item_predicate& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::item_predicate>() { return "copper_server::base_objects::parsers::command::item_predicate"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::item_predicate>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::color& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::color& obj, [[maybe_unused]] FN&& fn){
@@ -541,7 +531,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::color& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::color>() { return "copper_server::base_objects::parsers::command::color"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::color>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::hex_color& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::hex_color& obj, [[maybe_unused]] FN&& fn){
@@ -559,7 +548,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::hex_color& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::hex_color>() { return "copper_server::base_objects::parsers::command::hex_color"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::hex_color>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::component& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::component& obj, [[maybe_unused]] FN&& fn){
@@ -577,7 +565,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::component& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::component>() { return "copper_server::base_objects::parsers::command::component"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::component>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::style& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::style& obj, [[maybe_unused]] FN&& fn){
@@ -595,7 +582,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::style& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::style>() { return "copper_server::base_objects::parsers::command::style"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::style>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::message& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::message& obj, [[maybe_unused]] FN&& fn){
@@ -613,7 +599,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::message& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::message>() { return "copper_server::base_objects::parsers::command::message"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::message>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::nbt_compound_tag& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::nbt_compound_tag& obj, [[maybe_unused]] FN&& fn){
@@ -631,7 +616,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::nbt_compound_tag& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::nbt_compound_tag>() { return "copper_server::base_objects::parsers::command::nbt_compound_tag"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::nbt_compound_tag>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::nbt_tag& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::nbt_tag& obj, [[maybe_unused]] FN&& fn){
@@ -649,7 +633,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::nbt_tag& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::nbt_tag>() { return "copper_server::base_objects::parsers::command::nbt_tag"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::nbt_tag>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::nbt_path& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::nbt_path& obj, [[maybe_unused]] FN&& fn){
@@ -667,7 +650,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::nbt_path& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::nbt_path>() { return "copper_server::base_objects::parsers::command::nbt_path"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::nbt_path>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::objective& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::objective& obj, [[maybe_unused]] FN&& fn){
@@ -685,7 +667,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::objective& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::objective>() { return "copper_server::base_objects::parsers::command::objective"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::objective>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::objective_criteria& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::objective_criteria& obj, [[maybe_unused]] FN&& fn){
@@ -703,7 +684,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::objective_criteria& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::objective_criteria>() { return "copper_server::base_objects::parsers::command::objective_criteria"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::objective_criteria>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::operation& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::operation& obj, [[maybe_unused]] FN&& fn){
@@ -721,7 +701,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::operation& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::operation>() { return "copper_server::base_objects::parsers::command::operation"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::operation>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::particle& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::particle& obj, [[maybe_unused]] FN&& fn){
@@ -739,7 +718,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::particle& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::particle>() { return "copper_server::base_objects::parsers::command::particle"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::particle>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::angle& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::angle& obj, [[maybe_unused]] FN&& fn){
@@ -757,7 +735,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::angle& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::angle>() { return "copper_server::base_objects::parsers::command::angle"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::angle>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::rotation& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::rotation& obj, [[maybe_unused]] FN&& fn){
@@ -775,7 +752,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::rotation& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::rotation>() { return "copper_server::base_objects::parsers::command::rotation"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::rotation>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::scoreboard_slot& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::scoreboard_slot& obj, [[maybe_unused]] FN&& fn){
@@ -793,7 +769,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::scoreboard_slot& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::scoreboard_slot>() { return "copper_server::base_objects::parsers::command::scoreboard_slot"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::scoreboard_slot>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::score_holder& obj, [[maybe_unused]] FN&& fn){
   fn(obj.allow_multiple);
 }
@@ -835,7 +810,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::swizzle& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::swizzle>() { return "copper_server::base_objects::parsers::command::swizzle"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::swizzle>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::team& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::team& obj, [[maybe_unused]] FN&& fn){
@@ -853,7 +827,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::team& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::team>() { return "copper_server::base_objects::parsers::command::team"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::team>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::item_slot& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::item_slot& obj, [[maybe_unused]] FN&& fn){
@@ -871,7 +844,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::item_slot& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::item_slot>() { return "copper_server::base_objects::parsers::command::item_slot"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::item_slot>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::item_slots& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::item_slots& obj, [[maybe_unused]] FN&& fn){
@@ -889,7 +861,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::item_slots& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::item_slots>() { return "copper_server::base_objects::parsers::command::item_slots"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::item_slots>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::resource_location& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::resource_location& obj, [[maybe_unused]] FN&& fn){
@@ -907,7 +878,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::resource_location& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::resource_location>() { return "copper_server::base_objects::parsers::command::resource_location"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::resource_location>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::function& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::function& obj, [[maybe_unused]] FN&& fn){
@@ -925,7 +895,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::function& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::function>() { return "copper_server::base_objects::parsers::command::function"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::function>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::entity_anchor& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::entity_anchor& obj, [[maybe_unused]] FN&& fn){
@@ -943,7 +912,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::entity_anchor& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::entity_anchor>() { return "copper_server::base_objects::parsers::command::entity_anchor"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::entity_anchor>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::int_range& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::int_range& obj, [[maybe_unused]] FN&& fn){
@@ -961,7 +929,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::int_range& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::int_range>() { return "copper_server::base_objects::parsers::command::int_range"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::int_range>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::float_range& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::float_range& obj, [[maybe_unused]] FN&& fn){
@@ -979,7 +946,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::float_range& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::float_range>() { return "copper_server::base_objects::parsers::command::float_range"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::float_range>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::dimension& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::dimension& obj, [[maybe_unused]] FN&& fn){
@@ -997,7 +963,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::dimension& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::dimension>() { return "copper_server::base_objects::parsers::command::dimension"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::dimension>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::gamemode& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::gamemode& obj, [[maybe_unused]] FN&& fn){
@@ -1015,7 +980,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::gamemode& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::gamemode>() { return "copper_server::base_objects::parsers::command::gamemode"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::gamemode>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::time& obj, [[maybe_unused]] FN&& fn){
   fn(obj.min_ticks);
 }
@@ -1177,7 +1141,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::template_mirror& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::template_mirror>() { return "copper_server::base_objects::parsers::command::template_mirror"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::template_mirror>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::template_rotation& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::template_rotation& obj, [[maybe_unused]] FN&& fn){
@@ -1195,7 +1158,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::template_rotation& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::template_rotation>() { return "copper_server::base_objects::parsers::command::template_rotation"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::template_rotation>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::heightmap& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::heightmap& obj, [[maybe_unused]] FN&& fn){
@@ -1213,7 +1175,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::heightmap& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::heightmap>() { return "copper_server::base_objects::parsers::command::heightmap"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::heightmap>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::loot_table& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::loot_table& obj, [[maybe_unused]] FN&& fn){
@@ -1231,7 +1192,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::loot_table& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::loot_table>() { return "copper_server::base_objects::parsers::command::loot_table"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::loot_table>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::loot_predicate& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::loot_predicate& obj, [[maybe_unused]] FN&& fn){
@@ -1249,7 +1209,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::loot_predicate& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::loot_predicate>() { return "copper_server::base_objects::parsers::command::loot_predicate"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::loot_predicate>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::loot_modifier& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::loot_modifier& obj, [[maybe_unused]] FN&& fn){
@@ -1267,7 +1226,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::loot_modifier& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::loot_modifier>() { return "copper_server::base_objects::parsers::command::loot_modifier"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::loot_modifier>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::dialog& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::dialog& obj, [[maybe_unused]] FN&& fn){
@@ -1285,7 +1243,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::dialog& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::dialog>() { return "copper_server::base_objects::parsers::command::dialog"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::dialog>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::command::uuid& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::command::uuid& obj, [[maybe_unused]] FN&& fn){
@@ -1303,7 +1260,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::command::uuid& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::command::uuid>() { return "copper_server::base_objects::parsers::command::uuid"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::command::uuid>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::_bool& obj, [[maybe_unused]] FN&& fn){
   fn(obj.value);
 }
@@ -1723,7 +1679,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::block_predicate& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::block_predicate>() { return "copper_server::base_objects::parsers::block_predicate"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::block_predicate>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::item_stack& obj, [[maybe_unused]] FN&& fn){
   fn(obj.value);
   fn(obj.data_tags);
@@ -1771,7 +1726,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::item_predicate& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::item_predicate>() { return "copper_server::base_objects::parsers::item_predicate"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::item_predicate>() { return 0; }
 template<>struct enum_data<copper_server::base_objects::parsers::color> {using item = std::pair<std::string_view, copper_server::base_objects::parsers::color>;
 static constexpr inline std::array<item, 16> values = {item{"white", copper_server::base_objects::parsers::color::white}, item{"orange", copper_server::base_objects::parsers::color::orange}, item{"magenta", copper_server::base_objects::parsers::color::magenta}, item{"light_blue", copper_server::base_objects::parsers::color::light_blue}, item{"yellow", copper_server::base_objects::parsers::color::yellow}, item{"lime", copper_server::base_objects::parsers::color::lime}, item{"pink", copper_server::base_objects::parsers::color::pink}, item{"gray", copper_server::base_objects::parsers::color::gray}, item{"light_gray", copper_server::base_objects::parsers::color::light_gray}, item{"cyan", copper_server::base_objects::parsers::color::cyan}, item{"purple", copper_server::base_objects::parsers::color::purple}, item{"blue", copper_server::base_objects::parsers::color::blue}, item{"brown", copper_server::base_objects::parsers::color::brown}, item{"green", copper_server::base_objects::parsers::color::green}, item{"red", copper_server::base_objects::parsers::color::red}, item{"black", copper_server::base_objects::parsers::color::black}};};
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::color>() { return "copper_server::base_objects::parsers::color"; }
@@ -1816,7 +1770,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::component& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::component>() { return "copper_server::base_objects::parsers::component"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::component>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::style& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::style& obj, [[maybe_unused]] FN&& fn){
@@ -1834,7 +1787,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::style& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::style>() { return "copper_server::base_objects::parsers::style"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::style>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::message& obj, [[maybe_unused]] FN&& fn){
   fn(obj.str);
 }
@@ -2515,7 +2467,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::score_holder::anything& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::score_holder::anything>() { return "copper_server::base_objects::parsers::score_holder::anything"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::score_holder::anything>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::score_holder& obj, [[maybe_unused]] FN&& fn){
   fn(obj.value);
 }
@@ -2965,7 +2916,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::loot_table& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::loot_table>() { return "copper_server::base_objects::parsers::loot_table"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::loot_table>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::loot_predicate& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::loot_predicate& obj, [[maybe_unused]] FN&& fn){
@@ -2983,7 +2933,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::loot_predicate& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::loot_predicate>() { return "copper_server::base_objects::parsers::loot_predicate"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::loot_predicate>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::loot_modifier& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::loot_modifier& obj, [[maybe_unused]] FN&& fn){
@@ -3001,7 +2950,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::loot_modifier& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::loot_modifier>() { return "copper_server::base_objects::parsers::loot_modifier"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::loot_modifier>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::dialog& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::parsers::dialog& obj, [[maybe_unused]] FN&& fn){
@@ -3019,7 +2967,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::parsers::dialog& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::parsers::dialog>() { return "copper_server::base_objects::parsers::dialog"; }
-template<>consteval size_t fields_count<copper_server::base_objects::parsers::dialog>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::parsers::uuid& obj, [[maybe_unused]] FN&& fn){
   fn(obj.value);
 }

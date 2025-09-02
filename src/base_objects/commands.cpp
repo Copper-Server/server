@@ -12,7 +12,6 @@
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/entity.hpp>
-#include <src/base_objects/packets.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 #include <src/storage/world_data.hpp>
@@ -715,58 +714,6 @@ namespace copper_server::base_objects {
                     throw std::invalid_argument("invalid command path");
             }
             return current;
-        }
-    }
-
-    void apply_options(packets::command_node::parsers parser, packets::command_node::properties_t& parser_data) {
-        switch (parser) {
-        case packets::command_node::parsers::brigadier_float:
-        case packets::command_node::parsers::brigadier_double:
-        case packets::command_node::parsers::brigadier_integer:
-        case packets::command_node::parsers::brigadier_long: {
-            parser_data.flags = 0;
-            if (parser_data.min)
-                *parser_data.flags |= 1;
-            if (parser_data.max)
-                *parser_data.flags |= 2;
-            parser_data.registry = std::nullopt;
-            break;
-        }
-        case packets::command_node::parsers::brigadier_string:
-        case packets::command_node::parsers::minecraft_score_holder:
-        case packets::command_node::parsers::minecraft_entity: {
-            if (!parser_data.flags)
-                parser_data.flags = 0;
-            parser_data.min = std::nullopt;
-            parser_data.max = std::nullopt;
-            parser_data.registry = std::nullopt;
-            break;
-        }
-        case packets::command_node::parsers::minecraft_time: {
-            if (!parser_data.min)
-                parser_data.min = std::numeric_limits<int32_t>::max();
-            parser_data.flags = std::nullopt;
-            parser_data.max = std::nullopt;
-            parser_data.registry = std::nullopt;
-            break;
-        }
-        case packets::command_node::parsers::minecraft_resource_or_tag:
-        case packets::command_node::parsers::minecraft_resource_or_tag_key:
-        case packets::command_node::parsers::minecraft_resource:
-        case packets::command_node::parsers::minecraft_resource_key: {
-            if (!parser_data.registry)
-                throw std::invalid_argument("this parser should have registry");
-            parser_data.flags = std::nullopt;
-            parser_data.min = std::nullopt;
-            parser_data.max = std::nullopt;
-            break;
-        }
-        default:
-            parser_data.flags = std::nullopt;
-            parser_data.min = std::nullopt;
-            parser_data.max = std::nullopt;
-            parser_data.registry = std::nullopt;
-            break;
         }
     }
 

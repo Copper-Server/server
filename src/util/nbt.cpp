@@ -385,12 +385,15 @@ namespace copper_server::util {
                 throw std::out_of_range("Out of bounds");
             i += length;
             if (length <= 32 && length >= 16) {
-                try {
-                    enbt::raw_uuid res;
-                    auto check_view = enbt::raw_uuid::from_uuid_string(res, std::string_view((const char*)data + i - length, length));
-                    if (check_view.size() == length)
-                        return enbt::value(res);
-                } catch (...) {
+                std::string_view check((const char*)data + i - length, length);
+                if (check.find_first_not_of("0123456789ABCDEF-") == std::string_view::npos) {
+                    try {
+                        enbt::raw_uuid res;
+                        auto check_view = enbt::raw_uuid::from_uuid_string(res, check);
+                        if (check_view.size() == length)
+                            return enbt::value(res);
+                    } catch (...) {
+                    }
                 }
             }
             return enbt::value((const char*)data + i - length, length);

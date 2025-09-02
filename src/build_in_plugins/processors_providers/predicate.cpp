@@ -7,14 +7,14 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <src/api/entity_id_map.hpp>
-#include <src/api/internal/predicate.hpp>
 #include <src/api/predicate.hpp>
+#include <src/api/registers.hpp>
 #include <src/api/tags.hpp>
 #include <src/api/world.hpp>
+#include <src/base_objects/commands.hpp>
+#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
-#include <src/base_objects/predicate_processor.hpp>
 #include <src/plugin/main.hpp>
-#include <src/registers.hpp>
 
 namespace copper_server::build_in_plugins::processors_providers {
     template <class T>
@@ -78,7 +78,7 @@ namespace copper_server::build_in_plugins::processors_providers {
                 if (!entity->nbt.contains("effects"))
                     return false;
 
-                auto id = registers::effects.at(key).id;
+                auto id = api::registers::effects.at(key).id;
                 auto& effect = entity->active_effects.at(id);
                 if (conditions.contains("amplifier"))
                     if (!diff_min_max(conditions.at("amplifier"), effect.amplifier))
@@ -564,16 +564,11 @@ namespace copper_server::build_in_plugins::processors_providers {
         return false;
     }
 
-    class predicate : public PluginAutoRegister<"processors_provider/predicate", predicate> {
-        base_objects::predicate_processor processor;
-
-    public:
-        predicate() {}
-
+    struct predicate : public PluginAutoRegister<"processors_provider/predicate", predicate> {
         void OnInitialization(const PluginRegistrationPtr&) override {
-            processor.register_handler("all_of", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+            api::predicate::register_handler("all_of", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
                 for (auto& value : predicate["terms"].as_array()) {
-                    if (!processor.process_predicate(
+                    if (!api::predicate::process_predicate(
                             value.as_compound(),
                             context
                         ))
@@ -581,9 +576,9 @@ namespace copper_server::build_in_plugins::processors_providers {
                 }
                 return true;
             });
-            processor.register_handler("any_of", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+            api::predicate::register_handler("any_of", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
                 for (auto& value : predicate["terms"].as_array()) {
-                    if (processor.process_predicate(
+                    if (api::predicate::process_predicate(
                             value.as_compound(),
                             context
                         ))
@@ -591,37 +586,36 @@ namespace copper_server::build_in_plugins::processors_providers {
                 }
                 return false;
             });
-            processor.register_handler("inverted", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
-                return !processor.process_predicate(
+            api::predicate::register_handler("inverted", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+                return !api::predicate::process_predicate(
                     predicate.at("term").as_compound(),
                     context
                 );
             });
-            processor.register_handler("reference", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
-                return processor.process_predicate( //TODO
+            api::predicate::register_handler("reference", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+                return api::predicate::process_predicate( //TODO
                     context.other_data.at(predicate.at("name")).as_compound(),
                     context
                 );
             });
 
 
-            processor.register_handler("copper_server:__adventure_block_", _server_helper__adventure_block_);
-            processor.register_handler("block_state_property", block_state_property);
-            processor.register_handler("damage_source_properties", damage_source_properties);
-            processor.register_handler("enchantment_active_check", enchantment_active_check);
-            processor.register_handler("entity_properties", entity_properties);
-            processor.register_handler("entity_scores", entity_scores);
-            processor.register_handler("killed_by_player", killed_by_player);
-            processor.register_handler("location_check", location_check);
-            processor.register_handler("match_tool", match_tool);
-            processor.register_handler("random_chance", random_chance);
-            processor.register_handler("random_chance_with_enchanted_bonus", random_chance_with_enchanted_bonus);
-            processor.register_handler("survives_explosion", survives_explosion);
-            processor.register_handler("table_bonus", table_bonus);
-            processor.register_handler("time_check", time_check);
-            processor.register_handler("value_check", value_check);
-            processor.register_handler("weather_check", weather_check);
-            api::predicate::register_processor(processor);
+            api::predicate::register_handler("copper_server:__adventure_block_", _server_helper__adventure_block_);
+            api::predicate::register_handler("block_state_property", block_state_property);
+            api::predicate::register_handler("damage_source_properties", damage_source_properties);
+            api::predicate::register_handler("enchantment_active_check", enchantment_active_check);
+            api::predicate::register_handler("entity_properties", entity_properties);
+            api::predicate::register_handler("entity_scores", entity_scores);
+            api::predicate::register_handler("killed_by_player", killed_by_player);
+            api::predicate::register_handler("location_check", location_check);
+            api::predicate::register_handler("match_tool", match_tool);
+            api::predicate::register_handler("random_chance", random_chance);
+            api::predicate::register_handler("random_chance_with_enchanted_bonus", random_chance_with_enchanted_bonus);
+            api::predicate::register_handler("survives_explosion", survives_explosion);
+            api::predicate::register_handler("table_bonus", table_bonus);
+            api::predicate::register_handler("time_check", time_check);
+            api::predicate::register_handler("value_check", value_check);
+            api::predicate::register_handler("weather_check", weather_check);
         }
     };
 }

@@ -46,6 +46,16 @@ namespace copper_server {
             });
         }
 
+        list_array<int32_t> entity_data::get_entity_ids() {
+            return data_for_entities.get([&](auto& data) {
+                list_array<int32_t> res;
+                res.reserve(data._registry.size());
+                for (auto& [id, ent] : data._registry)
+                    res.push_back(id);
+                return res;
+            });
+        }
+
         uint16_t entity_data::register_entity(entity_data entity) {
             return data_for_entities.set([&](auto& data) {
                 uint16_t id = data.id_adder++;
@@ -692,7 +702,7 @@ namespace copper_server {
             if (const_data().metadata.contains("AIR"))
                 if (assigned_player)
                     *assigned_player << api::packets::client_bound::play::set_entity_data{
-                        .entity_id = protocol_id,
+                        .id = protocol_id,
                         .metadata = {} //TODO
                     };
         }

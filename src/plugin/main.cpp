@@ -7,7 +7,7 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <src/api/configuration.hpp>
-#include <src/log.hpp>
+#include <src/api/log.hpp>
 #include <src/plugin/main.hpp>
 
 namespace copper_server {

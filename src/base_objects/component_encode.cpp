@@ -185,7 +185,7 @@ namespace copper_server::base_objects {
             serialize_entry(res, value.value);
         } else if constexpr (is_convertible_to_packet_form<Type>) {
             serialize_entry(res, value.to_packet());
-        } else if constexpr (is_id_source<Type>) {
+        } else if constexpr (api::id::is_source<Type>) {
             serialize_entry(res, value.to_string());
         } else {
             bool process_next = true;

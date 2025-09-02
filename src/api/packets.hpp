@@ -20,14 +20,16 @@
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/slot.hpp>
 #include <src/util/calculations.hpp>
-#define STRUCT__ struct //;
-#define decl_variant(name, ...)                        \
-    /*Spacing for reflect_map*/                        \
-    STRUCT__ name : public std::variant<__VA_ARGS__> { \
-        using base = std::variant<__VA_ARGS__>;        \
-        using base::variant;                           \
-        using base::operator=;                         \
+
+//reflect_map skip_begin
+#define decl_variant(name, ...)                      \
+    struct name : public std::variant<__VA_ARGS__> { \
+        using base = std::variant<__VA_ARGS__>;      \
+        using base::variant;                         \
+        using base::operator=;                       \
     }
+
+//reflect_map skip_end
 
 namespace copper_server {
     struct ArrayStream;
@@ -46,7 +48,6 @@ namespace copper_server {
     // note: because this api uses reflection under the hood, recommended to enable build cache to reduce the build time
     // the api implements the latest protocol implementation: 772(1.21.8)
     namespace api::packets {
-
         using base_objects::Angle;
         using base_objects::any_of;
         using base_objects::bitset_fixed;
@@ -283,7 +284,7 @@ namespace copper_server {
                 };
 
                 struct entity : public enum_item<1> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     float eye_height;
                 };
 
@@ -583,7 +584,7 @@ namespace copper_server {
                 };
 
                 struct add_entity : public packet<0x01> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     enbt::raw_uuid uuid;
                     var_int32::entity_type type;
                     double x;
@@ -609,7 +610,7 @@ namespace copper_server {
                     };
                     using enum animation_e;
 
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     enum_as<animation_e, uint8_t> animation;
                 };
 
@@ -629,7 +630,7 @@ namespace copper_server {
                 };
 
                 struct block_destruction : public packet<0x05> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     position location;
                     uint8_t destroy_stage;
                 };
@@ -938,10 +939,10 @@ namespace copper_server {
                 };
 
                 struct damage_event : public packet<0x19> {
-                    var_int32 entity_id;
-                    optional_var_int32 source_damage_type_id = std::nullopt;
-                    optional_var_int32 source_entity_id = std::nullopt;
-                    optional_var_int32 source_direct_entity_id = std::nullopt;
+                    var_int32::entity_id id;
+                    optional_var_int32::damage_type source_damage_type_id = std::nullopt;
+                    optional_var_int32::entity_id source_id = std::nullopt;
+                    optional_var_int32::entity_id source_direct_id = std::nullopt;
                     std::optional<util::VECTOR> source_pos = std::nullopt;
                 };
 
@@ -967,12 +968,12 @@ namespace copper_server {
                 };
 
                 struct entity_event : public packet<0x1E> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     int8_t status;
                 };
 
                 struct entity_position_sync : public packet<0x1F> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     double x;
                     double y;
                     double z;
@@ -1093,11 +1094,11 @@ namespace copper_server {
                 struct horse_screen_open : public packet<0x23> {
                     var_int32 window_id;
                     var_int32 columns_count;
-                    int32_t entity_id;
+                    api::id::entity id;
                 };
 
                 struct hurt_animation : public packet<0x24> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     float yaw;
                 };
 
@@ -1284,7 +1285,7 @@ namespace copper_server {
                         position location;
                     };
 
-                    int32_t entity_id;
+                    api::id::entity id;
                     bool is_hardcore;
                     list_array<identifier> dimension_names;
                     var_int32 max_players;
@@ -1398,7 +1399,7 @@ namespace copper_server {
                 };
 
                 struct move_entity_pos : public packet<0x2E> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     short delta_x;
                     short delta_y;
                     short delta_z;
@@ -1406,7 +1407,7 @@ namespace copper_server {
                 };
 
                 struct move_entity_pos_rot : public packet<0x2F> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     short delta_x;
                     short delta_y;
                     short delta_z;
@@ -1429,12 +1430,12 @@ namespace copper_server {
                         float weight;
                     };
 
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     list_array<step> steps;
                 };
 
                 struct move_entity_rot : public packet<0x31> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     Angle yaw;
                     Angle pitch;
                     bool on_ground;
@@ -1606,7 +1607,7 @@ namespace copper_server {
                     using enum using_position_e;
 
                     struct entity_target {
-                        int32_t entity_id;
+                        var_int32::entity_id id;
                         enum_as<using_position_e, var_int32> using_position;
                     };
 
@@ -1672,11 +1673,11 @@ namespace copper_server {
                 };
 
                 struct remove_entities : public packet<0x46> {
-                    list_array<var_int32> entity_ids;
+                    list_array<var_int32::entity_id> ids;
                 };
 
                 struct remove_mob_effect : public packet<0x47> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     var_int32::mob_effect effect_id;
                 };
 
@@ -1724,7 +1725,7 @@ namespace copper_server {
                 };
 
                 struct rotate_head : public packet<0x4C> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     Angle head_yaw; //new angle
                 };
 
@@ -1792,7 +1793,7 @@ namespace copper_server {
                 };
 
                 struct set_camera : public packet<0x56> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                 };
 
                 struct set_chunk_cache_center : public packet<0x57> {
@@ -1841,17 +1842,17 @@ namespace copper_server {
                 };
 
                 struct set_entity_data : public packet<0x5C> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     list_array_siz_from_packet<uint8_t> metadata;
                 };
 
                 struct set_entity_link : public packet<0x5D> {
-                    int32_t attached_entity_id;
-                    int32_t holding_entity_id;
+                    api::id::entity attached_id;
+                    api::id::entity holding_id;
                 };
 
                 struct set_entity_motion : public packet<0x5E> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     int16_t velocity_x;
                     int16_t velocity_y;
                     int16_t velocity_z;
@@ -1876,7 +1877,7 @@ namespace copper_server {
                         slot item;
                     };
 
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     list_array_depend<equipment> equipments;
                 };
 
@@ -1927,8 +1928,8 @@ namespace copper_server {
                 };
 
                 struct set_passengers : public packet<0x64> {
-                    var_int32 entity_id;
-                    list_array<var_int32> passengers;
+                    var_int32::entity_id id;
+                    list_array<var_int32::entity_id> passengers;
                 };
 
                 struct set_player_inventory : public packet<0x65> {
@@ -2037,7 +2038,7 @@ namespace copper_server {
                 struct sound_entity : public packet<0x6D> {
                     or_<var_int32::sound_event, base_objects::sound_event> sound;
                     var_int32 category;
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     float volume;
                     float pitch;
                     int64_t seed;
@@ -2090,13 +2091,13 @@ namespace copper_server {
                 };
 
                 struct take_item_entity : public packet<0x75> {
-                    var_int32 collected_entity_id;
-                    var_int32 collectors_entity_id;
+                    var_int32::entity_id collected_id;
+                    var_int32::entity_id collectors_id;
                     var_int32 items_count;
                 };
 
                 struct teleport_entity : public packet<0x76> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     double x;
                     double y;
                     double z;
@@ -2204,7 +2205,7 @@ namespace copper_server {
                         list_array<modifier> modifiers;
                     };
 
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     list_array<property> properties;
                 };
 
@@ -2216,7 +2217,7 @@ namespace copper_server {
                         blend = 0x8,
                     };
 
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     var_int32::mob_effect effect;
                     var_int32 amplifier;
                     var_int32 duration;
@@ -2255,7 +2256,7 @@ namespace copper_server {
                 };
 
                 struct projectile_power : public packet<0x80> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     double power;
                 };
 
@@ -2832,11 +2833,11 @@ namespace copper_server {
 
                 struct entity_tag_query : public packet<0x18> {
                     var_int32 tag_query_id; //managed by client
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                 };
 
                 struct interact : public packet<0x19> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     enum class hand_e : uint8_t {
                         main = 0,
                         off = 1
@@ -2943,7 +2944,7 @@ namespace copper_server {
                 };
 
                 struct pick_item_from_entity : public packet<0x24> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     bool include_data = false;
                 };
 
@@ -3000,7 +3001,7 @@ namespace copper_server {
                         inventory_vehicle_open = 5,
                         elytra_fly = 6,
                     };
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     enum_as<action_e, var_int32> action;
                     var_int32 jump_boost;
                 };
@@ -3108,7 +3109,7 @@ namespace copper_server {
                 };
 
                 struct set_command_minecart : public packet<0x36> {
-                    var_int32 entity_id;
+                    var_int32::entity_id id;
                     string_sized<32767> command;
                     bool track_output = 0;
                 };
@@ -3327,6 +3328,10 @@ namespace copper_server {
         std::string stringize_packet(const server_bound::play_packet&);
         std::string stringize_packet(const client_bound_packet&);
         std::string stringize_packet(const server_bound_packet&);
+
+
+        int32_t java_name_to_protocol(const std::string& name_or_number);
+        const char* protocol_to_java_name(int32_t id);
 
         namespace __internal {
             base_objects::events::sync_event<client_bound::status_packet&, base_objects::SharedClientData&>& client_viewer_s(size_t id);

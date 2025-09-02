@@ -16,3 +16,6 @@
 [submodule "tools/extractor"]
 	path = tools/extractor
 	url = https://github.com/Melnytskyi/Extractor.git
+[submodule "tools/own_extractor"]
+	path = tools/own_extractor
+	url = https://github.com/Copper-Server/extractor.git

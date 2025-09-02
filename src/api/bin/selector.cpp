@@ -12,9 +12,9 @@
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
-#include <src/base_objects/selector.hpp>
+#include <src/api/selector.hpp>
 
-namespace copper_server::base_objects {
+namespace copper_server::api {
 
     size_t next_select(std::string_view view) {
         size_t pos = 0;
@@ -281,13 +281,13 @@ namespace copper_server::base_objects {
                     limit_inverted = is_inverted;
                 } else if (key == "sort") {
                     if (value == "nearest")
-                        sort = selector_sort::nearest;
+                        sort = sort_t::nearest;
                     else if (value == "furthest")
-                        sort = selector_sort::furthest;
+                        sort = sort_t::furthest;
                     else if (value == "random")
-                        sort = selector_sort::random;
+                        sort = sort_t::random;
                     else if (value == "arbitrary")
-                        sort = selector_sort::arbitrary;
+                        sort = sort_t::arbitrary;
                     else
                         throw std::runtime_error("Unknown sort type: " + std::string(value));
                 } else {
@@ -301,9 +301,9 @@ namespace copper_server::base_objects {
         build_selector_parse(selector_string);
     }
 
-    bool selector::select(command_context& context, std::function<void(entity&)>&& fn) const {
-        list_array<entity_ref> entities;
-        entity_ref self_entity;
+    bool selector::select(base_objects::command_context& context, std::function<void(base_objects::entity&)>&& fn) const {
+        list_array<base_objects::entity_ref> entities;
+        base_objects::entity_ref self_entity;
         if (context.other_data.contains("entity_id"))
             self_entity = api::entity_id_map::get_entity((int32_t)context.other_data.at("entity_id"));
         else
@@ -324,7 +324,7 @@ namespace copper_server::base_objects {
                 api::world::get((int32_t)context.other_data.at("world_id"), [&](storage::world_data& world) {
                     if (distance) {
                         if (distance->min <= 0) {
-                            spherical_bounds_block bounds{.x = (int64_t)check_x, .y = (int64_t)check_y, .z = (int64_t)check_z, .radius = (double)distance->max};
+                            base_objects::spherical_bounds_block bounds{.x = (int64_t)check_x, .y = (int64_t)check_y, .z = (int64_t)check_z, .radius = (double)distance->max};
                             world.for_each_entity(bounds, [&entities](auto& entity) {
                                 entities.push_back(entity);
                             });
@@ -335,7 +335,7 @@ namespace copper_server::base_objects {
                                 });
                             }
                         } else {
-                            spherical_bounds_block_out bounds{.x = (int64_t)check_x, .y = (int64_t)check_y, .z = (int64_t)check_z, .radius_begin = (double)distance->min, .radius_end = (double)distance->max};
+                            base_objects::spherical_bounds_block_out bounds{.x = (int64_t)check_x, .y = (int64_t)check_y, .z = (int64_t)check_z, .radius_begin = (double)distance->min, .radius_end = (double)distance->max};
                             world.for_each_entity(bounds, [&entities](auto& entity) { entities.push_back(entity); });
                             if (distance->is_inverted) {
                                 world.for_each_entity([&entities, filter_entities = entities.take()](auto& entity) {
@@ -545,7 +545,7 @@ namespace copper_server::base_objects {
 
         if (sort) {
             switch (*sort) {
-            case selector_sort::nearest: {
+            case sort_t::nearest: {
                 double check_x = context.other_data.at("x");
                 double check_y = context.other_data.at("y");
                 double check_z = context.other_data.at("z");
@@ -562,7 +562,7 @@ namespace copper_server::base_objects {
                     });
                 break;
             }
-            case selector_sort::furthest: {
+            case sort_t::furthest: {
                 double check_x = context.other_data.at("x");
                 double check_y = context.other_data.at("y");
                 double check_z = context.other_data.at("z");
@@ -579,7 +579,7 @@ namespace copper_server::base_objects {
                     });
                 break;
             }
-            case selector_sort::random: {
+            case sort_t::random: {
                 entities.sort([](auto& _, auto&) {
                     static std::mt19937_64 gen(std::random_device{}());
                     static std::uniform_int_distribution<> dis(0, 1);
@@ -587,7 +587,7 @@ namespace copper_server::base_objects {
                 });
                 break;
             }
-            case selector_sort::arbitrary:
+            case sort_t::arbitrary:
                 break;
             }
         }

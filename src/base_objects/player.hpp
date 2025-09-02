@@ -98,6 +98,7 @@ namespace copper_server::base_objects {
         player& operator=(player&& other);
 
         player();
+        player(player&&);
         ~player();
     };
 }

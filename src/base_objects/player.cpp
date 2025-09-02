@@ -31,5 +31,10 @@ namespace copper_server::base_objects {
     }
 
     player::player() = default;
+
+    player::player(player&& mov) {
+        *this = std::move(mov);
+    }
+
     player::~player() = default;
 }

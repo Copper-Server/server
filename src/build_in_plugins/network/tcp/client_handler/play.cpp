@@ -13,13 +13,13 @@
 #include <src/api/entity_id_map.hpp>
 #include <src/api/packets.hpp>
 #include <src/api/players.hpp>
+#include <src/api/registers.hpp>
 #include <src/api/world.hpp>
+#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/build_in_plugins/network/tcp/util.hpp>
 #include <src/plugin/main.hpp>
-#include <src/registers.hpp>
-#include <src/storage/players_data.hpp>
 #include <src/util/calculations.hpp>
 
 namespace copper_server::build_in_plugins::network::tcp::client_handler {
@@ -91,11 +91,6 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
     using custom_click_action = api::packets::server_bound::play::custom_click_action;
 
     struct tcp_play : public PluginAutoRegister<"network/tcp_play", tcp_play> {
-        storage::players_data players_data;
-
-        tcp_play()
-            : players_data(api::configuration::get().server.get_storage_path() / "players") {}
-
         struct extra_data_t {
             keep_alive_solution ka_solution;
 
@@ -122,9 +117,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     if (p_data.assigned_entity->current_world())
                         api::world::unregister_entity(p_data.assigned_entity->current_world()->world_id, p_data.assigned_entity);
 
-                    auto data = players_data.get_player_data(hold->data->uuid_str);
-                    data.player = std::move(hold->player_data);
-                    data.save();
+                    api::players::save_player(std::move(hold->player_data), hold->data->uuid);
                     for (auto& plugin : hold->compatible_plugins)
                         plugin->OnPlay_uninitialized_compatible(*hold);
 
@@ -147,13 +140,10 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 extra_data_t::get(client).ka_solution.start();
 
                 auto client_ref = api::players::get_player(client);
-                {
-                    auto data = players_data.get_player_data(client.data->uuid_str);
-                    data.load();
-                    data.player.assigned_entity->id = client.data->uuid;
-                    data.player.assigned_entity->assigned_player = client_ref;
-                    client.player_data = std::move(data.player);
-                }
+                client.player_data = api::players::load_player(client.data->uuid);
+                client.player_data.assigned_entity->id = client.data->uuid;
+                client.player_data.assigned_entity->assigned_player = client_ref;
+
                 bool world_debug = false;
                 bool world_flat = false;
                 bool enable_respawn_screen = false;
@@ -187,14 +177,14 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     do_limited_crafting = data.world_game_rules.contains("doLimitedCrafting") ? (bool)data.world_game_rules["doLimitedCrafting"] : false;
                     difficulty = data.difficulty;
                     difficulty_locked = data.difficulty_locked;
-                    world_type = registers::dimensionTypes.at(data.get_world_type()).id;
+                    world_type = api::registers::dimensionTypes.at(data.get_world_type()).id;
                 });
                 auto player_entity_id = api::entity_id_map::allocate_id(client.data->uuid);
                 api::entity_id_map::assign_entity(player_entity_id, client.player_data.assigned_entity);
                 client.player_data.assigned_entity->protocol_id = player_entity_id;
 
                 client << api::client::play::login{
-                    .entity_id = player_entity_id,
+                    .id = player_entity_id,
                     .is_hardcore = client.player_data.hardcore_hearts,
                     .dimension_names = api::world::request_names().convert<base_objects::identifier>(),
                     .max_players = (int32_t)api::configuration::get().server.max_players,
@@ -345,7 +335,9 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 };
             });
 
-            register_packet_processor([]([[maybe_unused]] configuration_acknowledged&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {});
+            register_packet_processor([this]([[maybe_unused]] configuration_acknowledged&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+                api::players::save_player(std::move(client.player_data), client.data->uuid);
+            });
 
             register_packet_processor([]([[maybe_unused]] container_button_click&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
@@ -382,7 +374,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             });
 
             register_packet_processor([]([[maybe_unused]] entity_tag_query&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                auto entity = api::entity_id_map::get_entity(packet.entity_id);
+                auto entity = api::entity_id_map::get_entity(packet.id);
                 if (entity)
                     client << api::client::play::tag_query{
                         .tag_query_id = packet.tag_query_id,

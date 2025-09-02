@@ -9,7 +9,6 @@
 #ifndef SRC_BASE_OBJECTS_RECIPE
 #define SRC_BASE_OBJECTS_RECIPE
 #include <library/list_array.hpp>
-#include <src/base_objects/slot.hpp>
 #include <src/base_objects/slot_display.hpp>
 #include <string>
 #include <variant>

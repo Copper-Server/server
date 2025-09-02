@@ -12,7 +12,7 @@
 #include <src/base_objects/events/event.hpp>
 #include <string>
 
-namespace copper_server::log {
+namespace copper_server::api::log {
     enum class level {
         info,
         warn,

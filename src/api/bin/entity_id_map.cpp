@@ -68,6 +68,14 @@ namespace copper_server::api::entity_id_map {
         return mem.has_uuid(uuid);
     }
 
+    list_array<int32_t> query_ids() {
+        return mem.query_ids();
+    }
+
+    [[nodiscard]] uint8_t id_index(int32_t id) {
+        return mem.id_index(id);
+    }
+
     void apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(base_objects::entity&)>&& callback) {
         return mem.apply_selector(caller, selector, std::move(callback));
     }

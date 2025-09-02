@@ -21,7 +21,7 @@
 #include <src/base_objects/events/event.hpp>
 
 namespace copper_server::api::configuration {
-    struct ServerConfiguration {
+    struct server_configuration {
         struct World {
             std::string name = "overworld";
             std::string seed = "0";
@@ -160,6 +160,7 @@ namespace copper_server::api::configuration {
         } anti_cheat;
 
         struct Mojang {
+            static constexpr std::string_view session_server = "sessionserver.mojang.com";
             bool enforce_secure_profile = true; //enables signature signing for chat messages using mojang's service
         } mojang;
 
@@ -212,7 +213,7 @@ namespace copper_server::api::configuration {
         class plugin_actions {
             enbt::value& it;
             plugin_actions(enbt::value& it);
-            friend struct ServerConfiguration;
+            friend struct server_configuration;
 
         public:
             plugin_actions operator^(std::string_view name);
@@ -226,7 +227,7 @@ namespace copper_server::api::configuration {
         std::string get(const std::string& config_item_path);
     };
 
-    ServerConfiguration& get();
+    server_configuration& get();
 
     void load(bool fill_default_values = true);
 

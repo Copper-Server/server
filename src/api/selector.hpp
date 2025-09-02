@@ -6,63 +6,68 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#ifndef SRC_BASE_OBJECTS_SELECTOR
-#define SRC_BASE_OBJECTS_SELECTOR
+
+#ifndef SRC_API_SELECTOR
+#define SRC_API_SELECTOR
 #include <library/list_array.hpp>
 #include <optional>
 #include <string>
 #include <unordered_map>
 
 namespace copper_server::base_objects {
-    struct integer_range {
-        int min;
-        int max;
-        bool is_inverted;
-    };
-
-    struct double_range {
-        double min;
-        double max;
-        bool is_inverted;
-    };
-
-    struct selector_string {
-        std::string string;
-        bool is_inverted;
-    };
-
-    enum class selector_sort {
-        nearest,
-        furthest,
-        random,
-        arbitrary
-    };
-
-    struct selector_flags {
-        //@p == only_players & nearest & only_one & except_self
-        //@r == only_players & random
-        //@a == only_players
-        //@e == 0
-        //@s == self
-        //@R == random
-        //@E == only_entities
-        //@n == nearest & except_self
-        //@o == random & only_one
-        //@t == only_entities & random
-        //@<only_players, only_entities, random, nearest, only_one, self, except_self, select_virtual> custom
-
-        bool only_players : 1 = false;  //
-        bool only_entities : 1 = false; //
-        bool random : 1 = false;
-        bool nearest : 1 = false; //
-        bool only_one : 1 = false;
-        bool self : 1 = false;           //
-        bool except_self : 1 = false;    //
-        bool select_virtual : 1 = false; //
-    };
-
+    struct command_context;
+    struct entity;
+}
+namespace copper_server::api {
     //extended entity selector, supports more selection arguments
     struct selector {
+        struct integer_range {
+            int min;
+            int max;
+            bool is_inverted;
+        };
+
+        struct double_range {
+            double min;
+            double max;
+            bool is_inverted;
+        };
+
+        struct string_t {
+            std::string string;
+            bool is_inverted;
+        };
+
+        enum class sort_t {
+            nearest,
+            furthest,
+            random,
+            arbitrary
+        };
+
+        struct flags_t {
+            //@p == only_players & nearest & only_one & except_self
+            //@r == only_players & random
+            //@a == only_players
+            //@e == 0
+            //@s == self
+            //@R == random
+            //@E == only_entities
+            //@n == nearest & except_self
+            //@o == random & only_one
+            //@t == only_entities & random
+            //@<only_players, only_entities, random, nearest, only_one, self, except_self, select_virtual> custom
+
+            bool only_players : 1 = false;  //
+            bool only_entities : 1 = false; //
+            bool random : 1 = false;
+            bool nearest : 1 = false; //
+            bool only_one : 1 = false;
+            bool self : 1 = false;           //
+            bool except_self : 1 = false;    //
+            bool select_virtual : 1 = false; //
+        };
+
         std::string full_string;
 
         // position selectors
@@ -78,19 +83,19 @@ namespace copper_server::base_objects {
 
         //Scoreboard selectors
         std::unordered_map<std::string, integer_range> scores;
-        list_array<selector_string> tags;
-        list_array<selector_string> team;
+        list_array<string_t> tags;
+        list_array<string_t> team;
 
         //entity species
-        list_array<selector_string> name;
-        list_array<selector_string> type;
-        list_array<selector_string> family;
-        list_array<selector_string> predicate;
+        list_array<string_t> name;
+        list_array<string_t> type;
+        list_array<string_t> family;
+        list_array<string_t> predicate;
 
         //entity data
         std::optional<std::string> nbt;
         std::optional<std::string> abilities;
-        list_array<selector_string> has_item;
+        list_array<string_t> has_item;
 
         //Player data
         std::optional<std::string> gamemode;
@@ -99,14 +104,14 @@ namespace copper_server::base_objects {
 
         //Permissions
         std::unordered_map<std::string, bool> has_permission; //
-        list_array<selector_string> in_group;                 //
+        list_array<string_t> in_group;                        //
 
         //Traits
         std::optional<uint32_t> limit;     //
-        std::optional<selector_sort> sort; //
+        std::optional<sort_t> sort;        //
 
 
-        selector_flags flags;
+        flags_t flags;
         bool scores_inverted = false;
         bool tags_inverted = false;
         bool team_inverted = false;
@@ -127,7 +132,8 @@ namespace copper_server::base_objects {
         void build_selector_parse(std::string_view& selector_string);
         void build_selector(std::string_view selector_string);
 
-        bool select(struct command_context&, std::function<void(struct entity&)>&& fn) const;
+        bool select(base_objects::command_context&, std::function<void(base_objects::entity&)>&& fn) const;
     };
 }
-#endif /* SRC_BASE_OBJECTS_SELECTOR */
+
+#endif /* SRC_API_SELECTOR */

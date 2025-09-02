@@ -6,21 +6,15 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/internal/block_state_provider.hpp>
+#include <src/api/block_state_provider.hpp>
 #include <src/base_objects/block.hpp>
-#include <src/base_objects/block_state_provider.hpp>
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins::processors_providers {
     //provides generator and registers default handles, custom handles can be added via api
-    class block_state_generator : public PluginAutoRegister<"processors_provider/block_state_generator", block_state_generator> {
-        base_objects::block_state_provider_generator generator;
-
-    public:
-        block_state_generator() {}
-
+    struct block_state_generator : public PluginAutoRegister<"processors_provider/block_state_generator", block_state_generator> {
         void OnInitialization(const PluginRegistrationPtr&) override {
-            generator.register_handler("simple_state_provider", [](const enbt::compound_const_ref& config, [[maybe_unused]] enbt::compound& local_state) {
+            api::block_state_provider::register_handler("simple_state_provider", [](const enbt::compound_const_ref& config, [[maybe_unused]] enbt::compound& local_state) {
                 auto& state = config["state"];
                 auto& full_states = base_objects::block::get_block((std::string)state["Name"]);
                 auto states = full_states.assigned_states_to_properties->left.at(full_states.default_state);
@@ -38,7 +32,7 @@ namespace copper_server::build_in_plugins::processors_providers {
                 }
                 return base_objects::block(full_states.assigned_states_to_properties->right.at(states));
             });
-            generator.register_handler("rotated_block_provider", [](const enbt::compound_const_ref& config, [[maybe_unused]] enbt::compound& local_state) {
+            api::block_state_provider::register_handler("rotated_block_provider", [](const enbt::compound_const_ref& config, [[maybe_unused]] enbt::compound& local_state) {
                 auto& state = config["state"];
                 auto& full_states = base_objects::block::get_block((std::string)state["Name"]);
                 auto states = full_states.assigned_states_to_properties->left.at(full_states.default_state);
@@ -46,7 +40,6 @@ namespace copper_server::build_in_plugins::processors_providers {
                 //TODO
             });
             //TODO
-            api::block_state_provider::register_generator(generator);
         }
     };
 }

@@ -12,10 +12,11 @@
 #include <library/list_array.hpp>
 #include <map>
 #include <mutex>
+#include <src/base_objects/Chat.hpp>
+#include <src/base_objects/number_provider.hpp>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include <src/base_objects/number_provider.hpp>
 
 #include <boost/bimap.hpp>
 #include <boost/bimap/unordered_set_of.hpp>
@@ -50,6 +51,7 @@ namespace copper_server {
             };
 
         public:
+            Chat display_name;
             std::shared_ptr<enbt::compound> loot_table;
             std::vector<shape_data*> collision_shapes;
             std::vector<shape_data*> outline_shapes;
@@ -400,6 +402,7 @@ namespace copper_server {
             bool is_tickable() const;
             bool is_solid() const;
             const std::vector<shape_data*>& collision_shapes() const;
+            const Chat& display_name() const;
             const std::string& instrument() const;
             const std::string& piston_behavior() const;
             const std::string& name() const;
@@ -443,6 +446,24 @@ namespace copper_server {
                 return *block_entity_data_.at(block_entity_id);
             }
 
+            static list_array<int32_t> get_block_states() {
+                return full_block_data_.convert_fn([](auto& block) {
+                    return block->current_state;
+                });
+            }
+
+            static list_array<int32_t> get_block_entities() {
+                return block_entity_data_.convert_fn([](auto& block) {
+                    return block->block_entity_id;
+                });
+            }
+
+            static list_array<int32_t> get_block_generals() {
+                return general_block_data_.convert_fn([](auto& block) {
+                    return block->general_block_id;
+                });
+            }
+
             static block make_block(const std::string& name) {
                 return block(get_block(name).default_state);
             }
@@ -467,6 +488,7 @@ namespace copper_server {
             bool is_tickable() const { return block.is_tickable();}
             bool is_solid() const { return block.is_solid();}
             const std::vector<shape_data*>& collision_shapes() const { return block.collision_shapes();}
+            const Chat& display_name() const { return block.display_name(); }
             const std::string& instrument() const { return block.instrument();}
             const std::string& piston_behavior() const { return block.piston_behavior();}
             const std::string& name() const { return block.name();}
@@ -505,6 +527,7 @@ namespace copper_server {
             bool is_tickable() const { return block.is_tickable();}
             bool is_solid() const { return block.is_solid();}
             const std::vector<shape_data*>& collision_shapes() const { return block.collision_shapes();}
+            const Chat& display_name() const { return block.display_name(); }
             const std::string& instrument() const { return block.instrument();}
             const std::string& piston_behavior() const { return block.piston_behavior();}
             const std::string& name() const { return block.name();}

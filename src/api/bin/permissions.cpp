@@ -31,19 +31,19 @@ namespace copper_server::api::permissions {
 
     bool has_action_limits(const std::string& action_name) {
         if (perm == nullptr)
-            return true;
+            return false;
         return perm->has_action_limits(action_name);
     }
 
     bool has_permission(const std::string& permission_name) {
         if (perm == nullptr)
-            return true;
+            return false;
         return perm->has_permission(permission_name);
     }
 
     bool has_group(const std::string& group_name) {
         if (perm == nullptr)
-            return true;
+            return false;
         return perm->has_group(group_name);
     }
 

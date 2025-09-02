@@ -6,10 +6,10 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/api/log.hpp>
 #include <src/api/network/tcp.hpp>
 #include <src/api/packets.hpp>
 #include <src/base_objects/shared_client_data.hpp>
-#include <src/log.hpp>
 #include <src/util/readers.hpp>
 #include <src/util/reflect.hpp>
 #include <src/util/reflect/calculations.hpp>
@@ -391,7 +391,7 @@ namespace copper_server::api::packets {
             value.value = std::move(res);
         } else if constexpr (std::is_same_v<bit_list_array<uint64_t>, Type>) {
             value.data() = stream.read_array<uint64_t>();
-        } else if constexpr (is_id_source<Type>) {
+        } else if constexpr (api::id::is_source<Type>) {
             decode_entry(context, stream, value.value, prev);
         } else if constexpr (is_tvalue_template_base_of<ordered_id, Type>) {
             decode_entry(context, stream, value.value, prev);

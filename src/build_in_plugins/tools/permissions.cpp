@@ -9,13 +9,13 @@
 #include <src/api/client.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/internal/permissions.hpp>
+#include <src/api/log.hpp>
 #include <src/api/permissions.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/base_objects/entity/event.hpp>
 #include <src/base_objects/player.hpp>
-#include <src/log.hpp>
 #include <src/plugin/main.hpp>
 #include <src/storage/list_storage.hpp>
 #include <src/storage/permissions_manager.hpp>
@@ -74,7 +74,7 @@ namespace copper_server::build_in_plugins {
 
         void OnLoad(const PluginRegistrationPtr&) override {
             if (!op_list.is_loaded())
-                log::error("permissions", "failed to load permissions");
+                api::log::error("permissions", "failed to load permissions");
         }
 
         void OnPostLoad(const PluginRegistrationPtr&) override {
@@ -253,7 +253,7 @@ namespace copper_server::build_in_plugins {
                 break;
             }
             client_ref << api::client::play::entity_event{
-                .entity_id = client_ref.player_data.assigned_entity->protocol_id,
+                .id = client_ref.player_data.assigned_entity->protocol_id,
                 .status = (int8_t)event
             };
         }

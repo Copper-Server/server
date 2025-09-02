@@ -46,12 +46,24 @@ namespace copper_server::api::world {
         get_worlds().save_and_unload(world_id);
     }
 
+    void unload_all() {
+        get_worlds().unload_all();
+    }
+
     void save(int32_t world_id) {
         get_worlds().save(world_id);
     }
 
     void save_all() {
         get_worlds().save_all();
+    }
+
+    void save_and_unload(int32_t world_id) {
+        get_worlds().save_and_unload(world_id);
+    }
+
+    void save_and_unload_all() {
+        get_worlds().save_and_unload_all();
     }
 
     size_t loaded_chunks_count() {
@@ -98,6 +110,10 @@ namespace copper_server::api::world {
         return get_worlds().base_world_id;
     }
 
+    void set_default_world_id(int32_t id) {
+        get_worlds().base_world_id = id;
+    }
+
     void pre_load_world(int32_t world_id) {
         get_worlds().get(world_id);
     }
@@ -114,6 +130,14 @@ namespace copper_server::api::world {
         return id;
     }
 
+    bool exists(const std::string& name) {
+        return get_worlds().exists(name);
+    }
+
+    bool exists(int32_t id) {
+        return get_worlds().exists(id);
+    }
+
     int32_t create(const std::string& name) {
         return get_worlds().create(name);
     }
@@ -125,12 +149,20 @@ namespace copper_server::api::world {
         return get_worlds().create(name, callback);
     }
 
+    void remove(int32_t id) {
+        get_worlds().erase(id);
+    }
+
+    void for_each_world(const std::function<void(int32_t id, storage::world_data& world)>& func) {
+        get_worlds().for_each_world(func);
+    }
+
     //gets client world, checks if world exists, returns pair of id and name, if world does not exists then returns default world and sets default position for player in new world
     std::pair<int32_t, std::string> prepare_world(base_objects::SharedClientData& client_ref) {
         auto id = get_worlds().get_id(client_ref.player_data.world_id);
         bool set_new_data = false;
         if (id == (int32_t)-1) {
-            using enum_ = api::configuration::ServerConfiguration::World::world_not_found_for_client_e;
+            using enum_ = api::configuration::server_configuration::World::world_not_found_for_client_e;
             switch (api::configuration::get().world.world_not_found_for_client) {
             case enum_::kick:
                 throw std::runtime_error("World with id " + client_ref.player_data.world_id + " does not exists.");

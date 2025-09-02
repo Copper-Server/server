@@ -11,11 +11,11 @@
 #include <src/api/configuration.hpp>
 #include <src/api/entity_id_map.hpp>
 #include <src/api/players.hpp>
+#include <src/api/registers.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
-#include <src/registers.hpp>
 
 namespace copper_server::build_in_plugins {
     //handles clients with play state, allows players to access world and other things through api
@@ -54,7 +54,7 @@ namespace copper_server::build_in_plugins {
                         f = f | api::client::play::update_mob_effect::flags_f::blend;
 
                     *self.assigned_player << api::client::play::update_mob_effect{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .effect = id,
                         .amplifier = amplifier,
                         .duration = (int32_t)duration,
@@ -65,29 +65,29 @@ namespace copper_server::build_in_plugins {
             proc.entity_animation = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_animation animation) {
                 if (self.assigned_player) {
                     *self.assigned_player << api::client::play::animate{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .animation = static_cast<api::client::play::animate::animation_e>(animation)
                     };
                 }
             };
-            proc.entity_attach = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_ref& other_entity_id) {
-                if (self.assigned_player && other_entity_id)
+            proc.entity_attach = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_ref& other_id) {
+                if (self.assigned_player && other_id)
                     *self.assigned_player << api::client::play::set_entity_link{
-                        .attached_entity_id = other_entity_id->protocol_id,
-                        .holding_entity_id = target.protocol_id
+                        .attached_id = other_id->protocol_id,
+                        .holding_id = target.protocol_id
                     };
             };
-            proc.entity_attack = [](base_objects::entity& self, base_objects::entity& target, [[maybe_unused]] base_objects::entity_ref& other_entity_id) {
+            proc.entity_attack = [](base_objects::entity& self, base_objects::entity& target, [[maybe_unused]] base_objects::entity_ref& other_id) {
                 if (self.assigned_player)
                     *self.assigned_player << api::client::play::animate{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .animation = api::client::play::animate::swing_main_arm
                     };
             };
             proc.entity_break = [](base_objects::entity& self, base_objects::entity& target, int64_t x, int64_t y, int64_t z, uint8_t state) {
                 if (self.assigned_player)
                     *self.assigned_player << api::client::play::block_destruction{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                         .destroy_stage = state
                     };
@@ -95,7 +95,7 @@ namespace copper_server::build_in_plugins {
             proc.entity_cancel_break = [](base_objects::entity& self, base_objects::entity& target, int64_t x, int64_t y, int64_t z) {
                 if (self.assigned_player)
                     *self.assigned_player << api::client::play::block_destruction{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                         .destroy_stage = 10
                     };
@@ -103,7 +103,7 @@ namespace copper_server::build_in_plugins {
             proc.entity_damage = [](base_objects::entity& self, base_objects::entity& target, [[maybe_unused]] float health, int32_t type_id, const std::optional<util::VECTOR>& pos) {
                 if (self.assigned_player)
                     *self.assigned_player << api::client::play::damage_event{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .source_damage_type_id = type_id,
                         .source_pos = pos
                     };
@@ -111,32 +111,32 @@ namespace copper_server::build_in_plugins {
             proc.entity_damage_with_source = [](base_objects::entity& self, base_objects::entity& target, [[maybe_unused]] float health, int32_t type_id, base_objects::entity_ref& source, const std::optional<util::VECTOR>& pos) {
                 if (self.assigned_player && source)
                     *self.assigned_player << api::client::play::damage_event{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .source_damage_type_id = type_id,
-                        .source_entity_id = source->protocol_id,
-                        .source_direct_entity_id = source->protocol_id,
+                        .source_id = source->protocol_id,
+                        .source_direct_id = source->protocol_id,
                         .source_pos = pos
                     };
             };
             proc.entity_damage_with_sources = [](base_objects::entity& self, base_objects::entity& target, [[maybe_unused]] float health, int32_t type_id, base_objects::entity_ref& source, base_objects::entity_ref& source_direct, const std::optional<util::VECTOR>& pos) {
                 if (self.assigned_player && source && source_direct)
                     *self.assigned_player << api::client::play::damage_event{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .source_damage_type_id = type_id,
-                        .source_entity_id = source->protocol_id,
-                        .source_direct_entity_id = source_direct->protocol_id,
+                        .source_id = source->protocol_id,
+                        .source_direct_id = source_direct->protocol_id,
                         .source_pos = pos
                     };
             };
             proc.entity_death = [](base_objects::entity& self, base_objects::entity& target) {
                 if (self.assigned_player) {
                     *self.assigned_player << api::client::play::entity_event{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .status = (int8_t)base_objects::entity_event::entity_died
                     };
                     //TODO add delay
                     *self.assigned_player << api::client::play::entity_event{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .status = (int8_t)base_objects::entity_event::death_smoke
                     };
                 }
@@ -144,28 +144,28 @@ namespace copper_server::build_in_plugins {
             proc.entity_deinit = [](base_objects::entity& self, base_objects::entity& target) {
                 if (self.assigned_player) {
                     *self.assigned_player << api::client::play::remove_entities{
-                        .entity_ids{target.protocol_id}
+                        .ids{target.protocol_id}
                     };
                 }
             };
             proc.entity_detach = [](base_objects::entity& self, base_objects::entity& target, [[maybe_unused]] base_objects::entity_ref& other) {
                 if (self.assigned_player)
                     *self.assigned_player << api::client::play::set_entity_link{
-                        .attached_entity_id = (int32_t)target.protocol_id,
-                        .holding_entity_id = -1
+                        .attached_id = (int32_t)target.protocol_id,
+                        .holding_id = -1
                     };
             };
             proc.entity_event = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_event status) {
                 if (self.assigned_player)
                     *self.assigned_player << api::client::play::entity_event{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .status = (int8_t)status
                     };
             };
             proc.entity_finish_break = [](base_objects::entity& self, base_objects::entity& target, int64_t x, int64_t y, int64_t z) {
                 if (self.assigned_player)
                     *self.assigned_player << api::client::play::block_destruction{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .location = {(int)x, (int)y, (int)z},
                         .destroy_stage = 11
                     };
@@ -174,7 +174,7 @@ namespace copper_server::build_in_plugins {
                 if (self.assigned_player) {
                     auto velocity = util::minecraft::packets::velocity(target.motion);
                     *self.assigned_player << api::client::play::add_entity{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .uuid = api::entity_id_map::get_uuid(target.protocol_id),
                         .type = target.get_entity_type_id(),
                         .x = target.position.x,
@@ -193,28 +193,28 @@ namespace copper_server::build_in_plugins {
             proc.entity_iteract = [](base_objects::entity& self, base_objects::entity& target, [[maybe_unused]] base_objects::entity_ref& other) {
                 if (self.assigned_player)
                     *self.assigned_player << api::client::play::animate{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .animation = api::client::play::animate::swing_main_arm
                     };
             };
             proc.entity_iteract_block = [](base_objects::entity& self, base_objects::entity& target, auto, auto, auto) {
                 if (self.assigned_player)
                     *self.assigned_player << api::client::play::animate{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .animation = api::client::play::animate::swing_main_arm
                     };
             };
             proc.entity_leaves_ride = [](base_objects::entity& self, base_objects::entity& target, base_objects::entity_ref& other) {
                 if (self.assigned_player && other)
                     *self.assigned_player << api::client::play::set_passengers{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .passengers = other->ride_by_entity.convert_fn([](auto& entity) { return (base_objects::var_int32)entity->protocol_id; })
                     };
             };
             proc.entity_look_changes = [](base_objects::entity& self, base_objects::entity& target, util::ANGLE_DEG rot) {
                 if (self.assigned_player)
                     *self.assigned_player << api::client::play::rotate_head{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .head_yaw = rot.x
                     };
             };
@@ -222,7 +222,7 @@ namespace copper_server::build_in_plugins {
                 if (self.assigned_player) {
                     auto velocity = util::minecraft::packets::velocity(mot);
                     *self.assigned_player << api::client::play::set_entity_motion{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .velocity_x = velocity.x,
                         .velocity_y = velocity.y,
                         .velocity_z = velocity.z
@@ -233,7 +233,7 @@ namespace copper_server::build_in_plugins {
                 if (self.assigned_player) {
                     auto delta = util::minecraft::packets::delta_move({(float)dif.x, (float)dif.y, (float)dif.z});
                     *self.assigned_player << api::client::play::move_entity_pos{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .delta_x = delta.x,
                         .delta_y = delta.y,
                         .delta_z = delta.z,
@@ -244,35 +244,35 @@ namespace copper_server::build_in_plugins {
             proc.entity_place_block = [](base_objects::entity& self, base_objects::entity& target, bool is_main_hand, [[maybe_unused]] int64_t x, [[maybe_unused]] int64_t y, [[maybe_unused]] int64_t z, [[maybe_unused]] const base_objects::block& block) {
                 if (self.assigned_player)
                     *self.assigned_player << api::client::play::animate{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .animation = is_main_hand ? api::client::play::animate::swing_main_arm : api::client::play::animate::swing_offhand
                     };
             };
             proc.entity_place_block_entity = [](base_objects::entity& self, base_objects::entity& target, bool is_main_hand, [[maybe_unused]] int64_t x, [[maybe_unused]] int64_t y, [[maybe_unused]] int64_t z, auto) {
                 if (self.assigned_player)
                     *self.assigned_player << api::client::play::animate{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .animation = is_main_hand ? api::client::play::animate::swing_main_arm : api::client::play::animate::swing_offhand
                     };
             };
             proc.entity_remove_effect = [](base_objects::entity& self, base_objects::entity& target, uint32_t id) {
                 if (self.assigned_player)
                     *self.assigned_player << api::client::play::remove_mob_effect{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .effect_id = id
                     };
             };
             proc.entity_rides = [](base_objects::entity& self, [[maybe_unused]] base_objects::entity& target, base_objects::entity_ref& other_entity) {
                 if (self.assigned_player && other_entity)
                     *self.assigned_player << api::client::play::set_passengers{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .passengers = other_entity->ride_by_entity.convert_fn([](auto& entity) { return (base_objects::var_int32)entity->protocol_id; })
                     };
             };
             proc.entity_rotation_changes = [](base_objects::entity& self, base_objects::entity& target, util::ANGLE_DEG rot) {
                 if (self.assigned_player)
                     *self.assigned_player << api::client::play::move_entity_rot{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .yaw = rot.x,
                         .pitch = rot.y,
                         .on_ground = target.is_on_ground()
@@ -281,7 +281,7 @@ namespace copper_server::build_in_plugins {
             proc.entity_teleport = [](base_objects::entity& self, base_objects::entity& target, util::VECTOR pos) {
                 if (self.assigned_player)
                     *self.assigned_player << api::client::play::entity_position_sync{
-                        .entity_id = target.protocol_id,
+                        .id = target.protocol_id,
                         .x = pos.x,
                         .y = pos.y,
                         .z = pos.z,
@@ -549,7 +549,7 @@ namespace copper_server::build_in_plugins {
                     if (self.current_world()) {
                         auto& player_data = self.assigned_player->player_data;
                         *self.assigned_player << api::client::play::respawn{
-                            .dimension_type = registers::dimensionTypes.at(new_world.get_world_type()).id,
+                            .dimension_type = api::registers::dimensionTypes.at(new_world.get_world_type()).id,
                             .dimension_name = new_world.world_name,
                             .seed_hashed = new_world.get_hashed_seed(),
                             .gamemode = player_data.gamemode,

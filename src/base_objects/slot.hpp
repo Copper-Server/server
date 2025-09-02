@@ -32,6 +32,9 @@ namespace copper_server::base_objects {
         std::string id;
         std::unordered_map<int32_t, component> default_components;
         int32_t internal_id = 0;
+        std::optional<int32_t> spawn_entity;
+        uint32_t fuel_time = 0;                 //0 == not fuel
+        float composter_increase_chance = 0.0f; //0.0f == should not be used in composter
 
         enbt::compound server_side;
 
@@ -123,6 +126,7 @@ namespace copper_server::base_objects {
         bool operator!=(const slot_data& other) const;
 
         bool is_same_def(const slot_data& other) const;
+        std::optional<int32_t> spawns_entity_type() const;
 
         static slot_data create_item(const std::string& id, int32_t count = 1);
         static slot_data create_item(uint32_t id, int32_t count = 1);
@@ -131,7 +135,7 @@ namespace copper_server::base_objects {
 
         static void add_slot_data(static_slot_data&& move);
 
-        static_slot_data& get_slot_data();
+        static_slot_data& get_slot_data() const;
 
         static void enumerate_slot_data(const std::function<void(static_slot_data&)>& fn);
 

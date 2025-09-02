@@ -8,9 +8,10 @@
  */
 #ifndef SRC_API_ENTITY_ID_MAP
 #define SRC_API_ENTITY_ID_MAP
-#include <library/enbt/enbt.hpp>
-#include <src/base_objects/atomic_holder.hpp>
 #include <functional>
+#include <library/enbt/enbt.hpp>
+#include <library/list_array.hpp>
+#include <src/base_objects/atomic_holder.hpp>
 
 namespace copper_server::base_objects {
     struct entity;
@@ -34,6 +35,9 @@ namespace copper_server::api::entity_id_map {
     [[nodiscard]] base_objects::entity_ref get_entity(const enbt::raw_uuid& uuid);
     [[nodiscard]] bool has_id(int32_t id);
     [[nodiscard]] bool has_uuid(const enbt::raw_uuid& uuid);
+    [[nodiscard]] list_array<int32_t> query_ids();
+    [[nodiscard]] uint8_t id_index(int32_t id); //gets index of allocated id
+
     void apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(base_objects::entity&)>&& callback);
 }
 

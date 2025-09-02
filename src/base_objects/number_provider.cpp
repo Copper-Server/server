@@ -311,6 +311,7 @@ namespace copper_server::base_objects {
                         res.target.value = (std::string)target.at("target");
                     else
                         throw std::runtime_error("Invalid target type: " + score_type);
+                    res.target.type = score_type;
                     return number_provider_score(std::move(res));
                 } else if (type == "storage" || type == "minecraft:storage") {
                     base_objects::number_provider_storage res;
@@ -329,5 +330,92 @@ namespace copper_server::base_objects {
             }
         } else
             return number_provider_constant((int32_t)other_data);
+    }
+
+    enbt::value number_provider::get_enbt() const {
+        return std::visit(
+            []<class T>(const T& val) -> enbt::value {
+                if constexpr (std::is_same_v<T, number_provider_constant*>) {
+                    return std::visit([](auto it) -> enbt::value { return it; }, val->value);
+                } else if constexpr (std::is_same_v<T, number_provider_uniform*>) {
+                    return enbt::compound{
+                        {"type", "minecraft:uniform"},
+                        {"min", std::visit([](auto it) -> enbt::value { return it; }, val->min_inclusive)},
+                        {"max", std::visit([](auto it) -> enbt::value { return it; }, val->max_exclusive)}
+                    };
+                } else if constexpr (std::is_same_v<T, number_provider_clamped_normal*>) {
+                    return enbt::compound{
+                        {"type", "minecraft:clamped_normal"},
+                        {"mean", val->mean},
+                        {"deviation", val->deviation},
+                        {"min", val->min},
+                        {"max", val->max}
+                    };
+                } else if constexpr (std::is_same_v<T, number_provider_trapezoid*>) {
+                    return enbt::compound{
+                        {"type", "minecraft:trapezoid"},
+                        {"min", val->min},
+                        {"max", val->max},
+                        {"max", val->plateau}
+                    };
+                } else if constexpr (std::is_same_v<T, number_provider_clamped*>) {
+                    return enbt::compound{
+                        {"type", "minecraft:clamped"},
+                        {"min", std::visit([](auto it) -> enbt::value { return it; }, val->min_inclusive)},
+                        {"max", std::visit([](auto it) -> enbt::value { return it; }, val->max_inclusive)},
+                        {"source", val->source.get_enbt()}
+                    };
+                } else if constexpr (std::is_same_v<T, number_provider_weighted_list*>) {
+                    enbt::fixed_array arr;
+                    arr.reserve(val->values.size());
+                    for (auto& it : val->values) {
+                        arr.push_back(enbt::compound{{"data", it.first.get_enbt()}, {"weight", it.second}});
+                    }
+                    return enbt::compound{
+                        {"type", "minecraft:weighted_list"},
+                        {"values", std::move(arr)}
+                    };
+                } else if constexpr (std::is_same_v<T, number_provider_biased_to_bottom*>) {
+                    return enbt::compound{
+                        {"type", "minecraft:biased_to_bottom"},
+                        {"min", std::visit([](auto it) -> enbt::value { return it; }, val->min_inclusive)},
+                        {"max", std::visit([](auto it) -> enbt::value { return it; }, val->max_exclusive)}
+                    };
+                } else if constexpr (std::is_same_v<T, number_provider_binomial*>) {
+                    return enbt::compound{
+                        {"type", "minecraft:binomial"},
+                        {"n", val->n.get_enbt()},
+                        {"p", val->p.get_enbt()}
+                    };
+                } else if constexpr (std::is_same_v<T, number_provider_score*>) {
+                    if (val->target.type == "fixed") {
+                        return enbt::compound{
+                            {"type", "minecraft:score"},
+                            {"scale", val->scale},
+                            {"score", val->score},
+                            {"target", enbt::compound{{"type", val->target.type}, {"name", val->target.value}}}
+                        };
+                    } else {
+                        return enbt::compound{
+                            {"type", "minecraft:score"},
+                            {"scale", val->scale},
+                            {"score", val->score},
+                            {"target", enbt::compound{{"type", val->target.type}, {"target", val->target.value}}}
+                        };
+                    }
+                } else if constexpr (std::is_same_v<T, number_provider_storage*>) {
+                    return enbt::compound{
+                        {"type", "minecraft:storage"},
+                        {"storage", val->storage},
+                        {"path", val->path}
+                    };
+                } else // number_provider_enchantment_level*
+                    return enbt::compound{
+                        {"type", "minecraft:enchantment_level"},
+                        {"amount", val->amount}
+                    };
+            },
+            provider
+        );
     }
 }

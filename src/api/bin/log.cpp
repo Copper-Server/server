@@ -16,10 +16,10 @@
 #include <mutex>
 #include <src/api/console.hpp>
 #include <src/base_objects/events/event.hpp>
-#include <src/log.hpp>
+#include <src/api/log.hpp>
 #include <src/util/task_management.hpp>
 
-namespace copper_server::log {
+namespace copper_server::api::log {
 
     std::string log_levels_names[(int)level::__max] = {
         "info",
@@ -43,7 +43,7 @@ namespace copper_server::log {
                         fast_task::files::_sync_flags{}
                     );
                     if (value->bad()) {
-                        log::error("log", "Failed to set log file.");
+                        api::log::error("log", "Failed to set log file.");
                         value = nullptr;
                     }
                 }
@@ -63,7 +63,7 @@ namespace copper_server::log {
             true, //debug
         };
 
-        void print(std::chrono::local_time<std::chrono::system_clock::duration> now, log::level level, std::string_view source, std::string_view message) {
+        void print(std::chrono::local_time<std::chrono::system_clock::duration> now, api::log::level level, std::string_view source, std::string_view message) {
             handle.get([&](auto& handle) {
                 if (!log_levels_switch[(int)level] || !handle)
                     return;
@@ -111,7 +111,7 @@ namespace copper_server::log {
             return "\033[38;2;" + std::to_string(r) + ";" + std::to_string(g) + ";" + std::to_string(b) + "m" + message + "\033[0m";
         }
 
-        void print(log::level level, std::string_view source, std::string_view message) {
+        void print(api::log::level level, std::string_view source, std::string_view message) {
             if (!log_levels_switch[(int)level] || !cmd)
                 return;
             auto [r, g, b] = log_levels_colors[(int)level];

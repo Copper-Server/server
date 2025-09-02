@@ -8,10 +8,13 @@
  */
 #ifndef SRC_RESOURCES_REGISTERS
 #define SRC_RESOURCES_REGISTERS
-#include <boost/json/value.hpp>
 #include <filesystem>
 #include <library/list_array.hpp>
 #include <src/base_objects/data_packs/known_pack.hpp>
+
+namespace boost::json {
+    class object;
+}
 
 namespace copper_server::resources {
     void initialize_entities();

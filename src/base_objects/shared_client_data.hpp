@@ -18,9 +18,9 @@
 #include <library/enbt/enbt.hpp>
 #include <library/fast_task.hpp>
 #include <library/list_array.hpp>
+#include <src/api/mojang/session_server.hpp>
 #include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/ptr_optional.hpp>
-#include <src/mojang/api/session_server.hpp>
 #include <src/plugin/registration.hpp>
 
 namespace copper_server {
@@ -44,7 +44,7 @@ namespace copper_server {
         struct SharedClientData {
             std::string name;
             std::string ip;
-            std::shared_ptr<mojang::api::session_server::player_data> data;
+            std::shared_ptr<api::mojang::session_server::player_data> data;
             std::string client_brand;
 
 

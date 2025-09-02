@@ -8,7 +8,7 @@
  */
 #include <format>
 #include <library/fast_task/include/files.hpp>
-#include <src/log.hpp>
+#include <src/api/log.hpp>
 #include <src/util/json_helpers.hpp>
 
 namespace copper_server::util {
@@ -34,7 +34,7 @@ namespace copper_server::util {
                     std::string err_string = ec.has_location()
                                                  ? std::format("Failed to read {} file because:\n{}\n On:\n{}", file_path.string(), ec.message(), ec.location().to_string())
                                                  : std::format("Failed to read {} file because:\n{}", file_path.string(), ec.message());
-                    log::warn("server", err_string);
+                    api::log::warn("server", err_string);
                     return std::nullopt;
                 }
             }
@@ -54,7 +54,7 @@ namespace copper_server::util {
                 std::string err_string = ec.has_location()
                                              ? std::format("Failed to read json because:\n{}\n On:\n{}", ec.message(), ec.location().to_string())
                                              : std::format("Failed to read json because:\n{}", ec.message());
-                log::warn("server", err_string);
+                api::log::warn("server", err_string);
                 return std::nullopt;
             }
         }

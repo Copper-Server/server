@@ -13,7 +13,6 @@
 #include <library/list_array.hpp>
 #include <optional>
 #include <src/base_objects/chat.hpp>
-#include <src/base_objects/packets.hpp>
 #include <src/base_objects/parsers.hpp>
 #include <src/base_objects/permissions.hpp>
 #include <src/base_objects/shared_client_data.hpp>
@@ -99,7 +98,59 @@ namespace copper_server::base_objects {
         std::string action_name;
         uint32_t links = 0;
 
-        using parsers = packets::command_node::parsers;
+        enum class parsers : uint32_t {
+            brigadier_bool,
+            brigadier_float,
+            brigadier_double,
+            brigadier_integer,
+            brigadier_long,
+            brigadier_string,
+            minecraft_entity,
+            minecraft_game_profile,
+            minecraft_block_pos,
+            minecraft_column_pos,
+            minecraft_vec3,
+            minecraft_vec2,
+            minecraft_block_state,
+            minecraft_block_predicate,
+            minecraft_item_stack,
+            minecraft_item_predicate,
+            minecraft_color,
+            minecraft_component,
+            minecraft_style,
+            minecraft_message,
+            minecraft_nbt,
+            minecraft_nbt_tag,
+            minecraft_nbt_path,
+            minecraft_objective,
+            minecraft_objective_criteria,
+            minecraft_operation,
+            minecraft_particle,
+            minecraft_angle,
+            minecraft_rotation,
+            minecraft_scoreboard_slot,
+            minecraft_score_holder,
+            minecraft_swizzle,
+            minecraft_team,
+            minecraft_item_slot,
+            minecraft_resource_location,
+            minecraft_function,
+            minecraft_entity_anchor,
+            minecraft_int_range,
+            minecraft_float_range,
+            minecraft_dimension,
+            minecraft_gamemode,
+            minecraft_time,
+            minecraft_resource_or_tag,
+            minecraft_resource_or_tag_key,
+            minecraft_resource,
+            minecraft_resource_key,
+            minecraft_template_mirror,
+            minecraft_template_rotation,
+            minecraft_heightmap,
+            minecraft_uuid,
+        };
+
 
         bool is_named_suggestion() const {
             return std::visit(

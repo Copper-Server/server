@@ -10,10 +10,10 @@
 #include <src/api/packets.hpp>
 #include <src/api/permissions.hpp>
 #include <src/api/players.hpp>
+#include <src/api/registers.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/base_objects/slot.hpp>
-#include <src/registers.hpp>
 #include <src/storage/world_data.hpp>
 
 namespace copper_server {
@@ -366,7 +366,7 @@ namespace copper_server {
                     result.x = (int32_t)chunk.chunk_x;
                     result.z = (int32_t)chunk.chunk_z;
                     for (auto& section : chunk.sub_chunks) {
-                        base_objects::pallete_container_biome biomes(registers::biomes.size());
+                        base_objects::pallete_container_biome biomes(api::registers::biomes.size());
                         for (auto& x : section.biomes)
                             for (auto& y : x)
                                 for (auto& z : y)
@@ -401,7 +401,7 @@ namespace copper_server {
                     for (auto& section_ : chunk.sub_chunks) {
                         uint16_t block_count = 0;
                         base_objects::pallete_container_block blocks(base_objects::block::block_states_size());
-                        base_objects::pallete_container_biome biomes(registers::biomes.size());
+                        base_objects::pallete_container_biome biomes(api::registers::biomes.size());
                         for (auto& x : section_.blocks)
                             for (auto& y : x)
                                 for (auto z : y) {
@@ -574,6 +574,41 @@ namespace copper_server {
         }
 
         base_objects::events::sync_event<base_objects::SharedClientData&> client_state_changed;
+
+        int32_t java_name_to_protocol(const std::string& name_or_number) {
+            static const std::unordered_map<std::string, int32_t> map{
+                {"772", 772},
+                {"771", 771},
+                {"770", 770},
+                {"769", 769},
+                {"768", 768},
+                {"767", 767},
+                {"1.21.8", 772},
+                {"1.21.7", 771},
+                {"1.21.6", 771},
+                {"1.21.5", 770},
+                {"1.21.4", 769},
+                {"1.21.3", 768},
+                {"1.21.2", 768},
+                {"1.21.1", 767},
+                {"1.21", 767}
+            };
+            return map.at(name_or_number);
+        }
+
+        const char* protocol_to_java_name(int32_t id) {
+            static const std::unordered_map<int32_t, const char*> map{
+                {772, "1.21.8"},
+                {771, "1.21.6"},
+                {770, "1.21.5"},
+                {769, "1.21.4"},
+                {768, "1.21.3"},
+                {768, "1.21.2"},
+                {767, "1.21.1"},
+                {767, "1.21"}
+            };
+            return map.at(id);
+        }
     }
 }
 

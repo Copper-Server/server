@@ -6,12 +6,12 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/console.hpp>
 #include <src/api/client.hpp>
+#include <src/api/console.hpp>
 #include <src/api/internal/command.hpp>
+#include <src/api/log.hpp>
 #include <src/api/permissions.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/log.hpp>
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins {

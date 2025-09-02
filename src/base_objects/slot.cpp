@@ -73,6 +73,10 @@ namespace copper_server::base_objects {
         return true;
     }
 
+    std::optional<int32_t> slot_data::spawns_entity_type() const {
+        return get_slot_data().spawn_entity;
+    }
+
     void static_slot_data::reset_items() {
         slot_data::named_full_item_data.clear();
         slot_data::full_item_data_.clear();
@@ -133,7 +137,7 @@ namespace copper_server::base_objects {
         return *full_item_data_.at(id);
     }
 
-    static_slot_data& slot_data::get_slot_data() {
+    static_slot_data& slot_data::get_slot_data() const {
         return *full_item_data_.at(id);
     }
 

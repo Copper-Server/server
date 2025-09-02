@@ -151,7 +151,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::slot_display::empty& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::slot_display::empty>() { return "copper_server::api::packets::slot_display::empty"; }
-template<>consteval size_t fields_count<copper_server::api::packets::slot_display::empty>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::slot_display::any_fuel& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::slot_display::any_fuel& obj, [[maybe_unused]] FN&& fn){
@@ -169,7 +168,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::slot_display::any_fuel& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::slot_display::any_fuel>() { return "copper_server::api::packets::slot_display::any_fuel"; }
-template<>consteval size_t fields_count<copper_server::api::packets::slot_display::any_fuel>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::slot_display::item& obj, [[maybe_unused]] FN&& fn){
   fn(obj.type);
 }
@@ -861,31 +859,31 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::particle_data::vibration::block>() { return "copper_server::api::packets::particle_data::vibration::block"; }
 template<>consteval size_t fields_count<copper_server::api::packets::particle_data::vibration::block>() { return 1; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::particle_data::vibration::entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.eye_height);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::particle_data::vibration::entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.eye_height);
 }
 template<>struct for_each_type_s<copper_server::api::packets::particle_data::vibration::entity> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::particle_data::vibration::entity>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::particle_data::vibration::entity>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::particle_data::vibration::entity>().eye_height)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::particle_data::vibration::entity> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::particle_data::vibration::entity>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::particle_data::vibration::entity>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::particle_data::vibration::entity>().eye_height)>("eye_height");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::particle_data::vibration::entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.eye_height, "eye_height");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::particle_data::vibration::entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.eye_height, "eye_height");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::particle_data::vibration::entity>() { return "copper_server::api::packets::particle_data::vibration::entity"; }
@@ -1456,7 +1454,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::configuration::finish_configuration& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::configuration::finish_configuration>() { return "copper_server::api::packets::client_bound::configuration::finish_configuration"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::configuration::finish_configuration>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::configuration::keep_alive& obj, [[maybe_unused]] FN&& fn){
   fn(obj.keep_alive_id);
 }
@@ -1522,7 +1519,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::configuration::reset_chat& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::configuration::reset_chat>() { return "copper_server::api::packets::client_bound::configuration::reset_chat"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::configuration::reset_chat>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::configuration::registry_data::entry& obj, [[maybe_unused]] FN&& fn){
   fn(obj.entry_id);
   fn(obj.data);
@@ -2011,7 +2007,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::configuration::clear_dialog& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::configuration::clear_dialog>() { return "copper_server::api::packets::client_bound::configuration::clear_dialog"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::configuration::clear_dialog>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::configuration::show_dialog& obj, [[maybe_unused]] FN&& fn){
   fn(obj.dialog);
 }
@@ -2073,7 +2068,7 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::bundle_delimiter>() { return "copper_server::api::packets::client_bound::play::bundle_delimiter"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::bundle_delimiter>() { return 3; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::add_entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.uuid);
   fn(obj.type);
   fn(obj.x);
@@ -2088,7 +2083,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::
   fn(obj.velocity_z);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::add_entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.uuid);
   fn(obj.type);
   fn(obj.x);
@@ -2104,7 +2099,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_se
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::add_entity> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::add_entity>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::add_entity>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::add_entity>().uuid)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::add_entity>().type)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::add_entity>().x)>();
@@ -2121,7 +2116,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::add_entity> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::add_entity>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::add_entity>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::add_entity>().uuid)>("uuid");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::add_entity>().type)>("type");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::add_entity>().x)>("x");
@@ -2137,7 +2132,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::add_entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.uuid, "uuid");
   fn(obj.type, "type");
   fn(obj.x, "x");
@@ -2152,7 +2147,7 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
   fn(obj.velocity_z, "velocity_z");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::add_entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.uuid, "uuid");
   fn(obj.type, "type");
   fn(obj.x, "x");
@@ -2172,31 +2167,31 @@ template<>struct enum_data<copper_server::api::packets::client_bound::play::anim
 static constexpr inline std::array<item, 6> values = {item{"swing_main_arm", copper_server::api::packets::client_bound::play::animate::animation_e::swing_main_arm}, item{"unrecognized", copper_server::api::packets::client_bound::play::animate::animation_e::unrecognized}, item{"leave_bed", copper_server::api::packets::client_bound::play::animate::animation_e::leave_bed}, item{"swing_offhand", copper_server::api::packets::client_bound::play::animate::animation_e::swing_offhand}, item{"critical_hit", copper_server::api::packets::client_bound::play::animate::animation_e::critical_hit}, item{"enchanted_hit", copper_server::api::packets::client_bound::play::animate::animation_e::enchanted_hit}};};
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::animate::animation_e>() { return "copper_server::api::packets::client_bound::play::animate::animation_e"; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::animate& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.animation);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::animate& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.animation);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::animate> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::animate>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::animate>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::animate>().animation)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::animate> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::animate>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::animate>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::animate>().animation)>("animation");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::animate& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.animation, "animation");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::animate& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.animation, "animation");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::animate>() { return "copper_server::api::packets::client_bound::play::animate"; }
@@ -2286,36 +2281,36 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::block_changed_ack>() { return "copper_server::api::packets::client_bound::play::block_changed_ack"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::block_changed_ack>() { return 1; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::block_destruction& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.location);
   fn(obj.destroy_stage);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::block_destruction& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.location);
   fn(obj.destroy_stage);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::block_destruction> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::block_destruction>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::block_destruction>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::block_destruction>().location)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::block_destruction>().destroy_stage)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::block_destruction> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::block_destruction>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::block_destruction>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::block_destruction>().location)>("location");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::block_destruction>().destroy_stage)>("destroy_stage");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::block_destruction& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.location, "location");
   fn(obj.destroy_stage, "destroy_stage");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::block_destruction& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.location, "location");
   fn(obj.destroy_stage, "destroy_stage");
 }
@@ -2494,7 +2489,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::boss_event::remove& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::boss_event::remove>() { return "copper_server::api::packets::client_bound::play::boss_event::remove"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::boss_event::remove>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::boss_event::update_health& obj, [[maybe_unused]] FN&& fn){
   fn(obj.health);
 }
@@ -2698,7 +2692,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::chunk_batch_start& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::chunk_batch_start>() { return "copper_server::api::packets::client_bound::play::chunk_batch_start"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::chunk_batch_start>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::chunks_biomes& obj, [[maybe_unused]] FN&& fn){
   fn(obj.z);
   fn(obj.x);
@@ -2848,7 +2841,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::commands::node::root_node& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::commands::node::root_node>() { return "copper_server::api::packets::client_bound::play::commands::node::root_node"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::commands::node::root_node>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::commands::node::literal_node& obj, [[maybe_unused]] FN&& fn){
   fn(obj.name);
 }
@@ -2920,7 +2912,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::commands::node::is_executable& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::commands::node::is_executable>() { return "copper_server::api::packets::client_bound::play::commands::node::is_executable"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::commands::node::is_executable>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::commands::node::redirect_node& obj, [[maybe_unused]] FN&& fn){
   fn(obj.node);
 }
@@ -2986,7 +2977,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::commands::node::is_restricted& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::commands::node::is_restricted>() { return "copper_server::api::packets::client_bound::play::commands::node::is_restricted"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::commands::node::is_restricted>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::commands::node& obj, [[maybe_unused]] FN&& fn){
   fn(obj.flags);
   fn(obj.children);
@@ -3630,49 +3620,49 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::custom_payload>() { return "copper_server::api::packets::client_bound::play::custom_payload"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::custom_payload>() { return 2; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::damage_event& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.source_damage_type_id);
-  fn(obj.source_entity_id);
-  fn(obj.source_direct_entity_id);
+  fn(obj.source_id);
+  fn(obj.source_direct_id);
   fn(obj.source_pos);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::damage_event& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.source_damage_type_id);
-  fn(obj.source_entity_id);
-  fn(obj.source_direct_entity_id);
+  fn(obj.source_id);
+  fn(obj.source_direct_id);
   fn(obj.source_pos);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::damage_event> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::damage_event>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::damage_event>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::damage_event>().source_damage_type_id)>();
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::damage_event>().source_entity_id)>();
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::damage_event>().source_direct_entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::damage_event>().source_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::damage_event>().source_direct_id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::damage_event>().source_pos)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::damage_event> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::damage_event>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::damage_event>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::damage_event>().source_damage_type_id)>("source_damage_type_id");
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::damage_event>().source_entity_id)>("source_entity_id");
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::damage_event>().source_direct_entity_id)>("source_direct_entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::damage_event>().source_id)>("source_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::damage_event>().source_direct_id)>("source_direct_id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::damage_event>().source_pos)>("source_pos");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::damage_event& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.source_damage_type_id, "source_damage_type_id");
-  fn(obj.source_entity_id, "source_entity_id");
-  fn(obj.source_direct_entity_id, "source_direct_entity_id");
+  fn(obj.source_id, "source_id");
+  fn(obj.source_direct_id, "source_direct_id");
   fn(obj.source_pos, "source_pos");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::damage_event& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.source_damage_type_id, "source_damage_type_id");
-  fn(obj.source_entity_id, "source_entity_id");
-  fn(obj.source_direct_entity_id, "source_direct_entity_id");
+  fn(obj.source_id, "source_id");
+  fn(obj.source_direct_id, "source_direct_id");
   fn(obj.source_pos, "source_pos");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::damage_event>() { return "copper_server::api::packets::client_bound::play::damage_event"; }
@@ -3804,37 +3794,37 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::disguised_chat>() { return "copper_server::api::packets::client_bound::play::disguised_chat"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::disguised_chat>() { return 4; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::entity_event& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.status);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::entity_event& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.status);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::entity_event> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::entity_event>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::entity_event>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::entity_event>().status)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::entity_event> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::entity_event>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::entity_event>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::entity_event>().status)>("status");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::entity_event& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.status, "status");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::entity_event& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.status, "status");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::entity_event>() { return "copper_server::api::packets::client_bound::play::entity_event"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::entity_event>() { return 2; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::entity_position_sync& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.x);
   fn(obj.y);
   fn(obj.z);
@@ -3846,7 +3836,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::
   fn(obj.on_ground);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::entity_position_sync& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.x);
   fn(obj.y);
   fn(obj.z);
@@ -3859,7 +3849,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_se
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::entity_position_sync> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::entity_position_sync>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::entity_position_sync>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::entity_position_sync>().x)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::entity_position_sync>().y)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::entity_position_sync>().z)>();
@@ -3873,7 +3863,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::entity_position_sync> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::entity_position_sync>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::entity_position_sync>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::entity_position_sync>().x)>("x");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::entity_position_sync>().y)>("y");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::entity_position_sync>().z)>("z");
@@ -3886,7 +3876,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::entity_position_sync& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.x, "x");
   fn(obj.y, "y");
   fn(obj.z, "z");
@@ -3898,7 +3888,7 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
   fn(obj.on_ground, "on_ground");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::entity_position_sync& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.x, "x");
   fn(obj.y, "y");
   fn(obj.z, "z");
@@ -4397,65 +4387,65 @@ template<>consteval size_t fields_count<copper_server::api::packets::client_boun
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::horse_screen_open& obj, [[maybe_unused]] FN&& fn){
   fn(obj.window_id);
   fn(obj.columns_count);
-  fn(obj.entity_id);
+  fn(obj.id);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::horse_screen_open& obj, [[maybe_unused]] FN&& fn){
   fn(obj.window_id);
   fn(obj.columns_count);
-  fn(obj.entity_id);
+  fn(obj.id);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::horse_screen_open> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::horse_screen_open>().window_id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::horse_screen_open>().columns_count)>();
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::horse_screen_open>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::horse_screen_open>().id)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::horse_screen_open> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::horse_screen_open>().window_id)>("window_id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::horse_screen_open>().columns_count)>("columns_count");
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::horse_screen_open>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::horse_screen_open>().id)>("id");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::horse_screen_open& obj, [[maybe_unused]] FN&& fn){
   fn(obj.window_id, "window_id");
   fn(obj.columns_count, "columns_count");
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::horse_screen_open& obj, [[maybe_unused]] FN&& fn){
   fn(obj.window_id, "window_id");
   fn(obj.columns_count, "columns_count");
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::horse_screen_open>() { return "copper_server::api::packets::client_bound::play::horse_screen_open"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::horse_screen_open>() { return 3; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::hurt_animation& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.yaw);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::hurt_animation& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.yaw);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::hurt_animation> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::hurt_animation>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::hurt_animation>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::hurt_animation>().yaw)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::hurt_animation> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::hurt_animation>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::hurt_animation>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::hurt_animation>().yaw)>("yaw");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::hurt_animation& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.yaw, "yaw");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::hurt_animation& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.yaw, "yaw");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::hurt_animation>() { return "copper_server::api::packets::client_bound::play::hurt_animation"; }
@@ -4971,7 +4961,7 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::login::death_location_t>() { return "copper_server::api::packets::client_bound::play::login::death_location_t"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::login::death_location_t>() { return 2; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::login& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.is_hardcore);
   fn(obj.dimension_names);
   fn(obj.max_players);
@@ -4993,7 +4983,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::
   fn(obj.enforce_secure_chat);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::login& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.is_hardcore);
   fn(obj.dimension_names);
   fn(obj.max_players);
@@ -5016,7 +5006,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_se
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::login> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::login>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::login>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::login>().is_hardcore)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::login>().dimension_names)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::login>().max_players)>();
@@ -5040,7 +5030,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::login> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::login>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::login>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::login>().is_hardcore)>("is_hardcore");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::login>().dimension_names)>("dimension_names");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::login>().max_players)>("max_players");
@@ -5063,7 +5053,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::login& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.is_hardcore, "is_hardcore");
   fn(obj.dimension_names, "dimension_names");
   fn(obj.max_players, "max_players");
@@ -5085,7 +5075,7 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
   fn(obj.enforce_secure_chat, "enforce_secure_chat");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::login& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.is_hardcore, "is_hardcore");
   fn(obj.dimension_names, "dimension_names");
   fn(obj.max_players, "max_players");
@@ -5424,14 +5414,14 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::merchant_offers>() { return "copper_server::api::packets::client_bound::play::merchant_offers"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::merchant_offers>() { return 6; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::move_entity_pos& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.delta_x);
   fn(obj.delta_y);
   fn(obj.delta_z);
   fn(obj.on_ground);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::move_entity_pos& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.delta_x);
   fn(obj.delta_y);
   fn(obj.delta_z);
@@ -5439,7 +5429,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_se
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::move_entity_pos> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos>().delta_x)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos>().delta_y)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos>().delta_z)>();
@@ -5448,7 +5438,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::move_entity_pos> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos>().delta_x)>("delta_x");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos>().delta_y)>("delta_y");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos>().delta_z)>("delta_z");
@@ -5456,14 +5446,14 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::move_entity_pos& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.delta_x, "delta_x");
   fn(obj.delta_y, "delta_y");
   fn(obj.delta_z, "delta_z");
   fn(obj.on_ground, "on_ground");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::move_entity_pos& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.delta_x, "delta_x");
   fn(obj.delta_y, "delta_y");
   fn(obj.delta_z, "delta_z");
@@ -5472,7 +5462,7 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::move_entity_pos>() { return "copper_server::api::packets::client_bound::play::move_entity_pos"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::move_entity_pos>() { return 5; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::move_entity_pos_rot& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.delta_x);
   fn(obj.delta_y);
   fn(obj.delta_z);
@@ -5481,7 +5471,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::
   fn(obj.on_ground);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::move_entity_pos_rot& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.delta_x);
   fn(obj.delta_y);
   fn(obj.delta_z);
@@ -5491,7 +5481,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_se
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::move_entity_pos_rot> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos_rot>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos_rot>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos_rot>().delta_x)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos_rot>().delta_y)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos_rot>().delta_z)>();
@@ -5502,7 +5492,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::move_entity_pos_rot> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos_rot>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos_rot>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos_rot>().delta_x)>("delta_x");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos_rot>().delta_y)>("delta_y");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_pos_rot>().delta_z)>("delta_z");
@@ -5512,7 +5502,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::move_entity_pos_rot& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.delta_x, "delta_x");
   fn(obj.delta_y, "delta_y");
   fn(obj.delta_z, "delta_z");
@@ -5521,7 +5511,7 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
   fn(obj.on_ground, "on_ground");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::move_entity_pos_rot& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.delta_x, "delta_x");
   fn(obj.delta_y, "delta_y");
   fn(obj.delta_z, "delta_z");
@@ -5604,50 +5594,50 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::move_minecart_along_track::step>() { return "copper_server::api::packets::client_bound::play::move_minecart_along_track::step"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::move_minecart_along_track::step>() { return 9; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::move_minecart_along_track& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.steps);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::move_minecart_along_track& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.steps);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::move_minecart_along_track> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_minecart_along_track>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_minecart_along_track>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_minecart_along_track>().steps)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::move_minecart_along_track> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_minecart_along_track>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_minecart_along_track>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_minecart_along_track>().steps)>("steps");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::move_minecart_along_track& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.steps, "steps");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::move_minecart_along_track& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.steps, "steps");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::move_minecart_along_track>() { return "copper_server::api::packets::client_bound::play::move_minecart_along_track"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::move_minecart_along_track>() { return 2; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::move_entity_rot& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.yaw);
   fn(obj.pitch);
   fn(obj.on_ground);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::move_entity_rot& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.yaw);
   fn(obj.pitch);
   fn(obj.on_ground);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::move_entity_rot> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_rot>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_rot>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_rot>().yaw)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_rot>().pitch)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_rot>().on_ground)>();
@@ -5655,20 +5645,20 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::move_entity_rot> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_rot>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_rot>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_rot>().yaw)>("yaw");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_rot>().pitch)>("pitch");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::move_entity_rot>().on_ground)>("on_ground");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::move_entity_rot& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.yaw, "yaw");
   fn(obj.pitch, "pitch");
   fn(obj.on_ground, "on_ground");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::move_entity_rot& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.yaw, "yaw");
   fn(obj.pitch, "pitch");
   fn(obj.on_ground, "on_ground");
@@ -5974,7 +5964,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::player_chat::no_filter& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::player_chat::no_filter>() { return "copper_server::api::packets::client_bound::play::player_chat::no_filter"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::player_chat::no_filter>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::player_chat::fully_filtered& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::player_chat::fully_filtered& obj, [[maybe_unused]] FN&& fn){
@@ -5992,7 +5981,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::player_chat::fully_filtered& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::player_chat::fully_filtered>() { return "copper_server::api::packets::client_bound::play::player_chat::fully_filtered"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::player_chat::fully_filtered>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::player_chat::partially_filtered& obj, [[maybe_unused]] FN&& fn){
   fn(obj.filtered_characters);
 }
@@ -6154,7 +6142,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::player_combat_enter& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::player_combat_enter>() { return "copper_server::api::packets::client_bound::play::player_combat_enter"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::player_combat_enter>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::player_combat_kill& obj, [[maybe_unused]] FN&& fn){
   fn(obj.player_id);
   fn(obj.message);
@@ -6513,31 +6500,31 @@ template<>struct enum_data<copper_server::api::packets::client_bound::play::play
 static constexpr inline std::array<item, 2> values = {item{"feet", copper_server::api::packets::client_bound::play::player_look_at::using_position_e::feet}, item{"eyes", copper_server::api::packets::client_bound::play::player_look_at::using_position_e::eyes}};};
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::player_look_at::using_position_e>() { return "copper_server::api::packets::client_bound::play::player_look_at::using_position_e"; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::player_look_at::entity_target& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.using_position);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::player_look_at::entity_target& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.using_position);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::player_look_at::entity_target> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::player_look_at::entity_target>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::player_look_at::entity_target>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::player_look_at::entity_target>().using_position)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::player_look_at::entity_target> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::player_look_at::entity_target>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::player_look_at::entity_target>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::player_look_at::entity_target>().using_position)>("using_position");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::player_look_at::entity_target& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.using_position, "using_position");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::player_look_at::entity_target& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.using_position, "using_position");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::player_look_at::entity_target>() { return "copper_server::api::packets::client_bound::play::player_look_at::entity_target"; }
@@ -6876,55 +6863,55 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::recipe_book_settings>() { return "copper_server::api::packets::client_bound::play::recipe_book_settings"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::recipe_book_settings>() { return 8; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::remove_entities& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_ids);
+  fn(obj.ids);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::remove_entities& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_ids);
+  fn(obj.ids);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::remove_entities> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::remove_entities>().entity_ids)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::remove_entities>().ids)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::remove_entities> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::remove_entities>().entity_ids)>("entity_ids");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::remove_entities>().ids)>("ids");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::remove_entities& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_ids, "entity_ids");
+  fn(obj.ids, "ids");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::remove_entities& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_ids, "entity_ids");
+  fn(obj.ids, "ids");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::remove_entities>() { return "copper_server::api::packets::client_bound::play::remove_entities"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::remove_entities>() { return 1; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::remove_mob_effect& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.effect_id);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::remove_mob_effect& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.effect_id);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::remove_mob_effect> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::remove_mob_effect>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::remove_mob_effect>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::remove_mob_effect>().effect_id)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::remove_mob_effect> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::remove_mob_effect>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::remove_mob_effect>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::remove_mob_effect>().effect_id)>("effect_id");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::remove_mob_effect& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.effect_id, "effect_id");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::remove_mob_effect& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.effect_id, "effect_id");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::remove_mob_effect>() { return "copper_server::api::packets::client_bound::play::remove_mob_effect"; }
@@ -7149,31 +7136,31 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::respawn>() { return "copper_server::api::packets::client_bound::play::respawn"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::respawn>() { return 11; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::rotate_head& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.head_yaw);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::rotate_head& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.head_yaw);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::rotate_head> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::rotate_head>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::rotate_head>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::rotate_head>().head_yaw)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::rotate_head> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::rotate_head>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::rotate_head>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::rotate_head>().head_yaw)>("head_yaw");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::rotate_head& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.head_yaw, "head_yaw");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::rotate_head& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.head_yaw, "head_yaw");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::rotate_head>() { return "copper_server::api::packets::client_bound::play::rotate_head"; }
@@ -7503,26 +7490,26 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::set_border_warning_distance>() { return "copper_server::api::packets::client_bound::play::set_border_warning_distance"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::set_border_warning_distance>() { return 1; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::set_camera& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_camera& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::set_camera> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_camera>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_camera>().id)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::set_camera> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_camera>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_camera>().id)>("id");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::set_camera& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_camera& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::set_camera>() { return "copper_server::api::packets::client_bound::play::set_camera"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::set_camera>() { return 1; }
@@ -7668,80 +7655,80 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::set_display_objective>() { return "copper_server::api::packets::client_bound::play::set_display_objective"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::set_display_objective>() { return 2; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::set_entity_data& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.metadata);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_entity_data& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.metadata);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::set_entity_data> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_data>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_data>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_data>().metadata)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::set_entity_data> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_data>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_data>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_data>().metadata)>("metadata");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::set_entity_data& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.metadata, "metadata");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_entity_data& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.metadata, "metadata");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::set_entity_data>() { return "copper_server::api::packets::client_bound::play::set_entity_data"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::set_entity_data>() { return 2; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::set_entity_link& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.attached_entity_id);
-  fn(obj.holding_entity_id);
+  fn(obj.attached_id);
+  fn(obj.holding_id);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_entity_link& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.attached_entity_id);
-  fn(obj.holding_entity_id);
+  fn(obj.attached_id);
+  fn(obj.holding_id);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::set_entity_link> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_link>().attached_entity_id)>();
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_link>().holding_entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_link>().attached_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_link>().holding_id)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::set_entity_link> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_link>().attached_entity_id)>("attached_entity_id");
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_link>().holding_entity_id)>("holding_entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_link>().attached_id)>("attached_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_link>().holding_id)>("holding_id");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::set_entity_link& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.attached_entity_id, "attached_entity_id");
-  fn(obj.holding_entity_id, "holding_entity_id");
+  fn(obj.attached_id, "attached_id");
+  fn(obj.holding_id, "holding_id");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_entity_link& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.attached_entity_id, "attached_entity_id");
-  fn(obj.holding_entity_id, "holding_entity_id");
+  fn(obj.attached_id, "attached_id");
+  fn(obj.holding_id, "holding_id");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::set_entity_link>() { return "copper_server::api::packets::client_bound::play::set_entity_link"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::set_entity_link>() { return 2; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::set_entity_motion& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.velocity_x);
   fn(obj.velocity_y);
   fn(obj.velocity_z);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_entity_motion& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.velocity_x);
   fn(obj.velocity_y);
   fn(obj.velocity_z);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::set_entity_motion> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_motion>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_motion>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_motion>().velocity_x)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_motion>().velocity_y)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_motion>().velocity_z)>();
@@ -7749,20 +7736,20 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::set_entity_motion> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_motion>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_motion>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_motion>().velocity_x)>("velocity_x");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_motion>().velocity_y)>("velocity_y");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_entity_motion>().velocity_z)>("velocity_z");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::set_entity_motion& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.velocity_x, "velocity_x");
   fn(obj.velocity_y, "velocity_y");
   fn(obj.velocity_z, "velocity_z");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_entity_motion& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.velocity_x, "velocity_x");
   fn(obj.velocity_y, "velocity_y");
   fn(obj.velocity_z, "velocity_z");
@@ -7809,31 +7796,31 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::set_equipment::equipment>() { return "copper_server::api::packets::client_bound::play::set_equipment::equipment"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::set_equipment::equipment>() { return 3; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::set_equipment& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.equipments);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_equipment& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.equipments);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::set_equipment> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_equipment>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_equipment>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_equipment>().equipments)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::set_equipment> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_equipment>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_equipment>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_equipment>().equipments)>("equipments");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::set_equipment& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.equipments, "equipments");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_equipment& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.equipments, "equipments");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::set_equipment>() { return "copper_server::api::packets::client_bound::play::set_equipment"; }
@@ -7951,7 +7938,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_objective::blank& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::set_objective::blank>() { return "copper_server::api::packets::client_bound::play::set_objective::blank"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::set_objective::blank>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::set_objective::styled& obj, [[maybe_unused]] FN&& fn){
   fn(obj.styling);
 }
@@ -8053,7 +8039,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_objective::remove& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::set_objective::remove>() { return "copper_server::api::packets::client_bound::play::set_objective::remove"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::set_objective::remove>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::set_objective::update& obj, [[maybe_unused]] FN&& fn){
   fn(obj.name);
   fn(obj.type);
@@ -8121,31 +8106,31 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::set_objective>() { return "copper_server::api::packets::client_bound::play::set_objective"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::set_objective>() { return 2; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::set_passengers& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.passengers);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_passengers& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.passengers);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::set_passengers> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_passengers>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_passengers>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_passengers>().passengers)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::set_passengers> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_passengers>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_passengers>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::set_passengers>().passengers)>("passengers");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::set_passengers& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.passengers, "passengers");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_passengers& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.passengers, "passengers");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::set_passengers>() { return "copper_server::api::packets::client_bound::play::set_passengers"; }
@@ -8266,7 +8251,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_player_team::remove& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::set_player_team::remove>() { return "copper_server::api::packets::client_bound::play::set_player_team::remove"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::set_player_team::remove>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::set_player_team::update& obj, [[maybe_unused]] FN&& fn){
   fn(obj.display_name);
   fn(obj.friendly);
@@ -8422,7 +8406,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::set_score::blank& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::set_score::blank>() { return "copper_server::api::packets::client_bound::play::set_score::blank"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::set_score::blank>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::set_score::styled& obj, [[maybe_unused]] FN&& fn){
   fn(obj.styling);
 }
@@ -8666,7 +8649,7 @@ template<>consteval size_t fields_count<copper_server::api::packets::client_boun
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::sound_entity& obj, [[maybe_unused]] FN&& fn){
   fn(obj.sound);
   fn(obj.category);
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.volume);
   fn(obj.pitch);
   fn(obj.seed);
@@ -8674,7 +8657,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::sound_entity& obj, [[maybe_unused]] FN&& fn){
   fn(obj.sound);
   fn(obj.category);
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.volume);
   fn(obj.pitch);
   fn(obj.seed);
@@ -8683,7 +8666,7 @@ template<>struct for_each_type_s<copper_server::api::packets::client_bound::play
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::sound_entity>().sound)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::sound_entity>().category)>();
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::sound_entity>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::sound_entity>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::sound_entity>().volume)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::sound_entity>().pitch)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::sound_entity>().seed)>();
@@ -8693,7 +8676,7 @@ template<>struct for_each_type_with_name_s<copper_server::api::packets::client_b
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::sound_entity>().sound)>("sound");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::sound_entity>().category)>("category");
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::sound_entity>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::sound_entity>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::sound_entity>().volume)>("volume");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::sound_entity>().pitch)>("pitch");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::sound_entity>().seed)>("seed");
@@ -8702,7 +8685,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::sound_entity& obj, [[maybe_unused]] FN&& fn){
   fn(obj.sound, "sound");
   fn(obj.category, "category");
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.volume, "volume");
   fn(obj.pitch, "pitch");
   fn(obj.seed, "seed");
@@ -8710,7 +8693,7 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::sound_entity& obj, [[maybe_unused]] FN&& fn){
   fn(obj.sound, "sound");
   fn(obj.category, "category");
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.volume, "volume");
   fn(obj.pitch, "pitch");
   fn(obj.seed, "seed");
@@ -8800,7 +8783,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::start_configuration& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::start_configuration>() { return "copper_server::api::packets::client_bound::play::start_configuration"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::start_configuration>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::stop_sound::source& obj, [[maybe_unused]] FN&& fn){
   fn(obj.source);
 }
@@ -8994,43 +8976,43 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::tag_query>() { return "copper_server::api::packets::client_bound::play::tag_query"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::tag_query>() { return 2; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::take_item_entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.collected_entity_id);
-  fn(obj.collectors_entity_id);
+  fn(obj.collected_id);
+  fn(obj.collectors_id);
   fn(obj.items_count);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::take_item_entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.collected_entity_id);
-  fn(obj.collectors_entity_id);
+  fn(obj.collected_id);
+  fn(obj.collectors_id);
   fn(obj.items_count);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::take_item_entity> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::take_item_entity>().collected_entity_id)>();
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::take_item_entity>().collectors_entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::take_item_entity>().collected_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::take_item_entity>().collectors_id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::take_item_entity>().items_count)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::take_item_entity> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::take_item_entity>().collected_entity_id)>("collected_entity_id");
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::take_item_entity>().collectors_entity_id)>("collectors_entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::take_item_entity>().collected_id)>("collected_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::take_item_entity>().collectors_id)>("collectors_id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::take_item_entity>().items_count)>("items_count");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::take_item_entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.collected_entity_id, "collected_entity_id");
-  fn(obj.collectors_entity_id, "collectors_entity_id");
+  fn(obj.collected_id, "collected_id");
+  fn(obj.collectors_id, "collectors_id");
   fn(obj.items_count, "items_count");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::take_item_entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.collected_entity_id, "collected_entity_id");
-  fn(obj.collectors_entity_id, "collectors_entity_id");
+  fn(obj.collected_id, "collected_id");
+  fn(obj.collectors_id, "collectors_id");
   fn(obj.items_count, "items_count");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::take_item_entity>() { return "copper_server::api::packets::client_bound::play::take_item_entity"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::take_item_entity>() { return 3; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::teleport_entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.x);
   fn(obj.y);
   fn(obj.z);
@@ -9043,7 +9025,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::
   fn(obj.on_ground);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::teleport_entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.x);
   fn(obj.y);
   fn(obj.z);
@@ -9057,7 +9039,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_se
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::teleport_entity> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::teleport_entity>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::teleport_entity>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::teleport_entity>().x)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::teleport_entity>().y)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::teleport_entity>().z)>();
@@ -9072,7 +9054,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::teleport_entity> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::teleport_entity>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::teleport_entity>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::teleport_entity>().x)>("x");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::teleport_entity>().y)>("y");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::teleport_entity>().z)>("z");
@@ -9086,7 +9068,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::teleport_entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.x, "x");
   fn(obj.y, "y");
   fn(obj.z, "z");
@@ -9099,7 +9081,7 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
   fn(obj.on_ground, "on_ground");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::teleport_entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.x, "x");
   fn(obj.y, "y");
   fn(obj.z, "z");
@@ -9304,7 +9286,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::update_advancements::display::show_toast& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::update_advancements::display::show_toast>() { return "copper_server::api::packets::client_bound::play::update_advancements::display::show_toast"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::update_advancements::display::show_toast>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::update_advancements::display::hidden& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::update_advancements::display::hidden& obj, [[maybe_unused]] FN&& fn){
@@ -9322,7 +9303,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::update_advancements::display::hidden& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::update_advancements::display::hidden>() { return "copper_server::api::packets::client_bound::play::update_advancements::display::hidden"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::update_advancements::display::hidden>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::update_advancements::display& obj, [[maybe_unused]] FN&& fn){
   fn(obj.title);
   fn(obj.description);
@@ -9639,31 +9619,31 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::update_attributes::property>() { return "copper_server::api::packets::client_bound::play::update_attributes::property"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::update_attributes::property>() { return 3; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::update_attributes& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.properties);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::update_attributes& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.properties);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::update_attributes> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::update_attributes>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::update_attributes>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::update_attributes>().properties)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::update_attributes> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::update_attributes>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::update_attributes>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::update_attributes>().properties)>("properties");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::update_attributes& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.properties, "properties");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::update_attributes& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.properties, "properties");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::update_attributes>() { return "copper_server::api::packets::client_bound::play::update_attributes"; }
@@ -9672,14 +9652,14 @@ template<>struct enum_data<copper_server::api::packets::client_bound::play::upda
 static constexpr inline std::array<item, 4> values = {item{"is_ambient", copper_server::api::packets::client_bound::play::update_mob_effect::flags_f::is_ambient}, item{"show_particles", copper_server::api::packets::client_bound::play::update_mob_effect::flags_f::show_particles}, item{"show_icon", copper_server::api::packets::client_bound::play::update_mob_effect::flags_f::show_icon}, item{"blend", copper_server::api::packets::client_bound::play::update_mob_effect::flags_f::blend}};};
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::update_mob_effect::flags_f>() { return "copper_server::api::packets::client_bound::play::update_mob_effect::flags_f"; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::update_mob_effect& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.effect);
   fn(obj.amplifier);
   fn(obj.duration);
   fn(obj.flags);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::update_mob_effect& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.effect);
   fn(obj.amplifier);
   fn(obj.duration);
@@ -9687,7 +9667,7 @@ template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_se
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::update_mob_effect> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::update_mob_effect>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::update_mob_effect>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::update_mob_effect>().effect)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::update_mob_effect>().amplifier)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::update_mob_effect>().duration)>();
@@ -9696,7 +9676,7 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::update_mob_effect> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::update_mob_effect>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::update_mob_effect>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::update_mob_effect>().effect)>("effect");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::update_mob_effect>().amplifier)>("amplifier");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::update_mob_effect>().duration)>("duration");
@@ -9704,14 +9684,14 @@ template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::update_mob_effect& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.effect, "effect");
   fn(obj.amplifier, "amplifier");
   fn(obj.duration, "duration");
   fn(obj.flags, "flags");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::update_mob_effect& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.effect, "effect");
   fn(obj.amplifier, "amplifier");
   fn(obj.duration, "duration");
@@ -9894,31 +9874,31 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::update_tags>() { return "copper_server::api::packets::client_bound::play::update_tags"; }
 template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::update_tags>() { return 1; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::projectile_power& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.power);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::client_bound::play::projectile_power& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.power);
 }
 template<>struct for_each_type_s<copper_server::api::packets::client_bound::play::projectile_power> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::projectile_power>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::projectile_power>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::projectile_power>().power)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::client_bound::play::projectile_power> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::projectile_power>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::projectile_power>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::client_bound::play::projectile_power>().power)>("power");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::client_bound::play::projectile_power& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.power, "power");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::projectile_power& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.power, "power");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::projectile_power>() { return "copper_server::api::packets::client_bound::play::projectile_power"; }
@@ -10090,7 +10070,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::waypoint::here& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::waypoint::here>() { return "copper_server::api::packets::client_bound::play::waypoint::here"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::waypoint::here>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::waypoint::near& obj, [[maybe_unused]] FN&& fn){
   fn(obj.x);
   fn(obj.y);
@@ -10240,7 +10219,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::client_bound::play::clear_dialog& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::client_bound::play::clear_dialog>() { return "copper_server::api::packets::client_bound::play::clear_dialog"; }
-template<>consteval size_t fields_count<copper_server::api::packets::client_bound::play::clear_dialog>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::client_bound::play::show_dialog& obj, [[maybe_unused]] FN&& fn){
   fn(obj.dialog);
 }
@@ -10327,7 +10305,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::status::status_request& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::status::status_request>() { return "copper_server::api::packets::server_bound::status::status_request"; }
-template<>consteval size_t fields_count<copper_server::api::packets::server_bound::status::status_request>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::server_bound::status::ping_response& obj, [[maybe_unused]] FN&& fn){
   fn(obj.timestamp);
 }
@@ -10459,7 +10436,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::login::login_acknowledged& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::login::login_acknowledged>() { return "copper_server::api::packets::server_bound::login::login_acknowledged"; }
-template<>consteval size_t fields_count<copper_server::api::packets::server_bound::login::login_acknowledged>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::server_bound::login::cookie_response& obj, [[maybe_unused]] FN&& fn){
   fn(obj.key);
   fn(obj.payload);
@@ -10651,7 +10627,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::configuration::finish_configuration& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::configuration::finish_configuration>() { return "copper_server::api::packets::server_bound::configuration::finish_configuration"; }
-template<>consteval size_t fields_count<copper_server::api::packets::server_bound::configuration::finish_configuration>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::server_bound::configuration::keep_alive& obj, [[maybe_unused]] FN&& fn){
   fn(obj.keep_alive_id);
 }
@@ -11263,7 +11238,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::play::client_tick_end& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::play::client_tick_end>() { return "copper_server::api::packets::server_bound::play::client_tick_end"; }
-template<>consteval size_t fields_count<copper_server::api::packets::server_bound::play::client_tick_end>() { return 0; }
 template<>struct enum_data<copper_server::api::packets::server_bound::play::client_information::chat_mode_e> {using item = std::pair<std::string_view, copper_server::api::packets::server_bound::play::client_information::chat_mode_e>;
 static constexpr inline std::array<item, 3> values = {item{"disabled", copper_server::api::packets::server_bound::play::client_information::chat_mode_e::disabled}, item{"commands_only", copper_server::api::packets::server_bound::play::client_information::chat_mode_e::commands_only}, item{"hidden", copper_server::api::packets::server_bound::play::client_information::chat_mode_e::hidden}};};
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::play::client_information::chat_mode_e>() { return "copper_server::api::packets::server_bound::play::client_information::chat_mode_e"; }
@@ -11395,7 +11369,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::play::configuration_acknowledged& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::play::configuration_acknowledged>() { return "copper_server::api::packets::server_bound::play::configuration_acknowledged"; }
-template<>consteval size_t fields_count<copper_server::api::packets::server_bound::play::configuration_acknowledged>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::server_bound::play::container_button_click& obj, [[maybe_unused]] FN&& fn){
   fn(obj.window_id);
   fn(obj.button_id);
@@ -11770,31 +11743,31 @@ template<>consteval std::string_view type_name<copper_server::api::packets::serv
 template<>consteval size_t fields_count<copper_server::api::packets::server_bound::play::edit_book>() { return 3; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::server_bound::play::entity_tag_query& obj, [[maybe_unused]] FN&& fn){
   fn(obj.tag_query_id);
-  fn(obj.entity_id);
+  fn(obj.id);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::server_bound::play::entity_tag_query& obj, [[maybe_unused]] FN&& fn){
   fn(obj.tag_query_id);
-  fn(obj.entity_id);
+  fn(obj.id);
 }
 template<>struct for_each_type_s<copper_server::api::packets::server_bound::play::entity_tag_query> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
   fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::entity_tag_query>().tag_query_id)>();
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::entity_tag_query>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::entity_tag_query>().id)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::server_bound::play::entity_tag_query> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
   fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::entity_tag_query>().tag_query_id)>("tag_query_id");
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::entity_tag_query>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::entity_tag_query>().id)>("id");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::server_bound::play::entity_tag_query& obj, [[maybe_unused]] FN&& fn){
   fn(obj.tag_query_id, "tag_query_id");
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::play::entity_tag_query& obj, [[maybe_unused]] FN&& fn){
   fn(obj.tag_query_id, "tag_query_id");
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::play::entity_tag_query>() { return "copper_server::api::packets::server_bound::play::entity_tag_query"; }
 template<>consteval size_t fields_count<copper_server::api::packets::server_bound::play::entity_tag_query>() { return 2; }
@@ -11842,7 +11815,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::play::interact::attack& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::play::interact::attack>() { return "copper_server::api::packets::server_bound::play::interact::attack"; }
-template<>consteval size_t fields_count<copper_server::api::packets::server_bound::play::interact::attack>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::server_bound::play::interact::interact_at& obj, [[maybe_unused]] FN&& fn){
   fn(obj.x);
   fn(obj.y);
@@ -11886,36 +11858,36 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::play::interact::interact_at>() { return "copper_server::api::packets::server_bound::play::interact::interact_at"; }
 template<>consteval size_t fields_count<copper_server::api::packets::server_bound::play::interact::interact_at>() { return 4; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::server_bound::play::interact& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.type);
   fn(obj.sneak_key_pressed);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::server_bound::play::interact& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.type);
   fn(obj.sneak_key_pressed);
 }
 template<>struct for_each_type_s<copper_server::api::packets::server_bound::play::interact> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::interact>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::interact>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::interact>().type)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::interact>().sneak_key_pressed)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::server_bound::play::interact> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::interact>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::interact>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::interact>().type)>("type");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::interact>().sneak_key_pressed)>("sneak_key_pressed");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::server_bound::play::interact& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.type, "type");
   fn(obj.sneak_key_pressed, "sneak_key_pressed");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::play::interact& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.type, "type");
   fn(obj.sneak_key_pressed, "sneak_key_pressed");
 }
@@ -12288,31 +12260,31 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::play::pick_item_from_block>() { return "copper_server::api::packets::server_bound::play::pick_item_from_block"; }
 template<>consteval size_t fields_count<copper_server::api::packets::server_bound::play::pick_item_from_block>() { return 2; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::server_bound::play::pick_item_from_entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.include_data);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::server_bound::play::pick_item_from_entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.include_data);
 }
 template<>struct for_each_type_s<copper_server::api::packets::server_bound::play::pick_item_from_entity> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::pick_item_from_entity>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::pick_item_from_entity>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::pick_item_from_entity>().include_data)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::server_bound::play::pick_item_from_entity> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::pick_item_from_entity>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::pick_item_from_entity>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::pick_item_from_entity>().include_data)>("include_data");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::server_bound::play::pick_item_from_entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.include_data, "include_data");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::play::pick_item_from_entity& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.include_data, "include_data");
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::play::pick_item_from_entity>() { return "copper_server::api::packets::server_bound::play::pick_item_from_entity"; }
@@ -12456,36 +12428,36 @@ template<>struct enum_data<copper_server::api::packets::server_bound::play::play
 static constexpr inline std::array<item, 7> values = {item{"leave_bed", copper_server::api::packets::server_bound::play::player_command::action_e::leave_bed}, item{"start_sprinting", copper_server::api::packets::server_bound::play::player_command::action_e::start_sprinting}, item{"stop_sprinting", copper_server::api::packets::server_bound::play::player_command::action_e::stop_sprinting}, item{"horse_jump_start", copper_server::api::packets::server_bound::play::player_command::action_e::horse_jump_start}, item{"horse_jump_stop", copper_server::api::packets::server_bound::play::player_command::action_e::horse_jump_stop}, item{"inventory_vehicle_open", copper_server::api::packets::server_bound::play::player_command::action_e::inventory_vehicle_open}, item{"elytra_fly", copper_server::api::packets::server_bound::play::player_command::action_e::elytra_fly}};};
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::play::player_command::action_e>() { return "copper_server::api::packets::server_bound::play::player_command::action_e"; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::server_bound::play::player_command& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.action);
   fn(obj.jump_boost);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::server_bound::play::player_command& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.action);
   fn(obj.jump_boost);
 }
 template<>struct for_each_type_s<copper_server::api::packets::server_bound::play::player_command> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::player_command>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::player_command>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::player_command>().action)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::player_command>().jump_boost)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::server_bound::play::player_command> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::player_command>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::player_command>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::player_command>().action)>("action");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::player_command>().jump_boost)>("jump_boost");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::server_bound::play::player_command& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.action, "action");
   fn(obj.jump_boost, "jump_boost");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::play::player_command& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.action, "action");
   fn(obj.jump_boost, "jump_boost");
 }
@@ -12535,7 +12507,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::play::player_loaded& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::play::player_loaded>() { return "copper_server::api::packets::server_bound::play::player_loaded"; }
-template<>consteval size_t fields_count<copper_server::api::packets::server_bound::play::player_loaded>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::server_bound::play::pong& obj, [[maybe_unused]] FN&& fn){
   fn(obj.id);
 }
@@ -12721,7 +12692,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::play::seen_advancements::closed_screen& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::play::seen_advancements::closed_screen>() { return "copper_server::api::packets::server_bound::play::seen_advancements::closed_screen"; }
-template<>consteval size_t fields_count<copper_server::api::packets::server_bound::play::seen_advancements::closed_screen>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::server_bound::play::seen_advancements& obj, [[maybe_unused]] FN&& fn){
   fn(obj.action);
 }
@@ -12873,36 +12843,36 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::play::set_command_block>() { return "copper_server::api::packets::server_bound::play::set_command_block"; }
 template<>consteval size_t fields_count<copper_server::api::packets::server_bound::play::set_command_block>() { return 4; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::server_bound::play::set_command_minecart& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.command);
   fn(obj.track_output);
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::server_bound::play::set_command_minecart& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id);
+  fn(obj.id);
   fn(obj.command);
   fn(obj.track_output);
 }
 template<>struct for_each_type_s<copper_server::api::packets::server_bound::play::set_command_minecart> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::set_command_minecart>().entity_id)>();
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::set_command_minecart>().id)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::set_command_minecart>().command)>();
   fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::set_command_minecart>().track_output)>();
 }
 };
 template<>struct for_each_type_with_name_s<copper_server::api::packets::server_bound::play::set_command_minecart> {
 template<class FN>static constexpr void each([[maybe_unused]] FN&& fn){
-  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::set_command_minecart>().entity_id)>("entity_id");
+  fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::set_command_minecart>().id)>("id");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::set_command_minecart>().command)>("command");
   fn.template operator()<decltype(std::declval<copper_server::api::packets::server_bound::play::set_command_minecart>().track_output)>("track_output");
 }
 };
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] copper_server::api::packets::server_bound::play::set_command_minecart& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.command, "command");
   fn(obj.track_output, "track_output");
 }
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::play::set_command_minecart& obj, [[maybe_unused]] FN&& fn){
-  fn(obj.entity_id, "entity_id");
+  fn(obj.id, "id");
   fn(obj.command, "command");
   fn(obj.track_output, "track_output");
 }
@@ -13021,7 +12991,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::play::set_structure_block::ignore_entities& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::play::set_structure_block::ignore_entities>() { return "copper_server::api::packets::server_bound::play::set_structure_block::ignore_entities"; }
-template<>consteval size_t fields_count<copper_server::api::packets::server_bound::play::set_structure_block::ignore_entities>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::server_bound::play::set_structure_block::show_air& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::server_bound::play::set_structure_block::show_air& obj, [[maybe_unused]] FN&& fn){
@@ -13039,7 +13008,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::play::set_structure_block::show_air& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::play::set_structure_block::show_air>() { return "copper_server::api::packets::server_bound::play::set_structure_block::show_air"; }
-template<>consteval size_t fields_count<copper_server::api::packets::server_bound::play::set_structure_block::show_air>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::server_bound::play::set_structure_block::show_bounding_block& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::server_bound::play::set_structure_block::show_bounding_block& obj, [[maybe_unused]] FN&& fn){
@@ -13057,7 +13025,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::play::set_structure_block::show_bounding_block& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::play::set_structure_block::show_bounding_block>() { return "copper_server::api::packets::server_bound::play::set_structure_block::show_bounding_block"; }
-template<>consteval size_t fields_count<copper_server::api::packets::server_bound::play::set_structure_block::show_bounding_block>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::server_bound::play::set_structure_block::strict_placement& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::api::packets::server_bound::play::set_structure_block::strict_placement& obj, [[maybe_unused]] FN&& fn){
@@ -13075,7 +13042,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::api::packets::server_bound::play::set_structure_block::strict_placement& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::api::packets::server_bound::play::set_structure_block::strict_placement>() { return "copper_server::api::packets::server_bound::play::set_structure_block::strict_placement"; }
-template<>consteval size_t fields_count<copper_server::api::packets::server_bound::play::set_structure_block::strict_placement>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::api::packets::server_bound::play::set_structure_block& obj, [[maybe_unused]] FN&& fn){
   fn(obj.location);
   fn(obj.action);

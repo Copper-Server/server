@@ -13,13 +13,13 @@
 #include <library/enbt/senbt.hpp>
 #include <library/fast_task/include/files.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/log.hpp>
+#include <src/api/registers.hpp>
 #include <src/api/tags.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/entity.hpp>
-#include <src/log.hpp>
-#include <src/mojang/api/hash256.hpp>
-#include <src/registers.hpp>
 #include <src/storage/world_data.hpp>
+#include <src/util/mojang/api/hash256.hpp>
 #include <src/util/task_management.hpp>
 
 namespace enbt::io_helper {
@@ -1570,18 +1570,18 @@ namespace copper_server::storage {
 
     void world_data::tick_update_weather() {
         if (world_game_rules["doWeatherCycle"]) {
-            if (weather_time > 0){
+            if (weather_time > 0) {
                 --weather_time;
-                if (weather_time==0){
+                if (weather_time == 0) {
                     current_weather = base_objects::weather::clear;
                     sync_weather();
                 }
-            } else if (clear_weather_time > 0){
+            } else if (clear_weather_time > 0) {
                 --clear_weather_time;
             } else {
                 std::mt19937_64 gen(std::random_device{}());
                 std::uniform_int_distribution<uint16_t> dis_x(0, 1);
-                current_weather = dis_x(gen) ? base_objects::weather::rain : base_objects::weather::thunder;//TODO get real chances
+                current_weather = dis_x(gen) ? base_objects::weather::rain : base_objects::weather::thunder; //TODO get real chances
                 sync_weather();
             }
         }
@@ -1600,6 +1600,7 @@ namespace copper_server::storage {
     void world_data::tick_run_local_scheduled_commands() {
         //TODO
     }
+
     template <class T>
     enbt::fixed_array to_fixed_array(const std::vector<T>& vec) {
         enbt::fixed_array _enabled_datapacks(vec.size());
@@ -1642,7 +1643,7 @@ namespace copper_server::storage {
         if (!world_type.empty())
             throw std::runtime_error("World type already been set.");
         world_type = std::string(type);
-        auto& type_data = registers::dimensionTypes.at(world_type);
+        auto& type_data = api::registers::dimensionTypes.at(world_type);
         chunk_y_count = type_data.height / 16;
         world_y_offset = type_data.min_y;
         world_y_chunk_offset = type_data.min_y ? type_data.min_y / 16 : 0;
@@ -1650,7 +1651,7 @@ namespace copper_server::storage {
 
     void world_data::set_seed(int32_t seed) {
         world_seed = seed;
-        mojang::api::hash256 hash;
+        util::mojang::api::hash256 hash;
         hash.update(&seed, sizeof(int32_t));
         hashed_seed_value = hash.to_part_hash();
     }
@@ -1834,6 +1835,7 @@ namespace copper_server::storage {
             }
         }
     }
+
     world_data::world_data(int32_t world_id, const std::filesystem::path& path)
         : path(path), world_id(world_id) {
         world_game_rules["reducedDebugInfo"] = api::configuration::get().game_play.reduced_debug_screen;
@@ -3285,7 +3287,7 @@ namespace copper_server::storage {
                 try {
                     result.push_back(std::stoi(path.filename().string()));
                 } catch (const std::exception&) {
-                    log::warn("storage:worlds_data", "Got corrupted file path: " + path.string());
+                    api::log::warn("storage:worlds_data", "Got corrupted file path: " + path.string());
                 }
             }
         }

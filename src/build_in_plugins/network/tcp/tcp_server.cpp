@@ -7,9 +7,9 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <src/api/configuration.hpp>
+#include <src/api/log.hpp>
 #include <src/api/network.hpp>
 #include <src/api/server.hpp>
-#include <src/log.hpp>
 #include <src/plugin/main.hpp>
 
 #include <library/fast_task/include/networking.hpp>
@@ -36,14 +36,14 @@ namespace copper_server::build_in_plugins::network::tcp {
         } catch (const std::exception& ex) {
             std::stringstream stack_trace;
             stack_trace << std::stacktrace::current();
-            log::error("Network", "unhandled exception while processing client. Id: " + std::to_string(session->id) + ". Address: " + stream.remote_address().to_string());
-            log::debug_error("Network", "client id " + std::to_string(session->id) + " stack trace:\n" + stack_trace.str());
-            log::debug_error("Network", "client id " + std::to_string(session->id) + " exceptions data:\n" + ex.what());
+            api::log::error("Network", "unhandled exception while processing client. Id: " + std::to_string(session->id) + ". Address: " + stream.remote_address().to_string());
+            api::log::debug_error("Network", "client id " + std::to_string(session->id) + " stack trace:\n" + stack_trace.str());
+            api::log::debug_error("Network", "client id " + std::to_string(session->id) + " exceptions data:\n" + ex.what());
         } catch (...) {
             std::stringstream stack_trace;
             stack_trace << std::stacktrace::current();
-            log::error("Network", "unhandled undefined exception while processing client. Id: " + std::to_string(session->id) + ". Address: " + stream.remote_address().to_string());
-            log::debug_error("Network", "client id " + std::to_string(session->id) + " stack trace:\n" + stack_trace.str());
+            api::log::error("Network", "unhandled undefined exception while processing client. Id: " + std::to_string(session->id) + ". Address: " + stream.remote_address().to_string());
+            api::log::debug_error("Network", "client id " + std::to_string(session->id) + " stack trace:\n" + stack_trace.str());
         }
         session->disconnect();
     }
@@ -55,18 +55,18 @@ namespace copper_server::build_in_plugins::network::tcp {
             tcp_server->start();
             if (tcp_server->is_running()) {
                 auto address = tcp_server->server_address();
-                log::info("Network", "TCP server started on " + address.to_string());
+                api::log::info("Network", "TCP server started on " + address.to_string());
                 if (address.is_loopback())
                     api::configuration::get().server.offline_mode = true;
             } else {
-                log::error("Network", "Failed to start TCP server on " + api::configuration::get().server.ip + ":" + std::to_string(api::configuration::get().server.port));
+                api::log::error("Network", "Failed to start TCP server on " + api::configuration::get().server.ip + ":" + std::to_string(api::configuration::get().server.port));
                 throw std::runtime_error("TCP server failed to start");
             }
         }
 
         void stop() {
             tcp_server->stop();
-            log::info("Network", "TCP server stopped on " + tcp_server->server_address().to_string());
+            api::log::info("Network", "TCP server stopped on " + tcp_server->server_address().to_string());
         }
 
     public:

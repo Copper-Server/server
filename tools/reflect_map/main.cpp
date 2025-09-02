@@ -197,6 +197,7 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
         std::vector<std::string> namespace_stack;
         std::vector<std::string> cached_output;
         EnumInfo current_enum;
+        size_t skip_scopes = 0;
 
         auto build_fn = [&]() {
             for (const auto& ns : namespace_stack)
@@ -342,7 +343,7 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
             }
 
             //fields_count
-            if (!is_template) {
+            if (!is_template && fields.size()) {
                 func << "template<>consteval size_t fields_count<";
                 for (const auto& ns : namespace_stack)
                     if (!ns.empty())
@@ -375,9 +376,18 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
         while (std::getline(iss, line)) {
             ltrim(line);
             rtrim(line);
-            if (line.empty() || line.rfind("//") == 0) {
-                continue; // Skip empty lines and comments
+            if (line.empty())
+                continue;
+            if (line.rfind("//") == 0) {
+                if (line.rfind("//reflect_map skip_begin") == 0) {
+                    ++skip_scopes;
+                } else if (line.rfind("//reflect_map skip_end") == 0 && skip_scopes != 0) {
+                    --skip_scopes;
+                } else
+                    continue;
             }
+            if (skip_scopes != 0)
+                continue;
 
             if (line.rfind("concept ", 0) == 0) {
                 std::string_view concept_name = std::string_view(line).substr(8);

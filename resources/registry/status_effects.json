@@ -1,5 +1,5 @@
 {
-  "speed": {
+  "minecraft:speed": {
     "id": 0,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -15,13 +15,13 @@
     ],
     "attribute_modifiers": [
       {
-        "name": "movement_speed",
+        "id": 22,
         "operation": "ADD_MULTIPLIED_TOTAL",
         "value": 0.20000000298023224
       }
     ]
   },
-  "slowness": {
+  "minecraft:slowness": {
     "id": 1,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -37,13 +37,13 @@
     ],
     "attribute_modifiers": [
       {
-        "name": "movement_speed",
+        "id": 22,
         "operation": "ADD_MULTIPLIED_TOTAL",
         "value": -0.15000000596046448
       }
     ]
   },
-  "haste": {
+  "minecraft:haste": {
     "id": 2,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -59,13 +59,13 @@
     ],
     "attribute_modifiers": [
       {
-        "name": "attack_speed",
+        "id": 4,
         "operation": "ADD_MULTIPLIED_TOTAL",
         "value": 0.10000000149011612
       }
     ]
   },
-  "mining_fatigue": {
+  "minecraft:mining_fatigue": {
     "id": 3,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -81,13 +81,13 @@
     ],
     "attribute_modifiers": [
       {
-        "name": "attack_speed",
+        "id": 4,
         "operation": "ADD_MULTIPLIED_TOTAL",
         "value": -0.10000000149011612
       }
     ]
   },
-  "strength": {
+  "minecraft:strength": {
     "id": 4,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -103,13 +103,13 @@
     ],
     "attribute_modifiers": [
       {
-        "name": "attack_damage",
+        "id": 2,
         "operation": "ADD_VALUE",
         "value": 3.0
       }
     ]
   },
-  "instant_health": {
+  "minecraft:instant_health": {
     "id": 5,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -125,7 +125,7 @@
     ],
     "attribute_modifiers": []
   },
-  "instant_damage": {
+  "minecraft:instant_damage": {
     "id": 6,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -141,7 +141,7 @@
     ],
     "attribute_modifiers": []
   },
-  "jump_boost": {
+  "minecraft:jump_boost": {
     "id": 7,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -157,13 +157,13 @@
     ],
     "attribute_modifiers": [
       {
-        "name": "safe_fall_distance",
+        "id": 24,
         "operation": "ADD_VALUE",
         "value": 1.0
       }
     ]
   },
-  "nausea": {
+  "minecraft:nausea": {
     "id": 8,
     "fade_in_ticks": 150,
     "fade_out_ticks": 20,
@@ -179,7 +179,7 @@
     ],
     "attribute_modifiers": []
   },
-  "regeneration": {
+  "minecraft:regeneration": {
     "id": 9,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -195,7 +195,7 @@
     ],
     "attribute_modifiers": []
   },
-  "resistance": {
+  "minecraft:resistance": {
     "id": 10,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -211,7 +211,7 @@
     ],
     "attribute_modifiers": []
   },
-  "fire_resistance": {
+  "minecraft:fire_resistance": {
     "id": 11,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -227,7 +227,7 @@
     ],
     "attribute_modifiers": []
   },
-  "water_breathing": {
+  "minecraft:water_breathing": {
     "id": 12,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -243,7 +243,7 @@
     ],
     "attribute_modifiers": []
   },
-  "invisibility": {
+  "minecraft:invisibility": {
     "id": 13,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -259,13 +259,13 @@
     ],
     "attribute_modifiers": [
       {
-        "name": "waypoint_transmit_range",
+        "id": 33,
         "operation": "ADD_MULTIPLIED_TOTAL",
         "value": -1.0
       }
     ]
   },
-  "blindness": {
+  "minecraft:blindness": {
     "id": 14,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -281,7 +281,7 @@
     ],
     "attribute_modifiers": []
   },
-  "night_vision": {
+  "minecraft:night_vision": {
     "id": 15,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -297,7 +297,7 @@
     ],
     "attribute_modifiers": []
   },
-  "hunger": {
+  "minecraft:hunger": {
     "id": 16,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -313,7 +313,7 @@
     ],
     "attribute_modifiers": []
   },
-  "weakness": {
+  "minecraft:weakness": {
     "id": 17,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -329,13 +329,13 @@
     ],
     "attribute_modifiers": [
       {
-        "name": "attack_damage",
+        "id": 2,
         "operation": "ADD_VALUE",
         "value": -4.0
       }
     ]
   },
-  "poison": {
+  "minecraft:poison": {
     "id": 18,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -351,7 +351,7 @@
     ],
     "attribute_modifiers": []
   },
-  "wither": {
+  "minecraft:wither": {
     "id": 19,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -367,7 +367,7 @@
     ],
     "attribute_modifiers": []
   },
-  "health_boost": {
+  "minecraft:health_boost": {
     "id": 20,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -383,13 +383,13 @@
     ],
     "attribute_modifiers": [
       {
-        "name": "max_health",
+        "id": 19,
         "operation": "ADD_VALUE",
         "value": 4.0
       }
     ]
   },
-  "absorption": {
+  "minecraft:absorption": {
     "id": 21,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -405,13 +405,13 @@
     ],
     "attribute_modifiers": [
       {
-        "name": "max_absorption",
+        "id": 18,
         "operation": "ADD_VALUE",
         "value": 4.0
       }
     ]
   },
-  "saturation": {
+  "minecraft:saturation": {
     "id": 22,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -427,7 +427,7 @@
     ],
     "attribute_modifiers": []
   },
-  "glowing": {
+  "minecraft:glowing": {
     "id": 23,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -443,7 +443,7 @@
     ],
     "attribute_modifiers": []
   },
-  "levitation": {
+  "minecraft:levitation": {
     "id": 24,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -459,7 +459,7 @@
     ],
     "attribute_modifiers": []
   },
-  "luck": {
+  "minecraft:luck": {
     "id": 25,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -475,13 +475,13 @@
     ],
     "attribute_modifiers": [
       {
-        "name": "luck",
+        "id": 17,
         "operation": "ADD_VALUE",
         "value": 1.0
       }
     ]
   },
-  "unluck": {
+  "minecraft:unluck": {
     "id": 26,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -497,13 +497,13 @@
     ],
     "attribute_modifiers": [
       {
-        "name": "luck",
+        "id": 17,
         "operation": "ADD_VALUE",
         "value": -1.0
       }
     ]
   },
-  "slow_falling": {
+  "minecraft:slow_falling": {
     "id": 27,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -519,7 +519,7 @@
     ],
     "attribute_modifiers": []
   },
-  "conduit_power": {
+  "minecraft:conduit_power": {
     "id": 28,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -535,7 +535,7 @@
     ],
     "attribute_modifiers": []
   },
-  "dolphins_grace": {
+  "minecraft:dolphins_grace": {
     "id": 29,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -551,7 +551,7 @@
     ],
     "attribute_modifiers": []
   },
-  "bad_omen": {
+  "minecraft:bad_omen": {
     "id": 30,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -567,7 +567,7 @@
     ],
     "attribute_modifiers": []
   },
-  "hero_of_the_village": {
+  "minecraft:hero_of_the_village": {
     "id": 31,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -583,7 +583,7 @@
     ],
     "attribute_modifiers": []
   },
-  "darkness": {
+  "minecraft:darkness": {
     "id": 32,
     "fade_in_ticks": 22,
     "fade_out_ticks": 22,
@@ -599,7 +599,7 @@
     ],
     "attribute_modifiers": []
   },
-  "trial_omen": {
+  "minecraft:trial_omen": {
     "id": 33,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -615,7 +615,7 @@
     ],
     "attribute_modifiers": []
   },
-  "raid_omen": {
+  "minecraft:raid_omen": {
     "id": 34,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -631,7 +631,7 @@
     ],
     "attribute_modifiers": []
   },
-  "wind_charged": {
+  "minecraft:wind_charged": {
     "id": 35,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -647,7 +647,7 @@
     ],
     "attribute_modifiers": []
   },
-  "weaving": {
+  "minecraft:weaving": {
     "id": 36,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -663,7 +663,7 @@
     ],
     "attribute_modifiers": []
   },
-  "oozing": {
+  "minecraft:oozing": {
     "id": 37,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,
@@ -679,7 +679,7 @@
     ],
     "attribute_modifiers": []
   },
-  "infested": {
+  "minecraft:infested": {
     "id": 38,
     "fade_in_ticks": 0,
     "fade_out_ticks": 0,

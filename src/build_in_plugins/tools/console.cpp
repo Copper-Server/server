@@ -10,12 +10,12 @@
 #include <src/api/configuration.hpp>
 #include <src/api/console.hpp>
 #include <src/api/internal/console.hpp>
+#include <src/api/log.hpp>
 #include <src/api/packets.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/virtual_client.hpp>
-#include <src/log.hpp>
 #include <src/plugin/main.hpp>
 #include <src/storage/list_storage.hpp>
 
@@ -45,7 +45,7 @@ namespace copper_server::build_in_plugins {
         void OnLoad(const PluginRegistrationPtr&) override {
             api::console::register_virtual_client(console_data);
 
-            log::commands::registerCommandSuggestion([this](const std::string& line, int position) {
+            api::log::commands::registerCommandSuggestion([this](const std::string& line, int position) {
                 auto tmp = line;
                 if (uint32_t(position) <= line.size())
                     tmp.resize(position);
@@ -74,14 +74,14 @@ namespace copper_server::build_in_plugins {
                         using T = std::decay_t<decltype(it)>;
                         if constexpr (std::is_same_v<T, api::packets::client_bound::play::disguised_chat>) {
                             if (!it.target_name)
-                                log::info("message", "[" + it.sender.to_ansi_console() + "] " + it.message.to_ansi_console());
+                                api::log::info("message", "[" + it.sender.to_ansi_console() + "] " + it.message.to_ansi_console());
                             else
-                                log::info("message", "[" + it.sender.to_ansi_console() + " -> " + it.target_name->to_ansi_console() + "] " + it.message.to_ansi_console());
+                                api::log::info("message", "[" + it.sender.to_ansi_console() + " -> " + it.target_name->to_ansi_console() + "] " + it.message.to_ansi_console());
                         } else if constexpr (std::is_same_v<T, api::packets::client_bound::play::system_chat>) {
                             if (!it.is_overlay)
-                                log::info("console", it.content.to_ansi_console());
+                                api::log::info("console", it.content.to_ansi_console());
                             else
-                                log::info("console [overlay]", it.content.to_ansi_console());
+                                api::log::info("console [overlay]", it.content.to_ansi_console());
                         }
                     },
                     packet
@@ -103,21 +103,21 @@ namespace copper_server::build_in_plugins {
                     error_place[error_place.size() - 1] = '\t';
                     if (ex.pos != -1)
                         error_place[ex.pos] = '^';
-                    log::error("console", error_message + error_place + ex.what);
+                    api::log::error("console", error_message + error_place + ex.what);
                     return false;
                 } catch (const std::exception& ex) {
-                    log::error("console", command + "\n Failed to execute command, reason:\n\t" + ex.what());
+                    api::log::error("console", command + "\n Failed to execute command, reason:\n\t" + ex.what());
                     return false;
                 }
-                log::info("console", command);
+                api::log::info("console", command);
                 return true;
             });
 
-            log::info("console", "console registered.");
+            api::log::info("console", "console registered.");
         }
 
         void OnUnload(const PluginRegistrationPtr&) override {
-            log::commands::unloadCommandSuggestion();
+            api::log::commands::unloadCommandSuggestion();
             clean_up_registered_events();
             api::console::unregister_virtual_client();
         }
@@ -137,22 +137,22 @@ namespace copper_server::build_in_plugins {
                               .set_callback({"command.console.log.enable", {"console"}}, [](const list_array<predicate>& args, base_objects::command_context&) {
                                   auto& level = std::get<pred_string>(args[0]).value;
                                   if (level == "info")
-                                      log::enable_log_level(log::level::info);
+                                      api::log::enable_log_level(api::log::level::info);
                                   else if (level == "warn")
-                                      log::enable_log_level(log::level::warn);
+                                      api::log::enable_log_level(api::log::level::warn);
                                   else if (level == "error")
-                                      log::enable_log_level(log::level::error);
+                                      api::log::enable_log_level(api::log::level::error);
                                   else if (level == "fatal")
-                                      log::enable_log_level(log::level::fatal);
+                                      api::log::enable_log_level(api::log::level::fatal);
                                   else if (level == "debug_error")
-                                      log::enable_log_level(log::level::debug_error);
+                                      api::log::enable_log_level(api::log::level::debug_error);
                                   else if (level == "debug")
-                                      log::enable_log_level(log::level::debug);
+                                      api::log::enable_log_level(api::log::level::debug);
                                   else {
-                                      log::error("console", "log level " + level + " is undefined.");
+                                      api::log::error("console", "log level " + level + " is undefined.");
                                       return;
                                   }
-                                  log::info("console", "Log level " + level + " is now enabled.");
+                                  api::log::info("console", "Log level " + level + " is now enabled.");
                               });
 
                     auto& disable
@@ -162,22 +162,22 @@ namespace copper_server::build_in_plugins {
                               .set_callback({"command.console.log.disable", {"console"}}, [](const list_array<predicate>& args, base_objects::command_context&) {
                                   auto& level = std::get<pred_string>(args[0]).value;
                                   if (level == "info")
-                                      log::disable_log_level(log::level::info);
+                                      api::log::disable_log_level(api::log::level::info);
                                   else if (level == "warn")
-                                      log::disable_log_level(log::level::warn);
+                                      api::log::disable_log_level(api::log::level::warn);
                                   else if (level == "error")
-                                      log::disable_log_level(log::level::error);
+                                      api::log::disable_log_level(api::log::level::error);
                                   else if (level == "fatal")
-                                      log::disable_log_level(log::level::fatal);
+                                      api::log::disable_log_level(api::log::level::fatal);
                                   else if (level == "debug_error")
-                                      log::disable_log_level(log::level::debug_error);
+                                      api::log::disable_log_level(api::log::level::debug_error);
                                   else if (level == "debug")
-                                      log::disable_log_level(log::level::debug);
+                                      api::log::disable_log_level(api::log::level::debug);
                                   else {
-                                      log::error("console", "log level " + level + " is undefined.");
+                                      api::log::error("console", "log level " + level + " is undefined.");
                                       return;
                                   }
-                                  log::info("console", "Log level " + level + " is now disabled.");
+                                  api::log::info("console", "Log level " + level + " is now disabled.");
                               });
 
                     add_log_type_suggestion(enable);
@@ -185,7 +185,7 @@ namespace copper_server::build_in_plugins {
                 }
                 _console.add_child("clear")
                     .set_callback({"command.console.clear", {"console"}}, [](const list_array<predicate>&, base_objects::command_context&) {
-                        log::clear();
+                        api::log::clear();
                     });
             }
         }

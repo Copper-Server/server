@@ -81,6 +81,10 @@ namespace copper_server::base_objects {
         return getStaticData().collision_shapes;
     }
 
+    const Chat& block::display_name() const {
+        return getStaticData().display_name;
+    }
+
     const std::string& block::instrument() const {
         return getStaticData().instrument;
     }

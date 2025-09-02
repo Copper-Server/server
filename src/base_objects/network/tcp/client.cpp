@@ -6,8 +6,8 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/api/log.hpp>
 #include <src/base_objects/network/tcp/client.hpp>
-#include <src/log.hpp>
 
 namespace copper_server::base_objects::network::tcp {
     response client::on_switch() {
@@ -25,6 +25,6 @@ namespace copper_server::base_objects::network::tcp {
         //    output.push_back(hex_chars[data[i] >> 4]);
         //    output.push_back(hex_chars[data[i] & 0xF]);
         //}
-        //log::debug("Debug tools", output);
+        //api::log::debug("Debug tools", output);
     }
 }

@@ -35,7 +35,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::switches_to::status& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::switches_to::status>() { return "copper_server::base_objects::switches_to::status"; }
-template<>consteval size_t fields_count<copper_server::base_objects::switches_to::status>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::switches_to::login& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::switches_to::login& obj, [[maybe_unused]] FN&& fn){
@@ -53,7 +52,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::switches_to::login& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::switches_to::login>() { return "copper_server::base_objects::switches_to::login"; }
-template<>consteval size_t fields_count<copper_server::base_objects::switches_to::login>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::switches_to::configuration& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::switches_to::configuration& obj, [[maybe_unused]] FN&& fn){
@@ -71,7 +69,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::switches_to::configuration& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::switches_to::configuration>() { return "copper_server::base_objects::switches_to::configuration"; }
-template<>consteval size_t fields_count<copper_server::base_objects::switches_to::configuration>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::switches_to::play& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::switches_to::play& obj, [[maybe_unused]] FN&& fn){
@@ -89,7 +86,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::switches_to::play& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::switches_to::play>() { return "copper_server::base_objects::switches_to::play"; }
-template<>consteval size_t fields_count<copper_server::base_objects::switches_to::play>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::disconnect_after& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::disconnect_after& obj, [[maybe_unused]] FN&& fn){
@@ -107,7 +103,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::disconnect_after& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::disconnect_after>() { return "copper_server::base_objects::disconnect_after"; }
-template<>consteval size_t fields_count<copper_server::base_objects::disconnect_after>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::compound_packet& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::compound_packet& obj, [[maybe_unused]] FN&& fn){
@@ -125,7 +120,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::compound_packet& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::compound_packet>() { return "copper_server::base_objects::compound_packet"; }
-template<>consteval size_t fields_count<copper_server::base_objects::compound_packet>() { return 0; }
 template<int32_t id, class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::packet<id>& obj, [[maybe_unused]] FN&& fn){
 }
 template<int32_t id, class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::packet<id>& obj, [[maybe_unused]] FN&& fn){
@@ -331,7 +325,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::optional_var_int32& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::optional_var_int32>() { return "copper_server::base_objects::optional_var_int32"; }
-template<>consteval size_t fields_count<copper_server::base_objects::optional_var_int32>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::optional_var_int64& obj, [[maybe_unused]] FN&& fn){
 }
 template<class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::optional_var_int64& obj, [[maybe_unused]] FN&& fn){
@@ -349,7 +342,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::optional_var_int64& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::optional_var_int64>() { return "copper_server::base_objects::optional_var_int64"; }
-template<>consteval size_t fields_count<copper_server::base_objects::optional_var_int64>() { return 0; }
 template<class Value, class T, class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::value_optional<Value, T>& obj, [[maybe_unused]] FN&& fn){
   fn(obj.v);
   fn(obj.rest);
@@ -436,7 +428,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::size_from_packet& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::size_from_packet>() { return "copper_server::base_objects::size_from_packet"; }
-template<>consteval size_t fields_count<copper_server::base_objects::size_from_packet>() { return 0; }
 template<class T, size_t size, class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::list_array_sized<T, size>& obj, [[maybe_unused]] FN&& fn){
 }
 template<class T, size_t size, class FN>constexpr void for_each_field([[maybe_unused]] const copper_server::base_objects::list_array_sized<T, size>& obj, [[maybe_unused]] FN&& fn){

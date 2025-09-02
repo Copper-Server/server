@@ -6,14 +6,14 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <cassert>
 #include <exception>
 #include <functional>
 #include <library/enbt/enbt.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/log.hpp>
 #include <src/build_in_plugins/network/tcp/util.hpp>
-#include <src/log.hpp>
 #include <src/plugin/main.hpp>
-#include <src/registers.hpp>
 #include <string>
 #include <utf8.h>
 #include <zlib.h>
@@ -245,7 +245,7 @@ namespace copper_server::build_in_plugins::network::tcp {
             if (combined.size() < 2)
                 return base_objects::network::response::empty();
             if (combined[0] == 0xFE && combined[1] == 0x01) {
-                log::debug("protocol", "handle legacy status");
+                api::log::debug("protocol", "handle legacy status");
                 auto& config = api::configuration::get();
                 if (!config.status.enable)
                     return base_objects::network::response::disconnect();

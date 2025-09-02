@@ -238,7 +238,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::consume_effect::clear_all_effects& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::consume_effect::clear_all_effects>() { return "copper_server::base_objects::consume_effect::clear_all_effects"; }
-template<>consteval size_t fields_count<copper_server::base_objects::consume_effect::clear_all_effects>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::consume_effect::teleport_randomly& obj, [[maybe_unused]] FN&& fn){
   fn(obj.diameter);
 }
@@ -692,7 +691,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::component::unbreakable& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::component::unbreakable>() { return "copper_server::base_objects::component::unbreakable"; }
-template<>consteval size_t fields_count<copper_server::base_objects::component::unbreakable>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::component::custom_name& obj, [[maybe_unused]] FN&& fn){
   fn(obj.name);
 }
@@ -1301,7 +1299,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::component::creative_slot_lock& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::component::creative_slot_lock>() { return "copper_server::base_objects::component::creative_slot_lock"; }
-template<>consteval size_t fields_count<copper_server::base_objects::component::creative_slot_lock>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::component::enchantment_glint_override& obj, [[maybe_unused]] FN&& fn){
   fn(obj.has);
 }
@@ -1757,7 +1754,6 @@ template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] coppe
 template<class FN>constexpr void for_each_field_with_name([[maybe_unused]] const copper_server::base_objects::component::glider& obj, [[maybe_unused]] FN&& fn){
 }
 template<>consteval std::string_view type_name<copper_server::base_objects::component::glider>() { return "copper_server::base_objects::component::glider"; }
-template<>consteval size_t fields_count<copper_server::base_objects::component::glider>() { return 0; }
 template<class FN>constexpr void for_each_field([[maybe_unused]] copper_server::base_objects::component::tooltip_style& obj, [[maybe_unused]] FN&& fn){
   fn(obj.style);
 }

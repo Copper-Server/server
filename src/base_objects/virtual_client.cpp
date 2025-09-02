@@ -7,9 +7,9 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <src/api/packets.hpp>
+#include <src/api/registers.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/virtual_client.hpp>
-#include <src/registers.hpp>
 
 namespace copper_server::base_objects {
 
@@ -27,7 +27,7 @@ namespace copper_server::base_objects {
         client->player_data.op_level = 4;
         client->player_data.world_id = "virtual_client astral space";
         client->is_virtual = true;
-        client->packets_state.protocol_version = registers::current_protocol_id;
+        client->packets_state.protocol_version = api::registers::current_protocol_id;
         client->packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::play;
         client->special_callback = [this](base_objects::SharedClientData& _, network::response&& resp) {
             resp.data.for_each([&](base_objects::network::response::item& it) {

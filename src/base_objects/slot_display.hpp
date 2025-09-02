@@ -11,12 +11,13 @@
 #include <functional>
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
-#include <src/base_objects/slot.hpp>
 #include <string>
 #include <vector>
 
 namespace copper_server::base_objects {
     struct slot_display;
+    struct slot_data;
+    struct slot;
 
     namespace slot_displays {
         namespace minecraft {
@@ -34,7 +35,7 @@ namespace copper_server::base_objects {
             };
 
             struct item_stack {
-                slot_data item;
+                std::shared_ptr<slot_data> item;
                 static constexpr const char name[] = "minecraft:item_stack";
             };
 

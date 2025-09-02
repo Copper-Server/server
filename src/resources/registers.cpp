@@ -11,12 +11,13 @@
 #include <library/enbt/io_tools.hpp>
 #include <resources/include.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/log.hpp>
 #include <src/api/recipe.hpp>
+#include <src/api/registers.hpp>
 #include <src/api/tags.hpp>
+#include <src/base_objects/block.hpp>
 #include <src/base_objects/data_packs/known_pack.hpp>
 #include <src/base_objects/entity.hpp>
-#include <src/log.hpp>
-#include <src/registers.hpp>
 #include <src/util/conversions.hpp>
 #include <src/util/json_helpers.hpp>
 
@@ -113,7 +114,7 @@ namespace copper_server::resources {
     }
 
     using namespace util;
-    using namespace registers;
+    using namespace api::registers;
 
     void registers_reset() {
         biomes.clear();
@@ -265,7 +266,7 @@ namespace copper_server::resources {
                 entity_data.drag_horizontal = 0.00f;
                 entity_data.terminal_velocity = 0.0f;
                 entity_data.drag_applied_after_acceleration = true;
-                log::debug("resource_load", "Entity " + entity_data.name + " has no hardcoded values");
+                api::log::debug("resource_load", "Entity " + entity_data.name + " has no hardcoded values");
             }
         }
     }
@@ -275,7 +276,7 @@ namespace copper_server::resources {
         for (auto& [id, obj_] : parsed.as_object()) {
             auto& obj = obj_.as_object();
             base_objects::entity_data entity_data;
-            entity_data.id = "minecraft:" + std::string(id);
+            entity_data.id = std::string(id);
             if (obj.contains("max_health")) {
                 base_objects::entity_data::living_entity_data_t living_data;
                 living_data.base_health = obj.at("max_health").to_number<float>();
@@ -422,7 +423,7 @@ namespace copper_server::resources {
 
     void load_file_biomes(js_object&& bio_js, const std::string& id, bool send_via_network_body = true) {
         check_override(biomes, id, "biome");
-        Biome bio;
+        biome bio;
         bio.send_via_network_body = send_via_network_body;
         bio.downfall = bio_js["downfall"];
         bio.temperature = bio_js["temperature"];
@@ -432,7 +433,7 @@ namespace copper_server::resources {
             bio.temperature_modifier = (std::string)bio_js["temperature_modifier"];
 
         {
-            Biome::Effects biom_effects;
+            biome::effects_t biom_effects;
             js_object effects_js = js_object::get_object(bio_js["effects"]);
             biom_effects.sky_color = effects_js["sky_color"];
             biom_effects.water_fog_color = effects_js["water_fog_color"];
@@ -446,7 +447,7 @@ namespace copper_server::resources {
                 biom_effects.grass_color_modifier = (std::string)effects_js["grass_color_modifier"];
             if (effects_js.contains("particle")) {
                 js_object particle_js = js_object::get_object(effects_js["particle"]);
-                Biome::Particle particle;
+                biome::particle particle;
                 particle.probability = particle_js["probability"];
                 auto options = js_object::get_object(particle_js["options"]);
                 particle.options.type = (std::string)options["type"];
@@ -459,7 +460,7 @@ namespace copper_server::resources {
                     biom_effects.ambient_sound = (std::string)eff;
                 else {
                     js_object ambient_sound_js = js_object::get_object(effects_js["ambient_sound"]);
-                    Biome::AmbientSound ambient_sound;
+                    biome::ambient_sound ambient_sound;
                     ambient_sound.sound = (std::string)ambient_sound_js["sound"];
                     ambient_sound.range = ambient_sound_js["range"];
                     biom_effects.ambient_sound = std::move(ambient_sound);
@@ -467,7 +468,7 @@ namespace copper_server::resources {
             }
             if (effects_js.contains("mood_sound")) {
                 js_object mood_sound_js = js_object::get_object(effects_js["mood_sound"]);
-                Biome::MoodSound mood_sound;
+                biome::mood_sound mood_sound;
                 mood_sound.sound = (std::string)mood_sound_js["sound"];
                 mood_sound.offset = mood_sound_js["offset"].or_apply(2.0);
                 mood_sound.block_search_extent = mood_sound_js["block_search_extent"].or_apply(8);
@@ -476,18 +477,18 @@ namespace copper_server::resources {
             }
             if (effects_js.contains("additions_sound")) {
                 js_object additions_sound_js = js_object::get_object(effects_js["additions_sound"]);
-                Biome::AdditionsSound additions_sound;
+                biome::additions_sound additions_sound;
                 additions_sound.sound = (std::string)additions_sound_js["sound"];
                 additions_sound.tick_chance = additions_sound_js["tick_chance"];
                 biom_effects.additions_sound = std::move(additions_sound);
             }
             if (effects_js.contains("music")) {
-                std::vector<Biome::Music> music_arr;
+                std::vector<biome::music> music_arr;
                 auto music_arr_js = js_array::get_array(effects_js["music"]);
                 music_arr.reserve(music_arr_js.size());
                 for (auto&& it : music_arr_js) {
                     js_object music_js = js_object::get_object(it);
-                    Biome::Music music;
+                    biome::music music;
                     if (music_js.contains("data")) {
                         auto music_data = js_object::get_object(music_js["data"]);
                         music.sound = (std::string)music_data["sound"];
@@ -541,7 +542,7 @@ namespace copper_server::resources {
                 category.reserve(category_values.size());
                 for (auto&& it : category_values) {
                     auto category_value = js_object::get_object(it);
-                    Biome::SpawnersValue value;
+                    biome::spawners_value value;
                     value.type = (std::string)category_value["type"];
                     value.weight = category_value["weight"];
                     value.weight = category_value["minCount"];
@@ -572,8 +573,8 @@ namespace copper_server::resources {
         load_file_biomes(js_object::get_object(*res), id);
     }
 
-    ChatType::Decoration to_decoration(js_value&& json) {
-        ChatType::Decoration decoration;
+    chat_type::decoration to_decoration(js_value&& json) {
+        chat_type::decoration decoration;
         js_object chat_js = js_object::get_object(json);
         if (chat_js.contains("style"))
             decoration.style = Chat::fromEnbt(conversions::json::from_json(chat_js["style"].get()));
@@ -727,7 +728,7 @@ namespace copper_server::resources {
 
     void load_file_chatType(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
         check_override(chatTypes, id, "chat type");
-        ChatType type;
+        chat_type type;
         type.send_via_network_body = send_via_network_body;
         if (type_js.contains("chat"))
             type.chat = to_decoration(type_js["chat"]);
@@ -744,7 +745,7 @@ namespace copper_server::resources {
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
         js_object type_js = js_object::get_object(*res);
-        ChatType type;
+        chat_type type;
         if (type_js.contains("chat"))
             type.chat = to_decoration(type_js["chat"]);
         if (type_js.contains("narration"))
@@ -755,11 +756,11 @@ namespace copper_server::resources {
 
     void load_file_advancements(js_object&& advancement_js, const std::string& id, bool send_via_network_body = true) {
         check_conflicts(advancements, id, "advancements");
-        Advancement advancement;
-        advancement.send_via_network_body = send_via_network_body;
+        advancement res;
+        res.send_via_network_body = send_via_network_body;
         if (advancement_js.contains("display")) {
             auto display_js = js_object::get_object(advancement_js["display"]);
-            Advancement::Display display;
+            advancement::display_t display;
             {
                 auto icon_js = js_object::get_object(display_js["icon"]);
                 display.icon.item = (std::string)icon_js["item"];
@@ -782,43 +783,43 @@ namespace copper_server::resources {
                 display.hidden = display_js["hidden"];
         }
         if (advancement_js.contains("parent"))
-            advancement.parent = (std::string)advancement_js["parent"];
-        advancement.criteria = util::conversions::json::from_json(advancement_js["criteria"].get());
+            res.parent = (std::string)advancement_js["parent"];
+        res.criteria = util::conversions::json::from_json(advancement_js["criteria"].get());
         if (advancement_js.contains("requirements")) {
             auto list_of_requirements_js = js_array::get_array(advancement_js["requirements"]);
-            advancement.requirements.reserve(list_of_requirements_js.size());
+            res.requirements.reserve(list_of_requirements_js.size());
             for (auto&& value : list_of_requirements_js) {
                 auto requirements_js = js_array::get_array(value);
                 std::vector<std::string> requirements;
                 requirements.reserve(requirements_js.size());
                 for (auto&& req : requirements_js)
                     requirements.emplace_back(req);
-                advancement.requirements.emplace_back(std::move(requirements));
+                res.requirements.emplace_back(std::move(requirements));
             }
         }
         if (advancement_js.contains("rewards")) {
             auto rewards_js = js_object::get_object(advancement_js["rewards"]);
             if (rewards_js.contains("recipes")) {
                 auto recipes_js = js_array::get_array(rewards_js["recipes"]);
-                advancement.rewards.recipes.reserve(rewards_js.size());
+                res.rewards.recipes.reserve(rewards_js.size());
                 for (auto&& req : recipes_js)
-                    advancement.rewards.recipes.emplace_back((std::string)req);
+                    res.rewards.recipes.emplace_back((std::string)req);
             }
             if (rewards_js.contains("loot")) {
                 auto loot_js = js_array::get_array(rewards_js["loot"]);
-                advancement.rewards.loot.reserve(rewards_js.size());
+                res.rewards.loot.reserve(rewards_js.size());
                 for (auto&& req : loot_js)
-                    advancement.rewards.loot.emplace_back((std::string)req);
+                    res.rewards.loot.emplace_back((std::string)req);
             }
             if (rewards_js.contains("experience"))
-                advancement.rewards.experience = rewards_js["experience"];
+                res.rewards.experience = rewards_js["experience"];
             if (rewards_js.contains("function"))
-                advancement.rewards.function = (std::string)rewards_js["function"];
+                res.rewards.function = (std::string)rewards_js["function"];
         }
 
         if (advancement_js.contains("sends_telemetry_event"))
-            advancement.sends_telemetry_event = advancement_js["sends_telemetry_event"];
-        advancements[id] = std::move(advancement);
+            res.sends_telemetry_event = advancement_js["sends_telemetry_event"];
+        advancements[id] = std::move(res);
     }
 
     void load_file_advancements(const std::filesystem::path& file_path, const std::string& id) {
@@ -831,7 +832,7 @@ namespace copper_server::resources {
 
     void load_file_jukebox_song(js_object&& song_js, const std::string& id, bool send_via_network_body = true) {
         check_conflicts(jukebox_songs, id, "jukebox song");
-        JukeboxSong song;
+        jukebox_song song;
         song.send_via_network_body = send_via_network_body;
         song.comparator_output = song_js["comparator_output"];
         song.length_in_seconds = song_js["length_in_seconds"];
@@ -841,7 +842,7 @@ namespace copper_server::resources {
             song.sound_event = (std::string)sound_event_js;
         else {
             auto sound_event_obj = js_object::get_object(sound_event_js);
-            JukeboxSong::custom ex;
+            jukebox_song::custom ex;
             ex.sound_id = (std::string)sound_event_obj["sound_id"];
             if (sound_event_obj.contains("fixed_range"))
                 ex.fixed_range = sound_event_obj["fixed_range"];
@@ -931,7 +932,7 @@ namespace copper_server::resources {
 
     void load_file_armorTrimPattern(js_object&& pattern_js, const std::string& id, bool send_via_network_body = true) {
         check_override(armorTrimPatterns, id, "armor trim pattern");
-        ArmorTrimPattern pattern;
+        armor_trim_pattern pattern;
         pattern.send_via_network_body = send_via_network_body;
         pattern.asset_id = (std::string)pattern_js["asset_id"];
         pattern.decal = pattern_js["decal"];
@@ -955,7 +956,7 @@ namespace copper_server::resources {
 
     void load_file_armorTrimMaterial(js_object&& material_js, const std::string& id, bool send_via_network_body = true) {
         check_override(armorTrimMaterials, id, "armor trim material");
-        ArmorTrimMaterial material;
+        armor_trim_material material;
         material.send_via_network_body = send_via_network_body;
         material.asset_name = (std::string)material_js["asset_name"];
         {
@@ -978,7 +979,7 @@ namespace copper_server::resources {
 
     void load_file_wolfVariant(js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
         check_override(wolfVariants, id, "wolf variant");
-        WolfVariant variant;
+        wolf_variant variant;
         variant.send_via_network_body = send_via_network_body;
         variant.assets = conversions::json::from_json(variant_js.at("assets").get());
         variant.spawn_conditions = conversions::json::from_json(variant_js.at("spawn_conditions").get());
@@ -993,9 +994,9 @@ namespace copper_server::resources {
         load_file_wolfVariant(js_object::get_object(*res), id);
     }
 
-    void load_file_entityVariant(std::unordered_map<std::string, EntityVariant>& map, const std::string& key, js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
+    void load_file_entityVariant(std::unordered_map<std::string, entity_variant>& map, const std::string& key, js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
         check_override(map, id, key);
-        EntityVariant variant;
+        entity_variant variant;
         variant.send_via_network_body = send_via_network_body;
         variant.asset_id = (std::string)variant_js.at("asset_id");
         variant.spawn_conditions = conversions::json::from_json(variant_js.at("spawn_conditions").get());
@@ -1004,7 +1005,7 @@ namespace copper_server::resources {
         map[id] = std::move(variant);
     }
 
-    void load_file_entityVariant(std::unordered_map<std::string, EntityVariant>& map, const std::string& key, const std::filesystem::path& file_path, const std::string& id) {
+    void load_file_entityVariant(std::unordered_map<std::string, entity_variant>& map, const std::string& key, const std::filesystem::path& file_path, const std::string& id) {
         check_override(map, id, key);
         auto res = try_read_json_file(file_path);
         if (!res)
@@ -1028,7 +1029,7 @@ namespace copper_server::resources {
 
     void load_file_wolfSoundVariant(js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
         check_override(wolfSoundVariants, id, "wolf sound variant");
-        WolfSoundVariant variant;
+        wolf_sound_variant variant;
         variant.send_via_network_body = send_via_network_body;
         variant.ambient_sound = (std::string)variant_js.at("ambient_sound");
         variant.death_sound = (std::string)variant_js.at("death_sound");
@@ -1049,20 +1050,14 @@ namespace copper_server::resources {
 
     void load_file_dimensionType(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
         check_override(dimensionTypes, id, "dimension type");
-        DimensionType type;
+        dimension_type type;
         type.send_via_network_body = send_via_network_body;
         if (type_js.contains("monster_spawn_light_level")) {
             auto monster_spawn_light_level = type_js["monster_spawn_light_level"];
             if (monster_spawn_light_level.is_number())
                 type.monster_spawn_light_level = monster_spawn_light_level;
-            else {
-
-                js_object monster_spawn_light_level_js = js_object::get_object(monster_spawn_light_level);
-                IntegerDistribution monster_spawn_light_level_;
-                monster_spawn_light_level_.value = conversions::json::from_json(monster_spawn_light_level_js.get());
-                monster_spawn_light_level_.type = (std::string)monster_spawn_light_level_js.at("type");
-                type.monster_spawn_light_level = std::move(monster_spawn_light_level_);
-            }
+            else
+                type.monster_spawn_light_level = base_objects::number_provider::parse_provider(util::conversions::json::from_json(monster_spawn_light_level.get()));
         }
         if (type_js.contains("fixed_time"))
             type.fixed_time = type_js["fixed_time"];
@@ -1122,7 +1117,7 @@ namespace copper_server::resources {
             type.supported_items = (std::string)type_js.at("supported_items");
         else {
             auto supported_items_js = js_array::get_array(type_js.at("supported_items"));
-            std::vector<base_objects::id_item> supported_items;
+            std::vector<api::id::item> supported_items;
             supported_items.reserve(supported_items_js.size());
             for (auto&& set : supported_items_js)
                 supported_items.emplace_back((std::string)set);
@@ -1133,7 +1128,7 @@ namespace copper_server::resources {
                 type.primary_items = (std::string)type_js.at("primary_items");
             else {
                 auto primary_items_js = js_array::get_array(type_js.at("primary_items"));
-                std::vector<base_objects::id_item> primary_items;
+                std::vector<api::id::item> primary_items;
                 primary_items.reserve(primary_items_js.size());
                 for (auto&& set : primary_items_js)
                     primary_items.emplace_back((std::string)set);
@@ -1172,7 +1167,7 @@ namespace copper_server::resources {
 
     void load_file_instrument(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
         check_conflicts(instruments, id, "instruments");
-        Instrument type;
+        instrument type;
         type.description = Chat::fromEnbt(util::conversions::json::from_json(type_js.at("description").get()));
         type.use_duration = type_js.at("use_duration");
         type.range = type_js.at("range");
@@ -1181,7 +1176,7 @@ namespace copper_server::resources {
             type.sound_event = (std::string)type_js.at("sound_event");
         } else {
             auto sound_event = js_object::get_object(type_js.at("sound_event"));
-            type.sound_event = Instrument::custom{.sound_name = (std::string)sound_event.at("sound_name"), .fixed_range = sound_event.contains("fixed_range") ? std::optional<float>(sound_event.at("fixed_range")) : std::nullopt};
+            type.sound_event = instrument::custom{.sound_name = (std::string)sound_event.at("sound_name"), .fixed_range = sound_event.contains("fixed_range") ? std::optional<float>(sound_event.at("fixed_range")) : std::nullopt};
         }
         instruments[id] = std::move(type);
     }
@@ -1204,33 +1199,33 @@ namespace copper_server::resources {
 
     void load_file_damageType(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
         check_override(damageTypes, id, "damage type");
-        DamageType type;
+        damage_type type;
         type.message_id = (std::string)type_js["message_id"];
         type.send_via_network_body = send_via_network_body;
         std::string scaling = type_js["scaling"];
         if (scaling == "never")
-            type.scaling = DamageType::ScalingType::never;
+            type.scaling = damage_type::scaling_type::never;
         else if (scaling == "when_caused_by_living_non_player")
-            type.scaling = DamageType::ScalingType::when_caused_by_living_non_player;
+            type.scaling = damage_type::scaling_type::when_caused_by_living_non_player;
         else if (scaling == "always")
-            type.scaling = DamageType::ScalingType::always;
+            type.scaling = damage_type::scaling_type::always;
         else
             type_js["scaling"].parsing_error("Unknown scaling type: " + scaling);
 
         if (type_js.contains("effects")) {
             std::string damage_effects = type_js["effects"];
             if (damage_effects == "hurt")
-                type.effects = DamageType::EffectsType::hurt;
+                type.effects = damage_type::effects_type::hurt;
             else if (damage_effects == "thorns")
-                type.effects = DamageType::EffectsType::thorns;
+                type.effects = damage_type::effects_type::thorns;
             else if (damage_effects == "drowning")
-                type.effects = DamageType::EffectsType::drowning;
+                type.effects = damage_type::effects_type::drowning;
             else if (damage_effects == "burning")
-                type.effects = DamageType::EffectsType::burning;
+                type.effects = damage_type::effects_type::burning;
             else if (damage_effects == "poking")
-                type.effects = DamageType::EffectsType::poking;
+                type.effects = damage_type::effects_type::poking;
             else if (damage_effects == "freezing")
-                type.effects = DamageType::EffectsType::freezing;
+                type.effects = damage_type::effects_type::freezing;
             else
                 type_js["effects"].parsing_error("Unknown damage effects type: " + damage_effects);
         }
@@ -1238,11 +1233,11 @@ namespace copper_server::resources {
         if (type_js.contains("death_message_type")) {
             std::string death_message_type = type_js["death_message_type"];
             if (death_message_type == "default")
-                type.death_message_type = DamageType::DeathMessageType::_default;
+                type.death_message_type = damage_type::death_message_type::_default;
             else if (death_message_type == "fall_variants")
-                type.death_message_type = DamageType::DeathMessageType::fall_variants;
+                type.death_message_type = damage_type::death_message_type::fall_variants;
             else if (death_message_type == "intentional_game_design")
-                type.death_message_type = DamageType::DeathMessageType::intentional_game_design;
+                type.death_message_type = damage_type::death_message_type::intentional_game_design;
             else
                 type_js["death_message_type"].parsing_error("Unknown death message type: " + death_message_type);
         }
@@ -1261,7 +1256,7 @@ namespace copper_server::resources {
 
     void load_file_bannerPattern(js_object&& pattern_js, const std::string& id, bool send_via_network_body = true) {
         check_override(bannerPatterns, id, "banner pattern");
-        BannerPattern pattern;
+        banner_pattern pattern;
         pattern.asset_id = (std::string)pattern_js["asset_id"];
         pattern.translation_key = (std::string)pattern_js["translation_key"];
         pattern.send_via_network_body = send_via_network_body;
@@ -1278,7 +1273,7 @@ namespace copper_server::resources {
 
     void load_file_paintingVariant(js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
         check_override(paintingVariants, id, "painting variant");
-        PaintingVariant variant;
+        painting_variant variant;
         variant.asset_id = (std::string)variant_js["asset_id"];
         variant.height = variant_js["height"];
         variant.width = variant_js["width"];
@@ -1295,9 +1290,6 @@ namespace copper_server::resources {
     }
 
     void load_file_recipe(js_object&& variant_js, const std::string& id, [[maybe_unused]] bool send_via_network_body = true) {
-        if (!api::recipe::registered())
-            throw std::runtime_error("Recipe api not registered!");
-
         enbt::compound res;
         res = util::conversions::json::from_json(variant_js.get());
         api::recipe::set_recipe(id, std::move(res));
@@ -1525,6 +1517,30 @@ namespace copper_server::resources {
 
     void load_blocks() {
         {
+            auto block_shapes = boost::json::parse(resources::registry::block_shapes).as_array();
+            base_objects::static_block_data::all_shapes.reserve(block_shapes.size());
+            for (auto& shape : block_shapes) {
+                auto& min = shape.at("min");
+                auto& max = shape.at("max");
+                base_objects::static_block_data::all_shapes.emplace_back(
+                    base_objects::shape_data{
+                        .min_x = min.at(0).to_number<double>(),
+                        .min_y = min.at(1).to_number<double>(),
+                        .min_z = min.at(2).to_number<double>(),
+                        .max_x = max.at(0).to_number<double>(),
+                        .max_y = max.at(1).to_number<double>(),
+                        .max_z = max.at(2).to_number<double>()
+                    }
+                );
+            }
+        }
+        {
+            auto block_entity_types = boost::json::parse(resources::registry::block_entity_types).as_array();
+            base_objects::static_block_data::block_entity_types.reserve(block_entity_types.size());
+            for (auto& type : block_entity_types)
+                base_objects::static_block_data::block_entity_types.emplace_back((std::string)type.as_string());
+        }
+        {
             auto block_properties = boost::json::parse(resources::registry::block_properties).as_array();
             base_objects::static_block_data::all_properties.reserve(block_properties.size());
             for (auto& item : block_properties) {
@@ -1561,262 +1577,225 @@ namespace copper_server::resources {
         filter.push(boost::iostreams::zstd_decompressor());
         filter.push(source);
         enbt::io_helper::value_read_stream read_stream(filter);
-        std::unordered_map<base_objects::block_id_t, list_array<size_t>> assign_collision_boxes;
-        std::unordered_map<base_objects::block_id_t, list_array<size_t>> assign_outline_boxes;
-        read_stream.iterate([&assign_collision_boxes, &assign_outline_boxes](std::string_view name, enbt::io_helper::value_read_stream& entry) {
-            if (name == "shapes") {
-                entry.iterate(
-                    [](auto size) {
-                        base_objects::static_block_data::all_shapes.reserve(size);
-                    },
-                    [&](auto& shape) {
-                        auto item = shape.read();
-                        auto& min = item.at("min");
-                        auto& max = item.at("max");
-                        base_objects::static_block_data::all_shapes.emplace_back(
-                            base_objects::shape_data{
-                                .min_x = min.at(0),
-                                .min_y = min.at(1),
-                                .min_z = min.at(2),
-                                .max_x = max.at(0),
-                                .max_y = max.at(1),
-                                .max_z = max.at(2)
-                            }
-                        );
-                    }
-                );
-            } else if (name == "block_entity_types") {
-                entry.iterate(
-                    [](auto size) {
-                        base_objects::static_block_data::block_entity_types.reserve(size);
-                    },
-                    [&](auto& item) {
-                        base_objects::static_block_data::block_entity_types.emplace_back((std::string)item.read());
-                    }
-                );
-            } else if (name == "blocks") {
-                base_objects::block::access_full_block_data(std::function([&](list_array<std::shared_ptr<base_objects::static_block_data>>& full_block_data_, std::unordered_map<std::string, std::shared_ptr<base_objects::static_block_data>>& named_full_block_data) {
-                    entry.iterate([&](enbt::io_helper::value_read_stream& decl) {
-                        std::shared_ptr<base_objects::static_block_data> default_state_data = std::make_shared<base_objects::static_block_data>();
-                        list_array<base_objects::block_id_t> init_states;
-                        std::shared_ptr<base_objects::static_block_data::map_of_states> associated_states = std::make_shared<base_objects::static_block_data::map_of_states>();
-                        base_objects::block_id_t default_state = 0;
-                        bool has_default_state = false;
 
-                        decl.iterate([&](std::string_view name, enbt::io_helper::value_read_stream& item) {
-                            if (name == "name") {
-                                default_state_data->name = "minecraft:" + item.read().as_string();
-                                if (named_full_block_data.contains(default_state_data->name))
-                                    throw std::runtime_error("Duplicate block name: " + default_state_data->name);
-                            } else if (name == "id")
-                                default_state_data->general_block_id = item.read();
-                            else if (name == "translation_key")
-                                default_state_data->translation_key = item.read().as_string();
-                            else if (name == "slipperiness")
-                                default_state_data->slipperiness = item.read();
-                            else if (name == "velocity_multiplier")
-                                default_state_data->velocity_multiplier = item.read();
-                            else if (name == "jump_velocity_multiplier")
-                                default_state_data->jump_velocity_multiplier = item.read();
-                            else if (name == "hardness")
-                                default_state_data->hardness = item.read();
-                            else if (name == "blast_resistance")
-                                default_state_data->blast_resistance = item.read();
-                            else if (name == "item_id")
-                                default_state_data->default_drop_item_id = item.read();
-                            else if (name == "map_color_rgb")
-                                default_state_data->map_color_rgb = item.read();
-                            else if (name == "loot_table")
-                                *(default_state_data->loot_table = std::make_shared<enbt::compound>()) = item.read();
-                            else if (name == "default_state_id") {
-                                if (!has_default_state) {
-                                    default_state = item.read();
-                                    has_default_state = true;
-                                }
-                            } else if (name == "properties") {
-                                std::vector<int32_t> properties;
-                                item.iterate(
-                                    [&properties](auto size) { properties.reserve(size); },
-                                    [&properties](enbt::io_helper::value_read_stream& item) { properties.emplace_back(item.read()); }
-                                );
-                                default_state_data->allowed_properties = std::move(properties);
-                            } else if (name == "flammable") {
-                                enbt::compound comp;
-                                comp = item.read();
-                                default_state_data->flammable = base_objects::static_block_data::flammable_t{
-                                    .spread_chance = comp.at("spread_chance"),
-                                    .burn_chance = comp.at("burn_chance"),
-                                };
-                            } else if (name == "experience") {
-                                enbt::compound comp;
-                                comp = item.read();
+        base_objects::block::access_full_block_data(std::function([&](list_array<std::shared_ptr<base_objects::static_block_data>>& full_block_data_, std::unordered_map<std::string, std::shared_ptr<base_objects::static_block_data>>& named_full_block_data) {
+            read_stream.iterate([&](enbt::io_helper::value_read_stream& decl) {
+                std::shared_ptr<base_objects::static_block_data> default_state_data = std::make_shared<base_objects::static_block_data>();
+                list_array<base_objects::block_id_t> init_states;
+                std::shared_ptr<base_objects::static_block_data::map_of_states> associated_states = std::make_shared<base_objects::static_block_data::map_of_states>();
+                base_objects::block_id_t default_state = 0;
+                bool has_default_state = false;
+
+                decl.iterate([&](std::string_view name, enbt::io_helper::value_read_stream& item) {
+                    if (name == "name") {
+                        default_state_data->display_name = Chat::fromEnbt(item.read());
+                    } else if (name == "named_id") {
+                        default_state_data->name = item.read().as_string();
+                        if (named_full_block_data.contains(default_state_data->name))
+                            throw std::runtime_error("Duplicate block name: " + default_state_data->name);
+                    } else if (name == "id")
+                        default_state_data->general_block_id = item.read();
+                    else if (name == "translation_key")
+                        default_state_data->translation_key = item.read().as_string();
+                    else if (name == "slipperiness")
+                        default_state_data->slipperiness = item.read();
+                    else if (name == "velocity_multiplier")
+                        default_state_data->velocity_multiplier = item.read();
+                    else if (name == "jump_velocity_multiplier")
+                        default_state_data->jump_velocity_multiplier = item.read();
+                    else if (name == "hardness")
+                        default_state_data->hardness = item.read();
+                    else if (name == "blast_resistance")
+                        default_state_data->blast_resistance = item.read();
+                    else if (name == "item_id")
+                        default_state_data->default_drop_item_id = item.read();
+                    else if (name == "map_color_rgb")
+                        default_state_data->map_color_rgb = item.read();
+                    else if (name == "loot_table")
+                        *(default_state_data->loot_table = std::make_shared<enbt::compound>()) = item.read();
+                    else if (name == "default_state_id") {
+                        if (!has_default_state) {
+                            default_state = item.read();
+                            has_default_state = true;
+                        }
+                    } else if (name == "exp_drop") {
+                        item.iterate([&default_state_data](auto& name, auto& data) {
+                            if (name == "experience")
                                 default_state_data->ore_data = base_objects::static_block_data::ore_data_t{
-                                    .experience = base_objects::number_provider::parse_provider(comp.at("experience"))
+                                    .experience = base_objects::number_provider::parse_provider(data.read())
                                 };
-                            } else if (name == "states") {
-                                item.iterate(
-                                    [&](auto size) { init_states.reserve(size); },
-                                    [&](enbt::io_helper::value_read_stream& decl) {
-                                        std::shared_ptr<base_objects::static_block_data> block_data = std::make_shared<base_objects::static_block_data>();
-                                        base_objects::block_id_t block_data_id = 0;
-                                        block_data->opacity = 255;
-#define ARGS__d [[maybe_unused]] list_array<size_t> outline_shapes, [[maybe_unused]] list_array<size_t> collision_shapes, [[maybe_unused]] base_objects::block_id_t &default_state, [[maybe_unused]] bool &has_default_state, [[maybe_unused]] list_array<std::shared_ptr<base_objects::static_block_data>>&full_block_data_, [[maybe_unused]] std::shared_ptr<base_objects::static_block_data>&block_data, [[maybe_unused]] base_objects::block_id_t &block_data_id, [[maybe_unused]] enbt::io_helper::value_read_stream &item
-#define ARGS__pass outline_shapes, collision_shapes, default_state, has_default_state, full_block_data_, block_data, block_data_id, item
-
-                                        static std::unordered_map<std::string, void (*)(ARGS__d)> map{
-                                            {"id", [](ARGS__d) {
-                                                 base_objects::block_id_t id = block_data_id = item.read();
-                                                 block_data->current_state = id;
-                                                 if (id >= full_block_data_.size()) {
-                                                     if (full_block_data_.reserved() == 0)
-                                                         full_block_data_.reserve(id);
-                                                     full_block_data_.resize(id + 1);
-                                                 }
-                                                 auto& ref = full_block_data_.at(id);
-                                                 if (ref)
-                                                     throw std::runtime_error("Duplicate block id: " + std::to_string(id));
-                                                 ref = block_data;
-                                                 if (!has_default_state) {
-                                                     default_state = id;
-                                                     has_default_state = true;
-                                                 }
-                                             }},
-                                            {"state_flags", [](ARGS__d) {
-                                                 // AIR = 0b00000001
-                                                 // BURNABLE = 0b00000010
-                                                 // TOOL_REQUIRED = 0b00000100
-                                                 // SIDED_TRANSPARENCY = 0b00001000
-                                                 // REPLACEABLE = 0b00010000
-                                                 // IS_LIQUID = 0b00100000
-                                                 // IS_SOLID = 0b01000000
-                                                 // IS_FULL_CUBE = 0b10000000
-                                                 int32_t states = item.read();
-                                                 block_data->is_air = states & 0b00000001;
-                                                 block_data->is_burnable = states & 0b00000010;
-                                                 block_data->is_tool_required = states & 0b00000100;
-                                                 block_data->is_replaceable = states & 0b00010000;
-                                                 block_data->is_liquid = states & 0b00100000;
-                                                 block_data->is_solid = states & 0b01000000;
-                                                 block_data->is_full_cube = states & 0b10000000;
-                                             }},
-                                            {"side_flags", [](ARGS__d) {
-                                                 //DOWN_SIDE_SOLID = 0b00000001;
-                                                 //UP_SIDE_SOLID = 0b00000010;
-                                                 //NORTH_SIDE_SOLID = 0b00000100;
-                                                 //SOUTH_SIDE_SOLID = 0b00001000;
-                                                 //WEST_SIDE_SOLID = 0b00010000;
-                                                 //EAST_SIDE_SOLID = 0b00100000;
-                                                 //DOWN_CENTER_SOLID = 0b01000000;
-                                                 //UP_CENTER_SOLID = 0b10000000;
-                                                 int32_t states = item.read();
-                                                 auto& sides = block_data->transparent_sides;
-                                                 sides.down_side_solid = states & 0b00000001;
-                                                 sides.up_side_solid = states & 0b00000010;
-                                                 sides.north_side_solid = states & 0b00000100;
-                                                 sides.south_side_solid = states & 0b00001000;
-                                                 sides.west_side_solid = states & 0b00010000;
-                                                 sides.east_side_solid = states & 0b00100000;
-                                                 sides.down_center_solid = states & 0b01000000;
-                                                 sides.up_center_solid = states & 0b10000000;
-                                             }},
-                                            {"opacity", [](ARGS__d) { block_data->opacity = item.read(); }},
-                                            {"instrument", [](ARGS__d) { block_data->instrument = item.read().as_string(); }},
-                                            {"luminance", [](ARGS__d) { block_data->luminance = item.read(); }},
-                                            {"emits_redstone", [](ARGS__d) { block_data->is_emits_redstone = item.read(); }},
-                                            {"piston_behavior", [](ARGS__d) { block_data->piston_behavior = item.read().as_string(); }},
-                                            {"hardness", [](ARGS__d) { block_data->hardness = item.read(); }},
-                                            {"has_random_ticks", [](ARGS__d) { block_data->has_random_ticks = item.read(); }},
-                                            {"has_comparator_output", [](ARGS__d) { block_data->has_comparator_output = item.read(); }},
-                                            {"default_state_id", [](ARGS__d) {
-                                                 default_state = item.read();
-                                                 block_data->is_default_state = true;
-                                                 has_default_state = true;
-                                             }},
-                                            {"properties", [](ARGS__d) {
-                                                 std::unordered_map<std::string, std::string> properties;
-                                                 item.iterate([&](auto size) { properties.reserve(size); }, [&](const std::string& name, enbt::io_helper::value_read_stream& item) { properties[name] = item.read().as_string(); });
-                                                 block_data->current_properties = std::move(properties);
-                                             }},
-                                            {"collision_shapes", [](ARGS__d) {
-                                                 item.iterate(
-                                                     [&](auto size) { collision_shapes.reserve(size); },
-                                                     [&](enbt::io_helper::value_read_stream& item) { collision_shapes.emplace_back(item.read()); }
-                                                 );
-                                             }},
-                                            {"block_entity_type", [](ARGS__d) {
-                                                 block_data->is_block_entity = true;
-                                                 block_data->block_entity_id = item.read();
-                                             }},
-                                            {"outline_shapes", [](ARGS__d) {
-                                                 item.iterate(
-                                                     [&](auto size) { outline_shapes.reserve(size); },
-                                                     [&](enbt::io_helper::value_read_stream& item) { outline_shapes.emplace_back(item.read()); }
-                                                 );
-                                             }},
-                                        };
-
-                                        list_array<size_t> collision_shapes;
-                                        list_array<size_t> outline_shapes;
-                                        decl.iterate([&](const std::string& name, enbt::io_helper::value_read_stream& item) {
-                                            map.at(name)(ARGS__pass);
-                                        });
-                                        init_states.push_back(block_data_id);
-                                        if (collision_shapes.size())
-                                            assign_collision_boxes[block_data_id] = std::move(collision_shapes);
-                                        if (outline_shapes.size())
-                                            assign_outline_boxes[block_data_id] = std::move(outline_shapes);
-#undef ARGS__d
-#undef ARGS__pass
-                                    }
-                                );
+                            else if (name == "properties") {
+                                data.read(); //skip would not work for compressed streams
                             } else
                                 throw std::runtime_error("Skipped value definitions");
                         });
+                    } else if (name == "properties") {
+                        std::vector<int32_t> properties;
+                        item.iterate(
+                            [&properties](auto size) { properties.reserve(size); },
+                            [&properties](enbt::io_helper::value_read_stream& item) { properties.emplace_back(item.read()); }
+                        );
+                        default_state_data->allowed_properties = std::move(properties);
+                    } else if (name == "flammable") {
+                        enbt::compound comp;
+                        comp = item.read();
+                        default_state_data->flammable = base_objects::static_block_data::flammable_t{
+                            .spread_chance = comp.at("spread_chance"),
+                            .burn_chance = comp.at("burn_chance"),
+                        };
+                    } else if (name == "experience") {
+                        enbt::compound comp;
+                        comp = item.read();
+                        default_state_data->ore_data = base_objects::static_block_data::ore_data_t{
+                            .experience = base_objects::number_provider::parse_provider(comp.at("experience"))
+                        };
+                    } else if (name == "states") {
+                        item.iterate(
+                            [&](auto size) { init_states.reserve(size); },
+                            [&](enbt::io_helper::value_read_stream& decl) {
+                                std::shared_ptr<base_objects::static_block_data> block_data = std::make_shared<base_objects::static_block_data>();
+                                base_objects::block_id_t block_data_id = 0;
+                                block_data->opacity = 255;
+#define ARGS__d [[maybe_unused]] base_objects::block_id_t &default_state, [[maybe_unused]] bool &has_default_state, [[maybe_unused]] list_array<std::shared_ptr<base_objects::static_block_data>>&full_block_data_, [[maybe_unused]] std::shared_ptr<base_objects::static_block_data>&block_data, [[maybe_unused]] base_objects::block_id_t &block_data_id, [[maybe_unused]] enbt::io_helper::value_read_stream &item
+#define ARGS__pass default_state, has_default_state, full_block_data_, block_data, block_data_id, item
+
+                                static std::unordered_map<std::string, void (*)(ARGS__d)> map{
+                                    {"id", [](ARGS__d) {
+                                         base_objects::block_id_t id = block_data_id = item.read();
+                                         block_data->current_state = id;
+                                         if (id >= full_block_data_.size()) {
+                                             if (full_block_data_.reserved() == 0)
+                                                 full_block_data_.reserve(id);
+                                             full_block_data_.resize(id + 1);
+                                         }
+                                         auto& ref = full_block_data_.at(id);
+                                         if (ref)
+                                             throw std::runtime_error("Duplicate block id: " + std::to_string(id));
+                                         ref = block_data;
+                                         if (!has_default_state) {
+                                             default_state = id;
+                                             has_default_state = true;
+                                         }
+                                     }},
+                                    {"state_flags", [](ARGS__d) {
+                                         // AIR = 0b0000000001
+                                         // BURNABLE = 0b0000000010
+                                         // TOOL_REQUIRED = 0b0000000100
+                                         // SIDED_TRANSPARENCY = 0b0000001000
+                                         // REPLACEABLE = 0b0000010000
+                                         // IS_LIQUID = 0b0000100000
+                                         // IS_SOLID = 0b0001000000
+                                         // IS_FULL_CUBE = 0b0010000000
+                                         // HAS_RANDOM_TICKS = 0b0100000000
+                                         // HAS_COMPARATOR_OUTPUT = 0b1000000000
+                                         int32_t states = item.read();
+                                         block_data->is_air = states & 0b0000000001;
+                                         block_data->is_burnable = states & 0b0000000010;
+                                         block_data->is_tool_required = states & 0b0000000100;
+                                         block_data->is_replaceable = states & 0b0000010000;
+                                         block_data->is_liquid = states & 0b0000100000;
+                                         block_data->is_solid = states & 0b0001000000;
+                                         block_data->is_full_cube = states & 0b0010000000;
+                                         block_data->tickable = states & 0b0100000000 ? block_data->tickable : base_objects::static_block_data::tick_opt::no_tick;
+                                         block_data->has_comparator_output = states & 0b1000000000;
+                                     }},
+                                    {"side_flags", [](ARGS__d) {
+                                         //DOWN_SIDE_SOLID = 0b00000001;
+                                         //UP_SIDE_SOLID = 0b00000010;
+                                         //NORTH_SIDE_SOLID = 0b00000100;
+                                         //SOUTH_SIDE_SOLID = 0b00001000;
+                                         //WEST_SIDE_SOLID = 0b00010000;
+                                         //EAST_SIDE_SOLID = 0b00100000;
+                                         //DOWN_CENTER_SOLID = 0b01000000;
+                                         //UP_CENTER_SOLID = 0b10000000;
+                                         int32_t states = item.read();
+                                         auto& sides = block_data->transparent_sides;
+                                         sides.down_side_solid = states & 0b00000001;
+                                         sides.up_side_solid = states & 0b00000010;
+                                         sides.north_side_solid = states & 0b00000100;
+                                         sides.south_side_solid = states & 0b00001000;
+                                         sides.west_side_solid = states & 0b00010000;
+                                         sides.east_side_solid = states & 0b00100000;
+                                         sides.down_center_solid = states & 0b01000000;
+                                         sides.up_center_solid = states & 0b10000000;
+                                     }},
+                                    {"opacity", [](ARGS__d) { block_data->opacity = item.read(); }},
+                                    {"instrument", [](ARGS__d) { block_data->instrument = item.read().as_string(); }},
+                                    {"luminance", [](ARGS__d) { block_data->luminance = item.read(); }},
+                                    {"emits_redstone", [](ARGS__d) { block_data->is_emits_redstone = item.read(); }},
+                                    {"piston_behavior", [](ARGS__d) { block_data->piston_behavior = item.read().as_string(); }},
+                                    {"hardness", [](ARGS__d) { block_data->hardness = item.read(); }},
+                                    {"has_random_ticks", [](ARGS__d) { block_data->has_random_ticks = item.read(); }},
+                                    {"default_state_id", [](ARGS__d) {
+                                         default_state = item.read();
+                                         block_data->is_default_state = true;
+                                         has_default_state = true;
+                                     }},
+                                    {"properties", [](ARGS__d) {
+                                         std::unordered_map<std::string, std::string> properties;
+                                         item.iterate([&](auto size) { properties.reserve(size); }, [&](const std::string& name, enbt::io_helper::value_read_stream& item) { properties[name] = item.read().as_string(); });
+                                         block_data->current_properties = std::move(properties);
+                                     }},
+                                    {"collision_shapes", [](ARGS__d) {
+                                         item.iterate(
+                                             [&](auto size) { block_data->collision_shapes.reserve(size); },
+                                             [&](enbt::io_helper::value_read_stream& item) { block_data->collision_shapes.push_back(&base_objects::static_block_data::all_shapes.at(item.read())); }
+                                         );
+                                     }},
+                                    {"block_entity_type", [](ARGS__d) {
+                                         block_data->is_block_entity = true;
+                                         block_data->block_entity_id = item.read();
+                                     }},
+                                    {"outline_shapes", [](ARGS__d) {
+                                         item.iterate(
+                                             [&](auto size) { block_data->outline_shapes.reserve(size); },
+                                             [&](enbt::io_helper::value_read_stream& item) { block_data->outline_shapes.push_back(&base_objects::static_block_data::all_shapes.at(item.read())); }
+                                         );
+                                     }},
+                                };
+
+                                decl.iterate([&](const std::string& name, enbt::io_helper::value_read_stream& item) {
+                                    map.at(name)(ARGS__pass);
+                                });
+                                init_states.push_back(block_data_id);
+#undef ARGS__d
+#undef ARGS__pass
+                            }
+                        );
+                    } else
+                        throw std::runtime_error("Skipped value definitions");
+                });
 
 
-                        for (auto& state : init_states) {
-                            auto& block_data = full_block_data_.at(state);
-                            block_data->assigned_states_to_properties = associated_states;
-                            block_data->default_state = default_state;
+                for (auto& state : init_states) {
+                    auto& block_data = full_block_data_.at(state);
+                    block_data->assigned_states_to_properties = associated_states;
+                    block_data->default_state = default_state;
 
-                            block_data->name = default_state_data->name;
-                            block_data->general_block_id = default_state_data->general_block_id;
-                            block_data->translation_key = default_state_data->translation_key;
-                            block_data->slipperiness = default_state_data->slipperiness;
-                            block_data->velocity_multiplier = default_state_data->velocity_multiplier;
-                            block_data->jump_velocity_multiplier = default_state_data->jump_velocity_multiplier;
-                            block_data->hardness = default_state_data->hardness;
-                            block_data->blast_resistance = default_state_data->blast_resistance;
-                            block_data->default_drop_item_id = default_state_data->default_drop_item_id;
-                            block_data->map_color_rgb = default_state_data->map_color_rgb;
-                            block_data->loot_table = default_state_data->loot_table;
-                            block_data->allowed_properties = default_state_data->allowed_properties;
-                            block_data->flammable = default_state_data->flammable;
-                            block_data->ore_data = default_state_data->ore_data;
-                        }
-                        named_full_block_data[(std::string)default_state_data->name] = full_block_data_.at(default_state);
-                    });
+                    block_data->name = default_state_data->name;
+                    block_data->general_block_id = default_state_data->general_block_id;
+                    block_data->translation_key = default_state_data->translation_key;
+                    block_data->slipperiness = default_state_data->slipperiness;
+                    block_data->velocity_multiplier = default_state_data->velocity_multiplier;
+                    block_data->jump_velocity_multiplier = default_state_data->jump_velocity_multiplier;
+                    block_data->hardness = default_state_data->hardness;
+                    block_data->blast_resistance = default_state_data->blast_resistance;
+                    block_data->default_drop_item_id = default_state_data->default_drop_item_id;
+                    block_data->map_color_rgb = default_state_data->map_color_rgb;
+                    block_data->loot_table = default_state_data->loot_table;
+                    block_data->allowed_properties = default_state_data->allowed_properties;
+                    block_data->flammable = default_state_data->flammable;
+                    block_data->ore_data = default_state_data->ore_data;
+                }
+                named_full_block_data[(std::string)default_state_data->name] = full_block_data_.at(default_state);
+            });
 
-                    for (auto it = full_block_data_.begin(); it != full_block_data_.end(); ++it) {
-                        if (*it == nullptr)
-                            throw std::runtime_error("Gap between block definitions");
-                    }
-                    full_block_data_.commit();
-                }));
+            for (auto it = full_block_data_.begin(); it != full_block_data_.end(); ++it) {
+                if (*it == nullptr)
+                    throw std::runtime_error("Gap between block definitions");
             }
-        });
-        for (auto& [state, bb] : assign_collision_boxes) {
-            base_objects::block::get_block(state).collision_shapes
-                = bb.convert_fn([](size_t indx) {
-                        return &base_objects::static_block_data::all_shapes.at(indx);
-                    }).to_container<std::vector>();
-        }
-        for (auto& [state, bb] : assign_outline_boxes) {
-            base_objects::block::get_block(state).outline_shapes
-                = bb.convert_fn([](size_t indx) {
-                        return &base_objects::static_block_data::all_shapes.at(indx);
-                    }).to_container<std::vector>();
-        }
+            full_block_data_.commit();
+        }));
     }
 
     void load_items() {
@@ -1848,8 +1827,8 @@ namespace copper_server::resources {
 
             it.second["proto_invert"] = std::move(invert);
         }
-        registers::current_protocol_id = 772;
-        registers::current_protocol_registers = std::move(res);
+        api::registers::current_protocol_id = 772;
+        api::registers::current_protocol_registers = std::move(res);
     }
 
     void __prepare_tags(boost::json::object& parsed, const std::string& type, const std::string& namespace_, const std::string& tag) {
@@ -1992,7 +1971,7 @@ namespace copper_server::resources {
                                 if (pack.contains("pack_format")) {
                                     auto pack_format = (int64_t)pack["pack_format"];
                                     if (pack_format != 61) {
-                                        log::error("resource_load", "Unsupported pack format: " + std::to_string(pack_format) + " for child datapack: " + namespace_ + "->" + pack_id);
+                                        api::log::error("resource_load", "Unsupported pack format: " + std::to_string(pack_format) + " for child datapack: " + namespace_ + "->" + pack_id);
                                         continue;
                                     }
                                 }
@@ -2080,7 +2059,7 @@ namespace copper_server::resources {
                     if (pack.contains("pack_format")) {
                         auto pack_format = (int64_t)pack["pack_format"];
                         if (pack_format != 61) {
-                            log::error("resource_load", "Unsupported pack format: " + std::to_string(pack_format) + " for datapack: " + path.string());
+                            api::log::error("resource_load", "Unsupported pack format: " + std::to_string(pack_format) + " for datapack: " + path.string());
                             continue;
                         }
                     }
@@ -2108,15 +2087,83 @@ namespace copper_server::resources {
 
     void __initialization__versions_inital() { //skips items assignation
         {
-            auto current_effect = registers::current_protocol_registers.at("minecraft:mob_effect").at("entries").as_compound();
-            for (auto& [name, decl] : current_effect)
-                registers::effects[name] = effect{name, (uint32_t)decl.at("protocol_id")};
+            auto reg_attributes = boost::json::parse(resources::registry::entity_pose);
+            for (auto& [name, id] : reg_attributes.as_object())
+                api::registers::entity_pose[name] = id.to_number<int32_t>();
             {
-                registers::effects_cache.resize(registers::effects.size());
-                auto it = registers::effects.begin();
-                auto end = registers::effects.end();
+                api::registers::entity_pose_cache.resize(api::registers::entity_pose.size());
+                auto it = api::registers::entity_pose.begin();
+                auto end = api::registers::entity_pose.end();
                 while (it != end) {
-                    registers::effects_cache.at(it->second.id) = it;
+                    api::registers::entity_pose_cache.at(it->second) = it;
+                    ++it;
+                }
+            }
+        }
+
+        {
+            auto reg_attributes = boost::json::parse(resources::registry::entity_attributes);
+            auto current_attribute = api::registers::current_protocol_registers.at("minecraft:attribute").at("entries").as_compound();
+            for (auto& [name, decl] : current_attribute)
+                api::registers::attributes[name] = attribute{name, (uint32_t)decl.at("protocol_id"), reg_attributes.at(name).to_number<double>()};
+            {
+                api::registers::attributes_cache.resize(api::registers::attributes.size());
+                auto it = api::registers::attributes.begin();
+                auto end = api::registers::attributes.end();
+                while (it != end) {
+                    api::registers::attributes_cache.at(it->second.id) = it;
+                    ++it;
+                }
+            }
+        }
+
+        {
+            auto parsed = boost::json::parse(resources::registry::status_effects);
+            for (auto& [named_id, decl] : parsed.as_object()) {
+                std::unordered_set<std::string> required_features;
+                list_array<effect::attribute_modifier> attribute_modifiers;
+                std::string name = (std::string)decl.at("name").as_string();
+                std::string translation_key = (std::string)decl.at("translation_key").as_string();
+                std::string category = (std::string)decl.at("category").as_string();
+                for (auto& nam : decl.at("required_features").as_array())
+                    required_features.insert((std::string)nam.as_string());
+                for (auto& mod : decl.at("attribute_modifiers").as_array()) {
+                    auto& mod_obj = mod.as_object();
+                    effect::attribute_modifier add{
+                        .attribute = mod_obj.at("id").to_number<int32_t>(),
+                        .value = mod_obj.at("id").to_number<double>()
+                    };
+                    auto& op = mod_obj.at("operation").as_string();
+                    if (op == "ADD_VALUE")
+                        add.operation = effect::attribute_modifier::operation_e::add;
+                    else if (op == "ADD_MULTIPLIED_BASE")
+                        add.operation = effect::attribute_modifier::operation_e::add_multiplied_base;
+                    else
+                        add.operation = effect::attribute_modifier::operation_e::add_multiplied_total;
+                    attribute_modifiers.emplace_back(std::move(add));
+                }
+
+                api::registers::effects[named_id] = effect{
+                    .required_features = std::move(required_features),
+                    .attribute_modifiers = std::move(attribute_modifiers),
+                    .name = (std::string)decl.at("name").as_string(),
+                    .translation_key = (std::string)decl.at("translation_key").as_string(),
+                    .category = (std::string)decl.at("category").as_string(),
+                    .id = decl.at("id").to_number<uint32_t>(),
+                    .fade_in_ticks = decl.at("fade_in_ticks").to_number<uint32_t>(),
+                    .fade_out_ticks = decl.at("fade_out_ticks").to_number<uint32_t>(),
+                    .fade_out_threshold_ticks = decl.at("fade_out_threshold_ticks").to_number<uint32_t>(),
+                    .rgb = decl.at("rgb").to_number<uint32_t>(),
+                    .is_instant = decl.at("is_instant").as_bool(),
+                    .is_beneficial = decl.at("is_beneficial").as_bool()
+                };
+            }
+            {
+                api::registers::effects_cache.resize(api::registers::effects.size());
+                auto it = api::registers::effects.begin();
+                auto end = api::registers::effects.end();
+                while (it != end) {
+                    api::registers::effects_cache.at(it->second.id) = it;
                     ++it;
                 }
             }
@@ -2127,13 +2174,19 @@ namespace copper_server::resources {
                 auto parsed = boost::json::parse(resources::registry::potion);
                 for (auto&& [name, decl] : parsed.as_object()) {
                     auto checked_decl = decl.as_object();
-                    auto full_name = "minecraft:" + (std::string)name;
-                    std::vector<base_objects::id_mob_effect> potion_effects;
-                    for (auto&& item : checked_decl.at("effects").as_array())
-                        potion_effects.push_back(item.to_number<uint32_t>());
+                    std::vector<potion::effect_data> potion_effects;
+                    for (auto&& item : checked_decl.at("effects").as_array()) {
+                        potion_effects.push_back(
+                            potion::effect_data{
+                                .id = item.at("id").to_number<int32_t>(),
+                                .duration = item.at("duration").to_number<int32_t>(),
+                                .amplifier = item.at("amplifier").to_number<int32_t>()
+                            }
+                        );
+                    }
 
-                    registers::potions[full_name] = potion{
-                        .name = full_name,
+                    api::registers::potions[name] = potion{
+                        .name = name,
                         .id = checked_decl.at("id").to_number<uint32_t>(),
                         .effects = std::move(potion_effects),
                         .recipe = {}
@@ -2141,11 +2194,11 @@ namespace copper_server::resources {
                 }
             }
             {
-                registers::potions_cache.resize(registers::potions.size());
-                auto it = registers::potions.begin();
-                auto end = registers::potions.end();
+                api::registers::potions_cache.resize(api::registers::potions.size());
+                auto it = api::registers::potions.begin();
+                auto end = api::registers::potions.end();
                 while (it != end) {
-                    registers::potions_cache.at(it->second.id) = it;
+                    api::registers::potions_cache.at(it->second.id) = it;
                     ++it;
                 }
             }
@@ -2156,22 +2209,7 @@ namespace copper_server::resources {
                     uint32_t input = obj_decl.at("input").to_number<uint32_t>();
                     uint32_t item = obj_decl.at("item").to_number<uint32_t>();
                     uint32_t output = obj_decl.at("output").to_number<uint32_t>();
-                    registers::potions_cache.at(input)->second.recipe[item] = output;
-                }
-            }
-        }
-        {
-            auto reg_attributes = boost::json::parse(resources::registry::attributes);
-            auto current_attribute = registers::current_protocol_registers.at("minecraft:attribute").at("entries").as_compound();
-            for (auto& [name, decl] : current_attribute)
-                registers::attributes[name] = attribute{name, (uint32_t)decl.at("protocol_id"), reg_attributes.at(name).to_number<double>()};
-            {
-                registers::attributes_cache.resize(registers::attributes.size());
-                auto it = registers::attributes.begin();
-                auto end = registers::attributes.end();
-                while (it != end) {
-                    registers::attributes_cache.at(it->second.id) = it;
-                    ++it;
+                    api::registers::potions_cache.at(input)->second.recipe[item] = output;
                 }
             }
         }
@@ -2186,7 +2224,7 @@ namespace copper_server::resources {
         {
             for (auto&& [name, decl] : parsed_items.as_object()) {
                 base_objects::static_slot_data slot;
-                slot.id = "minecraft:" + std::string(name);
+                slot.id = std::string(name);
                 base_objects::slot_data::add_slot_data(std::move(slot));
             }
         }
@@ -2197,16 +2235,29 @@ namespace copper_server::resources {
         base_objects::entity_data::initialize_entities();
         {
             //complete initialization
-
             for (auto&& [name, decl] : parsed_items.as_object()) {
-
                 std::unordered_map<int32_t, base_objects::component> components;
                 for (auto& [component_name, value] : decl.as_object().at("components").as_object()) {
                     auto component = base_objects::component::parse_component(component_name, conversions::json::from_json(value));
                     auto id = component.get_id();
                     components[id] = std::move(component);
                 }
-                base_objects::slot_data::get_slot_data("minecraft:" + std::string(name)).default_components = std::move(components);
+                base_objects::slot_data::get_slot_data(std::string(name)).default_components = std::move(components);
+            }
+            {
+                auto parsed_spawn_egg = boost::json::parse(resources::registry::spawn_egg);
+                for (auto&& [item, entity] : parsed_spawn_egg.as_object())
+                    base_objects::slot_data::get_slot_data(std::stoi(item)).spawn_entity = entity.to_number<int32_t>();
+            }
+            {
+                auto parsed_fuels = boost::json::parse(resources::registry::fuels);
+                for (auto&& [item, dur] : parsed_fuels.as_object())
+                    base_objects::slot_data::get_slot_data(std::stoi(item)).fuel_time = dur.to_number<uint32_t>();
+            }
+            {
+                auto parsed_composter_increase_chance = boost::json::parse(resources::registry::composter_increase_chance);
+                for (auto&& [item, chance] : parsed_composter_increase_chance.as_object())
+                    base_objects::slot_data::get_slot_data(std::stoi(item)).composter_increase_chance = chance.to_number<float>();
             }
         }
         __initialization__versions_post();

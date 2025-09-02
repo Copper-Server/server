@@ -6,6 +6,8 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <openssl/aes.h>
+#include <openssl/evp.h>
 #include <src/base_objects/encryption/aes.hpp>
 
 namespace copper_server::encryption {

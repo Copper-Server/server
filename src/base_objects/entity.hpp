@@ -261,6 +261,7 @@ namespace copper_server {
             //multi threaded
             static const entity_data& get_entity(uint16_t id);
             static const entity_data& get_entity(const std::string& id);
+            static list_array<int32_t> get_entity_ids();
             static uint16_t register_entity(entity_data);
             static const entity_data& view(const entity& entity);
             static void register_entity_world_processor(std::shared_ptr<world_processor> processor, const std::string& id);

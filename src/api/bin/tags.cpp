@@ -7,11 +7,11 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <library/fast_task.hpp>
+#include <src/api/registers.hpp>
 #include <src/api/tags.hpp>
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/base_objects/slot.hpp>
-#include <src/registers.hpp>
 
 namespace copper_server::api::tags {
     fast_task::task_mutex mut;
@@ -41,27 +41,27 @@ namespace copper_server::api::tags {
 
         switch (entry) {
         case builtin_entry::banner_pattern:
-            safety(return (int32_t)registers::bannerPatterns.at(value).id;);
+            safety(return (int32_t)api::registers::bannerPatterns.at(value).id;);
         case builtin_entry::block:
             safety(return base_objects::block::get_block(value).general_block_id;);
         case builtin_entry::damage_type:
-            safety(return (int32_t)registers::damageTypes.at(value).id;);
+            safety(return (int32_t)api::registers::damageTypes.at(value).id;);
         case builtin_entry::enchantment:
-            safety(return (int32_t)registers::enchantments.at(value).id;);
+            safety(return (int32_t)api::registers::enchantments.at(value).id;);
         case builtin_entry::entity_type:
             safety(return base_objects::entity_data::get_entity(value).entity_id;);
         case builtin_entry::fluid:;
-            safety(return registers::view_reg_pro_id("minecraft:fluid", value););
+            safety(return api::registers::view_reg_pro_id("minecraft:fluid", value););
         case builtin_entry::game_event:
-            safety(return registers::view_reg_pro_id("minecraft:game_event", value););
+            safety(return api::registers::view_reg_pro_id("minecraft:game_event", value););
         case builtin_entry::instrument:
-            safety(return (int32_t)registers::instruments.at(value).id;);
+            safety(return (int32_t)api::registers::instruments.at(value).id;);
         case builtin_entry::item:
             safety(return base_objects::slot_data::get_slot_data(value).internal_id;);
         case builtin_entry::painting_variant:
-            safety(return (int32_t)registers::paintingVariants.at(value).id;);
+            safety(return (int32_t)api::registers::paintingVariants.at(value).id;);
         //case builtin_entry::point_of_interest:
-        //  safety(return registers::.at(value).poi;);
+        //  safety(return api::registers::.at(value).poi;);
         default:
             throw std::runtime_error("Invalid entry");
         }
@@ -86,38 +86,38 @@ namespace copper_server::api::tags {
                 std::lock_guard lock(mut);
                 switch (entry) {
                 case builtin_entry::banner_pattern:
-                    ids_cache = items.convert_fn([entry](auto& it) { safety(return registers::bannerPatterns.at(it).id;) });
+                    ids_cache = items.convert_fn([entry](auto& it) { safety(return api::registers::bannerPatterns.at(it).id;) });
                     break;
                 case builtin_entry::block:
                     ids_cache = items.convert_fn([entry](auto& it) { safety(return base_objects::block::get_block(it).general_block_id;) });
                     break;
                 case builtin_entry::damage_type:
-                    ids_cache = items.convert_fn([entry](auto& it) { safety(return registers::damageTypes.at(it).id;) });
+                    ids_cache = items.convert_fn([entry](auto& it) { safety(return api::registers::damageTypes.at(it).id;) });
                     break;
                 case builtin_entry::enchantment:
-                    ids_cache = items.convert_fn([entry](auto& it) { safety(return registers::enchantments.at(it).id;) });
+                    ids_cache = items.convert_fn([entry](auto& it) { safety(return api::registers::enchantments.at(it).id;) });
                     break;
                 case builtin_entry::entity_type:
                     ids_cache = items.convert_fn([entry](auto& it) { safety(return base_objects::entity_data::get_entity(it).entity_id;) });
                     break;
                 case builtin_entry::fluid:
-                    ids_cache = items.convert_fn([entry](auto& it) { safety(return registers::view_reg_pro_id("minecraft:fluid", it);) });
+                    ids_cache = items.convert_fn([entry](auto& it) { safety(return api::registers::view_reg_pro_id("minecraft:fluid", it);) });
                     break;
                 case builtin_entry::game_event: {
-                    ids_cache = items.convert_fn([entry](auto& it) { safety(return registers::view_reg_pro_id("minecraft:game_event", it);) });
+                    ids_cache = items.convert_fn([entry](auto& it) { safety(return api::registers::view_reg_pro_id("minecraft:game_event", it);) });
                     break;
                 }
                 case builtin_entry::instrument:
-                    ids_cache = items.convert_fn([entry](auto& it) { safety(return registers::instruments.at(it).id;) });
+                    ids_cache = items.convert_fn([entry](auto& it) { safety(return api::registers::instruments.at(it).id;) });
                     break;
                 case builtin_entry::item:
                     ids_cache = items.convert_fn([entry](auto& it) { safety(return base_objects::slot_data::get_slot_data(it).internal_id;) });
                     break;
                 case builtin_entry::painting_variant:
-                    ids_cache = items.convert_fn([entry](auto& it) { safety(return registers::paintingVariants.at(it).id;) });
+                    ids_cache = items.convert_fn([entry](auto& it) { safety(return api::registers::paintingVariants.at(it).id;) });
                     break;
                 //case builtin_entry::point_of_interest:
-                //    ids_cache = items.convert_fn([entry](auto& it) { safety(return registers::.at(it).poi;) });
+                //    ids_cache = items.convert_fn([entry](auto& it) { safety(return api::registers::.at(it).poi;) });
                 //    break;
                 default:
                     throw std::runtime_error("Invalid entry");

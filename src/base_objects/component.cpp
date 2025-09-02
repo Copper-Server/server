@@ -199,7 +199,7 @@ namespace copper_server::base_objects {
 
     list_array<size_t> component::container::contains(const std::string& id, size_t count) const {
         list_array<size_t> res;
-        id_item real_id(id);
+        api::id::item real_id(id);
         size_t index = 0;
         for (auto& check : items) {
             if (check) {

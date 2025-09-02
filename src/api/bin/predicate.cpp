@@ -6,52 +6,34 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/base_objects/predicate_processor.hpp>
+#include <src/api/predicate.hpp>
+#include <src/api/registers.hpp>
+
 
 namespace copper_server::api::predicate {
-    base_objects::predicate_processor* processor = nullptr;
+    std::unordered_map<std::string, handler> handlers;
 
-    void register_processor(base_objects::predicate_processor& to_register_processor) {
-        if (processor)
-            throw std::runtime_error("predicate_processor already registered");
-        processor = &to_register_processor;
+    bool process_predicate(const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
+        return handlers.at(api::registers::normalize_entry((std::string)predicate["condition"]))(predicate, context);
     }
 
-    void unregister_processor() {
-        if (!processor)
-            throw std::runtime_error("predicate_processor already unregistered");
-        processor = nullptr;
-    }
-
-    bool process_predicate(const enbt::compound_ref& predicate, const base_objects::command_context& context) {
-        if (processor)
-            return processor->process_predicate(predicate, context);
-        else
-            return false;
-    }
-
-    void register_handler(const std::string& name, base_objects::predicate_processor::handler handler) {
-        if (processor)
-            processor->register_handler(name, handler);
+    void register_handler(const std::string& name, handler handler) {
+        handlers[api::registers::normalize_entry(name)] = std::move(handler);
     }
 
     void unregister_handler(const std::string& name) {
-        if (processor)
-            processor->unregister_handler(name);
+        handlers.erase(api::registers::normalize_entry(name));
     }
 
-    const base_objects::predicate_processor::handler& get_handler(const std::string& name) {
-        if (processor)
-            return processor->get_handler(name);
-        else
-            throw std::runtime_error("predicate_processor not registered");
+    const handler& get_handler(const std::string& name) {
+        return handlers.at(api::registers::normalize_entry(name));
+    }
+
+    void reset_handlers() {
+        handlers.clear();
     }
 
     bool has_handler(const std::string& name) {
-        return processor ? processor->has_handler(name) : false;
-    }
-
-    bool registered() {
-        return processor;
+        return handlers.find(api::registers::normalize_entry(name)) != handlers.end();
     }
 }

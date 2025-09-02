@@ -7,9 +7,9 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <random>
+#include <src/api/selector.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/entity.hpp>
-#include <src/base_objects/selector.hpp>
 #include <src/storage/memory/entity_ids_map.hpp>
 
 namespace copper_server::storage::memory {
@@ -190,8 +190,29 @@ namespace copper_server::storage::memory {
         return ids_r.contains(uuid);
     }
 
+    [[nodiscard]] list_array<int32_t> entity_ids_map_storage::query_ids() {
+        list_array<int32_t> res;
+        std::unique_lock lock(mutex);
+        res.reserve(ids_l.size());
+        for (auto& [id, data] : ids_l)
+            res.push_back(id);
+        return res;
+    }
+
+    [[nodiscard]] uint8_t entity_ids_map_storage::id_index(int32_t id) {
+        std::unique_lock lock(mutex);
+        auto& id_range = ids_l.at(id)->id;
+        uint8_t i = 0;
+        while (i != UINT8_MAX)
+            if (id_range[i] == id)
+                return i;
+            else
+                ++i;
+        throw std::runtime_error("Id not found");
+    }
+
     void entity_ids_map_storage::apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(base_objects::entity&)>&& callback) {
-        base_objects::selector sel;
+        api::selector sel;
         sel.build_selector(selector);
         base_objects::command_context context(caller, true);
         sel.flags.only_players = true;

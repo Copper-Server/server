@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <library/list_array.hpp>
-#include <src/base_objects/id_registry.hpp>
+#include <src/api/id.hpp>
 #include <src/util/cts.hpp>
 #include <string>
 #include <unordered_map>
@@ -259,74 +259,76 @@ namespace copper_server::base_objects {
 
     struct var_int32 {
         using underlying_type = int32_t;
-        using banner_pattern = id_source<var_int32, registry_source::banner_pattern>;
-        using cat_variant = id_source<var_int32, registry_source::cat_variant>;
-        using chat_type = id_source<var_int32, registry_source::chat_type>;
-        using chicken_variant = id_source<var_int32, registry_source::chicken_variant>;
-        using cow_variant = id_source<var_int32, registry_source::cow_variant>;
-        using damage_type = id_source<var_int32, registry_source::damage_type>;
-        using dialog = id_source<var_int32, registry_source::dialog>;
-        using dimension_type = id_source<var_int32, registry_source::dimension_type>;
-        using enchantment = id_source<var_int32, registry_source::enchantment>;
-        using enchantment_provider = id_source<var_int32, registry_source::enchantment_provider>;
-        using frog_variant = id_source<var_int32, registry_source::frog_variant>;
-        using instrument = id_source<var_int32, registry_source::instrument>;
-        using jukebox_song = id_source<var_int32, registry_source::jukebox_song>;
-        using loot_table = id_source<var_int32, registry_source::loot_table>;
-        using painting_variant = id_source<var_int32, registry_source::painting_variant>;
-        using pig_variant = id_source<var_int32, registry_source::pig_variant>;
-        using recipe = id_source<var_int32, registry_source::recipe>;
-        using test_environment = id_source<var_int32, registry_source::test_environment>;
-        using test_instance = id_source<var_int32, registry_source::test_instance>;
-        using trim_material = id_source<var_int32, registry_source::trim_material>;
-        using trim_pattern = id_source<var_int32, registry_source::trim_pattern>;
-        using wolf_sound_variant = id_source<var_int32, registry_source::wolf_sound_variant>;
-        using wolf_variant = id_source<var_int32, registry_source::wolf_variant>;
-        using worldgen__biome = id_source<var_int32, registry_source::worldgen__biome>;
-        using attribute = id_source<var_int32, registry_source::attribute>;
-        using block_state = id_source<var_int32, registry_source::block_state>;
-        using block_type = id_source<var_int32, registry_source::block_type>;
-        using block_entity_type = id_source<var_int32, registry_source::block_entity_type>;
-        using data_component_type = id_source<var_int32, registry_source::data_component_type>;
-        using dimension = id_source<var_int32, registry_source::dimension>;
-        using entity_type = id_source<var_int32, registry_source::entity_type>;
-        using fluid = id_source<var_int32, registry_source::fluid>;
-        using game_event = id_source<var_int32, registry_source::game_event>;
-        using position_source_type = id_source<var_int32, registry_source::position_source_type>;
-        using item = id_source<var_int32, registry_source::item>;
-        using menu = id_source<var_int32, registry_source::menu>;
-        using mob_effect = id_source<var_int32, registry_source::mob_effect>;
-        using particle_type = id_source<var_int32, registry_source::particle_type>;
-        using potion = id_source<var_int32, registry_source::potion>;
-        using recipe_serializer = id_source<var_int32, registry_source::recipe_serializer>;
-        using recipe_type = id_source<var_int32, registry_source::recipe_type>;
-        using sound_event = id_source<var_int32, registry_source::sound_event>;
-        using stat_type = id_source<var_int32, registry_source::stat_type>;
-        using custom_stat = id_source<var_int32, registry_source::custom_stat>;
-        using command_argument_type = id_source<var_int32, registry_source::command_argument_type>;
-        using entity__activity = id_source<var_int32, registry_source::entity__activity>;
-        using entity__memory_module_type = id_source<var_int32, registry_source::entity__memory_module_type>;
-        using entity__schedule = id_source<var_int32, registry_source::entity__schedule>;
-        using entity__sensor_type = id_source<var_int32, registry_source::entity__sensor_type>;
-        using entity__motive = id_source<var_int32, registry_source::entity__motive>;
-        using entity__villager_profession = id_source<var_int32, registry_source::entity__villager_profession>;
-        using entity__villager_type = id_source<var_int32, registry_source::entity__villager_type>;
-        using entity__poi_type = id_source<var_int32, registry_source::entity__poi_type>;
-        using loot_table__loot_condition_type = id_source<var_int32, registry_source::loot_table__loot_condition_type>;
-        using loot_table__loot_function_type = id_source<var_int32, registry_source::loot_table__loot_function_type>;
-        using loot_table__loot_nbt_provider_type = id_source<var_int32, registry_source::loot_table__loot_nbt_provider_type>;
-        using loot_table__loot_number_provider_type = id_source<var_int32, registry_source::loot_table__loot_number_provider_type>;
-        using loot_table__loot_pool_entry_type = id_source<var_int32, registry_source::loot_table__loot_pool_entry_type>;
-        using loot_table__loot_score_provider_type = id_source<var_int32, registry_source::loot_table__loot_score_provider_type>;
-        using villager_variant = id_source<var_int32, registry_source::villager_variant>;
-        using fox_variant = id_source<var_int32, registry_source::fox_variant>;
-        using parrot_variant = id_source<var_int32, registry_source::parrot_variant>;
-        using tropical_fish_pattern = id_source<var_int32, registry_source::tropical_fish_pattern>;
-        using mooshroom_variant = id_source<var_int32, registry_source::mooshroom_variant>;
-        using rabbit_variant = id_source<var_int32, registry_source::rabbit_variant>;
-        using horse_variant = id_source<var_int32, registry_source::horse_variant>;
-        using llama_variant = id_source<var_int32, registry_source::llama_variant>;
-        using axolotl_variant = id_source<var_int32, registry_source::axolotl_variant>;
+        using banner_pattern = api::id::source<var_int32, api::id::registry_source::banner_pattern>;
+        using cat_variant = api::id::source<var_int32, api::id::registry_source::cat_variant>;
+        using chat_type = api::id::source<var_int32, api::id::registry_source::chat_type>;
+        using chicken_variant = api::id::source<var_int32, api::id::registry_source::chicken_variant>;
+        using cow_variant = api::id::source<var_int32, api::id::registry_source::cow_variant>;
+        using damage_type = api::id::source<var_int32, api::id::registry_source::damage_type>;
+        using dialog = api::id::source<var_int32, api::id::registry_source::dialog>;
+        using dimension_type = api::id::source<var_int32, api::id::registry_source::dimension_type>;
+        using enchantment = api::id::source<var_int32, api::id::registry_source::enchantment>;
+        using enchantment_provider = api::id::source<var_int32, api::id::registry_source::enchantment_provider>;
+        using frog_variant = api::id::source<var_int32, api::id::registry_source::frog_variant>;
+        using instrument = api::id::source<var_int32, api::id::registry_source::instrument>;
+        using jukebox_song = api::id::source<var_int32, api::id::registry_source::jukebox_song>;
+        using loot_table = api::id::source<var_int32, api::id::registry_source::loot_table>;
+        using painting_variant = api::id::source<var_int32, api::id::registry_source::painting_variant>;
+        using pig_variant = api::id::source<var_int32, api::id::registry_source::pig_variant>;
+        using recipe = api::id::source<var_int32, api::id::registry_source::recipe>;
+        using test_environment = api::id::source<var_int32, api::id::registry_source::test_environment>;
+        using test_instance = api::id::source<var_int32, api::id::registry_source::test_instance>;
+        using trim_material = api::id::source<var_int32, api::id::registry_source::trim_material>;
+        using trim_pattern = api::id::source<var_int32, api::id::registry_source::trim_pattern>;
+        using wolf_sound_variant = api::id::source<var_int32, api::id::registry_source::wolf_sound_variant>;
+        using wolf_variant = api::id::source<var_int32, api::id::registry_source::wolf_variant>;
+        using worldgen__biome = api::id::source<var_int32, api::id::registry_source::worldgen__biome>;
+        using attribute = api::id::source<var_int32, api::id::registry_source::attribute>;
+        using block_state = api::id::source<var_int32, api::id::registry_source::block_state>;
+        using block_type = api::id::source<var_int32, api::id::registry_source::block_type>;
+        using block_entity_type = api::id::source<var_int32, api::id::registry_source::block_entity_type>;
+        using data_component_type = api::id::source<var_int32, api::id::registry_source::data_component_type>;
+        using dimension = api::id::source<var_int32, api::id::registry_source::dimension>;
+        using entity_type = api::id::source<var_int32, api::id::registry_source::entity_type>;
+        using fluid = api::id::source<var_int32, api::id::registry_source::fluid>;
+        using game_event = api::id::source<var_int32, api::id::registry_source::game_event>;
+        using position_source_type = api::id::source<var_int32, api::id::registry_source::position_source_type>;
+        using item = api::id::source<var_int32, api::id::registry_source::item>;
+        using menu = api::id::source<var_int32, api::id::registry_source::menu>;
+        using mob_effect = api::id::source<var_int32, api::id::registry_source::mob_effect>;
+        using particle_type = api::id::source<var_int32, api::id::registry_source::particle_type>;
+        using potion = api::id::source<var_int32, api::id::registry_source::potion>;
+        using recipe_serializer = api::id::source<var_int32, api::id::registry_source::recipe_serializer>;
+        using recipe_type = api::id::source<var_int32, api::id::registry_source::recipe_type>;
+        using sound_event = api::id::source<var_int32, api::id::registry_source::sound_event>;
+        using stat_type = api::id::source<var_int32, api::id::registry_source::stat_type>;
+        using custom_stat = api::id::source<var_int32, api::id::registry_source::custom_stat>;
+        using command_argument_type = api::id::source<var_int32, api::id::registry_source::command_argument_type>;
+        using activity = api::id::source<var_int32, api::id::registry_source::activity>;
+        using memory_module_type = api::id::source<var_int32, api::id::registry_source::memory_module_type>;
+        using schedule = api::id::source<var_int32, api::id::registry_source::schedule>;
+        using sensor_type = api::id::source<var_int32, api::id::registry_source::sensor_type>;
+        using motive = api::id::source<var_int32, api::id::registry_source::motive>;
+        using villager_profession = api::id::source<var_int32, api::id::registry_source::villager_profession>;
+        using villager_type = api::id::source<var_int32, api::id::registry_source::villager_type>;
+        using poi_type = api::id::source<var_int32, api::id::registry_source::poi_type>;
+        using loot_condition_type = api::id::source<var_int32, api::id::registry_source::loot_condition_type>;
+        using loot_function_type = api::id::source<var_int32, api::id::registry_source::loot_function_type>;
+        using loot_nbt_provider_type = api::id::source<var_int32, api::id::registry_source::loot_nbt_provider_type>;
+        using loot_number_provider_type = api::id::source<var_int32, api::id::registry_source::loot_number_provider_type>;
+        using loot_pool_entry_type = api::id::source<var_int32, api::id::registry_source::loot_pool_entry_type>;
+        using loot_score_provider_type = api::id::source<var_int32, api::id::registry_source::loot_score_provider_type>;
+        using villager_variant = api::id::source<var_int32, api::id::registry_source::villager_variant>;
+        using fox_variant = api::id::source<var_int32, api::id::registry_source::fox_variant>;
+        using parrot_variant = api::id::source<var_int32, api::id::registry_source::parrot_variant>;
+        using tropical_fish_pattern = api::id::source<var_int32, api::id::registry_source::tropical_fish_pattern>;
+        using mooshroom_variant = api::id::source<var_int32, api::id::registry_source::mooshroom_variant>;
+        using rabbit_variant = api::id::source<var_int32, api::id::registry_source::rabbit_variant>;
+        using horse_variant = api::id::source<var_int32, api::id::registry_source::horse_variant>;
+        using llama_variant = api::id::source<var_int32, api::id::registry_source::llama_variant>;
+        using axolotl_variant = api::id::source<var_int32, api::id::registry_source::axolotl_variant>;
+
+        using entity_id = api::id::source<var_int32, api::id::registry_source::entity_id>;
 
         int32_t value = 0;
 
@@ -383,7 +385,85 @@ namespace copper_server::base_objects {
     };
 
     struct optional_var_int32 : public std::optional<int32_t> { //encoded same as var_int32 but if set the value incremented and checked for overflow, if not set encoded as 0
+        using underlying_type = int32_t;
+        using banner_pattern = api::id::source<optional_var_int32, api::id::registry_source::banner_pattern>;
+        using cat_variant = api::id::source<optional_var_int32, api::id::registry_source::cat_variant>;
+        using chat_type = api::id::source<optional_var_int32, api::id::registry_source::chat_type>;
+        using chicken_variant = api::id::source<optional_var_int32, api::id::registry_source::chicken_variant>;
+        using cow_variant = api::id::source<optional_var_int32, api::id::registry_source::cow_variant>;
+        using damage_type = api::id::source<optional_var_int32, api::id::registry_source::damage_type>;
+        using dialog = api::id::source<optional_var_int32, api::id::registry_source::dialog>;
+        using dimension_type = api::id::source<optional_var_int32, api::id::registry_source::dimension_type>;
+        using enchantment = api::id::source<optional_var_int32, api::id::registry_source::enchantment>;
+        using enchantment_provider = api::id::source<optional_var_int32, api::id::registry_source::enchantment_provider>;
+        using frog_variant = api::id::source<optional_var_int32, api::id::registry_source::frog_variant>;
+        using instrument = api::id::source<optional_var_int32, api::id::registry_source::instrument>;
+        using jukebox_song = api::id::source<optional_var_int32, api::id::registry_source::jukebox_song>;
+        using loot_table = api::id::source<optional_var_int32, api::id::registry_source::loot_table>;
+        using painting_variant = api::id::source<optional_var_int32, api::id::registry_source::painting_variant>;
+        using pig_variant = api::id::source<optional_var_int32, api::id::registry_source::pig_variant>;
+        using recipe = api::id::source<optional_var_int32, api::id::registry_source::recipe>;
+        using test_environment = api::id::source<optional_var_int32, api::id::registry_source::test_environment>;
+        using test_instance = api::id::source<optional_var_int32, api::id::registry_source::test_instance>;
+        using trim_material = api::id::source<optional_var_int32, api::id::registry_source::trim_material>;
+        using trim_pattern = api::id::source<optional_var_int32, api::id::registry_source::trim_pattern>;
+        using wolf_sound_variant = api::id::source<optional_var_int32, api::id::registry_source::wolf_sound_variant>;
+        using wolf_variant = api::id::source<optional_var_int32, api::id::registry_source::wolf_variant>;
+        using worldgen__biome = api::id::source<optional_var_int32, api::id::registry_source::worldgen__biome>;
+        using attribute = api::id::source<optional_var_int32, api::id::registry_source::attribute>;
+        using block_state = api::id::source<optional_var_int32, api::id::registry_source::block_state>;
+        using block_type = api::id::source<optional_var_int32, api::id::registry_source::block_type>;
+        using block_entity_type = api::id::source<optional_var_int32, api::id::registry_source::block_entity_type>;
+        using data_component_type = api::id::source<optional_var_int32, api::id::registry_source::data_component_type>;
+        using dimension = api::id::source<optional_var_int32, api::id::registry_source::dimension>;
+        using entity_type = api::id::source<optional_var_int32, api::id::registry_source::entity_type>;
+        using fluid = api::id::source<optional_var_int32, api::id::registry_source::fluid>;
+        using game_event = api::id::source<optional_var_int32, api::id::registry_source::game_event>;
+        using position_source_type = api::id::source<optional_var_int32, api::id::registry_source::position_source_type>;
+        using item = api::id::source<optional_var_int32, api::id::registry_source::item>;
+        using menu = api::id::source<optional_var_int32, api::id::registry_source::menu>;
+        using mob_effect = api::id::source<optional_var_int32, api::id::registry_source::mob_effect>;
+        using particle_type = api::id::source<optional_var_int32, api::id::registry_source::particle_type>;
+        using potion = api::id::source<optional_var_int32, api::id::registry_source::potion>;
+        using recipe_serializer = api::id::source<optional_var_int32, api::id::registry_source::recipe_serializer>;
+        using recipe_type = api::id::source<optional_var_int32, api::id::registry_source::recipe_type>;
+        using sound_event = api::id::source<optional_var_int32, api::id::registry_source::sound_event>;
+        using stat_type = api::id::source<optional_var_int32, api::id::registry_source::stat_type>;
+        using custom_stat = api::id::source<optional_var_int32, api::id::registry_source::custom_stat>;
+        using command_argument_type = api::id::source<optional_var_int32, api::id::registry_source::command_argument_type>;
+        using activity = api::id::source<optional_var_int32, api::id::registry_source::activity>;
+        using memory_module_type = api::id::source<optional_var_int32, api::id::registry_source::memory_module_type>;
+        using schedule = api::id::source<optional_var_int32, api::id::registry_source::schedule>;
+        using sensor_type = api::id::source<optional_var_int32, api::id::registry_source::sensor_type>;
+        using motive = api::id::source<optional_var_int32, api::id::registry_source::motive>;
+        using villager_profession = api::id::source<optional_var_int32, api::id::registry_source::villager_profession>;
+        using villager_type = api::id::source<optional_var_int32, api::id::registry_source::villager_type>;
+        using poi_type = api::id::source<optional_var_int32, api::id::registry_source::poi_type>;
+        using loot_condition_type = api::id::source<optional_var_int32, api::id::registry_source::loot_condition_type>;
+        using loot_function_type = api::id::source<optional_var_int32, api::id::registry_source::loot_function_type>;
+        using loot_nbt_provider_type = api::id::source<optional_var_int32, api::id::registry_source::loot_nbt_provider_type>;
+        using loot_number_provider_type = api::id::source<optional_var_int32, api::id::registry_source::loot_number_provider_type>;
+        using loot_pool_entry_type = api::id::source<optional_var_int32, api::id::registry_source::loot_pool_entry_type>;
+        using loot_score_provider_type = api::id::source<optional_var_int32, api::id::registry_source::loot_score_provider_type>;
+        using villager_variant = api::id::source<optional_var_int32, api::id::registry_source::villager_variant>;
+        using fox_variant = api::id::source<optional_var_int32, api::id::registry_source::fox_variant>;
+        using parrot_variant = api::id::source<optional_var_int32, api::id::registry_source::parrot_variant>;
+        using tropical_fish_pattern = api::id::source<optional_var_int32, api::id::registry_source::tropical_fish_pattern>;
+        using mooshroom_variant = api::id::source<optional_var_int32, api::id::registry_source::mooshroom_variant>;
+        using rabbit_variant = api::id::source<optional_var_int32, api::id::registry_source::rabbit_variant>;
+        using horse_variant = api::id::source<optional_var_int32, api::id::registry_source::horse_variant>;
+        using llama_variant = api::id::source<optional_var_int32, api::id::registry_source::llama_variant>;
+        using axolotl_variant = api::id::source<optional_var_int32, api::id::registry_source::axolotl_variant>;
+        using entity_id = api::id::source<optional_var_int32, api::id::registry_source::entity_id>;
+
         using std::optional<int32_t>::optional;
+
+        operator int32_t() const {
+            if (has_value())
+                return value();
+            else
+                return 0;
+        }
     };
 
     struct optional_var_int64 : public std::optional<int64_t> { //encoded same as var_int64 but if set the value incremented and checked for overflow, if not set encoded as 0

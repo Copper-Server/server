@@ -6,8 +6,7 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/internal/recipe.hpp>
-#include <src/base_objects/recipe_processor.hpp>
+#include <src/api/recipe.hpp>
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins::processors_providers {
@@ -99,36 +98,30 @@ namespace copper_server::build_in_plugins::processors_providers {
     }
 
     //provides processor and registers default handles, custom handles can be added via api
-    class recipe : public PluginAutoRegister<"processors_provider/recipe", recipe> {
-        base_objects::recipe_processor processor;
-
-    public:
-        recipe() {}
-
+    struct recipe : public PluginAutoRegister<"processors_provider/recipe", recipe> {
         void OnInitialization(const PluginRegistrationPtr&) override {
-            processor.register_handler("minecraft:blasting", handle_furnace);
-            processor.register_handler("minecraft:smelting", handle_furnace);
-            processor.register_handler("minecraft:smoking", handle_furnace);
-            processor.register_handler("minecraft:campfire_cooking", handle_furnace);
-            processor.register_handler("minecraft:crafting_shaped", handle_crafting_shaped);
-            processor.register_handler("minecraft:crafting_transmute", handle_crafting_transmute);
-            processor.register_handler("minecraft:crafting_special_armordye", handle_crafting_special_armordye);
-            processor.register_handler("minecraft:crafting_special_bannerduplicate", handle_crafting_special_bannerduplicate);
-            processor.register_handler("minecraft:crafting_special_bookcloning", handle_crafting_special_bookcloning);
-            processor.register_handler("minecraft:crafting_special_firework_rocket", handle_crafting_special_firework_rocket);
-            processor.register_handler("minecraft:crafting_special_firework_star", handle_crafting_special_firework_star);
-            processor.register_handler("minecraft:crafting_special_firework_star_fade", handle_crafting_special_firework_star_fade);
-            processor.register_handler("minecraft:crafting_special_mapcloning", handle_crafting_special_mapcloning);
-            processor.register_handler("minecraft:crafting_special_mapextending", handle_crafting_special_mapextending);
-            processor.register_handler("minecraft:crafting_special_repairitem", handle_crafting_special_repairitem);
-            processor.register_handler("minecraft:crafting_special_shielddecoration", handle_crafting_special_shielddecoration);
-            processor.register_handler("minecraft:crafting_special_shulkerboxcoloring‌", handle_crafting_special_shulkerboxcoloring);
-            processor.register_handler("minecraft:crafting_special_tippedarrow", handle_crafting_special_tippedarrow);
-            processor.register_handler("minecraft:crafting_special_suspiciousstew", handle_crafting_special_suspiciousstew);
-            processor.register_handler("minecraft:smithing_transform", handle_smithing_transform);
-            processor.register_handler("minecraft:smithing_trim", handle_smithing_trim);
-            processor.register_handler("minecraft:stonecutting", handle_stonecutting);
-            api::recipe::register_processor(processor);
+            api::recipe::register_handler("minecraft:blasting", handle_furnace);
+            api::recipe::register_handler("minecraft:smelting", handle_furnace);
+            api::recipe::register_handler("minecraft:smoking", handle_furnace);
+            api::recipe::register_handler("minecraft:campfire_cooking", handle_furnace);
+            api::recipe::register_handler("minecraft:crafting_shaped", handle_crafting_shaped);
+            api::recipe::register_handler("minecraft:crafting_transmute", handle_crafting_transmute);
+            api::recipe::register_handler("minecraft:crafting_special_armordye", handle_crafting_special_armordye);
+            api::recipe::register_handler("minecraft:crafting_special_bannerduplicate", handle_crafting_special_bannerduplicate);
+            api::recipe::register_handler("minecraft:crafting_special_bookcloning", handle_crafting_special_bookcloning);
+            api::recipe::register_handler("minecraft:crafting_special_firework_rocket", handle_crafting_special_firework_rocket);
+            api::recipe::register_handler("minecraft:crafting_special_firework_star", handle_crafting_special_firework_star);
+            api::recipe::register_handler("minecraft:crafting_special_firework_star_fade", handle_crafting_special_firework_star_fade);
+            api::recipe::register_handler("minecraft:crafting_special_mapcloning", handle_crafting_special_mapcloning);
+            api::recipe::register_handler("minecraft:crafting_special_mapextending", handle_crafting_special_mapextending);
+            api::recipe::register_handler("minecraft:crafting_special_repairitem", handle_crafting_special_repairitem);
+            api::recipe::register_handler("minecraft:crafting_special_shielddecoration", handle_crafting_special_shielddecoration);
+            api::recipe::register_handler("minecraft:crafting_special_shulkerboxcoloring‌", handle_crafting_special_shulkerboxcoloring);
+            api::recipe::register_handler("minecraft:crafting_special_tippedarrow", handle_crafting_special_tippedarrow);
+            api::recipe::register_handler("minecraft:crafting_special_suspiciousstew", handle_crafting_special_suspiciousstew);
+            api::recipe::register_handler("minecraft:smithing_transform", handle_smithing_transform);
+            api::recipe::register_handler("minecraft:smithing_trim", handle_smithing_trim);
+            api::recipe::register_handler("minecraft:stonecutting", handle_stonecutting);
         }
     };
 }

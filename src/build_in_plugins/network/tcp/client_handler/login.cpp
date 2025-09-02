@@ -12,8 +12,8 @@
 #include <src/api/packets.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/shared_client_data.hpp>
-#include <src/mojang/api/hash.hpp>
 #include <src/plugin/main.hpp>
+#include <src/util/mojang/api/hash.hpp>
 
 namespace copper_server::build_in_plugins::network::tcp {
     struct tcp_login : public PluginAutoRegister<"network/tcp_login", tcp_login> {
@@ -118,11 +118,11 @@ namespace copper_server::build_in_plugins::network::tcp {
                     client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 0").ToStr()}};
                     return;
                 }
-                client.data = std::make_shared<mojang::api::session_server::player_data>();
+                client.data = std::make_shared<api::mojang::session_server::player_data>();
                 client.data->uuid = packet.uuid;
                 auto player = api::players::get_player(packet.name);
                 if (player) {
-                    if (api::configuration::get().protocol.connection_conflict == api::configuration::ServerConfiguration::Protocol::connection_conflict_t::prevent_join) {
+                    if (api::configuration::get().protocol.connection_conflict == api::configuration::server_configuration::Protocol::connection_conflict_t::prevent_join) {
                         client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Someone already connected with this nickname").ToStr()}};
                         return;
                     } else
@@ -206,7 +206,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                         return;
                     }
 
-                    mojang::api::hash serverId;
+                    util::mojang::api::hash serverId;
                     serverId.update(shs);
                     serverId.update(api::network::tcp::public_key_buffer().data(), api::network::tcp::public_key_buffer().size());
 

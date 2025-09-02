@@ -9,9 +9,9 @@
 #include <src/api/ban.hpp>
 #include <src/api/client.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/log.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/log.hpp>
 #include <src/plugin/main.hpp>
 #include <src/plugin/registration.hpp>
 #include <src/storage/enbt_list_storage.hpp>
@@ -26,10 +26,10 @@ namespace copper_server::build_in_plugins {
             : banned_players(api::configuration::get().server.get_storage_path() / +"banned_players.c_enbt"),
               banned_ips(api::configuration::get().server.get_storage_path() / +"banned_ips.c_enbt") {
             if (!banned_players.is_loaded()) {
-                log::error("BanPlugin", "Failed to load banned players list");
+                api::log::error("BanPlugin", "Failed to load banned players list");
             }
             if (!banned_ips.is_loaded()) {
-                log::error("BanPlugin", "Failed to load banned ips list");
+                api::log::error("BanPlugin", "Failed to load banned ips list");
             }
         }
 
