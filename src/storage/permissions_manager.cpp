@@ -334,7 +334,6 @@ namespace copper_server::storage {
         return permissions_manager::permission_check_mode::all_or_noting;
     }
 
-
     void permissions_manager::sync() {
         using namespace util;
 

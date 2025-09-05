@@ -14,6 +14,7 @@
 #include <random>
 #include <string>
 #include <vector>
+#include <boost/unordered/unordered_flat_map.hpp>
 
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
@@ -37,21 +38,6 @@ namespace copper_server::base_objects {
 }
 
 namespace copper_server::storage {
-
-
-    struct local_block_pos {
-        uint8_t x : 4;
-        uint8_t y : 4;
-        uint8_t z : 4;
-    };
-
-    struct chunk_block_pos {
-        uint8_t x : 4;
-        uint32_t y : 21;
-        uint8_t z : 4;
-    };
-
-
     class world_data;
     class worlds_data;
 
@@ -68,7 +54,7 @@ namespace copper_server::storage {
     public:
         base_objects::world::height_maps height_maps;
         std::vector<base_objects::world::sub_chunk_data> sub_chunks;
-        std::unordered_map<uint64_t, base_objects::entity_ref> stored_entities; //uses id from world
+        boost::unordered_flat_map<uint64_t, base_objects::entity_ref> stored_entities; //uses id from world
 
         //instead of using negative values for priority, schedule ticks in reverse order
         // -1 == 1, -2 == 2, etc... means higher value == lower priority
@@ -181,21 +167,14 @@ namespace copper_server::storage {
 
         //if not set, all stages is parallel
         //preset_it -> mode
-        std::unordered_map<uint8_t, preset_mode> config;
+        boost::unordered_flat_map<uint8_t, preset_mode> config;
 
-        //this function also should increment generator_stage for chunk and set to 0xFF when complete
+        //this function also should increment generator_stage for chunk or set to 0xFF when processing is complete
         //to access information from other chunk, the generator must use request_chunk_data_weak_* or request_chunk_data_weak
         //if chunk is not fully generated, it would not be accessible other way
         virtual void process_chunk([[maybe_unused]] world_data& world, chunk_data& chunk, [[maybe_unused]] uint8_t preset_stage) {
             chunk.generator_stage = 0xFF;
         };
-
-        //Returns {Chunk}
-        //If generator uses process_chunk this function should return compound with "generator_stage" and (optionally) "resume_gen_level"
-        virtual enbt::compound generate_chunk(world_data& world, int64_t chunk_x, int64_t chunk_z) = 0;
-        //Returns {Subchunk}
-        virtual enbt::compound generate_sub_chunk(world_data& world, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z) = 0;
-
 
         static void register_it(const std::string& id, base_objects::atomic_holder<chunk_generator> gen);
         static void unregister_it(const std::string& id);
@@ -233,15 +212,15 @@ namespace copper_server::storage {
     };
 
     class world_data {
-        using chunk_row = std::unordered_map<uint64_t, base_objects::atomic_holder<chunk_data>>;
-        using chunk_column = std::unordered_map<uint64_t, chunk_row>;
+        using chunk_row = boost::unordered_flat_map<uint64_t, base_objects::atomic_holder<chunk_data>>;
+        using chunk_column = boost::unordered_flat_map<uint64_t, chunk_row>;
         uint64_t hashed_seed_value = 0;
 
         fast_task::task_recursive_mutex mutex;
         chunk_column chunks;
         base_objects::atomic_holder<chunk_light_processor> light_processor;
 
-        std::unordered_map<util::XY<int64_t>, FuturePtr<base_objects::atomic_holder<chunk_data>>> on_generate_process;
+        boost::unordered_flat_map<util::XY<int64_t>, FuturePtr<base_objects::atomic_holder<chunk_data>>, std::hash<util::XY<int64_t>>> on_generate_process;
 
         struct {
             std::bitset<255> sync_modes;
@@ -282,10 +261,10 @@ namespace copper_server::storage {
         std::string preview_world_name();
         std::filesystem::path path;
 
-        std::unordered_map<util::XY<int64_t>, FuturePtr<base_objects::atomic_holder<chunk_data>>> on_load_process;
-        std::unordered_map<util::XY<int64_t>, FuturePtr<bool>> on_save_process;
-        std::unordered_map<size_t, base_objects::entity_ref> entities;
-        std::unordered_map<size_t, base_objects::entity_ref> to_load_entities;
+        boost::unordered_flat_map<util::XY<int64_t>, FuturePtr<base_objects::atomic_holder<chunk_data>>, std::hash<util::XY<int64_t>>> on_load_process;
+        boost::unordered_flat_map<util::XY<int64_t>, FuturePtr<bool>, std::hash<util::XY<int64_t>>> on_save_process;
+        boost::unordered_flat_map<size_t, base_objects::entity_ref> entities;
+        boost::unordered_flat_map<size_t, base_objects::entity_ref> to_load_entities;
         size_t local_entity_id_generator = 0;
         size_t world_spawn_ticket_id;
 
@@ -380,7 +359,7 @@ namespace copper_server::storage {
         std::string world_name;
         std::string light_processor_id;
         std::string generator_id;
-        std::unordered_map<size_t, base_objects::world::loading_point_ticket> loading_tickets;
+        boost::unordered_flat_map<size_t, base_objects::world::loading_point_ticket> loading_tickets;
 
         struct {
             int64_t x = 0;
@@ -656,7 +635,7 @@ namespace copper_server::storage {
     class worlds_data {
         fast_task::task_recursive_mutex mutex;
         std::filesystem::path base_path;
-        std::unordered_map<int32_t, base_objects::atomic_holder<world_data>> cached_worlds;
+        boost::unordered_flat_map<int32_t, base_objects::atomic_holder<world_data>> cached_worlds;
         std::chrono::high_resolution_clock::time_point last_tps_calculated = std::chrono::high_resolution_clock::now();
         uint64_t got_ticks = 0;
 

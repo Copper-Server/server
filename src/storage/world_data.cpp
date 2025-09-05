@@ -8,6 +8,8 @@
  */
 #include <boost/iostreams/filter/zstd.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
+#include <boost/unordered/unordered_flat_set.hpp>
+#include <boost/unordered/unordered_flat_map.hpp>
 #include <library/enbt/io.hpp>
 #include <library/enbt/io_tools.hpp>
 #include <library/enbt/senbt.hpp>
@@ -947,7 +949,7 @@ namespace copper_server::storage {
         return *res;
     }
 
-    fast_task::protected_value<std::unordered_map<std::string, base_objects::atomic_holder<chunk_generator>>> chunk_generators;
+    fast_task::protected_value<boost::unordered_flat_map<std::string, base_objects::atomic_holder<chunk_generator>>> chunk_generators;
 
     void chunk_generator::register_it(const std::string& id, base_objects::atomic_holder<chunk_generator> gen) {
         chunk_generators.set([&](auto& map) {
@@ -967,7 +969,7 @@ namespace copper_server::storage {
         });
     }
 
-    fast_task::protected_value<std::unordered_map<std::string, base_objects::atomic_holder<chunk_light_processor>>> light_processors;
+    fast_task::protected_value<boost::unordered_flat_map<std::string, base_objects::atomic_holder<chunk_light_processor>>> light_processors;
 
     void chunk_light_processor::register_it(const std::string& id, base_objects::atomic_holder<chunk_light_processor> processor) {
         light_processors.set([&](auto& map) {
@@ -1079,9 +1081,10 @@ namespace copper_server::storage {
         try {
             auto chunk = base_objects::atomic_holder<chunk_data>(new chunk_data(chunk_x, chunk_z));
             if (!chunk->load(path / "chunks" / std::to_string(chunk_x) / (std::to_string(chunk_z) + ".dat"), tick_counter, *this)) {
-                if (!chunk->load(get_generator()->generate_chunk(*this, chunk_x, chunk_z), tick_counter, *this))
-                    return nullptr;
+                chunk->sub_chunks.resize(get_chunk_y_count());
+                chunk->generator_stage = 0;
             }
+
             if (chunk->generator_stage != 0xFF) {
                 chunk->load_level = 31;
                 std::unique_lock lock(mutex);
@@ -2890,7 +2893,7 @@ namespace copper_server::storage {
             }
         }
 
-        std::unordered_map<int64_t, std::unordered_set<int64_t>> loading_tickets_cc;
+        boost::unordered_flat_map<int64_t, boost::unordered_flat_set<int64_t>> loading_tickets_cc;
         size_t target_load_count = 0;
         for (auto& [id, ticket] : loading_tickets) {
             bool expired = false;

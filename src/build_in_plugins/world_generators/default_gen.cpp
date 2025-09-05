@@ -11,48 +11,22 @@
 
 namespace copper_server::build_in_plugins::world_generators {
     struct default_generator : public storage::chunk_generator {
-        enbt::compound generate_chunk(storage::world_data& world, int64_t chunk_x, int64_t chunk_z) override {
-            enbt::fixed_array subchunks;
-            for (size_t i = 0; i < world.get_chunk_y_count(); i++)
-                subchunks.push_back(generate_sub_chunk(world, chunk_x, i, chunk_z));
-            return {
-                {"sub_chunks", std::move(subchunks)}
-            };
+        default_generator() {
+            config = {{0, preset_mode::parallel}};
         }
 
-        enbt::compound generate_sub_chunk(storage::world_data&, int64_t, int64_t sub_chunk_y, int64_t) override {
-            if (sub_chunk_y != 0) {
-                return {};
-            } else {
-                enbt::fixed_array blocks(16);
-                for (uint8_t x = 0; x < 16; x++) {
-                    enbt::fixed_array y_dim(16);
-                    for (uint8_t y = 0; y < 16; y++) {
-                        enbt::simple_array_ui32 z_dim(16);
-                        for (uint8_t z = 0; z < 16; z++) {
-                            if (y == 0)
-                                z_dim[z] = 1;
-                        }
-                        y_dim.set(y, std::move(z_dim));
-                    }
-                    blocks.set(x, std::move(y_dim));
-                }
-                enbt::fixed_array biomes(4);
-                for (uint8_t x = 0; x < 4; x++) {
-                    enbt::fixed_array y_dim(4);
-                    for (uint8_t y = 0; y < 4; y++) {
-                        enbt::simple_array_ui32 z_dim(4);
-                        for (uint8_t z = 0; z < 4; z++)
-                            z_dim[z] = 0;
-                        y_dim.set(y, std::move(z_dim));
-                    }
-                    biomes.set(x, std::move(y_dim));
-                }
-                return {
-                    {"blocks", std::move(blocks)},
-                    {"biomes", std::move(biomes)}
-                };
-            }
+        void process_chunk([[maybe_unused]] storage::world_data& world, storage::chunk_data& chunk, uint8_t preset_stage) override {
+            auto& bottom = chunk.sub_chunks.front();
+            auto& blocks = bottom.blocks;
+            auto stone = base_objects::block::make_block("minecraft:stone");
+
+            for (uint8_t x = 0; x < 16; x++) 
+                for (uint8_t y = 0; y < 16; y++)
+                    for (uint8_t z = 0; z < 16; z++) 
+                        if (y == 0)
+                            blocks[x][y][z] = stone;
+
+            chunk.generator_stage = 0xFF;
         }
     };
 

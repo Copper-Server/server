@@ -13,7 +13,6 @@
 #include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/plugin/main.hpp>
-#include <src/storage/memory/online_player.hpp>
 
 namespace copper_server::build_in_plugins {
     //provides and manages chat system
