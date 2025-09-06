@@ -13,3 +13,5 @@ built_resources/
 resources/include.hpp
 .PVS-Studio
 /src/util/reflect
+/resources/data
+/resources/registry

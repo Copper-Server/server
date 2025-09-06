@@ -15,8 +15,6 @@ set(Boost_NO_WARN_NEW_VERSIONS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_compile_definitions(tasks_enable_preemptive_scheduler_preview=false)
 
-add_subdirectory(tools)
-message(STATUS "Building resources")
 FILE(GLOB REFLECTION_FILES CONFIGURE_DEPENDS
   src/api/packets.hpp
   src/base_objects/component.hpp
@@ -25,6 +23,9 @@ FILE(GLOB REFLECTION_FILES CONFIGURE_DEPENDS
   src/base_objects/parsers.hpp
   src/util/calculations.hpp
 )
+add_subdirectory(tools)
+message(STATUS "Building resources")
+prepare_resources()
 FILE(GLOB RESOURCE_FILES CONFIGURE_DEPENDS
   resources/*/*.* 
   resources/*/*/*.* 
