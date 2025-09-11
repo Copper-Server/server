@@ -249,7 +249,6 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 if (!client.packets_state.is_fully_initialized) {
                     client.packets_state.is_fully_initialized = true;
                     api::world::sync_settings(client);
-                    api::world::register_entity(api::world::resolve_id(client.player_data.world_id), client.player_data.assigned_entity);
 
                     for (auto& plugin : client.compatible_plugins)
                         plugin->OnPlay_post_initialize_compatible(client);

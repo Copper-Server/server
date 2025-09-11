@@ -404,16 +404,18 @@ namespace copper_server {
                         base_objects::pallete_container_biome biomes(api::registers::biomes.size());
                         blocks.reserve(16 * 16 * 16);
                         biomes.reserve(4 * 4 * 4);
-                        for (auto& x : section_.blocks)
-                            for (auto& y : x)
-                                for (auto z : y) {
-                                    block_count += !z.is_air();
-                                    blocks.add(z.id);
+
+                        for (uint8_t x = 0; x < 16; x++)
+                            for (uint8_t y = 0; y < 16; y++)
+                                for (uint8_t z = 0; z < 16; z++) {
+                                    auto block = section_.blocks[y][x][z];
+                                    block_count += !block.is_air();
+                                    blocks.add(block.id);
                                 }
-                        for (auto& x : section_.biomes)
-                            for (auto& y : x)
-                                for (auto& z : y)
-                                    biomes.add(z);
+                        for (uint8_t x = 0; x < 4; x++)
+                            for (uint8_t y = 0; y < 4; y++)
+                                for (uint8_t z = 0; z < 4; z++)
+                                    biomes.add(section_.biomes[y][z][x]);
                         result.sections.value.push_back(section{block_count, std::move(blocks), std::move(biomes)});
                     }
                     if (api::configuration::get().protocol.send_nbt_data_in_chunk) {
