@@ -19,9 +19,14 @@
 
 namespace copper_server::build_in_plugins {
     //handles clients with play state, allows players to access world and other things through api
+
     class PlayEngine : public PluginAutoRegister<"base/play_engine", PlayEngine> {
         fast_task::task_mutex messages_order;
         list_array<std::variant<int32_t, std::array<uint8_t, 256>>> latest_messages;
+
+        static void send_async(auto& client, auto&& packet) {
+            fast_task::task::run([client, packet = std::move(packet)]() mutable { *client << std::move(packet); });
+        }
 
         void add_message(std::array<uint8_t, 256>&& val) {
             latest_messages.push_back(std::move(val));
@@ -488,7 +493,7 @@ namespace copper_server::build_in_plugins {
                 //if (self.assigned_player) {
                 //    if (self.world_syncing_data.chunk_in_bounds(x, z)) {
                 //        //TODO implement batching
-                //        *self.assigned_player << api::client::play::level_chunk_with_light::create(chunk, *self.current_world());
+                //        send_async(self.assigned_player, api::client::play::level_chunk_with_light::create(chunk, *self.current_world()));
                 //        self.world_syncing_data.mark_chunk(x, z, true);
                 //    }
                 //}
@@ -497,8 +502,10 @@ namespace copper_server::build_in_plugins {
                 if (self.assigned_player) {
                     if (self.world_syncing_data.chunk_in_bounds(x, z)) {
                         //TODO implement batching
-                        *self.assigned_player << api::client::play::level_chunk_with_light::create(chunk, *self.current_world());
-                        self.world_syncing_data.mark_chunk(x, z, true);
+                        if (self.assigned_player->is_active()) {
+                            send_async(self.assigned_player, api::client::play::level_chunk_with_light::create(chunk, *self.current_world()));
+                            self.world_syncing_data.mark_chunk(x, z, true);
+                        }
                     }
                 }
             };
@@ -513,8 +520,10 @@ namespace copper_server::build_in_plugins {
                         if (self.current_world()) {
                             self.current_world()->get_chunk_at(x, z, [&](auto& chunk) {
                                 //TODO implement batching
-                                *self.assigned_player << api::client::play::level_chunk_with_light::create(chunk, *self.current_world());
-                                self.world_syncing_data.mark_chunk(x, z, true);
+                                if (self.assigned_player->is_active()) {
+                                    send_async(self.assigned_player, api::client::play::level_chunk_with_light::create(chunk, *self.current_world()));
+                                    self.world_syncing_data.mark_chunk(x, z, true);
+                                }
                             });
                         }
                     }
@@ -526,8 +535,10 @@ namespace copper_server::build_in_plugins {
                         if (self.current_world()) {
                             self.current_world()->get_chunk_at(x, z, [&](auto& chunk) {
                                 //TODO implement batching
-                                *self.assigned_player << api::client::play::level_chunk_with_light::create(chunk, *self.current_world());
-                                self.world_syncing_data.mark_chunk(x, z, true);
+                                if (self.assigned_player->is_active()) {
+                                    send_async(self.assigned_player, api::client::play::level_chunk_with_light::create(chunk, *self.current_world()));
+                                    self.world_syncing_data.mark_chunk(x, z, true);
+                                }
                             });
                         }
                     }
@@ -582,8 +593,10 @@ namespace copper_server::build_in_plugins {
                                 auto chunk = self.current_world()->request_chunk_data_weak(chunk_x, chunk_z);
                                 if (chunk) {
                                     if ((*chunk)->generator_stage == 0xFF) {
-                                        *self.assigned_player << api::client::play::level_chunk_with_light::create(**chunk, *self.current_world());
-                                        self.world_syncing_data.mark_chunk(chunk_x, chunk_z, true);
+                                        if (self.assigned_player->is_active()) {
+                                            send_async(self.assigned_player, api::client::play::level_chunk_with_light::create(**chunk, *self.current_world()));
+                                            self.world_syncing_data.mark_chunk(chunk_x, chunk_z, true);
+                                        }
                                     }
                                 }
                             } else

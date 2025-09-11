@@ -275,7 +275,7 @@ function(create_reflect_map output_file FILES)
     if(result)
         message(FATAL_ERROR "Failed to build reflection map ${output_file}")
     endif()
-    file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
+    #file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
 endfunction(create_reflect_map)
 
 

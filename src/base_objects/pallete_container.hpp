@@ -125,11 +125,13 @@ namespace copper_server::base_objects {
         bool is_biomes_mode;
 
     public:
-        static inline constexpr auto max_indirect_biomes = 0x5;
-        static inline constexpr auto max_indirect_blocks = 0xFF;
+        static inline constexpr uint8_t max_indirect_biomes = 0x4;
+        static inline constexpr uint8_t max_indirect_blocks = 0x8;
+        static inline constexpr uint8_t min_indirect_biomes = 0x1;
+        static inline constexpr uint8_t min_indirect_blocks = 0x4;
 
-        static inline constexpr auto size_biomes = 64;
-        static inline constexpr auto size_blocks = 4096;
+        static inline constexpr size_t size_biomes = 64;
+        static inline constexpr size_t size_blocks = 4096;
 
         pallete_container():bits_per_entry(0), is_biomes_mode(false){}
         pallete_container(size_t max_items, bool is_biomes) : bits_per_entry(pallete_data::bits_for_max(max_items)), is_biomes_mode(is_biomes) {}
@@ -208,7 +210,7 @@ namespace copper_server::base_objects {
                 res.id_of_palette = unique_pallete.begin()->first;
                 return res;
             } else if ((is_biomes_mode && unique_pallete.size() <= max_indirect_biomes) || (!is_biomes_mode && unique_pallete.size() <= max_indirect_blocks)) {
-                pallete_container_indirect res(pallete_data::bits_for_max(unique_pallete.size()));
+                pallete_container_indirect res(std::max<uint8_t>(pallete_data::bits_for_max(unique_pallete.size()), is_biomes_mode ? min_indirect_biomes : min_indirect_blocks));
                 std::unordered_map<int32_t, size_t> map;
                 res.palette.reserve(unique_pallete.size());
                 for (auto [id, count] : unique_pallete)
@@ -255,6 +257,11 @@ namespace copper_server::base_objects {
 
         size_t size() const {
             return is_biomes_mode ? size_biomes : size_blocks;
+        }
+
+        void reserve(size_t size) {
+            data.reserve(size);
+            unique_pallete.reserve(size / 8);
         }
     };
 

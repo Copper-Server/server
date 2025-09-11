@@ -402,6 +402,8 @@ namespace copper_server {
                         uint16_t block_count = 0;
                         base_objects::pallete_container_block blocks(base_objects::block::block_states_size());
                         base_objects::pallete_container_biome biomes(api::registers::biomes.size());
+                        blocks.reserve(16 * 16 * 16);
+                        biomes.reserve(4 * 4 * 4);
                         for (auto& x : section_.blocks)
                             for (auto& y : x)
                                 for (auto z : y) {

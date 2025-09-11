@@ -114,10 +114,14 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         });
                     }
                     auto& p_data = hold->player_data;
-                    if (p_data.assigned_entity->current_world())
+                    if (p_data.assigned_entity->current_world()) {
                         api::world::unregister_entity(p_data.assigned_entity->current_world()->world_id, p_data.assigned_entity);
+                    }
 
                     api::players::save_player(std::move(hold->player_data), hold->data->uuid);
+                    hold->player_data.assigned_entity->assigned_player = nullptr;
+                    hold->packets_state.internal_data.set([](auto& it) { it.extra_data = nullptr; });
+                    hold->player_data.assigned_entity = nullptr;
                     for (auto& plugin : hold->compatible_plugins)
                         plugin->OnPlay_uninitialized_compatible(*hold);
 

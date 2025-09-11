@@ -18,6 +18,7 @@
 #include <variant>
 
 namespace copper_server::base_objects {
+    //reflect_map skip_begin
     template <class T>
     static constexpr bool is_enum_item = requires { T::item_id::value; };
 
@@ -120,6 +121,7 @@ namespace copper_server::base_objects {
         return true;
     }
 
+    //reflect_map skip_end
     namespace switches_to {
         struct status {
             std::strong_ordering operator<=>(const status& other) const = default;
