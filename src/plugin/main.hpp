@@ -72,6 +72,13 @@ namespace copper_server {
         static void register_value() {
             static_registry<T, name>::p;
         }
+
+        void info(std::string_view source, std::string_view message);
+        void error(std::string_view source, std::string_view message);
+        void warn(std::string_view source, std::string_view message);
+        void debug(std::string_view source, std::string_view message);
+        void debug_error(std::string_view source, std::string_view message);
+        void fatal(std::string_view source, std::string_view message);
     }
 
     class PluginManagement {
@@ -297,6 +304,32 @@ namespace copper_server {
             __internal__::register_value<Self, name>();
             return name.data;
         }();
+
+        struct log {
+            static inline void info(std::string_view message) {
+                __internal__::info(registered_name, message);
+            }
+
+            static inline void error(std::string_view message) {
+                __internal__::error(registered_name, message);
+            }
+
+            static inline void warn(std::string_view message) {
+                __internal__::warn(registered_name, message);
+            }
+
+            static inline void debug(std::string_view message) {
+                __internal__::debug(registered_name, message);
+            }
+
+            static inline void debug_error(std::string_view message) {
+                __internal__::debug_error(registered_name, message);
+            }
+
+            static inline void fatal(std::string_view message) {
+                __internal__::fatal(registered_name, message);
+            }
+        };
 
         virtual ~PluginAutoRegister() noexcept {}
     };

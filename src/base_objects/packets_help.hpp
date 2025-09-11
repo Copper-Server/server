@@ -18,9 +18,48 @@
 #include <variant>
 
 namespace copper_server::base_objects {
+    template <class T>
+    static constexpr bool is_enum_item = requires { T::item_id::value; };
+
+    template <class T>
+    static constexpr bool is_default_enum_item = requires { T::item_id::value; typename T::flag_default; };
+
+    template <class T>
+    static constexpr bool is_flag_item = requires {
+        T::flag_value::value;
+        T::flag_mask::value;
+        T::flag_order::value;
+    };
+
     namespace internal {
         template <template <class...> class Base, class... Ts>
         void test(Base<Ts...>&);
+
+        template <class... Ts>
+        struct find_default_item;
+
+        template <class T, class... Ts>
+        struct find_default_item<T, Ts...> {
+            using type = std::conditional_t<is_default_enum_item<T>, T, typename find_default_item<Ts...>::type>;
+        };
+
+        template <>
+        struct find_default_item<> {
+            using type = void;
+        };
+
+        template <class... Ts>
+        struct count_default_items;
+
+        template <class T, class... Ts>
+        struct count_default_items<T, Ts...> {
+            static constexpr int value = (is_default_enum_item<T> ? 1 : 0) + count_default_items<Ts...>::value;
+        };
+
+        template <>
+        struct count_default_items<> {
+            static constexpr int value = 0;
+        };
     }
 
     template <class type>
@@ -71,6 +110,8 @@ namespace copper_server::base_objects {
     template <class... Args>
     constexpr bool is_correct_variant() {
         for_each_type<std::variant<Args...>>::each([]<class T>() {
+            static_assert(std::default_initializable<T>);
+            static_assert(std::is_default_constructible_v<T>);
             static_assert(std::is_copy_constructible_v<T>);
             static_assert(std::is_move_constructible_v<T>);
             static_assert(std::is_copy_assignable_v<T>);
@@ -117,6 +158,13 @@ namespace copper_server::base_objects {
         std::strong_ordering operator<=>(const enum_item& other) const = default;
     };
 
+    template <int32_t value>
+    struct default_enum_item {
+        using flag_default = void;
+        using item_id = ic<value>;
+        std::strong_ordering operator<=>(const default_enum_item& other) const = default;
+    };
+
     template <size_t value, size_t mask, ptrdiff_t order>
     struct flag_item {
         using flag_value = ic<value>;
@@ -129,6 +177,7 @@ namespace copper_server::base_objects {
     static constexpr bool could_be_preprocessed = requires(T& v, R& it) { v.preprocess(it); };
 
     struct identifier {
+        using underlying_type = std::string;
         std::string value;
 
         constexpr identifier() {}
@@ -174,6 +223,7 @@ namespace copper_server::base_objects {
 
     template <size_t size>
     struct string_sized {
+        using underlying_type = std::string;
         std::string value;
         static constexpr inline size_t max_size = size;
 
@@ -244,6 +294,7 @@ namespace copper_server::base_objects {
     };
 
     struct json_text_component {
+        using underlying_type = std::string;
         std::string value;
 
         auto operator<=>(const json_text_component& other) const = default;
@@ -251,6 +302,7 @@ namespace copper_server::base_objects {
 
     template <class T, T min, T max>
     struct limited_num {
+        using underlying_type = T;
         static constexpr inline T check_min = min;
         static constexpr inline T check_max = max;
         T value = {};
@@ -467,7 +519,15 @@ namespace copper_server::base_objects {
     };
 
     struct optional_var_int64 : public std::optional<int64_t> { //encoded same as var_int64 but if set the value incremented and checked for overflow, if not set encoded as 0
+        using underlying_type = int32_t;
         using std::optional<int64_t>::optional;
+
+        operator int64_t() const {
+            if (has_value())
+                return value();
+            else
+                return 0;
+        }
     };
 
     template <class Value, class T>
@@ -819,6 +879,7 @@ namespace copper_server::base_objects {
     template <class Enum, class T>
     struct enum_as {
         using encode_t = T;
+        using enum_t = Enum;
         Enum value;
 
         constexpr enum_as() : value() {}
@@ -853,13 +914,12 @@ namespace copper_server::base_objects {
         }
     };
 
-    template <class T>
-    static constexpr bool is_enum_item = requires { T::item_id::value; };
-
     template <class ValueType, class... Ty>
     struct enum_switch : public std::variant<Ty...> {
+        static_assert(internal::count_default_items<Ty...>::value <= 1, "enum_switch can have at most one default item");
         static constexpr inline bool is_correct = is_correct_variant<Ty...>();
 
+        using default_item = typename internal::find_default_item<Ty...>::type;
         using encode_type = ValueType;
         using base = std::variant<Ty...>;
 
@@ -913,6 +973,12 @@ namespace copper_server::base_objects {
                     fn.template operator()<T>();
                 }
             );
+        }
+
+        template <class FN>
+        constexpr static void get_default(FN&& fn) {
+            if constexpr (!std::is_same_v<default_item, void>)
+                fn.template operator()<default_item>();
         }
 
         bool operator==(const enum_switch& other) const = default;
@@ -996,17 +1062,11 @@ namespace copper_server::base_objects {
         }
     };
 
-    template <class T>
-    static constexpr bool is_flag_item = requires {
-        T::flag_value::value;
-        T::flag_mask::value;
-        T::flag_order::value;
-    };
-
     template <class flag_type, class... Ty>
     struct flags_list {
         using max_orders = ic<std::max<ptrdiff_t>({Ty::flag_order::value...})>;
         using base = std::variant<Ty...>;
+        static constexpr inline bool is_correct = is_correct_variant<Ty...>();
         flag_type flag;
         std::unordered_map<ptrdiff_t, std::variant<Ty...>> values; //order->value
 
@@ -1120,8 +1180,8 @@ namespace copper_server::base_objects {
         using preprocess_source_name = ic<source_name>;
         using base = std::variant<Ty...>;
         using source_type = SourceType;
+        static constexpr inline bool is_correct = is_correct_variant<Ty...>();
         std::unordered_map<ptrdiff_t, std::variant<Ty...>> values; //flag_order->value
-        source_type pre_process_result;
 
         flags_list_from() {}
 
@@ -1137,17 +1197,21 @@ namespace copper_server::base_objects {
             return (values.find(T::flag_order::value) != values.end());
         }
 
-        void preprocess(Source& source) {
-            source.*source_name = 0;
+        source_type get_flags() const {
+            source_type res{0};
             for (auto& [id, value] : values) {
                 std::visit(
                     [&]<class T>(T& it) {
-                        source.*source_name |= (T::flag_value::value & T::flag_mask::value);
+                        res |= (T::flag_value::value & T::flag_mask::value);
                     },
                     value
                 );
             }
-            pre_process_result = source.*source_name;
+            return res;
+        }
+
+        void preprocess(Source& source) {
+            source.*source_name = get_flags();
         }
 
         template <class FN>
@@ -1219,6 +1283,7 @@ namespace copper_server::base_objects {
     template <class Enum, class T>
     struct enum_as_flag {
         using encode_t = T;
+        using enum_t = Enum;
         Enum value;
 
         constexpr enum_as_flag() : value() {}
@@ -1281,6 +1346,7 @@ namespace copper_server::base_objects {
 
     template <class value_type, class... Ty>
     struct partial_enum_switch : public std::variant<value_type, Ty...> {
+        static constexpr inline bool is_correct = is_correct_variant<value_type, Ty...>();
         using encode_type = value_type;
         using base = std::variant<value_type, Ty...>;
 

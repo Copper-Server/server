@@ -22,33 +22,32 @@ namespace copper_server::build_in_plugins::network::tcp {
     using fast_task::networking::TcpError;
     base_objects::network::tcp::client* tcp_handler = new universal_client_handle();
 
-    void handler(fast_task::networking::TcpNetworkStream& stream) {
-        if (api::network::ip_filter(stream.remote_address()))
-            return;
-
-        auto session = std::make_shared<tcp::session>(stream, tcp_handler, api::configuration::get().protocol.all_connections_timeout_seconds);
-        try {
-            while (!stream.is_closed()) {
-                auto input = stream.read_available_ref();
-                if (stream.error() == TcpError::none)
-                    session->received(input);
-            }
-        } catch (const std::exception& ex) {
-            std::stringstream stack_trace;
-            stack_trace << std::stacktrace::current();
-            api::log::error("Network", "unhandled exception while processing client. Id: " + std::to_string(session->id) + ". Address: " + stream.remote_address().to_string());
-            api::log::debug_error("Network", "client id " + std::to_string(session->id) + " stack trace:\n" + stack_trace.str());
-            api::log::debug_error("Network", "client id " + std::to_string(session->id) + " exceptions data:\n" + ex.what());
-        } catch (...) {
-            std::stringstream stack_trace;
-            stack_trace << std::stacktrace::current();
-            api::log::error("Network", "unhandled undefined exception while processing client. Id: " + std::to_string(session->id) + ". Address: " + stream.remote_address().to_string());
-            api::log::debug_error("Network", "client id " + std::to_string(session->id) + " stack trace:\n" + stack_trace.str());
-        }
-        session->disconnect();
-    }
-
     class TCPServerPlugin : public PluginAutoRegister<"network/tcp_server", TCPServerPlugin> {
+        static void handler(fast_task::networking::TcpNetworkStream& stream) {
+            if (api::network::ip_filter(stream.remote_address()))
+                return;
+
+            auto session = std::make_shared<tcp::session>(stream, tcp_handler, api::configuration::get().protocol.all_connections_timeout_seconds);
+            try {
+                while (!stream.is_closed()) {
+                    auto input = stream.read_available_ref();
+                    if (stream.error() == TcpError::none)
+                        session->received(input);
+                }
+            } catch (const std::exception& ex) {
+                std::stringstream stack_trace;
+                stack_trace << std::stacktrace::current();
+                api::log::error("Network", "unhandled exception while processing client. Id: " + std::to_string(session->id) + ". Address: " + stream.remote_address().to_string());
+                api::log::debug_error("Network", "client id " + std::to_string(session->id) + " stack trace:\n" + stack_trace.str());
+                api::log::debug_error("Network", "client id " + std::to_string(session->id) + " exceptions data:\n" + ex.what());
+            } catch (...) {
+                std::stringstream stack_trace;
+                stack_trace << std::stacktrace::current();
+                api::log::error("Network", "unhandled undefined exception while processing client. Id: " + std::to_string(session->id) + ". Address: " + stream.remote_address().to_string());
+                api::log::debug_error("Network", "client id " + std::to_string(session->id) + " stack trace:\n" + stack_trace.str());
+            }
+            session->disconnect();
+        }
         std::shared_ptr<fast_task::networking::TcpNetworkServer> tcp_server;
 
         void start() {

@@ -131,10 +131,12 @@ namespace copper_server::api::network {
         }
 
         std::span<uint8_t> private_key_buffer() {
+            init_ssl();
             return {server_private_key.data(), server_private_key.size()};
         }
 
         std::span<uint8_t> public_key_buffer() {
+            init_ssl();
             return {server_public_key.data(), server_public_key.size()};
         }
     }

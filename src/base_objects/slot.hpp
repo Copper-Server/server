@@ -18,6 +18,11 @@
 #include <string>
 #include <src/base_objects/component.hpp>
 
+namespace enbt::io_helper {
+    class value_write_stream;
+    class value_read_stream;
+}
+
 namespace copper_server::api::packets {
     struct slot;
 }
@@ -119,9 +124,6 @@ namespace copper_server::base_objects {
             return components.contains(T::item_id::value);
         }
 
-        enbt::compound to_enbt() const;
-        static slot_data from_enbt(enbt::compound_const_ref compound);
-
         bool operator==(const slot_data& other) const;
         bool operator!=(const slot_data& other) const;
 
@@ -138,6 +140,13 @@ namespace copper_server::base_objects {
         static_slot_data& get_slot_data() const;
 
         static void enumerate_slot_data(const std::function<void(static_slot_data&)>& fn);
+
+
+        enbt::compound to_enbt() const;
+        static slot_data from_enbt(enbt::compound_const_ref compound);
+
+        void to_enbt(enbt::io_helper::value_write_stream&) const;
+        static slot_data from_enbt(enbt::io_helper::value_read_stream& stream);
 
         copper_server::api::packets::slot to_packet() const;
         static slot_data from_packet(copper_server::api::packets::slot&&);

@@ -23,6 +23,14 @@
 #include <src/util/calculations.hpp>
 #include <stdint.h>
 
+namespace enbt::io_helper {
+    class value_write_stream;
+    class value_read_stream;
+
+    template <class T>
+    struct serialization;
+}
+
 namespace copper_server {
     namespace storage {
         class world_data;
@@ -140,8 +148,7 @@ namespace copper_server {
 
             std::function<bool(entity& target_entity, bool force)> pre_death_callback;
             std::function<void(entity& target_entity)> create_callback;
-            std::function<void(entity& target_entity, const enbt::compound_const_ref&)> create_callback_with_nbt;
-            std::function<void(entity_ref& creating_entity, const enbt::compound_const_ref&)> create_from_enbt_callback;
+            std::function<void(entity& target_entity)> load_callback;
             std::function<void(entity_ref& checking_entity, entity_data&, util::VECTOR pos)> check_bounds; //if nullptr then used base_bounds, return true if entity is in bounds
             std::function<int32_t(const entity& checking_entity)> get_object_field;                        //optional
 
@@ -468,7 +475,6 @@ namespace copper_server {
             const entity_data& const_data();
 
             entity_ref copy() const;
-            enbt::compound copy_to_enbt() const;
 
             void teleport(util::VECTOR pos);
             void teleport(util::VECTOR pos, float yaw, float pitch);
@@ -563,7 +569,6 @@ namespace copper_server {
             static entity_ref create(uint16_t id, const enbt::compound_const_ref& nbt);
             static entity_ref create(const std::string& id);
             static entity_ref create(const std::string& id, const enbt::compound_const_ref& nbt);
-            static entity_ref load_from_enbt(const enbt::compound_const_ref& file_nbt);
 
             bool hitboxes_touching_x(double min, double max);
             bool hitboxes_touching_y(double min, double max);
@@ -588,8 +593,14 @@ namespace copper_server {
                 return entity_id;
             }
 
+            static void store_to_file(const entity_ref&, enbt::io_helper::value_write_stream& w);
+            static entity_ref load_from_file(enbt::io_helper::value_read_stream& w);
+            static void store_to_enbt(const entity_ref&, enbt::compound& w);
+            static entity_ref load_from_enbt(const enbt::compound_const_ref& file_nbt);
+
         private:
             friend struct entity_data;
+            friend struct enbt::io_helper::serialization<entity_ref>;
             uint16_t entity_id;
             bool died : 1 = false;
         };

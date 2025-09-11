@@ -11,6 +11,31 @@
 #include <src/plugin/main.hpp>
 
 namespace copper_server {
+    void __internal__::info(std::string_view source, std::string_view message) {
+        api::log::info(source, message);
+    }
+
+    void __internal__::error(std::string_view source, std::string_view message) {
+        api::log::error(source, message);
+    }
+
+    void __internal__::warn(std::string_view source, std::string_view message) {
+        api::log::warn(source, message);
+    }
+
+    void __internal__::debug(std::string_view source, std::string_view message) {
+        api::log::debug(source, message);
+    }
+
+    void __internal__::debug_error(std::string_view source, std::string_view message) {
+        api::log::debug_error(source, message);
+    }
+
+    void __internal__::fatal(std::string_view source, std::string_view message) {
+        api::log::fatal(source, message);
+    }
+
+
     void unregisterEvery(PluginRegistrationPtr& plugin, std::unordered_map<std::string, PluginRegistrationPtr>& container) {
         for (
             std::unordered_map<std::string, PluginRegistrationPtr>::iterator it = container.begin();

@@ -96,8 +96,10 @@ namespace copper_server::build_in_plugins::network::tcp {
 
 
             std::lock_guard guard(tc);
-            if (encryption_enabled)
+            if (encryption_enabled) {
+                response_data.commit();
                 encryption.encrypt(response_data, response_data);
+            }
             if (stream) {
                 std::shared_ptr<std::vector<uint8_t>> send_data = std::make_shared<std::vector<uint8_t>>(response_data.begin(), response_data.end());
                 stream->write((char*)response_data.data(), response_data.size());

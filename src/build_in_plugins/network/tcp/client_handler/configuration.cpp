@@ -9,7 +9,6 @@
 #include <src/api/configuration.hpp>
 #include <src/api/dialogs.hpp>
 #include <src/api/id.hpp>
-#include <src/api/log.hpp>
 #include <src/api/network/tcp.hpp>
 #include <src/api/packets.hpp>
 #include <src/api/registers.hpp>

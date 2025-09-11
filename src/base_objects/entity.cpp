@@ -6,6 +6,7 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <library/enbt/io_tools.hpp>
 #include <library/fast_task.hpp>
 #include <src/api/entity_id_map.hpp>
 #include <src/api/packets.hpp>
@@ -14,6 +15,522 @@
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/storage/world_data.hpp>
 #include <src/util/calculations.hpp>
+
+namespace enbt::io_helper {
+    using namespace copper_server;
+    using namespace copper_server::base_objects;
+
+    template <>
+    struct serialization<std::unordered_map<uint32_t, slot_data>> {
+        static void read(std::unordered_map<uint32_t, slot_data>& res, value_read_stream& read_stream) {
+            read_stream.iterate(
+                [&res](auto size) { res.reserve(size); },
+                [&res](std::string_view id, auto& value) {
+                    uint32_t id_ = 0;
+                    auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
+                    if (parsing_res.ec == std::errc{})
+                        res[id_] = slot_data::from_enbt(value);
+                }
+            );
+        }
+
+        static void write(const std::unordered_map<uint32_t, slot_data>& res, value_write_stream& read_stream) {
+            auto compound = read_stream.write_compound();
+            for (auto& [id, value] : res)
+                compound.write(std::to_string(id), [&value](auto& stream) { value.to_enbt(stream); });
+        }
+
+        static void read(std::unordered_map<uint32_t, slot_data>& res, const enbt::value& from) {
+            res.reserve(from.size());
+            for (auto& [id, value] : from.as_compound()) {
+                uint32_t id_ = 0;
+                auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
+                if (parsing_res.ec == std::errc{})
+                    res[id_] = slot_data::from_enbt(value.as_compound());
+            }
+        }
+
+        static void write(const std::unordered_map<uint32_t, slot_data>& res, enbt::value& to) {
+            enbt::compound compound;
+            compound.reserve(res.size());
+            for (auto& [id, value] : res)
+                compound[std::to_string(id)] = value.to_enbt();
+            to = std::move(compound);
+        }
+    };
+
+    template <>
+    struct serialization<entity_ref> {
+        static void read(entity_ref& res, value_read_stream& read_stream) {
+            read_stream
+                .read_compound()
+                .collect("died", [&](auto& stream) { res->died = stream.read(); })
+                .collect_as("entity_id", res->entity_id)
+                .collect_as("id", res->id)
+                .collect("motion", [&](auto& stream) { enbt::io_helper::serialization_read(res->motion, stream); })
+                .collect("position", [&](auto& stream) { enbt::io_helper::serialization_read(res->position, stream); })
+                .collect("rotation", [&](auto& stream) { enbt::io_helper::serialization_read(res->rotation, stream); })
+                .collect("head_rotation", [&](auto& stream) { enbt::io_helper::serialization_read(res->head_rotation, stream); })
+                .collect("inventory", [&](auto& stream) { enbt::io_helper::serialization_read(res->inventory, stream); })
+                .collect("custom_inventory", [&](auto& stream) { enbt::io_helper::serialization_read(res->custom_inventory, stream); })
+                .collect("nbt", [&](auto& stream) { res->nbt = stream.read(); })
+                .collect("server_data", [&](auto& stream) { res->server_data = stream.read(); })
+                .collect("bound_world", [&](auto& stream) {
+                    std::string world_id = stream.read();
+                    api::world::get(world_id, [&res](storage::world_data& it) {
+                        it.register_entity(res);
+                    });
+                    if (!res->world_syncing_data.world)
+                        throw std::runtime_error("World " + world_id + " not found.");
+                })
+                .collect("hidden_effects", [&](auto& stream) {
+                    stream.iterate(
+                        [&res](auto size) { res->hidden_effects.reserve(size); },
+                        [&res](std::string_view id, value_read_stream& effects) {
+                            uint32_t id_ = 0;
+                            auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
+                            if (parsing_res.ec == std::errc{}) {
+                                list_array<entity::effect> set_effects;
+                                effects.iterate(
+                                    [&res, id_](auto size) { res->hidden_effects[id_].reserve(size); },
+                                    [&res, id_](value_read_stream& effect_) {
+                                        auto effect = effect_.read();
+                                        res->hidden_effects[id_].push_back(entity::effect{
+                                            .duration = effect.at("duration"),
+                                            .id = effect.at("id"),
+                                            .amplifier = effect.at("amplifier"),
+                                            .ambient = effect.at("is_ambient"),
+                                            .particles = effect.at("particles"),
+                                        });
+                                    }
+                                );
+                            }
+                        }
+                    );
+                })
+                .collect("active_effects", [&](auto& stream) {
+                    stream.iterate(
+                        [&res](auto size) { res->active_effects.reserve(size); },
+                        [&res](value_read_stream& effect_) {
+                            auto effect = effect_.read();
+                            res->active_effects.emplace(
+                                effect.at("id"),
+                                entity::effect{
+                                    .duration = effect.at("duration"),
+                                    .id = effect.at("id"),
+                                    .amplifier = effect.at("amplifier"),
+                                    .ambient = effect.at("is_ambient"),
+                                    .particles = effect.at("particles"),
+                                }
+                            );
+                        }
+                    );
+                })
+                .collect("ride_by_entity", [&](auto& stream) {
+                    stream.iterate(
+                        [&res](auto size) { res->ride_by_entity.reserve(size); },
+                        [&res](value_read_stream& value) {
+                            auto ride_entity = entity::load_from_file(value);
+                            if (res->world_syncing_data.world)
+                                res->world_syncing_data.world->register_entity(ride_entity);
+                            ride_entity->set_ride_entity(res);
+                        }
+                    );
+                })
+                .collect("attached_to", [&](auto& stream) {
+                    auto val = stream.read();
+                    if (val.is_uuid())
+                        res->attached_to = (enbt::raw_uuid)val;
+                })
+                .collect("attached", [&](auto& stream) {
+                    stream.iterate(
+                        [&res](auto size) { res->attached.reserve(size); },
+                        [&res](value_read_stream& value) {
+                            res->attached.push_back((enbt::raw_uuid)value.read());
+                        }
+                    );
+                })
+                .make_collect();
+        }
+
+        static void write(const entity_ref& value, value_write_stream& write_stream) {
+            auto compound = write_stream.write_compound();
+            compound.write("died", value->died)
+                .write("entity_id", value->entity_id)
+                .write("id", value->id)
+                .write("nbt", value->nbt)
+                .write("server_data", value->server_data)
+                .write("motion", [&value](value_write_stream& stream) {
+                    enbt::io_helper::serialization_write(value->motion, stream);
+                })
+                .write("position", [&value](value_write_stream& stream) {
+                    enbt::io_helper::serialization_write(value->position, stream);
+                })
+                .write("rotation", [&value](value_write_stream& stream) {
+                    enbt::io_helper::serialization_write(value->rotation, stream);
+                })
+                .write("head_rotation", [&value](value_write_stream& stream) {
+                    enbt::io_helper::serialization_write(value->head_rotation, stream);
+                })
+                .write("inventory", [&value](value_write_stream& stream) {
+                    enbt::io_helper::serialization_write(value->inventory, stream);
+                })
+                .write("custom_inventory", [&value](value_write_stream& stream) {
+                    enbt::io_helper::serialization_write(value->custom_inventory, stream);
+                })
+                .write("active_effects", [&value](value_write_stream& stream) {
+                    stream.write_array(value->active_effects.size()).iterable(value->active_effects, [](auto& item, value_write_stream& item_stream) {
+                        auto& [id, effect] = item;
+                        item_stream
+                            .write_compound()
+                            .write("duration", effect.duration)
+                            .write("id", effect.id)
+                            .write("amplifier", effect.amplifier)
+                            .write("is_ambient", effect.ambient)
+                            .write("particles", effect.particles);
+                    });
+                })
+                .write("hidden_effects", [&value](value_write_stream& stream) {
+                    auto comp = stream.write_compound();
+                    for (auto& [id, effects] : value->hidden_effects) {
+                        comp.write(std::to_string(id), [&effects](value_write_stream& effects_stream) {
+                            effects_stream.write_array(effects.size())
+                                .iterable(effects, [](auto& effect, value_write_stream& item_stream) {
+                                    item_stream
+                                        .write_compound()
+                                        .write("duration", effect.duration)
+                                        .write("id", effect.id)
+                                        .write("amplifier", effect.amplifier)
+                                        .write("is_ambient", effect.ambient)
+                                        .write("particles", effect.particles);
+                                });
+                        });
+                    }
+                })
+                .write("attached", [&value](value_write_stream& stream) {
+                    stream
+                        .write_array(value->attached.size())
+                        .iterable(value->attached, [](auto& attached, value_write_stream& attached_stream) {
+                            std::visit(
+                                [&attached_stream]<class T>(const T& item) {
+                                    if constexpr (std::is_same_v<T, enbt::raw_uuid>)
+                                        attached_stream.write(item);
+                                    else {
+                                        attached_stream.write(item->id);
+                                    }
+                                },
+                                attached
+                            );
+                        });
+                });
+            if (value->attached_to) {
+                compound.write("attached_to", [&value](value_write_stream& stream) {
+                    std::visit(
+                        [&stream]<class T>(const T& item) {
+                            if constexpr (std::is_same_v<T, enbt::raw_uuid>)
+                                stream.write(item);
+                            else {
+                                stream.write(item->id);
+                            }
+                        },
+                        *value->attached_to
+                    );
+                });
+            }
+            if (value->current_world())
+                compound.write("bound_world", value->current_world()->world_name);
+        }
+
+        static void read(entity_ref& res, const enbt::value& from) {
+            for (auto& [name, value] : from.as_compound()) {
+                if (name == "died")
+                    res->died = value;
+                else if (name == "entity_id")
+                    res->entity_id = value;
+                else if (name == "id")
+                    res->id = value;
+                else if (name == "motion")
+                    enbt::io_helper::serialization_read(res->motion, value);
+                else if (name == "position")
+                    enbt::io_helper::serialization_read(res->position, value);
+                else if (name == "rotation")
+                    enbt::io_helper::serialization_read(res->rotation, value);
+                else if (name == "head_rotation")
+                    enbt::io_helper::serialization_read(res->head_rotation, value);
+                else if (name == "inventory")
+                    enbt::io_helper::serialization_read(res->inventory, value);
+                else if (name == "custom_inventory")
+                    enbt::io_helper::serialization_read(res->custom_inventory, value);
+                else if (name == "nbt")
+                    res->nbt = value;
+                else if (name == "server_data")
+                    res->server_data = value;
+                else if (name == "bound_world") {
+                    std::string world_id = value;
+                    api::world::get(world_id, [&res](storage::world_data& it) {
+                        it.register_entity(res);
+                    });
+                    if (!res->world_syncing_data.world)
+                        throw std::runtime_error("World " + world_id + " not found.");
+                } else if (name == "hidden_effects") {
+                    res->hidden_effects.reserve(value.size());
+                    for (auto& [id, effects] : value.as_compound()) {
+                        uint32_t id_ = 0;
+                        auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
+                        auto& cur_effects = res->hidden_effects[id_];
+                        cur_effects.reserve(effects.size());
+                        for (auto& effect : effects.as_array()) {
+                            cur_effects.push_back(entity::effect{
+                                .duration = effect.at("duration"),
+                                .id = effect.at("id"),
+                                .amplifier = effect.at("amplifier"),
+                                .ambient = effect.at("is_ambient"),
+                                .particles = effect.at("particles"),
+                            });
+                        }
+                    }
+                } else if (name == "active_effects") {
+                    res->active_effects.reserve(value.size());
+                    for (auto& [id, effect] : value.as_compound()) {
+                        uint32_t id_ = 0;
+                        auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
+                        res->active_effects.emplace(
+                            id_,
+                            entity::effect{
+                                .duration = effect.at("duration"),
+                                .id = effect.at("id"),
+                                .amplifier = effect.at("amplifier"),
+                                .ambient = effect.at("is_ambient"),
+                                .particles = effect.at("particles"),
+                            }
+                        );
+                    }
+                } else if (name == "ride_by_entity") {
+                    res->ride_by_entity.reserve(value.size());
+                    for (auto& entity : value.as_array()) {
+                        auto ride_entity = entity::load_from_enbt(entity.as_compound());
+                        if (res->world_syncing_data.world)
+                            res->world_syncing_data.world->register_entity(ride_entity);
+                        ride_entity->set_ride_entity(res);
+                    }
+                } else if (name == "attached_to") {
+                    res->attached_to = (enbt::raw_uuid)value;
+                } else if (name == "attached") {
+                    res->attached.reserve(value.size());
+                    for (auto& entity : value.as_array())
+                        res->attached.push_back((enbt::raw_uuid)entity);
+                }
+            }
+        }
+
+        static void write(const entity_ref& value, enbt::value& to) {
+            enbt::compound compound{
+                {"died", value->died},
+                {"id", value->id},
+                {"nbt", value->nbt},
+                {"server_data", value->server_data},
+            };
+            enbt::io_helper::serialization_write(value->motion, compound["motion"]);
+            enbt::io_helper::serialization_write(value->position, compound["position"]);
+            enbt::io_helper::serialization_write(value->rotation, compound["rotation"]);
+            enbt::io_helper::serialization_write(value->head_rotation, compound["head_rotation"]);
+            enbt::io_helper::serialization_write(value->inventory, compound["inventory"]);
+            enbt::io_helper::serialization_write(value->custom_inventory, compound["custom_inventory"]);
+            {
+                enbt::fixed_array arr;
+                arr.reserve(value->active_effects.size());
+                for (auto& [id, effect] : value->active_effects) {
+                    arr.push_back(enbt::compound{
+                        {"duration", effect.duration},
+                        {"id", effect.id},
+                        {"amplifier", effect.amplifier},
+                        {"is_ambient", effect.ambient},
+                        {"particles", effect.particles},
+                    });
+                }
+                compound.emplace("active_effects", std::move(arr));
+            };
+            {
+                enbt::compound hidden_effects;
+                hidden_effects.reserve(value->hidden_effects.size());
+                for (auto& [id, effects] : value->hidden_effects) {
+                    enbt::fixed_array arr;
+                    arr.reserve(effects.size());
+                    for (auto& effect : effects) {
+                        arr.push_back(enbt::compound{
+                            {"duration", effect.duration},
+                            {"id", effect.id},
+                            {"amplifier", effect.amplifier},
+                            {"is_ambient", effect.ambient},
+                            {"particles", effect.particles},
+                        });
+                    }
+                    hidden_effects.emplace(std::to_string(id), std::move(arr));
+                }
+                compound.emplace("hidden_effects", std::move(hidden_effects));
+            };
+            {
+                enbt::fixed_array arr;
+                arr.reserve(value->attached.size());
+                for (auto& attached : value->attached) {
+                    std::visit(
+                        [&arr]<class T>(const T& item) {
+                            if constexpr (std::is_same_v<T, enbt::raw_uuid>)
+                                arr.push_back(item);
+                            else
+                                arr.push_back(item->id);
+                        },
+                        attached
+                    );
+                }
+                compound.emplace("attached", std::move(arr));
+            }
+            {
+            }
+            if (value->attached_to) {
+                compound.emplace(
+                    "attached_to",
+                    std::visit(
+                        []<class T>(const T& item) {
+                            if constexpr (std::is_same_v<T, enbt::raw_uuid>)
+                                return item;
+                            else
+                                return item->id;
+                        },
+                        *value->attached_to
+                    )
+                );
+            }
+            if (value->current_world())
+                compound.emplace("bound_world", value->current_world()->world_name);
+            to = std::move(compound);
+        }
+    };
+
+    template <class T>
+    struct serialization<util::XYZ<T>> {
+        static void read(util::XYZ<T>& res, value_read_stream& read_stream) {
+            read_stream
+                .read_compound()
+                .collect_as("x", res.x)
+                .collect_as("y", res.y)
+                .collect_as("z", res.z)
+                .force_all_collect();
+        }
+
+        static void write(const util::XYZ<T>& res, value_write_stream& write_stream) {
+            write_stream
+                .write_compound()
+                .write("x", res.x)
+                .write("y", res.y)
+                .write("z", res.z);
+        }
+
+        static void read(util::XYZ<T>& res, const enbt::value& from) {
+            res.x = from.at("x");
+            res.y = from.at("y");
+            res.z = from.at("z");
+        }
+
+        static void write(const util::XYZ<T>& res, enbt::value& to) {
+            to = enbt::compound{
+                {"x", res.x},
+                {"y", res.y},
+                {"z", res.z}
+            };
+        }
+    };
+
+    template <class T>
+    struct serialization<util::XY<T>> {
+        static void read(util::XY<T>& res, value_read_stream& read_stream) {
+            read_stream
+                .read_compound()
+                .collect_as("x", res.x)
+                .collect_as("y", res.y)
+                .force_all_collect();
+        }
+
+        static void write(const util::XY<T>& res, value_write_stream& write_stream) {
+            write_stream
+                .write_compound()
+                .write("x", res.x)
+                .write("y", res.y);
+        }
+
+        static void read(util::XY<T>& res, const enbt::value& from) {
+            res.x = from.at("x");
+            res.y = from.at("y");
+        }
+
+        static void write(const util::XY<T>& res, enbt::value& to) {
+            to = enbt::compound{
+                {"x", res.x},
+                {"y", res.y}
+            };
+        }
+    };
+
+    template <>
+    struct serialization<util::ANGLE_DEG> {
+        static void read(util::ANGLE_DEG& res, value_read_stream& read_stream) {
+            read_stream
+                .read_compound()
+                .collect_as("x", res.x)
+                .collect_as("y", res.y)
+                .force_all_collect();
+        }
+
+        static void write(const util::ANGLE_DEG& res, value_write_stream& write_stream) {
+            write_stream
+                .write_compound()
+                .write("x", res.x)
+                .write("y", res.y);
+        }
+
+        static void read(util::ANGLE_DEG& res, const enbt::value& from) {
+            res.x = from.at("x");
+            res.y = from.at("y");
+        }
+
+        static void write(const util::ANGLE_DEG& res, enbt::value& to) {
+            to = enbt::compound{
+                {"x", res.x},
+                {"y", res.y}
+            };
+        }
+    };
+
+    template <>
+    struct serialization<util::ANGLE_RAD> {
+        static void read(util::ANGLE_RAD& res, value_read_stream& read_stream) {
+            read_stream
+                .read_compound()
+                .collect_as("x", res.x)
+                .collect_as("y", res.y)
+                .force_all_collect();
+        }
+
+        static void write(const util::ANGLE_RAD& res, value_write_stream& write_stream) {
+            write_stream
+                .write_compound()
+                .write("x", res.x)
+                .write("y", res.y);
+        }
+
+        static void read(util::ANGLE_RAD& res, const enbt::value& from) {
+            res.x = from.at("x");
+            res.y = from.at("y");
+        }
+
+        static void write(const util::ANGLE_RAD& res, enbt::value& to) {
+            to = enbt::compound{
+                {"x", res.x},
+                {"y", res.y}
+            };
+        }
+    };
+}
 
 namespace copper_server {
     namespace base_objects {
@@ -117,117 +634,6 @@ namespace copper_server {
             return res;
         }
 
-        enbt::compound entity::copy_to_enbt() const {
-            enbt::compound res;
-            res["nbt"] = nbt;
-            res["server_data"] = server_data;
-            res["position"] = enbt::fixed_array({position.x, position.y, position.z});
-            res["motion"] = enbt::fixed_array({motion.x, motion.y, motion.z});
-            res["rotation"] = enbt::fixed_array({rotation.x, rotation.y});
-            res["head_rotation"] = enbt::fixed_array({head_rotation.x, head_rotation.y});
-            res["entity_id"] = entity_id;
-            res["id"] = id;
-            res["died"] = died;
-
-            if (world_syncing_data.world)
-                res["bound_world"] = world_syncing_data.world->world_name;
-
-            if (inventory.size()) {
-                enbt::compound inventory_enbt;
-                inventory_enbt.reserve(inventory.size());
-                for (auto& [slot_id, value] : inventory)
-                    inventory_enbt[std::to_string(slot_id)] = value.to_enbt();
-                res["inventory"] = std::move(inventory_enbt);
-            }
-
-
-            if (custom_inventory.size()) {
-                enbt::compound custom_inventory_enbt;
-                custom_inventory_enbt.reserve(custom_inventory.size());
-                for (auto& [inventory_id, inventory_data] : custom_inventory) {
-                    enbt::compound inventory_enbt;
-                    inventory_enbt.reserve(inventory_data.size());
-                    for (auto& [slot_id, value] : inventory_data)
-                        inventory_enbt[std::to_string(slot_id)] = value.to_enbt();
-                    custom_inventory_enbt[inventory_id] = std::move(inventory_enbt);
-                }
-
-                res["custom_inventory"] = std::move(custom_inventory_enbt);
-            }
-
-            if (hidden_effects.size()) {
-                enbt::compound hidden_effects_enbt;
-                hidden_effects_enbt.reserve(hidden_effects.size());
-                for (auto& [effect_id, effects] : hidden_effects) {
-                    enbt::fixed_array effects_enbt;
-                    effects_enbt.reserve(effects.size());
-                    for (auto& effect : effects) {
-                        effects_enbt.push_back(enbt::compound{
-                            {"is_ambient", effect.ambient},
-                            {"amplifier", effect.amplifier},
-                            {"duration", effect.duration},
-                            {"id", effect.id},
-                            {"particles", effect.particles},
-                        });
-                    }
-                    hidden_effects_enbt[std::to_string(effect_id)] = std::move(effects_enbt);
-                }
-                res["hidden_effects"] = std::move(hidden_effects_enbt);
-            }
-            if (active_effects.size()) {
-                enbt::compound active_effects_enbt;
-                active_effects_enbt.reserve(active_effects.size());
-                for (auto& [effect_id, effect] : active_effects)
-                    active_effects_enbt[std::to_string(effect_id)] = enbt::compound{
-                        {"is_ambient", effect.ambient},
-                        {"amplifier", effect.amplifier},
-                        {"duration", effect.duration},
-                        {"id", effect.id},
-                        {"particles", effect.particles},
-                    };
-                res["active_effects"] = std::move(active_effects_enbt);
-            }
-
-            if (nbt.contains("ride_by_entity")) {
-                enbt::fixed_array arr;
-                arr.reserve(ride_by_entity.size());
-                for (auto& value : ride_by_entity)
-                    arr.push_back(value->copy_to_enbt());
-                res["ride_by_entity"] = std::move(arr);
-            }
-
-            if (attached_to) {
-                std::visit(
-                    [&res](auto& it) {
-                        if constexpr (std::is_same_v<std::decay_t<decltype(it)>, enbt::raw_uuid>)
-                            res["attached_to"] = it;
-                        else
-                            res["attached_to"] = it->id;
-                    },
-                    *attached_to
-                );
-            }
-
-            if (attached.size()) {
-                enbt::fixed_array arr;
-                arr.reserve(attached.size());
-                for (auto& it : attached) {
-                    std::visit(
-                        [&arr](auto& it) {
-                            if constexpr (std::is_same_v<std::decay_t<decltype(it)>, enbt::raw_uuid>)
-                                arr.push_back(it);
-                            else
-                                arr.push_back(it->id);
-                        },
-                        it
-                    );
-                }
-
-                res["attached"] = std::move(arr);
-            }
-            return res;
-        }
-
         void resolve_entity(std::variant<entity_ref, enbt::raw_uuid>& it) {
             if (std::holds_alternative<enbt::raw_uuid>(it)) {
                 auto entity = api::entity_id_map::get_entity(std::get<enbt::raw_uuid>(it));
@@ -317,140 +723,6 @@ namespace copper_server {
 
         const entity_data& entity::const_data() {
             return entity_data::get_entity(entity_id);
-        }
-
-        entity_ref entity::load_from_enbt(const enbt::compound_const_ref& nbt) {
-            entity_ref res = new entity();
-            res->died = nbt["died"];
-            res->entity_id = nbt["entity_id"];
-
-            res->id = nbt["id"];
-            res->bounds = res->const_data().base_bounds;
-
-            auto motion = nbt["motion"].as_fixed_array();
-            res->motion = {motion[0], motion[1], motion[2]};
-
-            auto position = nbt["position"].as_fixed_array();
-            res->position = {position[0], position[1], position[2]};
-
-            auto rotation = nbt["rotation"].as_fixed_array();
-            res->rotation = {rotation[0], rotation[1]};
-
-            auto head_rotation = nbt["head_rotation"].as_fixed_array();
-            res->head_rotation = {head_rotation[0], head_rotation[1]};
-
-            res->nbt = nbt["nbt"];
-            res->server_data = nbt["server_data"];
-
-            if (nbt.contains("bound_world")) {
-                api::world::get((std::string)nbt["bound_world"], [&](storage::world_data& it) {
-                    it.register_entity(res);
-                });
-                if (!res->world_syncing_data.world)
-                    throw std::runtime_error("World " + (std::string)nbt["bound_world"] + " not found.");
-            };
-            try {
-                auto creation_callback = entity_data::get_entity(res->entity_id).create_from_enbt_callback;
-                if (creation_callback)
-                    creation_callback(res, nbt);
-            } catch (...) {
-                if (res->world_syncing_data.world)
-                    res->world_syncing_data.world->unregister_entity(res);
-                throw;
-            }
-
-            if (nbt.contains("inventory")) {
-                auto inventory_enbt = nbt["inventory"].as_compound();
-                res->inventory.reserve(inventory_enbt.size());
-                for (auto& [id, value] : inventory_enbt) {
-                    uint32_t id_ = 0;
-                    auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
-                    if (parsing_res.ec == std::errc{})
-                        res->inventory[id_] = slot_data::from_enbt(value.as_compound());
-                }
-            }
-            if (nbt.contains("custom_inventory")) {
-                auto custom_inventory_enbt = nbt["custom_inventory"].as_compound();
-                res->custom_inventory.reserve(custom_inventory_enbt.size());
-                for (auto& [id, value] : custom_inventory_enbt) {
-                    decltype(res->inventory) custom_inventory;
-                    res->inventory.reserve(value.size());
-                    for (auto& [inventory_id, inventory_data] : value.as_compound()) {
-                        uint32_t id_ = 0;
-                        auto parsing_res = std::from_chars(inventory_id.data(), inventory_id.data() + inventory_id.size(), id_);
-                        if (parsing_res.ec == std::errc{})
-                            custom_inventory[id_] = slot_data::from_enbt(inventory_data.as_compound());
-                    }
-                    res->custom_inventory[id] = std::move(custom_inventory);
-                }
-            }
-
-            if (nbt.contains("hidden_effects")) {
-                auto hidden_effects_enbt = nbt["hidden_effects"].as_compound();
-                res->hidden_effects.reserve(hidden_effects_enbt.size());
-                for (auto& [id, effects] : hidden_effects_enbt) {
-                    uint32_t id_ = 0;
-                    auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
-                    if (parsing_res.ec == std::errc{}) {
-                        list_array<entity::effect> set_effects;
-                        res->inventory.reserve(effects.size());
-                        for (auto& effect_item : effects.as_array()) {
-                            auto effect = effect_item.as_compound();
-                            set_effects.push_back(entity::effect{
-                                .duration = effect.at("duration"),
-                                .id = effect.at("id"),
-                                .amplifier = effect.at("amplifier"),
-                                .ambient = effect.at("is_ambient"),
-                                .particles = effect.at("particles"),
-                            });
-                        }
-                        res->hidden_effects[id_] = std::move(set_effects);
-                    }
-                }
-            }
-            if (nbt.contains("active_effects")) {
-                auto active_effects_enbt = nbt["active_effects"].as_compound();
-                res->active_effects.reserve(active_effects_enbt.size());
-                for (auto& [id, value] : active_effects_enbt) {
-                    uint32_t id_ = 0;
-                    auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
-                    if (parsing_res.ec == std::errc{}) {
-                        auto effect = value.as_compound();
-                        res->active_effects[id_] = entity::effect{
-                            .duration = effect.at("duration"),
-                            .id = effect.at("id"),
-                            .amplifier = effect.at("amplifier"),
-                            .ambient = effect.at("is_ambient"),
-                            .particles = effect.at("particles"),
-                        };
-                    }
-                }
-            }
-
-            if (nbt.contains("ride_by_entity")) {
-                auto ride_by_entity = nbt["ride_by_entity"].as_array();
-                res->ride_by_entity.reserve(ride_by_entity.size());
-                for (auto& value : ride_by_entity) {
-                    auto ride_entity = entity::load_from_enbt(value.as_compound());
-                    if (res->world_syncing_data.world)
-                        res->world_syncing_data.world->register_entity(ride_entity);
-                    ride_entity->set_ride_entity(res);
-                }
-            }
-
-            if (nbt.contains("attached_to")) {
-                auto& attached_to = nbt["attached_to"];
-                if (attached_to.is_uuid())
-                    res->attached_to = (enbt::raw_uuid)nbt["attached_to"];
-            }
-
-            if (nbt.contains("attached")) {
-                auto attached_enbt = nbt["attached"].as_array();
-                res->attached.reserve(attached_enbt.size());
-                for (auto& value : attached_enbt)
-                    res->attached.push_back((enbt::raw_uuid)value);
-            }
-            return res;
         }
 
         bool entity::hitboxes_touching_x(double min, double max) {
@@ -946,10 +1218,9 @@ namespace copper_server {
             entity_ref res = new entity();
             res->entity_id = id;
             res->bounds = it.base_bounds;
+            res->nbt = nbt;
             if (it.create_callback)
-                it.create_callback_with_nbt(*res, nbt);
-            else
-                res->nbt = nbt;
+                it.create_callback(*res);
             return res;
         }
 
@@ -969,7 +1240,7 @@ namespace copper_server {
             res->entity_id = it.entity_id;
             res->bounds = it.base_bounds;
             if (it.create_callback)
-                it.create_callback_with_nbt(*res, nbt);
+                it.create_callback(*res);
             else
                 res->nbt = nbt;
             return res;
@@ -984,6 +1255,46 @@ namespace copper_server {
 
         bool entity::is_player() {
             return entity_id == entity_data::player_entity_id;
+        }
+
+        void entity::store_to_file(const entity_ref& entity, enbt::io_helper::value_write_stream& w) {
+            enbt::io_helper::serialization_write(entity, w);
+        }
+
+        entity_ref entity::load_from_file(enbt::io_helper::value_read_stream& w) {
+            entity_ref res = new entity();
+            enbt::io_helper::serialization_read(res, w);
+            try {
+                auto load_callback = entity_data::get_entity(res->entity_id).load_callback;
+                if (load_callback)
+                    load_callback(*res);
+            } catch (...) {
+                if (res->world_syncing_data.world)
+                    res->world_syncing_data.world->unregister_entity(res);
+                throw;
+            }
+            return res;
+        }
+
+        void entity::store_to_enbt(const entity_ref& entity, enbt::compound& w) {
+            enbt::value tmp;
+            enbt::io_helper::serialization_write(entity, tmp);
+            w = std::move(tmp);
+        }
+
+        entity_ref entity::load_from_enbt(const enbt::compound_const_ref& nbt) {
+            entity_ref res = new entity();
+            enbt::io_helper::serialization_read(res, (const enbt::value&)nbt);
+            try {
+                auto load_callback = entity_data::get_entity(res->entity_id).load_callback;
+                if (load_callback)
+                    load_callback(*res);
+            } catch (...) {
+                if (res->world_syncing_data.world)
+                    res->world_syncing_data.world->unregister_entity(res);
+                throw;
+            }
+            return res;
         }
     }
 }

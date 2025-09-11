@@ -31,7 +31,7 @@ namespace copper_server {
             struct sub_chunk_data;
         }
         struct block;
-        typedef uint16_t block_id_t;
+        typedef uint32_t block_id_t;
 
         struct shape_data {
             double min_x, min_y, min_z;
@@ -316,7 +316,7 @@ namespace copper_server {
                     throw std::runtime_error("Block with " + new_block.name + " name already defined.");
 
                 struct {
-                    block_id_t id : 15;
+                    block_id_t id : 30;
                 } bound_check;
 
                 bound_check.id = full_block_data_.size();
@@ -336,8 +336,7 @@ namespace copper_server {
                 return addNewStatelessBlock(static_block_data(new_block));
             }
 
-            base_objects::block_id_t id : 15;
-            uint16_t block_state_data : 15;
+            base_objects::block_id_t id : 30;
             tick_opt tickable : 2;
 
             inline void set_raw(uint32_t raw) {
@@ -358,8 +357,8 @@ namespace copper_server {
                 return u.r;
             }
 
-            block(block_id_t block_id = 0, uint16_t block_state_data = 0)
-                : id(block_id), block_state_data(block_state_data), tickable(tick_opt::undefined) {}
+            block(block_id_t block_id = 0)
+                : id(block_id), tickable(tick_opt::undefined) {}
 
             block(const block& copy) {
                 operator=(copy);

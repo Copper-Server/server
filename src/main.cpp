@@ -9,7 +9,6 @@
 #include <library/fast_task.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/log.hpp>
-#include <src/api/packets.hpp>
 #include <src/api/server.hpp>
 #include <src/plugin/main.hpp>
 #include <src/resources/registers.hpp>

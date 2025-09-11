@@ -127,9 +127,13 @@ namespace copper_server::api::id {
 
         constexpr source() {}
 
+#pragma warning(push)
+#pragma warning(disable : 4244)
         template <source_allow_cast<Value> T>
         constexpr source(T value)
             : value(static_cast<Value>(value)) {}
+
+#pragma warning(pop)
 
         constexpr source(Value value) : value(value) {}
 

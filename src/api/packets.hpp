@@ -2780,7 +2780,7 @@ namespace copper_server {
 
                         struct component {
                             var_int32::data_component_type type;
-                            int32_t crc32_hash = 0;
+                            int32_t crc32c_hash = 0;
                         };
 
                         list_array<component> add_components;
