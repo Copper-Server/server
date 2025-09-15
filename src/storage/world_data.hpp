@@ -10,11 +10,11 @@
 #define SRC_STORAGE_WORLD_DATA
 #include <atomic>
 #include <bitset>
+#include <boost/unordered/unordered_flat_map.hpp>
 #include <filesystem>
 #include <random>
 #include <string>
 #include <vector>
-#include <boost/unordered/unordered_flat_map.hpp>
 
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
@@ -261,6 +261,7 @@ namespace copper_server::storage {
         std::string preview_world_name();
         std::filesystem::path path;
 
+        fast_task::task_query limit_on_load;
         boost::unordered_flat_map<util::XY<int64_t>, FuturePtr<base_objects::atomic_holder<chunk_data>>, std::hash<util::XY<int64_t>>> on_load_process;
         boost::unordered_flat_map<util::XY<int64_t>, FuturePtr<bool>, std::hash<util::XY<int64_t>>> on_save_process;
         boost::unordered_flat_map<size_t, base_objects::entity_ref> entities;
@@ -324,6 +325,10 @@ namespace copper_server::storage {
             return world_type;
         }
 
+        void update_load_limit(size_t count) {
+            limit_on_load.set_max_at_execution(count);
+        }
+
         //use only in initialization
         void set_world_type(std::string_view type);
 
@@ -345,7 +350,6 @@ namespace copper_server::storage {
             std::unordered_map<base_objects::block_id_t, liquid_data> liquid;
             enbt::compound other;
         } general_world_data;
-
 
         enbt::compound world_game_rules;
         enbt::compound world_generator_data;
@@ -426,7 +430,7 @@ namespace copper_server::storage {
         bool request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback);
         void request_chunk_data(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback, const std::function<void()>& fault);
 
-        void save_chunks(bool unload = false);
+        void save_chunks(bool unload = false, bool ignore_limits = false);
         void await_save_chunks();
         void save_and_unload_chunk(int64_t chunk_x, int64_t chunk_z);
         void unload_chunk(int64_t chunk_x, int64_t chunk_z);
@@ -622,7 +626,7 @@ namespace copper_server::storage {
             std::function<void(world_data& world, int64_t chunk_x, int64_t chunk_z)> chunk_unloaded;
 
             std::atomic_size_t chunk_generator_counter = 0; //generating in process
-            std::atomic_size_t chunk_load_counter = 0; //load in process
+            std::atomic_size_t chunk_load_counter = 0;      //load in process
             size_t chunk_target_to_load = 0;
             size_t chunk_total_loaded = 0;
         } profiling;

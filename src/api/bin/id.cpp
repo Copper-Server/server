@@ -305,31 +305,32 @@ namespace copper_server::api::id::detail {
         }
     }
 
-    const list_array<int32_t>& to_registry_source_values(registry_source source, const std::string& value) {
-        static list_array<int32_t> empty;
+    api::tags::tag_handle to_registry_source_handle(registry_source source, std::string_view value) {
         switch (source) {
         case registry_source::banner_pattern:
-            return api::tags::unfold_tag(api::tags::builtin_entry::banner_pattern, value);
+            return api::tags::get_tag_handle(api::tags::builtin_entry::banner_pattern, value);
         case registry_source::damage_type:
-            return api::tags::unfold_tag(api::tags::builtin_entry::damage_type, value);
+            return api::tags::get_tag_handle(api::tags::builtin_entry::damage_type, value);
         case registry_source::enchantment:
-            return api::tags::unfold_tag(api::tags::builtin_entry::enchantment, value);
+            return api::tags::get_tag_handle(api::tags::builtin_entry::enchantment, value);
         case registry_source::painting_variant:
-            return api::tags::unfold_tag(api::tags::builtin_entry::painting_variant, value);
+            return api::tags::get_tag_handle(api::tags::builtin_entry::painting_variant, value);
         case registry_source::instrument:
-            return api::tags::unfold_tag(api::tags::builtin_entry::instrument, value);
+            return api::tags::get_tag_handle(api::tags::builtin_entry::instrument, value);
         case registry_source::item:
-            return api::tags::unfold_tag(api::tags::builtin_entry::item, value);
+            return api::tags::get_tag_handle(api::tags::builtin_entry::item, value);
         case registry_source::block_type:
-            return api::tags::unfold_tag(api::tags::builtin_entry::block, value);
+            return api::tags::get_tag_handle(api::tags::builtin_entry::block, value);
+        case registry_source::block_state:
+            return api::tags::get_tag_handle(api::tags::builtin_entry::block_state, value);
         case registry_source::entity_type:
-            return api::tags::unfold_tag(api::tags::builtin_entry::entity_type, value);
+            return api::tags::get_tag_handle(api::tags::builtin_entry::entity_type, value);
         case registry_source::fluid:
-            return api::tags::unfold_tag(api::tags::builtin_entry::fluid, value);
+            return api::tags::get_tag_handle(api::tags::builtin_entry::fluid, value);
         case registry_source::game_event:
-            return api::tags::unfold_tag(api::tags::builtin_entry::game_event, value);
+            return api::tags::get_tag_handle(api::tags::builtin_entry::game_event, value);
         default:
-            return empty;
+            std::unreachable();
         }
     }
 

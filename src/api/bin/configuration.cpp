@@ -52,6 +52,7 @@ namespace copper_server::api::configuration {
             cfg.world.type = "minecraft:" + cfg.world.type;
         cfg.world.generator_type = (std::string)world["generator_type"].or_apply(cfg.world.generator_type);
         cfg.world.unload_speed = world["unload_speed"].or_apply(cfg.world.unload_speed);
+        cfg.world.load_speed = world["load_speed"].or_apply(cfg.world.load_speed);
         cfg.world.auto_save = world["auto_save"].or_apply(cfg.world.auto_save);
         {
             auto generator_settings = js_object::get_object(world["generator_settings"]);

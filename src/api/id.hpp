@@ -10,6 +10,7 @@
 #define SRC_API_ID
 #include <cstdint>
 #include <library/list_array.hpp>
+#include <src/api/tags.hpp>
 #include <src/base_objects/atomic_holder.hpp>
 #include <string>
 
@@ -102,7 +103,7 @@ namespace copper_server::api::id {
     namespace detail {
         std::string from_registry_source_value(registry_source source, int32_t value);
         int32_t to_registry_source_value(registry_source source, const std::string& value);
-        const list_array<int32_t>& to_registry_source_values(registry_source source, const std::string& value);
+        api::tags::tag_handle to_registry_source_handle(registry_source source, std::string_view value);
 
         base_objects::entity_ref from_registry_source_entity(int32_t value);
         int32_t to_registry_source_entity(const base_objects::entity_ref& value);
@@ -129,6 +130,7 @@ namespace copper_server::api::id {
 
 #pragma warning(push)
 #pragma warning(disable : 4244)
+
         template <source_allow_cast<Value> T>
         constexpr source(T value)
             : value(static_cast<Value>(value)) {}
@@ -192,7 +194,7 @@ namespace copper_server::api::id {
 
     template <registry_source sourc>
     struct source_set {
-        using value_type = std::variant<std::string, int32_t>;
+        using value_type = std::variant<api::tags::tag_handle, int32_t>;
         using reg_source = std::integral_constant<registry_source, sourc>;
         value_type value;
 
@@ -203,9 +205,9 @@ namespace copper_server::api::id {
         constexpr source_set(source_set&& value) noexcept
             : value(std::move(value.value)) {}
 
-        constexpr source_set(std::string_view value) : value(value.starts_with('#') ? value_type(value) : value_type(detail::to_registry_source_value(sourc, std::string(value)))) {}
+        constexpr source_set(std::string_view value) : value(value.starts_with('#') ? value_type(detail::to_registry_source_handle(sourc, value)) : value_type(detail::to_registry_source_value(sourc, std::string(value)))) {}
 
-        constexpr source_set(const std::string& value) : value(value.starts_with('#') ? value_type(value) : value_type(detail::to_registry_source_value(sourc, value))) {}
+        constexpr source_set(const std::string& value) : value(value.starts_with('#') ? value_type(detail::to_registry_source_handle(sourc, value)) : value_type(detail::to_registry_source_value(sourc, value))) {}
 
         template <size_t N>
         constexpr source_set(const char (&value)[N]) : source_set(std::string_view(value, N)) {}
@@ -224,11 +226,11 @@ namespace copper_server::api::id {
 
         list_array<int32_t> view_ids() const {
             return std::visit(
-                []<class T>(const T& it) {
+                []<class T>(const T& it) -> list_array<int32_t> {
                     if constexpr (std::is_same_v<int32_t, T>)
                         return {it};
                     else
-                        return detail::to_registry_source_values(sourc, it);
+                        return api::tags::unfold_tag_ids(it);
                 },
                 value
             );
@@ -237,12 +239,35 @@ namespace copper_server::api::id {
         const list_array<int32_t>& view_ids_direct() const {
             return std::visit(
                 []<class T>(const T& it) -> const list_array<int32_t>& {
-                    if constexpr (std::is_same_v<int32_t, T>){
-                        static list_array<int32_t>empty;
+                    if constexpr (std::is_same_v<int32_t, T>) {
+                        static list_array<int32_t> empty;
                         return empty;
-                    }
-                    else
-                        return detail::to_registry_source_values(sourc, it);
+                    } else
+                        return api::tags::unfold_tag_ids(it);
+                },
+                value
+            );
+        }
+
+        bool contains(int32_t id) const {
+            return std::visit(
+                [id]<class T>(const T& it) {
+                    if constexpr (std::is_same_v<int32_t, T>) {
+                        return it == id;
+                    } else
+                        return api::tags::contains(it, id);
+                },
+                value
+            );
+        }
+
+        bool contains() const {
+            return std::visit(
+                []<class T>(const T& it) {
+                    if constexpr (std::is_same_v<int32_t, T>) {
+                        return false;
+                    } else
+                        return api::tags::contains(it);
                 },
                 value
             );
@@ -417,6 +442,7 @@ namespace copper_server::api::id {
         using painting_variant = source_set<registry_source::painting_variant>;
         using instrument = source_set<registry_source::instrument>;
         using item = source_set<registry_source::item>;
+        using block_state = source_set<registry_source::block_state>; //virtual, uses block tag
         using block_type = source_set<registry_source::block_type>;
         using entity_type = source_set<registry_source::entity_type>;
         using fluid = source_set<registry_source::fluid>;

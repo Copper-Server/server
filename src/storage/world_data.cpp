@@ -31,6 +31,21 @@ namespace enbt::io_helper {
     using height_maps = base_objects::world::height_maps;
 
     template <>
+    struct compact_matrix_simple_cast<base_objects::block[16][16][16]> {
+        using direct_type = std::uint32_t;
+    };
+
+    template <>
+    struct compact_matrix_simple_cast<light_data::light_item[16][16][16]> {
+        using direct_type = std::uint32_t;
+    };
+
+    template <>
+    struct compact_matrix_simple_cast<int32_t[4][4][4]> {
+        using direct_type = std::uint32_t;
+    };
+
+    template <>
     struct serialization_simple_cast<base_objects::block> {
         using direct_type = std::uint32_t;
     };
@@ -59,7 +74,7 @@ namespace enbt::io_helper {
         }
 
         static void write(const height_maps& height_maps, enbt::io_helper::value_write_stream& write_stream) {
-            write_stream.write_compound()
+            write_stream.write_compound(4)
                 .write("ocean_floor", [&](enbt::io_helper::value_write_stream& write_stream) {
                     serialization_write(height_maps.ocean_floor, write_stream);
                 })
@@ -101,7 +116,7 @@ namespace enbt::io_helper {
         }
 
         static void read(light_data::light_item& light_data, enbt::io_helper::value_read_stream& self) {
-            light_data.light_point = self.read();
+            self.read_as(light_data.light_point);
         }
 
         static void write(const light_data::light_item& light_data, enbt::io_helper::value_write_stream& write_stream) {
@@ -118,7 +133,9 @@ namespace enbt::io_helper {
         }
 
         static void read(base_objects::block& block, enbt::io_helper::value_read_stream& self) {
-            block.set_raw(self.read());
+            uint32_t raw = 0;
+            self.read_as(raw);
+            block.set_raw(raw);
         }
 
         static void write(const base_objects::block& block, enbt::io_helper::value_write_stream& write_stream) {
@@ -211,6 +228,7 @@ namespace copper_server::storage {
             return false;
 
         filter.push(file);
+        sub_chunks.reserve(world.get_chunk_y_count());
         uint8_t format_version = enbt::io_helper::read_token(filter);
         enbt::io_helper::value_read_stream stream(filter);
         switch (format_version) {
@@ -225,10 +243,10 @@ namespace copper_server::storage {
                     auto& sub_chunk_data = sub_chunks.back();
                     bool need_recalculate_light_block_light = true;
                     bool need_recalculate_light_sky_light = true;
-                    bool check_tickable = true;
                     self
                         .read_compound()
-                        .collect("blocks", [&](auto& stream) { enbt::io_helper::serialization_read(sub_chunk_data.blocks, stream); check_tickable=true; })
+                        .collect("blocks", [&](auto& stream) { enbt::io_helper::serialization_read(sub_chunk_data.blocks, stream); })
+                        .collect("has_tickable_blocks", [&](auto& stream) { sub_chunk_data.has_tickable_blocks = true; })
                         .collect("block_light", [&](auto& stream) { enbt::io_helper::serialization_read(sub_chunk_data.block_light, stream); need_recalculate_light_block_light = false; })
                         .collect("sky_light", [&](auto& stream) { enbt::io_helper::serialization_read(sub_chunk_data.sky_light, stream); need_recalculate_light_sky_light = false; })
                         .collect("biomes", [&](auto& stream) { enbt::io_helper::serialization_read(sub_chunk_data.biomes, stream); need_recalculate_light_sky_light = false; })
@@ -242,25 +260,25 @@ namespace copper_server::storage {
                                     .collect("x", [&](auto& stream) { local_pos.x = stream.read(); })
                                     .collect("y", [&](auto& stream) { local_pos.y = stream.read(); })
                                     .collect("z", [&](auto& stream) { local_pos.z = stream.read(); })
-                                    .collect("id", [&](auto& stream) { sub_chunk_data.blocks[local_pos.x][local_pos.y][local_pos.z] = base_objects::block{(base_objects::block_id_t)self.read()}; })
-                                    .collect("nbt", [&](auto& stream) { sub_chunk_data.block_entities[local_pos.z | (local_pos.y << 4) | (local_pos.x << 8)] = stream.read(); })
+                                    .collect("id", [&](auto& stream) { 
+                                        base_objects::block_id_t id =0;
+                                         self.read_as(id);
+                                        sub_chunk_data.blocks[local_pos.x][local_pos.y][local_pos.z] = base_objects::block{id}; })
+                                    .collect("nbt", [&](auto& stream) {
+                                        sub_chunk_data.block_entities[local_pos.z | (local_pos.y << 4) | (local_pos.x << 8)] = stream.read();
+                                    })
                                     .force_all_collect();
                             }
                         )
                         .make_collect([](auto& name, auto& stream) { stream.read(); });
+
                     sub_chunk_data.need_to_recalculate_light = need_recalculate_light_block_light || need_recalculate_light_sky_light;
-                    if (check_tickable)
-                        for (auto& x : sub_chunk_data.blocks)
-                            for (auto& y : x)
-                                for (auto& z : y)
-                                    if (bool is_tickable = sub_chunk_data.has_tickable_blocks |= z.is_tickable(); is_tickable)
-                                        return;
                 })
                 .collect_iterate( //format-fix
                     "entities",
                     [&](std::uint64_t len) { stored_entities.reserve(len); },
                     [&](enbt::io_helper::value_read_stream& self) {
-                        auto res = base_objects::entity::load_from_enbt(self.read().as_compound());
+                        auto res = base_objects::entity::load_from_file(self);
                         world.register_entity(res);
                     }
                 )
@@ -363,6 +381,8 @@ namespace copper_server::storage {
                     return false;
                 load_block_data(blocks, sub_chunk_data->blocks, sub_chunk_data->has_tickable_blocks);
             }
+            if (sub_chunk.contains("has_tickable_blocks"))
+                sub_chunk_data->has_tickable_blocks = sub_chunk["has_tickable_blocks"];
             if (sub_chunk.contains("entities")) {
                 for (auto& entity : sub_chunk["entities"].as_array()) {
                     auto entity_ref = base_objects::entity::load_from_enbt(entity.as_compound());
@@ -422,7 +442,16 @@ namespace copper_server::storage {
     bool chunk_data::save(const std::filesystem::path& path, uint64_t tick_counter, world_data& world) {
         if (api::configuration::get().server.world_debug_mode)
             return false;
-        std::filesystem::create_directories(path.parent_path());
+        {
+            fast_task::files::async_iofstream file( //the std::filesystem::create_directories is slower without check
+                path,
+                fast_task::files::open_mode::write,
+                fast_task::files::on_open_action::always_new,
+                fast_task::files::_sync_flags{}
+            );
+            if (!file.is_open())
+                std::filesystem::create_directories(path.parent_path());
+        }
         fast_task::files::async_iofstream file(
             path,
             fast_task::files::open_mode::write,
@@ -438,14 +467,14 @@ namespace copper_server::storage {
             filter.push(boost::iostreams::zstd_compressor());
         filter.push(file);
         enbt::io_helper::write_token(filter, 0ui8);
-        std::stringstream ss;
-        enbt::io_helper::value_write_stream stream(ss);
+        std::ostringstream str;
+        enbt::io_helper::value_write_stream stream(str);
         {
             auto comp
-                = stream.write_compound()
+                = stream.write_compound(5 + (generator_stage != 0xFF) + (resume_gen_level != 255))
                       .write("sub_chunks", [&](enbt::io_helper::value_write_stream& stream) {
                           stream.write_array(sub_chunks.size()).iterable(sub_chunks, [&](const storage::sub_chunk_data& sub_chunk, enbt::io_helper::value_write_stream& stream) {
-                              auto compound = stream.write_compound();
+                              auto compound = stream.write_compound(3 + (sub_chunk.need_to_recalculate_light ? 0 : 2) + sub_chunk.has_tickable_blocks);
                               compound.write("blocks", [&](enbt::io_helper::value_write_stream& stream) {
                                   enbt::io_helper::serialization_write(sub_chunk.blocks, stream);
                               });
@@ -457,7 +486,7 @@ namespace copper_server::storage {
                                       pos.y = (_pos >> 4) & 0xF;
                                       pos.z = _pos & 0xF;
 
-                                      auto compound = stream.write_compound();
+                                      auto compound = stream.write_compound(5);
                                       compound.write("x", pos.x);
                                       compound.write("y", pos.y);
                                       compound.write("z", pos.z);
@@ -476,6 +505,8 @@ namespace copper_server::storage {
                                       enbt::io_helper::serialization_write(sub_chunk.block_light.light_map, stream);
                                   });
                               }
+                              if (sub_chunk.has_tickable_blocks)
+                                  compound.write("has_tickable_blocks", true);
                           });
                       })
                       .write("entities", [&](enbt::io_helper::value_write_stream& stream) {
@@ -492,7 +523,7 @@ namespace copper_server::storage {
                           stream.write_array(queried_for_tick.size()).iterable(queried_for_tick, [&](auto& item, enbt::io_helper::value_write_stream& stream) {
                               stream.write_array(item.size()).iterable(item, [&](auto& item, enbt::io_helper::value_write_stream& stream) {
                                   auto& [till_tick, block_pos] = item;
-                                  auto compound = stream.write_compound();
+                                  auto compound = stream.write_compound(4);
                                   compound.write("x", block_pos.x);
                                   compound.write("y", block_pos.y);
                                   compound.write("z", block_pos.z);
@@ -503,7 +534,7 @@ namespace copper_server::storage {
                       .write("queried_for_liquid_tick", [&](enbt::io_helper::value_write_stream& stream) {
                           stream.write_array(queried_for_tick.size()).iterable(queried_for_liquid_tick, [&](auto& item, enbt::io_helper::value_write_stream& stream) {
                               auto& [till_tick, block_pos] = item;
-                              auto compound = stream.write_compound();
+                              auto compound = stream.write_compound(4);
                               compound.write("x", block_pos.x);
                               compound.write("y", block_pos.y);
                               compound.write("z", block_pos.z);
@@ -519,9 +550,9 @@ namespace copper_server::storage {
                 comp.write("resume_gen_level", resume_gen_level);
         }
 
-
-        auto tmp = ss.str();
-        filter.write(tmp.c_str(), tmp.size());
+        filter << str.view();
+        filter.flush();
+        file.flush();
         return true;
     }
 
@@ -1752,7 +1783,7 @@ namespace copper_server::storage {
     }
 
     world_data::world_data(int32_t world_id, const std::filesystem::path& path)
-        : path(path), world_id(world_id) {
+        : path(path), world_id(world_id), limit_on_load(api::configuration::get().world.load_speed) {
         world_game_rules["reducedDebugInfo"] = api::configuration::get().game_play.reduced_debug_screen;
         if (!std::filesystem::exists(path))
             std::filesystem::create_directories(path);
@@ -1766,6 +1797,7 @@ namespace copper_server::storage {
                 22
             }
         );
+        limit_on_load.enable();
     }
 
     void world_data::update_spawn_data(int64_t x, int64_t z, int64_t radius, float angle) {
@@ -1846,26 +1878,22 @@ namespace copper_server::storage {
     FuturePtr<base_objects::atomic_holder<chunk_data>> world_data::create_chunk_load_future(int64_t chunk_x, int64_t chunk_z) {
         if (profiling.enable_world_profiling)
             ++profiling.chunk_load_counter;
-        return Future<base_objects::atomic_holder<chunk_data>>::start(
-            [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
-                return processed_load_chunk_sync(chunk_x, chunk_z, true);
-            }
-        );
+        return Future<base_objects::atomic_holder<chunk_data>>::start(limit_on_load, [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
+            return processed_load_chunk_sync(chunk_x, chunk_z, true);
+        });
     }
 
     FuturePtr<base_objects::atomic_holder<chunk_data>> world_data::create_chunk_load_future(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback, const std::function<void()>& fault) {
         if (profiling.enable_world_profiling)
             ++profiling.chunk_load_counter;
-        return Future<base_objects::atomic_holder<chunk_data>>::start(
-            [this, chunk_x, chunk_z, callback, fault]() -> base_objects::atomic_holder<chunk_data> {
-                auto chunk = processed_load_chunk_sync(chunk_x, chunk_z, true);
-                if (chunk)
-                    callback(*chunk);
-                else
-                    fault();
-                return chunk;
-            }
-        );
+        return Future<base_objects::atomic_holder<chunk_data>>::start(limit_on_load, [this, chunk_x, chunk_z, callback, fault]() -> base_objects::atomic_holder<chunk_data> {
+            auto chunk = processed_load_chunk_sync(chunk_x, chunk_z, true);
+            if (chunk)
+                callback(*chunk);
+            else
+                fault();
+            return chunk;
+        });
     }
 
     base_objects::atomic_holder<chunk_data> world_data::request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z) {
@@ -2022,11 +2050,30 @@ namespace copper_server::storage {
         to_await.for_each([](FuturePtr<bool>& i) { i->wait(); });
     }
 
-    void world_data::save_chunks(bool unload) {
-        std::unique_lock lock(mutex);
-        for (auto& [x, x_axis] : chunks)
-            for (auto& [z, chunk] : x_axis)
+    void world_data::save_chunks(bool unload, bool ignore_limits) {
+        auto max_save = api::configuration::get().world.unload_speed;
+        if (max_save && !ignore_limits) {
+            list_array<std::pair<int64_t, int64_t>> to_save;
+            {
+                std::unique_lock lock(mutex);
+                for (auto& [x, x_axis] : chunks)
+                    for (auto& [z, chunk] : x_axis)
+                        to_save.emplace_back(x, z);
+            }
+            for (auto [x, z] : to_save) {
+                std::unique_lock lock(mutex);
                 make_save(x, z, unload);
+                if (on_save_process.size() > max_save) {
+                    lock.unlock();
+                    await_save_chunks();
+                }
+            }
+        } else {
+            std::unique_lock lock(mutex);
+            for (auto& [x, x_axis] : chunks)
+                for (auto& [z, chunk] : x_axis)
+                    make_save(x, z, unload);
+        }
     }
 
     void world_data::save_and_unload_chunk(int64_t chunk_x, int64_t chunk_z) {
@@ -3129,6 +3176,8 @@ namespace copper_server::storage {
                 if (slow_world_threshold < current_tick_speed)
                     profiling.slow_world_tick_callback(*this, std::chrono::duration_cast<std::chrono::milliseconds>(current_tick_speed));
             }
+            if (profiling.sync_profiling)
+                lock.unlock();
         }
 
         auto as = api::configuration::get().world.auto_save;
@@ -3289,14 +3338,20 @@ namespace copper_server::storage {
         if (auto item = cached_worlds.find(world_id); item == cached_worlds.end())
             throw std::runtime_error("World not found");
         else {
-            item->second->save();
-            item->second->save_chunks();
+            auto w = item->second;
+            lock.unlock();
+            w->save();
+            w->save_chunks();
         }
     }
 
     void worlds_data::save_all() {
         std::unique_lock lock(mutex);
-        for (auto& [id, world] : cached_worlds) {
+        list_array<base_objects::atomic_holder<world_data>> worlds;
+        for (auto& [id, world] : cached_worlds)
+            worlds.emplace_back(world);
+        lock.unlock();
+        for (auto& world : worlds) {
             world->save();
             world->save_chunks();
         }
@@ -3310,7 +3365,7 @@ namespace copper_server::storage {
             auto& world = item->second;
             on_world_unloaded(world_id);
             world->save();
-            world->save_chunks(true);
+            world->save_chunks(true, true);
             world->await_save_chunks();
             cached_worlds.erase(item);
         }
@@ -3321,7 +3376,7 @@ namespace copper_server::storage {
         for (auto& [id, world] : cached_worlds) {
             on_world_unloaded(id);
             world->save();
-            world->save_chunks();
+            world->save_chunks(true, true);
             world->await_save_chunks();
         }
         cached_worlds.clear();

@@ -29,7 +29,8 @@ namespace copper_server::api::configuration {
             std::string generator_type = "default";
             std::string saving_mode = "zstd"; //allowed modes is 'zstd' and 'raw'
 
-            size_t unload_speed = 10; //max 10 chunks per tick and per world
+            size_t unload_speed = 10; //max 10 chunks at once
+            size_t load_speed = 10;   //max 10 chunks at once
             size_t auto_save = 6000;  //0 to disable
 
             struct {
