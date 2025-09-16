@@ -9,7 +9,7 @@
 #ifndef SRC_UTIL_TASK_MANAGEMENT
 #define SRC_UTIL_TASK_MANAGEMENT
 #include <library/fast_task.hpp>
-#include <library/fast_task/src/future.hpp>
+#include <library/fast_task/include/future.hpp>
 #include <library/list_array.hpp>
 
 struct Task {

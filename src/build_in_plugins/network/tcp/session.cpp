@@ -19,7 +19,7 @@ namespace copper_server::build_in_plugins::network::tcp {
     std::atomic_uint64_t id_gen(0);
     bool session::do_log_connection_errors = true;
 
-    session::session(fast_task::networking::TcpNetworkStream& s, client* client_handler, float& set_timeout)
+    session::session(fast_task::networking::tcp_network_stream& s, client* client_handler, float& set_timeout)
         : api::network::tcp::session(id_gen++), stream(&s), timeout(set_timeout) {
         chandler = client_handler->define_ourself(this);
         read_data.resize(1024);

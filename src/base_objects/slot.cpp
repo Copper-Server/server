@@ -38,7 +38,7 @@ namespace copper_server::base_objects {
 
     void slot_data::to_enbt(enbt::io_helper::value_write_stream& stream) const {
         stream
-            .write_compound()
+            .write_compound(3)
             .write("id", id)
             .write("count", count)
             .write("components", [this](auto& components_stream) {

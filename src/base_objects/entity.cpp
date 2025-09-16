@@ -35,7 +35,7 @@ namespace enbt::io_helper {
         }
 
         static void write(const std::unordered_map<uint32_t, slot_data>& res, value_write_stream& read_stream) {
-            auto compound = read_stream.write_compound();
+            auto compound = read_stream.write_compound(res.size());
             for (auto& [id, value] : res)
                 compound.write(std::to_string(id), [&value](auto& stream) { value.to_enbt(stream); });
         }
@@ -154,7 +154,7 @@ namespace enbt::io_helper {
         }
 
         static void write(const entity_ref& value, value_write_stream& write_stream) {
-            auto compound = write_stream.write_compound();
+            auto compound = write_stream.write_compound(14 + bool(value->attached_to) + bool(value->current_world()));
             compound.write("died", value->died)
                 .write("entity_id", value->entity_id)
                 .write("id", value->id)
@@ -182,7 +182,7 @@ namespace enbt::io_helper {
                     stream.write_array(value->active_effects.size()).iterable(value->active_effects, [](auto& item, value_write_stream& item_stream) {
                         auto& [id, effect] = item;
                         item_stream
-                            .write_compound()
+                            .write_compound(5)
                             .write("duration", effect.duration)
                             .write("id", effect.id)
                             .write("amplifier", effect.amplifier)
@@ -191,13 +191,13 @@ namespace enbt::io_helper {
                     });
                 })
                 .write("hidden_effects", [&value](value_write_stream& stream) {
-                    auto comp = stream.write_compound();
+                    auto comp = stream.write_compound(value->hidden_effects.size());
                     for (auto& [id, effects] : value->hidden_effects) {
                         comp.write(std::to_string(id), [&effects](value_write_stream& effects_stream) {
                             effects_stream.write_array(effects.size())
                                 .iterable(effects, [](auto& effect, value_write_stream& item_stream) {
                                     item_stream
-                                        .write_compound()
+                                        .write_compound(5)
                                         .write("duration", effect.duration)
                                         .write("id", effect.id)
                                         .write("amplifier", effect.amplifier)

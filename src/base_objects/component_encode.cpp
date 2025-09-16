@@ -46,7 +46,7 @@ namespace copper_server::base_objects {
                     nam = "minecraft:" + std::string(T::actual_name::value);
                 else
                     nam = "minecraft:" + std::string(reflect::get_pretty_type_name<T>());
-                stream.write_compound().write(nam, [&it](enbt::io_helper::value_write_stream& stream) {
+                stream.write_compound(1).write(nam, [&it](enbt::io_helper::value_write_stream& stream) {
                     util::encoding::enbt::serialize_entry(stream, it);
                 });
             },

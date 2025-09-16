@@ -7,6 +7,7 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <library/fast_task.hpp>
+#include <library/fast_task/include/allocator.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/log.hpp>
 #include <src/api/server.hpp>
@@ -76,4 +77,22 @@ int main() {
     api::log::info("Initializer thread", "Loading complete.");
     fast_task::scheduler::await_end_tasks(false);
     return 0;
+}
+
+//Allocation safety(only when preemptive scheduler enabled in fast_task)
+
+void* operator new(std::size_t n) noexcept(false) {
+    return fast_task::allocate(n);
+}
+
+void operator delete(void* p) noexcept {
+    return fast_task::free(p);
+}
+
+void* operator new[](std::size_t s) noexcept(false) {
+    return fast_task::allocate(s);
+}
+
+void operator delete[](void* p) noexcept {
+    return fast_task::free(p);
 }

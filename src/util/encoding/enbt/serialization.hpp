@@ -198,7 +198,7 @@ namespace copper_server::util::encoding::enbt {
                     serialize_entry(stream, *value);
                 });
         } else if constexpr (std::is_same_v<base_objects::position, Type>)
-            res.write_compound().write("x", value.x).write("y", value.y).write("z", value.z);
+            res.write_compound(3).write("x", value.x).write("y", value.y).write("z", value.z);
         else if constexpr (is_template_base_of<base_objects::ignored, Type>) {
             res.write(::enbt::value());
         } else if constexpr (is_template_base_of<std::optional, Type>) {
@@ -215,11 +215,11 @@ namespace copper_server::util::encoding::enbt {
             std::visit(
                 [&res](auto& it) {
                     if constexpr (std::is_same_v<typename Type::var_0, std::decay_t<decltype(it)>>)
-                        res.write_compound().write("var_0", [&it](auto& stream) {
+                        res.write_compound(1).write("var_0", [&it](auto& stream) {
                             serialize_entry(stream, it);
                         });
                     else
-                        res.write_compound().write("var_1", [&it](auto& stream) {
+                        res.write_compound(1).write("var_1", [&it](auto& stream) {
                             serialize_entry(stream, it);
                         });
                 },
@@ -230,7 +230,7 @@ namespace copper_server::util::encoding::enbt {
                 [&](auto& it) {
                     using it_T = std::decay_t<decltype(it)>;
                     res
-                        .write_compound()
+                        .write_compound(2)
                         .write("type", [&res](auto& stream) {
                             serialize_entry(stream, typename Type::encode_type(it_T::item_id::value));
                         })
@@ -246,7 +246,7 @@ namespace copper_server::util::encoding::enbt {
             serialize_entry(res, value.value);
         } else if constexpr (is_template_base_of<base_objects::flags_list, Type>) {
             res
-                .write_compound()
+                .write_compound(2)
                 .write("flag", [&value](auto& stream) {
                     serialize_entry(stream, value.flag);
                 })
@@ -291,7 +291,7 @@ namespace copper_server::util::encoding::enbt {
             serialize_entry(res, value.to_string());
         } else {
             bool process_next = true;
-            auto comp = res.write_compound();
+            auto comp = res.write_compound(reflect::fields_count<Type>());
             reflect::for_each_field_with_name(value, [&res, &process_next, &comp](auto& item, std::string_view name) {
                 if (process_next)
                     comp.write(name, [&item](auto& stream) {

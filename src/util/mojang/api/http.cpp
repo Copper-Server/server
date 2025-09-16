@@ -18,7 +18,7 @@ namespace copper_server::util::mojang::api::http {
     std::string request(const std::string& mode, const std::string& address, const std::string& query, uint16_t port, uint8_t max_redirects) {
         auto port_string = std::to_string(port);
 
-        std::unique_ptr<fast_task::networking::TcpClientSocket> client(fast_task::networking::TcpClientSocket::connect({address, port}));
+        std::unique_ptr<fast_task::networking::tcp_client_socket> client(fast_task::networking::tcp_client_socket::connect({address, port}));
 
 
         boost::beast::flat_buffer buf;
