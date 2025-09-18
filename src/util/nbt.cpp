@@ -73,7 +73,7 @@ namespace copper_server::util {
             nbt_data.push_back((uint8_t)val[i]);
     }
 
-    void NBT::IntegerInsert(enbt::value& val, bool typ_ins) {
+    void NBT::IntegerInsert(const enbt::value& val, bool typ_ins) {
         switch (val.get_type_len()) {
         case enbt::type_len::Tiny:
             if (typ_ins)
@@ -111,7 +111,7 @@ namespace copper_server::util {
         }
     }
 
-    void NBT::FloatingInsert(enbt::value& val, bool typ_ins) {
+    void NBT::FloatingInsert(const enbt::value& val, bool typ_ins) {
         switch (val.get_type_len()) {
         case enbt::type_len::Default:
             if (typ_ins)
@@ -128,7 +128,7 @@ namespace copper_server::util {
         }
     }
 
-    void NBT::BuildCompoundItem(const std::string& c_name, enbt::value& comp, bool compress) {
+    void NBT::BuildCompoundItem(const std::string& c_name, const enbt::value& comp, bool compress) {
         if (c_name.size() > UINT16_MAX)
             throw std::out_of_range("enbt::value string too big to fit in NBT");
         InsertType(comp.type_id());
@@ -137,7 +137,7 @@ namespace copper_server::util {
         RecursiveBuilder(comp, false, "", compress, false);
     }
 
-    void NBT::BuildCompound(const std::string& c_name, enbt::value& comp, bool compress, bool insert_name) {
+    void NBT::BuildCompound(const std::string& c_name, const enbt::value& comp, bool compress, bool insert_name) {
         if (insert_name) {
             insertValue((uint16_t)c_name.size());
             insertString(c_name.data(), c_name.size());
@@ -210,7 +210,7 @@ namespace copper_server::util {
         }
     }
 
-    void NBT::BuildBaseIntArray(int32_t len, enbt::value& arr, enbt::type_id base_id) {
+    void NBT::BuildBaseIntArray(int32_t len, const enbt::value& arr, enbt::type_id base_id) {
         insertValue(len);
         for (int32_t i = 0; i < len; i++) {
             if (arr[i].type_id() != base_id)
@@ -219,7 +219,7 @@ namespace copper_server::util {
         }
     }
 
-    void NBT::BuildSimpleIntArray(int32_t len, enbt::value& arr, enbt::type_id base_id) {
+    void NBT::BuildSimpleIntArray(int32_t len, const enbt::value& arr, enbt::type_id base_id) {
         insertValue(len);
         for (int32_t i = 0; i < len; i++) {
             auto val = arr.get_index(i);
@@ -229,7 +229,7 @@ namespace copper_server::util {
         }
     }
 
-    void NBT::BuildArray(int32_t len, enbt::value& arr, enbt::type_id base_id, bool compress) {
+    void NBT::BuildArray(int32_t len, const enbt::value& arr, enbt::type_id base_id, bool compress) {
         insertValue(len);
         if (arr.is_sarray()) {
             for (int32_t i = 0; i < len; i++) {
@@ -257,7 +257,7 @@ namespace copper_server::util {
         }
     }
 
-    void NBT::BuildArray(enbt::value& enbt, bool insert_type, bool compress) {
+    void NBT::BuildArray(const enbt::value& enbt, bool insert_type, bool compress) {
         if (!enbt.size()) {
             if (insert_type)
                 nbt_data.push_back(9);
@@ -309,7 +309,7 @@ namespace copper_server::util {
         BuildArray((int32_t)enbt.size(), enbt, base_type, compress);
     }
 
-    void NBT::RecursiveBuilder(enbt::value& enbt, bool insert_type, const std::string& name, bool compress, bool insert_name) {
+    void NBT::RecursiveBuilder(const enbt::value& enbt, bool insert_type, const std::string& name, bool compress, bool insert_name) {
         switch (enbt.get_type()) {
         case enbt::type::none:
             if (insert_type)
@@ -385,12 +385,15 @@ namespace copper_server::util {
                 throw std::out_of_range("Out of bounds");
             i += length;
             if (length <= 32 && length >= 16) {
-                try {
-                    enbt::raw_uuid res;
-                    auto check_view = enbt::raw_uuid::from_uuid_string(res, std::string_view((const char*)data + i - length, length));
-                    if (check_view.size() == length)
-                        return enbt::value(res);
-                } catch (...) {
+                std::string_view check((const char*)data + i - length, length);
+                if (check.find_first_not_of("0123456789ABCDEF-") == std::string_view::npos) {
+                    try {
+                        enbt::raw_uuid res;
+                        auto check_view = enbt::raw_uuid::from_uuid_string(res, check);
+                        if (check_view.size() == length)
+                            return enbt::value(res);
+                    } catch (...) {
+                    }
                 }
             }
             return enbt::value((const char*)data + i - length, length);
@@ -403,7 +406,7 @@ namespace copper_server::util {
             std::vector<enbt::value> res;
             res.reserve(length);
             for (int32_t iterate = 0; iterate < length; iterate++)
-                res.push_back(RecursiveExtractor_1(list_type, data, i, max_size));
+                res.emplace_back(RecursiveExtractor_1(list_type, data, i, max_size));
             return enbt::value(res, enbt::type_id(enbt::type::array, enbt::type_len::Default));
         }
         case 10: { //compound
@@ -426,14 +429,14 @@ namespace copper_server::util {
             if (i + length * 4 >= max_size)
                 throw std::out_of_range("Out of bounds");
             i += length * 4;
-            return enbt::value((int32_t*)data, length, std::endian::big, true);
+            return enbt::value((const int32_t*)data, length, std::endian::big, true);
         }
         case 12: { //long array
             int32_t length = extractValue<int32_t>(data, i, max_size);
             if (i + length * 8 >= max_size)
                 throw std::out_of_range("Out of bounds");
             i += length * 8;
-            return enbt::value((int64_t*)data, length, std::endian::big, true);
+            return enbt::value((const int64_t*)data, length, std::endian::big, true);
         }
         default:
             throw std::exception("Invalid type");
@@ -487,7 +490,7 @@ namespace copper_server::util {
 
     NBT NBT::build(const enbt::value& enbt, bool compress, const std::string& entry_name) {
         NBT ret;
-        ret.RecursiveBuilder(const_cast<enbt::value&>(enbt), true, entry_name, compress, true);
+        ret.RecursiveBuilder(enbt, true, entry_name, compress, true);
         return ret;
     }
 

@@ -9,9 +9,9 @@
 #include <src/api/allowlist.hpp>
 #include <src/api/client.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/log.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/log.hpp>
 #include <src/plugin/main.hpp>
 #include <src/storage/unordered_list_storage.hpp>
 
@@ -68,7 +68,7 @@ namespace copper_server::build_in_plugins {
             {
                 auto allowlist = browser.add_child({"allowlist", "", ""});
                 allowlist.add_child({"add", "", ""})
-                    .add_child({"<player>", "add player to allowlist", "/allowlist add <player>"}, cmd_pred_string::quotable_phrase)
+                    .add_child({"player", "add player to allowlist", "/allowlist add player"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                     .set_callback("command.allowlist.add", [this](const list_array<predicate>& args, base_objects::command_context& context) -> void {
                         auto& player_name = std::get<pred_string>(args[0]).value;
                         if (player_name.contains("\n"))
@@ -82,7 +82,7 @@ namespace copper_server::build_in_plugins {
                         context.executor << api::client::play::system_chat{.content = {"Player " + player_name + " added to allowlist"}};
                     });
                 allowlist.add_child({"remove", "", ""})
-                    .add_child({"<player>", "remove player from allowlist", "/allowlist remove <player>"}, cmd_pred_string::quotable_phrase)
+                    .add_child({"player", "remove player from allowlist", "/allowlist remove player"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                     .set_callback("command.allowlist.remove", [this](const list_array<predicate>& args, base_objects::command_context& context) -> void {
                         auto& player_name = std::get<pred_string>(args[0]).value;
                         if (player_name.contains("\n"))
@@ -120,20 +120,20 @@ namespace copper_server::build_in_plugins {
                         }
                     });
                 allowlist.add_child({"mode"})
-                    .add_child({"<mode>", "set allowlist mode", "/allowlist mode block|allow|off"}, cmd_pred_string::quotable_phrase)
+                    .add_child({"mode", "set allowlist mode", "/allowlist mode block|allow|off"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                     .set_callback("command.allowlist.mode", [](const list_array<predicate>& args, base_objects::command_context& context) -> void {
-                        auto& mode = std::get<pred_string>(args[0]).value;
-                        if (mode == "block")
+                        auto& new_mode = std::get<pred_string>(args[0]).value;
+                        if (new_mode == "block")
                             api::allowlist::on_mode_change(api::allowlist::allowlist_mode::block);
-                        else if (mode == "allow")
+                        else if (new_mode == "allow")
                             api::allowlist::on_mode_change(api::allowlist::allowlist_mode::allow);
-                        else if (mode == "off")
+                        else if (new_mode == "off")
                             api::allowlist::on_mode_change(api::allowlist::allowlist_mode::off);
                         else {
                             context.executor << api::client::play::system_chat{.content = {"Usage: /allowlist mode block|allow|off"}};
                             return;
                         }
-                        context.executor << api::client::play::system_chat{.content = {"Allowlist mode set to " + mode}};
+                        context.executor << api::client::play::system_chat{.content = {"Allowlist mode set to " + new_mode}};
                     });
             }
         }

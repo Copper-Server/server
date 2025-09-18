@@ -18,9 +18,18 @@
 #include <src/base_objects/entity/event.hpp>
 #include <src/base_objects/events/sync_event.hpp>
 #include <src/base_objects/slot.hpp>
+#include <src/base_objects/weather.hpp>
 #include <src/base_objects/world/block_action.hpp>
 #include <src/util/calculations.hpp>
 #include <stdint.h>
+
+namespace enbt::io_helper {
+    class value_write_stream;
+    class value_read_stream;
+
+    template <class T>
+    struct serialization;
+}
 
 namespace copper_server {
     namespace storage {
@@ -45,6 +54,7 @@ namespace copper_server {
         struct block_entity_ref;
         struct const_block_entity_ref;
 
+        //TODO Feat: allow edit some entity properties in config
         struct entity_data {
             list_array<std::string> entity_aliases; //string entity ids(checks from first to last, if none found in `initialize_entities()` throws) implicitly uses id first
             std::string id;
@@ -52,18 +62,18 @@ namespace copper_server {
             std::string translation_resource_key;
             std::string spawn_group;
 
-            bounding base_bounds;
-            float eye_height;
+            bounding base_bounds{0.0, 0.0};
+            float eye_height = 0.0f;
 
-            float acceleration; // block\tick
-            float drag_vertical;
-            float drag_horizontal;
-            float terminal_velocity;
+            float acceleration = 0.0f; // block\tick
+            float drag_vertical = 0.0f;
+            float drag_horizontal = 0.0f;
+            float terminal_velocity = 0.0f;
 
             int32_t max_track_distance = 0;
             int32_t track_tick_interval = 0;
 
-            uint16_t entity_id;
+            uint16_t entity_id = 0;
 
             bool drag_applied_after_acceleration = false;
             bool is_summonable = false;
@@ -74,15 +84,15 @@ namespace copper_server {
 
             struct living_entity_data_t {
                 int32_t inventory_size = 0;
-                float base_health;
-                float step_height;
+                float base_health = 0.0f;
+                float step_height = 0.0f;
                 uint16_t max_air = 300;
                 bool can_avoid_traps = false;
                 bool can_be_hit_by_projectile = true;
-                bool can_freeze;
-                bool can_hit;
-                bool is_collidable;
-                bool is_attackable;
+                bool can_freeze = false;
+                bool can_hit = false;
+                bool is_collidable = false;
+                bool is_attackable = false;
 
                 struct brain_task {
                     std::string name;
@@ -138,8 +148,7 @@ namespace copper_server {
 
             std::function<bool(entity& target_entity, bool force)> pre_death_callback;
             std::function<void(entity& target_entity)> create_callback;
-            std::function<void(entity& target_entity, const enbt::compound_const_ref&)> create_callback_with_nbt;
-            std::function<void(entity_ref& creating_entity, const enbt::compound_const_ref&)> create_from_enbt_callback;
+            std::function<void(entity& target_entity)> load_callback;
             std::function<void(entity_ref& checking_entity, entity_data&, util::VECTOR pos)> check_bounds; //if nullptr then used base_bounds, return true if entity is in bounds
             std::function<int32_t(const entity& checking_entity)> get_object_field;                        //optional
 
@@ -158,9 +167,9 @@ namespace copper_server {
                 void (*entity_attach)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
                 void (*entity_detach)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
 
-                void (*entity_damage)(entity& self, entity&, float health, int32_t type_id, const std::optional<util::VECTOR>& pos);
-                void (*entity_damage_with_source)(entity& self, entity&, float health, int32_t type_id, base_objects::entity_ref& source, const std::optional<util::VECTOR>& pos);
-                void (*entity_damage_with_sources)(entity& self, entity&, float health, int32_t type_id, base_objects::entity_ref& source, base_objects::entity_ref& source_direct, const std::optional<util::VECTOR>& pos);
+                void (*entity_damage)(entity& self, entity&, float health, int32_t type_id, const std::optional<util::VECTOR>& pos) = nullptr;
+                void (*entity_damage_with_source)(entity& self, entity&, float health, int32_t type_id, base_objects::entity_ref& source, const std::optional<util::VECTOR>& pos) = nullptr;
+                void (*entity_damage_with_sources)(entity& self, entity&, float health, int32_t type_id, base_objects::entity_ref& source, base_objects::entity_ref& source_direct, const std::optional<util::VECTOR>& pos) = nullptr;
 
                 void (*entity_attack)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
                 void (*entity_iteract)(entity& self, entity&, base_objects::entity_ref& other_entity_id) = nullptr;
@@ -202,12 +211,15 @@ namespace copper_server {
                 void (*on_change_world)(entity& self, storage::world_data& new_world) = nullptr;
 
                 void (*on_tick)(entity& self) = nullptr;
+
+                void (*sync_time)(entity& self, uint32_t time, int64_t day_time) = nullptr;
+                void (*weather_change)(entity& self, uint32_t weather_time, base_objects::weather) = nullptr;
             };
 
             std::shared_ptr<world_processor> processor;
 
             struct metadata_sync {
-                uint8_t index;
+                uint8_t index =0;
 
                 enum class type_t : uint8_t {
                     byte,
@@ -246,7 +258,7 @@ namespace copper_server {
                     vector3,
                     quaternion,
                 };
-                type_t type;
+                type_t type = type_t::byte;
             };
 
             std::unordered_map<std::string, metadata_sync> metadata;
@@ -256,6 +268,7 @@ namespace copper_server {
             //multi threaded
             static const entity_data& get_entity(uint16_t id);
             static const entity_data& get_entity(const std::string& id);
+            static list_array<int32_t> get_entity_ids();
             static uint16_t register_entity(entity_data);
             static const entity_data& view(const entity& entity);
             static void register_entity_world_processor(std::shared_ptr<world_processor> processor, const std::string& id);
@@ -270,8 +283,8 @@ namespace copper_server {
 
         struct entity {
             struct effect {
-                uint32_t duration;
-                uint32_t id;
+                uint32_t duration = 0;
+                uint32_t id = 0;
                 uint8_t amplifier : 8 = 1;
                 bool ambient : 1 = false;
                 bool particles : 1 = true;
@@ -285,11 +298,22 @@ namespace copper_server {
                 uint64_t assigned_world_id = (uint64_t)-1;
                 storage::world_data* world = nullptr;
                 uint32_t attached_to_distance = 0;
+                uint32_t inactivity_counter = 0;
                 uint16_t keep_alive_ticks = 0; //used for handling entity animation
                 bool on_ground : 1 = true;
                 bool is_sleeping : 1 = false;
                 bool is_sneaking : 1 = false;
                 bool is_sprinting : 1 = false;
+                bool inactivity_immune : 1 = false; //set if entity type is wither or if nbt set {PersistenceRequired: 1b}
+                bool despawn_immune : 1 = false;    //set if entity is not despawning naturally
+                enum class state_e : uint8_t {      //this controls inactivity_counter and their ai
+                    init = 0,
+                    player_near,
+                    player_far,
+                    no_player,             //outside player zone
+                    scheduled_for_despawn, //after second chance no_player or inactivity_counter reached entitys max counter
+                } state : 2
+                    = state_e::init;
 
                 bool mark_chunk(int64_t pos_x, int64_t pos_z, bool loaded) {
                     if (pos_x > INT32_MAX || pos_x < INT32_MIN || pos_z > INT32_MAX || pos_z < INT32_MIN)
@@ -397,19 +421,13 @@ namespace copper_server {
             util::ANGLE_DEG rotation;
             bounding bounds;
 
-            std::optional<world_syncing> world_syncing_data;
+            world_syncing world_syncing_data;
             list_array<client_data_holder> spectating_players;
             client_data_holder assigned_player;
 
             int32_t protocol_id;
 
             storage::world_data* current_world() const;
-
-            world_syncing& get_syncing_data() {
-                if (!world_syncing_data)
-                    throw std::runtime_error("World syncing data is not initialized for entity " + id.to_string());
-                return *world_syncing_data;
-            }
 
             //nbt {
             //  float health = 20;
@@ -457,7 +475,6 @@ namespace copper_server {
             const entity_data& const_data();
 
             entity_ref copy() const;
-            enbt::compound copy_to_enbt() const;
 
             void teleport(util::VECTOR pos);
             void teleport(util::VECTOR pos, float yaw, float pitch);
@@ -552,7 +569,6 @@ namespace copper_server {
             static entity_ref create(uint16_t id, const enbt::compound_const_ref& nbt);
             static entity_ref create(const std::string& id);
             static entity_ref create(const std::string& id, const enbt::compound_const_ref& nbt);
-            static entity_ref load_from_enbt(const enbt::compound_const_ref& file_nbt);
 
             bool hitboxes_touching_x(double min, double max);
             bool hitboxes_touching_y(double min, double max);
@@ -577,8 +593,14 @@ namespace copper_server {
                 return entity_id;
             }
 
+            static void store_to_file(const entity_ref&, enbt::io_helper::value_write_stream& w);
+            static entity_ref load_from_file(enbt::io_helper::value_read_stream& w);
+            static void store_to_enbt(const entity_ref&, enbt::compound& w);
+            static entity_ref load_from_enbt(const enbt::compound_const_ref& file_nbt);
+
         private:
             friend struct entity_data;
+            friend struct enbt::io_helper::serialization<entity_ref>;
             uint16_t entity_id;
             bool died : 1 = false;
         };

@@ -26,6 +26,10 @@ namespace copper_server::base_objects::network {
     struct response;
 }
 
+namespace copper_server::base_objects {
+    class player;
+}
+
 namespace copper_server::api::players {
     template <class T>
     struct personal {
@@ -63,6 +67,10 @@ namespace copper_server::api::players {
     void iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::SharedClientData&)>& callback);
     void iterate_players_not_state(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::SharedClientData&)>& callback);
     void iterate_players(const std::function<bool(base_objects::SharedClientData&)>& callback);
+
+
+    void save_player(base_objects::player&& sav, enbt::raw_uuid uuid);
+    base_objects::player load_player(enbt::raw_uuid uuid);
 }
 
 #endif /* SRC_API_PLAYERS */

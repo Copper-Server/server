@@ -21,16 +21,17 @@
 #include <src/base_objects/events/event.hpp>
 
 namespace copper_server::api::configuration {
-    struct ServerConfiguration {
-
+    struct server_configuration {
         struct World {
             std::string name = "overworld";
             std::string seed = "0";
-            std::string type = "default";
+            std::string type = "minecraft:overworld";
+            std::string generator_type = "default";
             std::string saving_mode = "zstd"; //allowed modes is 'zstd' and 'raw'
 
-            size_t unload_speed = 10; //max 10 chunks per tick and per world
-            size_t auto_save = 6000;
+            size_t unload_speed = 10; //max 10 chunks at once
+            size_t load_speed = 10;   //max 10 chunks at once
+            size_t auto_save = 6000;  //0 to disable
 
             struct {
                 int64_t x = 0;
@@ -61,12 +62,33 @@ namespace copper_server::api::configuration {
             uint32_t player_idle_timeout = 2000; //ms
             bool hardcore = false;
             bool pvp = true;
-            bool spawn_animals = true;
-            bool spawn_monsters = true;
             bool allow_flight = true;
             bool sync_chunk_writes = false;
             bool enable_command_block = false;
             bool reduced_debug_screen = false;
+
+            struct {
+                bool spawn_animals = true;
+                bool spawn_monsters = true;
+                double enable_spawners = 16;
+                double spawn_mobs_in_range = 24;
+                double tick_mobs_in_range = 32;
+                double despawn_mobs_outside = 128;
+
+                struct {
+                    uint32_t despawn_after_inactivity = 30 * 20;
+                    uint32_t high_light_penalty = 2; //1 + 2
+                    float despawn_chance = 1.0f / 800;
+                    uint8_t high_light_value = 12;
+                } despawn{};
+
+                struct { //
+                    double enable_spawners = 16 * 16;
+                    double spawn_mobs_in_range = 24 * 24;
+                    double tick_mobs_in_range = 32 * 32;
+                    double despawn_mobs_outside = 128 * 128;
+                } /*[[computed_from(entity)]] [runtime]*/ squared_values{};
+            } entity{};
         } game_play;
 
         struct Protocol {
@@ -139,13 +161,9 @@ namespace copper_server::api::configuration {
         } anti_cheat;
 
         struct Mojang {
+            static constexpr std::string_view session_server = "sessionserver.mojang.com";
             bool enforce_secure_profile = true; //enables signature signing for chat messages using mojang's service
         } mojang;
-
-        struct Query {
-            uint16_t port = 25545;
-            bool enabled = false;
-        } query;
 
         struct Status {
             std::string server_name = "Copper Server";
@@ -187,7 +205,7 @@ namespace copper_server::api::configuration {
         //allows custom plugin settings
         enbt::compound plugins;
 
-        list_array<std::string> disabled_plugins;
+        std::unordered_set<std::string> disabled_plugins;
 
         //allowed dimensions to visit to player without the `action.world.transfer.disallowed` permission
         //if empty then this setting ignored
@@ -196,7 +214,7 @@ namespace copper_server::api::configuration {
         class plugin_actions {
             enbt::value& it;
             plugin_actions(enbt::value& it);
-            friend struct ServerConfiguration;
+            friend struct server_configuration;
 
         public:
             plugin_actions operator^(std::string_view name);
@@ -210,12 +228,13 @@ namespace copper_server::api::configuration {
         std::string get(const std::string& config_item_path);
     };
 
-    ServerConfiguration& get();
+    server_configuration& get();
 
     void load(bool fill_default_values = true);
 
     void set_item(const std::string& config_item_path, const std::string& value); //accepts json
     std::string get_item(const std::string& config_item_path);                    //returns json
+    void apply_preset(const std::string& preset);
 
     extern base_objects::events::event<void> updated;
 }

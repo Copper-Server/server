@@ -8,10 +8,63 @@
  */
 #ifndef SRC_UTIL_REFLECT
 #define SRC_UTIL_REFLECT
-#include "reflect_fns.hpp"
 #include <charconv>
+#include <string>
 
 namespace copper_server::reflect {
+    template <class T>
+    consteval std::string_view type_name();
+
+    template <class T>
+    consteval size_t fields_count() {
+        return 0;
+    }
+
+    template <class T>
+    struct enum_data {};
+
+    template <class T>
+    struct for_each_type_s {};
+
+    template <class T>
+    struct for_each_type_with_name_s {};
+
+    template <class T>
+    struct visit_field_s {};
+
+    template <class T>
+    struct visit_field_with_name_s {};
+
+    template <class T, class FN>
+    constexpr void for_each_type(FN&& fn) {
+        for_each_type_s<T>::each(std::move(fn));
+    }
+
+    template <class T, class FN>
+    constexpr void for_each_type_with_name(FN&& fn) {
+        for_each_type_with_name_s<T>::each(std::move(fn));
+    }
+
+    template <class T, class FN>
+    constexpr void visit_field(std::string_view name, FN&& fn) {
+        visit_field_s<T>::visit(name, std::move(fn));
+    }
+
+    template <class T, class FN>
+    constexpr void visit_field_with_name(std::string_view name, FN&& fn) {
+        visit_field_with_name_s<T>::visit(name, std::move(fn));
+    }
+
+    template <class T, class FN>
+    constexpr void visit_field(size_t index, FN&& fn) {
+        visit_field_s<T>::visit(index, std::move(fn));
+    }
+
+    template <class T, class FN>
+    constexpr void visit_field_with_name(size_t index, FN&& fn) {
+        visit_field_with_name_s<T>::visit(index, std::move(fn));
+    }
+
     template <class T>
     consteval std::string_view type_name() {
 #if defined(__clang__) || defined(__GNUC__)
@@ -62,14 +115,45 @@ namespace copper_server::reflect {
     }
 
     template <class EnumT>
+    constexpr EnumT get_enum_value(std::string_view value) {
+        for (auto& it : enum_data<EnumT>::values)
+            if (it.first == value)
+                return it.second;
+
+        std::underlying_type_t<EnumT> res;
+        auto success = std::from_chars(value.data(), value.data() + value.size(), res);
+        if (success.ec == std::errc())
+            return static_cast<EnumT>(res);
+        else
+            return EnumT(0);
+    }
+
+    template <class EnumT>
     constexpr std::string get_enum_flag_value(EnumT value) {
         using U = std::underlying_type_t<EnumT>;
         U check = 0x1;
         std::string res;
         for (size_t shifts_left = sizeof(U) * 8; shifts_left; shifts_left--) {
             if (bool(static_cast<U>(value) & check))
-                res += (res.size() ? "|" : ":") + get_enum_value(static_cast<EnumT>(check));
+                res += (res.size() ? "|" : "") + get_enum_value(static_cast<EnumT>(check));
             check <<= 1;
+        }
+        return res;
+    }
+
+    template <class EnumT>
+    constexpr EnumT get_enum_flag_value(std::string_view value) {
+        EnumT res;
+        for (; value.size();) {
+            auto i = value.find('|');
+            if (i != std::string_view::npos) {
+                auto tmp = value.substr(0, i);
+                value = value.substr(i + 1);
+                res = EnumT(static_cast<std::underlying_type_t<EnumT>>(res) | static_cast<std::underlying_type_t<EnumT>>(get_enum_value<EnumT>(tmp)));
+            } else {
+                res = EnumT(static_cast<std::underlying_type_t<EnumT>>(res) | static_cast<std::underlying_type_t<EnumT>>(get_enum_value<EnumT>(value)));
+                break;
+            }
         }
         return res;
     }

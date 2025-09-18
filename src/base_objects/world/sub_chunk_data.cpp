@@ -10,9 +10,9 @@
 #include <src/base_objects/world/sub_chunk_data.hpp>
 
 namespace copper_server::base_objects::world {
-
-
     sub_chunk_data::sub_chunk_data() {
+        memset(biomes, 0, sizeof(biomes));
+        memset(blocks, 0, sizeof(blocks));
     }
 
     sub_chunk_data::~sub_chunk_data() {

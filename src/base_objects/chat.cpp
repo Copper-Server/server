@@ -42,11 +42,8 @@ namespace copper_server {
         if (json.contains("obfuscated"))
             result.SetObfuscated(json["obfuscated"]);
 
-        if (json.contains("insertion"))
-            result.SetInsertion(json["insertion"]);
-
-        if (json.contains("insertion"))
-            result.SetInsertion(json["insertion"]);
+        if (json.contains("font"))
+            result.SetFont(json["font"]);
 
         if (json.contains("clickEvent")) {
             auto click_event = js_object::get_object(json["clickEvent"]);
@@ -981,11 +978,8 @@ namespace copper_server {
         if (entry.contains("obfuscated"))
             result.SetObfuscated(entry["obfuscated"]);
 
-        if (entry.contains("insertion"))
-            result.SetInsertion(entry["insertion"]);
-
-        if (entry.contains("insertion"))
-            result.SetInsertion(entry["insertion"]);
+        if (entry.contains("font"))
+            result.SetFont(entry["font"]);
 
         if (entry.contains("clickEvent")) {
             auto click_event = entry["clickEvent"].as_compound();
@@ -1118,17 +1112,17 @@ namespace copper_server {
         if (text) {
             if (text_is_translation != other.text_is_translation)
                 return false;
-            if (strcmp(text, other.text))
+            if (!strcmp(text, other.text))
                 return false;
         }
         if (color)
-            if (strcmp(color, other.color))
+            if (!strcmp(color, other.color))
                 return false;
         if (insertion)
-            if (strcmp(insertion, other.insertion))
+            if (!strcmp(insertion, other.insertion))
                 return false;
         if (font)
-            if (strcmp(font, other.font))
+            if (!strcmp(font, other.font))
                 return false;
 
         if (clickEvent) {
@@ -1146,16 +1140,16 @@ namespace copper_server {
                     return false;
 
             if (clickEvent->copy_to_clipboard)
-                if (strcmp(clickEvent->copy_to_clipboard, other.clickEvent->copy_to_clipboard))
+                if (!strcmp(clickEvent->copy_to_clipboard, other.clickEvent->copy_to_clipboard))
                     return false;
             if (clickEvent->open_url)
-                if (strcmp(clickEvent->open_url, other.clickEvent->open_url))
+                if (!strcmp(clickEvent->open_url, other.clickEvent->open_url))
                     return false;
             if (clickEvent->run_command)
-                if (strcmp(clickEvent->run_command, other.clickEvent->run_command))
+                if (!strcmp(clickEvent->run_command, other.clickEvent->run_command))
                     return false;
             if (clickEvent->suggest_command)
-                if (strcmp(clickEvent->suggest_command, other.clickEvent->suggest_command))
+                if (!strcmp(clickEvent->suggest_command, other.clickEvent->suggest_command))
                     return false;
         }
         if (hoverEvent) {
@@ -1166,7 +1160,7 @@ namespace copper_server {
             )
                 return false;
             if (hoverEvent->show_text)
-                if (strcmp(hoverEvent->show_text, other.hoverEvent->show_text))
+                if (!strcmp(hoverEvent->show_text, other.hoverEvent->show_text))
                     return false;
 
             if (hoverEvent->show_entity) {

@@ -15,7 +15,6 @@
 #include <src/api/network/tcp.hpp>
 #include <src/base_objects/network/response.hpp>
 #include <src/base_objects/network/tcp/client.hpp>
-#include <src/base_objects/packets.hpp>
 #include <src/base_objects/ptr_optional.hpp>
 #include <src/util/readers.hpp>
 #include <string>

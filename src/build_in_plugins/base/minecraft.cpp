@@ -7,9 +7,9 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <src/api/client.hpp>
+#include <src/api/log.hpp>
 #include <src/base_objects/network/response.hpp>
 #include <src/base_objects/shared_client_data.hpp>
-#include <src/log.hpp>
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins {
@@ -25,7 +25,7 @@ namespace copper_server::build_in_plugins {
                 .channel = "minecraft:brand",
                 .payload = r.data
             };
-            return false;
+            return client.client_brand.size();
         }
 
         bool OnConfigurationHandle(const PluginRegistrationPtr& _, const std::string& chanel, const list_array<uint8_t>& data, base_objects::SharedClientData& client) override {

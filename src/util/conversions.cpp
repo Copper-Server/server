@@ -464,7 +464,6 @@ namespace copper_server::util::conversions {
 
         std::string to_transport(std::string_view string) {
             std::string result;
-            std::string utf_code_pint;
             bool got_slash = false;
             for (char c : string) {
                 if (got_slash) {
@@ -519,6 +518,8 @@ namespace copper_server::util::conversions {
             case none:
                 return boost::json::value();
             case integer:
+            case var_integer:
+            case comp_integer:
                 switch (type_id.length) {
                     using enum enbt::type_len;
                 case Tiny:
@@ -554,32 +555,6 @@ namespace copper_server::util::conversions {
                     return boost::json::value((float)enbt);
                 case Long:
                     return boost::json::value((double)enbt);
-                default:
-                    throw std::runtime_error("Unknown type");
-                }
-            case var_integer:
-                switch (type_id.length) {
-                    using enum enbt::type_len;
-                case Tiny:
-                    if (type_id.is_signed)
-                        return boost::json::value((int8_t)enbt);
-                    else
-                        return boost::json::value((uint8_t)enbt);
-                case Short:
-                    if (type_id.is_signed)
-                        return boost::json::value((int16_t)enbt);
-                    else
-                        return boost::json::value((uint16_t)enbt);
-                case Default:
-                    if (type_id.is_signed)
-                        return boost::json::value((int32_t)enbt);
-                    else
-                        return boost::json::value((uint32_t)enbt);
-                case Long:
-                    if (type_id.is_signed)
-                        return boost::json::value((int64_t)enbt);
-                    else
-                        return boost::json::value((uint64_t)enbt);
                 default:
                     throw std::runtime_error("Unknown type");
                 }
@@ -706,7 +681,7 @@ namespace copper_server::util::conversions {
                 std::vector<enbt::value> result;
                 result.reserve(arr.size());
                 for (auto& item : arr)
-                    result.push_back(from_json(item));
+                    result.emplace_back(from_json(item));
                 return enbt::dynamic_array(std::move(result));
             }
             case boost::json::kind::object: {

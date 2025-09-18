@@ -22,6 +22,11 @@
 #include <src/util/readers.hpp>
 #include <string>
 
+namespace enbt::io_helper {
+    class value_write_stream;
+    class value_read_stream;
+}
+
 namespace copper_server::base_objects {
     struct slot;
     struct slot_data;
@@ -207,7 +212,12 @@ namespace copper_server::base_objects {
             bool operator==(const custom_name& other) const = default;
         };
 
-        struct item_model : public enum_item<6> {
+        struct item_name : public enum_item<6> {
+            Chat name;
+            bool operator==(const item_name& other) const = default;
+        };
+
+        struct item_model : public enum_item<7> {
             identifier model;
             bool operator==(const item_model& other) const = default;
         };
@@ -265,8 +275,8 @@ namespace copper_server::base_objects {
             std::optional<id_set<var_int32::block_type>> blocks = std::nullopt;
             std::optional<list_array<property>> properties = std::nullopt;
             std::optional<enbt::value> nbt = std::nullopt;
-            list_array<component> full_components_match;
-            list_array<partial_component> partial_components_match;
+            list_array<component> full_components_match;            //for block entity
+            list_array<partial_component> partial_components_match; //for block entity
             bool operator==(const can_place_on& other) const;
         };
 
@@ -421,7 +431,7 @@ namespace copper_server::base_objects {
         };
 
         struct use_cooldown : public enum_item<23> {
-            float seconds;
+            float seconds = 0.0f;
             std::optional<identifier> cooldown_group = std::nullopt;
             bool operator==(const use_cooldown& other) const = default;
         };
@@ -472,9 +482,9 @@ namespace copper_server::base_objects {
             std::optional<identifier> model = std::nullopt;
             std::optional<identifier> overlay = std::nullopt;
             std::optional<id_set<var_int32::entity_type>> allowed_entities = std::nullopt;
-            bool dispensable;
-            bool swappable;
-            bool reduces_durability_on_damage;
+            bool dispensable = false;
+            bool swappable = false;
+            bool reduces_durability_on_damage = false;
             bool operator==(const equippable& other) const = default;
         };
 
@@ -500,19 +510,19 @@ namespace copper_server::base_objects {
         struct blocks_attacks : public enum_item<33> {
 
             struct damage_reductions {
-                float horizontal_block_angle;
+                float horizontal_block_angle = 0.0f;
                 std::optional<id_set<var_int32::damage_type>> damage_kind = std::nullopt;
-                float base;
-                float factor;
+                float base = 0.0f;
+                float factor = 1.0f;
                 bool operator==(const damage_reductions& other) const = default;
             };
 
-            float block_delay;
-            float disable_cooldown_scale;
+            float block_delay = 0.0f;
+            float disable_cooldown_scale = 0.0f;
             list_array<damage_reductions> reductions;
-            float item_damage_threshold;
-            float item_damage_base;
-            float item_damage_factor;
+            float item_damage_threshold = 0.0f;
+            float item_damage_base = 0.0f;
+            float item_damage_factor = 0.0f;
             std::optional<identifier> bypassed_by = std::nullopt;
             std::optional<or_<var_int32::sound_event, sound_event>> block_sound = std::nullopt;
             std::optional<or_<var_int32::sound_event, sound_event>> disable_sound = std::nullopt;
@@ -652,13 +662,13 @@ namespace copper_server::base_objects {
         };
 
         struct instrument : public enum_item<52> {
-            or_<var_int32::sound_event, base_objects::instrument> value;
+            or_<var_int32::instrument, base_objects::instrument> value;
             bool operator==(const instrument& other) const = default;
         };
 
         struct provides_trim_material : public enum_item<53> {
 
-            struct reference : public enum_item<0> {
+            struct reference : public default_enum_item<0> {
                 identifier name;
                 bool operator==(const reference& other) const = default;
             };
@@ -681,7 +691,7 @@ namespace copper_server::base_objects {
         struct jukebox_playable : public enum_item<55> {
 
             //would fail to parse in client, use direct one
-            struct reference : public enum_item<0> {
+            struct reference : public default_enum_item<0> {
                 identifier name;
                 bool operator==(const reference& other) const = default;
             };
@@ -701,7 +711,7 @@ namespace copper_server::base_objects {
         };
 
         struct recipes : public enum_item<57> {
-            enbt::compound data;
+            enbt::dynamic_array data; //check, is this really should be nbt compound and not the array of strings in nbt
             bool operator==(const recipes& other) const = default;
         };
 
@@ -937,8 +947,7 @@ namespace copper_server::base_objects {
         };
 
         struct chicken_variant : public enum_item<86> {
-
-            struct reference : public enum_item<0> {
+            struct reference : public default_enum_item<0> {
                 identifier name;
                 bool operator==(const reference& other) const = default;
             };
@@ -1016,6 +1025,7 @@ namespace copper_server::base_objects {
             damage,
             unbreakable,
             custom_name,
+            item_name,
             item_model,
             lore,
             rarity,
@@ -1108,8 +1118,14 @@ namespace copper_server::base_objects {
 
         base type;
 
-        static component parse_component(const std::string& name, const enbt::value& item);
-        static std::pair<std::string, enbt::value> encode_component(const component& item);
+        static component parse_component(const enbt::value& item);
+        static component parse_component(const std::string& component_name, const enbt::value& item);
+        static enbt::value encode_component(const component& item);
+
+        //the entries should be ordered same as got from encode_component, any reorder could break flags_list_from items(currently not used but reserved for future)
+        static void parse_component(component& item, enbt::io_helper::value_read_stream& stream);
+        static void encode_component(const component& item, enbt::io_helper::value_write_stream& stream);
+
 
         component();
         component(component&& mov);
@@ -1132,6 +1148,7 @@ namespace copper_server::base_objects {
         template <class T>
         component& operator=(const T& copy)
             requires std::is_constructible_v<base, T>;
+        ~component();
 
         bool operator==(const component& other) const;
         bool operator!=(const component& other) const;

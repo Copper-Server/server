@@ -31,19 +31,19 @@ namespace copper_server::api::permissions {
 
     bool has_action_limits(const std::string& action_name) {
         if (perm == nullptr)
-            return true;
+            return false;
         return perm->has_action_limits(action_name);
     }
 
     bool has_permission(const std::string& permission_name) {
         if (perm == nullptr)
-            return true;
+            return false;
         return perm->has_permission(permission_name);
     }
 
     bool has_group(const std::string& group_name) {
         if (perm == nullptr)
-            return true;
+            return false;
         return perm->has_group(group_name);
     }
 
@@ -83,10 +83,10 @@ namespace copper_server::api::permissions {
         perm->remove_requirement(action_name, permission_tag);
     }
 
-    void add_permission(base_objects::permissions_object permission) {
+    void add_permission(base_objects::permissions_object&& permission) {
         if (perm == nullptr)
             return;
-        perm->add_permission(permission);
+        perm->add_permission(std::move(permission));
     }
 
     void remove_permission(const std::string& permission_tag) {

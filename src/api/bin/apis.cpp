@@ -8,10 +8,10 @@
  */
 #include <src/api/allowlist.hpp>
 #include <src/api/ban.hpp>
+#include <src/api/log.hpp>
 #include <src/api/statistics.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/virtual_client.hpp>
-#include <src/log.hpp>
 
 namespace copper_server::api {
     namespace allowlist {
@@ -80,7 +80,7 @@ namespace copper_server::api {
         bool console_enabled() {
             if (!console_data)
                 return false;
-            return log::commands::is_inited();
+            return api::log::commands::is_inited();
         }
     }
 

@@ -8,35 +8,36 @@
  */
 #include <src/api/configuration.hpp>
 #include <src/api/dialogs.hpp>
+#include <src/api/id.hpp>
 #include <src/api/network/tcp.hpp>
 #include <src/api/packets.hpp>
+#include <src/api/registers.hpp>
 #include <src/api/tags.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/build_in_plugins/network/tcp/util.hpp>
-#include <src/log.hpp>
 #include <src/plugin/main.hpp>
-#include <src/registers.hpp>
 #include <src/resources/registers.hpp>
 
 namespace copper_server::build_in_plugins::network::tcp::client_handler {
     struct tcp_configuration : public PluginAutoRegister<"network/tcp_configuration", tcp_configuration> {
+        struct ResourcePackData {
+            bool required : 1 = false;
+        };
+
         struct extra_data_t {
-            enum class load_state_e {
-                to_init,
-                await_known_packs,
-                await_processing,
-                done
-            } load_state
-                = load_state_e::to_init;
+            bool packs_requested = false;
             keep_alive_solution ka_solution;
             list_array<PluginRegistrationPtr> active_plugins{};
+            std::unordered_map<enbt::raw_uuid, ResourcePackData> pending_resource_packs;
 
             static extra_data_t& get(base_objects::SharedClientData& client) {
-                if (!client.packets_state.extra_data) {
-                    auto allocated = new extra_data_t{.ka_solution = client.get_session()};
-                    client.packets_state.extra_data = std::shared_ptr<void>((void*)allocated, [](void* d) { delete reinterpret_cast<extra_data_t*>(d); });
-                }
-                return *reinterpret_cast<extra_data_t*>(client.packets_state.extra_data.get());
+                return *client.packets_state.internal_data.set([&](auto& data) {
+                    if (!data.extra_data) {
+                        auto allocated = new extra_data_t{.ka_solution = client.get_session()};
+                        data.extra_data = std::shared_ptr<void>((void*)allocated, [](void* d) { delete reinterpret_cast<extra_data_t*>(d); });
+                    }
+                    return reinterpret_cast<extra_data_t*>(data.extra_data.get());
+                });
             }
         };
 
@@ -55,14 +56,14 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             fluid.registry_id = "minecraft:fluid";
             for (auto& [id, values] : api::tags::view_tag("minecraft:fluid", "minecraft")) {
                 fluid.tags.push_back(
-                    {.tag_name = id, .values = registers::convert_reg_pro_id("minecraft:fluid", values).convert<base_objects::var_int32>()}
+                    {.tag_name = id, .values = api::registers::convert_reg_pro_id("minecraft:fluid", values).convert<base_objects::var_int32>()}
                 );
             }
             api::packets::client_bound::configuration::update_tags::entry worldgen_biome;
             worldgen_biome.registry_id = "minecraft:worldgen/biome";
             for (auto& [id, values] : api::tags::view_tag("minecraft:worldgen/biome", "minecraft")) {
                 worldgen_biome.tags.push_back(
-                    {.tag_name = id, .values = values.convert_fn([](auto& it) { return (base_objects::var_int32)registers::biomes.at(it).id; })}
+                    {.tag_name = id, .values = values.convert_fn([](auto& it) { return (base_objects::var_int32)api::registers::biomes.at(it).id; })}
                 );
             }
             api::packets::client_bound::configuration::update_tags::entry entity_type;
@@ -75,7 +76,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             game_event.registry_id = "minecraft:game_event";
             for (auto& [id, values] : api::tags::view_tag("minecraft:game_event", "minecraft")) {
                 game_event.tags.push_back(
-                    {.tag_name = id, .values = registers::convert_reg_pro_id("minecraft:game_event", values).convert<base_objects::var_int32>()}
+                    {.tag_name = id, .values = api::registers::convert_reg_pro_id("minecraft:game_event", values).convert<base_objects::var_int32>()}
                 );
             }
 
@@ -121,7 +122,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             static base_objects::network::response data;
             if (!data.has_data()) {
                 { // minecraft:trim_material
-                    data += registry_data_serialize_entry<registers::ArmorTrimMaterial>("minecraft:trim_material", registers::armorTrimMaterials_cache, [](registers::ArmorTrimMaterial& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::armor_trim_material>("minecraft:trim_material", api::registers::armorTrimMaterials_cache, [](api::registers::armor_trim_material& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -134,7 +135,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:trim_pattern
-                    data += registry_data_serialize_entry<registers::ArmorTrimPattern>("minecraft:trim_pattern", registers::armorTrimPatterns_cache, [](registers::ArmorTrimPattern& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::armor_trim_pattern>("minecraft:trim_pattern", api::registers::armorTrimPatterns_cache, [](api::registers::armor_trim_pattern& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -148,7 +149,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:worldgen/biome
-                    data += registry_data_serialize_entry<registers::Biome>("minecraft:worldgen/biome", registers::biomes_cache, [](registers::Biome& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::biome>("minecraft:worldgen/biome", api::registers::biomes_cache, [](api::registers::biome& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -163,11 +164,11 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                             effects["water_fog_color"] = it.effects.water_fog_color;
                             effects["sky_color"] = it.effects.sky_color;
                             if (it.effects.foliage_color)
-                                effects["foliage_color"] = it.effects.foliage_color.value();
+                                effects["foliage_color"] = *it.effects.foliage_color;
                             if (it.effects.grass_color)
-                                effects["grass_color"] = it.effects.grass_color.value();
+                                effects["grass_color"] = *it.effects.grass_color;
                             if (it.effects.grass_color_modifier)
-                                effects["grass_color_modifier"] = it.effects.grass_color_modifier.value();
+                                effects["grass_color_modifier"] = *it.effects.grass_color_modifier;
                             if (it.effects.particle) {
                                 enbt::compound particle;
                                 particle["probability"] = it.effects.particle->probability;
@@ -178,10 +179,10 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                             if (it.effects.ambient_sound) {
                                 if (std::holds_alternative<std::string>(*it.effects.ambient_sound))
                                     effects["ambient_sound"] = std::get<std::string>(*it.effects.ambient_sound);
-                                else if (std::holds_alternative<registers::Biome::AmbientSound>(*it.effects.ambient_sound)) {
+                                else if (std::holds_alternative<api::registers::biome::ambient_sound>(*it.effects.ambient_sound)) {
                                     enbt::compound ambient_sound;
-                                    ambient_sound["sound"] = std::get<registers::Biome::AmbientSound>(*it.effects.ambient_sound).sound.to_string();
-                                    ambient_sound["range"] = std::get<registers::Biome::AmbientSound>(*it.effects.ambient_sound).range;
+                                    ambient_sound["sound"] = std::get<api::registers::biome::ambient_sound>(*it.effects.ambient_sound).sound.to_string();
+                                    ambient_sound["range"] = std::get<api::registers::biome::ambient_sound>(*it.effects.ambient_sound).range;
                                     effects["ambient_sound"] = std::move(ambient_sound);
                                 }
                             }
@@ -217,7 +218,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:chat_type
-                    data += registry_data_serialize_entry<registers::ChatType>("minecraft:chat_type", registers::chatTypes_cache, [](registers::ChatType& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::chat_type>("minecraft:chat_type", api::registers::chatTypes_cache, [](api::registers::chat_type& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -250,7 +251,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:damage_type
-                    data += registry_data_serialize_entry<registers::DamageType>("minecraft:damage_type", registers::damageTypes_cache, [](registers::DamageType& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::damage_type>("minecraft:damage_type", api::registers::damageTypes_cache, [](api::registers::damage_type& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -258,13 +259,13 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         {
                             const char* scaling = nullptr;
                             switch (it.scaling) {
-                            case registers::DamageType::ScalingType::never:
+                            case api::registers::damage_type::scaling_type::never:
                                 scaling = "never";
                                 break;
-                            case registers::DamageType::ScalingType::when_caused_by_living_non_player:
+                            case api::registers::damage_type::scaling_type::when_caused_by_living_non_player:
                                 scaling = "when_caused_by_living_non_player";
                                 break;
-                            case registers::DamageType::ScalingType::always:
+                            case api::registers::damage_type::scaling_type::always:
                                 scaling = "always";
                                 break;
                             }
@@ -275,22 +276,22 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         if (it.effects) {
                             const char* effect = nullptr;
                             switch (*it.effects) {
-                            case registers::DamageType::EffectsType::hurt:
+                            case api::registers::damage_type::effects_type::hurt:
                                 effect = "hurt";
                                 break;
-                            case registers::DamageType::EffectsType::thorns:
+                            case api::registers::damage_type::effects_type::thorns:
                                 effect = "thorns";
                                 break;
-                            case registers::DamageType::EffectsType::drowning:
+                            case api::registers::damage_type::effects_type::drowning:
                                 effect = "drowning";
                                 break;
-                            case registers::DamageType::EffectsType::burning:
+                            case api::registers::damage_type::effects_type::burning:
                                 effect = "burning";
                                 break;
-                            case registers::DamageType::EffectsType::poking:
+                            case api::registers::damage_type::effects_type::poking:
                                 effect = "poking";
                                 break;
-                            case registers::DamageType::EffectsType::freezing:
+                            case api::registers::damage_type::effects_type::freezing:
                                 effect = "freezing";
                                 break;
                             default:
@@ -302,13 +303,13 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         if (it.death_message_type) {
                             const char* death_message_type = nullptr;
                             switch (*it.death_message_type) {
-                            case registers::DamageType::DeathMessageType::_default:
+                            case api::registers::damage_type::death_message_type::_default:
                                 death_message_type = "default";
                                 break;
-                            case registers::DamageType::DeathMessageType::fall_variants:
+                            case api::registers::damage_type::death_message_type::fall_variants:
                                 death_message_type = "fall_variants";
                                 break;
-                            case registers::DamageType::DeathMessageType::intentional_game_design:
+                            case api::registers::damage_type::death_message_type::intentional_game_design:
                                 death_message_type = "intentional_game_design";
                                 break;
                             default:
@@ -321,16 +322,16 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:dimension_type
-                    data += registry_data_serialize_entry<registers::DimensionType>("minecraft:dimension_type", registers::dimensionTypes_cache, [](registers::DimensionType& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::dimension_type>("minecraft:dimension_type", api::registers::dimensionTypes_cache, [](api::registers::dimension_type& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
                         if (std::holds_alternative<int32_t>(it.monster_spawn_light_level))
                             element["monster_spawn_light_level"] = std::get<int32_t>(it.monster_spawn_light_level);
                         else
-                            element["monster_spawn_light_level"] = std::get<registers::IntegerDistribution>(it.monster_spawn_light_level).get_enbt();
+                            element["monster_spawn_light_level"] = std::get<base_objects::number_provider>(it.monster_spawn_light_level).get_enbt();
                         if (it.fixed_time)
-                            element["fixed_time"] = it.fixed_time.value();
+                            element["fixed_time"] = *it.fixed_time;
                         element["infiniburn"] = it.infiniburn;
                         element["effects"] = it.effects;
                         element["coordinate_scale"] = it.coordinate_scale;
@@ -351,7 +352,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:wolf_variant
-                    data += registry_data_serialize_entry<registers::WolfVariant>("minecraft:wolf_variant", registers::wolfVariants_cache, [](registers::WolfVariant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::wolf_variant>("minecraft:wolf_variant", api::registers::wolfVariants_cache, [](api::registers::wolf_variant& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -361,7 +362,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:painting_variant
-                    data += registry_data_serialize_entry<registers::PaintingVariant>("minecraft:painting_variant", registers::paintingVariants_cache, [](registers::PaintingVariant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::painting_variant>("minecraft:painting_variant", api::registers::paintingVariants_cache, [](api::registers::painting_variant& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -374,7 +375,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:instrument
-                    data += registry_data_serialize_entry<registers::Instrument>("minecraft:instrument", registers::instruments_cache, [](registers::Instrument& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::instrument>("minecraft:instrument", api::registers::instruments_cache, [](api::registers::instrument& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -384,7 +385,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         std::visit(
                             [&](auto& it) {
                                 using T = std::decay_t<decltype(it)>;
-                                if constexpr (base_objects::is_id_source<T>) {
+                                if constexpr (api::id::is_source<T>) {
                                     element["sound_event"] = it.to_string();
                                 } else {
                                     enbt::compound sound_event;
@@ -400,67 +401,67 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:cat_variant
-                    data += registry_data_serialize_entry<registers::EntityVariant>("minecraft:cat_variant", registers::catVariants_cache, [](registers::EntityVariant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:cat_variant", api::registers::catVariants_cache, [](api::registers::entity_variant& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
                         element["asset_id"] = it.asset_id;
                         if (it.model)
-                            element["model"] = it.model.value();
+                            element["model"] = *it.model;
                         element["spawn_conditions"] = it.spawn_conditions;
                         return element;
                     });
                 }
                 { // minecraft:chicken_variant
-                    data += registry_data_serialize_entry<registers::EntityVariant>("minecraft:chicken_variant", registers::chickenVariants_cache, [](registers::EntityVariant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:chicken_variant", api::registers::chickenVariants_cache, [](api::registers::entity_variant& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
                         element["asset_id"] = it.asset_id;
                         if (it.model)
-                            element["model"] = it.model.value();
+                            element["model"] = *it.model;
                         element["spawn_conditions"] = it.spawn_conditions;
                         return element;
                     });
                 }
                 { // minecraft:cow_variant
-                    data += registry_data_serialize_entry<registers::EntityVariant>("minecraft:cow_variant", registers::cowVariants_cache, [](registers::EntityVariant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:cow_variant", api::registers::cowVariants_cache, [](api::registers::entity_variant& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
                         element["asset_id"] = it.asset_id;
                         if (it.model)
-                            element["model"] = it.model.value();
+                            element["model"] = *it.model;
                         element["spawn_conditions"] = it.spawn_conditions;
                         return element;
                     });
                 }
                 { // minecraft:frog_variant
-                    data += registry_data_serialize_entry<registers::EntityVariant>("minecraft:frog_variant", registers::frogVariants_cache, [](registers::EntityVariant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:frog_variant", api::registers::frogVariants_cache, [](api::registers::entity_variant& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
                         element["asset_id"] = it.asset_id;
                         if (it.model)
-                            element["model"] = it.model.value();
+                            element["model"] = *it.model;
                         element["spawn_conditions"] = it.spawn_conditions;
                         return element;
                     });
                 }
                 { // minecraft:pig_variant
-                    data += registry_data_serialize_entry<registers::EntityVariant>("minecraft:pig_variant", registers::pigVariants_cache, [](registers::EntityVariant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:pig_variant", api::registers::pigVariants_cache, [](api::registers::entity_variant& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
                         element["asset_id"] = it.asset_id;
                         if (it.model)
-                            element["model"] = it.model.value();
+                            element["model"] = *it.model;
                         element["spawn_conditions"] = it.spawn_conditions;
                         return element;
                     });
                 }
                 { // minecraft:wolf_sound_variant
-                    data += registry_data_serialize_entry<registers::WolfSoundVariant>("minecraft:wolf_sound_variant", registers::wolfSoundVariants_cache, [](registers::WolfSoundVariant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::wolf_sound_variant>("minecraft:wolf_sound_variant", api::registers::wolfSoundVariants_cache, [](api::registers::wolf_sound_variant& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -478,13 +479,16 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
         }
 
         static void make_finish(base_objects::SharedClientData& client) {
-            if (extra_data_t::get(client).active_plugins.empty()) {
-                if (client.packets_state.pending_resource_packs.empty()) {
-                    extra_data_t::get(client).load_state = extra_data_t::load_state_e::done;
-                    client << api::packets::client_bound::configuration::finish_configuration{};
+            auto& data = extra_data_t::get(client);
+            if (data.packs_requested) {
+                if (data.active_plugins.empty()) {
+                    if (data.pending_resource_packs.empty()) {
+                        client << api::packets::client_bound::configuration::finish_configuration{};
+                    }
                 }
             }
         }
+
 
         void OnRegister(const PluginRegistrationPtr&) override {
             using client_information = api::packets::server_bound::configuration::client_information;
@@ -497,89 +501,93 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             using select_known_packs = api::packets::server_bound::configuration::select_known_packs;
             using custom_click_action = api::packets::server_bound::configuration::custom_click_action;
 
-            api::packets::register_viewer_client_bound<client_bound_resource_pack>([](client_bound_resource_pack&& packet, base_objects::SharedClientData& client) {
-                client.packets_state.pending_resource_packs[packet.uuid] = {.required = packet.forced};
+            register_packet_viewer([](const client_bound_resource_pack& packet, base_objects::SharedClientData& client) {
+                extra_data_t::get(client).pending_resource_packs[packet.uuid] = {.required = packet.forced};
+                return false;
             });
-            api::packets::register_server_bound_processor<client_information>([](client_information&& packet, base_objects::SharedClientData& client) {
-                if (extra_data_t::get(client).load_state == extra_data_t::load_state_e::to_init) {
-                    client.locale = packet.locale.value;
-                    client.view_distance = (uint8_t)std::min<uint32_t>(packet.view_distance, api::configuration::get().game_play.view_distance);
-                    client.chat_mode = (base_objects::SharedClientData::ChatMode)packet.chat_mode.value;
-                    client.enable_chat_colors = packet.enable_chat_colors;
-                    client.skin_parts.mask = packet.displayed_skin_parts.get();
-                    client.main_hand = (base_objects::SharedClientData::MainHand)packet.main_hand.value;
-                    client.enable_filtering = packet.enable_text_filtering;
-                    client.allow_server_listings = packet.allow_server_listings;
-                    client.particle_status = (base_objects::SharedClientData::ParticleStatus)packet.particle_status.value;
-                    if (client.get_session())
-                        client.get_session()->request_buffer(api::configuration::get().protocol.buffer);
-                    extra_data_t::get(client).load_state = extra_data_t::load_state_e::await_known_packs;
-                    extra_data_t::get(client).ka_solution.set_callback([](int64_t res, base_objects::SharedClientData& client) {
-                        client << api::packets::client_bound::configuration::keep_alive{.keep_alive_id = (uint64_t)res};
-                    });
-                    client << api::packets::client_bound::configuration::select_known_packs{
-                        .packs = resources::loaded_packs()
-                                     .convert_fn([](auto& it) {
-                                         return api::packets::client_bound::configuration::select_known_packs::pack{
-                                             .pack_namespace = it.namespace_,
-                                             .id = it.id,
-                                             .version = it.version
-                                         };
-                                     })
-                    };
-                    extra_data_t::get(client).ka_solution.make_keep_alive_packet();
-                } else
-                    client << api::packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 0"};
+            register_packet_processor([](client_information&& packet, base_objects::SharedClientData& client) {
+                client.locale = packet.locale.value;
+                client.view_distance = (uint8_t)std::min<uint32_t>(packet.view_distance, api::configuration::get().game_play.view_distance);
+                client.chat_mode = (base_objects::SharedClientData::ChatMode)packet.chat_mode.value;
+                client.enable_chat_colors = packet.enable_chat_colors;
+                client.skin_parts.mask = packet.displayed_skin_parts.get();
+                client.main_hand = (base_objects::SharedClientData::MainHand)packet.main_hand.value;
+                client.enable_filtering = packet.enable_text_filtering;
+                client.allow_server_listings = packet.allow_server_listings;
+                client.particle_status = (base_objects::SharedClientData::ParticleStatus)packet.particle_status.value;
+                if (client.get_session())
+                    client.get_session()->request_buffer(api::configuration::get().protocol.buffer);
+                auto& data = extra_data_t::get(client);
+                data.ka_solution.set_callback([](int64_t res, base_objects::SharedClientData& client) {
+                    client << api::packets::client_bound::configuration::keep_alive{.keep_alive_id = (uint64_t)res};
+                });
+                client << api::packets::client_bound::configuration::select_known_packs{
+                    .packs = resources::loaded_packs()
+                                 .convert_fn([](auto& it) {
+                                     return api::packets::client_bound::configuration::select_known_packs::pack{
+                                         .pack_namespace = it.namespace_,
+                                         .id = it.id,
+                                         .version = it.version
+                                     };
+                                 })
+                };
+                data.packs_requested = true;
+                data.ka_solution.start();
             });
-            api::packets::register_server_bound_processor<cookie_response>([](cookie_response&& packet, base_objects::SharedClientData& client) {
-                if (extra_data_t::get(client).load_state == extra_data_t::load_state_e::await_processing) {
-                    if (auto plugin = pluginManagement.get_bind_cookies(PluginManagement::registration_on::configuration, packet.key); plugin)
-                        if (plugin->OnConfigurationCookie(plugin, packet.key, packet.payload ? *packet.payload : list_array<uint8_t>{}, client)) {
-                            extra_data_t::get(client).active_plugins.remove(plugin);
-                            make_finish(client);
-                        }
-                } else
-                    client << api::packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 2"};
-            });
-            api::packets::register_server_bound_processor<custom_payload>([](custom_payload&& packet, base_objects::SharedClientData& client) {
-                if (extra_data_t::get(client).load_state == extra_data_t::load_state_e::await_processing) {
-                    auto it = pluginManagement.get_bind_plugin(PluginManagement::registration_on::configuration, packet.channel);
-                    if (it != nullptr)
-                        packet.payload.commit();
-                    if (it->OnConfigurationHandle(it, packet.channel, packet.payload, client)) {
-                        extra_data_t::get(client).active_plugins.remove(it);
+            register_packet_processor([](cookie_response&& packet, base_objects::SharedClientData& client) {
+                if (auto plugin = pluginManagement.get_bind_cookies(PluginManagement::registration_on::configuration, packet.key); plugin)
+                    if (plugin->OnConfigurationCookie(plugin, packet.key, packet.payload ? *packet.payload : list_array<uint8_t>{}, client)) {
+                        extra_data_t::get(client).active_plugins.remove(plugin);
                         make_finish(client);
                     }
-                } else
-                    client << api::packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 2"};
             });
-            api::packets::register_viewer_server_bound<api::packets::server_bound::configuration::finish_configuration>([](api::packets::server_bound::configuration::finish_configuration&&, base_objects::SharedClientData& client) {
-                if (extra_data_t::get(client).load_state == extra_data_t::load_state_e::done) {
+            register_packet_processor([](custom_payload&& packet, base_objects::SharedClientData& client) {
+                auto it = pluginManagement.get_bind_plugin(PluginManagement::registration_on::configuration, packet.channel);
+                if (it == nullptr) {
+                    extra_data_t::get(client).active_plugins.remove(it);
+                    make_finish(client);
+                    return;
+                }
+                if (it != nullptr)
+                    packet.payload.commit();
+                if (it->OnConfigurationHandle(it, packet.channel, packet.payload, client)) {
+                    extra_data_t::get(client).active_plugins.remove(it);
+                    make_finish(client);
+                }
+            });
+            register_packet_viewer([](const api::packets::server_bound::configuration::finish_configuration&, base_objects::SharedClientData& client) {
+                if (extra_data_t::get(client).packs_requested) {
                     if (extra_data_t::get(client).active_plugins.empty()) {
-                        if (client.packets_state.pending_resource_packs.empty())
+                        if (extra_data_t::get(client).pending_resource_packs.empty())
                             return false;
                         else
-                            client << api::packets::client_bound::play::disconnect{.reason = "Pending resource packs"};
+                            client << api::packets::client_bound::play::disconnect{.reason = "Pending resource packs."};
                     } else
-                        client << api::packets::client_bound::play::disconnect{.reason = "Invalid protocol state, 3"};
+                        client << api::packets::client_bound::play::disconnect{.reason = "Requested more data."};
                 } else
-                    client << api::packets::client_bound::play::disconnect{.reason = "Invalid protocol state, 3"};
+                    client << api::packets::client_bound::play::disconnect{.reason = "Nope, gimme packs!"};
                 return true;
             });
-            api::packets::register_server_bound_processor<keep_alive>([](keep_alive&& packet, base_objects::SharedClientData& client) {
+            register_packet_processor([](keep_alive&& packet, base_objects::SharedClientData& client) {
                 auto delay = extra_data_t::get(client).ka_solution.got_valid_keep_alive((int64_t)packet.keep_alive_id);
                 client.packets_state.keep_alive_ping_ms = (int32_t)std::min<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(delay).count(), INT32_MAX);
             });
-            api::packets::register_server_bound_processor<pong>([](pong&&, base_objects::SharedClientData& client) {
-                client.ping = std::chrono::duration_cast<std::chrono::milliseconds>(client.packets_state.pong_timer - std::chrono::system_clock::now());
+            register_packet_viewer([](api::packets::client_bound::play::ping&, base_objects::SharedClientData& client) {
+                client.packets_state.pong_timer = std::chrono::system_clock::now();
+                return true;
             });
-            api::packets::register_server_bound_processor<resource_pack>([](resource_pack&& packet, base_objects::SharedClientData& client) {
-                auto res = client.packets_state.pending_resource_packs.find(packet.uuid);
-                if (res != client.packets_state.pending_resource_packs.end()) {
+            register_packet_processor([](pong&& packet, base_objects::SharedClientData& client) {
+                if (packet.ping_request_id.is_valid)
+                    client.ping = std::chrono::duration_cast<std::chrono::milliseconds>(client.packets_state.pong_timer - std::chrono::system_clock::now());
+            });
+            register_packet_processor([](resource_pack&& packet, base_objects::SharedClientData& client) {
+                auto& data = extra_data_t::get(client);
+                auto res = data.pending_resource_packs.find(packet.uuid);
+                if (res != data.pending_resource_packs.end()) {
                     switch (packet.result.value) {
                     case resource_pack::result_e::success:
                         client.packets_state.active_resource_packs.insert(packet.uuid);
-                        client.packets_state.pending_resource_packs.erase(res);
+                        data.pending_resource_packs.erase(res);
                         break;
                     case resource_pack::result_e::accepted:
                     case resource_pack::result_e::downloaded:
@@ -588,27 +596,23 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         if (res->second.required)
                             client << api::packets::client_bound::configuration::disconnect{.reason = "Resource pack is required"};
                         else
-                            client.packets_state.pending_resource_packs.erase(res);
+                            data.pending_resource_packs.erase(res);
                     }
                     make_finish(client);
                 }
             });
-            api::packets::register_server_bound_processor<select_known_packs>([](select_known_packs&& packet, base_objects::SharedClientData& client) {
-                if (extra_data_t::get(client).load_state == extra_data_t::load_state_e::await_known_packs) {
-                    send_registry_data(client);
-                    send_tags(client);
-                    extra_data_t::get(client).load_state = extra_data_t::load_state_e::await_processing;
-                    pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::configuration, [&client, &packet](PluginRegistrationPtr plugin) {
-                        if (!plugin->OnConfiguration(client)) {
-                            if (!plugin->OnConfiguration_gotKnownPacks(client, packet))
-                                extra_data_t::get(client).active_plugins.push_back(plugin);
-                        }
-                    });
-                    make_finish(client);
-                } else
-                    client << api::packets::client_bound::configuration::disconnect{.reason = "Invalid protocol state, 1"};
+            register_packet_processor([](select_known_packs&& packet, base_objects::SharedClientData& client) {
+                send_registry_data(client);
+                send_tags(client);
+                pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::configuration, [&client, &packet](PluginRegistrationPtr plugin) {
+                    if (!plugin->OnConfiguration(client)) {
+                        if (!plugin->OnConfiguration_gotKnownPacks(client, packet))
+                            extra_data_t::get(client).active_plugins.push_back(plugin);
+                    }
+                });
+                make_finish(client);
             });
-            api::packets::register_server_bound_processor<custom_click_action>([](custom_click_action&& packet, base_objects::SharedClientData& client) {
+            register_packet_processor([](custom_click_action&& packet, base_objects::SharedClientData& client) {
                 api::dialogs::pass_dialog(packet.id, client, std::move(packet.payload));
             });
         }

@@ -20,13 +20,13 @@ namespace copper_server::build_in_plugins::network::tcp {
 
     class session final : public api::network::tcp::session {
         fast_task::task_mutex tc;
-        fast_task::networking::TcpNetworkStream* stream;
+        fast_task::networking::tcp_network_stream* stream;
 
     public:
         static bool do_log_connection_errors;
         encryption::aes encryption;
 
-        session(fast_task::networking::TcpNetworkStream& s, base_objects::network::tcp::client* client_handler, float& set_timeout);
+        session(fast_task::networking::tcp_network_stream& s, base_objects::network::tcp::client* client_handler, float& set_timeout);
         ~session() noexcept override;
 
         bool is_active() override;

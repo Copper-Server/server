@@ -6,15 +6,21 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/api/log.hpp>
 #include <src/api/network/tcp.hpp>
 #include <src/api/packets.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/util/readers.hpp>
 #include <src/util/reflect.hpp>
-#include <src/log.hpp>
+#include <src/util/reflect/calculations.hpp>
+#include <src/util/reflect/component.hpp>
+#include <src/util/reflect/dye_color.hpp>
+#include <src/util/reflect/packets.hpp>
+#include <src/util/reflect/packets_help.hpp>
+#include <src/util/reflect/parsers.hpp>
+#include <src/util/templates.hpp>
 
 namespace copper_server::api::packets {
-    extern bool debugging_enabled;
     using namespace base_objects;
 
     namespace __internal {
@@ -79,67 +85,78 @@ namespace copper_server::api::packets {
     template <class type>
     concept requires_check = is_limited_num<type> || is_string_sized<type> || is_list_array_sized<type> || is_list_array_fixed<type> || is_value_template_base_of<no_size, type>;
 
-
     struct processor_handle_data {
         uint8_t mode;
         size_t id;
     };
 
     struct processors_manager {
-        uint64_t id_counter = 0;
-        std::unordered_map<uint64_t, processor_handle_data> hd;
-        std::unordered_map<size_t, std::function<void(server_bound_packet&&, base_objects::SharedClientData&)>> handles[5];
+        std::unordered_map<size_t, base_objects::events::sync_event_single<server_bound::handshake_packet&&, base_objects::SharedClientData&>> h;
+        std::unordered_map<size_t, base_objects::events::sync_event_single<server_bound::status_packet&&, base_objects::SharedClientData&>> s;
+        std::unordered_map<size_t, base_objects::events::sync_event_single<server_bound::login_packet&&, base_objects::SharedClientData&>> l;
+        std::unordered_map<size_t, base_objects::events::sync_event_single<server_bound::configuration_packet&&, base_objects::SharedClientData&>> c;
+        std::unordered_map<size_t, base_objects::events::sync_event_single<server_bound::play_packet&&, base_objects::SharedClientData&>> p;
 
-        base_objects::events::event_register_id register_h(uint8_t mode, size_t id, std::function<void(server_bound_packet&&, base_objects::SharedClientData&)>&& fn) {
-            auto& it = handles[mode][id];
-            if (it)
-                throw std::runtime_error("This packet already registered.");
-            it = std::move(fn);
-            do {
-                ++id_counter;
-            } while (hd.contains(id_counter));
-            hd[id_counter] = {mode, id};
-            return {id_counter};
-        }
-
-        void handle(uint8_t mode, size_t id, server_bound_packet&& packet, base_objects::SharedClientData& context) {
-            auto& it = handles[mode][id];
-            if (!it) {
-                switch (mode) {
-                case 0:
-                    throw std::runtime_error("Handler for packet with id handshake:" + std::to_string(id) + " is not registered.");
-                case 1:
-                    throw std::runtime_error("Handler for packet with id status:" + std::to_string(id) + " is not registered.");
-                case 2:
-                    throw std::runtime_error("Handler for packet with id login:" + std::to_string(id) + " is not registered.");
-                case 3:
-                    throw std::runtime_error("Handler for packet with id configuration:" + std::to_string(id) + " is not registered.");
-                case 4:
-                    throw std::runtime_error("Handler for packet with id play:" + std::to_string(id) + " is not registered.");
-                default:
-                    std::unreachable();
-                }
+        void handle(size_t id, server_bound::handshake_packet&& packet, base_objects::SharedClientData& context) {
+            auto& it = h[id];
+            if (it.empty()) {
+                throw std::runtime_error("Handler for packet with id handshake:" + std::to_string(id) + " is not registered.");
             }
             it(std::move(packet), context);
         }
 
-        void unregister_h(base_objects::events::event_register_id id) {
-            if (auto it = hd.find(id.id); it != hd.end()) {
-                auto& item = it->second;
-                handles[item.mode].erase(item.id);
-                hd.erase(it);
+        void handle(size_t id, server_bound::status_packet&& packet, base_objects::SharedClientData& context) {
+            auto& it = s[id];
+            if (it.empty()) {
+                throw std::runtime_error("Handler for packet with id status:" + std::to_string(id) + " is not registered.");
             }
+            it(std::move(packet), context);
+        }
+
+        void handle(size_t id, server_bound::login_packet&& packet, base_objects::SharedClientData& context) {
+            auto& it = l[id];
+            if (it.empty()) {
+                throw std::runtime_error("Handler for packet with id login:" + std::to_string(id) + " is not registered.");
+            }
+            it(std::move(packet), context);
+        }
+
+        void handle(size_t id, server_bound::configuration_packet&& packet, base_objects::SharedClientData& context) {
+            auto& it = c[id];
+            if (it.empty()) {
+                throw std::runtime_error("Handler for packet with id configuration:" + std::to_string(id) + " is not registered.");
+            }
+            it(std::move(packet), context);
+        }
+
+        void handle(size_t id, server_bound::play_packet&& packet, base_objects::SharedClientData& context) {
+            auto& it = p[id];
+            if (it.empty()) {
+                throw std::runtime_error("Handler for packet with id play:" + std::to_string(id) + " is not registered.");
+            }
+            it(std::move(packet), context);
         }
     } handle_server_processor_manager;
 
-    
     namespace __internal {
-        base_objects::events::event_register_id register_server_processor(uint8_t mode, size_t id, std::function<void(server_bound_packet&&, base_objects::SharedClientData&)>&& fn) {
-            return handle_server_processor_manager.register_h(mode, id, std::move(fn));
+        base_objects::events::sync_event_single<server_bound::handshake_packet&&, base_objects::SharedClientData&>& server_processor_h(size_t id) {
+            return handle_server_processor_manager.h[id];
         }
 
-        void unregister_server_processor(base_objects::events::event_register_id id) {
-            return handle_server_processor_manager.unregister_h(id);
+        base_objects::events::sync_event_single<server_bound::status_packet&&, base_objects::SharedClientData&>& server_processor_s(size_t id) {
+            return handle_server_processor_manager.s[id];
+        }
+
+        base_objects::events::sync_event_single<server_bound::login_packet&&, base_objects::SharedClientData&>& server_processor_l(size_t id) {
+            return handle_server_processor_manager.l[id];
+        }
+
+        base_objects::events::sync_event_single<server_bound::configuration_packet&&, base_objects::SharedClientData&>& server_processor_c(size_t id) {
+            return handle_server_processor_manager.c[id];
+        }
+
+        base_objects::events::sync_event_single<server_bound::play_packet&&, base_objects::SharedClientData&>& server_processor_p(size_t id) {
+            return handle_server_processor_manager.p[id];
         }
     }
 
@@ -240,8 +257,7 @@ namespace copper_server::api::packets {
             value.bits_per_entry = base_objects::pallete_data::bits_for_max(get_size_source_value(context, size_source::get_world_blocks_height));
             auto size = value.bits_per_entry * 256;
             size += size % 8;
-            auto range = stream.range_read(size);
-            value.data.data() = list_array<uint8_t>(range.data_read(), range.size_read());
+            value.data.data() = stream.read_array<uint64_t>(int32_t(size / 8));
         } else if constexpr (is_template_base_of<list_array_depend, Type>) {
             bool has_next = false;
             do {
@@ -375,8 +391,34 @@ namespace copper_server::api::packets {
             value.value = std::move(res);
         } else if constexpr (std::is_same_v<bit_list_array<uint64_t>, Type>) {
             value.data() = stream.read_array<uint64_t>();
-        } else if constexpr (is_id_source<Type>) {
+        } else if constexpr (api::id::is_source<Type>) {
             decode_entry(context, stream, value.value, prev);
+        } else if constexpr (is_tvalue_template_base_of<ordered_id, Type>) {
+            decode_entry(context, stream, value.value, prev);
+            value.is_valid = context.packets_state.internal_data.get([&](auto& data) {
+                auto it = data.id_tracker.find(Type::id_source);
+                return it != data.id_tracker.end() ? ((decltype(value.value))it->second) == value.value : false;
+            });
+        } else if constexpr (is_template_base_of<enum_set, Type>) {
+            using Tupple_T = std::decay_t<decltype(value.values)>;
+            bit_list_array<uint8_t> bit(std::tuple_size_v<Tupple_T>);
+            for (size_t i = 0; i < bit.size(); i++)
+                bit.data()[i] = stream.read_value<uint8_t>();
+            static constexpr auto type_table = []<size_t... I>(std::index_sequence<I...>) {
+                return std::array<void (*)(SharedClientData& context, ArrayStream& stream, T& value, Prev_T* prev), sizeof...(I)>{
+                    [](SharedClientData& context, ArrayStream& stream, T& value, Prev_T* prev) {
+                        using DT = std::tuple_element_t<I, Tupple_T>::value_type;
+                        DT v{};
+                        decode_entry(context, stream, v, prev);
+                        value.push(std::move(v));
+                    }...
+                };
+            }(std::make_index_sequence<std::tuple_size_v<Tupple_T>>());
+            size_t siz = stream.read_var<int32_t>();
+            for (size_t i = 0; i < siz; i++)
+                for (size_t j = 0; j < std::tuple_size_v<Tupple_T>; j++)
+                    if (bit.at(i) || j == 0) //j==0 is for header
+                        type_table[i + 1](context, stream, value, prev);
         } else {
             bool process_next = true;
             reflect::for_each_field(value, [&](auto& item) {
@@ -416,31 +458,16 @@ namespace copper_server::api::packets {
     template <class T>
     bool decode_server_packet_handle(SharedClientData& context, ArrayStream& stream) {
         auto packet = decode_server_packet<T>(context, stream);
-        uint8_t mode;
         static_assert(std::is_copy_constructible_v<T>);
         static_assert(std::is_move_constructible_v<T>);
         static_assert(std::is_copy_assignable_v<T>);
         static_assert(std::is_move_assignable_v<T>);
-        if constexpr (std::is_constructible_v<server_bound::handshake_packet, T>) {
-            mode = 0;
-        } else if constexpr (std::is_constructible_v<server_bound::status_packet, T>) {
-            mode = 1;
-        } else if constexpr (std::is_constructible_v<server_bound::login_packet, T>) {
-            mode = 2;
-        } else if constexpr (std::is_constructible_v<server_bound::configuration_packet, T>) {
-            mode = 3;
-        } else
-            mode = 4;
-        if (debugging_enabled) {
-            auto id = context.get_session() ? context.get_session()->id : -1;
-            log::debug("protocol", "server_bound:client_id: " + std::to_string(id) + "\n" + stringize_packet(packet));
-        }
 
         if (__internal::visit_packet_viewer(packet, context))
             return false;
         std::visit(
             [&](auto& mode) {
-                return std::visit(
+                std::visit(
                     [&]<class P>(P& _) {
                         if constexpr (std::is_base_of_v<switches_to::status, P>)
                             context << switches_to::status{};
@@ -453,11 +480,11 @@ namespace copper_server::api::packets {
                     },
                     mode
                 );
+                handle_server_processor_manager.handle(T::packet_id::value, std::move(mode), context);
             },
             packet
         );
 
-        handle_server_processor_manager.handle(mode, T::packet_id::value, std::move(packet), context);
         return true;
     }
 
@@ -465,33 +492,21 @@ namespace copper_server::api::packets {
         if (__internal::visit_packet_viewer(packet, context))
             return false;
 
-        uint8_t mode;
-        size_t id = 0;
         std::visit(
-            [&]<class T>(const T& it) {
-                if constexpr (std::is_same_v<server_bound::handshake_packet, T>) {
-                    mode = 0;
-                } else if constexpr (std::is_same_v<server_bound::status_packet, T>) {
-                    mode = 1;
-                } else if constexpr (std::is_same_v<server_bound::login_packet, T>) {
-                    mode = 2;
-                } else if constexpr (std::is_same_v<server_bound::configuration_packet, T>) {
-                    mode = 3;
-                } else
-                    mode = 4;
+            [&context]<class T>(T& it) {
+                size_t id = 0;
                 std::visit(
-                    [&]<class U>(const U& _) {
+                    [&]<class U>(U& _) {
                         id = (size_t)U::packet_id::value;
                         if constexpr (requires { U::switches_to::value; })
                             context << U::switches_to::value;
                     },
                     it
                 );
+                handle_server_processor_manager.handle(id, std::move(it), context);
             },
             packet
         );
-
-        handle_server_processor_manager.handle(mode, id, std::move(packet), context);
         return true;
     }
 

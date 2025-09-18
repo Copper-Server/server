@@ -6,13 +6,39 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/log.hpp>
+#include <src/api/configuration.hpp>
+#include <src/api/log.hpp>
 #include <src/plugin/main.hpp>
 
 namespace copper_server {
+    void __internal__::info(std::string_view source, std::string_view message) {
+        api::log::info(source, message);
+    }
+
+    void __internal__::error(std::string_view source, std::string_view message) {
+        api::log::error(source, message);
+    }
+
+    void __internal__::warn(std::string_view source, std::string_view message) {
+        api::log::warn(source, message);
+    }
+
+    void __internal__::debug(std::string_view source, std::string_view message) {
+        api::log::debug(source, message);
+    }
+
+    void __internal__::debug_error(std::string_view source, std::string_view message) {
+        api::log::debug_error(source, message);
+    }
+
+    void __internal__::fatal(std::string_view source, std::string_view message) {
+        api::log::fatal(source, message);
+    }
+
+
     void unregisterEvery(PluginRegistrationPtr& plugin, std::unordered_map<std::string, PluginRegistrationPtr>& container) {
         for (
-            std::unordered_map<std::string, PluginRegistrationPtr>::iterator it;
+            std::unordered_map<std::string, PluginRegistrationPtr>::iterator it = container.begin();
             it != container.end();
             it = std::find_if(container.begin(), container.end(), [&plugin](auto& item) {
                 return item.second == plugin;
@@ -204,7 +230,8 @@ namespace copper_server {
 
     void PluginManagement::autoRegister() {
         for (auto& [name, plugin] : __internal__::registration_list()) {
-            registerPlugin(name, plugin->construct());
+            if (!api::configuration::get().disabled_plugins.contains(name))
+                registerPlugin(name, plugin->construct());
         }
         __internal__::registration_list().clear();
     }

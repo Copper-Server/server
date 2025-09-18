@@ -11,15 +11,56 @@
 #include <algorithm>
 #include <cstdint>
 #include <library/list_array.hpp>
-#include <src/base_objects/id_registry.hpp>
+#include <src/api/id.hpp>
+#include <src/util/cts.hpp>
 #include <string>
 #include <unordered_map>
 #include <variant>
 
 namespace copper_server::base_objects {
+    //reflect_map skip_begin
+    template <class T>
+    static constexpr bool is_enum_item = requires { T::item_id::value; };
+
+    template <class T>
+    static constexpr bool is_default_enum_item = requires { T::item_id::value; typename T::flag_default; };
+
+    template <class T>
+    static constexpr bool is_flag_item = requires {
+        T::flag_value::value;
+        T::flag_mask::value;
+        T::flag_order::value;
+    };
+
     namespace internal {
         template <template <class...> class Base, class... Ts>
         void test(Base<Ts...>&);
+
+        template <class... Ts>
+        struct find_default_item;
+
+        template <class T, class... Ts>
+        struct find_default_item<T, Ts...> {
+            using type = std::conditional_t<is_default_enum_item<T>, T, typename find_default_item<Ts...>::type>;
+        };
+
+        template <>
+        struct find_default_item<> {
+            using type = void;
+        };
+
+        template <class... Ts>
+        struct count_default_items;
+
+        template <class T, class... Ts>
+        struct count_default_items<T, Ts...> {
+            static constexpr int value = (is_default_enum_item<T> ? 1 : 0) + count_default_items<Ts...>::value;
+        };
+
+        template <>
+        struct count_default_items<> {
+            static constexpr int value = 0;
+        };
     }
 
     template <class type>
@@ -70,6 +111,8 @@ namespace copper_server::base_objects {
     template <class... Args>
     constexpr bool is_correct_variant() {
         for_each_type<std::variant<Args...>>::each([]<class T>() {
+            static_assert(std::default_initializable<T>);
+            static_assert(std::is_default_constructible_v<T>);
             static_assert(std::is_copy_constructible_v<T>);
             static_assert(std::is_move_constructible_v<T>);
             static_assert(std::is_copy_assignable_v<T>);
@@ -78,6 +121,7 @@ namespace copper_server::base_objects {
         return true;
     }
 
+    //reflect_map skip_end
     namespace switches_to {
         struct status {
             std::strong_ordering operator<=>(const status& other) const = default;
@@ -116,6 +160,13 @@ namespace copper_server::base_objects {
         std::strong_ordering operator<=>(const enum_item& other) const = default;
     };
 
+    template <int32_t value>
+    struct default_enum_item {
+        using flag_default = void;
+        using item_id = ic<value>;
+        std::strong_ordering operator<=>(const default_enum_item& other) const = default;
+    };
+
     template <size_t value, size_t mask, ptrdiff_t order>
     struct flag_item {
         using flag_value = ic<value>;
@@ -125,9 +176,10 @@ namespace copper_server::base_objects {
     };
 
     template <class T, class R>
-    static constexpr bool could_be_preprocessed = requires(R& it) { T::preprocess(it); };
+    static constexpr bool could_be_preprocessed = requires(T& v, R& it) { v.preprocess(it); };
 
     struct identifier {
+        using underlying_type = std::string;
         std::string value;
 
         constexpr identifier() {}
@@ -136,7 +188,8 @@ namespace copper_server::base_objects {
 
         constexpr identifier(const std::string& value) : value(value) {}
 
-        constexpr identifier(identifier&& value) : value(std::move(value.value)) {}
+        constexpr identifier(identifier&& value) noexcept
+            : value(std::move(value.value)) {}
 
         constexpr identifier(const identifier& value) : value(value.value) {}
 
@@ -145,7 +198,7 @@ namespace copper_server::base_objects {
         template <size_t siz>
         constexpr identifier(const char (&value)[siz]) : value(value) {}
 
-        constexpr identifier& operator=(identifier&& other) {
+        constexpr identifier& operator=(identifier&& other) noexcept {
             value = std::move(other.value);
             return *this;
         }
@@ -172,6 +225,7 @@ namespace copper_server::base_objects {
 
     template <size_t size>
     struct string_sized {
+        using underlying_type = std::string;
         std::string value;
         static constexpr inline size_t max_size = size;
 
@@ -242,6 +296,7 @@ namespace copper_server::base_objects {
     };
 
     struct json_text_component {
+        using underlying_type = std::string;
         std::string value;
 
         auto operator<=>(const json_text_component& other) const = default;
@@ -249,82 +304,85 @@ namespace copper_server::base_objects {
 
     template <class T, T min, T max>
     struct limited_num {
+        using underlying_type = T;
         static constexpr inline T check_min = min;
         static constexpr inline T check_max = max;
-        T value;
+        T value = {};
         auto operator<=>(const limited_num& other) const = default;
     };
 
     struct var_int32 {
         using underlying_type = int32_t;
-        using banner_pattern = id_source<var_int32, registry_source::banner_pattern>;
-        using cat_variant = id_source<var_int32, registry_source::cat_variant>;
-        using chat_type = id_source<var_int32, registry_source::chat_type>;
-        using chicken_variant = id_source<var_int32, registry_source::chicken_variant>;
-        using cow_variant = id_source<var_int32, registry_source::cow_variant>;
-        using damage_type = id_source<var_int32, registry_source::damage_type>;
-        using dialog = id_source<var_int32, registry_source::dialog>;
-        using dimension_type = id_source<var_int32, registry_source::dimension_type>;
-        using enchantment = id_source<var_int32, registry_source::enchantment>;
-        using enchantment_provider = id_source<var_int32, registry_source::enchantment_provider>;
-        using frog_variant = id_source<var_int32, registry_source::frog_variant>;
-        using instrument = id_source<var_int32, registry_source::instrument>;
-        using jukebox_song = id_source<var_int32, registry_source::jukebox_song>;
-        using loot_table = id_source<var_int32, registry_source::loot_table>;
-        using painting_variant = id_source<var_int32, registry_source::painting_variant>;
-        using pig_variant = id_source<var_int32, registry_source::pig_variant>;
-        using recipe = id_source<var_int32, registry_source::recipe>;
-        using test_environment = id_source<var_int32, registry_source::test_environment>;
-        using test_instance = id_source<var_int32, registry_source::test_instance>;
-        using trim_material = id_source<var_int32, registry_source::trim_material>;
-        using trim_pattern = id_source<var_int32, registry_source::trim_pattern>;
-        using wolf_sound_variant = id_source<var_int32, registry_source::wolf_sound_variant>;
-        using wolf_variant = id_source<var_int32, registry_source::wolf_variant>;
-        using worldgen__biome = id_source<var_int32, registry_source::worldgen__biome>;
-        using attribute = id_source<var_int32, registry_source::attribute>;
-        using block_state = id_source<var_int32, registry_source::block_state>;
-        using block_type = id_source<var_int32, registry_source::block_type>;
-        using block_entity_type = id_source<var_int32, registry_source::block_entity_type>;
-        using data_component_type = id_source<var_int32, registry_source::data_component_type>;
-        using dimension = id_source<var_int32, registry_source::dimension>;
-        using entity_type = id_source<var_int32, registry_source::entity_type>;
-        using fluid = id_source<var_int32, registry_source::fluid>;
-        using game_event = id_source<var_int32, registry_source::game_event>;
-        using position_source_type = id_source<var_int32, registry_source::position_source_type>;
-        using item = id_source<var_int32, registry_source::item>;
-        using menu = id_source<var_int32, registry_source::menu>;
-        using mob_effect = id_source<var_int32, registry_source::mob_effect>;
-        using particle_type = id_source<var_int32, registry_source::particle_type>;
-        using potion = id_source<var_int32, registry_source::potion>;
-        using recipe_serializer = id_source<var_int32, registry_source::recipe_serializer>;
-        using recipe_type = id_source<var_int32, registry_source::recipe_type>;
-        using sound_event = id_source<var_int32, registry_source::sound_event>;
-        using stat_type = id_source<var_int32, registry_source::stat_type>;
-        using custom_stat = id_source<var_int32, registry_source::custom_stat>;
-        using command_argument_type = id_source<var_int32, registry_source::command_argument_type>;
-        using entity__activity = id_source<var_int32, registry_source::entity__activity>;
-        using entity__memory_module_type = id_source<var_int32, registry_source::entity__memory_module_type>;
-        using entity__schedule = id_source<var_int32, registry_source::entity__schedule>;
-        using entity__sensor_type = id_source<var_int32, registry_source::entity__sensor_type>;
-        using entity__motive = id_source<var_int32, registry_source::entity__motive>;
-        using entity__villager_profession = id_source<var_int32, registry_source::entity__villager_profession>;
-        using entity__villager_type = id_source<var_int32, registry_source::entity__villager_type>;
-        using entity__poi_type = id_source<var_int32, registry_source::entity__poi_type>;
-        using loot_table__loot_condition_type = id_source<var_int32, registry_source::loot_table__loot_condition_type>;
-        using loot_table__loot_function_type = id_source<var_int32, registry_source::loot_table__loot_function_type>;
-        using loot_table__loot_nbt_provider_type = id_source<var_int32, registry_source::loot_table__loot_nbt_provider_type>;
-        using loot_table__loot_number_provider_type = id_source<var_int32, registry_source::loot_table__loot_number_provider_type>;
-        using loot_table__loot_pool_entry_type = id_source<var_int32, registry_source::loot_table__loot_pool_entry_type>;
-        using loot_table__loot_score_provider_type = id_source<var_int32, registry_source::loot_table__loot_score_provider_type>;
-        using villager_variant = id_source<var_int32, registry_source::villager_variant>;
-        using fox_variant = id_source<var_int32, registry_source::fox_variant>;
-        using parrot_variant = id_source<var_int32, registry_source::parrot_variant>;
-        using tropical_fish_pattern = id_source<var_int32, registry_source::tropical_fish_pattern>;
-        using mooshroom_variant = id_source<var_int32, registry_source::mooshroom_variant>;
-        using rabbit_variant = id_source<var_int32, registry_source::rabbit_variant>;
-        using horse_variant = id_source<var_int32, registry_source::horse_variant>;
-        using llama_variant = id_source<var_int32, registry_source::llama_variant>;
-        using axolotl_variant = id_source<var_int32, registry_source::axolotl_variant>;
+        using banner_pattern = api::id::source<var_int32, api::id::registry_source::banner_pattern>;
+        using cat_variant = api::id::source<var_int32, api::id::registry_source::cat_variant>;
+        using chat_type = api::id::source<var_int32, api::id::registry_source::chat_type>;
+        using chicken_variant = api::id::source<var_int32, api::id::registry_source::chicken_variant>;
+        using cow_variant = api::id::source<var_int32, api::id::registry_source::cow_variant>;
+        using damage_type = api::id::source<var_int32, api::id::registry_source::damage_type>;
+        using dialog = api::id::source<var_int32, api::id::registry_source::dialog>;
+        using dimension_type = api::id::source<var_int32, api::id::registry_source::dimension_type>;
+        using enchantment = api::id::source<var_int32, api::id::registry_source::enchantment>;
+        using enchantment_provider = api::id::source<var_int32, api::id::registry_source::enchantment_provider>;
+        using frog_variant = api::id::source<var_int32, api::id::registry_source::frog_variant>;
+        using instrument = api::id::source<var_int32, api::id::registry_source::instrument>;
+        using jukebox_song = api::id::source<var_int32, api::id::registry_source::jukebox_song>;
+        using loot_table = api::id::source<var_int32, api::id::registry_source::loot_table>;
+        using painting_variant = api::id::source<var_int32, api::id::registry_source::painting_variant>;
+        using pig_variant = api::id::source<var_int32, api::id::registry_source::pig_variant>;
+        using recipe = api::id::source<var_int32, api::id::registry_source::recipe>;
+        using test_environment = api::id::source<var_int32, api::id::registry_source::test_environment>;
+        using test_instance = api::id::source<var_int32, api::id::registry_source::test_instance>;
+        using trim_material = api::id::source<var_int32, api::id::registry_source::trim_material>;
+        using trim_pattern = api::id::source<var_int32, api::id::registry_source::trim_pattern>;
+        using wolf_sound_variant = api::id::source<var_int32, api::id::registry_source::wolf_sound_variant>;
+        using wolf_variant = api::id::source<var_int32, api::id::registry_source::wolf_variant>;
+        using worldgen__biome = api::id::source<var_int32, api::id::registry_source::worldgen__biome>;
+        using attribute = api::id::source<var_int32, api::id::registry_source::attribute>;
+        using block_state = api::id::source<var_int32, api::id::registry_source::block_state>;
+        using block_type = api::id::source<var_int32, api::id::registry_source::block_type>;
+        using block_entity_type = api::id::source<var_int32, api::id::registry_source::block_entity_type>;
+        using data_component_type = api::id::source<var_int32, api::id::registry_source::data_component_type>;
+        using dimension = api::id::source<var_int32, api::id::registry_source::dimension>;
+        using entity_type = api::id::source<var_int32, api::id::registry_source::entity_type>;
+        using fluid = api::id::source<var_int32, api::id::registry_source::fluid>;
+        using game_event = api::id::source<var_int32, api::id::registry_source::game_event>;
+        using position_source_type = api::id::source<var_int32, api::id::registry_source::position_source_type>;
+        using item = api::id::source<var_int32, api::id::registry_source::item>;
+        using menu = api::id::source<var_int32, api::id::registry_source::menu>;
+        using mob_effect = api::id::source<var_int32, api::id::registry_source::mob_effect>;
+        using particle_type = api::id::source<var_int32, api::id::registry_source::particle_type>;
+        using potion = api::id::source<var_int32, api::id::registry_source::potion>;
+        using recipe_serializer = api::id::source<var_int32, api::id::registry_source::recipe_serializer>;
+        using recipe_type = api::id::source<var_int32, api::id::registry_source::recipe_type>;
+        using sound_event = api::id::source<var_int32, api::id::registry_source::sound_event>;
+        using stat_type = api::id::source<var_int32, api::id::registry_source::stat_type>;
+        using custom_stat = api::id::source<var_int32, api::id::registry_source::custom_stat>;
+        using command_argument_type = api::id::source<var_int32, api::id::registry_source::command_argument_type>;
+        using activity = api::id::source<var_int32, api::id::registry_source::activity>;
+        using memory_module_type = api::id::source<var_int32, api::id::registry_source::memory_module_type>;
+        using schedule = api::id::source<var_int32, api::id::registry_source::schedule>;
+        using sensor_type = api::id::source<var_int32, api::id::registry_source::sensor_type>;
+        using motive = api::id::source<var_int32, api::id::registry_source::motive>;
+        using villager_profession = api::id::source<var_int32, api::id::registry_source::villager_profession>;
+        using villager_type = api::id::source<var_int32, api::id::registry_source::villager_type>;
+        using poi_type = api::id::source<var_int32, api::id::registry_source::poi_type>;
+        using loot_condition_type = api::id::source<var_int32, api::id::registry_source::loot_condition_type>;
+        using loot_function_type = api::id::source<var_int32, api::id::registry_source::loot_function_type>;
+        using loot_nbt_provider_type = api::id::source<var_int32, api::id::registry_source::loot_nbt_provider_type>;
+        using loot_number_provider_type = api::id::source<var_int32, api::id::registry_source::loot_number_provider_type>;
+        using loot_pool_entry_type = api::id::source<var_int32, api::id::registry_source::loot_pool_entry_type>;
+        using loot_score_provider_type = api::id::source<var_int32, api::id::registry_source::loot_score_provider_type>;
+        using villager_variant = api::id::source<var_int32, api::id::registry_source::villager_variant>;
+        using fox_variant = api::id::source<var_int32, api::id::registry_source::fox_variant>;
+        using parrot_variant = api::id::source<var_int32, api::id::registry_source::parrot_variant>;
+        using tropical_fish_pattern = api::id::source<var_int32, api::id::registry_source::tropical_fish_pattern>;
+        using mooshroom_variant = api::id::source<var_int32, api::id::registry_source::mooshroom_variant>;
+        using rabbit_variant = api::id::source<var_int32, api::id::registry_source::rabbit_variant>;
+        using horse_variant = api::id::source<var_int32, api::id::registry_source::horse_variant>;
+        using llama_variant = api::id::source<var_int32, api::id::registry_source::llama_variant>;
+        using axolotl_variant = api::id::source<var_int32, api::id::registry_source::axolotl_variant>;
+
+        using entity_id = api::id::source<var_int32, api::id::registry_source::entity_id>;
 
         int32_t value = 0;
 
@@ -381,11 +439,97 @@ namespace copper_server::base_objects {
     };
 
     struct optional_var_int32 : public std::optional<int32_t> { //encoded same as var_int32 but if set the value incremented and checked for overflow, if not set encoded as 0
+        using underlying_type = int32_t;
+        using banner_pattern = api::id::source<optional_var_int32, api::id::registry_source::banner_pattern>;
+        using cat_variant = api::id::source<optional_var_int32, api::id::registry_source::cat_variant>;
+        using chat_type = api::id::source<optional_var_int32, api::id::registry_source::chat_type>;
+        using chicken_variant = api::id::source<optional_var_int32, api::id::registry_source::chicken_variant>;
+        using cow_variant = api::id::source<optional_var_int32, api::id::registry_source::cow_variant>;
+        using damage_type = api::id::source<optional_var_int32, api::id::registry_source::damage_type>;
+        using dialog = api::id::source<optional_var_int32, api::id::registry_source::dialog>;
+        using dimension_type = api::id::source<optional_var_int32, api::id::registry_source::dimension_type>;
+        using enchantment = api::id::source<optional_var_int32, api::id::registry_source::enchantment>;
+        using enchantment_provider = api::id::source<optional_var_int32, api::id::registry_source::enchantment_provider>;
+        using frog_variant = api::id::source<optional_var_int32, api::id::registry_source::frog_variant>;
+        using instrument = api::id::source<optional_var_int32, api::id::registry_source::instrument>;
+        using jukebox_song = api::id::source<optional_var_int32, api::id::registry_source::jukebox_song>;
+        using loot_table = api::id::source<optional_var_int32, api::id::registry_source::loot_table>;
+        using painting_variant = api::id::source<optional_var_int32, api::id::registry_source::painting_variant>;
+        using pig_variant = api::id::source<optional_var_int32, api::id::registry_source::pig_variant>;
+        using recipe = api::id::source<optional_var_int32, api::id::registry_source::recipe>;
+        using test_environment = api::id::source<optional_var_int32, api::id::registry_source::test_environment>;
+        using test_instance = api::id::source<optional_var_int32, api::id::registry_source::test_instance>;
+        using trim_material = api::id::source<optional_var_int32, api::id::registry_source::trim_material>;
+        using trim_pattern = api::id::source<optional_var_int32, api::id::registry_source::trim_pattern>;
+        using wolf_sound_variant = api::id::source<optional_var_int32, api::id::registry_source::wolf_sound_variant>;
+        using wolf_variant = api::id::source<optional_var_int32, api::id::registry_source::wolf_variant>;
+        using worldgen__biome = api::id::source<optional_var_int32, api::id::registry_source::worldgen__biome>;
+        using attribute = api::id::source<optional_var_int32, api::id::registry_source::attribute>;
+        using block_state = api::id::source<optional_var_int32, api::id::registry_source::block_state>;
+        using block_type = api::id::source<optional_var_int32, api::id::registry_source::block_type>;
+        using block_entity_type = api::id::source<optional_var_int32, api::id::registry_source::block_entity_type>;
+        using data_component_type = api::id::source<optional_var_int32, api::id::registry_source::data_component_type>;
+        using dimension = api::id::source<optional_var_int32, api::id::registry_source::dimension>;
+        using entity_type = api::id::source<optional_var_int32, api::id::registry_source::entity_type>;
+        using fluid = api::id::source<optional_var_int32, api::id::registry_source::fluid>;
+        using game_event = api::id::source<optional_var_int32, api::id::registry_source::game_event>;
+        using position_source_type = api::id::source<optional_var_int32, api::id::registry_source::position_source_type>;
+        using item = api::id::source<optional_var_int32, api::id::registry_source::item>;
+        using menu = api::id::source<optional_var_int32, api::id::registry_source::menu>;
+        using mob_effect = api::id::source<optional_var_int32, api::id::registry_source::mob_effect>;
+        using particle_type = api::id::source<optional_var_int32, api::id::registry_source::particle_type>;
+        using potion = api::id::source<optional_var_int32, api::id::registry_source::potion>;
+        using recipe_serializer = api::id::source<optional_var_int32, api::id::registry_source::recipe_serializer>;
+        using recipe_type = api::id::source<optional_var_int32, api::id::registry_source::recipe_type>;
+        using sound_event = api::id::source<optional_var_int32, api::id::registry_source::sound_event>;
+        using stat_type = api::id::source<optional_var_int32, api::id::registry_source::stat_type>;
+        using custom_stat = api::id::source<optional_var_int32, api::id::registry_source::custom_stat>;
+        using command_argument_type = api::id::source<optional_var_int32, api::id::registry_source::command_argument_type>;
+        using activity = api::id::source<optional_var_int32, api::id::registry_source::activity>;
+        using memory_module_type = api::id::source<optional_var_int32, api::id::registry_source::memory_module_type>;
+        using schedule = api::id::source<optional_var_int32, api::id::registry_source::schedule>;
+        using sensor_type = api::id::source<optional_var_int32, api::id::registry_source::sensor_type>;
+        using motive = api::id::source<optional_var_int32, api::id::registry_source::motive>;
+        using villager_profession = api::id::source<optional_var_int32, api::id::registry_source::villager_profession>;
+        using villager_type = api::id::source<optional_var_int32, api::id::registry_source::villager_type>;
+        using poi_type = api::id::source<optional_var_int32, api::id::registry_source::poi_type>;
+        using loot_condition_type = api::id::source<optional_var_int32, api::id::registry_source::loot_condition_type>;
+        using loot_function_type = api::id::source<optional_var_int32, api::id::registry_source::loot_function_type>;
+        using loot_nbt_provider_type = api::id::source<optional_var_int32, api::id::registry_source::loot_nbt_provider_type>;
+        using loot_number_provider_type = api::id::source<optional_var_int32, api::id::registry_source::loot_number_provider_type>;
+        using loot_pool_entry_type = api::id::source<optional_var_int32, api::id::registry_source::loot_pool_entry_type>;
+        using loot_score_provider_type = api::id::source<optional_var_int32, api::id::registry_source::loot_score_provider_type>;
+        using villager_variant = api::id::source<optional_var_int32, api::id::registry_source::villager_variant>;
+        using fox_variant = api::id::source<optional_var_int32, api::id::registry_source::fox_variant>;
+        using parrot_variant = api::id::source<optional_var_int32, api::id::registry_source::parrot_variant>;
+        using tropical_fish_pattern = api::id::source<optional_var_int32, api::id::registry_source::tropical_fish_pattern>;
+        using mooshroom_variant = api::id::source<optional_var_int32, api::id::registry_source::mooshroom_variant>;
+        using rabbit_variant = api::id::source<optional_var_int32, api::id::registry_source::rabbit_variant>;
+        using horse_variant = api::id::source<optional_var_int32, api::id::registry_source::horse_variant>;
+        using llama_variant = api::id::source<optional_var_int32, api::id::registry_source::llama_variant>;
+        using axolotl_variant = api::id::source<optional_var_int32, api::id::registry_source::axolotl_variant>;
+        using entity_id = api::id::source<optional_var_int32, api::id::registry_source::entity_id>;
+
         using std::optional<int32_t>::optional;
+
+        operator int32_t() const {
+            if (has_value())
+                return value();
+            else
+                return 0;
+        }
     };
 
     struct optional_var_int64 : public std::optional<int64_t> { //encoded same as var_int64 but if set the value incremented and checked for overflow, if not set encoded as 0
+        using underlying_type = int32_t;
         using std::optional<int64_t>::optional;
+
+        operator int64_t() const {
+            if (has_value())
+                return value();
+            else
+                return 0;
+        }
     };
 
     template <class Value, class T>
@@ -728,7 +872,7 @@ namespace copper_server::base_objects {
         }
 
         operator double() {
-            return (value * 360) / (3.14159265358979323846 * 2);
+            return (value * 360.0) / (3.14159265358979323846 * 2);
         }
 
         auto operator<=>(const Angle& other) const = default;
@@ -737,6 +881,7 @@ namespace copper_server::base_objects {
     template <class Enum, class T>
     struct enum_as {
         using encode_t = T;
+        using enum_t = Enum;
         Enum value;
 
         constexpr enum_as() : value() {}
@@ -771,21 +916,24 @@ namespace copper_server::base_objects {
         }
     };
 
-    template <class T>
-    static constexpr bool is_enum_item = requires { T::item_id::value; };
-
     template <class ValueType, class... Ty>
     struct enum_switch : public std::variant<Ty...> {
+        static_assert(internal::count_default_items<Ty...>::value <= 1, "enum_switch can have at most one default item");
         static constexpr inline bool is_correct = is_correct_variant<Ty...>();
 
+        using default_item = typename internal::find_default_item<Ty...>::type;
         using encode_type = ValueType;
         using base = std::variant<Ty...>;
 
         enum_switch() : base() {}
 
-        enum_switch(const enum_switch& v) : base((const base&)v) {}
+        enum_switch(const enum_switch& v) {
+            *this = v;
+        }
 
-        enum_switch(enum_switch&& v) : base(std::move((base&)v)) {}
+        enum_switch(enum_switch&& v) {
+            *this = std::move(v);
+        }
 
         enum_switch(std::variant<Ty...>&& v) {
             *this = std::move(v);
@@ -795,10 +943,20 @@ namespace copper_server::base_objects {
             *this = v;
         }
 
+        enum_switch(std::convertible_to<std::variant<Ty...>> auto&& v) {
+            *this = std::move(v);
+        }
+
+        enum_switch(const std::convertible_to<std::variant<Ty...>> auto& v) {
+            *this = v;
+        }
+
         enum_switch& operator=(const enum_switch& v);
         enum_switch& operator=(enum_switch&& v);
         enum_switch& operator=(std::variant<Ty...>&& v);
         enum_switch& operator=(const std::variant<Ty...>& v);
+        enum_switch& operator=(std::convertible_to<std::variant<Ty...>> auto&& v);
+        enum_switch& operator=(const std::convertible_to<std::variant<Ty...>> auto& v);
 
         template <class FN>
         constexpr static void get_enum(size_t id, FN&& fn) {
@@ -817,6 +975,12 @@ namespace copper_server::base_objects {
                     fn.template operator()<T>();
                 }
             );
+        }
+
+        template <class FN>
+        constexpr static void get_default(FN&& fn) {
+            if constexpr (!std::is_same_v<default_item, void>)
+                fn.template operator()<default_item>();
         }
 
         bool operator==(const enum_switch& other) const = default;
@@ -847,17 +1011,64 @@ namespace copper_server::base_objects {
         return *this;
     }
 
-    template <class T>
-    static constexpr bool is_flag_item = requires {
-        T::flag_value::value;
-        T::flag_mask::value;
-        T::flag_order::value;
+    template <class ValueType, class... Ty>
+    enum_switch<ValueType, Ty...>& enum_switch<ValueType, Ty...>::operator=(std::convertible_to<std::variant<Ty...>> auto&& v) {
+        (base&)* this = std::move(v);
+        return *this;
+    }
+
+    template <class ValueType, class... Ty>
+    enum_switch<ValueType, Ty...>& enum_switch<ValueType, Ty...>::operator=(const std::convertible_to<std::variant<Ty...>> auto& v) {
+        (base&)* this = v;
+        return *this;
+    }
+
+    template <class header, class... Ty>
+    struct enum_set {
+        std::tuple<list_array<header>, list_array<Ty>...> values;
+        using header_t = header;
+
+        template <class T>
+        void push(T&& mov) {
+            std::get<list_array<std::decay_t<T>>>(values).push_back(std::move(mov));
+        }
+
+        template <class T>
+        void push(const T& mov) {
+            std::get<list_array<std::decay_t<T>>>(values).push_back(mov);
+        }
+
+        template <class T>
+        void push() {
+            std::get<list_array<std::decay_t<T>>>(values).push_back(T{});
+        }
+
+        template <class T>
+        bool has() const {
+            return std::get<list_array<std::decay_t<T>>>(values).size();
+        }
+
+        template <class T>
+        list_array<T>& get() & {
+            return std::get<list_array<std::decay_t<T>>>(values);
+        }
+
+        template <class T>
+        const list_array<T>& get() const& {
+            return std::get<list_array<std::decay_t<T>>>(values);
+        }
+
+        template <class T>
+        list_array<T> get() && {
+            return std::move(std::get<list_array<std::decay_t<T>>>(values));
+        }
     };
 
     template <class flag_type, class... Ty>
     struct flags_list {
         using max_orders = ic<std::max<ptrdiff_t>({Ty::flag_order::value...})>;
         using base = std::variant<Ty...>;
+        static constexpr inline bool is_correct = is_correct_variant<Ty...>();
         flag_type flag;
         std::unordered_map<ptrdiff_t, std::variant<Ty...>> values; //order->value
 
@@ -971,8 +1182,8 @@ namespace copper_server::base_objects {
         using preprocess_source_name = ic<source_name>;
         using base = std::variant<Ty...>;
         using source_type = SourceType;
+        static constexpr inline bool is_correct = is_correct_variant<Ty...>();
         std::unordered_map<ptrdiff_t, std::variant<Ty...>> values; //flag_order->value
-        source_type pre_process_result;
 
         flags_list_from() {}
 
@@ -988,11 +1199,21 @@ namespace copper_server::base_objects {
             return (values.find(T::flag_order::value) != values.end());
         }
 
+        source_type get_flags() const {
+            source_type res{0};
+            for (auto& [id, value] : values) {
+                std::visit(
+                    [&]<class T>(T& it) {
+                        res |= (T::flag_value::value & T::flag_mask::value);
+                    },
+                    value
+                );
+            }
+            return res;
+        }
+
         void preprocess(Source& source) {
-            source.*source_name = 0;
-            for (auto& [id, value] : values)
-                source.*source_name |= (decltype(value)::flag_value::value & decltype(value)::flag_mask::value);
-            pre_process_result = source.*source_name;
+            source.*source_name = get_flags();
         }
 
         template <class FN>
@@ -1064,6 +1285,7 @@ namespace copper_server::base_objects {
     template <class Enum, class T>
     struct enum_as_flag {
         using encode_t = T;
+        using enum_t = Enum;
         Enum value;
 
         constexpr enum_as_flag() : value() {}
@@ -1126,6 +1348,7 @@ namespace copper_server::base_objects {
 
     template <class value_type, class... Ty>
     struct partial_enum_switch : public std::variant<value_type, Ty...> {
+        static constexpr inline bool is_correct = is_correct_variant<value_type, Ty...>();
         using encode_type = value_type;
         using base = std::variant<value_type, Ty...>;
 
@@ -1250,6 +1473,39 @@ namespace copper_server::base_objects {
         }
 
         auto operator<=>(const ignored& other) const = default;
+    };
+
+    template <class T, util::CTS id>
+    struct ordered_id {
+        static inline const std::string id_source{id.data};
+        T value;
+        bool is_valid = true;
+
+        constexpr ordered_id() : value() {}
+
+        constexpr ordered_id(T e) : value(e) {}
+
+        constexpr ordered_id(const ordered_id& c) : value(c.value), is_valid(c.is_valid) {}
+
+        constexpr ordered_id(ordered_id&& m) : value(std::move(m.value)), is_valid(m.is_valid) {}
+
+        constexpr ordered_id& operator=(const ordered_id& c) {
+            value = c.value;
+            is_valid = c.is_valid;
+            return *this;
+        }
+
+        constexpr ordered_id& operator=(ordered_id&& m) {
+            value = m.value;
+            is_valid = m.is_valid;
+            return *this;
+        }
+
+        constexpr auto operator<=>(const ordered_id& other) const = default;
+
+        constexpr operator bool() const {
+            return value;
+        }
     };
 }
 

@@ -46,7 +46,8 @@ namespace copper_server {
                 )
                     register_configuration(tmp_);
                 if (
-                    &T::OnPlay_initialize != &PluginRegistration::OnPlay_initialize
+                    &T::OnPlay_pre_initialize != &PluginRegistration::OnPlay_pre_initialize
+                    || &T::OnPlay_initialize != &PluginRegistration::OnPlay_initialize
                     || &T::OnPlay_initialize_compatible != &PluginRegistration::OnPlay_initialize_compatible
                     || &T::OnPlay_post_initialize != &PluginRegistration::OnPlay_post_initialize
                     || &T::OnPlay_post_initialize_compatible != &PluginRegistration::OnPlay_post_initialize_compatible
@@ -64,13 +65,20 @@ namespace copper_server {
 
         template <class T, util::CTS name>
         static_registry<T, name>::proxy::proxy() {
-            registration_list().push_back({name.data, std::make_shared<delayed_construct<T>>()});
+            registration_list().emplace_back(name.data, std::make_shared<delayed_construct<T>>());
         }
 
         template <class T, util::CTS name>
         static void register_value() {
             static_registry<T, name>::p;
         }
+
+        void info(std::string_view source, std::string_view message);
+        void error(std::string_view source, std::string_view message);
+        void warn(std::string_view source, std::string_view message);
+        void debug(std::string_view source, std::string_view message);
+        void debug_error(std::string_view source, std::string_view message);
+        void fatal(std::string_view source, std::string_view message);
     }
 
     class PluginManagement {
@@ -273,13 +281,14 @@ namespace copper_server {
     class PluginHandlingFixer {};
 
     template <class Self>
-    struct PluginHandlingFixer<Self, true> : public PluginRegistration {};
-
-    template <class Self>
-    struct PluginHandlingFixer<Self, false> : public PluginRegistration {
+    struct PluginHandlingFixer<Self, true> : public PluginRegistration {
         bool OnConfiguration_gotKnownPacks(base_objects::SharedClientData&, const api::packets::server_bound::configuration::select_known_packs&) override {
             return false;
         }
+    };
+
+    template <class Self>
+    struct PluginHandlingFixer<Self, false> : public PluginRegistration {
     };
 
     template <class Self>
@@ -295,6 +304,32 @@ namespace copper_server {
             __internal__::register_value<Self, name>();
             return name.data;
         }();
+
+        struct log {
+            static inline void info(std::string_view message) {
+                __internal__::info(registered_name, message);
+            }
+
+            static inline void error(std::string_view message) {
+                __internal__::error(registered_name, message);
+            }
+
+            static inline void warn(std::string_view message) {
+                __internal__::warn(registered_name, message);
+            }
+
+            static inline void debug(std::string_view message) {
+                __internal__::debug(registered_name, message);
+            }
+
+            static inline void debug_error(std::string_view message) {
+                __internal__::debug_error(registered_name, message);
+            }
+
+            static inline void fatal(std::string_view message) {
+                __internal__::fatal(registered_name, message);
+            }
+        };
 
         virtual ~PluginAutoRegister() noexcept {}
     };

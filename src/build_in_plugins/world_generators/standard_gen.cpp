@@ -67,16 +67,6 @@ namespace copper_server::build_in_plugins::world_generators {
                 break;
             }
         }
-
-        enbt::compound generate_chunk(storage::world_data&, int64_t, int64_t) override {
-            return {
-                {"generator_stage", 0}
-            };
-        }
-
-        enbt::compound generate_sub_chunk(storage::world_data&, int64_t, int64_t, int64_t) override {
-            return {};
-        }
     };
 
     struct standard_gen : public PluginAutoRegister<"world_generators/standard", standard_gen> {

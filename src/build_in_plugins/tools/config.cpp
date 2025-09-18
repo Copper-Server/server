@@ -8,8 +8,8 @@
  */
 #include <src/api/client.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/log.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/log.hpp>
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins {
@@ -30,8 +30,8 @@ namespace copper_server::build_in_plugins {
                         context.executor << api::client::play::system_chat{.content = "Config reloaded"};
                     });
                 _config.add_child("set")
-                    .add_child("<config item>", cmd_pred_string::quotable_phrase)
-                    .add_child({"<value>", "updates config in file and applies for program", "/config set <config item> <value>"}, cmd_pred_string::greedy_phrase)
+                    .add_child("config_item", cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
+                    .add_child({"value", "updates config in file and applies for program", "/config set config_item value"}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                     .set_callback({"command.config.set", {"console"}}, [&](const list_array<predicate>& args, base_objects::command_context& context) {
                         api::configuration::set_item(std::get<pred_string>(args[0]).value, std::get<pred_string>(args[1]).value);
                         context.executor << api::client::play::system_chat{.content = "Config updated"};
@@ -41,7 +41,7 @@ namespace copper_server::build_in_plugins {
                     });
                 _config
                     .add_child("get")
-                    .add_child({"<config item>", "returns config value", "/config get <config item>"}, cmd_pred_string::quotable_phrase)
+                    .add_child({"config_item", "returns config value", "/config get config_item"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                     .set_callback({"command.config.get", {"console"}}, [&](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto value = api::configuration::get().get(std::get<pred_string>(args[0]).value);
                         while (value.ends_with('\n') || value.ends_with('\r'))
@@ -50,6 +50,12 @@ namespace copper_server::build_in_plugins {
                             context.executor << api::client::play::system_chat{.content = "Config value: \n" + value};
                         else
                             context.executor << api::client::play::system_chat{.content = "Config value: " + value};
+                    });
+                _config
+                    .add_child("use_preset")
+                    .add_child({"name", "applies preset for confing", "/config use_preset name"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
+                    .set_callback({"command.config.use_preset", {"console"}}, [&](const list_array<predicate>& args, base_objects::command_context& context) {
+                        api::configuration::apply_preset(std::get<pred_string>(args[0]).value);
                     });
             }
         }

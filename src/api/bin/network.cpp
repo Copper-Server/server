@@ -8,26 +8,26 @@
  */
 #include <library/fast_task/include/networking.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/log.hpp>
 #include <src/base_objects/events/sync_event.hpp>
-#include <src/log.hpp>
 
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
 #include <span>
-#define OPENSSL_CHECK(OPERATION, console_output)  \
-    if ((OPERATION) <= 0) {                       \
-        log::error("OpenSSL", console_output);    \
-        throw std::runtime_error(console_output); \
+#define OPENSSL_CHECK(OPERATION, console_output)    \
+    if ((OPERATION) <= 0) {                         \
+        api::log::error("OpenSSL", console_output); \
+        throw std::runtime_error(console_output);   \
     }
-#define NOT_NULL(X, console_output)               \
-    if (!(X)) {                                   \
-        log::error("OpenSSL", console_output);    \
-        throw std::runtime_error(console_output); \
+#define NOT_NULL(X, console_output)                 \
+    if (!(X)) {                                     \
+        api::log::error("OpenSSL", console_output); \
+        throw std::runtime_error(console_output);   \
     }
-#define IS_CORRECT(X, console_output)             \
-    if (!(X)) {                                   \
-        log::error("OpenSSL", console_output);    \
-        throw std::runtime_error(console_output); \
+#define IS_CORRECT(X, console_output)               \
+    if (!(X)) {                                     \
+        api::log::error("OpenSSL", console_output); \
+        throw std::runtime_error(console_output);   \
     }
 
 namespace copper_server::api::network {
@@ -131,10 +131,12 @@ namespace copper_server::api::network {
         }
 
         std::span<uint8_t> private_key_buffer() {
+            init_ssl();
             return {server_private_key.data(), server_private_key.size()};
         }
 
         std::span<uint8_t> public_key_buffer() {
+            init_ssl();
             return {server_public_key.data(), server_public_key.size()};
         }
     }

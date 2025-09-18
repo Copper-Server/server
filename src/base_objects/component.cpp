@@ -199,7 +199,7 @@ namespace copper_server::base_objects {
 
     list_array<size_t> component::container::contains(const std::string& id, size_t count) const {
         list_array<size_t> res;
-        id_item real_id(id);
+        api::id::item real_id(id);
         size_t index = 0;
         for (auto& check : items) {
             if (check) {
@@ -276,11 +276,13 @@ namespace copper_server::base_objects {
         return items.equal(other.items, [](auto& i0, auto& i1) { return i0 == i1; });
     }
 
-    component::component() {}
+    component::component() : type() {}
 
     component::component(component&& mov) : type(std::move(mov.type)) {}
 
     component::component(const component& copy) : type(copy.type) {}
+
+    component::~component() = default;
 
     component& component::operator=(component&& mov) noexcept {
         type = std::move(mov.type);

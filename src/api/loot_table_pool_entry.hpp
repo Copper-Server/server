@@ -8,19 +8,18 @@
  */
 #ifndef SRC_API_LOOT_TABLE_POOL_ENTRY
 #define SRC_API_LOOT_TABLE_POOL_ENTRY
-#include <src/base_objects/loot_table_pool_entry_processor.hpp>
+#include <library/enbt/enbt.hpp>
+#include <src/base_objects/commands.hpp>
+#include <src/base_objects/slot.hpp>
 
-namespace copper_server {
-    namespace api {
-        namespace loot_table_pool_entry {
-            std::optional<base_objects::slot> process_entry(const enbt::compound_ref& predicate, const base_objects::command_context& context);
-            void register_handler(const std::string& name, base_objects::loot_table_pool_entry_processor::handler handler);
-            void unregister_handler(const std::string& name);
-            const base_objects::loot_table_pool_entry_processor::handler& get_handler(const std::string& name);
-            bool has_handler(const std::string& name);
+namespace copper_server::api::loot_table_pool_entry {
+    using handler = std::function<std::optional<base_objects::slot>(const enbt::compound_const_ref&, const base_objects::command_context&)>;
 
-            bool registered();
-        }
-    }
+    std::optional<base_objects::slot> process_entry(const enbt::compound_const_ref& predicate, const base_objects::command_context& context);
+    void register_handler(const std::string& name, handler handler);
+    void unregister_handler(const std::string& name);
+    const handler& get_handler(const std::string& name);
+    void reset_handlers();
+    bool has_handler(const std::string& name);
 }
 #endif /* SRC_API_LOOT_TABLE_POOL_ENTRY */

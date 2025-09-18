@@ -215,9 +215,23 @@ namespace copper_server::base_objects::events {
         event()
             : gen(rd()) {}
 
+        bool empty() const {
+            std::lock_guard<fast_task::task_mutex> lock(mutex);
+            return can_skip();
+        }
+
     private:
-        bool can_skip() {
-            return heigh_priority.empty() && upper_avg_priority.empty() && avg_priority.empty() && lower_avg_priority.empty() && low_priority.empty() && async_heigh_priority.empty() && async_upper_avg_priority.empty() && async_avg_priority.empty() && async_lower_avg_priority.empty() && async_low_priority.empty();
+        bool can_skip() const {
+            return heigh_priority.empty()
+                   && upper_avg_priority.empty()
+                   && avg_priority.empty()
+                   && lower_avg_priority.empty()
+                   && low_priority.empty()
+                   && async_heigh_priority.empty()
+                   && async_upper_avg_priority.empty()
+                   && async_avg_priority.empty()
+                   && async_lower_avg_priority.empty()
+                   && async_low_priority.empty();
         }
 
         fast_task::task_mutex mutex;
@@ -536,9 +550,8 @@ namespace copper_server::base_objects::events {
                 tasks.push_back(task);
                 fast_task::scheduler::start(task);
             }
-            lock.unlock();
+            fast_task::relock_guard relock(lock);
             fast_task::task::await_multiple(tasks, true, true);
-            lock.lock();
             return result;
         }
 
@@ -547,11 +560,10 @@ namespace copper_server::base_objects::events {
             fns.reserve(map.size());
             for (auto& [id, func] : map)
                 fns.push_back(func);
-            lock.unlock();
+            fast_task::relock_guard relock(lock);
             for (auto& [id, func] : map)
                 if (func())
                     return true;
-            lock.lock();
             return false;
         }
     };

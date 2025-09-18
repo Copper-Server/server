@@ -7,8 +7,8 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <src/api/tags.hpp>
+#include <src/base_objects/slot.hpp>
 #include <src/base_objects/slot_display.hpp>
-#include <src/registers.hpp>
 
 namespace copper_server::base_objects {
     namespace slot_displays {
@@ -54,7 +54,7 @@ namespace copper_server::base_objects {
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::item, T>) {
                     return list_array<slot>().push_back(std::make_optional(slot_data::create_item(it.item)));
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::item_stack, T>) {
-                    return list_array<slot>().push_back(std::make_optional(it.item));
+                    return list_array<slot>().push_back(std::make_optional(*it.item));
                 } else if constexpr (std::is_same_v<slot_displays::minecraft::tag, T>) {
                     return api::tags::unfold_tag(api::tags::builtin_entry::item, it.tag).convert_fn([](const auto& item) -> slot {
                         return std::make_optional(slot_data::create_item(item));

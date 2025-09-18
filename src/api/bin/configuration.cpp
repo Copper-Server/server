@@ -11,9 +11,8 @@
 #include <library/fast_task/include/files.hpp>
 #include <library/list_array.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/log.hpp>
 #include <src/base_objects/events/event.hpp>
-#include <src/base_objects/packets.hpp>
-#include <src/log.hpp>
 #include <src/util/conversions.hpp>
 #include <src/util/json_helpers.hpp>
 #include <thread>
@@ -22,12 +21,12 @@ namespace copper_server::api::configuration {
     using namespace base_objects;
     using namespace util;
 
-    ServerConfiguration config;
+    server_configuration config;
     bool loaded = false;
 
-    std::string to_string(ServerConfiguration::Protocol::connection_conflict_t conflict_type) {
+    std::string to_string(server_configuration::Protocol::connection_conflict_t conflict_type) {
         switch (conflict_type) {
-            using t = ServerConfiguration::Protocol::connection_conflict_t;
+            using t = server_configuration::Protocol::connection_conflict_t;
         case t::kick_connected:
             return "kick_connected";
         case t::prevent_join:
@@ -36,26 +35,24 @@ namespace copper_server::api::configuration {
         throw std::runtime_error("Stack corruption or incomplete to_string code");
     }
 
-    void set_from_string(ServerConfiguration::Protocol::connection_conflict_t& conflict_type, const std::string& val) {
-        using t = ServerConfiguration::Protocol::connection_conflict_t;
+    void set_from_string(server_configuration::Protocol::connection_conflict_t& conflict_type, const std::string& val) {
+        using t = server_configuration::Protocol::connection_conflict_t;
         if (val == "kick_connected")
             conflict_type = t::kick_connected;
         else if (val == "prevent_join")
             conflict_type = t::prevent_join;
     }
 
-    void merge_configs_query(ServerConfiguration& cfg, js_object& data) {
-        auto query = js_object::get_object(data["query"]);
-        cfg.query.enabled = query["enabled"].or_apply(cfg.query.enabled);
-        cfg.query.port = query["port"].or_apply(cfg.query.port);
-    }
-
-    void merge_configs_world(ServerConfiguration& cfg, js_object& data) {
+    void merge_configs_world(server_configuration& cfg, js_object& data) {
         auto world = js_object::get_object(data["world"]);
         cfg.world.name = (std::string)world["name"].or_apply(cfg.world.name);
         cfg.world.seed = world["seed"].or_apply(cfg.world.seed).to_text();
         cfg.world.type = (std::string)world["type"].or_apply(cfg.world.type);
+        if (!cfg.world.type.contains(':'))
+            cfg.world.type = "minecraft:" + cfg.world.type;
+        cfg.world.generator_type = (std::string)world["generator_type"].or_apply(cfg.world.generator_type);
         cfg.world.unload_speed = world["unload_speed"].or_apply(cfg.world.unload_speed);
+        cfg.world.load_speed = world["load_speed"].or_apply(cfg.world.load_speed);
         cfg.world.auto_save = world["auto_save"].or_apply(cfg.world.auto_save);
         {
             auto generator_settings = js_object::get_object(world["generator_settings"]);
@@ -76,18 +73,18 @@ namespace copper_server::api::configuration {
             };
             if (!allowed_modes.contains(saving_mode))
                 saving_mode = "zstd";
-            cfg.world.saving_mode = saving_mode;
+            cfg.world.saving_mode = std::move(saving_mode);
         }
         {
-            static std::unordered_map<std::string, ServerConfiguration::World::world_not_found_for_client_e> world_not_found_for_client_from_str = {
-                {"kick", ServerConfiguration::World::world_not_found_for_client_e::kick},
-                {"transfer_to_default", ServerConfiguration::World::world_not_found_for_client_e::transfer_to_default},
-                {"request_plugin_or_default", ServerConfiguration::World::world_not_found_for_client_e::request_plugin_or_default},
+            static std::unordered_map<std::string, server_configuration::World::world_not_found_for_client_e> world_not_found_for_client_from_str = {
+                {"kick", server_configuration::World::world_not_found_for_client_e::kick},
+                {"transfer_to_default", server_configuration::World::world_not_found_for_client_e::transfer_to_default},
+                {"request_plugin_or_default", server_configuration::World::world_not_found_for_client_e::request_plugin_or_default},
             };
             static std::unordered_map<int, std::string> world_not_found_for_client_to_str = {
-                {(int)ServerConfiguration::World::world_not_found_for_client_e::kick, "kick"},
-                {(int)ServerConfiguration::World::world_not_found_for_client_e::transfer_to_default, "transfer_to_default"},
-                {(int)ServerConfiguration::World::world_not_found_for_client_e::request_plugin_or_default, "request_plugin_or_default"},
+                {(int)server_configuration::World::world_not_found_for_client_e::kick, "kick"},
+                {(int)server_configuration::World::world_not_found_for_client_e::transfer_to_default, "transfer_to_default"},
+                {(int)server_configuration::World::world_not_found_for_client_e::request_plugin_or_default, "request_plugin_or_default"},
             };
             auto world_not_found_for_client = js_object::get_object(world["world_not_found_for_client"]);
             cfg.world.world_not_found_for_client = world_not_found_for_client_from_str.at(
@@ -98,7 +95,7 @@ namespace copper_server::api::configuration {
         }
     }
 
-    void merge_configs_game_play(ServerConfiguration& cfg, js_object& data) {
+    void merge_configs_game_play(server_configuration& cfg, js_object& data) {
         auto game_play = js_object::get_object(data["game_play"]);
         cfg.game_play.difficulty = (std::string)game_play["difficulty"].or_apply(cfg.game_play.difficulty);
         cfg.game_play.gamemode = (std::string)game_play["gamemode"].or_apply(cfg.game_play.gamemode);
@@ -111,8 +108,6 @@ namespace copper_server::api::configuration {
         cfg.game_play.player_idle_timeout = game_play["player_idle_timeout"].or_apply(cfg.game_play.player_idle_timeout);
         cfg.game_play.hardcore = game_play["hardcore"].or_apply(cfg.game_play.hardcore);
         cfg.game_play.pvp = game_play["pvp"].or_apply(cfg.game_play.pvp);
-        cfg.game_play.spawn_animals = game_play["spawn_animals"].or_apply(cfg.game_play.spawn_animals);
-        cfg.game_play.spawn_monsters = game_play["spawn_monsters"].or_apply(cfg.game_play.spawn_monsters);
         cfg.game_play.allow_flight = game_play["allow_flight"].or_apply(cfg.game_play.allow_flight);
         cfg.game_play.sync_chunk_writes = game_play["sync_chunk_writes"].or_apply(cfg.game_play.sync_chunk_writes);
         cfg.game_play.enable_command_block = game_play["enable_command_block"].or_apply(cfg.game_play.enable_command_block);
@@ -129,9 +124,11 @@ namespace copper_server::api::configuration {
             for (auto& it : cfg.game_play.enabled_features)
                 enabled_features.push_back((boost::json::string)it);
         }
+        cfg.game_play.entity.spawn_animals = game_play["spawn_animals"].or_apply(cfg.game_play.entity.spawn_animals);
+        cfg.game_play.entity.spawn_monsters = game_play["spawn_monsters"].or_apply(cfg.game_play.entity.spawn_monsters);
     }
 
-    void merge_configs_protocol(ServerConfiguration& cfg, js_object& data) {
+    void merge_configs_protocol(server_configuration& cfg, js_object& data) {
         auto protocol = js_object::get_object(data["protocol"]);
         cfg.protocol.compression_threshold = protocol["compression_threshold"].or_apply(cfg.protocol.compression_threshold);
         cfg.protocol.rate_limit = protocol["rate_limit"].or_apply(cfg.protocol.rate_limit);
@@ -151,7 +148,7 @@ namespace copper_server::api::configuration {
         set_from_string(cfg.protocol.connection_conflict, protocol["connection_conflict"].or_apply(to_string(cfg.protocol.connection_conflict)));
     }
 
-    void merge_configs_anti_cheat(ServerConfiguration& cfg, js_object& data) {
+    void merge_configs_anti_cheat(server_configuration& cfg, js_object& data) {
         auto anti_cheat = js_object::get_object(data["anti_cheat"]);
         {
             auto fly = js_object::get_object(anti_cheat["fly"]);
@@ -205,12 +202,12 @@ namespace copper_server::api::configuration {
         }
     }
 
-    void merge_configs_mojang(ServerConfiguration& cfg, js_object& data) {
+    void merge_configs_mojang(server_configuration& cfg, js_object& data) {
         auto mojang = js_object::get_object(data["mojang"]);
         cfg.mojang.enforce_secure_profile = mojang["enforce_secure_profile"].or_apply(cfg.mojang.enforce_secure_profile);
     }
 
-    void merge_configs_status(ServerConfiguration& cfg, js_object& data) {
+    void merge_configs_status(server_configuration& cfg, js_object& data) {
         auto status = js_object::get_object(data["status"]);
         cfg.status.server_name = (std::string)status["server_name"].or_apply(cfg.status.server_name);
         cfg.status.description = (std::string)status["description"].or_apply(cfg.status.description);
@@ -220,13 +217,13 @@ namespace copper_server::api::configuration {
         cfg.status.show_players = status["show_players"].or_apply(cfg.status.show_players);
     }
 
-    void merge_configs_server(ServerConfiguration& cfg, js_object& data) {
+    void merge_configs_server(server_configuration& cfg, js_object& data) {
         auto server = js_object::get_object(data["server"]);
         auto& folder = (boost::json::string&)server["storage_folder"].or_apply(cfg.server.storage_folder);
 
 
         if (folder.find_first_of(".,\\#$%^&*()`~'\":;|?!<>") != folder.npos)
-            log::warn("server", "server config: root.server.storage_folder contains special symbol .,\\#$%^&*()`~'\":;|?!<>, item has been ignored");
+            api::log::warn("server", "server config: root.server.storage_folder contains special symbol .,\\#$%^&*()`~'\":;|?!<>, item has been ignored");
         else {
             cfg.server.storage_folder = (std::string)folder;
             std::filesystem::create_directories(cfg.server.get_storage_path());
@@ -234,7 +231,7 @@ namespace copper_server::api::configuration {
 
         auto& worlds = (boost::json::string&)server["worlds_folder"].or_apply(cfg.server.worlds_folder);
         if (worlds.find_first_of(".,\\#$%^&*()`~'\":;|?!<>") != worlds.npos)
-            log::warn("server", "server config: root.server.worlds_folder contains special symbol .,\\#$%^&*()`~'\":;|?!<>, item has been ignored");
+            api::log::warn("server", "server config: root.server.worlds_folder contains special symbol .,\\#$%^&*()`~'\":;|?!<>, item has been ignored");
         else {
             cfg.server.worlds_folder = (std::string)worlds;
             std::filesystem::create_directories(cfg.server.get_storage_path());
@@ -254,7 +251,7 @@ namespace copper_server::api::configuration {
             cfg.server.working_threads = std::thread::hardware_concurrency();
     }
 
-    void merge_configs_allowed_dimensions(ServerConfiguration& cfg, js_object& data) {
+    void merge_configs_allowed_dimensions(server_configuration& cfg, js_object& data) {
         auto allowed_dimensions = js_array::get_array(data["allowed_dimensions"]);
         if (allowed_dimensions.empty()) {
             for (auto& id : cfg.allowed_dimensions)
@@ -266,7 +263,7 @@ namespace copper_server::api::configuration {
         }
     }
 
-    void merge_configs__process__status_favicon_path(ServerConfiguration& cfg) {
+    void merge_configs__process__status_favicon_path(server_configuration& cfg) {
         if (!cfg.status.favicon_path.empty()) {
             fast_task::files::async_iofstream file(
                 cfg.status.favicon_path,
@@ -278,7 +275,7 @@ namespace copper_server::api::configuration {
                 file.seekg(0, std::istream::end);
                 size_t file_size = file.tellg();
                 if (file_size < 28) {
-                    log::error("server", "Failed to read favicon, icon too small, skipping...");
+                    api::log::error("server", "Failed to read favicon, icon too small, skipping...");
                     return;
                 }
                 file.seekg(0, std::istream::beg);
@@ -290,7 +287,7 @@ namespace copper_server::api::configuration {
                 height = enbt::endian_helpers::convert_endian(std::endian::big, *(uint32_t*)&res[20]);
 
                 if (width != 64 || height != 64) {
-                    log::error("server", "Failed to read favicon, icon resolution not equal to 64x64, skipping...");
+                    api::log::error("server", "Failed to read favicon, icon resolution not equal to 64x64, skipping...");
                     return;
                 }
                 cfg.status.favicon = std::move(res);
@@ -299,13 +296,19 @@ namespace copper_server::api::configuration {
             cfg.status.favicon.clear();
     }
 
-    void merge_configs_plugins(ServerConfiguration& cfg, js_object& data) {
+    void merge_configs_plugins(server_configuration& cfg, js_object& data) {
         cfg.plugins = std::move(cfg.plugins).merge(util::conversions::json::from_json(js_object::get_object(data["plugins"]).get()));
         data["plugins"] = util::conversions::json::to_json(cfg.plugins);
     }
 
-    void merge_configs_disabled_plugins(ServerConfiguration& cfg, js_object& data) {
-        if (data.contains("disabled_plugins")) {
+    void merge_configs_disabled_plugins(server_configuration& cfg, js_object& data, bool load) {
+        if (load) {
+            auto disabled_plugins = js_array::get_array(data["disabled_plugins"].or_apply(boost::json::array{}));
+            cfg.disabled_plugins.clear();
+            cfg.disabled_plugins.reserve(disabled_plugins.size());
+            for (auto&& name : disabled_plugins)
+                cfg.disabled_plugins.emplace((std::string)name);
+        } else if (data.contains("disabled_plugins")) {
             auto& disabled_plugins = (data["disabled_plugins"]).get().get_array();
             disabled_plugins.clear();
             disabled_plugins.reserve(cfg.disabled_plugins.size());
@@ -314,8 +317,7 @@ namespace copper_server::api::configuration {
         }
     }
 
-    void merge_configs(ServerConfiguration& cfg, js_object& data, bool process = false) {
-        merge_configs_query(cfg, data);
+    void merge_configs(server_configuration& cfg, js_object& data, bool load = false) {
         merge_configs_world(cfg, data);
         merge_configs_game_play(cfg, data);
         merge_configs_protocol(cfg, data);
@@ -325,9 +327,9 @@ namespace copper_server::api::configuration {
         merge_configs_server(cfg, data);
         merge_configs_allowed_dimensions(cfg, data);
         merge_configs_plugins(cfg, data);
-        merge_configs_disabled_plugins(cfg, data);
+        merge_configs_disabled_plugins(cfg, data, load);
 
-        if (process)
+        if (load)
             merge_configs__process__status_favicon_path(cfg);
     }
 
@@ -342,7 +344,7 @@ namespace copper_server::api::configuration {
         );
 
         if (!file.is_open()) {
-            log::warn("server", "Failed to save config file. Can not open file.");
+            api::log::warn("server", "Failed to save config file. Can not open file.");
             return;
         }
         file << util::pretty_print(config_data);
@@ -425,7 +427,7 @@ namespace copper_server::api::configuration {
         return get_value_by_path(entry, tmp, path);
     }
 
-    std::string ServerConfiguration::get(const std::string& config_item_path) {
+    std::string server_configuration::get(const std::string& config_item_path) {
         boost::json::value config_data = boost::json::object();
         auto js_config = js_object::get_object(config_data.get_object());
         merge_configs(*this, js_config);
@@ -435,15 +437,15 @@ namespace copper_server::api::configuration {
 
     base_objects::events::event<void> updated;
 
-    ServerConfiguration::plugin_actions::plugin_actions(enbt::value& it) : it(it) {}
+    server_configuration::plugin_actions::plugin_actions(enbt::value& it) : it(it) {}
 
-    auto ServerConfiguration::plugin_actions::operator^(std::string_view name) -> plugin_actions {
+    auto server_configuration::plugin_actions::operator^(std::string_view name) -> plugin_actions {
         if (it.is_none())
             operator^=(enbt::compound());
         return it[std::string(name)];
     }
 
-    auto ServerConfiguration::plugin_actions::operator^=(const enbt::value& value) -> plugin_actions& {
+    auto server_configuration::plugin_actions::operator^=(const enbt::value& value) -> plugin_actions& {
         it = value;
         updated();
         if (config.server.frozen_config)
@@ -455,17 +457,17 @@ namespace copper_server::api::configuration {
         return *this;
     }
 
-    auto ServerConfiguration::plugin_actions::operator|=(const enbt::value& value) -> plugin_actions& {
+    auto server_configuration::plugin_actions::operator|=(const enbt::value& value) -> plugin_actions& {
         if (it.is_none())
             return operator^=(value);
         return *this;
     }
 
-    ServerConfiguration::plugin_actions::operator const enbt::value&() const {
+    server_configuration::plugin_actions::operator const enbt::value&() const {
         return it;
     }
 
-    auto ServerConfiguration::operator^(std::string_view name) -> plugin_actions {
+    auto server_configuration::operator^(std::string_view name) -> plugin_actions {
         return plugins[std::string(name)];
     }
 
@@ -476,7 +478,7 @@ namespace copper_server::api::configuration {
             auto config_file_path = std::filesystem::current_path();
             auto config_data = try_read_json_file(config_file_path / "config.json");
             if (!config_data.has_value() && !fill_default_values) {
-                log::warn("server", "Failed to read config file. Using default values.");
+                api::log::warn("server", "Failed to read config file. Using default values.");
                 return;
             } else if (!config_data.has_value())
                 config_data = boost::json::object();
@@ -486,7 +488,7 @@ namespace copper_server::api::configuration {
             try {
                 merge_configs(config, config_js, true);
             } catch (const std::exception& ex) {
-                log::error("server", ex.what());
+                api::log::error("server", ex.what());
                 throw;
             }
             save_config(config_file_path, *config_data);
@@ -496,7 +498,7 @@ namespace copper_server::api::configuration {
         updated();
     }
 
-    ServerConfiguration& get() {
+    server_configuration& get() {
         if (!loaded)
             load(true);
         return config;
@@ -518,5 +520,8 @@ namespace copper_server::api::configuration {
 
     std::string get_item(const std::string& config_item_path) {
         return get().get(config_item_path);
+    }
+
+    void apply_preset(const std::string& preset) {
     }
 }

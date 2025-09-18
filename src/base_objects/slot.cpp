@@ -6,6 +6,7 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <library/enbt/io.hpp>
 #include <src/api/packets.hpp>
 #include <src/base_objects/slot.hpp>
 
@@ -18,8 +19,8 @@ namespace copper_server::base_objects {
         base_objects::slot_data slot_data = base_objects::slot_data::create_item(id);
         if (compound.contains("count"))
             slot_data.count = compound.at("count");
-        for (auto& [name, value] : compound.at("components").as_compound())
-            slot_data.add_component(component::parse_component(name, value));
+        for (auto& comp : compound.at("components").as_array())
+            slot_data.add_component(component::parse_component(comp));
         return slot_data;
     }
 
@@ -27,14 +28,38 @@ namespace copper_server::base_objects {
         enbt::compound compound;
         compound["id"] = id;
         compound["count"] = count;
-        enbt::compound comp;
+        enbt::fixed_array comp;
         comp.reserve(components.size());
-        for (auto& [c_id, value] : components) {
-            auto [name, component] = component::encode_component(value);
-            comp[name] = std::move(component);
-        }
+        for (auto& [c_id, value] : components)
+            comp.push_back(component::encode_component(value));
         compound["components"] = std::move(comp);
         return compound;
+    }
+
+    void slot_data::to_enbt(enbt::io_helper::value_write_stream& stream) const {
+        stream
+            .write_compound(3)
+            .write("id", id)
+            .write("count", count)
+            .write("components", [this](auto& components_stream) {
+                components_stream.write_array(components.size()).iterable(components, [this](auto& component, auto& component_stream) {
+                    component::encode_component(component.second, component_stream);
+                });
+            });
+    }
+
+    slot_data slot_data::from_enbt(enbt::io_helper::value_read_stream& stream) {
+        slot_data res;
+        stream.read_compound()
+            .collect_as("id", res.id)
+            .collect_as("count", res.count)
+            .collect_iterate("components", [&res](auto& component_stream) {
+                component c;
+                component::parse_component(c, component_stream);
+                res.add_component(std::move(c));
+            })
+            .make_collect();
+        return res;
     }
 
     bool slot_data::operator==(const slot_data& other) const {
@@ -71,6 +96,10 @@ namespace copper_server::base_objects {
                 return false;
         }
         return true;
+    }
+
+    std::optional<int32_t> slot_data::spawns_entity_type() const {
+        return get_slot_data().spawn_entity;
     }
 
     void static_slot_data::reset_items() {
@@ -133,7 +162,7 @@ namespace copper_server::base_objects {
         return *full_item_data_.at(id);
     }
 
-    static_slot_data& slot_data::get_slot_data() {
+    static_slot_data& slot_data::get_slot_data() const {
         return *full_item_data_.at(id);
     }
 

@@ -15,4 +15,4 @@
 	url = https://github.com/microsoft/vcpkg.git
 [submodule "tools/extractor"]
 	path = tools/extractor
-	url = https://github.com/Melnytskyi/Extractor.git
+	url = https://github.com/Copper-Server/extractor.git

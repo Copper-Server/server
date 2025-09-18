@@ -6,11 +6,11 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/api/log.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/network/tcp/client.hpp>
 #include <src/build_in_plugins/network/tcp/session.hpp>
 #include <src/build_in_plugins/network/tcp/util.hpp>
-#include <src/log.hpp>
 
 namespace copper_server::build_in_plugins::network::tcp {
     using base_objects::network::tcp::client;
@@ -19,13 +19,15 @@ namespace copper_server::build_in_plugins::network::tcp {
     std::atomic_uint64_t id_gen(0);
     bool session::do_log_connection_errors = true;
 
-    session::session(fast_task::networking::TcpNetworkStream& s, client* client_handler, float& set_timeout)
+    session::session(fast_task::networking::tcp_network_stream& s, client* client_handler, float& set_timeout)
         : api::network::tcp::session(id_gen++), stream(&s), timeout(set_timeout) {
         chandler = client_handler->define_ourself(this);
         read_data.resize(1024);
     }
 
     session::~session() noexcept {
+        if (chandler)
+            delete chandler;
         if (_sharedData) {
             try {
                 api::players::handlers::on_disconnect.await_notify(shared_data_ref());
@@ -33,12 +35,10 @@ namespace copper_server::build_in_plugins::network::tcp {
             }
             api::players::remove_player(shared_data_ref());
         }
-        if (chandler)
-            delete chandler;
     }
 
     base_objects::client_data_holder& session::shared_data_ref() {
-        return _sharedData ? _sharedData : _sharedData = api::players::allocate_player();
+        return _sharedData ? _sharedData : _sharedData = api::players::allocate_player(this);
     }
 
     base_objects::SharedClientData& session::shared_data() {
@@ -96,8 +96,10 @@ namespace copper_server::build_in_plugins::network::tcp {
 
 
             std::lock_guard guard(tc);
-            if (encryption_enabled)
+            if (encryption_enabled) {
+                response_data.commit();
                 encryption.encrypt(response_data, response_data);
+            }
             if (stream) {
                 std::shared_ptr<std::vector<uint8_t>> send_data = std::make_shared<std::vector<uint8_t>>(response_data.begin(), response_data.end());
                 stream->write((char*)response_data.data(), response_data.size());

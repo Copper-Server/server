@@ -195,7 +195,8 @@ namespace copper_server::base_objects {
                 auto it = vals.cleanup_list.find(id);
                 if (it == vals.cleanup_list.end())
                     return;
-                it->second.event_obj->leave(it->second.id, it->second.priority, it->second.async_mode);
+                auto& ev = it->second;
+                ev.event_obj->leave(ev.id, ev.priority, ev.async_mode);
                 vals.cleanup_list.erase(it);
             });
         }

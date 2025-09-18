@@ -265,6 +265,7 @@ int merge_json_resource(const resource_location& location, const std::filesystem
 int senbt_resource(const resource_location& location, const std::filesystem::path& input_file, bool compress) {
     std::filesystem::path output_file = location.output_path.parent_path() / (location.output_path.filename().string() + ".cpp");
     std::filesystem::path header_file = location.output_path.parent_path() / (location.output_path.filename().string() + ".hpp");
+    std::filesystem::path debug_file = location.output_path.parent_path() / (location.output_path.filename().string() + ".debug.enbt");
 
     auto file_change_time = std::filesystem::last_write_time(input_file);
 
@@ -333,6 +334,15 @@ int senbt_resource(const resource_location& location, const std::filesystem::pat
     header << location.namespace_open
            << "extern const std::string_view " << location.name << ";\n";
     header << location.namespace_close;
+
+
+    std::ofstream debug_(debug_file, std::ios::binary);
+    if (!out) {
+        std::cerr << "Error opening output file: " << debug_file << "\n";
+        return 1;
+    }
+    enbt::io_helper::write_token(debug_, senbt::parse(senbt_data));
+
 
     std::cout << "Resource built successfully: " << location.full_name << std::endl;
     return 0;

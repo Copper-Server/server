@@ -12,6 +12,8 @@
 #include <library/list_array.hpp>
 #include <map>
 #include <mutex>
+#include <src/base_objects/Chat.hpp>
+#include <src/base_objects/number_provider.hpp>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -29,7 +31,7 @@ namespace copper_server {
             struct sub_chunk_data;
         }
         struct block;
-        typedef uint16_t block_id_t;
+        typedef uint32_t block_id_t;
 
         struct shape_data {
             double min_x, min_y, min_z;
@@ -49,8 +51,10 @@ namespace copper_server {
             };
 
         public:
+            Chat display_name;
             std::shared_ptr<enbt::compound> loot_table;
             std::vector<shape_data*> collision_shapes;
+            std::vector<shape_data*> outline_shapes;
             std::string instrument;
             std::string piston_behavior;
             std::string name;
@@ -93,6 +97,20 @@ namespace copper_server {
                 bool up_center_solid : 1 = false;
             } transparent_sides;
 
+            struct flammable_t {
+                float spread_chance;
+                float burn_chance;
+            };
+
+            std::optional<flammable_t> flammable;
+
+            struct ore_data_t {
+                number_provider experience;
+            };
+
+            std::optional<ore_data_t> ore_data;
+
+
             bool can_explode(float explode_strength) const {
                 return blast_resistance < explode_strength;
             }
@@ -123,7 +141,8 @@ namespace copper_server {
                 block_tickable,
                 entity_tickable,
                 no_tick
-            } tickable;
+            } tickable
+                = tick_opt::undefined;
 
             bool is_tickable() const {
                 switch (tickable) {
@@ -158,10 +177,10 @@ namespace copper_server {
             }
 
             tick_opt resolve_tickable() const {
-                if (on_tick)
-                    return tick_opt::block_tickable;
                 if (as_entity_on_tick)
                     return tick_opt::entity_tickable;
+                if (on_tick)
+                    return tick_opt::block_tickable;
                 return tick_opt::no_tick;
             }
 
@@ -214,7 +233,7 @@ namespace copper_server {
                   current_properties(copy.current_properties),
                   block_aliases(copy.block_aliases) {}
 
-            static_block_data(static_block_data&& copy)
+            static_block_data(static_block_data&& copy) noexcept
                 : loot_table(std::move(copy.loot_table)),
                   collision_shapes(std::move(copy.collision_shapes)),
                   instrument(std::move(copy.instrument)),
@@ -297,7 +316,7 @@ namespace copper_server {
                     throw std::runtime_error("Block with " + new_block.name + " name already defined.");
 
                 struct {
-                    block_id_t id : 15;
+                    block_id_t id : 30;
                 } bound_check;
 
                 bound_check.id = full_block_data_.size();
@@ -317,8 +336,7 @@ namespace copper_server {
                 return addNewStatelessBlock(static_block_data(new_block));
             }
 
-            base_objects::block_id_t id : 15;
-            uint16_t block_state_data : 15;
+            base_objects::block_id_t id : 30;
             tick_opt tickable : 2;
 
             inline void set_raw(uint32_t raw) {
@@ -339,8 +357,8 @@ namespace copper_server {
                 return u.r;
             }
 
-            block(block_id_t block_id = 0, uint16_t block_state_data = 0)
-                : id(block_id), block_state_data(block_state_data), tickable(tick_opt::undefined) {}
+            block(block_id_t block_id = 0)
+                : id(block_id), tickable(tick_opt::undefined) {}
 
             block(const block& copy) {
                 operator=(copy);
@@ -383,6 +401,7 @@ namespace copper_server {
             bool is_tickable() const;
             bool is_solid() const;
             const std::vector<shape_data*>& collision_shapes() const;
+            const Chat& display_name() const;
             const std::string& instrument() const;
             const std::string& piston_behavior() const;
             const std::string& name() const;
@@ -426,6 +445,24 @@ namespace copper_server {
                 return *block_entity_data_.at(block_entity_id);
             }
 
+            static list_array<int32_t> get_block_states() {
+                return full_block_data_.convert_fn([](auto& block) {
+                    return block->current_state;
+                });
+            }
+
+            static list_array<int32_t> get_block_entities() {
+                return block_entity_data_.convert_fn([](auto& block) {
+                    return block->block_entity_id;
+                });
+            }
+
+            static list_array<int32_t> get_block_generals() {
+                return general_block_data_.convert_fn([](auto& block) {
+                    return block->general_block_id;
+                });
+            }
+
             static block make_block(const std::string& name) {
                 return block(get_block(name).default_state);
             }
@@ -450,6 +487,7 @@ namespace copper_server {
             bool is_tickable() const { return block.is_tickable();}
             bool is_solid() const { return block.is_solid();}
             const std::vector<shape_data*>& collision_shapes() const { return block.collision_shapes();}
+            const Chat& display_name() const { return block.display_name(); }
             const std::string& instrument() const { return block.instrument();}
             const std::string& piston_behavior() const { return block.piston_behavior();}
             const std::string& name() const { return block.name();}
@@ -488,6 +526,7 @@ namespace copper_server {
             bool is_tickable() const { return block.is_tickable();}
             bool is_solid() const { return block.is_solid();}
             const std::vector<shape_data*>& collision_shapes() const { return block.collision_shapes();}
+            const Chat& display_name() const { return block.display_name(); }
             const std::string& instrument() const { return block.instrument();}
             const std::string& piston_behavior() const { return block.piston_behavior();}
             const std::string& name() const { return block.name();}

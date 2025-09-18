@@ -31,7 +31,7 @@ namespace copper_server::util {
         js_value(const std::string& path, boost::json::value& obj)
             : obj(obj), path(path) {}
 
-        js_value(js_value&& move)
+        js_value(js_value&& move) noexcept
             : obj(move.obj), path(move.path) {}
 
         js_value& operator=(const boost::json::value& any_val) {
@@ -451,7 +451,7 @@ namespace copper_server::util {
             js_iterator(const js_iterator& iterator)
                 : inner_path(iterator.inner_path), iterator(iterator.iterator) {}
 
-            js_iterator(js_iterator&& iterator)
+            js_iterator(js_iterator&& iterator) noexcept
                 : inner_path(iterator.inner_path), iterator(std::move(iterator.iterator)) {}
 
             std::pair<boost::json::string_view, js_value> operator*() {
@@ -481,7 +481,7 @@ namespace copper_server::util {
             }
 
             auto operator==(const js_iterator& other) {
-                return iterator != other.iterator;
+                return iterator == other.iterator;
             }
         };
 
@@ -506,7 +506,7 @@ namespace copper_server::util {
         js_object(const js_object& copy)
             : obj(copy.obj), path(copy.path) {}
 
-        js_object(js_object&& move)
+        js_object(js_object&& move) noexcept
             : obj(move.obj), path(move.path) {}
 
         js_value operator[](const boost::json::string_view& name) {
@@ -584,7 +584,7 @@ namespace copper_server::util {
             js_iterator(const js_iterator& iterator)
                 : inner_path(iterator.inner_path), beginning(iterator.beginning), iterator(iterator.iterator) {}
 
-            js_iterator(js_iterator&& iterator)
+            js_iterator(js_iterator&& iterator) noexcept
                 : inner_path(iterator.inner_path), beginning(iterator.beginning), iterator(std::move(iterator.iterator)) {}
 
             js_value operator*() {
@@ -614,7 +614,7 @@ namespace copper_server::util {
             }
 
             auto operator==(const js_iterator& other) {
-                return iterator != other.iterator;
+                return iterator == other.iterator;
             }
         };
 
@@ -633,7 +633,7 @@ namespace copper_server::util {
         js_array(const js_array& copy)
             : obj(copy.obj), path(copy.path) {}
 
-        js_array(js_array&& move)
+        js_array(js_array&& move) noexcept
             : obj(move.obj), path(move.path) {}
 
         js_value operator[](size_t index) {

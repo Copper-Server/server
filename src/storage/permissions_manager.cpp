@@ -9,9 +9,9 @@
 #include <boost/json.hpp>
 #include <format>
 #include <library/fast_task/include/files.hpp>
+#include <src/api/log.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
-#include <src/log.hpp>
 #include <src/storage/permissions_manager.hpp>
 #include <src/util/json_helpers.hpp>
 
@@ -107,10 +107,9 @@ namespace copper_server::storage {
 
     bool permissions_manager::has_action_limits(const std::string& action_name) const {
         return protected_values.get([&](const protected_values_t& values) {
-            bool pass_if_noting = values.check_mode == permission_check_mode::all_or_noting || values.check_mode == permission_check_mode::any_or_noting;
             auto item = values.actions.find(action_name);
             if (item == values.actions.end())
-                return pass_if_noting;
+                return !(values.check_mode == permission_check_mode::all_or_noting || values.check_mode == permission_check_mode::any_or_noting);
             else
                 return !item->second.empty();
         });
@@ -186,7 +185,7 @@ namespace copper_server::storage {
         });
     }
 
-    void permissions_manager::add_permission(base_objects::permissions_object permission) {
+    void permissions_manager::add_permission(base_objects::permissions_object&& permission) {
         protected_values.set([&](protected_values_t& values) {
             values.permissions[permission.permission_tag] = std::move(permission);
         });
@@ -335,13 +334,12 @@ namespace copper_server::storage {
         return permissions_manager::permission_check_mode::all_or_noting;
     }
 
-
     void permissions_manager::sync() {
         using namespace util;
 
         auto config_holder = try_read_json_file(base_path);
         if (!config_holder.has_value()) {
-            log::error("server", "Failed to load permissions file");
+            api::log::error("server", "Failed to load permissions file");
             return;
         }
         auto root = js_object::get_object(*config_holder);
@@ -514,7 +512,7 @@ namespace copper_server::storage {
                 fast_task::files::_sync_flags{}
             );
             if (!file.is_open()) {
-                log::warn("server", "Failed to save permissions file. Can not open file.");
+                api::log::warn("server", "Failed to save permissions file. Can not open file.");
                 return;
             }
             file << util::pretty_print(*config_holder);

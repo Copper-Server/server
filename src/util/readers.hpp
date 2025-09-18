@@ -308,7 +308,7 @@ namespace copper_server {
         if (str.size() > (size_t)max_string_len)
             throw std::out_of_range("actual string len out of range");
         WriteVar<int32_t>(str.size(), data);
-        data.push_back((uint8_t*)str.data(), str.size());
+        data.push_back((const uint8_t*)str.data(), str.size());
     }
 
     static void WriteIdentifier(list_array<uint8_t>& data, const std::string& str) {

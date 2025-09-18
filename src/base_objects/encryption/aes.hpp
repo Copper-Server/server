@@ -10,8 +10,8 @@
 #define SRC_BASE_OBJECTS_ENCRYPTION_AES
 #include <cstdint>
 #include <library/list_array.hpp>
-#include <openssl/aes.h>
-#include <openssl/evp.h>
+
+typedef struct evp_cipher_ctx_st EVP_CIPHER_CTX;
 
 namespace copper_server::encryption {
     class aes {

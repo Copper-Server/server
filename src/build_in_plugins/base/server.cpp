@@ -6,28 +6,15 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/client.hpp>
-#include <src/api/configuration.hpp>
-#include <src/api/console.hpp>
-#include <src/api/permissions.hpp>
-#include <src/api/players.hpp>
 #include <src/api/server.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/log.hpp>
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins {
     struct ServerPlugin : public PluginAutoRegister<"base/server", ServerPlugin> {
-        void OnPostLoad(const std::shared_ptr<PluginRegistration>&) override {
-            if (api::console::console_enabled())
-                api::console::on_command("version");
-        }
-
         void OnCommandsLoad(const PluginRegistrationPtr&, base_objects::command_root_browser& browser) override {
-            using predicate = base_objects::parser;
-
             browser.add_child({"stop", "stop server", "/stop"})
-                .set_callback("command.stop", [](const list_array<predicate>&, base_objects::command_context&) {
+                .set_callback("command.stop", [](const list_array<base_objects::parser>&, base_objects::command_context&) {
                     api::server::shutdown();
                     pluginManagement.callUnload();
                 });
