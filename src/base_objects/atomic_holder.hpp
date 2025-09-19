@@ -36,7 +36,7 @@ namespace copper_server::base_objects {
         atomic_holder()
             : data(), ref_count() {}
 
-        atomic_holder(nullptr_t)
+        atomic_holder(std::nullptr_t)
             : data(nullptr), ref_count(nullptr) {}
 
         atomic_holder(T* data)

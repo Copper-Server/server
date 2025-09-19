@@ -879,7 +879,7 @@ namespace copper_server::base_objects {
                 if (api::permissions::has_rights(current->action_name, data.executor))
                     return (*current->executable)(args, data);
                 else
-                    throw std::exception("Not enough permissions for this command.");
+                    throw std::runtime_error("Not enough permissions for this command.");
             } else {
                 if (current->childs.size() == 1) {
                     auto& usage = command_nodes[current->childs[0]].usage;

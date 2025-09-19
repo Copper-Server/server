@@ -101,6 +101,7 @@ namespace enbt::io_helper {
                                             .amplifier = effect.at("amplifier"),
                                             .ambient = effect.at("is_ambient"),
                                             .particles = effect.at("particles"),
+                                            .use_blend = effect.at("use_blend"),
                                         });
                                     }
                                 );
@@ -121,6 +122,7 @@ namespace enbt::io_helper {
                                     .amplifier = effect.at("amplifier"),
                                     .ambient = effect.at("is_ambient"),
                                     .particles = effect.at("particles"),
+                                    .use_blend = effect.at("use_blend"),
                                 }
                             );
                         }
@@ -187,7 +189,8 @@ namespace enbt::io_helper {
                             .write("id", effect.id)
                             .write("amplifier", effect.amplifier)
                             .write("is_ambient", effect.ambient)
-                            .write("particles", effect.particles);
+                            .write("particles", effect.particles)
+                            .write("use_blend", effect.use_blend);
                     });
                 })
                 .write("hidden_effects", [&value](value_write_stream& stream) {
@@ -202,7 +205,8 @@ namespace enbt::io_helper {
                                         .write("id", effect.id)
                                         .write("amplifier", effect.amplifier)
                                         .write("is_ambient", effect.ambient)
-                                        .write("particles", effect.particles);
+                                        .write("particles", effect.particles)
+                                        .write("use_blend", effect.use_blend);
                                 });
                         });
                     }
@@ -286,6 +290,7 @@ namespace enbt::io_helper {
                                 .amplifier = effect.at("amplifier"),
                                 .ambient = effect.at("is_ambient"),
                                 .particles = effect.at("particles"),
+                                .use_blend = effect.at("use_blend"),
                             });
                         }
                     }
@@ -344,8 +349,9 @@ namespace enbt::io_helper {
                         {"duration", effect.duration},
                         {"id", effect.id},
                         {"amplifier", effect.amplifier},
-                        {"is_ambient", effect.ambient},
-                        {"particles", effect.particles},
+                        {"is_ambient", (bool)effect.ambient},
+                        {"particles", (bool)effect.particles},
+                        {"use_blend", (bool)effect.use_blend},
                     });
                 }
                 compound.emplace("active_effects", std::move(arr));
@@ -361,8 +367,9 @@ namespace enbt::io_helper {
                             {"duration", effect.duration},
                             {"id", effect.id},
                             {"amplifier", effect.amplifier},
-                            {"is_ambient", effect.ambient},
-                            {"particles", effect.particles},
+                            {"is_ambient", (bool)effect.ambient},
+                            {"particles", (bool)effect.particles},
+                            {"use_blend", (bool)effect.use_blend},
                         });
                     }
                     hidden_effects.emplace(std::to_string(id), std::move(arr));

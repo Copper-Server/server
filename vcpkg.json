@@ -3,12 +3,7 @@
     "name": "copper-server",
     "version": "0.2.0",
     "dependencies": [
-        {
-            "name":"boost-asio",
-            "features": [
-                "ssl"
-            ]
-        },
+        "openssl",
         "boost-bimap",
         "boost-thread",
         "boost-uuid",
@@ -20,6 +15,10 @@
         "utfcpp",
         "gtest",
         "zlib",
-        "lionkor-commandline"
+        "lionkor-commandline",
+        {
+            "name": "liburing",
+            "platform": "linux"
+        }
     ]
 }

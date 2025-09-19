@@ -6,6 +6,7 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <algorithm>
 #include <cassert>
 #include <random>
 #include <src/base_objects/number_provider.hpp>

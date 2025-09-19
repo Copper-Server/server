@@ -28,62 +28,85 @@ namespace copper_server::api::packets {
         bool visit_packet_viewer(server_bound_packet& packet, SharedClientData& context);
     }
 
-
-    template <class type>
-    concept is_packet = requires(type& d) {
-        type::packet_id::value;
-    };
-
-
     template <template <auto...> class Base, auto... Ts>
-    void value_test(Base<Ts...>&);
-
-    template <template <class, auto...> class Base, class T, auto... Ts>
-    void tvalue_test(Base<T, Ts...>&);
-
+    static void value_test(Base<Ts...>&) {}
 
     template <template <auto...> class, class, class = void>
     constexpr bool is_value_template_base_of = false;
-
     template <template <auto...> class Base, class Derived>
     constexpr bool is_value_template_base_of<Base, Derived, std::void_t<decltype(value_test<Base>(std::declval<Derived&>()))>> = true;
 
-
-    template <template <class, auto...> class, class, class = void>
-    constexpr bool is_tvalue_template_base_of = false;
-
-    template <template <class, auto...> class Base, class Derived>
-    constexpr bool is_tvalue_template_base_of<Base, Derived, std::void_t<decltype(tvalue_test<Base>(std::declval<Derived&>()))>> = true;
-
-    // Helper to detect instantiations of flags_list_from
     template <class T>
-    struct is_flags_list_from_helper : std::false_type {};
+    struct type_selector : std::integral_constant<size_t, 0> {};
+
+    template <class T, T min, T max>
+    struct type_selector<limited_num<T, min, max>> : std::integral_constant<size_t, 1> {};
 
     template <class S, class ST, ST S::* M, class... Ts>
-    struct is_flags_list_from_helper<flags_list_from<S, ST, M, Ts...>> : std::true_type {};
+    struct type_selector<flags_list_from<S, ST, M, Ts...>> : std::integral_constant<size_t, 2> {};
+
+    template <size_t size>
+    struct type_selector<string_sized<size>> : std::integral_constant<size_t, 3> {};
+
+    template <size_t size>
+    struct type_selector<bitset_fixed<size>> : std::integral_constant<size_t, 4> {};
+
+    template <class T, size_t size>
+    struct type_selector<list_array_sized<T, size>> : std::integral_constant<size_t, 5> {};
+
+    template <class T, auto... dep_v>
+    struct type_selector<list_array_no_size<T, dep_v...>> : std::integral_constant<size_t, 6> {};
+
+    template <class T, size_t size, auto... dep_v>
+    struct type_selector<list_array_sized_no_size<T, size, dep_v...>> : std::integral_constant<size_t, 7> {};
+
+    template <class T, size_t size>
+    struct type_selector<list_array_sized_siz_from_packet<T, size>> : std::integral_constant<size_t, 8> {};
+
+    template <class T, class Ts>
+    struct type_selector<sized_entry<T, Ts>> : std::integral_constant<size_t, 9> {};
+
+    template <class T, size_t size>
+    struct type_selector<list_array_fixed<T, size>> : std::integral_constant<size_t, 10> {};
+
+    template <class T>
+    struct type_selector<list_array_siz_from_packet<T>> : std::integral_constant<size_t, 11> {};
+
+    template <class T, util::CTS id>
+    struct type_selector<ordered_id<T, id>> : std::integral_constant<size_t, 12> {};
+
+    template <class T, size_t size>
+    struct type_selector<std::array<T, size>> : std::integral_constant<size_t, 13> {};
 
     template <class type>
-    concept is_flags_list_from = is_flags_list_from_helper<std::decay_t<type>>::value;
+    concept is_limited_num = type_selector<type>::value == 1;
 
     template <class type>
-    concept is_string_sized = is_value_template_base_of<string_sized, type>;
-    template <class type>
-    concept is_bitset_fixed = is_value_template_base_of<bitset_fixed, type>;
+    concept is_flags_list_from = type_selector<type>::value == 2;
 
     template <class type>
-    concept is_list_array_sized = is_tvalue_template_base_of<list_array_sized, type> || is_tvalue_template_base_of<list_array_sized_siz_from_packet, type> || is_tvalue_template_base_of<list_array_sized_no_size, type>;
+    concept is_string_sized = type_selector<type>::value == 3;
 
     template <class type>
-    concept is_list_array_fixed = is_tvalue_template_base_of<list_array_fixed, type>;
+    concept is_bitset_fixed = type_selector<type>::value == 4;
 
     template <class type>
-    concept is_std_array = is_tvalue_template_base_of<std::array, type>;
+    concept is_list_array_sized = type_selector<type>::value == 5 || type_selector<type>::value == 7 || type_selector<type>::value == 8;
 
     template <class type>
-    concept is_limited_num = is_tvalue_template_base_of<limited_num, type>;
+    concept is_list_array_fixed = type_selector<type>::value == 10;
 
     template <class type>
-    concept requires_check = is_limited_num<type> || is_string_sized<type> || is_list_array_sized<type> || is_list_array_fixed<type> || is_value_template_base_of<no_size, type>;
+    concept is_ordered_id = type_selector<type>::value == 12;
+
+    template <class type>
+    concept is_std_array = type_selector<type>::value == 13;
+
+    template <class type>
+    concept is_no_size = is_value_template_base_of<no_size, type>;
+
+    template <class type>
+    concept requires_check = is_limited_num<type> || is_string_sized<type> || is_list_array_sized<type> || is_list_array_fixed<type> || is_no_size<type> || is_bitset_fixed<type>;
 
     struct processor_handle_data {
         uint8_t mode;
@@ -168,7 +191,7 @@ namespace copper_server::api::packets {
         static_assert(std::is_move_assignable_v<T>);
         using Type = std::decay_t<T>;
         if constexpr (is_convertible_to_packet_form<Type>) {
-            convertible_to_packet_type<Type> res;
+            convertible_to_packet_type<Type> res{};
             decode_entry(context, stream, res, prev);
             value = Type::from_packet(std::move(res));
         } else if constexpr (std::is_same_v<identifier, Type>)
@@ -267,9 +290,9 @@ namespace copper_server::api::packets {
                 value.push_back(std::move(next));
             } while (has_next);
         } else if constexpr (is_template_base_of<_list_array_impl::list_array, Type>) {
-            if constexpr (!is_value_template_base_of<no_size, Type> && !std::is_base_of_v<size_from_packet, Type>) {
+            if constexpr (!is_no_size<Type> && !std::is_base_of_v<size_from_packet, Type>) {
                 value.resize(stream.read_var<int32_t>(), typename Type::value_type{});
-            } else if constexpr (is_value_template_base_of<no_size, Type>) {
+            } else if constexpr (is_no_size<Type>) {
                 value.resize(Type::get_depended_size(context, *prev), typename Type::value_type{});
             } else
                 value.resize(stream.size_read() / sizeof(typename Type::value_type), typename Type::value_type{});
@@ -393,7 +416,7 @@ namespace copper_server::api::packets {
             value.data() = stream.read_array<uint64_t>();
         } else if constexpr (api::id::is_source<Type>) {
             decode_entry(context, stream, value.value, prev);
-        } else if constexpr (is_tvalue_template_base_of<ordered_id, Type>) {
+        } else if constexpr (is_ordered_id<Type>) {
             decode_entry(context, stream, value.value, prev);
             value.is_valid = context.packets_state.internal_data.get([&](auto& data) {
                 auto it = data.id_tracker.find(Type::id_source);

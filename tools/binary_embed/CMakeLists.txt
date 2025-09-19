@@ -15,7 +15,9 @@ include_directories(${Boost_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
 
 
 add_executable(binary_embed ${SRCFILES})
-target_compile_options(binary_embed PRIVATE /MT)
+IF(MSVC)
+    target_compile_options(binary_embed PRIVATE /MT)
+endif()
 target_link_libraries(binary_embed
     PRIVATE
       Boost::iostreams

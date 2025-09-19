@@ -38,7 +38,7 @@
                 }
             ],
             "logging": {
-                "moduleLoad": false
+                "moduleLoad": false,
             },
             "showDisplayString": true,
             "setupCommands": [

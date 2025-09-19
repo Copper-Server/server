@@ -1399,7 +1399,7 @@ namespace copper_server::build_in_plugins {
             OnCommandsLoad_getworldspawn(browser);
         }
 
-        void OnConfigReload(const PluginRegistrationPtr& _) {
+        void OnConfigReload(const PluginRegistrationPtr& _) override {
             api::world::for_each_world([speed = api::configuration::get().world.load_speed](auto id, auto& world) {
                 world.update_load_limit(speed);
             });

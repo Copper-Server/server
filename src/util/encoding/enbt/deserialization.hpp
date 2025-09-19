@@ -252,8 +252,8 @@ namespace copper_server::util::encoding::enbt {
         } else if constexpr (is_template_base_of<base_objects::enum_switch, Type>) {
             if(value.is_compound()){
                 if (value.contains("type") && value.contains("data")){
-                    Type::get_enum(value["type"], [&]<class T>() {
-                        T tmp{};
+                    Type::get_enum(value["type"], [&]<class Ty>() {
+                        Ty tmp{};
                         deserialize_entry(tmp, value["data"], prev);
                         res = std::move(tmp);
                     });
@@ -274,7 +274,7 @@ namespace copper_server::util::encoding::enbt {
             deserialize_entry(res, value.at("flag"), prev);
             auto& items = value.at("items");
             size_t i = 0;
-            res.for_each_set_flag_in_order([&res, &prev, &i]<class Ty>() {
+            res.for_each_set_flag_in_order([&res, &prev, &i, &items]<class Ty>() {
                 Ty tmp{};
                 deserialize_entry(tmp, items[i++], prev);
                 res.values.emplace(Ty::flag_order::value, std::move(tmp));
@@ -287,7 +287,7 @@ namespace copper_server::util::encoding::enbt {
                 deserialize_entry(tmp, value.at(i++), prev);
                 res.set(std::move(tmp));
             });
-        } else if constexpr (is_tvalue_template_base_of<base_objects::ordered_id, Type>) {
+        } else if constexpr (is_ordered_id<Type>) {
             deserialize_entry(res.value, value, prev);
         } else if constexpr (is_template_base_of<base_objects::value_optional, Type>) {
             if (value.contains() && value.type_equal(::enbt::type::optional)) {
@@ -299,8 +299,8 @@ namespace copper_server::util::encoding::enbt {
             deserialize_entry(res, value.get_log_value(), prev);
         } else if constexpr (is_limited_num<Type>) {
             deserialize_entry(res.value, value, prev);
-        } else if constexpr (is_convertible_to_packet_form<Type>) {
-            base_objects::convertible_to_packet_type tmp{};
+        } else if constexpr (base_objects::is_convertible_to_packet_form<Type>) {
+            base_objects::convertible_to_packet_type<Type> tmp{};
             deserialize_entry(tmp, value, prev);
             res = Type::from_packet(std::move(tmp));
         } else if constexpr (api::id::is_source<Type>) {
@@ -363,7 +363,7 @@ namespace copper_server::util::encoding::enbt {
                         deserialize_entry(item, item_stream, res);
                 }
             );
-        } else if constexpr (is_std_array<Type> || is_template_base_of<_list_array_impl::list_array, Type>) {
+        } else if constexpr (is_template_base_of<_list_array_impl::list_array, Type>) {
             stream.iterate(
                 [&res](auto size) { res.reserve(size); },
                 [&res, &prev](auto& item_stream) {
@@ -440,7 +440,7 @@ namespace copper_server::util::encoding::enbt {
                 if (name == "flag") {
                     deserialize_entry(res, comp_stream, prev);
                 } else if (name == "items") {
-                    auto arr_r = stream.read_array();
+                    auto arr_r = comp_stream.read_array();
                     res.for_each_set_flag_in_order([&arr_r, &res, &prev]<class Ty>() {
                         arr_r.read_one([&res, &prev](auto& flag_stream) {
                             Ty tmp{};
@@ -460,7 +460,7 @@ namespace copper_server::util::encoding::enbt {
                     res.set(std::move(tmp));
                 });
             });
-        } else if constexpr (is_tvalue_template_base_of<base_objects::ordered_id, Type>) {
+        } else if constexpr (is_ordered_id<Type>) {
             deserialize_entry(res.value, stream, prev);
         } else if constexpr (is_template_base_of<base_objects::value_optional, Type>) {
             stream.read_optional(

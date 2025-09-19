@@ -25,17 +25,17 @@ namespace copper_server::util {
         if constexpr (!std::is_same<Target, T>::value) {
             if constexpr (std::is_unsigned_v<Target> == std::is_unsigned_v<T>) {
                 if (tmp != val)
-                    throw std::exception("Unsupported tag");
+                    throw std::runtime_error("Unsupported tag");
             } else if constexpr (std::is_unsigned_v<Target>) {
                 if (val < 0)
-                    throw std::exception("Unsupported tag");
+                    throw std::runtime_error("Unsupported tag");
                 if (tmp != (std::make_unsigned_t<T>)val)
-                    throw std::exception("Unsupported tag");
+                    throw std::runtime_error("Unsupported tag");
             } else if constexpr (std::is_unsigned_v<T>) {
                 if (tmp < 0)
-                    throw std::exception("Unsupported tag");
+                    throw std::runtime_error("Unsupported tag");
                 if ((std::make_unsigned_t<Target>)val != (T)val)
-                    throw std::exception("Unsupported tag");
+                    throw std::runtime_error("Unsupported tag");
             }
         }
         insertValue(tmp, max);
@@ -124,7 +124,7 @@ namespace copper_server::util {
             insertValue((double)val);
             break;
         default:
-            throw std::exception("Unsupported tag");
+            throw std::runtime_error("Unsupported tag");
         }
     }
 
@@ -191,7 +191,7 @@ namespace copper_server::util {
                 nbt_data.push_back(6);
                 break;
             default:
-                throw std::exception("Unsupported tag");
+                throw std::runtime_error("Unsupported tag");
             }
             break;
         case enbt::type::uuid:
@@ -206,7 +206,7 @@ namespace copper_server::util {
             nbt_data.push_back(10);
             break;
         default:
-            throw std::exception("Unsupported tag");
+            throw std::runtime_error("Unsupported tag");
         }
     }
 
@@ -214,7 +214,7 @@ namespace copper_server::util {
         insertValue(len);
         for (int32_t i = 0; i < len; i++) {
             if (arr[i].type_id() != base_id)
-                throw std::exception("Array type mismatch");
+                throw std::runtime_error("Array type mismatch");
             IntegerInsert(arr[i], false);
         }
     }
@@ -224,7 +224,7 @@ namespace copper_server::util {
         for (int32_t i = 0; i < len; i++) {
             auto val = arr.get_index(i);
             if (val.type_id() != base_id)
-                throw std::exception("Array type mismatch");
+                throw std::runtime_error("Array type mismatch");
             IntegerInsert(val, false);
         }
     }
@@ -236,7 +236,7 @@ namespace copper_server::util {
                 auto val = arr.get_index(i);
                 auto type = val.type_id();
                 if (type.type != base_id.type || type.length != base_id.length || type.is_signed != base_id.is_signed)
-                    throw std::exception("Array type mismatch");
+                    throw std::runtime_error("Array type mismatch");
                 RecursiveBuilder(val, false, "", compress, false);
             }
         } else {
@@ -244,13 +244,13 @@ namespace copper_server::util {
                 for (int32_t i = 0; i < len; i++) {
                     auto type = arr[i].type_id();
                     if (type.type != base_id.type || type.length != base_id.length || type.is_signed != base_id.is_signed)
-                        throw std::exception("Array type mismatch");
+                        throw std::runtime_error("Array type mismatch");
                     RecursiveBuilder(arr[i], false, "", compress, false);
                 }
             } else {
                 for (int32_t i = 0; i < len; i++) {
                     if (arr[i].type_id() != base_id)
-                        throw std::exception("Array type mismatch");
+                        throw std::runtime_error("Array type mismatch");
                     RecursiveBuilder(arr[i], false, "", compress, false);
                 }
             }
@@ -267,9 +267,9 @@ namespace copper_server::util {
         }
         auto check_siz = (int32_t)enbt.size();
         if (check_siz < 0)
-            throw std::exception("Unsupported array len");
+            throw std::runtime_error("Unsupported array len");
         if ((size_t)check_siz != enbt.size())
-            throw std::exception("Unsupported array len");
+            throw std::runtime_error("Unsupported array len");
         auto base_type = enbt.is_sarray() ? enbt.get_index(0).type_id() : enbt[0].type_id();
         if ((base_type.type == enbt::type::integer || base_type.type == enbt::type::var_integer) && compress) {
             switch (base_type.length) {
@@ -333,7 +333,7 @@ namespace copper_server::util {
                 nbt_data.push_back(8);
             const std::string& str = (const std::string&)enbt;
             if (((uint16_t)str.size()) != str.size())
-                throw std::exception("Unsupported string len");
+                throw std::runtime_error("Unsupported string len");
             insertValue((uint16_t)str.size());
             insertString(str.data(), str.size());
             break;
@@ -354,7 +354,7 @@ namespace copper_server::util {
             BuildCompound(name, enbt, compress, insert_name);
             break;
         default:
-            throw std::exception("Unsupported tag");
+            throw std::runtime_error("Unsupported tag");
         }
     }
 
@@ -439,7 +439,7 @@ namespace copper_server::util {
             return enbt::value((const int64_t*)data, length, std::endian::big, true);
         }
         default:
-            throw std::exception("Invalid type");
+            throw std::runtime_error("Invalid type");
         }
     }
 

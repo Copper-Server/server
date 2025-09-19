@@ -9,6 +9,7 @@
 #ifndef SRC_UTIL_CALCULATIONS
 #define SRC_UTIL_CALCULATIONS
 #include <cmath>
+#include <cstdint>
 
 namespace copper_server::util {
     extern const double pi;

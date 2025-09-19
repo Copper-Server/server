@@ -442,7 +442,6 @@ namespace copper_server {
                 struct reset_chat : public packet<0x06> {};
 
                 struct registry_data : public packet<0x07> {
-
                     struct entry {
                         identifier entry_id;
                         std::optional<enbt::value> data = std::nullopt;
@@ -479,7 +478,6 @@ namespace copper_server {
                 };
 
                 struct update_tags : public packet<0x0D> {
-
                     struct tag {
                         identifier tag_name;
                         list_array<var_int32> values;
@@ -1007,9 +1005,22 @@ namespace copper_server {
                 };
 
                 struct game_event : public packet<0x22> {
-
                     struct no_respawn_block_available : public enum_item<0> {
                         float _ignored = 0.0f;
+
+                        no_respawn_block_available() {}
+
+                        no_respawn_block_available(no_respawn_block_available&&) {}
+
+                        no_respawn_block_available(const no_respawn_block_available&) {}
+
+                        no_respawn_block_available& operator=(no_respawn_block_available&&) {
+                            return *this;
+                        }
+
+                        no_respawn_block_available& operator=(const no_respawn_block_available&) {
+                            return *this;
+                        }
                     };
 
                     struct raining_begin : public enum_item<1> {
@@ -1025,7 +1036,7 @@ namespace copper_server {
                     };
 
                     struct win_game : public enum_item<4> {
-                        float roll_credits; //true/false
+                        float roll_credits; //true/false 0/1
                     };
 
                     struct demo_event : public enum_item<5> {
@@ -1356,14 +1367,14 @@ namespace copper_server {
 
                     struct color_patch {
                         depends_next<uint8_t> columns;
-                        uint8_t rows = 0;
-                        uint8_t x = 0;
-                        uint8_t z = 0;
+                        uint8_t rows;
+                        uint8_t x;
+                        uint8_t z;
                         list_array_no_size<uint8_t, &color_patch::columns, &color_patch::rows> data; //255 color pallete
                     };
 
                     var_int32 map_id;
-                    int8_t scale = 0;
+                    int8_t scale;
                     bool is_locked = false;
                     std::optional<list_array<icon>> icons = std::nullopt;
                     color_patch patch;
@@ -1382,12 +1393,12 @@ namespace copper_server {
                         slot output;
                         std::optional<trade_item> input_1 = std::nullopt;
                         bool trade_disabled = false;
-                        int trade_uses = 0;
-                        int max_trade_uses = 0;
-                        int xp = 0;
-                        int special_price = 0;
-                        float price_multiplier = 0.0f;
-                        int demand = 0;
+                        int trade_uses;
+                        int max_trade_uses;
+                        int xp;
+                        int special_price;
+                        float price_multiplier;
+                        int demand;
                     };
 
                     var_int32 window_id;
@@ -1513,8 +1524,8 @@ namespace copper_server {
                     var_int32 index;
                     std::optional<std::array<uint8_t, 256>> signature = std::nullopt;
                     string_sized<256> message;
-                    uint64_t timestamp = 0;
-                    uint64_t salt = 0;
+                    uint64_t timestamp;
+                    uint64_t salt;
                     list_array_sized<previous_message, 20> previous_messages;
                     std::optional<Chat> unsigned_content = std::nullopt;
                     enum_switch<var_int32, no_filter, fully_filtered, partially_filtered> filter;
@@ -1707,7 +1718,7 @@ namespace copper_server {
 
                     var_int32::dimension_type dimension_type;
                     identifier dimension_name;
-                    uint64_t seed_hashed = 0;
+                    uint64_t seed_hashed;
                     enum_as<gamemode_e, uint8_t> gamemode;
                     enum_as<optional_gamemode_e, int8_t> previous_gamemode;
                     bool is_debug = false;
@@ -1898,7 +1909,6 @@ namespace copper_server {
                 };
 
                 struct set_objective : public packet<0x63> {
-
                     struct blank : public enum_item<0> {};
 
                     struct styled : public enum_item<1> {
@@ -1912,7 +1922,7 @@ namespace copper_server {
                     struct create : public enum_item<0> {
                         Chat name;
                         var_int32 type; //0 numbers, 1 - hearts
-                        std::optional<enum_switch<var_int32, blank, styled, fixed>> default_format = std::nullopt;
+                        std::optional<enum_switch<var_int32, blank, styled, fixed>> default_format;
                     };
 
                     struct remove : public enum_item<1> {};
@@ -1920,7 +1930,7 @@ namespace copper_server {
                     struct update : public enum_item<2> {
                         Chat name;
                         var_int32 type; //0 numbers, 1 - hearts
-                        std::optional<enum_switch<var_int32, blank, styled, fixed>> default_format = std::nullopt;
+                        std::optional<enum_switch<var_int32, blank, styled, fixed>> default_format;
                     };
 
                     string_sized<32767> name;
@@ -2128,7 +2138,7 @@ namespace copper_server {
                 };
 
                 struct ticking_step : public packet<0x79> {
-                    var_int32 steps = 1;
+                    var_int32 steps;
                 };
 
                 struct transfer : public packet<0x7A> {
@@ -2780,7 +2790,7 @@ namespace copper_server {
 
                         struct component {
                             var_int32::data_component_type type;
-                            int32_t crc32c_hash = 0;
+                            int32_t crc32c_hash;
                         };
 
                         list_array<component> add_components;
@@ -2788,14 +2798,14 @@ namespace copper_server {
                     };
 
                     struct changed_slot {
-                        short slot = 0;
+                        short slot;
                         std::optional<hashed_slot_data> data = std::nullopt;
                     };
 
                     var_int32 window_id;
                     var_int32 state_id;
                     short slot;
-                    int8_t button = 0;
+                    int8_t button;
                     var_int32 mode;
                     list_array_sized<changed_slot, 128> changed;
                     std::optional<hashed_slot_data> carry_item = std::nullopt;
@@ -2867,7 +2877,7 @@ namespace copper_server {
                 };
 
                 struct keep_alive : public packet<0x1B> {
-                    uint64_t id = 0;
+                    uint64_t id;
                 };
 
                 struct lock_difficulty : public packet<0x1C> {
@@ -2949,7 +2959,7 @@ namespace copper_server {
                 };
 
                 struct ping_request : public packet<0x25> {
-                    uint64_t payload = 0;
+                    uint64_t payload;
                 };
 
                 struct place_recipe : public packet<0x26> {
@@ -3023,7 +3033,7 @@ namespace copper_server {
                 struct player_loaded : public packet<0x2B> {};
 
                 struct pong : public packet<0x2C> {
-                    int32_t id = 0;
+                    int32_t id;
                 };
 
                 struct recipe_book_change_settings : public packet<0x2D> {
@@ -3085,7 +3095,7 @@ namespace copper_server {
                 };
 
                 struct set_carried_item : public packet<0x34> {
-                    short slot = 0;
+                    short slot;
                 };
 
                 struct set_command_block : public packet<0x35> {
@@ -3111,11 +3121,11 @@ namespace copper_server {
                 struct set_command_minecart : public packet<0x36> {
                     var_int32::entity_id id;
                     string_sized<32767> command;
-                    bool track_output = 0;
+                    bool track_output;
                 };
 
                 struct set_creative_mode_slot : public packet<0x37> {
-                    short slot = 0;
+                    short slot;
                     struct slot item;
                 };
 

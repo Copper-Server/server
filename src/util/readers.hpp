@@ -76,7 +76,7 @@ namespace copper_server {
             if (mi <= w)
                 throw std::out_of_range("array max size is: " + std::to_string(mi) + "byt try write in: " + std::to_string(w));
             if (read_only)
-                throw std::exception("Readonly Mode");
+                throw std::runtime_error("Readonly Mode");
             arr_[w++] = value;
         }
 

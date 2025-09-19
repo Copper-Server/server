@@ -12,7 +12,7 @@
 #include <library/list_array.hpp>
 #include <map>
 #include <mutex>
-#include <src/base_objects/Chat.hpp>
+#include <src/base_objects/chat.hpp>
 #include <src/base_objects/number_provider.hpp>
 #include <string>
 #include <unordered_map>

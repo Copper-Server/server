@@ -466,7 +466,7 @@ namespace copper_server::storage {
         if (mode == "zstd")
             filter.push(boost::iostreams::zstd_compressor());
         filter.push(file);
-        enbt::io_helper::write_token(filter, 0ui8);
+        enbt::io_helper::write_token(filter, (uint8_t)0);
         std::ostringstream str;
         enbt::io_helper::value_write_stream stream(str);
         {
@@ -1648,8 +1648,8 @@ namespace copper_server::storage {
         portal_teleport_boundary = load_from_nbt.at("portal_teleport_boundary");
         ticking_frozen = load_from_nbt.at("ticking_frozen");
 
-        chunk_lifetime = std::chrono::milliseconds((long long)load_from_nbt.at("chunk_lifetime"));
-        world_lifetime = std::chrono::milliseconds((long long)load_from_nbt.at("world_lifetime"));
+        chunk_lifetime = std::chrono::milliseconds((int64_t)load_from_nbt.at("chunk_lifetime"));
+        world_lifetime = std::chrono::milliseconds((int64_t)load_from_nbt.at("world_lifetime"));
         clear_weather_time = load_from_nbt.at("clear_weather_time");
         weather_time = load_from_nbt.at("weather_time");
         current_weather = base_objects::weather::from_string(load_from_nbt.at("current_weather"));
