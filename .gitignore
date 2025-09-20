@@ -2,7 +2,6 @@ build/*
 .vs
 .vscode/settings.json
 .cache
-.venv
 .VSCodeCounter
 out/
 /storage

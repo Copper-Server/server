@@ -15,9 +15,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#if _WIN32
-    #include <stacktrace>
-#endif
+#include <stacktrace>
 #include <vector>
 
 struct resource_location {
@@ -467,11 +465,7 @@ int main(int argc, char* argv[]) {
         }
     } catch (const std::exception& ex) {
         std::cout << "Failed to build resource: " << location.full_name << ", unexected error: " << ex.what()
-#if _WIN32
                   << ", stack trace " << std::stacktrace::current() << std::endl;
-#else
-            ;
-#endif
         return 1;
     }
 

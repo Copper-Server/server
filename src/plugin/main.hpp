@@ -8,29 +8,17 @@
  */
 #ifndef SRC_PLUGIN_MAIN
 #define SRC_PLUGIN_MAIN
+
 #include <src/plugin/registration.hpp>
 #include <src/util/cts.hpp>
 #include <src/util/task_management.hpp>
 
 namespace copper_server {
     namespace __internal__ {
-        template <class T, util::CTS name>
-        struct static_registry {
-            struct proxy {
-                inline proxy();
-            };
-
-            static proxy p;
-        };
-
-        template <class T, util::CTS name>
-        typename static_registry<T, name>::proxy static_registry<T, name>::p;
-
         class delayed_construct_base {
         public:
             virtual PluginRegistrationPtr construct() = 0;
         };
-
 
         void register_configuration(const PluginRegistrationPtr& self);
         void register_play(const PluginRegistrationPtr& self);
@@ -64,13 +52,8 @@ namespace copper_server {
         std::vector<std::pair<std::string, std::shared_ptr<delayed_construct_base>>>& registration_list();
 
         template <class T, util::CTS name>
-        static_registry<T, name>::proxy::proxy() {
-            registration_list().emplace_back(name.data, std::make_shared<delayed_construct<T>>());
-        }
-
-        template <class T, util::CTS name>
         static void register_value() {
-            static_registry<T, name>::p;
+            registration_list().emplace_back(name.data, std::make_shared<delayed_construct<T>>());
         }
 
         void info(std::string_view source, std::string_view message);
@@ -300,10 +283,18 @@ namespace copper_server {
     template <util::CTS name, class Self>
     class PluginAutoRegister : public PluginHandlingFix<Self> {
     public:
+#if defined(__GNUC__) || defined(__clang__)
+        __attribute__((constructor, used)) static void ___perform_auto_registration() {
+            __internal__::register_value<Self, name>();
+        }
+
+        static inline const std::string registered_name = name.data;
+#else
         static inline const std::string registered_name = []() {
             __internal__::register_value<Self, name>();
             return name.data;
         }();
+#endif
 
         struct log {
             static inline void info(std::string_view message) {

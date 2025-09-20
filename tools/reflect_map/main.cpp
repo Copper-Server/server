@@ -12,9 +12,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
-#if _WIN32
-    #include <stacktrace>
-#endif
+#include <stacktrace>
 #include <unordered_set>
 
 struct EnumInfo {
@@ -945,19 +943,11 @@ int process_file(std::ofstream& output_file, const std::filesystem::path& header
             output_file << out;
     } catch (const std::exception& ex) {
         std::cerr << "Failed to build resource: " << header_path << ", unexected error: " << ex.what()
-#if _WIN32
                   << ", stack trace " << std::stacktrace::current() << std::endl;
-#else
-            ;
-#endif
         return 1;
     } catch (...) {
         std::cerr << "Failed to build resource: " << header_path << ", unexected error "
-#if _WIN32
                   << ", stack trace " << std::stacktrace::current() << std::endl;
-#else
-            ;
-#endif
         return 1;
     }
     return 0;

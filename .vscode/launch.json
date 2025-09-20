@@ -18,7 +18,7 @@
             "logging": {
                 "moduleLoad": false
             },
-            "console":"externalTerminal",
+            "console": "externalTerminal",
             "visualizerFile": "${workspaceFolder}/library/list_array/list_array.natvis"
         },
         {
@@ -48,6 +48,38 @@
                   "ignoreFailures": true
                 },
             ],
+            "visualizerFile": [
+                "${workspaceFolder}/library/list_array/list_array.natvis"
+            ]
+        },
+        {
+            "name": "Debug-Linux-Valgrid",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "$PATH:${command:cmake.launchTargetDirectory}"
+                }
+            ],
+            "logging": {
+                "moduleLoad": false,
+            },
+            "showDisplayString": true,
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+            ],
+            "preLaunchTask": "valgrind-debug", // This is the key part!
             "visualizerFile": [
                 "${workspaceFolder}/library/list_array/list_array.natvis"
             ]

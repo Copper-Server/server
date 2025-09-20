@@ -17,6 +17,9 @@ include_directories(${Boost_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
 add_executable(binary_embed ${SRCFILES})
 IF(MSVC)
     target_compile_options(binary_embed PRIVATE /MT)
+else()
+  target_link_libraries(binary_embed PRIVATE stdc++_libbacktrace)
+  target_compile_options(binary_embed PRIVATE -g)
 endif()
 target_link_libraries(binary_embed
     PRIVATE
