@@ -79,8 +79,6 @@ int main() {
     return 0;
 }
 
-//Allocation safety(only when preemptive scheduler enabled in fast_task)
-
 void* operator new(std::size_t n) noexcept(false) {
     return fast_task::allocate(n);
 }

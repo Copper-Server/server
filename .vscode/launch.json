@@ -78,8 +78,13 @@
                     "text": "-enable-pretty-printing",
                     "ignoreFailures": true
                 },
+                {
+                    "description": "Connect to Valgrind's GDB server",
+                    "text": "target remote | vgdb",
+                    "ignoreFailures": false
+                },
             ],
-            "preLaunchTask": "valgrind-debug", // This is the key part!
+            "preLaunchTask": "valgrind-debug",
             "visualizerFile": [
                 "${workspaceFolder}/library/list_array/list_array.natvis"
             ]

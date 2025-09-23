@@ -99,8 +99,6 @@ IF(MSVC)
 ENDIF(MSVC)
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   target_compile_options(CopperServer PUBLIC -Wno-unused-function)
-  target_compile_options(CopperServer PUBLIC -fsanitize=address)
-  target_compile_options(CopperServer PUBLIC -fsanitize=undefined)
   target_link_libraries(CopperServer PRIVATE stdc++_libbacktrace)
   
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")

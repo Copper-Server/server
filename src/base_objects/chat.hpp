@@ -23,25 +23,7 @@ namespace copper_server {
             uint32_t* change_page = nullptr;
             char* copy_to_clipboard = nullptr;
 
-            ~clickEventS() {
-                if (open_url)
-                    delete open_url;
-                if (run_command)
-                    delete run_command;
-                if (suggest_command)
-                    delete suggest_command;
-                if (change_page)
-                    delete change_page;
-                if (copy_to_clipboard)
-                    delete copy_to_clipboard;
-
-
-                open_url = nullptr;
-                run_command = nullptr;
-                suggest_command = nullptr;
-                change_page = nullptr;
-                copy_to_clipboard = nullptr;
-            }
+            ~clickEventS();
         };
 
         struct hoverEventS {
@@ -59,14 +41,7 @@ namespace copper_server {
 
             char* show_text = nullptr;
 
-            ~hoverEventS() {
-                if (show_text)
-                    delete show_text;
-                if (show_item)
-                    delete show_item;
-                if (show_entity)
-                    delete show_entity;
-            }
+            ~hoverEventS();
         };
 
         Chat();

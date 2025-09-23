@@ -118,6 +118,35 @@ namespace copper_server {
             formater(items, i);
     };
 
+    Chat::clickEventS::~clickEventS() {
+        if (open_url)
+            delete[] open_url;
+        if (run_command)
+            delete[] run_command;
+        if (suggest_command)
+            delete[] suggest_command;
+        if (change_page)
+            delete change_page;
+        if (copy_to_clipboard)
+            delete[] copy_to_clipboard;
+
+
+        open_url = nullptr;
+        run_command = nullptr;
+        suggest_command = nullptr;
+        change_page = nullptr;
+        copy_to_clipboard = nullptr;
+    }
+
+    Chat::hoverEventS::~hoverEventS() {
+        if (show_text)
+            delete[] show_text;
+        if (show_item)
+            delete show_item;
+        if (show_entity)
+            delete show_entity;
+    }
+
     Chat::Chat() = default;
 
     Chat::Chat(std::initializer_list<Chat> args) {
@@ -199,11 +228,11 @@ namespace copper_server {
 
     Chat::~Chat() {
         if (text)
-            delete text;
+            delete[] text;
         if (color)
-            delete color;
+            delete[] color;
         if (insertion)
-            delete insertion;
+            delete[] insertion;
         if (clickEvent)
             delete clickEvent;
         if (hoverEvent)
@@ -332,13 +361,16 @@ namespace copper_server {
             clickEvent = new clickEventS;
 
         if (clickEvent->run_command)
-            delete clickEvent->run_command;
+            delete[] clickEvent->run_command;
+        clickEvent->run_command = nullptr;
 
         if (clickEvent->suggest_command)
-            delete clickEvent->suggest_command;
+            delete[] clickEvent->suggest_command;
+        clickEvent->suggest_command = nullptr;
 
         if (clickEvent->change_page)
             delete clickEvent->change_page;
+        clickEvent->change_page = nullptr;
         setString(clickEvent->open_url, _open_url);
         return *this;
     }
@@ -348,13 +380,16 @@ namespace copper_server {
             clickEvent = new clickEventS;
 
         if (clickEvent->open_url)
-            delete clickEvent->open_url;
+            delete[] clickEvent->open_url;
+        clickEvent->open_url = nullptr;
 
         if (clickEvent->suggest_command)
-            delete clickEvent->suggest_command;
+            delete[] clickEvent->suggest_command;
+        clickEvent->suggest_command = nullptr;
 
         if (clickEvent->change_page)
             delete clickEvent->change_page;
+        clickEvent->change_page = nullptr;
 
         setString(clickEvent->run_command, _run_command);
         return *this;
@@ -365,13 +400,16 @@ namespace copper_server {
             clickEvent = new clickEventS;
 
         if (clickEvent->open_url)
-            delete clickEvent->open_url;
+            delete[] clickEvent->open_url;
+        clickEvent->open_url = nullptr;
 
         if (clickEvent->run_command)
-            delete clickEvent->run_command;
+            delete[] clickEvent->run_command;
+        clickEvent->run_command = nullptr;
 
         if (clickEvent->change_page)
             delete clickEvent->change_page;
+        clickEvent->change_page = nullptr;
 
         setString(clickEvent->suggest_command, _suggest_command);
         return *this;
@@ -390,7 +428,7 @@ namespace copper_server {
         if (!clickEvent)
             clickEvent = new clickEventS;
         if (clickEvent->copy_to_clipboard)
-            delete clickEvent->copy_to_clipboard;
+            delete[] clickEvent->copy_to_clipboard;
         clickEvent->copy_to_clipboard = nullptr;
         setString(clickEvent->copy_to_clipboard, _copy_to_clipboard);
         return *this;
@@ -1218,17 +1256,14 @@ namespace copper_server {
             setString(char_ptr, new_string);
             return;
         }
-        if (size_t str_len = string.size(); str_len) {
-            str_len++;
-            if (char_ptr)
-                delete[] char_ptr;
-            char_ptr = new char[str_len + 1];
-            for (size_t i = 0; i < str_len; i++)
-                char_ptr[i] = string[i];
-            char_ptr[str_len] = 0;
-        } else if (char_ptr) {
+        if (char_ptr){
             delete[] char_ptr;
             char_ptr = nullptr;
+        }
+        if (size_t str_len = string.size(); str_len) {
+            char_ptr = new char[str_len + 1];
+            memcpy(char_ptr, string.data(), str_len);
+            char_ptr[str_len] = 0;
         }
     }
 
@@ -1244,7 +1279,7 @@ namespace copper_server {
         hoverEvent->show_entity = nullptr;
 
         if (hoverEvent->show_text)
-            delete hoverEvent->show_text;
+            delete[] hoverEvent->show_text;
 
         hoverEvent->show_text = nullptr;
     }
@@ -1261,7 +1296,7 @@ namespace copper_server {
         hoverEvent->show_item = nullptr;
 
         if (hoverEvent->show_text)
-            delete hoverEvent->show_text;
+            delete[] hoverEvent->show_text;
 
         hoverEvent->show_text = nullptr;
     }
@@ -1270,7 +1305,7 @@ namespace copper_server {
         if (!hoverEvent)
             hoverEvent = new hoverEventS;
         if (hoverEvent->show_text)
-            delete hoverEvent->show_text;
+            delete[] hoverEvent->show_text;
         hoverEvent->show_text = nullptr;
         setString(hoverEvent->show_text, setHoverEvent);
 
