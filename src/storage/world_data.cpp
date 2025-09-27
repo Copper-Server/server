@@ -446,18 +446,13 @@ namespace copper_server::storage {
             fast_task::files::async_iofstream file( //the std::filesystem::create_directories is slower without check
                 path,
                 fast_task::files::open_mode::write,
-                fast_task::files::on_open_action::always_new,
+                fast_task::files::on_open_action::open,
                 fast_task::files::_sync_flags{}
             );
             if (!file.is_open())
                 std::filesystem::create_directories(path.parent_path());
         }
-        fast_task::files::async_iofstream file(
-            path,
-            fast_task::files::open_mode::write,
-            fast_task::files::on_open_action::always_new,
-            fast_task::files::_sync_flags{}
-        );
+        fast_task::files::atomic_async_ofstream file(path);
         if (!file.is_open())
             return false;
         auto mode = api::configuration::get().world.saving_mode;
@@ -1746,12 +1741,7 @@ namespace copper_server::storage {
 
         auto stringized = senbt::serialize(world_data_file, false, true);
         std::filesystem::create_directories(path);
-        fast_task::files::async_iofstream file(
-            path / "world.senbt",
-            fast_task::files::open_mode::write,
-            fast_task::files::on_open_action::always_new,
-            fast_task::files::_sync_flags{}
-        );
+        fast_task::files::atomic_async_ofstream file(path / "world.senbt");
         if (!file.is_open())
             throw std::runtime_error("Can't open world file");
         file.write(stringized.data(), stringized.size());

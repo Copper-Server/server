@@ -15,6 +15,7 @@
         "utfcpp",
         "gtest",
         "zlib",
+        "cpptrace",
         "lionkor-commandline",
         {
             "name": "liburing",

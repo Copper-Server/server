@@ -75,12 +75,7 @@ namespace copper_server::storage {
         });
 
         if (save) {
-            fast_task::files::async_iofstream file(
-                path,
-                fast_task::files::open_mode::write,
-                fast_task::files::on_open_action::always_new,
-                fast_task::files::_sync_flags{}
-            );
+            fast_task::files::atomic_async_ofstream file(path);
             data.get([&](auto& list) {
                 for (const auto& [key, value] : list) {
                     enbt::io_helper::write_string(file, key);
@@ -117,12 +112,7 @@ namespace copper_server::storage {
         });
 
         if (save) {
-            fast_task::files::async_iofstream file(
-                path,
-                fast_task::files::open_mode::write,
-                fast_task::files::on_open_action::always_new,
-                fast_task::files::_sync_flags{}
-            );
+            fast_task::files::atomic_async_ofstream file(path);
             data.get([&](auto& list) {
                 for (const auto& [key, value] : list) {
                     enbt::io_helper::write_string(file, key);

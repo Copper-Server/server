@@ -336,12 +336,7 @@ namespace copper_server::api::configuration {
     void save_config(const std::filesystem::path& config_file_path, boost::json::object& config_data) {
         if (config.server.frozen_config)
             return;
-        fast_task::files::async_iofstream file(
-            config_file_path / "config.json",
-            fast_task::files::open_mode::write,
-            fast_task::files::on_open_action::always_new,
-            fast_task::files::_sync_flags{}
-        );
+        fast_task::files::atomic_async_ofstream file(config_file_path / "config.json");
 
         if (!file.is_open()) {
             api::log::warn("server", "Failed to save config file. Can not open file.");
@@ -487,11 +482,14 @@ namespace copper_server::api::configuration {
 
             try {
                 merge_configs(config, config_js, true);
+                save_config(config_file_path, *config_data);
+            } catch (const std::filesystem::filesystem_error& ex) {
+                api::log::error("server", ex.what());
+                throw;
             } catch (const std::exception& ex) {
                 api::log::error("server", ex.what());
                 throw;
             }
-            save_config(config_file_path, *config_data);
             //}
         }
         loaded = true;

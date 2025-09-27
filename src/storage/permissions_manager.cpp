@@ -505,12 +505,7 @@ namespace copper_server::storage {
             return values;
         });
         {
-            fast_task::files::async_iofstream file(
-                base_path,
-                fast_task::files::open_mode::write,
-                fast_task::files::on_open_action::always_new,
-                fast_task::files::_sync_flags{}
-            );
+            fast_task::files::atomic_async_ofstream file(base_path);
             if (!file.is_open()) {
                 api::log::warn("server", "Failed to save permissions file. Can not open file.");
                 return;

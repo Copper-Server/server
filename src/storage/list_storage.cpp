@@ -69,17 +69,11 @@ namespace copper_server::storage {
         });
 
         if (save) {
-            fast_task::files::async_iofstream file(
-                path,
-                fast_task::files::open_mode::write,
-                fast_task::files::on_open_action::always_new,
-                fast_task::files::_sync_flags{}
-            );
+            fast_task::files::atomic_async_ofstream file(path);
             data.get([&](auto& value) {
                 for (const auto& line : value)
                     file << line << '\n';
             });
-            file.flush();
         }
     }
 
@@ -111,6 +105,5 @@ namespace copper_server::storage {
             fast_task::files::on_open_action::always_new,
             fast_task::files::_sync_flags{}
         );
-        file.flush();
     }
 }
