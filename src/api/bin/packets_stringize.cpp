@@ -19,61 +19,86 @@
 
 namespace copper_server::api::packets {
     using namespace base_objects;
-    template <class type>
-    concept is_packet = requires(type& d) {
-        type::packet_id::value;
-    };
-
 
     template <template <auto...> class Base, auto... Ts>
-    void value_test(Base<Ts...>&) {}
-
-    template <template <class, auto...> class Base, class T, auto... Ts>
-    void tvalue_test(Base<T, Ts...>&) {}
-
+    static void value_test(Base<Ts...>&) {}
 
     template <template <auto...> class, class, class = void>
     constexpr bool is_value_template_base_of = false;
-
     template <template <auto...> class Base, class Derived>
     constexpr bool is_value_template_base_of<Base, Derived, std::void_t<decltype(value_test<Base>(std::declval<Derived&>()))>> = true;
 
-
-    template <template <class, auto...> class, class, class = void>
-    constexpr bool is_tvalue_template_base_of = false;
-
-    template <template <class, auto...> class Base, class Derived>
-    constexpr bool is_tvalue_template_base_of<Base, Derived, std::void_t<decltype(tvalue_test<Base>(std::declval<Derived&>()))>> = true;
-
-    // Helper to detect instantiations of flags_list_from
     template <class T>
-    struct is_flags_list_from_helper : std::false_type {};
+    struct type_selector : std::integral_constant<size_t, 0> {};
+
+    template <class T, T min, T max>
+    struct type_selector<limited_num<T, min, max>> : std::integral_constant<size_t, 1> {};
 
     template <class S, class ST, ST S::* M, class... Ts>
-    struct is_flags_list_from_helper<flags_list_from<S, ST, M, Ts...>> : std::true_type {};
+    struct type_selector<flags_list_from<S, ST, M, Ts...>> : std::integral_constant<size_t, 2> {};
+
+    template <size_t size>
+    struct type_selector<string_sized<size>> : std::integral_constant<size_t, 3> {};
+    
+    template <size_t size>
+    struct type_selector<bitset_fixed<size>> : std::integral_constant<size_t, 4> {};
+
+    template <class T, size_t size>
+    struct type_selector<list_array_sized<T, size>> : std::integral_constant<size_t, 5> {};
+
+    template <class T, auto ... dep_v>
+    struct type_selector<list_array_no_size<T, dep_v...>> : std::integral_constant<size_t, 6> {};
+
+    template <class T, size_t size, auto ... dep_v>
+    struct type_selector<list_array_sized_no_size<T, size, dep_v...>> : std::integral_constant<size_t, 7> {};
+
+    template <class T, size_t size>
+    struct type_selector<list_array_sized_siz_from_packet<T, size>> : std::integral_constant<size_t, 8> {};
+
+    template <class T, class  Ts>
+    struct type_selector<sized_entry<T, Ts>> : std::integral_constant<size_t, 9> {};
+
+    template <class T, size_t size>
+    struct type_selector<list_array_fixed<T, size>> : std::integral_constant<size_t, 10> {};
+
+    template <class T>
+    struct type_selector<list_array_siz_from_packet<T>> : std::integral_constant<size_t, 11> {};
+
+    template <class T, util::CTS id>
+    struct type_selector<ordered_id<T, id>> : std::integral_constant<size_t, 12> {};
+
+    template <class T, size_t size>
+    struct type_selector<std::array<T, size>> : std::integral_constant<size_t, 13> {};
+    
+    template <class type>
+    concept is_limited_num = type_selector<type>::value == 1;
 
     template <class type>
-    concept is_flags_list_from = is_flags_list_from_helper<std::decay_t<type>>::value;
+    concept is_flags_list_from = type_selector<type>::value == 2;
 
     template <class type>
-    concept is_string_sized = is_value_template_base_of<string_sized, type>;
-    template <class type>
-    concept is_bitset_fixed = is_value_template_base_of<bitset_fixed, type>;
+    concept is_string_sized = type_selector<type>::value == 3;
 
     template <class type>
-    concept is_list_array_sized = is_tvalue_template_base_of<list_array_sized, type> || is_tvalue_template_base_of<list_array_sized_siz_from_packet, type> || is_tvalue_template_base_of<list_array_sized_no_size, type>;
+    concept is_bitset_fixed = type_selector<type>::value == 4;
 
     template <class type>
-    concept is_list_array_fixed = is_tvalue_template_base_of<list_array_fixed, type>;
+    concept is_list_array_sized = type_selector<type>::value == 5 || type_selector<type>::value == 7 ||  type_selector<type>::value == 8;
 
     template <class type>
-    concept is_std_array = is_tvalue_template_base_of<std::array, type>;
+    concept is_list_array_fixed = type_selector<type>::value == 10;
 
     template <class type>
-    concept is_limited_num = is_tvalue_template_base_of<limited_num, type>;
+    concept is_ordered_id = type_selector<type>::value == 12;
 
     template <class type>
-    concept requires_check = is_limited_num<type> || is_string_sized<type> || is_list_array_sized<type> || is_list_array_fixed<type> || is_value_template_base_of<no_size, type>;
+    concept is_std_array = type_selector<type>::value == 13;
+
+    template <class type>
+    concept is_no_size = is_value_template_base_of<no_size, type>;
+
+    template <class type>
+    concept requires_check = is_limited_num<type> || is_string_sized<type> || is_list_array_sized<type> || is_list_array_fixed<type> || is_no_size<type> || is_bitset_fixed<type>;
 
     namespace sp {
         template <class T>

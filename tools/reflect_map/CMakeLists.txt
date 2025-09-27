@@ -9,7 +9,12 @@ FILE(GLOB SRCFILES
 )
 
 add_executable(reflect_map ${SRCFILES})
-target_compile_options(reflect_map PRIVATE /MT)
+IF(MSVC)
+    target_compile_options(reflect_map PRIVATE /MT)
+else()
+  target_link_libraries(reflect_map PRIVATE stdc++_libbacktrace)
+  target_compile_options(reflect_map PRIVATE -g)
+endif()
 
 #copy executable to current path
 add_custom_command(TARGET reflect_map POST_BUILD

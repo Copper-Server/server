@@ -18,7 +18,7 @@
             "logging": {
                 "moduleLoad": false
             },
-            "console":"externalTerminal",
+            "console": "externalTerminal",
             "visualizerFile": "${workspaceFolder}/library/list_array/list_array.natvis"
         },
         {
@@ -38,7 +38,7 @@
                 }
             ],
             "logging": {
-                "moduleLoad": false
+                "moduleLoad": false,
             },
             "showDisplayString": true,
             "setupCommands": [
@@ -48,6 +48,43 @@
                   "ignoreFailures": true
                 },
             ],
+            "visualizerFile": [
+                "${workspaceFolder}/library/list_array/list_array.natvis"
+            ]
+        },
+        {
+            "name": "Debug-Linux-Valgrid",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "$PATH:${command:cmake.launchTargetDirectory}"
+                }
+            ],
+            "logging": {
+                "moduleLoad": false,
+            },
+            "showDisplayString": true,
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Connect to Valgrind's GDB server",
+                    "text": "target remote | vgdb",
+                    "ignoreFailures": false
+                },
+            ],
+            "preLaunchTask": "valgrind-debug",
             "visualizerFile": [
                 "${workspaceFolder}/library/list_array/list_array.natvis"
             ]

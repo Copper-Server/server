@@ -285,7 +285,7 @@ namespace copper_server {
             struct effect {
                 uint32_t duration = 0;
                 uint32_t id = 0;
-                uint8_t amplifier : 8 = 1;
+                uint8_t amplifier = 1;
                 bool ambient : 1 = false;
                 bool particles : 1 = true;
                 bool show_icon : 1 = true;
@@ -312,7 +312,7 @@ namespace copper_server {
                     player_far,
                     no_player,             //outside player zone
                     scheduled_for_despawn, //after second chance no_player or inactivity_counter reached entitys max counter
-                } state : 2
+                } state : 3
                     = state_e::init;
 
                 bool mark_chunk(int64_t pos_x, int64_t pos_z, bool loaded) {
@@ -602,7 +602,7 @@ namespace copper_server {
             friend struct entity_data;
             friend struct enbt::io_helper::serialization<entity_ref>;
             uint16_t entity_id;
-            bool died : 1 = false;
+            bool died = false;
         };
     }
 }

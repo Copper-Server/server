@@ -10,6 +10,7 @@
 #define SRC_UTIL_JSON_HELPERS
 #include <boost/json.hpp>
 #include <filesystem>
+#include <format>
 
 namespace copper_server::util {
     inline std::string to_string(boost::json::kind type_kind) {

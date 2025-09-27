@@ -8,6 +8,7 @@
  */
 #include <library/fast_task.hpp>
 #include <library/fast_task/include/allocator.hpp>
+#include <library/fast_task/include/debug.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/log.hpp>
 #include <src/api/server.hpp>
@@ -36,6 +37,7 @@ int main() {
         fast_task::scheduler::shut_down();
     });
     try {
+        //fast_task::debug::enable_init_stack_trace();
         size_t working_threads = api::configuration::get().server.working_threads;
         fast_task::scheduler::reduce_executor(fast_task::scheduler::total_executors());
         fast_task::scheduler::create_executor(working_threads);
@@ -78,8 +80,6 @@ int main() {
     fast_task::scheduler::await_end_tasks(false);
     return 0;
 }
-
-//Allocation safety(only when preemptive scheduler enabled in fast_task)
 
 void* operator new(std::size_t n) noexcept(false) {
     return fast_task::allocate(n);

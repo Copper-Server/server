@@ -234,7 +234,7 @@ namespace copper_server::base_objects::events {
                    && async_low_priority.empty();
         }
 
-        fast_task::task_mutex mutex;
+        mutable fast_task::task_mutex mutex;
         std::random_device rd;
         std::mt19937 gen;
         std::unordered_map<uint64_t, function> heigh_priority;

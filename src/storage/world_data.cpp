@@ -446,18 +446,13 @@ namespace copper_server::storage {
             fast_task::files::async_iofstream file( //the std::filesystem::create_directories is slower without check
                 path,
                 fast_task::files::open_mode::write,
-                fast_task::files::on_open_action::always_new,
+                fast_task::files::on_open_action::open,
                 fast_task::files::_sync_flags{}
             );
             if (!file.is_open())
                 std::filesystem::create_directories(path.parent_path());
         }
-        fast_task::files::async_iofstream file(
-            path,
-            fast_task::files::open_mode::write,
-            fast_task::files::on_open_action::always_new,
-            fast_task::files::_sync_flags{}
-        );
+        fast_task::files::atomic_async_ofstream file(path);
         if (!file.is_open())
             return false;
         auto mode = api::configuration::get().world.saving_mode;
@@ -466,7 +461,7 @@ namespace copper_server::storage {
         if (mode == "zstd")
             filter.push(boost::iostreams::zstd_compressor());
         filter.push(file);
-        enbt::io_helper::write_token(filter, 0ui8);
+        enbt::io_helper::write_token(filter, (uint8_t)0);
         std::ostringstream str;
         enbt::io_helper::value_write_stream stream(str);
         {
@@ -1648,8 +1643,8 @@ namespace copper_server::storage {
         portal_teleport_boundary = load_from_nbt.at("portal_teleport_boundary");
         ticking_frozen = load_from_nbt.at("ticking_frozen");
 
-        chunk_lifetime = std::chrono::milliseconds((long long)load_from_nbt.at("chunk_lifetime"));
-        world_lifetime = std::chrono::milliseconds((long long)load_from_nbt.at("world_lifetime"));
+        chunk_lifetime = std::chrono::milliseconds((int64_t)load_from_nbt.at("chunk_lifetime"));
+        world_lifetime = std::chrono::milliseconds((int64_t)load_from_nbt.at("world_lifetime"));
         clear_weather_time = load_from_nbt.at("clear_weather_time");
         weather_time = load_from_nbt.at("weather_time");
         current_weather = base_objects::weather::from_string(load_from_nbt.at("current_weather"));
@@ -1746,12 +1741,7 @@ namespace copper_server::storage {
 
         auto stringized = senbt::serialize(world_data_file, false, true);
         std::filesystem::create_directories(path);
-        fast_task::files::async_iofstream file(
-            path / "world.senbt",
-            fast_task::files::open_mode::write,
-            fast_task::files::on_open_action::always_new,
-            fast_task::files::_sync_flags{}
-        );
+        fast_task::files::atomic_async_ofstream file(path / "world.senbt");
         if (!file.is_open())
             throw std::runtime_error("Can't open world file");
         file.write(stringized.data(), stringized.size());

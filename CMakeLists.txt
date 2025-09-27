@@ -65,21 +65,14 @@ add_subdirectory("library/commandline")
 set(CC_src_INCLUDE_DIR ".")
 set(CC_INCLUDE_DIR ${CC_src_INCLUDE_DIR})
 
-FILE(GLOB SRCFILES 
+FILE(GLOB_RECURSE SRCFILES CONFIGURE_DEPENDS
   src/*.cpp 
-  src/*/*.cpp 
-  src/*/*/*.cpp 
-  src/*/*/*/*.cpp
-  src/*/*/*/*/*.cpp
-  src/*/*/*/*/*/*.cpp
-  src/*/*/*/*/*/*/*.cpp
   library/enbt/*.cpp
 )
-
+add_executable(CopperServer src/main.cpp)
+target_sources(CopperServer PRIVATE ${SRCFILES} ${RESOURCE_FILES_build})
 include_directories(${Boost_INCLUDE_DIRS} ${CC_INCLUDE_DIR} ${ZLIB_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${utf8cpp_INCLUDE_DIRS})
 
-
-add_executable(CopperServer ${SRCFILES} ${RESOURCE_FILES_build})
 IF(MSVC)
   target_compile_options(CopperServer PRIVATE /utf-8)
   target_compile_options(CopperServer PRIVATE /EHa)
@@ -106,6 +99,11 @@ IF(MSVC)
 ENDIF(MSVC)
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   target_compile_options(CopperServer PUBLIC -Wno-unused-function)
+  target_link_libraries(CopperServer PRIVATE stdc++_libbacktrace)
+  
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_options(CopperServer PRIVATE -g)
+  endif()
   
   IF(MSVC)
     target_compile_options(CopperServer PUBLIC /clang:-ftemplate-backtrace-limit=0)

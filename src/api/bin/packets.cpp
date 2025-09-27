@@ -173,7 +173,7 @@ namespace copper_server {
             bool visit_packet_viewer(client_bound_packet& packet, base_objects::SharedClientData& context) {
                 if (
                     !std::visit(
-                        [&](auto& it) {
+                        [&](auto& it) -> bool {
                             using T = std::decay_t<decltype(it)>;
                             static auto& dir = []() -> auto& {
                                 if constexpr (std::is_constructible_v<client_bound::status_packet, T>) {
@@ -223,7 +223,7 @@ namespace copper_server {
             bool visit_packet_viewer(server_bound_packet& packet, base_objects::SharedClientData& context) {
                 if (
                     !std::visit(
-                        [&](auto& it) {
+                        [&](auto& it) -> bool {
                             using T = std::decay_t<decltype(it)>;
                             static auto& dir = []() -> auto& {
                                 if constexpr (std::is_constructible_v<server_bound::handshake_packet, T>) {
@@ -275,7 +275,7 @@ namespace copper_server {
 
             void visit_packet_post_send_viewer(client_bound_packet& packet, base_objects::SharedClientData& context) {
                 std::visit(
-                    [&](auto& it) {
+                    [&](auto& it) -> void {
                         using T = std::decay_t<decltype(it)>;
                         static auto& dir = []() -> auto& {
                             if constexpr (std::is_constructible_v<client_bound::status_packet, T>) {

@@ -612,6 +612,10 @@ namespace copper_server::api::tags {
             }
         };
 
+        _tag_entry_handle* copy(_tag_entry_handle* copy) {
+            return new _tag_entry_handle(*copy);
+        }
+
         void destruct_tag_entry_handle::operator()(_tag_entry_handle* ptr) {
             delete ptr;
         }
@@ -643,7 +647,7 @@ namespace copper_server::api::tags {
     }
 
     bool contains(const tag_handle& handle) {
-        return handle ? handle->get() : false;
+        return handle ? bool(handle->get()) : false;
     }
 
     bool contains(const tag_handle& handle, int32_t id) {

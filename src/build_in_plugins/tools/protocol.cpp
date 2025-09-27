@@ -20,7 +20,7 @@ namespace copper_server::build_in_plugins {
         std::string now = std::format("{:%Y_%m_%d__%H_%M_%OS}", std::chrono::current_zone()->to_local(std::chrono::system_clock::now()));
 
         void app_item(std::string_view dat, uint64_t client_id) {
-            fast_task::files::async_iofstream out(api::configuration::get().server.get_storage_path() / "protocol" / now / (std::to_string(client_id) + ".rs"), std::ios::app); //idc why, but rust highlighter works fine with current format
+            fast_task::files::async_iofstream out(api::configuration::get().server.get_storage_path() / "protocol" / now / (std::to_string(client_id) + ".rs"), std::ios::app); //idc why, but rust highlighter works nice with current format
             out << dat;
         }
 

@@ -10,11 +10,13 @@
 #include "../../library/enbt/senbt.hpp"
 #include <boost/iostreams/filter/zstd.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <stacktrace>
+#include <vector>
 
 struct resource_location {
     std::string namespace_open;

@@ -372,12 +372,7 @@ namespace copper_server::api::players {
     void save_player(base_objects::player&& player, enbt::raw_uuid uuid) {
         auto path = api::configuration::get().server.get_storage_path() / "players";
         std::filesystem::create_directories(path);
-        fast_task::files::async_iofstream file(
-            path / (uuid.to_string() + ".enbt"),
-            fast_task::files::open_mode::write,
-            fast_task::files::on_open_action::always_new,
-            fast_task::files::_sync_flags{}
-        );
+        fast_task::files::atomic_async_ofstream file(path / (uuid.to_string() + ".enbt"));
         if (!file.is_open())
             throw std::runtime_error("Failed to open file: " + (path / (uuid.to_string() + ".enbt")).string());
         enbt::io_helper::value_write_stream write(file);

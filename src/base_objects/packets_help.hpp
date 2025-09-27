@@ -124,18 +124,22 @@ namespace copper_server::base_objects {
     //reflect_map skip_end
     namespace switches_to {
         struct status {
+            constexpr status() = default;
             std::strong_ordering operator<=>(const status& other) const = default;
         };
 
         struct login {
+            constexpr login() = default;
             std::strong_ordering operator<=>(const login& other) const = default;
         };
 
         struct configuration {
+            constexpr configuration() = default;
             std::strong_ordering operator<=>(const configuration& other) const = default;
         };
 
         struct play {
+            constexpr play() = default;
             std::strong_ordering operator<=>(const play& other) const = default;
         };
     }
@@ -298,7 +302,50 @@ namespace copper_server::base_objects {
     struct json_text_component {
         using underlying_type = std::string;
         std::string value;
+        json_text_component() = default;
 
+        constexpr json_text_component(std::string&& value) : value(std::move(value)) {}
+
+        constexpr json_text_component(const std::string& value) : value(value) {}
+
+        constexpr json_text_component(json_text_component&& value) : value(std::move(value.value)) {}
+
+        constexpr json_text_component(const json_text_component& value) : value(value.value) {}
+
+        template <size_t siz>
+        constexpr json_text_component(const char (&value)[siz]) : value(value) {}
+
+        constexpr json_text_component& operator=(std::string&& other) {
+            value = std::move(other);
+            return *this;
+        }
+
+        constexpr json_text_component& operator=(const std::string& other) {
+            value = other;
+            return *this;
+        }
+
+        constexpr json_text_component& operator=(json_text_component&& other) {
+            value = std::move(other.value);
+            return *this;
+        }
+
+        constexpr json_text_component& operator=(const json_text_component& other) {
+            value = other.value;
+            return *this;
+        }
+
+        constexpr operator std::string&() & {
+            return value;
+        }
+
+        constexpr operator std::string&&() && {
+            return std::move(value);
+        }
+
+        constexpr operator const std::string&() const& {
+            return value;
+        }
         auto operator<=>(const json_text_component& other) const = default;
     };
 
@@ -308,6 +355,27 @@ namespace copper_server::base_objects {
         static constexpr inline T check_min = min;
         static constexpr inline T check_max = max;
         T value = {};
+
+        constexpr limited_num() = default;
+
+        constexpr limited_num(T&& value) : value(std::move(value)) {}
+
+        constexpr limited_num(const T& value) : value(value) {}
+
+        constexpr limited_num(const limited_num& value) : value(value.value) {}
+
+        constexpr limited_num(limited_num&& value) : value(value.value) {}
+
+        constexpr limited_num& operator=(limited_num&& other) {
+            value = std::move(other.value);
+            return *this;
+        }
+
+        constexpr limited_num& operator=(const limited_num& other) {
+            value = other.value;
+            return *this;
+        }
+
         auto operator<=>(const limited_num& other) const = default;
     };
 
@@ -393,6 +461,21 @@ namespace copper_server::base_objects {
 
         constexpr var_int32(int32_t value) : value(value) {}
 
+        constexpr var_int32(var_int32&& value) : value(value.value) {}
+
+        constexpr var_int32(const var_int32& value) : value(value.value) {}
+
+        constexpr var_int32& operator=(var_int32&& other) {
+            value = std::move(other.value);
+            return *this;
+        }
+
+        constexpr var_int32& operator=(const var_int32& other) {
+            value = other.value;
+            return *this;
+        }
+
+
         constexpr operator int32_t&() {
             return value;
         }
@@ -420,7 +503,19 @@ namespace copper_server::base_objects {
 
         constexpr var_int64(int64_t value) : value(value) {}
 
+        constexpr var_int64(var_int64&& value) : value(value.value) {}
+
         constexpr var_int64(const var_int64& value) : value(value.value) {}
+
+        constexpr var_int64& operator=(var_int64&& other) {
+            value = std::move(other.value);
+            return *this;
+        }
+
+        constexpr var_int64& operator=(const var_int64& other) {
+            value = other.value;
+            return *this;
+        }
 
         constexpr operator int64_t&() {
             return value;

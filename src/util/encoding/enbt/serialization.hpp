@@ -123,7 +123,7 @@ namespace copper_server::util::encoding::enbt {
                 res.push({});
                 serialize_entry(res.back(), it);
             });
-        } else if constexpr (is_tvalue_template_base_of<base_objects::ordered_id, Type>) {
+        } else if constexpr (is_ordered_id<Type>) {
             serialize_entry(res, value.value);
         } else if constexpr (is_template_base_of<base_objects::value_optional, Type>) {
             if (value.rest && value.v){
@@ -139,7 +139,7 @@ namespace copper_server::util::encoding::enbt {
             res = ::enbt::to_log_item(std::move(res));
         } else if constexpr (is_limited_num<Type>) {
             serialize_entry(res, value.value);
-        } else if constexpr (is_convertible_to_packet_form<Type>) {
+        } else if constexpr (base_objects::is_convertible_to_packet_form<Type>) {
             serialize_entry(res, value.to_packet());
         } else if constexpr (api::id::is_source<Type>) {
             serialize_entry(res, value.to_string());
@@ -259,13 +259,13 @@ namespace copper_server::util::encoding::enbt {
                     });
                 });
         } else if constexpr (is_flags_list_from<Type>) {
-            auto arr_w = res.write_array();
+            auto arr_w = res.write_array(value.values.size());
             value.for_each_in_order([&arr_w](auto& it) {
                 arr_w.write([&it](auto& stream) {
                     serialize_entry(stream, it);
                 });
             });
-        } else if constexpr (is_tvalue_template_base_of<base_objects::ordered_id, Type>) {
+        } else if constexpr (is_ordered_id<Type>) {
             serialize_entry(res, value.value);
         } else if constexpr (is_template_base_of<base_objects::value_optional, Type>) {
             auto opt = res.write_optional();
@@ -285,7 +285,7 @@ namespace copper_server::util::encoding::enbt {
             res.write_log_item(value.value);
         } else if constexpr (is_limited_num<Type>) {
             serialize_entry(res, value.value);
-        } else if constexpr (is_convertible_to_packet_form<Type>) {
+        } else if constexpr (base_objects::is_convertible_to_packet_form<Type>) {
             serialize_entry(res, value.to_packet());
         } else if constexpr (api::id::is_source<Type>) {
             serialize_entry(res, value.to_string());

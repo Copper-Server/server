@@ -8,6 +8,23 @@
             },
             "command": "cmake  ${workspaceRoot}",
         },
+        {
+            "label": "valgrind-debug",
+            "type": "shell",
+            "command": "valgrind",
+            "args": [
+                "--leak-check=full",
+                "--show-leak-kinds=all",
+                "--track-origins=yes",
+                "--verbose",
+                "--vgdb=yes",
+                "--vgdb-error=0",
+                "--log-file=valgrind-out.txt",
+                "${command:cmake.launchTargetPath}"
+            ],
+            "isBackground": true,
+            "problemMatcher": []
+        },
     ],
     "version": "2.0.0"
 }

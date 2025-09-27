@@ -1,9 +1,14 @@
 if(${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/main.cpp IS_NEWER_THAN ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed.exe)
     message(STATUS "Configuring binary_embed tool...")
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out)
-
-
-    execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed -DCMAKE_TOOLCHAIN_FILE=${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DVCPKG_TARGET_TRIPLET=x64-windows-static
+    if(WIN32)
+        set(binary_embed_triplet x64-windows-static)
+        set(binary_embed_build_type RelWithDebInfo)
+    elseif(UNIX)
+        set(binary_embed_triplet x64-linux)
+        set(binary_embed_build_type Release)
+    endif()
+    execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed -DCMAKE_TOOLCHAIN_FILE=${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=${binary_embed_build_type} -DVCPKG_TARGET_TRIPLET=${binary_embed_triplet}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out
         RESULT_VARIABLE result
         OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out/binary_embed.log
@@ -31,9 +36,15 @@ endif()
 if(${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/main.cpp IS_NEWER_THAN ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map.exe)
     message(STATUS "Configuring reflect_map tool...")
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out)
+    if(WIN32)
+        set(reflect_map_triplet x64-windows-static)
+        set(reflect_map_build_type RelWithDebInfo)
+    elseif(UNIX)
+        set(reflect_map_triplet x64-linux)
+        set(reflect_map_build_type Release)
+    endif()
 
-
-    execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map -DCMAKE_TOOLCHAIN_FILE=${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DVCPKG_TARGET_TRIPLET=x64-windows-static
+    execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map -DCMAKE_TOOLCHAIN_FILE=${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=${reflect_map_build_type} -DVCPKG_TARGET_TRIPLET=${reflect_map_triplet}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out
         RESULT_VARIABLE result
         OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out/reflect_map.log
@@ -257,7 +268,6 @@ endfunction(create_resources_header)
 
 function(create_reflect_map output_file FILES)
     cmake_path(GET output_file FILENAME result_name)
-    
     #convert FILES to a string
     set(FILES_STR "")
     foreach(file ${FILES})
@@ -286,7 +296,7 @@ function(execute_gradle project_dir args)
         set(GRADLEW_CMD  "${project_dir}/gradlew")
     endif()
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/gradle)
-    message(STATUS "Executing gradle command in ${project_dir}: ${args}")
+    message(STATUS "Executing gradle command in ${GRADLEW_CMD}: ${args}")
     execute_process(
         COMMAND ${GRADLEW_CMD} ${args} --no-daemon
         WORKING_DIRECTORY ${project_dir}
@@ -328,6 +338,7 @@ function(perform_extraction)
     file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/blocks.json ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/blocks.senbt)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/composter_increase_chance.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/entities.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
+    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/entity_pose.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/entity_attributes.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/flower_pot_transformation.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/fuels.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)

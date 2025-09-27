@@ -37,14 +37,14 @@ namespace copper_server::build_in_plugins::network::tcp {
             } catch (const std::exception& ex) {
                 std::stringstream stack_trace;
                 stack_trace << std::stacktrace::current();
-                api::log::error("Network", "unhandled exception while processing client. Id: " + std::to_string(session->id) + ". Address: " + stream.remote_address().to_string());
-                api::log::debug_error("Network", "client id " + std::to_string(session->id) + " stack trace:\n" + stack_trace.str());
-                api::log::debug_error("Network", "client id " + std::to_string(session->id) + " exceptions data:\n" + ex.what());
+                api::log::error("network", "unhandled exception while processing client. Id: " + std::to_string(session->id) + ". Address: " + stream.remote_address().to_string());
+                api::log::debug_error("network", "client id " + std::to_string(session->id) + " stack trace:\n" + stack_trace.str());
+                api::log::debug_error("network", "client id " + std::to_string(session->id) + " exceptions data:\n" + ex.what());
             } catch (...) {
                 std::stringstream stack_trace;
                 stack_trace << std::stacktrace::current();
-                api::log::error("Network", "unhandled undefined exception while processing client. Id: " + std::to_string(session->id) + ". Address: " + stream.remote_address().to_string());
-                api::log::debug_error("Network", "client id " + std::to_string(session->id) + " stack trace:\n" + stack_trace.str());
+                api::log::error("network", "unhandled undefined exception while processing client. Id: " + std::to_string(session->id) + ". Address: " + stream.remote_address().to_string());
+                api::log::debug_error("network", "client id " + std::to_string(session->id) + " stack trace:\n" + stack_trace.str());
             }
             session->disconnect();
         }
@@ -55,18 +55,23 @@ namespace copper_server::build_in_plugins::network::tcp {
             tcp_server->start();
             if (tcp_server->is_running()) {
                 auto address = tcp_server->server_address();
-                api::log::info("Network", "TCP server started on " + address.to_string());
+                api::log::info("network", "TCP server started on " + address.to_string());
+                for (auto& err : tcp_server->get_errors())
+                    api::log::warn("network", err);
+
                 if (address.is_loopback())
                     api::configuration::get().server.offline_mode = true;
             } else {
-                api::log::error("Network", "Failed to start TCP server on " + api::configuration::get().server.ip + ":" + std::to_string(api::configuration::get().server.port));
+                api::log::error("network", "Failed to start TCP server on " + api::configuration::get().server.ip + ":" + std::to_string(api::configuration::get().server.port));
+                for (auto& err : tcp_server->get_errors())
+                    api::log::error("network", err);
                 throw std::runtime_error("TCP server failed to start");
             }
         }
 
         void stop() {
             tcp_server->stop();
-            api::log::info("Network", "TCP server stopped on " + tcp_server->server_address().to_string());
+            api::log::info("network", "TCP server stopped on " + tcp_server->server_address().to_string());
         }
 
     public:

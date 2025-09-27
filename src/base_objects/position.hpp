@@ -8,26 +8,26 @@
  */
 #ifndef SRC_BASE_OBJECTS_POSITION
 #define SRC_BASE_OBJECTS_POSITION
-
+#include <cstdint>
 namespace copper_server::base_objects {
     struct position {
         int x : 26;
         int z : 26;
         int y : 12;
 
-        inline void set(unsigned long long raw) {
+        inline void set(uint64_t raw) {
             union u_t {
                 position flag;
-                unsigned long long r;
+                uint64_t r;
             } u{.r = raw};
 
             *this = u.flag;
         }
 
-        inline unsigned long long get() const {
+        inline uint64_t get() const {
             union u_t {
                 position flag;
-                unsigned long long r;
+                uint64_t r;
             } u{.flag = *this};
 
             return u.r;

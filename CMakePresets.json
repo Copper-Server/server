@@ -71,7 +71,13 @@
             "cacheVariables": {
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-                "VCPKG_TARGET_TRIPLET": "x64-linux"
+                "VCPKG_TARGET_TRIPLET": "x64-linux",
+                "VCPKG_CMAKE_SYSTEM_NAME": "Linux",
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_CXX_FLAGS": "",
+                "CMAKE_CXX_FLAGS_DEBUG": "",
+                "CMAKE_CXX_FLAGS_RELEASE": ""
             },
             "environment": {
                 "CMAKE_BUILD_PARALLEL_LEVEL": "16"

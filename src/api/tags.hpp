@@ -19,6 +19,8 @@ namespace copper_server::api::tags {
         struct destruct_tag_entry_handle {
             static void operator()(_tag_entry_handle* ptr);
         };
+
+        _tag_entry_handle* copy(_tag_entry_handle*);
     }
     enum class builtin_entry : uint8_t { //to access string result from block entry use minecraft:block as custom entry
         banner_pattern,
@@ -51,8 +53,45 @@ namespace copper_server::api::tags {
 
     int32_t resolve_entry_item(builtin_entry entry, const std::string& value);
 
+    struct tag_handle {
+        std::unique_ptr<detail::_tag_entry_handle, detail::destruct_tag_entry_handle> value;
 
-    using tag_handle = std::unique_ptr<detail::_tag_entry_handle, detail::destruct_tag_entry_handle>;
+        tag_handle() {}
+
+        tag_handle(std::unique_ptr<detail::_tag_entry_handle, detail::destruct_tag_entry_handle>&& value) : value(std::move(value)) {}
+
+        tag_handle(detail::_tag_entry_handle* value) : value(value) {}
+
+        tag_handle(tag_handle&& value) : value(std::move(value.value)) {}
+
+        tag_handle(const tag_handle& value) : value(detail::copy(value.value.get())) {}
+
+        tag_handle& operator=(const tag_handle& copy) {
+            value.reset(detail::copy(copy.value.get()));
+            return *this;
+        }
+
+        tag_handle& operator=(tag_handle&& move) {
+            value.reset(move.value.release());
+            return *this;
+        }
+
+        detail::_tag_entry_handle* operator->() {
+            return value.get();
+        }
+
+        detail::_tag_entry_handle* operator->() const {
+            return value.get();
+        }
+
+        void reset(detail::_tag_entry_handle* take) {
+            value.reset(take);
+        }
+
+        operator bool() const {
+            return (bool)value;
+        }
+    };
     tag_handle get_tag_handle(builtin_entry entry, std::string_view tag);
     tag_handle get_tag_handle(std::string_view custom_entry, std::string_view tag);
     bool contains(const tag_handle&, int32_t id);
