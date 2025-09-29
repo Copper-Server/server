@@ -278,7 +278,6 @@ namespace copper_server {
             };
 
             struct vibration : public enum_item<47> {
-
                 struct block : public enum_item<0> {
                     position block_pos;
                 };
@@ -378,7 +377,6 @@ namespace copper_server {
                 };
 
                 struct login_finished : public packet<0x02> {
-
                     struct property {
                         string_sized<64> name;
                         string_sized<32767> value;
@@ -492,7 +490,6 @@ namespace copper_server {
                 };
 
                 struct select_known_packs : public packet<0x0E> {
-
                     struct pack {
                         string_sized<32767> pack_namespace;
                         string_sized<32767> id;
@@ -503,7 +500,6 @@ namespace copper_server {
                 };
 
                 struct custom_report_details : public packet<0x0F> {
-
                     struct detail {
                         string_sized<128> title;
                         string_sized<4096> description;
@@ -613,7 +609,6 @@ namespace copper_server {
                 };
 
                 struct award_stats : public packet<0x03> {
-
                     struct statistic {
                         var_int32 category_id;
                         var_int32 statistic_id;
@@ -716,7 +711,6 @@ namespace copper_server {
                 };
 
                 struct command_suggestions : public packet<0x0F> {
-
                     struct match {
                         string_sized<32767> set;
                         std::optional<Chat> tooltip = std::nullopt;
@@ -984,7 +978,6 @@ namespace copper_server {
                 };
 
                 struct explode : public packet<0x20> {
-
                     struct player_delta_velocity_t {
                         double x;
                         double y;
@@ -1290,7 +1283,6 @@ namespace copper_server {
                 };
 
                 struct login : public packet<0x2B> {
-
                     struct death_location_t {
                         identifier world;
                         position location;
@@ -1319,7 +1311,6 @@ namespace copper_server {
                 };
 
                 struct map_item_data : public packet<0x2C> {
-
                     struct icon {
                         enum class type_e : uint8_t {
                             white_arrow = 0,
@@ -1381,7 +1372,6 @@ namespace copper_server {
                 };
 
                 struct merchant_offers : public packet<0x2D> {
-
                     struct trade {
                         struct trade_item {
                             var_int32::item item_id;
@@ -1428,7 +1418,6 @@ namespace copper_server {
                 };
 
                 struct move_minecart_along_track : public packet<0x30> {
-
                     struct step {
                         double x;
                         double y;
@@ -1648,7 +1637,6 @@ namespace copper_server {
                 };
 
                 struct recipe_book_add : public packet<0x43> {
-
                     struct recipe {
                         enum class flags_f : uint8_t {
                             show_notification = 0x1,
@@ -1710,7 +1698,6 @@ namespace copper_server {
                 };
 
                 struct respawn : public packet<0x4B> {
-
                     struct death_location_t {
                         identifier dimension_name;
                         position location;
@@ -1741,7 +1728,6 @@ namespace copper_server {
                 };
 
                 struct section_blocks_update : public packet<0x4D> {
-
                     struct position_t {
                         uint64_t x : 22;
                         uint64_t z : 22;
@@ -1870,7 +1856,6 @@ namespace copper_server {
                 };
 
                 struct set_equipment : public packet<0x5F> {
-
                     struct equipment {
                         enum class slot_place_e {
                             main_hand = 0,
@@ -2003,7 +1988,6 @@ namespace copper_server {
                 };
 
                 struct set_score : public packet<0x67> {
-
                     struct blank : public enum_item<0> {};
 
                     struct styled : public enum_item<1> {
@@ -2068,7 +2052,6 @@ namespace copper_server {
                 struct start_configuration : public packet<0x6F> {};
 
                 struct stop_sound : public packet<0x70> {
-
                     struct source : public flag_item<0x1, 0x1, 1> {
                         var_int32 source;
                     };
@@ -2121,7 +2104,6 @@ namespace copper_server {
                 };
 
                 struct test_instance_block_status : public packet<0x77> {
-
                     struct volume_t {
                         double x;
                         double y;
@@ -2147,7 +2129,6 @@ namespace copper_server {
                 };
 
                 struct update_advancements : public packet<0x7B> {
-
                     struct display {
                         struct background_texture : public flag_item<0x1, 0x1, 1> {
                             identifier texture;
@@ -2235,7 +2216,6 @@ namespace copper_server {
                 };
 
                 struct update_recipes : public packet<0x7E> {
-
                     struct property {
                         identifier set_id;
                         list_array<var_int32::item> items;
@@ -2251,7 +2231,6 @@ namespace copper_server {
                 };
 
                 struct update_tags : public packet<0x7F> {
-
                     struct tag {
                         identifier tag_name;
                         list_array<var_int32> values;
@@ -2271,7 +2250,6 @@ namespace copper_server {
                 };
 
                 struct custom_report_details : public packet<0x81> {
-
                     struct detail {
                         string_sized<128> title;
                         string_sized<4096> description;
@@ -2627,7 +2605,6 @@ namespace copper_server {
                 };
 
                 struct select_known_packs : public packet<0x07> {
-
                     struct pack {
                         std::string _namespace;
                         std::string id;
@@ -2688,7 +2665,6 @@ namespace copper_server {
                 };
 
                 struct chat_command_signed : public packet<0x07> {
-
                     struct argument_signature {
                         string_sized<16> argument_name;
                         std::array<uint8_t, 256> signature;
@@ -3075,7 +3051,6 @@ namespace copper_server {
                 };
 
                 struct seen_advancements : public packet<0x31> {
-
                     struct opened_tab : public enum_item<0> {
                         identifier tab_id;
                     };

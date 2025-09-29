@@ -8,6 +8,7 @@
  */
 #ifndef SRC_BASE_OBJECTS_SHARED_CLIENT_DATA
 #define SRC_BASE_OBJECTS_SHARED_CLIENT_DATA
+#include <array>
 #include <chrono>
 #include <list>
 #include <mutex>
@@ -100,17 +101,41 @@ namespace copper_server {
                 };
 
                 struct internal_data_t {
+                    struct signature_t {
+                        enbt::raw_uuid chat_session_id;
+                        uint64_t pub_key_expiries_timestamp;
+                        list_array<uint8_t> public_key;
+                        list_array<uint8_t> public_signature;
+                    };
+
+                    struct last_seen_message {
+                        std::array<uint8_t, 256> signature;
+                    };
+
+
                     std::unordered_map<std::string, int32_t> id_tracker;
                     std::unordered_map<std::string, unordered_track> unordered_id_tracker;
                     std::shared_ptr<void> extra_data; //here stored custom handler data, cleared after switching to other state
+                    std::unique_ptr<signature_t> signature;
+                    list_array<last_seen_message> last_seen_messages;
+
+                    void add_seen_signed_message(const std::array<uint8_t, 256>& val) {
+                        last_seen_messages.emplace_back(val);
+                        if (last_seen_messages.size() > 20)
+                            last_seen_messages.pop_front();
+                    }
                 };
 
                 fast_task::protected_value<internal_data_t> internal_data;
 
                 std::unordered_set<enbt::raw_uuid> active_resource_packs;
-                std::chrono::time_point<std::chrono::system_clock> pong_timer;
+                std::chrono::system_clock::time_point pong_timer;
+                std::chrono::system_clock::time_point last_batch_check = std::chrono::system_clock::time_point::min();
                 std::atomic_int32_t keep_alive_ping_ms = 0;
                 std::atomic_int32_t local_chat_counter = 0;
+                std::atomic_uint32_t await_ack_chunk_batches = 0;
+                int32_t chunk_batch_size = 25; //used only for world processing and thread unsafe. The writes should be synced
+                int32_t chunks_sent = 0;       //used only for world processing and thread unsafe. The writes should be synced
                 int32_t protocol_version = -1;
                 bool is_transferred = false;
                 bool is_fully_initialized = false;

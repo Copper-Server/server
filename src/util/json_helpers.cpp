@@ -129,4 +129,11 @@ namespace copper_server::util {
     std::string js_value::to_text() const {
         return boost::json::serialize(obj);
     }
+
+    std::string js_value::to_string() const {
+        if (obj.is_string())
+            return (std::string)obj.as_string();
+        else
+            return boost::json::serialize(obj);
+    }
 }

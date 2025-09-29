@@ -94,6 +94,7 @@ namespace copper_server::api::configuration {
         struct Protocol {
             int32_t compression_threshold = -1;
             uint32_t rate_limit = 0; //0 for unlimited, in bytes per second
+            uint32_t max_unacknowledged_chunk_batches = 10;
             bool handle_legacy = false;
             uint16_t new_client_buffer = 100;       //buffer for new connections, in bytes, used to prevent DoS attacks
             uint16_t buffer = 8192;                 //buffer for connections, in bytes
@@ -162,7 +163,11 @@ namespace copper_server::api::configuration {
 
         struct Mojang {
             static constexpr std::string_view session_server = "sessionserver.mojang.com";
+            static constexpr std::string_view services_server = "api.minecraftservices.com";
+            static constexpr std::string_view snoop_server = "snoop.minecraft.net";
             bool enforce_secure_profile = true; //enables signature signing for chat messages using mojang's service
+            bool enable_snoop_stats = false;    //should server send server stats
+            bool prevent_proxy_connections = false; //sends player ip to session server to verify ip
         } mojang;
 
         struct Status {
@@ -217,7 +222,10 @@ namespace copper_server::api::configuration {
             friend struct server_configuration;
 
         public:
+            struct get_value {};
+
             plugin_actions operator^(std::string_view name);
+            const enbt::value& operator^(get_value);
             plugin_actions& operator^=(const enbt::value& value);
             plugin_actions& operator|=(const enbt::value& value);
             operator const enbt::value&() const;
@@ -238,5 +246,7 @@ namespace copper_server::api::configuration {
 
     extern base_objects::events::event<void> updated;
 }
+
+static constexpr inline auto get_conf = copper_server::api::configuration::server_configuration::plugin_actions::get_value{};
 
 #endif /* SRC_API_CONFIGURATION */

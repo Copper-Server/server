@@ -46,7 +46,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         static void log_success(base_objects::SharedClientData& client) {
             extra_data_t::get(client).stage = 3;
             if (api::configuration::get().server.offline_mode)
-                client.data = api::mojang::get_session_server().hasJoined(client.name, "", false);
+                client.data = api::mojang::get_session_server().hasJoined(client.name, "", false, std::nullopt);
             if (!client.data)
                 client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 0").ToStr()}};
             else {
@@ -213,7 +213,8 @@ namespace copper_server::build_in_plugins::network::tcp {
                     client.data = api::mojang::get_session_server().hasJoined(
                         client.name,
                         serverId.hexdigest(),
-                        !api::configuration::get().server.offline_mode
+                        !api::configuration::get().server.offline_mode,
+                        api::configuration::get().mojang.prevent_proxy_connections ? std::optional<std::string>(client.ip) : std::nullopt
                     );
                     client.get_session()->start_symmetric_encryption(shs, shs);
                     switch_to_plugin_processing_stage(client);

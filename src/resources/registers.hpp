@@ -29,7 +29,7 @@ namespace copper_server::resources {
     void process_pack(const std::filesystem::path& folder_path_to_data_with_namespace, const std::string& namespace_, const std::string& id);
     void process_pack(boost::json::object& memory, const std::string& namespace_, const std::string& id);
 
-    list_array<base_objects::data_packs::known_pack> loaded_packs();
+    list_array<base_objects::data_packs::known_pack>& loaded_packs();
     //Accepts types:
     // advancement,
     // banner_pattern,

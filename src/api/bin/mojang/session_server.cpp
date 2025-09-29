@@ -7,13 +7,14 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <boost/json.hpp>
+#include <library/fast_task.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/mojang/session_server.hpp>
 #include <src/util/conversions.hpp>
 #include <src/util/mojang/api/http.hpp>
 
 namespace copper_server::api::mojang {
-    std::shared_ptr<session_server::player_data> session_server::hasJoined(const std::string& username, const std::string& serverId, bool online_mode, bool cache_result) {
+    std::shared_ptr<session_server::player_data> session_server::hasJoined(const std::string& username, const std::string& serverId, bool online_mode, std::optional<std::string> player_ip, bool cache_result) {
         auto cache_key = cache.find(username);
         if (cache_key != cache.end()) {
             if (!cache_key->second->online_data)
@@ -26,7 +27,7 @@ namespace copper_server::api::mojang {
         }
 
         if (online_mode) {
-            std::string response = util::mojang::api::http::get((std::string)copper_server::api::configuration::server_configuration::Mojang::session_server, "/session/minecraft/hasJoined?username=" + username + "&serverId=" + serverId);
+            std::string response = util::mojang::api::http::get((std::string)copper_server::api::configuration::server_configuration::Mojang::session_server, "/session/minecraft/hasJoined?username=" + username + "&serverId=" + serverId + (player_ip ? ("&ip=" + *player_ip) : ""));
             auto value = boost::json::parse(response).as_object();
             player_data data;
 
@@ -65,5 +66,37 @@ namespace copper_server::api::mojang {
     session_server& get_session_server() {
         static session_server res;
         return res;
+    }
+
+    void get_mojang_certificate_public_keys(std::function<void(const std::vector<std::string>&)>&& fn) {
+        struct data_t {
+            std::vector<std::string> keys;
+            std::chrono::system_clock::time_point point = std::chrono::system_clock::time_point::min();
+        };
+
+        static fast_task::protected_value<data_t> res;
+        bool need_update = false;
+        do {
+            if (need_update) {
+                res.set([](auto& data) {
+                    data.keys.clear();
+                    std::string response = util::mojang::api::http::get((std::string)copper_server::api::configuration::server_configuration::Mojang::services_server, "/publickeys");
+                    auto value = boost::json::parse(response).as_object();
+                    auto& arr = value.at("playerCertificateKeys").as_array();
+                    for (auto& it : arr)
+                        data.keys.push_back((std::string)it.at("publicKey").as_string());
+                    data.point = std::chrono::system_clock::now();
+                });
+                need_update = false;
+            }
+            need_update = res.get([&fn](auto& data) {
+                if (data.keys.empty())
+                    return true;
+                if (std::chrono::floor<std::chrono::days>(std::chrono::system_clock::now() - data.point).count())
+                    return true;
+                fn(data.keys);
+                return false;
+            });
+        } while (need_update);
     }
 }

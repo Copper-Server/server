@@ -551,7 +551,8 @@ namespace copper_server::api::tags {
                                     }));
                                 else
                                     resolved_items.push_back(unfold_tags_tag(tags, entry, item));
-                            }
+                            } else
+                                resolved_items.push_back(item);
                         }
                         de = tags_entry{std::move(resolved_items)};
                     }

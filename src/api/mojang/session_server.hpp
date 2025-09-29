@@ -13,6 +13,7 @@
 #include <library/enbt/enbt.hpp>
 #include <random>
 #include <string>
+#include <vector>
 
 namespace copper_server::api::mojang {
     class session_server {
@@ -35,10 +36,11 @@ namespace copper_server::api::mojang {
         std::unordered_map<std::string, std::shared_ptr<player_data>> cache;
         std::chrono::system_clock::duration cache_duration = std::chrono::minutes(20);
 
-        std::shared_ptr<player_data> hasJoined(const std::string& username, const std::string& serverId, bool online_mode, bool cache_result = true);
+        std::shared_ptr<player_data> hasJoined(const std::string& username, const std::string& serverId, bool online_mode, std::optional<std::string> player_ip, bool cache_result = true);
     };
 
     session_server& get_session_server();
+    void get_mojang_certificate_public_keys(std::function<void(const std::vector<std::string>&)>&&);
 }
 
 #endif /* SRC_API_MOJANG_SESSION_SERVER */

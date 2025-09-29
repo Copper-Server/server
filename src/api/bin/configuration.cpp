@@ -46,7 +46,7 @@ namespace copper_server::api::configuration {
     void merge_configs_world(server_configuration& cfg, js_object& data) {
         auto world = js_object::get_object(data["world"]);
         cfg.world.name = (std::string)world["name"].or_apply(cfg.world.name);
-        cfg.world.seed = world["seed"].or_apply(cfg.world.seed).to_text();
+        cfg.world.seed = world["seed"].or_apply(cfg.world.seed).to_string();
         cfg.world.type = (std::string)world["type"].or_apply(cfg.world.type);
         if (!cfg.world.type.contains(':'))
             cfg.world.type = "minecraft:" + cfg.world.type;
@@ -438,6 +438,10 @@ namespace copper_server::api::configuration {
         if (it.is_none())
             operator^=(enbt::compound());
         return it[std::string(name)];
+    }
+
+    auto server_configuration::plugin_actions::operator^(get_value) -> const enbt::value& {
+        return it;
     }
 
     auto server_configuration::plugin_actions::operator^=(const enbt::value& value) -> plugin_actions& {

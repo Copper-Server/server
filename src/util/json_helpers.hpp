@@ -426,6 +426,8 @@ namespace copper_server::util {
 
         std::string to_text() const;
 
+        std::string to_string() const;
+
         [[noreturn]] void parsing_error(std::string_view error_message) const {
             auto text = std::format("Parsing error at {} : {}", path, error_message);
             throw std::runtime_error(text);

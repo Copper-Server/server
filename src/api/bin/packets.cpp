@@ -402,20 +402,24 @@ namespace copper_server {
                         uint16_t block_count = 0;
                         base_objects::pallete_container_block blocks(base_objects::block::block_states_size());
                         base_objects::pallete_container_biome biomes(api::registers::biomes.size());
-                        blocks.reserve(16 * 16 * 16);
-                        biomes.reserve(4 * 4 * 4);
+                        blocks.reserve(4096);
+                        biomes.reserve(64);
+                        for (int i = 0; i < 4096; ++i) {
+                            // y = i >> 8; x = (i >> 4) & 15; z = i & 15;
+                            const auto& block = section_.blocks[(i >> 4) & 15][i >> 8][i & 15];
+                            block_count += !block.is_air();
+                            blocks.add(block.id);
+                        }
+                        //for (uint8_t x = 0; x < 16; x++)
+                        //    for (uint8_t y = 0; y < 16; y++)
+                        //        for (uint8_t z = 0; z < 16; z++) {
+                        //            auto block = section_.blocks[y][x][z];
 
-                        for (uint8_t x = 0; x < 16; x++)
-                            for (uint8_t y = 0; y < 16; y++)
-                                for (uint8_t z = 0; z < 16; z++) {
-                                    auto block = section_.blocks[y][x][z];
-                                    block_count += !block.is_air();
-                                    blocks.add(block.id);
-                                }
-                        for (uint8_t x = 0; x < 4; x++)
-                            for (uint8_t y = 0; y < 4; y++)
-                                for (uint8_t z = 0; z < 4; z++)
-                                    biomes.add(section_.biomes[y][z][x]);
+
+                        for (int i = 0; i < 64; ++i) {
+                            // y = i >> 4; z = (i >> 2) & 3; x = i & 3;
+                            biomes.add(section_.biomes[i >> 4][(i >> 2) & 3][i & 3]);
+                        }
                         result.sections.value.push_back(section{block_count, std::move(blocks), std::move(biomes)});
                     }
                     if (api::configuration::get().protocol.send_nbt_data_in_chunk) {
@@ -515,10 +519,10 @@ namespace copper_server {
                     light_update update;
                     update.x = (int32_t)chunk.chunk_x;
                     update.z = (int32_t)chunk.chunk_z;
-                    update.sky_light_mask = sky_light_mask.data();
-                    update.block_light_mask = block_light_mask.data();
-                    update.empty_sky_light_mask = empty_sky_light_mask.data();
-                    update.empty_block_light_mask = empty_block_light_mask.data();
+                    update.sky_light_mask = std::move(sky_light_mask.data());
+                    update.block_light_mask = std::move(block_light_mask.data());
+                    update.empty_sky_light_mask = std::move(empty_sky_light_mask.data());
+                    update.empty_block_light_mask = std::move(empty_block_light_mask.data());
                     update.sky_light = convert_light(std::move(sky_light));
                     update.block_light = convert_light(std::move(block_light));
                     return update;

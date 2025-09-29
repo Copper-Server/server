@@ -28,14 +28,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
     using bundle_item_selected = api::packets::server_bound::play::bundle_item_selected;
     using change_difficulty = api::packets::server_bound::play::change_difficulty;
     using change_gamemode = api::packets::server_bound::play::change_gamemode;
-    using chat_ack = api::packets::server_bound::play::chat_ack;
-    using chat_command = api::packets::server_bound::play::chat_command;
-    using chat_command_signed = api::packets::server_bound::play::chat_command_signed;
-    using chat = api::packets::server_bound::play::chat;
-    using chat_session_update = api::packets::server_bound::play::chat_session_update;
-    using chunk_batch_received = api::packets::server_bound::play::chunk_batch_received;
     using client_command = api::packets::server_bound::play::client_command;
-    using client_tick_end = api::packets::server_bound::play::client_tick_end;
     using client_information = api::packets::server_bound::play::client_information;
     using command_suggestion = api::packets::server_bound::play::command_suggestion;
     using configuration_acknowledged = api::packets::server_bound::play::configuration_acknowledged;
@@ -288,11 +281,6 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 //TODO
             });
 
-
-            register_packet_processor([]([[maybe_unused]] chunk_batch_received&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-
             register_packet_processor([](client_command&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 if (packet.action_id == client_command::action_id_e::perform_respawn) {
                     //TODO client << api::client::play::respawn{};
@@ -301,9 +289,6 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     //    .
                     //};
                 }
-            });
-
-            register_packet_processor([](client_tick_end&&, base_objects::SharedClientData& client) {
             });
 
             register_packet_processor([](client_information&& packet, base_objects::SharedClientData& client) {

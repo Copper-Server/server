@@ -22,10 +22,8 @@
 #include <src/util/json_helpers.hpp>
 
 namespace copper_server::resources {
-    list_array<base_objects::data_packs::known_pack> loaded_packs_;
-    int32_t latest_protocol_version = -1;
-
-    list_array<base_objects::data_packs::known_pack> loaded_packs() {
+    list_array<base_objects::data_packs::known_pack>& loaded_packs() {
+        static list_array<base_objects::data_packs::known_pack> loaded_packs_;
         return loaded_packs_;
     }
 
@@ -1860,7 +1858,6 @@ namespace copper_server::resources {
     }
 
     void prepare_versions() {
-
         auto res = util::conversions::json::from_json(boost::json::parse(resources::registry::protocol));
         for (auto& it : res.as_compound()) {
             auto entries = it.second.at("entries").as_compound();
@@ -2026,13 +2023,13 @@ namespace copper_server::resources {
                                 for (auto&& [in_pack_name, in_pack_decl] : in_pack_data)
                                     process_pack(in_pack_decl, in_pack_name, pack_id, false, send_via_network_body);
                             } else
-                                loaded_packs_.push_back({.namespace_ = "minecraft", .id = pack_id, .version = "1.21.8"});
+                                loaded_packs().push_back({.namespace_ = "minecraft", .id = pack_id, .version = "1.21.8"});
                         }
                     }
                 }
             }
         }
-        loaded_packs_.push_back({.namespace_ = namespace_, .id = id, .version = "1.21.8"});
+        loaded_packs().push_back({.namespace_ = namespace_, .id = id, .version = "1.21.8"});
     }
 
     void process_pack(boost::json::object& parsed, const std::string& namespace_, const std::string& id) {
