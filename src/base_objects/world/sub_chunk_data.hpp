@@ -32,6 +32,7 @@ namespace copper_server::base_objects {
 
             base_objects::world::light_data sky_light;
             base_objects::world::light_data block_light;
+            uint16_t active_blocks = 0; //if zero, the sub chunk is not rendered for clients
             bool has_tickable_blocks = false;
             bool need_to_recalculate_light = false;
             bool sky_lighted = false;   //set true if at least one block is lighted in this sub_chunk
@@ -44,6 +45,8 @@ namespace copper_server::base_objects {
             void get_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, std::function<void(base_objects::block& block)> on_normal, std::function<void(base_objects::block& block, enbt::value& entity_data)> on_entity);
             void set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::full_block_data& block);
             void set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::full_block_data&& block);
+            void set_block_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::full_block_data& block);
+            void set_block_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::full_block_data&& block);
             int32_t get_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z);
             void set_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z, int32_t id);
             void for_each_block(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block& block)> func);

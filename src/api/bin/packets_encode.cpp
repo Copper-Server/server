@@ -180,8 +180,8 @@ namespace copper_server::api::packets {
             || std::is_same_v<T, server_bound::play_packet>
             || std::is_arithmetic_v<T>
         ) {
-        } else if constexpr (std::is_base_of_v<base_objects::pallete_container, T>) {
-        } else if constexpr (std::is_same_v<base_objects::pallete_data_height_map, T>) {
+        } else if constexpr (std::is_base_of_v<base_objects::palette_container, T>) {
+        } else if constexpr (std::is_same_v<base_objects::palette_data_height_map, T>) {
         } else if constexpr (is_template_base_of<ignored, T>) {
         } else if constexpr (is_template_base_of<enum_as, T> || is_template_base_of<enum_as_flag, T>) {
         } else if constexpr (is_template_base_of<any_of, T>) {
@@ -275,26 +275,26 @@ namespace copper_server::api::packets {
             || std::is_same_v<enbt::simple_array_ui64, Type>
         )
             res.write_direct(util::NBT::build((const enbt::value&)value).get_as_network());
-        else if constexpr (std::is_base_of_v<base_objects::pallete_container, Type>) {
+        else if constexpr (std::is_base_of_v<base_objects::palette_container, Type>) {
             std::visit(
                 [&]<class IT>(IT&& it) {
-                    if constexpr (std::is_same_v<base_objects::pallete_container_indirect, IT>) {
+                    if constexpr (std::is_same_v<base_objects::palette_container_indirect, IT>) {
                         res.write_value(it.bits_per_entry);
                         res.write_var32_check(it.palette.size());
                         for (auto& i : it.palette)
                             res.write_var32(i);
                         res.write_direct(it.data.get());
-                    } else if constexpr (std::is_same_v<base_objects::pallete_container_single, IT>) {
+                    } else if constexpr (std::is_same_v<base_objects::palette_container_single, IT>) {
                         res.write_value((uint8_t)0);
                         res.write_var32(it.id_of_palette);
-                    } else if constexpr (std::is_same_v<base_objects::pallete_data, IT>) {
+                    } else if constexpr (std::is_same_v<base_objects::palette_data, IT>) {
                         res.write_value((uint8_t)it.bits_per_entry);
                         res.write_direct(it.get());
                     }
                 },
                 value.compile()
             );
-        } else if constexpr (std::is_same_v<base_objects::pallete_data_height_map, Type>) {
+        } else if constexpr (std::is_same_v<base_objects::palette_data_height_map, Type>) {
             res.write_array(value.get());
         } else if constexpr (is_template_base_of<list_array_depend, Type>) {
             size_t siz = value.size();
@@ -585,8 +585,8 @@ namespace copper_server::api::packets {
             || std::is_same_v<T, server_bound::play_packet>
             || std::is_arithmetic_v<T>
         ) {
-        } else if constexpr (std::is_base_of_v<base_objects::pallete_container, T>) {
-        } else if constexpr (std::is_same_v<base_objects::pallete_data_height_map, T>) {
+        } else if constexpr (std::is_base_of_v<base_objects::palette_container, T>) {
+        } else if constexpr (std::is_same_v<base_objects::palette_data_height_map, T>) {
         } else if constexpr (is_template_base_of<ignored, T>) {
         } else if constexpr (is_template_base_of<enum_as, T> || is_template_base_of<enum_as_flag, T>) {
         } else if constexpr (is_template_base_of<any_of, T>) {

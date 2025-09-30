@@ -70,6 +70,8 @@ namespace copper_server::storage {
 
         void update_height_map_on(uint8_t local_x, uint64_t local_y, uint8_t local_z);
         void update_height_map();
+        void calculate_active();
+        void update_metadata(); //update_height_map + calculate_active (called automatically)
 
         void for_each_block_entity(const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
         void for_each_block_entity(uint64_t local_y, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
@@ -94,6 +96,11 @@ namespace copper_server::storage {
         void tick_entity(chunk_tick_result& rr, world_data& world, std::mt19937& random_engine);
         void tick_block_entity(chunk_tick_result& rr, world_data& world);
         void tick_game_event(chunk_tick_result& rr, world_data& world);
+
+        //affects active_blocks, thread unsafe
+        void set_block(const base_objects::full_block_data& block, uint8_t local_x, uint64_t local_y, uint8_t local_z);
+        //affects active_blocks, thread unsafe
+        void set_block(base_objects::full_block_data&& block, uint8_t local_x, uint64_t local_y, uint8_t local_z);
 
 
         //generator functions
@@ -172,6 +179,8 @@ namespace copper_server::storage {
         //this function also should increment generator_stage for chunk or set to 0xFF when processing is complete
         //to access information from other chunk, the generator must use request_chunk_data_weak_* or request_chunk_data_weak
         //if chunk is not fully generated, it would not be accessible other way
+        //
+        //the after completing generation, the generator should set the generator_stage to 0xFF
         virtual void process_chunk([[maybe_unused]] world_data& world, chunk_data& chunk, [[maybe_unused]] uint8_t preset_stage) {
             chunk.generator_stage = 0xFF;
         };

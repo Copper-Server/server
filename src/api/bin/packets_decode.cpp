@@ -241,26 +241,26 @@ namespace copper_server::api::packets {
             || std::is_same_v<enbt::simple_array_ui64, Type>
         )
             value = ReadNetworkNBT_enbt(stream);
-        else if constexpr (std::is_base_of_v<base_objects::pallete_container, Type>) {
+        else if constexpr (std::is_base_of_v<base_objects::palette_container, Type>) {
             auto bits_per_entry = stream.read_value<uint8_t>();
             static constexpr auto max_indirect
-                = std::is_same_v<base_objects::pallete_container_biome, Type>
-                      ? base_objects::pallete_container::max_indirect_biomes
-                      : base_objects::pallete_container::max_indirect_blocks;
+                = std::is_same_v<base_objects::palette_container_biome, Type>
+                      ? base_objects::palette_container::max_indirect_biomes
+                      : base_objects::palette_container::max_indirect_blocks;
             static constexpr auto entries_count
-                = std::is_same_v<base_objects::pallete_container_biome, Type>
+                = std::is_same_v<base_objects::palette_container_biome, Type>
                       ? 64
                       : 4096;
             if (bits_per_entry == 0) {
-                base_objects::pallete_container_single res;
+                base_objects::palette_container_single res;
                 stream.read_value<uint8_t>(); //always zero
                 res.id_of_palette = stream.read_var<int32_t>();
                 value.decompile(std::move(res));
             } else if (bits_per_entry <= max_indirect) {
-                base_objects::pallete_container_indirect res(bits_per_entry);
-                uint32_t pallete = stream.read_var<uint32_t>();
-                res.palette.reserve(pallete);
-                for (uint32_t i = 0; i < pallete; i++)
+                base_objects::palette_container_indirect res(bits_per_entry);
+                uint32_t palette = stream.read_var<uint32_t>();
+                res.palette.reserve(palette);
+                for (uint32_t i = 0; i < palette; i++)
                     res.palette.push_back(stream.read_var<uint32_t>());
                 auto size = bits_per_entry * entries_count;
                 size += size % 8;
@@ -269,15 +269,15 @@ namespace copper_server::api::packets {
                 res.data.data.data() = list_array<uint8_t>(range.data_read(), range.size_read());
                 value.decompile(std::move(res));
             } else {
-                base_objects::pallete_data res(bits_per_entry);
+                base_objects::palette_data res(bits_per_entry);
                 auto size = bits_per_entry * entries_count;
                 size += size % 8;
                 auto range = stream.range_read(size);
                 res.data.data() = list_array<uint8_t>(range.data_read(), range.size_read());
                 value.decompile(std::move(res));
             }
-        } else if constexpr (std::is_same_v<base_objects::pallete_data_height_map, Type>) {
-            value.bits_per_entry = base_objects::pallete_data::bits_for_max(get_size_source_value(context, size_source::get_world_blocks_height));
+        } else if constexpr (std::is_same_v<base_objects::palette_data_height_map, Type>) {
+            value.bits_per_entry = base_objects::palette_data::bits_for_max(get_size_source_value(context, size_source::get_world_blocks_height));
             auto size = value.bits_per_entry * 256;
             size += size % 8;
             value.data.data() = stream.read_array<uint64_t>(int32_t(size / 8));

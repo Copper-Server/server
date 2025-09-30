@@ -31,6 +31,50 @@ namespace copper_server::base_objects::world {
     }
 
     void sub_chunk_data::set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::full_block_data& block) {
+        bool prev_active = !blocks[local_x][local_y][local_z].is_air();
+        std::visit(
+            [&](auto& block) {
+                using T = std::decay_t<decltype(block)>;
+                if constexpr (std::is_same_v<T, base_objects::block>) {
+                    blocks[local_x][local_y][local_z] = block;
+                    block_entities.erase(local_z | (local_y << 4) | (local_x << 8));
+                } else {
+                    blocks[local_x][local_y][local_z] = block.block;
+                    get_block_entity_data(local_x, local_y, local_z) = block.data;
+                }
+            },
+            block
+        );
+        bool now_active = !blocks[local_x][local_y][local_z].is_air();
+        if (prev_active && !now_active)
+            --active_blocks;
+        else if (!prev_active && now_active)
+            ++active_blocks;
+    }
+
+    void sub_chunk_data::set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::full_block_data&& block) {
+        bool prev_active = !blocks[local_x][local_y][local_z].is_air();
+        std::visit(
+            [&](auto& block) {
+                using T = std::decay_t<decltype(block)>;
+                if constexpr (std::is_same_v<T, base_objects::block>) {
+                    blocks[local_x][local_y][local_z] = block;
+                    block_entities.erase(local_z | (local_y << 4) | (local_x << 8));
+                } else {
+                    blocks[local_x][local_y][local_z] = block.block;
+                    get_block_entity_data(local_x, local_y, local_z) = std::move(block.data);
+                }
+            },
+            block
+        );
+        bool now_active = !blocks[local_x][local_y][local_z].is_air();
+        if (prev_active && !now_active)
+            --active_blocks;
+        else if (!prev_active && now_active)
+            ++active_blocks;
+    }
+
+    void sub_chunk_data::set_block_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::full_block_data& block) {
         std::visit(
             [&](auto& block) {
                 using T = std::decay_t<decltype(block)>;
@@ -46,7 +90,7 @@ namespace copper_server::base_objects::world {
         );
     }
 
-    void sub_chunk_data::set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::full_block_data&& block) {
+    void sub_chunk_data::set_block_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::full_block_data&& block) {
         std::visit(
             [&](auto& block) {
                 using T = std::decay_t<decltype(block)>;

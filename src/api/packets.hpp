@@ -15,7 +15,7 @@
 #include <src/base_objects/events/sync_event.hpp>
 #include <src/base_objects/network/response.hpp>
 #include <src/base_objects/packets_help.hpp>
-#include <src/base_objects/pallete_container.hpp>
+#include <src/base_objects/palette_container.hpp>
 #include <src/base_objects/parsers.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/slot.hpp>
@@ -701,7 +701,7 @@ namespace copper_server {
                 struct chunks_biomes : public packet<0x0D> {
                     int32_t z;
                     int32_t x;
-                    sized_entry<list_array_no_size<base_objects::pallete_container_biome, size_source::get_world_chunks_height>, var_int32> sections_of_biomes;
+                    sized_entry<list_array_no_size<base_objects::palette_container_biome, size_source::get_world_chunks_height>, var_int32> sections_of_biomes;
 
                     static chunks_biomes create(const storage::chunk_data&);
                 };
@@ -1131,13 +1131,13 @@ namespace copper_server {
                         };
                         using enum type_e;
                         enum_as<type_e, var_int32> type;
-                        base_objects::pallete_data_height_map pallete_data;
+                        base_objects::palette_data_height_map palette_data;
                     };
 
                     struct section {
                         uint16_t block_count;
-                        base_objects::pallete_container_block block_states;
-                        base_objects::pallete_container_biome biomes;
+                        base_objects::palette_container_block block_states;
+                        base_objects::palette_container_biome biomes;
                     };
 
                     struct block_entity {
@@ -1361,7 +1361,7 @@ namespace copper_server {
                         uint8_t rows;
                         uint8_t x;
                         uint8_t z;
-                        list_array_no_size<uint8_t, &color_patch::columns, &color_patch::rows> data; //255 color pallete
+                        list_array_no_size<uint8_t, &color_patch::columns, &color_patch::rows> data; //255 color palette
                     };
 
                     var_int32 map_id;

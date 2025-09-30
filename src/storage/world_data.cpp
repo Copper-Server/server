@@ -629,6 +629,21 @@ namespace copper_server::storage {
         }
     }
 
+    void chunk_data::calculate_active() {
+        for (auto& schunk : sub_chunks) {
+            schunk.active_blocks = 0;
+            for (uint8_t x = 0; x < 16; x++)
+                for (int8_t y = 0; y < 16; y++)
+                    for (uint8_t z = 0; z < 16; z++)
+                        schunk.active_blocks += !schunk.blocks[x][y][z].is_air();
+        }
+    }
+
+    void chunk_data::update_metadata() {
+        update_height_map();
+        calculate_active();
+    }
+
     void chunk_data::for_each_block_entity(const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func) {
         for (auto& sub_chunk : sub_chunks)
             for (auto& [_pos, data] : sub_chunk.block_entities) {
@@ -868,17 +883,27 @@ namespace copper_server::storage {
             return;
     }
 
-    //generator functions
-    void chunk_data::gen_set_block(const base_objects::full_block_data& block, uint8_t local_x, uint64_t local_y, uint8_t local_z) {
+    //affects active_blocks
+    void chunk_data::set_block(const base_objects::full_block_data& block, uint8_t local_x, uint64_t local_y, uint8_t local_z) {
         sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, block);
     }
 
-    void chunk_data::gen_set_block(base_objects::full_block_data&& block, uint8_t local_x, uint64_t local_y, uint8_t local_z) {
+    //affects active_blocks
+    void chunk_data::set_block(base_objects::full_block_data&& block, uint8_t local_x, uint64_t local_y, uint8_t local_z) {
         sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, std::move(block));
     }
 
+    //generator functions
+    void chunk_data::gen_set_block(const base_objects::full_block_data& block, uint8_t local_x, uint64_t local_y, uint8_t local_z) {
+        sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, block);
+    }
+
+    void chunk_data::gen_set_block(base_objects::full_block_data&& block, uint8_t local_x, uint64_t local_y, uint8_t local_z) {
+        sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, std::move(block));
+    }
+
     void chunk_data::gen_remove_block(uint8_t local_x, uint64_t local_y, uint8_t local_z) {
-        sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, base_objects::block());
+        sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, base_objects::block());
     }
 
     base_objects::full_block_data_ref chunk_data::gen_get_block(uint8_t local_x, uint64_t local_y, uint8_t local_z) {
@@ -1010,6 +1035,7 @@ namespace copper_server::storage {
                 --generator.count;
                 if (profiling.enable_world_profiling)
                     --profiling.chunk_generator_counter;
+                chunk->update_metadata();
                 return chunk;
             }
         );
@@ -1050,7 +1076,7 @@ namespace copper_server::storage {
                         done_process = true;
                     }
                 }
-                chunk->update_height_map();
+                chunk->update_metadata();
             }
             return chunk;
         } catch (...) {

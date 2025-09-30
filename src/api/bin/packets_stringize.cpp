@@ -204,10 +204,10 @@ namespace copper_server::api::packets {
                 res += list_array<char>(senbt::serialize(value, false, true))
                            .replace('\n', alignment.data(), alignment.size())
                            .to_container<std::string>();
-            } else if constexpr (std::is_base_of_v<base_objects::pallete_container, Type>) {
-                res += "pallete_data";
-            } else if constexpr (std::is_same_v<base_objects::pallete_data_height_map, Type>) {
-                res += "pallete_data";
+            } else if constexpr (std::is_base_of_v<base_objects::palette_container, Type>) {
+                res += "palette_data";
+            } else if constexpr (std::is_same_v<base_objects::palette_data_height_map, Type>) {
+                res += "palette_data";
             } else if constexpr (is_template_base_of<_list_array_impl::list_array, Type> || is_std_array<Type>) {
                 serialize_array(res, spacing, value);
             } else if constexpr (is_template_base_of<ignored, Type>) {

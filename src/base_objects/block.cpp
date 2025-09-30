@@ -130,157 +130,157 @@ namespace copper_server::base_objects {
             cached_is_air.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_is_air.set(i, it->is_air);
+                cached_is_air.set(i++, it->is_air);
         }
         {
             cached_is_solid.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_is_solid.set(i, it->is_solid);
+                cached_is_solid.set(i++, it->is_solid);
         }
         {
             cached_is_liquid.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_is_liquid.set(i, it->is_liquid);
+                cached_is_liquid.set(i++, it->is_liquid);
         }
         {
             cached_is_burnable.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_is_burnable.set(i, it->is_burnable);
+                cached_is_burnable.set(i++, it->is_burnable);
         }
         {
             cached_is_emits_redstone.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_is_emits_redstone.set(i, it->is_emits_redstone);
+                cached_is_emits_redstone.set(i++, it->is_emits_redstone);
         }
         {
             cached_is_full_cube.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_is_full_cube.set(i, it->is_full_cube);
+                cached_is_full_cube.set(i++, it->is_full_cube);
         }
         {
             cached_is_tool_required.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_is_tool_required.set(i, it->is_tool_required);
+                cached_is_tool_required.set(i++, it->is_tool_required);
         }
         {
             cached_is_replaceable.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_is_replaceable.set(i, it->is_replaceable);
+                cached_is_replaceable.set(i++, it->is_replaceable);
         }
         {
             cached_is_block_entity.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_is_block_entity.set(i, it->is_block_entity);
+                cached_is_block_entity.set(i++, it->is_block_entity);
         }
         {
             cached_is_default_state.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_is_default_state.set(i, it->is_default_state);
+                cached_is_default_state.set(i++, it->is_default_state);
         }
         {
             cached_has_random_ticks.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_has_random_ticks.set(i, it->has_random_ticks);
+                cached_has_random_ticks.set(i++, it->has_random_ticks);
         }
         {
             cached_has_comparator_output.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_has_comparator_output.set(i, it->has_comparator_output);
+                cached_has_comparator_output.set(i++, it->has_comparator_output);
         }
         {
             cached_transparent_sides.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_transparent_sides[i] = it->transparent_sides;
+                cached_transparent_sides[i++] = it->transparent_sides;
         }
         {
             cached_slipperiness.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_slipperiness[i] = it->slipperiness;
+                cached_slipperiness[i++] = it->slipperiness;
         }
         {
             cached_velocity_multiplier.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_velocity_multiplier[i] = it->velocity_multiplier;
+                cached_velocity_multiplier[i++] = it->velocity_multiplier;
         }
         {
             cached_jump_velocity_multiplier.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_jump_velocity_multiplier[i] = it->jump_velocity_multiplier;
+                cached_jump_velocity_multiplier[i++] = it->jump_velocity_multiplier;
         }
         {
             cached_hardness.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_hardness[i] = it->hardness;
+                cached_hardness[i++] = it->hardness;
         }
         {
             cached_blast_resistance.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_blast_resistance[i] = it->blast_resistance;
+                cached_blast_resistance[i++] = it->blast_resistance;
         }
         {
             cached_map_color_rgb.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_map_color_rgb[i] = it->map_color_rgb;
+                cached_map_color_rgb[i++] = it->map_color_rgb;
         }
         {
             cached_block_entity_id.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_block_entity_id[i] = it->block_entity_id;
+                cached_block_entity_id[i++] = it->block_entity_id;
         }
         {
             cached_default_drop_item_id.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_default_drop_item_id[i] = it->default_drop_item_id;
+                cached_default_drop_item_id[i++] = it->default_drop_item_id;
         }
         {
             cached_experience.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_experience[i] = it->experience;
+                cached_experience[i++] = it->experience;
         }
         {
             cached_general_block_id.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_general_block_id[i] = it->general_block_id;
+                cached_general_block_id[i++] = it->general_block_id;
         }
         {
             cached_default_state.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_default_state[i] = it->default_state;
+                cached_default_state[i++] = it->default_state;
         }
         {
             cached_luminance.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_luminance[i] = it->luminance;
+                cached_luminance[i++] = it->luminance;
         }
         {
             cached_opacity.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_opacity[i] = it->opacity;
+                cached_opacity[i++] = it->opacity;
         }
     }
 

@@ -366,7 +366,7 @@ namespace copper_server {
                     result.x = (int32_t)chunk.chunk_x;
                     result.z = (int32_t)chunk.chunk_z;
                     for (auto& section : chunk.sub_chunks) {
-                        base_objects::pallete_container_biome biomes(api::registers::biomes.size());
+                        base_objects::palette_container_biome biomes(api::registers::biomes.size());
                         for (auto& x : section.biomes)
                             for (auto& y : x)
                                 for (auto& z : y)
@@ -379,14 +379,14 @@ namespace copper_server {
                 level_chunk_with_light level_chunk_with_light::create(const storage::chunk_data& chunk, const storage::world_data& world) {
                     level_chunk_with_light result;
                     static auto build_height_map = [](uint8_t type, const uint64_t (&hei_map)[16][16], size_t world_height) {
-                        base_objects::pallete_data_height_map data(base_objects::pallete_data::bits_for_max(world_height));
+                        base_objects::palette_data_height_map data(base_objects::palette_data::bits_for_max(world_height));
                         for (uint_fast8_t x = 0; x < 16; x++)
                             for (uint_fast8_t z = 0; z < 16; z++)
                                 data.add(hei_map[x][z]);
                         data.add(0); //TODO check if bug fixed MC-247438, currently at 1.21.8 still not fixed
                         return height_map{
                             .type = height_map::type_e(type),
-                            .pallete_data = std::move(data)
+                            .palette_data = std::move(data)
                         };
                     };
                     size_t world_height = chunk.sub_chunks.size() * 16;
@@ -400,28 +400,17 @@ namespace copper_server {
 
                     result.sections.value.reserve(chunk.sub_chunks.size());
                     for (auto& section_ : chunk.sub_chunks) {
-                        uint16_t block_count = 0;
-                        base_objects::pallete_container_block blocks(base_objects::block::block_states_size());
-                        base_objects::pallete_container_biome biomes(api::registers::biomes.size());
+                        base_objects::palette_container_block blocks(base_objects::block::block_states_size());
+                        base_objects::palette_container_biome biomes(api::registers::biomes.size());
                         blocks.reserve(4096);
                         biomes.reserve(64);
-                        for (int i = 0; i < 4096; ++i) {
-                            // y = i >> 8; x = (i >> 4) & 15; z = i & 15;
-                            const auto& block = section_.blocks[(i >> 4) & 15][i >> 8][i & 15];
-                            block_count += !block.is_air();
-                            blocks.add(block.id);
-                        }
-                        //for (uint8_t x = 0; x < 16; x++)
-                        //    for (uint8_t y = 0; y < 16; y++)
-                        //        for (uint8_t z = 0; z < 16; z++) {
-                        //            auto block = section_.blocks[y][x][z];
+                        for (int i = 0; i < 4096; ++i) // y = i >> 8; x = (i >> 4) & 15; z = i & 15;
+                            blocks.add(section_.blocks[(i >> 4) & 15][i >> 8][i & 15].id);
 
+                        for (int i = 0; i < 64; ++i) // y = i >> 4; z = (i >> 2) & 3; x = i & 3;
+                            biomes.add(section_.biomes[i & 3][(i >> 2) & 3][i >> 4]);
 
-                        for (int i = 0; i < 64; ++i) {
-                            // y = i >> 4; z = (i >> 2) & 3; x = i & 3;
-                            biomes.add(section_.biomes[i >> 4][(i >> 2) & 3][i & 3]);
-                        }
-                        result.sections.value.push_back(section{block_count, std::move(blocks), std::move(biomes)});
+                        result.sections.value.push_back(section{section_.active_blocks, std::move(blocks), std::move(biomes)});
                     }
                     if (api::configuration::get().protocol.send_nbt_data_in_chunk) {
                         auto sub_chunk = world.get_world_y_chunk_offset();
