@@ -1577,9 +1577,9 @@ namespace copper_server::resources {
         enbt::io_helper::value_read_stream read_stream(filter);
 
 
-        base_objects::block::access_full_block_data(std::function([&read_stream](list_array<std::shared_ptr<base_objects::static_block_data>>& full_block_data_, std::unordered_map<std::string, std::shared_ptr<base_objects::static_block_data>>& named_full_block_data) {
+        base_objects::block::access_full_block_data(std::function([&read_stream](list_array<std::unique_ptr<base_objects::static_block_data>>& full_block_data_, std::unordered_map<std::string, base_objects::static_block_data*>& named_full_block_data) {
             //block
-            std::shared_ptr<base_objects::static_block_data> default_state_data = std::make_shared<base_objects::static_block_data>();
+            std::unique_ptr<base_objects::static_block_data> default_state_data = std::make_unique<base_objects::static_block_data>();
             list_array<base_objects::block_id_t> init_states;
             std::shared_ptr<base_objects::static_block_data::map_of_states> associated_states = std::make_shared<base_objects::static_block_data::map_of_states>();
             base_objects::block_id_t default_state = 0;
@@ -1587,7 +1587,8 @@ namespace copper_server::resources {
             //block
 
             //states
-            std::shared_ptr<base_objects::static_block_data> block_data = std::make_shared<base_objects::static_block_data>();
+            std::unique_ptr<base_objects::static_block_data> block_data_value = std::make_unique<base_objects::static_block_data>();
+            base_objects::static_block_data* block_data = block_data_value.get();
             base_objects::block_id_t block_data_id = 0;
             //states
 
@@ -1606,7 +1607,7 @@ namespace copper_server::resources {
                     auto& ref = full_block_data_.at(id);
                     if (ref)
                         throw std::runtime_error("Duplicate block id: " + std::to_string(id));
-                    ref = block_data;
+                    ref = std::move(block_data_value);
                     if (!has_default_state) {
                         default_state = id;
                         has_default_state = true;
@@ -1788,7 +1789,8 @@ namespace copper_server::resources {
                     };
                 })
                 .collect_iterate("states", [&](auto& item) {
-                    block_data = std::make_shared<base_objects::static_block_data>();
+                    block_data_value = std::make_unique<base_objects::static_block_data>();
+                    block_data = block_data_value.get();
                     block_data_id = 0;
                     block_data->opacity = 255;
                     state_collector.make_collect(item);
@@ -1800,7 +1802,7 @@ namespace copper_server::resources {
 
 
             read_stream.iterate([&](enbt::io_helper::value_read_stream& decl) {
-                default_state_data = std::make_shared<base_objects::static_block_data>();
+                default_state_data = std::make_unique<base_objects::static_block_data>();
                 init_states.clear();
                 associated_states = std::make_shared<base_objects::static_block_data::map_of_states>();
                 default_state = 0;
@@ -1829,7 +1831,7 @@ namespace copper_server::resources {
                     block_data->flammable = default_state_data->flammable;
                     block_data->ore_data = default_state_data->ore_data;
                 }
-                named_full_block_data[(std::string)default_state_data->name] = full_block_data_.at(default_state);
+                named_full_block_data[(std::string)default_state_data->name] = full_block_data_.at(default_state).get();
             });
 
             for (auto it = full_block_data_.begin(); it != full_block_data_.end(); ++it) {
@@ -1838,6 +1840,8 @@ namespace copper_server::resources {
             }
             full_block_data_.commit();
         }));
+
+        base_objects::block::initialize();
     }
 
     void load_items() {

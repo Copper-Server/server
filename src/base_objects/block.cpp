@@ -18,10 +18,37 @@ namespace copper_server::base_objects {
         boost::bimaps::unordered_set_of<std::string, std::hash<std::string>>>
         static_block_data::assigned_property_name;
 
-    std::unordered_map<std::string, std::shared_ptr<static_block_data>> block::named_full_block_data;
-    list_array<std::shared_ptr<static_block_data>> block::full_block_data_;
-    list_array<std::shared_ptr<static_block_data>> block::general_block_data_;
-    list_array<std::shared_ptr<static_block_data>> block::block_entity_data_;
+    std::unordered_map<std::string, static_block_data*> block::named_full_block_data;
+    list_array<std::unique_ptr<static_block_data>> block::full_block_data_;
+    list_array<static_block_data*> block::general_block_data_;
+    list_array<static_block_data*> block::block_entity_data_;
+
+    bit_list_array<> block::cached_is_air;
+    bit_list_array<> block::cached_is_solid;
+    bit_list_array<> block::cached_is_liquid;
+    bit_list_array<> block::cached_is_burnable;
+    bit_list_array<> block::cached_is_emits_redstone;
+    bit_list_array<> block::cached_is_full_cube;
+    bit_list_array<> block::cached_is_tool_required;
+    bit_list_array<> block::cached_is_replaceable;
+    bit_list_array<> block::cached_is_block_entity;
+    bit_list_array<> block::cached_is_default_state;
+    bit_list_array<> block::cached_has_random_ticks;
+    bit_list_array<> block::cached_has_comparator_output;
+    list_array<static_block_data::transparent_sides_t> block::cached_transparent_sides;
+    list_array<float> block::cached_slipperiness;
+    list_array<float> block::cached_velocity_multiplier;
+    list_array<float> block::cached_jump_velocity_multiplier;
+    list_array<float> block::cached_hardness;
+    list_array<float> block::cached_blast_resistance;
+    list_array<int32_t> block::cached_map_color_rgb;
+    list_array<int32_t> block::cached_block_entity_id;
+    list_array<int32_t> block::cached_default_drop_item_id;
+    list_array<int32_t> block::cached_experience;
+    list_array<block_id_t> block::cached_general_block_id;
+    list_array<block_id_t> block::cached_default_state;
+    list_array<uint8_t> block::cached_luminance;
+    list_array<uint8_t> block::cached_opacity;
 
     void block::tick(storage::world_data& world, base_objects::world::sub_chunk_data& sub_chunk, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked) {
     retry:
@@ -73,159 +100,188 @@ namespace copper_server::base_objects {
         }
     }
 
-    bool block::is_solid() const {
-        return getStaticData().is_solid;
-    }
-
-    const std::vector<shape_data*>& block::collision_shapes() const {
-        return getStaticData().collision_shapes;
-    }
-
-    const Chat& block::display_name() const {
-        return getStaticData().display_name;
-    }
-
-    const std::string& block::instrument() const {
-        return getStaticData().instrument;
-    }
-
-    const std::string& block::piston_behavior() const {
-        return getStaticData().piston_behavior;
-    }
-
-    const std::string& block::name() const {
-        return getStaticData().name;
-    }
-
-    const std::string& block::translation_key() const {
-        return getStaticData().translation_key;
-    }
-
-    block_id_t block::general_block_id() const {
-        return getStaticData().general_block_id;
-    }
-
-    float block::slipperiness() const {
-        return getStaticData().slipperiness;
-    }
-
-    float block::velocity_multiplier() const {
-        return getStaticData().velocity_multiplier;
-    }
-
-    float block::jump_velocity_multiplier() const {
-        return getStaticData().jump_velocity_multiplier;
-    }
-
-    float block::hardness() const {
-        return getStaticData().hardness;
-    }
-
-    float block::blast_resistance() const {
-        return getStaticData().blast_resistance;
-    }
-
-    int32_t block::map_color_rgb() const {
-        return getStaticData().map_color_rgb;
-    }
-
-    int32_t block::block_entity_id() const {
-        return getStaticData().block_entity_id;
-    }
-
-    int32_t block::default_drop_item_id() const {
-        return getStaticData().default_drop_item_id;
-    }
-
-    int32_t block::experience() const {
-        return getStaticData().experience;
-    }
-
-    block_id_t block::default_state() const {
-        return getStaticData().default_state;
-    }
-
-    uint8_t block::luminance() const {
-        return getStaticData().luminance;
-    }
-
-    uint8_t block::opacity() const {
-        return getStaticData().opacity;
-    }
-
-    bool block::is_air() const {
-        return getStaticData().is_air;
-    }
-
-    bool block::is_liquid() const {
-        return getStaticData().is_liquid;
-    }
-
-    bool block::is_burnable() const {
-        return getStaticData().is_burnable;
-    }
-
-    bool block::is_emits_redstone() const {
-        return getStaticData().is_emits_redstone;
-    }
-
-    bool block::is_full_cube() const {
-        return getStaticData().is_full_cube;
-    }
-
-    bool block::is_tool_required() const {
-        return getStaticData().is_tool_required;
-    }
-
-    bool block::is_sided_transparency() const {
-        auto sides = getStaticData().transparent_sides;
-        return sides.down_side_solid
-               && sides.up_side_solid
-               && sides.north_side_solid
-               && sides.south_side_solid
-               && sides.west_side_solid
-               && sides.east_side_solid
-               && sides.down_center_solid
-               && sides.up_center_solid;
-    }
-
-    bool block::is_replaceable() const {
-        return getStaticData().is_replaceable;
-    }
-
-    bool block::is_block_entity() const {
-        return getStaticData().is_block_entity;
-    }
-
     void block::initialize() {
         {
-            list_array<std::shared_ptr<static_block_data>> data;
+            list_array<static_block_data*> data;
             size_t max_ids = 0;
             data.resize(full_block_data_.size());
             for (auto& it : full_block_data_) {
-                data[it->general_block_id] = it;
+                data[it->general_block_id] = it.get();
                 max_ids = std::max<size_t>(it->general_block_id, max_ids);
             }
-            data.resize(max_ids);
-            general_block_data_ = data;
+            data.resize(max_ids).commit();
+            general_block_data_ = std::move(data);
         }
         {
-            list_array<std::shared_ptr<static_block_data>> data;
+            list_array<static_block_data*> data;
             size_t max_ids = 0;
             data.resize(full_block_data_.size());
             for (auto& it : full_block_data_) {
                 if (!it->is_block_entity)
                     continue;
-                data[it->block_entity_id] = it;
+                data[it->block_entity_id] = it.get();
                 max_ids = std::max<size_t>(it->block_entity_id, max_ids);
             }
-            data.resize(max_ids);
-            block_entity_data_ = data;
+            data.resize(max_ids).commit();
+            block_entity_data_ = std::move(data);
         }
-    }
 
-    size_t block::block_states_size() {
-        return full_block_data_.size();
+        {
+            cached_is_air.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_is_air.set(i, it->is_air);
+        }
+        {
+            cached_is_solid.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_is_solid.set(i, it->is_solid);
+        }
+        {
+            cached_is_liquid.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_is_liquid.set(i, it->is_liquid);
+        }
+        {
+            cached_is_burnable.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_is_burnable.set(i, it->is_burnable);
+        }
+        {
+            cached_is_emits_redstone.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_is_emits_redstone.set(i, it->is_emits_redstone);
+        }
+        {
+            cached_is_full_cube.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_is_full_cube.set(i, it->is_full_cube);
+        }
+        {
+            cached_is_tool_required.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_is_tool_required.set(i, it->is_tool_required);
+        }
+        {
+            cached_is_replaceable.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_is_replaceable.set(i, it->is_replaceable);
+        }
+        {
+            cached_is_block_entity.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_is_block_entity.set(i, it->is_block_entity);
+        }
+        {
+            cached_is_default_state.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_is_default_state.set(i, it->is_default_state);
+        }
+        {
+            cached_has_random_ticks.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_has_random_ticks.set(i, it->has_random_ticks);
+        }
+        {
+            cached_has_comparator_output.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_has_comparator_output.set(i, it->has_comparator_output);
+        }
+        {
+            cached_transparent_sides.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_transparent_sides[i] = it->transparent_sides;
+        }
+        {
+            cached_slipperiness.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_slipperiness[i] = it->slipperiness;
+        }
+        {
+            cached_velocity_multiplier.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_velocity_multiplier[i] = it->velocity_multiplier;
+        }
+        {
+            cached_jump_velocity_multiplier.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_jump_velocity_multiplier[i] = it->jump_velocity_multiplier;
+        }
+        {
+            cached_hardness.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_hardness[i] = it->hardness;
+        }
+        {
+            cached_blast_resistance.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_blast_resistance[i] = it->blast_resistance;
+        }
+        {
+            cached_map_color_rgb.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_map_color_rgb[i] = it->map_color_rgb;
+        }
+        {
+            cached_block_entity_id.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_block_entity_id[i] = it->block_entity_id;
+        }
+        {
+            cached_default_drop_item_id.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_default_drop_item_id[i] = it->default_drop_item_id;
+        }
+        {
+            cached_experience.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_experience[i] = it->experience;
+        }
+        {
+            cached_general_block_id.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_general_block_id[i] = it->general_block_id;
+        }
+        {
+            cached_default_state.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_default_state[i] = it->default_state;
+        }
+        {
+            cached_luminance.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_luminance[i] = it->luminance;
+        }
+        {
+            cached_opacity.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_opacity[i] = it->opacity;
+        }
     }
 
     void static_block_data::reset_blocks() {

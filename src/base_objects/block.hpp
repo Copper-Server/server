@@ -33,12 +33,12 @@ namespace copper_server {
         struct block;
         typedef uint32_t block_id_t;
 
-        struct shape_data {
+        struct shape_data final {
             double min_x, min_y, min_z;
             double max_x, max_y, max_z;
         };
 
-        class static_block_data {
+        class static_block_data final {
             struct block_state_hash {
                 size_t operator()(const std::unordered_map<std::string, std::string>& value) const noexcept {
                     size_t result = 0;
@@ -136,7 +136,7 @@ namespace copper_server {
             list_array<std::string> block_aliases; //string block ids(checks from first to last, if none found in `initialize_blocks()` throws) implicitly uses id first
 
 
-            enum class tick_opt : uint16_t {
+            enum class tick_opt : uint32_t {
                 undefined,
                 block_tickable,
                 entity_tickable,
@@ -306,7 +306,7 @@ namespace copper_server {
             }
         };
 
-        struct block {
+        struct block final {
             using tick_opt = static_block_data::tick_opt;
 
             static void initialize();
@@ -322,13 +322,14 @@ namespace copper_server {
                 bound_check.id = full_block_data_.size();
                 if (size_t(bound_check.id) != full_block_data_.size())
                     throw std::out_of_range("Blocks count out of range, block can't added");
-                auto block_ = std::make_shared<static_block_data>(std::move(new_block));
-                named_full_block_data[block_->name] = block_;
-                full_block_data_.emplace_back(block_);
+                auto block_ = std::make_unique<static_block_data>(std::move(new_block));
+                auto& new_loc = full_block_data_.emplace_back(std::move(block_));
+
+                named_full_block_data[block_->name] = new_loc.get();
                 return bound_check.id;
             }
 
-            static void access_full_block_data(std::function<void(list_array<std::shared_ptr<static_block_data>>&, std::unordered_map<std::string, std::shared_ptr<static_block_data>>&)> access) {
+            static void access_full_block_data(std::function<void(list_array<std::unique_ptr<static_block_data>>&, std::unordered_map<std::string, static_block_data*>&)> access) {
                 access(full_block_data_, named_full_block_data);
             }
 
@@ -336,46 +337,15 @@ namespace copper_server {
                 return addNewStatelessBlock(static_block_data(new_block));
             }
 
-            base_objects::block_id_t id : 30;
-            tick_opt tickable : 2;
+            base_objects::block_id_t id : 30 = 0;
+            tick_opt tickable : 2 = tick_opt::undefined;
 
             inline void set_raw(uint32_t raw) {
-                union u_t {
-                    block b;
-                    uint32_t r;
-                } u{.r = raw};
-
-                *this = u.b;
+                *this = std::bit_cast<block, uint32_t>(raw);
             }
 
             inline uint32_t get_raw() const {
-                union u_t {
-                    block b;
-                    uint32_t r;
-                } u{.b = *this};
-
-                return u.r;
-            }
-
-            block(block_id_t block_id = 0)
-                : id(block_id), tickable(tick_opt::undefined) {}
-
-            block(const block& copy) {
-                operator=(copy);
-            }
-
-            block(block&& move_me) noexcept {
-                operator=(std::move(move_me));
-            }
-
-            block& operator=(const block& block) {
-                id = block.id;
-                return *this;
-            }
-
-            block& operator=(block&& block) noexcept {
-                id = block.id;
-                return *this;
+                return std::bit_cast<uint32_t, block>(*this);
             }
 
             const static_block_data& getStaticData() const {
@@ -386,48 +356,152 @@ namespace copper_server {
                 return *full_block_data_.at(id);
             }
 
-            bool operator==(const block& b) const {
+            inline bool operator==(const block& b) const {
                 return id == b.id;
             }
 
-            bool operator!=(const block& b) const {
+            inline bool operator!=(const block& b) const {
                 return id != b.id;
             }
 
             void tick(storage::world_data&, base_objects::world::sub_chunk_data& sub_chunk, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked);
 
             static tick_opt resolve_tickable(base_objects::block_id_t block_id);
+
+            inline const std::vector<shape_data*>& collision_shapes() const {
+                return getStaticData().collision_shapes;
+            }
+
+            inline const Chat& display_name() const {
+                return getStaticData().display_name;
+            }
+
+            inline const std::string& instrument() const {
+                return getStaticData().instrument;
+            }
+
+            inline const std::string& piston_behavior() const {
+                return getStaticData().piston_behavior;
+            }
+
+            inline const std::string& name() const {
+                return getStaticData().name;
+            }
+
+            inline const std::string& translation_key() const {
+                return getStaticData().translation_key;
+            }
+
+            inline block_id_t general_block_id() const {
+                return cached_general_block_id[id];
+            }
+
+            inline float slipperiness() const {
+                return cached_slipperiness[id];
+            }
+
+            inline float velocity_multiplier() const {
+                return cached_velocity_multiplier[id];
+            }
+
+            inline float jump_velocity_multiplier() const {
+                return cached_jump_velocity_multiplier[id];
+            }
+
+            inline float hardness() const {
+                return cached_hardness[id];
+            }
+
+            inline float blast_resistance() const {
+                return cached_blast_resistance[id];
+            }
+
+            inline int32_t map_color_rgb() const {
+                return cached_map_color_rgb[id];
+            }
+
+            inline int32_t block_entity_id() const {
+                return cached_block_entity_id[id];
+            }
+
+            inline int32_t default_drop_item_id() const {
+                return cached_default_drop_item_id[id];
+            }
+
+            inline int32_t experience() const {
+                return cached_experience[id];
+            }
+
+            inline block_id_t default_state() const {
+                return cached_default_state[id];
+            }
+
+            inline uint8_t luminance() const {
+                return cached_luminance[id];
+            }
+
+            inline uint8_t opacity() const {
+                return cached_opacity[id];
+            }
+
+            inline bool is_air() const {
+                return cached_is_air.get_unchecked(id);
+            }
+
+            inline bool is_liquid() const {
+                return cached_is_liquid.get_unchecked(id);
+            }
+
+            inline bool is_burnable() const {
+                return cached_is_burnable.get_unchecked(id);
+            }
+
+            inline bool is_emits_redstone() const {
+                return cached_is_emits_redstone.get_unchecked(id);
+            }
+
+            inline bool is_full_cube() const {
+                return cached_is_full_cube.get_unchecked(id);
+            }
+
+            inline bool is_tool_required() const {
+                return cached_is_tool_required.get_unchecked(id);
+            }
+
+            inline bool is_sided_transparency() const {
+                auto sides = cached_transparent_sides[id];
+                return sides.down_side_solid
+                       && sides.up_side_solid
+                       && sides.north_side_solid
+                       && sides.south_side_solid
+                       && sides.west_side_solid
+                       && sides.east_side_solid
+                       && sides.down_center_solid
+                       && sides.up_center_solid;
+            }
+
+            inline bool is_replaceable() const {
+                return cached_is_replaceable.get_unchecked(id);
+            }
+
+            inline bool is_block_entity() const {
+                return cached_is_block_entity.get_unchecked(id);
+            }
+
             bool is_tickable();
             bool is_tickable() const;
-            bool is_solid() const;
-            const std::vector<shape_data*>& collision_shapes() const;
-            const Chat& display_name() const;
-            const std::string& instrument() const;
-            const std::string& piston_behavior() const;
-            const std::string& name() const;
-            const std::string& translation_key() const;
-            block_id_t general_block_id() const;
-            float slipperiness() const;
-            float velocity_multiplier() const;
-            float jump_velocity_multiplier() const;
-            float hardness() const;
-            float blast_resistance() const;
-            int32_t map_color_rgb() const;
-            int32_t block_entity_id() const;
-            int32_t default_drop_item_id() const;
-            int32_t experience() const;
-            block_id_t default_state() const;
-            uint8_t luminance() const;
-            uint8_t opacity() const;
-            bool is_air() const;
-            bool is_liquid() const;
-            bool is_burnable() const;
-            bool is_emits_redstone() const;
-            bool is_full_cube() const;
-            bool is_tool_required() const;
-            bool is_sided_transparency() const;
-            bool is_replaceable() const;
-            bool is_block_entity() const;
+
+            inline bool is_solid() const {
+                return cached_is_solid.get_unchecked(id);
+            }
+
+            inline static size_t block_states_size() {
+                return full_block_data_.size();
+            }
+
+            inline static_block_data::transparent_sides_t transparent_sides() const {
+                return cached_transparent_sides[id];
+            }
 
             static static_block_data& get_block(const std::string& name) {
                 return *named_full_block_data.at(name);
@@ -467,95 +541,121 @@ namespace copper_server {
                 return block(get_block(name).default_state);
             }
 
-            static block make_block(block_id_t id) {
+            inline static block make_block(block_id_t id) {
                 return block(id);
             }
 
-            static size_t block_states_size();
 
         private:
-            static std::unordered_map<std::string, std::shared_ptr<static_block_data>> named_full_block_data;
-            static list_array<std::shared_ptr<static_block_data>> full_block_data_;
-            static list_array<std::shared_ptr<static_block_data>> general_block_data_;
-            static list_array<std::shared_ptr<static_block_data>> block_entity_data_;
+            static std::unordered_map<std::string, static_block_data*> named_full_block_data;
+            static list_array<std::unique_ptr<static_block_data>> full_block_data_;
+            static list_array<static_block_data*> general_block_data_;
+            static list_array<static_block_data*> block_entity_data_;
+
+            static bit_list_array<> cached_is_air;
+            static bit_list_array<> cached_is_solid;
+            static bit_list_array<> cached_is_liquid;
+            static bit_list_array<> cached_is_burnable;
+            static bit_list_array<> cached_is_emits_redstone;
+            static bit_list_array<> cached_is_full_cube;
+            static bit_list_array<> cached_is_tool_required;
+            static bit_list_array<> cached_is_replaceable;
+            static bit_list_array<> cached_is_block_entity;
+            static bit_list_array<> cached_is_default_state;
+            static bit_list_array<> cached_has_random_ticks;
+            static bit_list_array<> cached_has_comparator_output;
+            static list_array<static_block_data::transparent_sides_t> cached_transparent_sides;
+            static list_array<float> cached_slipperiness;
+            static list_array<float> cached_velocity_multiplier;
+            static list_array<float> cached_jump_velocity_multiplier;
+            static list_array<float> cached_hardness;
+            static list_array<float> cached_blast_resistance;
+            static list_array<int32_t> cached_map_color_rgb;
+            static list_array<int32_t> cached_block_entity_id;
+            static list_array<int32_t> cached_default_drop_item_id;
+            static list_array<int32_t> cached_experience;
+            static list_array<block_id_t> cached_general_block_id;
+            static list_array<block_id_t> cached_default_state;
+            static list_array<uint8_t> cached_luminance;
+            static list_array<uint8_t> cached_opacity;
         };
 
         // clang-format off
-        struct block_entity {
+        struct block_entity final {
             block block;
             enbt::value data;
-            bool is_tickable() const { return block.is_tickable();}
-            bool is_solid() const { return block.is_solid();}
-            const std::vector<shape_data*>& collision_shapes() const { return block.collision_shapes();}
+            inline bool is_tickable() const { return block.is_tickable(); }
+            inline bool is_solid() const { return block.is_solid(); }
+            const std::vector<shape_data*>& collision_shapes() const { return block.collision_shapes(); }
             const Chat& display_name() const { return block.display_name(); }
-            const std::string& instrument() const { return block.instrument();}
-            const std::string& piston_behavior() const { return block.piston_behavior();}
-            const std::string& name() const { return block.name();}
-            const std::string& translation_key() const { return block.translation_key();}
-            block_id_t general_block_id() const { return block.general_block_id();}
-            float slipperiness() const { return block.slipperiness();}
-            float velocity_multiplier() const { return block.velocity_multiplier();}
-            float jump_velocity_multiplier() const { return block.jump_velocity_multiplier();}
-            float hardness() const { return block.hardness();}
-            float blast_resistance() const { return block.blast_resistance();}
-            int32_t map_color_rgb() const { return block.map_color_rgb();}
-            int32_t block_entity_id() const { return block.block_entity_id();}
-            int32_t default_drop_item_id() const { return block.default_drop_item_id();}
-            int32_t experience() const { return block.experience();}
-            block_id_t default_state() const { return block.default_state();}
-            uint8_t luminance() const { return block.luminance();}
-            uint8_t opacity() const { return block.opacity();}
-            bool is_air() const { return block.is_air();}
-            bool is_liquid() const { return block.is_liquid();}
-            bool is_burnable() const { return block.is_burnable();}
-            bool is_emits_redstone() const { return block.is_emits_redstone();}
-            bool is_full_cube() const { return block.is_full_cube();}
-            bool is_tool_required() const { return block.is_tool_required();}
-            bool is_sided_transparency() const { return block.is_sided_transparency();}
-            bool is_replaceable() const { return block.is_replaceable();}
-            bool is_block_entity() const { return block.is_block_entity();}
+            const std::string& instrument() const { return block.instrument(); }
+            const std::string& piston_behavior() const { return block.piston_behavior(); }
+            const std::string& name() const { return block.name(); }
+            const std::string& translation_key() const { return block.translation_key(); }
+            inline block_id_t general_block_id() const { return block.general_block_id(); }
+            inline float slipperiness() const { return block.slipperiness(); }
+            inline float velocity_multiplier() const { return block.velocity_multiplier(); }
+            inline float jump_velocity_multiplier() const { return block.jump_velocity_multiplier(); }
+            inline float hardness() const { return block.hardness(); }
+            inline float blast_resistance() const { return block.blast_resistance(); }
+            inline int32_t map_color_rgb() const { return block.map_color_rgb(); }
+            inline int32_t block_entity_id() const { return block.block_entity_id(); }
+            inline int32_t default_drop_item_id() const { return block.default_drop_item_id(); }
+            inline int32_t experience() const { return block.experience(); }
+            inline block_id_t default_state() const { return block.default_state(); }
+            inline uint8_t luminance() const { return block.luminance(); }
+            inline uint8_t opacity() const { return block.opacity(); }
+            inline bool is_air() const { return block.is_air(); }
+            inline bool is_liquid() const { return block.is_liquid(); }
+            inline bool is_burnable() const { return block.is_burnable(); }
+            inline bool is_emits_redstone() const { return block.is_emits_redstone(); }
+            inline bool is_full_cube() const { return block.is_full_cube(); }
+            inline bool is_tool_required() const { return block.is_tool_required(); }
+            inline bool is_sided_transparency() const { return block.is_sided_transparency(); }
+            inline bool is_replaceable() const { return block.is_replaceable(); }
+            inline bool is_block_entity() const { return block.is_block_entity(); }
         };
 
-        struct block_entity_ref {
+        struct block_entity_ref final {
             block& block;
             enbt::value& data;
 
             block_entity_ref(block_entity& ref) : block(ref.block), data(ref.data) {}
 
             block_entity_ref(base_objects::block& block, enbt::value& data) : block(block), data(data) {}
-            bool is_tickable() const { return block.is_tickable();}
-            bool is_solid() const { return block.is_solid();}
-            const std::vector<shape_data*>& collision_shapes() const { return block.collision_shapes();}
+            inline bool is_tickable() const { return block.is_tickable(); }
+            inline bool is_solid() const { return block.is_solid(); }
+            const std::vector<shape_data*>& collision_shapes() const { return block.collision_shapes(); }
             const Chat& display_name() const { return block.display_name(); }
-            const std::string& instrument() const { return block.instrument();}
-            const std::string& piston_behavior() const { return block.piston_behavior();}
-            const std::string& name() const { return block.name();}
-            const std::string& translation_key() const { return block.translation_key();}
-            block_id_t general_block_id() const { return block.general_block_id();}
-            float slipperiness() const { return block.slipperiness();}
-            float velocity_multiplier() const { return block.velocity_multiplier();}
-            float jump_velocity_multiplier() const { return block.jump_velocity_multiplier();}
-            float hardness() const { return block.hardness();}
-            float blast_resistance() const { return block.blast_resistance();}
-            int32_t map_color_rgb() const { return block.map_color_rgb();}
-            int32_t block_entity_id() const { return block.block_entity_id();}
-            int32_t default_drop_item_id() const { return block.default_drop_item_id();}
-            int32_t experience() const { return block.experience();}
-            block_id_t default_state() const { return block.default_state();}
-            uint8_t luminance() const { return block.luminance();}
-            uint8_t opacity() const { return block.opacity();}
-            bool is_air() const { return block.is_air();}
-            bool is_liquid() const { return block.is_liquid();}
-            bool is_burnable() const { return block.is_burnable();}
-            bool is_emits_redstone() const { return block.is_emits_redstone();}
-            bool is_full_cube() const { return block.is_full_cube();}
-            bool is_tool_required() const { return block.is_tool_required();}
-            bool is_sided_transparency() const { return block.is_sided_transparency();}
-            bool is_replaceable() const { return block.is_replaceable();}
-            bool is_block_entity() const { return block.is_block_entity();}
+            const std::string& instrument() const { return block.instrument(); }
+            const std::string& piston_behavior() const { return block.piston_behavior(); }
+            const std::string& name() const { return block.name(); }
+            const std::string& translation_key() const { return block.translation_key(); }
+            inline block_id_t general_block_id() const { return block.general_block_id(); }
+            inline float slipperiness() const { return block.slipperiness(); }
+            inline float velocity_multiplier() const { return block.velocity_multiplier(); }
+            inline float jump_velocity_multiplier() const { return block.jump_velocity_multiplier(); }
+            inline float hardness() const { return block.hardness(); }
+            inline float blast_resistance() const { return block.blast_resistance(); }
+            inline int32_t map_color_rgb() const { return block.map_color_rgb(); }
+            inline int32_t block_entity_id() const { return block.block_entity_id(); }
+            inline int32_t default_drop_item_id() const { return block.default_drop_item_id(); }
+            inline int32_t experience() const { return block.experience(); }
+            inline block_id_t default_state() const { return block.default_state(); }
+            inline uint8_t luminance() const { return block.luminance(); }
+            inline uint8_t opacity() const { return block.opacity(); }
+            inline bool is_air() const { return block.is_air(); }
+            inline bool is_liquid() const { return block.is_liquid(); }
+            inline bool is_burnable() const { return block.is_burnable(); }
+            inline bool is_emits_redstone() const { return block.is_emits_redstone(); }
+            inline bool is_full_cube() const { return block.is_full_cube(); }
+            inline bool is_tool_required() const { return block.is_tool_required(); }
+            inline bool is_sided_transparency() const { return block.is_sided_transparency(); }
+            inline bool is_replaceable() const { return block.is_replaceable(); }
+            inline bool is_block_entity() const { return block.is_block_entity(); }
         };
 
-        struct const_block_entity_ref {
+        struct const_block_entity_ref final {
             const block& block;
             const enbt::value& data;
 
@@ -565,35 +665,35 @@ namespace copper_server {
 
             const_block_entity_ref(const base_objects::block& block, const enbt::value& data) : block(block), data(data) {}
 
-            bool is_tickable() const { return block.is_tickable();}
-            bool is_solid() const { return block.is_solid();}
-            const std::vector<shape_data*>& collision_shapes() const { return block.collision_shapes();}
-            const std::string& instrument() const { return block.instrument();}
-            const std::string& piston_behavior() const { return block.piston_behavior();}
-            const std::string& name() const { return block.name();}
-            const std::string& translation_key() const { return block.translation_key();}
-            block_id_t general_block_id() const { return block.general_block_id();}
-            float slipperiness() const { return block.slipperiness();}
-            float velocity_multiplier() const { return block.velocity_multiplier();}
-            float jump_velocity_multiplier() const { return block.jump_velocity_multiplier();}
-            float hardness() const { return block.hardness();}
-            float blast_resistance() const { return block.blast_resistance();}
-            int32_t map_color_rgb() const { return block.map_color_rgb();}
-            int32_t block_entity_id() const { return block.block_entity_id();}
-            int32_t default_drop_item_id() const { return block.default_drop_item_id();}
-            int32_t experience() const { return block.experience();}
-            block_id_t default_state() const { return block.default_state();}
-            uint8_t luminance() const { return block.luminance();}
-            uint8_t opacity() const { return block.opacity();}
-            bool is_air() const { return block.is_air();}
-            bool is_liquid() const { return block.is_liquid();}
-            bool is_burnable() const { return block.is_burnable();}
-            bool is_emits_redstone() const { return block.is_emits_redstone();}
-            bool is_full_cube() const { return block.is_full_cube();}
-            bool is_tool_required() const { return block.is_tool_required();}
-            bool is_sided_transparency() const { return block.is_sided_transparency();}
-            bool is_replaceable() const { return block.is_replaceable();}
-            bool is_block_entity() const { return block.is_block_entity();}
+            inline bool is_tickable() const { return block.is_tickable(); }
+            inline bool is_solid() const { return block.is_solid(); }
+            const std::vector<shape_data*>& collision_shapes() const { return block.collision_shapes(); }
+            const std::string& instrument() const { return block.instrument(); }
+            const std::string& piston_behavior() const { return block.piston_behavior(); }
+            const std::string& name() const { return block.name(); }
+            const std::string& translation_key() const { return block.translation_key(); }
+            inline block_id_t general_block_id() const { return block.general_block_id(); }
+            inline float slipperiness() const { return block.slipperiness(); }
+            inline float velocity_multiplier() const { return block.velocity_multiplier(); }
+            inline float jump_velocity_multiplier() const { return block.jump_velocity_multiplier(); }
+            inline float hardness() const { return block.hardness(); }
+            inline float blast_resistance() const { return block.blast_resistance(); }
+            inline int32_t map_color_rgb() const { return block.map_color_rgb(); }
+            inline int32_t block_entity_id() const { return block.block_entity_id(); }
+            inline int32_t default_drop_item_id() const { return block.default_drop_item_id(); }
+            inline int32_t experience() const { return block.experience(); }
+            inline block_id_t default_state() const { return block.default_state(); }
+            inline uint8_t luminance() const { return block.luminance(); }
+            inline uint8_t opacity() const { return block.opacity(); }
+            inline bool is_air() const { return block.is_air(); }
+            inline bool is_liquid() const { return block.is_liquid(); }
+            inline bool is_burnable() const { return block.is_burnable(); }
+            inline bool is_emits_redstone() const { return block.is_emits_redstone(); }
+            inline bool is_full_cube() const { return block.is_full_cube(); }
+            inline bool is_tool_required() const { return block.is_tool_required(); }
+            inline bool is_sided_transparency() const { return block.is_sided_transparency(); }
+            inline bool is_replaceable() const { return block.is_replaceable(); }
+            inline bool is_block_entity() const { return block.is_block_entity(); }
         };
 
         // clang-format on
