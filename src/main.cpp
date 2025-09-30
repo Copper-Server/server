@@ -37,7 +37,6 @@ int main() {
         fast_task::scheduler::shut_down();
     });
     try {
-        //fast_task::debug::enable_init_stack_trace();
         size_t working_threads = api::configuration::get().server.working_threads;
         fast_task::scheduler::reduce_executor(fast_task::scheduler::total_executors());
         fast_task::scheduler::create_executor(working_threads);

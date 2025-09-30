@@ -620,6 +620,7 @@ namespace copper_server::build_in_plugins {
                             .distance = (int32_t)self.world_syncing_data.processing_region.radius
                         };
                     }
+                    fast_task::spin_lock packet_futs_lock;
                     std::vector<fast_task::future_ptr<void>> packet_futs;
                     bool make_tick = false;
                     bool make_batch = false;
@@ -641,9 +642,9 @@ namespace copper_server::build_in_plugins {
                                                 serialization_futs.push_back(
                                                     fast_task::future<void>::start(
                                                         [&, chunk]() {
-                                                            packet_futs.push_back(
-                                                                send_async(self.assigned_player, api::client::play::level_chunk_with_light::create(**chunk, *self.current_world()))
-                                                            );
+                                                            auto packet = send_async(self.assigned_player, api::client::play::level_chunk_with_light::create(**chunk, *self.current_world()));
+                                                            fast_task::lock_guard guard(packet_futs_lock);
+                                                            packet_futs.push_back(std::move(packet));
                                                         }
                                                     )
                                                 );
@@ -661,7 +662,7 @@ namespace copper_server::build_in_plugins {
                         make_tick = true;
                     if (make_batch) {
                         ++player.packets_state.await_ack_chunk_batches;
-                        fast_task::future_tool::combine_all(std::move(packet_futs))->when_ready([batch_size = player.packets_state.chunks_sent, player = self.assigned_player]() {
+                        fast_task::future_tool::combine_all(packet_futs)->when_ready([batch_size = player.packets_state.chunks_sent, player = self.assigned_player]() {
                             *player << api::packets::client_bound::play::chunk_batch_finished{
                                 .batch_size = batch_size
                             };
@@ -746,7 +747,8 @@ namespace copper_server::build_in_plugins {
         void OnInitialization(const PluginRegistrationPtr& _) override {
             base_objects::entity_data::register_entity_world_processor(make_processor(), "minecraft:player");
             register_packet_processor([]([[maybe_unused]] api::packets::server_bound::play::chunk_batch_received&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                client.packets_state.chunk_batch_size = int32_t(packet.chunks_per_tick / 2) + 1; //TODO calculate correctly using ticks
+                client.packets_state.chunk_batch_size = (int32_t)std::ceil(packet.chunks_per_tick);
+
                 uint32_t expected = client.packets_state.await_ack_chunk_batches.load(); // Read the current value
                 while (expected > 0)
                     if (client.packets_state.await_ack_chunk_batches.compare_exchange_weak(expected, expected - 1))

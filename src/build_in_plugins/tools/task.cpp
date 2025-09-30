@@ -14,7 +14,16 @@
 
 namespace copper_server::build_in_plugins {
     struct task : public PluginAutoRegister<"tools/task", task> {
+        void OnInitialization(const PluginRegistrationPtr&) override {
+            if (fast_task::debug::is_debug_enabled()) {
+                api::configuration::get() ^ "task" ^ "enable_creation_stack_traces" |= false;
+                fast_task::debug::enable_init_stack_trace(api::configuration::get() ^ "task" ^ "enable_creation_stack_traces" ^ get_conf);
+            }
+        }
+
         void OnCommandsLoad(const PluginRegistrationPtr&, base_objects::command_root_browser& browser) override {
+            if (!fast_task::debug::is_debug_enabled())
+                return;
             using predicate = base_objects::parser;
             using pred_string = base_objects::parsers::string;
             using cmd_pred_string = base_objects::parsers::command::string;
@@ -32,6 +41,11 @@ namespace copper_server::build_in_plugins {
                         fast_task::debug::save_program_state_dump(res.c_str());
                     });
                 });
+        }
+
+        void OnConfigReload(const PluginRegistrationPtr& _) override {
+            if (fast_task::debug::is_debug_enabled())
+                fast_task::debug::enable_init_stack_trace(api::configuration::get() ^ "task" ^ "enable_creation_stack_traces" ^ get_conf);
         }
     };
 }

@@ -383,6 +383,7 @@ namespace copper_server {
                         for (uint_fast8_t x = 0; x < 16; x++)
                             for (uint_fast8_t z = 0; z < 16; z++)
                                 data.add(hei_map[x][z]);
+                        data.add(0); //TODO check if bug fixed MC-247438, currently at 1.21.8 still not fixed
                         return height_map{
                             .type = height_map::type_e(type),
                             .pallete_data = std::move(data)
