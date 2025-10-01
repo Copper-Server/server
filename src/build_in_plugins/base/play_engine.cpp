@@ -529,7 +529,8 @@ namespace copper_server::build_in_plugins {
         static void notify_chunk_light(base_objects::entity& self, int64_t x, int64_t z, const storage::chunk_data& chunk) {
             if (self.assigned_player)
                 if (self.world_syncing_data.chunk_in_bounds(x, z))
-                    *self.assigned_player << api::client::play::light_update::create(chunk);
+                    if (self.world_syncing_data.chunk_processed(x, z))
+                        *self.assigned_player << api::client::play::light_update::create(chunk);
         };
 
         static void notify_sub_chunk(base_objects::entity& self, int64_t x, [[maybe_unused]] int64_t y, int64_t z, [[maybe_unused]] const base_objects::world::sub_chunk_data& chunk) {
@@ -683,6 +684,19 @@ namespace copper_server::build_in_plugins {
                                 .yaw = (float)yaw,
                                 .pitch = (float)pitch,
                                 .flags = api::packets::teleport_flags{}
+                            };
+                            *self.assigned_player << api::client::play::set_border_center{
+                                .x = self.current_world()->border_center_x,
+                                .z = self.current_world()->border_center_z
+                            };
+                            *self.assigned_player << api::client::play::set_border_size{
+                                .diameter = self.current_world()->border_size
+                            };
+                            *self.assigned_player << api::client::play::set_border_warning_delay{
+                                .warn_time = (int32_t)self.current_world()->border_warning_time
+                            };
+                            *self.assigned_player << api::client::play::set_border_warning_distance{
+                                .meters = (int32_t)self.current_world()->border_warning_blocks
                             };
                         }
                         if (self.current_world())

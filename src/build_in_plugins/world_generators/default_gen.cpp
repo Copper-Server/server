@@ -26,7 +26,7 @@ namespace copper_server::build_in_plugins::world_generators {
                         if (y == 0)
                             blocks[x][y][z] = stone;
 
-            chunk.generator_stage = 0xFF;
+            process_complete(world, chunk);
         }
     };
 

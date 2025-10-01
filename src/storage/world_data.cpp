@@ -932,6 +932,12 @@ namespace copper_server::storage {
         });
     }
 
+    void chunk_generator::process_complete(world_data& world, chunk_data& chunk) {
+        chunk.update_metadata();
+        world.reset_light_data(chunk.chunk_x, chunk.chunk_z);
+        chunk.generator_stage = 0xFF;
+    }
+
     fast_task::protected_value<boost::unordered_flat_map<std::string, base_objects::atomic_holder<chunk_light_processor>>> light_processors;
 
     void chunk_light_processor::register_it(const std::string& id, base_objects::atomic_holder<chunk_light_processor> processor) {
@@ -1035,7 +1041,6 @@ namespace copper_server::storage {
                 --generator.count;
                 if (profiling.enable_world_profiling)
                     --profiling.chunk_generator_counter;
-                chunk->update_metadata();
                 return chunk;
             }
         );
@@ -1183,6 +1188,8 @@ namespace copper_server::storage {
         auto chunk_x = convert_chunk_global_pos(self.position.x);
         auto chunk_z = convert_chunk_global_pos(self.position.z);
         for (auto& [id, entity] : entities) {
+            if (&*entity == &self)
+                continue;
             auto processor = entity->const_data().processor;
             if (processor && entity->world_syncing_data.world == this) {
                 if (entity->world_syncing_data.processing_region.in_bounds((int64_t)chunk_x, (int64_t)chunk_z))

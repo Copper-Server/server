@@ -174,20 +174,22 @@ namespace copper_server::storage {
 
         //if not set, all stages is parallel
         //preset_it -> mode
+        //preset count limited up to 0xFE
         boost::unordered_flat_map<uint8_t, preset_mode> config;
 
         //this function also should increment generator_stage for chunk or set to 0xFF when processing is complete
         //to access information from other chunk, the generator must use request_chunk_data_weak_* or request_chunk_data_weak
         //if chunk is not fully generated, it would not be accessible other way
         //
-        //the after completing generation, the generator should set the generator_stage to 0xFF
-        virtual void process_chunk([[maybe_unused]] world_data& world, chunk_data& chunk, [[maybe_unused]] uint8_t preset_stage) {
-            chunk.generator_stage = 0xFF;
-        };
+        //the after completing generation, the generator should call process_complete
+        virtual void process_chunk(world_data& world, chunk_data& chunk, [[maybe_unused]] uint8_t preset_stage) {
+            process_complete(world, chunk);
+        }
 
         static void register_it(const std::string& id, base_objects::atomic_holder<chunk_generator> gen);
         static void unregister_it(const std::string& id);
         static base_objects::atomic_holder<chunk_generator> get_it(const std::string& id);
+        static void process_complete(world_data& world, chunk_data& chunk);
     };
 
     class chunk_light_processor {

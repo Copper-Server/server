@@ -188,14 +188,15 @@ namespace copper_server::api::world {
                 auto oc = height_maps.surface[x % 16][z % 16];
                 pos_y = std::max(mt, std::max(oc_flor, oc));
             });
+            pos_y -= world->get_world_y_offset();
 
-            client_ref.player_data.world_id = get_worlds().get(id)->world_name;
+            client_ref.player_data.world_id
+                = get_worlds().get(id)->world_name;
 
             auto& ass_ent = client_ref.player_data.assigned_entity;
             ass_ent->position.x = 0.5 + (double)x;
             ass_ent->position.y = (double)pos_y;
             ass_ent->position.z = 0.5 + (double)z;
-            ass_ent->rotation = {0, 0};
         }
 
         return {id, client_ref.player_data.world_id};

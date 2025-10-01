@@ -415,17 +415,17 @@ namespace copper_server {
             std::unordered_map<uint32_t, list_array<effect>> hidden_effects; //effects with lower amplifier than active effect but longer duration
             std::unordered_map<uint32_t, effect> active_effects;
 
-            util::VECTOR position;
-            util::VECTOR motion;
-            util::ANGLE_DEG head_rotation;
-            util::ANGLE_DEG rotation;
-            bounding bounds;
+            util::VECTOR position{0, 0, 0};
+            util::VECTOR motion{0, 0, 0};
+            util::ANGLE_DEG head_rotation{0, 0};
+            util::ANGLE_DEG rotation{0, 0};
+            bounding bounds{0, 0};
 
             world_syncing world_syncing_data;
             list_array<client_data_holder> spectating_players;
             client_data_holder assigned_player;
 
-            int32_t protocol_id;
+            int32_t protocol_id = 0;
 
             storage::world_data* current_world() const;
 
@@ -601,7 +601,7 @@ namespace copper_server {
         private:
             friend struct entity_data;
             friend struct enbt::io_helper::serialization<entity_ref>;
-            uint16_t entity_id;
+            uint16_t entity_id = 0;
             bool died = false;
         };
     }

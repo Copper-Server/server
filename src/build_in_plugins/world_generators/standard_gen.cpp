@@ -60,7 +60,7 @@ namespace copper_server::build_in_plugins::world_generators {
                 chunk.generator_stage = 10;
                 break;
             case 10:
-                chunk.generator_stage = 0xff;
+                process_complete(world, chunk);
                 break;
 
             default:
