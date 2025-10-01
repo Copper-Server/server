@@ -460,32 +460,16 @@ namespace copper_server {
                         for (auto& section : chunk.sub_chunks) {
                             sky_light_mask.push_back(section.sky_lighted);
                             block_light_mask.push_back(section.block_lighted);
-                            empty_sky_light_mask.push_back(section.sky_lighted);
-                            empty_block_light_mask.push_back(section.block_lighted);
+                            empty_sky_light_mask.push_back(!section.sky_lighted);
+                            empty_block_light_mask.push_back(!section.block_lighted);
 
                             if (section.sky_lighted) {
-                                bit_list_array<> section_sky_light;
-                                for (auto& x : section.sky_light.light_map)
-                                    for (auto& y : x)
-                                        for (auto z : y) {
-                                            section_sky_light.push_back(z.light_point & 1);
-                                            section_sky_light.push_back(z.light_point & 2);
-                                            section_sky_light.push_back(z.light_point & 4);
-                                            section_sky_light.push_back(z.light_point & 8);
-                                        }
-                                sky_light.push_back(section_sky_light.take());
+                                auto proxy = reinterpret_cast<const uint8_t*>(section.sky_light.light_map);
+                                sky_light.push_back(list_array<uint8_t>(proxy, sizeof(section.sky_light.light_map)));
                             }
                             if (section.block_lighted) {
-                                bit_list_array<> section_block_light;
-                                for (auto& x : section.block_light.light_map)
-                                    for (auto& y : x)
-                                        for (auto z : y) {
-                                            section_block_light.push_back(z.light_point & 1);
-                                            section_block_light.push_back(z.light_point & 2);
-                                            section_block_light.push_back(z.light_point & 4);
-                                            section_block_light.push_back(z.light_point & 8);
-                                        }
-                                block_light.push_back(section_block_light.take());
+                                auto proxy = reinterpret_cast<const uint8_t*>(section.block_light.light_map);
+                                block_light.push_back(list_array<uint8_t>(proxy, sizeof(section.block_light.light_map)));
                             }
                         }
                         //light above world is unset

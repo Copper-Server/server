@@ -36,7 +36,7 @@ namespace enbt::io_helper {
     };
 
     template <>
-    struct compact_matrix_simple_cast<light_data::light_item[16][16][16]> {
+    struct compact_matrix_simple_cast<light_data::light_item[16][16][8]> {
         using direct_type = std::uint32_t;
     };
 
@@ -48,11 +48,6 @@ namespace enbt::io_helper {
     template <>
     struct serialization_simple_cast<base_objects::block> {
         using direct_type = std::uint32_t;
-    };
-
-    template <>
-    struct serialization_simple_cast<light_data::light_item> {
-        using direct_type = std::uint8_t;
     };
 
     template <>
@@ -104,42 +99,6 @@ namespace enbt::io_helper {
 
         static void write(const light_data& light_data, enbt::io_helper::value_write_stream& write_stream) {
             serialization_write(light_data.light_map, write_stream);
-        }
-    };
-
-    template <>
-    struct serialization<light_data::light_item> {
-        static light_data::light_item read(enbt::io_helper::value_read_stream& self) {
-            light_data::light_item light_item;
-            read(light_item, self);
-            return light_item;
-        }
-
-        static void read(light_data::light_item& light_data, enbt::io_helper::value_read_stream& self) {
-            self.read_as(light_data.light_point);
-        }
-
-        static void write(const light_data::light_item& light_data, enbt::io_helper::value_write_stream& write_stream) {
-            write_stream.write(light_data.light_point);
-        }
-    };
-
-    template <>
-    struct serialization<base_objects::block> {
-        static base_objects::block read(enbt::io_helper::value_read_stream& self) {
-            base_objects::block block;
-            read(block, self);
-            return block;
-        }
-
-        static void read(base_objects::block& block, enbt::io_helper::value_read_stream& self) {
-            uint32_t raw = 0;
-            self.read_as(raw);
-            block.set_raw(raw);
-        }
-
-        static void write(const base_objects::block& block, enbt::io_helper::value_write_stream& write_stream) {
-            write_stream.write(block.get_raw());
         }
     };
 
@@ -343,7 +302,7 @@ namespace copper_server::storage {
             for (auto& y : x.as_array()) {
                 size_t z_ = 0;
                 for (auto& z : y.as_ui8_array())
-                    data.light_map[x_][y_][z_++].light_point = z;
+                    data.set(x_, y_, z_++, z);
                 ++y_;
             }
             ++x_;

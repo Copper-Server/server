@@ -685,19 +685,6 @@ namespace copper_server::build_in_plugins {
                                 .pitch = (float)pitch,
                                 .flags = api::packets::teleport_flags{}
                             };
-                            *self.assigned_player << api::client::play::set_border_center{
-                                .x = self.current_world()->border_center_x,
-                                .z = self.current_world()->border_center_z
-                            };
-                            *self.assigned_player << api::client::play::set_border_size{
-                                .diameter = self.current_world()->border_size
-                            };
-                            *self.assigned_player << api::client::play::set_border_warning_delay{
-                                .warn_time = (int32_t)self.current_world()->border_warning_time
-                            };
-                            *self.assigned_player << api::client::play::set_border_warning_distance{
-                                .meters = (int32_t)self.current_world()->border_warning_blocks
-                            };
                         }
                         if (self.current_world())
                             if (!self.current_world()->ticking_frozen)

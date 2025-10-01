@@ -386,7 +386,7 @@ namespace copper_server::storage {
 
         double border_center_x = 0;
         double border_center_z = 0;
-        double border_size = 0;
+        double border_size = 29999984;
         double border_safe_zone = 5;
         double border_damage_per_block = 0;
         double border_lerp_target = 0;

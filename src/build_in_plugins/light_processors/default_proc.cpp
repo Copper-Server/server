@@ -6,22 +6,27 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/base_objects/entity.hpp>
 #include <src/plugin/main.hpp>
 #include <src/storage/world_data.hpp>
 
 namespace copper_server::build_in_plugins::light_processors {
     struct default_light_processor : public storage::chunk_light_processor {
         void process_chunk(storage::world_data& world, int64_t chunk_x, int64_t chunk_z) override {
-            world.get_chunk(chunk_x, chunk_z, [&](storage::chunk_data& chunk) {
-                chunk.for_each_sub_chunk([&](base_objects::world::sub_chunk_data& sub_chunk) {
-                    for (int_fast8_t i = 0; i < 16; ++i)
-                        for (int_fast8_t j = 0; j < 16; ++j)
-                            for (int_fast8_t k = 0; k < 16; ++k) {
-                                sub_chunk.sky_light.light_map[i][j][k].light_point = 15;
-                                sub_chunk.block_light.light_map[i][j][k].light_point = 15;
+            auto chunk_weak = world.request_chunk_data_weak(chunk_x, chunk_z);
+            if (chunk_weak) {
+                auto& chunk = *chunk_weak;
+                chunk->for_each_sub_chunk([&](base_objects::world::sub_chunk_data& sub_chunk) {
+                    for (size_t i = 0; i < 16; ++i)
+                        for (size_t j = 0; j < 16; ++j)
+                            for (size_t k = 0; k < 16; ++k) {
+                                sub_chunk.sky_light.set(i, j, k, 15);
+                                sub_chunk.block_light.set(i, j, k, 15);
                             }
+                    sub_chunk.sky_lighted = true;
+                    sub_chunk.block_lighted = true;
                 });
-            });
+            }
             world.notify_chunk_light(chunk_x, chunk_z);
         }
 
