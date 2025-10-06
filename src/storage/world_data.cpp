@@ -1293,6 +1293,10 @@ namespace copper_server::storage {
         entity_notify_change<&ew_processor::entity_event>(this, entities, self, status);
     }
 
+    void world_data::entity_metadata(base_objects::entity& self) {
+        entity_notify_change_all<&ew_processor::entity_event>(this, entities, self);
+    }
+
     void world_data::entity_add_effect(base_objects::entity& self, uint32_t effect_id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) {
         entity_notify_change_all<&ew_processor::entity_add_effect>(this, entities, self, effect_id, duration, amplifier, ambient, show_particles, show_icon, use_blend);
     }
@@ -2475,6 +2479,15 @@ namespace copper_server::storage {
         });
     }
 
+    base_objects::block world_data::get_block(int64_t global_x, int64_t global_y_raw, int64_t global_z) {
+        TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
+        base_objects::block res;
+        get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
+            sub_chunk.get_block(global_x & 15, global_y & 15, global_z & 15, [&res](auto block) { res = block; }, [&res](auto block, auto& extended_data) { res = block; });
+        });
+        return res;
+    }
+
     void world_data::get_block(int64_t global_x, int64_t global_y_raw, int64_t global_z, const std::function<void(base_objects::block& block)>& func, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& block_entity) {
         TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
         get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
@@ -3507,6 +3520,7 @@ namespace copper_server::storage {
             last_tps_calculated = new_current_time;
             got_ticks = 0;
         }
+        on_tick.async_notify(got_ticks);
     }
 
 #pragma endregion

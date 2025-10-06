@@ -326,63 +326,10 @@ namespace copper_server::resources {
                 entity_data.data["loot_table"] = util::conversions::json::from_json(obj.at("loot_table"));
 
             {
-                using type = base_objects::entity_data::metadata_sync::type_t;
-                //global_pos,
-                static std::unordered_map<std::string, type> types = {
-                    {"Byte", type::byte},
-                    {"Integer", type::varint},
-                    {"Long", type::varlong},
-                    {"Boolean", type::boolean},
-                    {"Float", type::_float},
-                    {"OptionalInt", type::opt_varint},
-                    {"NBT", type::nbt},
-                    {"NbtCompound", type::nbt},
-                    {"String", type::_string},
-
-                    {"Text", type::text},
-                    {"Optional<Text>", type::opt_text},
-
-                    {"ItemStack", type::slot},
-
-                    {"EulerAngle", type::euler_angle},
-                    {"Vector3f", type::vector3},
-                    {"Quaternionf", type::quaternion},
-
-                    {"BlockPos", type::postion},
-                    {"Optional<BlockPos>", type::opt_position},
-
-                    {"Direction", type::direction},
-                    {"EntityPose", type::pose},
-                    {"BlockState", type::block_state},
-                    {"Optional<BlockState>", type::opt_block_state},
-
-                    {"VillagerData", type::villager_data},
-
-                    {"ParticleEffect", type::particle},
-                    {"List<ParticleEffect>", type::particles},
-
-                    {"SnifferEntity$State", type::sniffer_state},
-                    {"ArmadilloEntity$State", type::armadillo_state},
-                    {"RegistryEntry<CatVariant>", type::cat_variant},
-                    {"RegistryEntry<ChickenVariant>", type::chicken_variant},
-                    {"RegistryEntry<CowVariant>", type::cow_variant},
-                    {"RegistryEntry<FrogVariant>", type::frog_variant},
-                    {"RegistryEntry<PaintingVariant>", type::painting_variant},
-                    {"RegistryEntry<PigVariant>", type::pig_variant},
-                    {"RegistryEntry<WolfVariant>", type::wolf_variant},
-                    {"RegistryEntry<WolfSoundVariant>", type::wolf_sound_variant},
-
-                    {"Optional<LazyEntityReference<LivingEntity>>", type::entity_refrence},
-                };
-                auto metadata = obj.at("metadata").as_array();
-                entity_data.metadata.reserve(metadata.size());
-                for (auto& meta : obj.at("metadata").as_array()) {
-                    base_objects::entity_data::metadata_sync metadata_sync;
-                    metadata_sync.index = meta.at("network_id").to_number<uint8_t>();
-                    std::string name = (std::string)meta.at("field_name").as_string();
-                    metadata_sync.type = types.at((std::string)meta.at("type_name").as_string());
-                    entity_data.metadata[name] = std::move(metadata_sync);
-                }
+                auto eye_height_in_each_pose = obj.at("eye_height_in_each_pose").as_array();
+                entity_data.eye_height_in_each_pose.reserve(eye_height_in_each_pose.size());
+                for (auto& height : obj.at("eye_height_in_each_pose").as_array())
+                    eye_height_in_each_pose.push_back(height.to_number<double>());
             }
 
             if (obj.contains("spawn_restriction")) {
@@ -1743,7 +1690,7 @@ namespace copper_server::resources {
                     item.read_as(default_state_data->blast_resistance);
                 })
                 .collect("item_id", [&default_state_data](auto& item) {
-                    item.read_as(default_state_data->default_drop_item_id);
+                    item.read_as(default_state_data->item_id);
                 })
                 .collect("map_color_rgb", [&default_state_data](auto& item) {
                     item.read_as(default_state_data->map_color_rgb);
@@ -1824,7 +1771,7 @@ namespace copper_server::resources {
                     block_data->jump_velocity_multiplier = default_state_data->jump_velocity_multiplier;
                     block_data->hardness = default_state_data->hardness;
                     block_data->blast_resistance = default_state_data->blast_resistance;
-                    block_data->default_drop_item_id = default_state_data->default_drop_item_id;
+                    block_data->item_id = default_state_data->item_id;
                     block_data->map_color_rgb = default_state_data->map_color_rgb;
                     block_data->loot_table = default_state_data->loot_table;
                     block_data->allowed_properties = default_state_data->allowed_properties;
@@ -2291,8 +2238,12 @@ namespace copper_server::resources {
             }
             {
                 auto parsed_spawn_egg = boost::json::parse(resources::registry::spawn_egg);
-                for (auto&& [item, entity] : parsed_spawn_egg.as_object())
-                    base_objects::slot_data::get_slot_data(std::stoi(item)).spawn_entity = entity.to_number<int32_t>();
+                for (auto&& [item, entity] : parsed_spawn_egg.as_object()) {
+                    auto item_id = std::stoi(item);
+                    auto entity_id = entity.to_number<int32_t>();
+                    base_objects::slot_data::get_slot_data(item_id).spawn_entity = entity_id;
+                    base_objects::entity_data::initialization_get(entity_id).spawn_egg = std::make_optional(item_id);
+                }
             }
             {
                 auto parsed_fuels = boost::json::parse(resources::registry::fuels);

@@ -13,6 +13,7 @@
 #include <library/list_array.hpp>
 #include <src/base_objects/atomic_holder.hpp>
 #include <string>
+#include <unordered_set>
 
 namespace copper_server::base_objects {
     struct entity;
@@ -81,6 +82,7 @@ namespace copper_server::base_objects {
 
         std::optional<DeathLocation> last_death_location;
         std::optional<OwnRespawnLocation> own_respawn_location;
+        std::unordered_set<int32_t> known_recipes;
 
         list_array<std::string> permission_groups;
 

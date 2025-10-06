@@ -14,10 +14,10 @@ namespace copper_server::util {
 
     VECTOR convert(ANGLE_DEG rot) {
         VECTOR res;
-        double x_cos = cos(rot.x);
-        res.x = cos(rot.y) * x_cos;
-        res.y = sin(rot.y) * x_cos;
-        res.z = sin(rot.x);
+        double x_cos = cos(rot.pitch);
+        res.x = cos(rot.yaw) * x_cos;
+        res.y = sin(rot.yaw) * x_cos;
+        res.z = sin(rot.pitch);
         return res;
     }
 
@@ -69,24 +69,12 @@ namespace copper_server::util {
         return (val * 360) / pi * 2;
     }
 
-    YAW_PITCH to_yaw_pitch(ANGLE_DEG val) {
-        return {rad_to_deg180(val.x), rad_to_deg180(val.y)}; //TODO check
-    }
-
-    YAW_PITCH to_yaw_pitch(ANGLE_RAD val) {
-        return {rad_to_deg180(val.x), rad_to_deg180(val.y)};
-    }
-
-    YAW_PITCH to_yaw_pitch(VECTOR val) {
-        return to_yaw_pitch(convert(val));
-    }
-
     YAW_PITCH_256 to_yaw_pitch_256(ANGLE_DEG val) {
-        return {(uint8_t)rad_to_deg360(val.x), (uint8_t)rad_to_deg360(val.y)}; //TODO check
+        return {(uint8_t)val.pitch, (uint8_t)val.yaw};
     }
 
     YAW_PITCH_256 to_yaw_pitch_256(ANGLE_RAD val) {
-        return {(uint8_t)rad_to_deg360(val.x), (uint8_t)rad_to_deg360(val.y)};
+        return {(uint8_t)rad_to_deg180(val.pitch), (uint8_t)rad_to_deg180(val.yaw)};
     }
 
     YAW_PITCH_256 to_yaw_pitch_256(VECTOR val) {
@@ -95,7 +83,7 @@ namespace copper_server::util {
 
     namespace minecraft {
         VECTOR velocity(ANGLE_DEG rot, ANGLE_DEG speed) {
-            return strength(convert(rot), speed.y);
+            return strength(convert(rot), speed.yaw);
         }
 
         VECTOR velocity(VECTOR pos, VECTOR target, double speed) {

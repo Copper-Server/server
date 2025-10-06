@@ -13,7 +13,7 @@
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins {
-    struct MinecraftPlugin : public PluginAutoRegister<"base/minecraft", MinecraftPlugin> {
+    struct brand : public PluginAutoRegister<"base/minecraft/brand", brand> {
         void OnLoad(const PluginRegistrationPtr& self) override {
             pluginManagement.bindPluginOn("minecraft:brand", self, PluginManagement::registration_on::configuration);
         }
@@ -25,7 +25,7 @@ namespace copper_server::build_in_plugins {
                 .channel = "minecraft:brand",
                 .payload = r.data
             };
-            return client.client_brand.size();
+            return client.client_brand.size();//end configuration if client already sent brand
         }
 
         bool OnConfigurationHandle(const PluginRegistrationPtr& _, const std::string& chanel, const list_array<uint8_t>& data, base_objects::SharedClientData& client) override {

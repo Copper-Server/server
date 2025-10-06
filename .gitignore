@@ -15,3 +15,5 @@ resources/include.hpp
 /src/util/reflect
 /resources/data
 /resources/registry
+src/api/bin/entity_proxy.cpp
+src/api/entity_proxy.hpp

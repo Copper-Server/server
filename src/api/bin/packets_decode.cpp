@@ -6,6 +6,7 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/api/configuration.hpp>
 #include <src/api/log.hpp>
 #include <src/api/network/tcp.hpp>
 #include <src/api/packets.hpp>
@@ -123,6 +124,8 @@ namespace copper_server::api::packets {
         void handle(size_t id, server_bound::handshake_packet&& packet, base_objects::SharedClientData& context) {
             auto& it = h[id];
             if (it.empty()) {
+                if (api::configuration::get().protocol.skip_unregistered_packets)
+                    return;
                 throw std::runtime_error("Handler for packet with id handshake:" + std::to_string(id) + " is not registered.");
             }
             it(std::move(packet), context);
@@ -131,6 +134,8 @@ namespace copper_server::api::packets {
         void handle(size_t id, server_bound::status_packet&& packet, base_objects::SharedClientData& context) {
             auto& it = s[id];
             if (it.empty()) {
+                if (api::configuration::get().protocol.skip_unregistered_packets)
+                    return;
                 throw std::runtime_error("Handler for packet with id status:" + std::to_string(id) + " is not registered.");
             }
             it(std::move(packet), context);
@@ -139,6 +144,8 @@ namespace copper_server::api::packets {
         void handle(size_t id, server_bound::login_packet&& packet, base_objects::SharedClientData& context) {
             auto& it = l[id];
             if (it.empty()) {
+                if (api::configuration::get().protocol.skip_unregistered_packets)
+                    return;
                 throw std::runtime_error("Handler for packet with id login:" + std::to_string(id) + " is not registered.");
             }
             it(std::move(packet), context);
@@ -147,6 +154,8 @@ namespace copper_server::api::packets {
         void handle(size_t id, server_bound::configuration_packet&& packet, base_objects::SharedClientData& context) {
             auto& it = c[id];
             if (it.empty()) {
+                if (api::configuration::get().protocol.skip_unregistered_packets)
+                    return;
                 throw std::runtime_error("Handler for packet with id configuration:" + std::to_string(id) + " is not registered.");
             }
             it(std::move(packet), context);
@@ -155,6 +164,8 @@ namespace copper_server::api::packets {
         void handle(size_t id, server_bound::play_packet&& packet, base_objects::SharedClientData& context) {
             auto& it = p[id];
             if (it.empty()) {
+                if (api::configuration::get().protocol.skip_unregistered_packets)
+                    return;
                 throw std::runtime_error("Handler for packet with id play:" + std::to_string(id) + " is not registered.");
             }
             it(std::move(packet), context);

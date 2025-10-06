@@ -278,6 +278,9 @@ namespace copper_server::api::players {
 
     namespace handlers {
         base_objects::events::event<base_objects::client_data_holder> on_disconnect;
+        base_objects::events::sync_event_no_cancel<base_objects::SharedClientData&> on_tab_listing_changed;
+        base_objects::events::sync_event_no_cancel<base_objects::SharedClientData&> on_skin_parts_changed;
+        base_objects::events::sync_event_no_cancel<base_objects::SharedClientData&> on_gamemode_changed;
     }
 
     auto& get_storage() {
@@ -291,6 +294,16 @@ namespace copper_server::api::players {
 
     size_t online_players() {
         return get_storage().online_players();
+    }
+
+    void set_gamemode(uint8_t gamemode, base_objects::SharedClientData& client) {
+        client.player_data.gamemode = gamemode;
+        handlers::on_gamemode_changed.notify(client);
+    }
+
+    void set_tab_listing(bool enable, base_objects::SharedClientData& client) {
+        client.enable_tab_listings = enable;
+        handlers::on_tab_listing_changed.notify(client);
     }
 
     base_objects::client_data_holder allocate_special_player(const std::function<void(base_objects::SharedClientData&, base_objects::network::response&&)>& callback) {

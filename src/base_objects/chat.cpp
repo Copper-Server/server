@@ -668,7 +668,7 @@ namespace copper_server {
         return str;
     }
 
-    Chat Chat::fromStr(const std::string& str) {
+    Chat Chat::fromStr(std::string_view str) {
         auto json_hold = boost::json::parse(str);
         if (json_hold.is_string())
             return Chat::parseToChat(json_hold.as_string().c_str());
@@ -762,13 +762,17 @@ namespace copper_server {
     }
 
     void Chat::removeColor() {
-        if (color)
-            delete color;
+        if (color) {
+            delete[] color;
+            color = nullptr;
+        }
     }
 
     void Chat::removeColorRecursive() {
-        if (color)
-            delete color;
+        if (color) {
+            delete[] color;
+            color = nullptr;
+        }
         for (auto& it : extra)
             it.removeColorRecursive();
     }
@@ -777,7 +781,7 @@ namespace copper_server {
         return !text && extra.empty();
     }
 
-    Chat Chat::parseToChat(const std::string& string) {
+    Chat Chat::parseToChat(std::string_view string) {
         list_array<Chat> result;
 
         constexpr const char format_symbol_parts[2] = {(char)(unsigned char)194, (char)(unsigned char)167}; //{(char)0xC2, (char)0xA7};

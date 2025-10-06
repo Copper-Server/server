@@ -116,139 +116,139 @@ namespace copper_server::base_objects {
 
         template <>
         struct variant_data<minecraft::crafting_shaped> {
-            constexpr static inline const char* name = "minecraft:crafting_shaped";
+            constexpr static inline std::string_view name = "minecraft:crafting_shaped";
             constexpr static inline bool must_display = true;
         };
 
         template <>
         struct variant_data<minecraft::crafting_shapeless> {
-            constexpr static inline const char* name = "minecraft:crafting_shapeless";
+            constexpr static inline std::string_view name = "minecraft:crafting_shapeless";
             constexpr static inline bool must_display = true;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_armordye> {
-            constexpr static inline const char* name = "minecraft:crafting_special_armordye";
+            constexpr static inline std::string_view name = "minecraft:crafting_special_armordye";
             constexpr static inline bool must_display = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_bookcloning> {
-            constexpr static inline const char* name = "minecraft:crafting_special_bookcloning";
+            constexpr static inline std::string_view name = "minecraft:crafting_special_bookcloning";
             constexpr static inline bool must_display = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_mapcloning> {
-            constexpr static inline const char* name = "minecraft:crafting_special_mapcloning";
+            constexpr static inline std::string_view name = "minecraft:crafting_special_mapcloning";
             constexpr static inline bool must_display = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_mapextending> {
-            constexpr static inline const char* name = "minecraft:crafting_special_mapextending";
+            constexpr static inline std::string_view name = "minecraft:crafting_special_mapextending";
             constexpr static inline bool must_display = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_firework_rocket> {
-            constexpr static inline const char* name = "minecraft:crafting_special_firework_rocket";
+            constexpr static inline std::string_view name = "minecraft:crafting_special_firework_rocket";
             constexpr static inline bool must_display = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_firework_star> {
-            constexpr static inline const char* name = "minecraft:crafting_special_firework_star";
+            constexpr static inline std::string_view name = "minecraft:crafting_special_firework_star";
             constexpr static inline bool must_display = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_firework_star_fade> {
-            constexpr static inline const char* name = "minecraft:crafting_special_firework_star_fade";
+            constexpr static inline std::string_view name = "minecraft:crafting_special_firework_star_fade";
             constexpr static inline bool must_display = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_tippedarrow> {
-            constexpr static inline const char* name = "minecraft:crafting_special_tippedarrow";
+            constexpr static inline std::string_view name = "minecraft:crafting_special_tippedarrow";
             constexpr static inline bool must_display = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_bannerduplicate> {
-            constexpr static inline const char* name = "minecraft:crafting_special_bannerduplicate";
+            constexpr static inline std::string_view name = "minecraft:crafting_special_bannerduplicate";
             constexpr static inline bool must_display = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_shielddecoration> {
-            constexpr static inline const char* name = "minecraft:crafting_special_shielddecoration";
+            constexpr static inline std::string_view name = "minecraft:crafting_special_shielddecoration";
             constexpr static inline bool must_display = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_special_repairitem> {
-            constexpr static inline const char* name = "minecraft:crafting_special_repairitem";
+            constexpr static inline std::string_view name = "minecraft:crafting_special_repairitem";
             constexpr static inline bool must_display = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_decorated_pot> {
-            constexpr static inline const char* name = "minecraft:crafting_decorated_pot";
+            constexpr static inline std::string_view name = "minecraft:crafting_decorated_pot";
             constexpr static inline bool must_display = false;
         };
 
         template <>
         struct variant_data<minecraft::smelting> {
-            constexpr static inline const char* name = "minecraft:smelting";
+            constexpr static inline std::string_view name = "minecraft:smelting";
             constexpr static inline bool must_display = true;
         };
 
         template <>
         struct variant_data<minecraft::blasting> {
-            constexpr static inline const char* name = "minecraft:blasting";
+            constexpr static inline std::string_view name = "minecraft:blasting";
             constexpr static inline bool must_display = true;
         };
 
         template <>
         struct variant_data<minecraft::smoking> {
-            constexpr static inline const char* name = "minecraft:smoking";
+            constexpr static inline std::string_view name = "minecraft:smoking";
             constexpr static inline bool must_display = true;
         };
 
         template <>
         struct variant_data<minecraft::campfire_cooking> {
-            constexpr static inline const char* name = "minecraft:campfire_cooking";
+            constexpr static inline std::string_view name = "minecraft:campfire_cooking";
             constexpr static inline bool must_display = true;
         };
 
         template <>
         struct variant_data<minecraft::stonecutting> {
-            constexpr static inline const char* name = "minecraft:stonecutting";
+            constexpr static inline std::string_view name = "minecraft:stonecutting";
             constexpr static inline bool must_display = true;
         };
 
         template <>
         struct variant_data<minecraft::smithing_transform> {
-            constexpr static inline const char* name = "minecraft:smithing_transform";
+            constexpr static inline std::string_view name = "minecraft:smithing_transform";
             constexpr static inline bool must_display = true;
         };
 
         template <>
         struct variant_data<minecraft::smithing_trim> {
-            constexpr static inline const char* name = "minecraft:smithing_trim";
+            constexpr static inline std::string_view name = "minecraft:smithing_trim";
             constexpr static inline bool must_display = false;
         };
 
         template <>
         struct variant_data<minecraft::crafting_transmute> {
-            constexpr static inline const char* name = "minecraft:crafting_transmute";
+            constexpr static inline std::string_view name = "minecraft:crafting_transmute";
             constexpr static inline bool must_display = false;
         };
 
         template <>
         struct variant_data<custom> {
-            constexpr static inline const char* name = "copper_server:custom";
+            constexpr static inline std::string_view name = "copper_server:custom";
             constexpr static inline bool must_display = false;
         };
 
@@ -292,6 +292,24 @@ namespace copper_server::base_objects {
         uint32_t id;
         bool show_notification;
         bool highlight_as_new;
+
+        std::string_view get_data_name() const {
+            return std::visit(
+                []<class T>(const T&) {
+                    return recipes::variant_data<T>::name;
+                },
+                data
+            );
+        }
+
+        bool must_display() const {
+            return std::visit(
+                []<class T>(const T&) {
+                    return recipes::variant_data<T>::must_display;
+                },
+                data
+            );
+        }
     };
 }
 #endif /* SRC_BASE_OBJECTS_RECIPE */

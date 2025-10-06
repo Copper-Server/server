@@ -95,14 +95,14 @@ namespace copper_server {
         std::optional<bool> GetObfuscated();
 
         std::string ToStr() const;
-        static Chat fromStr(const std::string& str);
+        static Chat fromStr(std::string_view str);
         enbt::value ToENBT() const;
 
         void removeColor();
         void removeColorRecursive();
         bool empty() const;
 
-        static Chat parseToChat(const std::string& string);
+        static Chat parseToChat(std::string_view string);
         static Chat fromEnbt(const enbt::value& enbt);
         static Chat from_enbt_with_format(const enbt::value& enbt, list_array<enbt::value>&&);
         std::string to_ansi_console() const;

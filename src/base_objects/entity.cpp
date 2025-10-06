@@ -483,27 +483,27 @@ namespace enbt::io_helper {
         static void read(util::ANGLE_DEG& res, value_read_stream& read_stream) {
             read_stream
                 .read_compound()
-                .collect_as("x", res.x)
-                .collect_as("y", res.y)
+                .collect_as("pitch", res.pitch)
+                .collect_as("yaw", res.yaw)
                 .force_all_collect();
         }
 
         static void write(const util::ANGLE_DEG& res, value_write_stream& write_stream) {
             write_stream
                 .write_compound()
-                .write("x", res.x)
-                .write("y", res.y);
+                .write("pitch", res.pitch)
+                .write("yaw", res.yaw);
         }
 
         static void read(util::ANGLE_DEG& res, const enbt::value& from) {
-            res.x = from.at("x");
-            res.y = from.at("y");
+            res.pitch = from.at("pitch");
+            res.yaw = from.at("yaw");
         }
 
         static void write(const util::ANGLE_DEG& res, enbt::value& to) {
             to = enbt::compound{
-                {"x", res.x},
-                {"y", res.y}
+                {"pitch", res.pitch},
+                {"yaw", res.yaw}
             };
         }
     };
@@ -513,27 +513,27 @@ namespace enbt::io_helper {
         static void read(util::ANGLE_RAD& res, value_read_stream& read_stream) {
             read_stream
                 .read_compound()
-                .collect_as("x", res.x)
-                .collect_as("y", res.y)
+                .collect_as("pitch", res.pitch)
+                .collect_as("yaw", res.yaw)
                 .force_all_collect();
         }
 
         static void write(const util::ANGLE_RAD& res, value_write_stream& write_stream) {
             write_stream
                 .write_compound()
-                .write("x", res.x)
-                .write("y", res.y);
+                .write("pitch", res.pitch)
+                .write("yaw", res.yaw);
         }
 
         static void read(util::ANGLE_RAD& res, const enbt::value& from) {
-            res.x = from.at("x");
-            res.y = from.at("y");
+            res.pitch = from.at("pitch");
+            res.yaw = from.at("yaw");
         }
 
         static void write(const util::ANGLE_RAD& res, enbt::value& to) {
             to = enbt::compound{
-                {"x", res.x},
-                {"y", res.y}
+                {"pitch", res.pitch},
+                {"yaw", res.yaw}
             };
         }
     };
@@ -596,6 +596,16 @@ namespace copper_server {
 
         const entity_data& entity_data::view(const entity& entity) {
             return get_entity(entity.entity_id);
+        }
+
+        entity_data& entity_data::initialization_get(uint16_t id) {
+            return data_for_entities.set([&](auto& data) -> entity_data& {
+                auto it = data._registry.find(id);
+                if (it == data._registry.end())
+                    throw std::runtime_error("Entity not found.");
+                else
+                    return it->second;
+            });
         }
 
         void entity_data::register_entity_world_processor(std::shared_ptr<world_processor> processor, const std::string& id) {
@@ -698,6 +708,22 @@ namespace copper_server {
             reduce_effects(hidden_effects, active_effects);
         }
 
+        entity_metadata::entity_pose entity::get_pose() const {
+            auto it = metadata.find("POSE");
+            if (it == metadata.end())
+                return entity_metadata::entity_pose{.value = entity_metadata::entity_pose::standing};
+            else
+                return std::get<entity_metadata::entity_pose>(it->second.value);
+        }
+
+        void entity::set_pose(entity_metadata::entity_pose pose) {
+            metadata["POSE"].value = pose;
+        }
+
+        double entity::eye_height() const {
+            return const_data().eye_height_in_each_pose.at(get_pose().value.value); //add scale and other modifiers
+        }
+
         bool entity::kill() {
             if (!const_data().pre_death_callback(*this, false))
                 return false;
@@ -728,7 +754,7 @@ namespace copper_server {
             return died;
         }
 
-        const entity_data& entity::const_data() {
+        const entity_data& entity::const_data() const {
             return entity_data::get_entity(entity_id);
         }
 
@@ -743,11 +769,67 @@ namespace copper_server {
         bool entity::hitboxes_touching_z(double min, double max) {
             return (position.z - bounds.xz) >= min && (position.z + bounds.xz) <= max;
         }
+        
+        void entity::update_metadata(){
+            if (world_syncing_data.world)
+                world_syncing_data.world->entity_metadata(*this);
+        }
+
+        void entity::moved(util::VECTOR pos) {
+            if (world_syncing_data.world)
+                world_syncing_data.world->entity_move(*this, pos);
+            position = pos;
+        }
+
+        void entity::moved(util::VECTOR pos, float yaw, float pitch) {
+            if (world_syncing_data.world) {
+                world_syncing_data.world->entity_move(*this, pos);
+                world_syncing_data.world->entity_rotation_changes(*this, {yaw, pitch});
+            }
+            position = pos;
+            rotation = {yaw, pitch};
+        }
+
+        void entity::moved(util::VECTOR pos, float yaw, float pitch, bool on_ground) {
+            if (world_syncing_data.world) {
+                world_syncing_data.world->entity_move(*this, pos);
+                world_syncing_data.world->entity_rotation_changes(*this, {yaw, pitch});
+            }
+            position = pos;
+            rotation = {yaw, pitch};
+            set_on_ground(on_ground);
+        }
+
+        void entity::rotated(float yaw, float pitch) {
+            if (world_syncing_data.world)
+                world_syncing_data.world->entity_rotation_changes(*this, {yaw, pitch});
+            rotation = {yaw, pitch};
+        }
+
+        void entity::rotated(float yaw, float pitch, bool on_ground) {
+            if (world_syncing_data.world)
+                world_syncing_data.world->entity_rotation_changes(*this, {yaw, pitch});
+            rotation = {yaw, pitch};
+            set_on_ground(on_ground);
+        }
 
         void entity::teleport(util::VECTOR pos) {
             if (world_syncing_data.world)
                 world_syncing_data.world->entity_teleport(*this, pos);
             position = pos;
+            if (assigned_player)
+                *assigned_player << api::packets::client_bound::play::entity_position_sync{
+                    .id = protocol_id,
+                    .x = pos.x,
+                    .y = pos.y,
+                    .z = pos.z,
+                    .velocity_x = motion.x,
+                    .velocity_y = motion.y,
+                    .velocity_z = motion.z,
+                    .yaw = (float)rotation.yaw,
+                    .pitch = (float)rotation.pitch,
+                    .on_ground = is_on_ground()
+                };
         }
 
         void entity::teleport(util::VECTOR pos, float yaw, float pitch) {
@@ -757,6 +839,19 @@ namespace copper_server {
             }
             position = pos;
             rotation = {yaw, pitch};
+            if (assigned_player)
+                *assigned_player << api::packets::client_bound::play::entity_position_sync{
+                    .id = protocol_id,
+                    .x = pos.x,
+                    .y = pos.y,
+                    .z = pos.z,
+                    .velocity_x = motion.x,
+                    .velocity_y = motion.y,
+                    .velocity_z = motion.z,
+                    .yaw = (float)rotation.yaw,
+                    .pitch = (float)rotation.pitch,
+                    .on_ground = is_on_ground()
+                };
         }
 
         void entity::teleport(util::VECTOR pos, float yaw, float pitch, bool on_ground) {
@@ -767,6 +862,19 @@ namespace copper_server {
             position = pos;
             rotation = {yaw, pitch};
             set_on_ground(on_ground);
+            if (assigned_player)
+                *assigned_player << api::packets::client_bound::play::entity_position_sync{
+                    .id = protocol_id,
+                    .x = pos.x,
+                    .y = pos.y,
+                    .z = pos.z,
+                    .velocity_x = motion.x,
+                    .velocity_y = motion.y,
+                    .velocity_z = motion.z,
+                    .yaw = (float)rotation.yaw,
+                    .pitch = (float)rotation.pitch,
+                    .on_ground = is_on_ground()
+                };
         }
 
         void entity::set_ride_entity(entity_ref entity) {
@@ -969,21 +1077,24 @@ namespace copper_server {
         }
 
         float entity::get_breath() const {
-            auto it = nbt.find("breath");
-            if (it == nbt.end())
+            auto it = metadata.find("breath");
+            if (it == metadata.end())
                 return 0;
             else
-                return it->second;
+                return std::get<entity_metadata::var_int>(it->second.value).value;
         }
 
         void entity::set_breath(float breath) {
-            nbt["breath"] = breath;
-            if (const_data().metadata.contains("AIR"))
-                if (assigned_player)
-                    *assigned_player << api::packets::client_bound::play::set_entity_data{
-                        .id = protocol_id,
-                        .metadata = {} //TODO
-                    };
+            auto& meta = metadata["AIR"];
+            meta.value = entity_metadata::var_int{.value = breath};
+            if (assigned_player)
+                *assigned_player << api::packets::client_bound::play::set_entity_data{
+                    .id = protocol_id,
+                    .metadata = {api::packets::client_bound::play::set_entity_data::metadata_item_t{
+                        .index = 0,
+                        .value = meta
+                    }}
+                };
         }
 
         void entity::add_breath(float breath) {

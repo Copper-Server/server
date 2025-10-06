@@ -12,6 +12,7 @@
 #include <library/enbt/enbt.hpp>
 #include <src/base_objects/box.hpp>
 #include <src/base_objects/chat.hpp>
+#include <src/base_objects/entity/metadata.hpp>
 #include <src/base_objects/events/sync_event.hpp>
 #include <src/base_objects/network/response.hpp>
 #include <src/base_objects/packets_help.hpp>
@@ -42,6 +43,7 @@ namespace copper_server {
     namespace base_objects {
         struct SharedClientData;
         class command_manager;
+        struct recipe;
     }
 
     //this api allows users to handle clients and simulate them if needed, also supports serialization to string for debug purposes
@@ -141,7 +143,8 @@ namespace copper_server {
             list_array_no_size<base_objects::component, &slot::components_to_add> to_add;
             list_array_no_size<var_int32::data_component_type, &slot::components_to_remove> to_remove;
 
-            slot create(const base_objects::slot&);
+            static slot create(const base_objects::slot&);
+            void read(base_objects::slot& res) &&;
         };
 
         struct slot_display {
@@ -235,6 +238,8 @@ namespace copper_server {
                 stonecutter,
                 smithing>
                 display;
+
+            static recipe_display create(const base_objects::recipe&);
         };
 
         struct particle_data {
@@ -902,7 +907,7 @@ namespace copper_server {
                     var_int32 windows_id;
                     var_int32 state_id;
                     short slot;
-                    struct slot carried_item;
+                    struct slot item;
                 };
 
                 struct cookie_request : public packet<0x15> {
@@ -1840,7 +1845,16 @@ namespace copper_server {
 
                 struct set_entity_data : public packet<0x5C> {
                     var_int32::entity_id id;
-                    list_array_siz_from_packet<uint8_t> metadata;
+
+                    struct metadata_item_t {
+                        uint8_t index = 0;
+                        base_objects::entity_metadata value;
+                    };
+
+                    list_array_siz_from_packet<metadata_item_t> metadata; //index 0xFF is end
+                    const uint8_t end_index = 0xFF;                       //this is safe because the sizeof(metadata_item_t) is more than 1 and this item would be not counted to metadata size because of the roundup by division in decoder
+
+                    static set_entity_data create(base_objects::entity& entity);
                 };
 
                 struct set_entity_link : public packet<0x5D> {

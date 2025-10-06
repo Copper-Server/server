@@ -11,26 +11,16 @@
 #include <cstdint>
 namespace copper_server::base_objects {
     struct position {
-        int x : 26;
-        int z : 26;
-        int y : 12;
+        int64_t x : 26;
+        int64_t z : 26;
+        int64_t y : 12;
 
         inline void set(uint64_t raw) {
-            union u_t {
-                position flag;
-                uint64_t r;
-            } u{.r = raw};
-
-            *this = u.flag;
+            *this = std::bit_cast<position>(raw);
         }
 
         inline uint64_t get() const {
-            union u_t {
-                position flag;
-                uint64_t r;
-            } u{.flag = *this};
-
-            return u.r;
+            return std::bit_cast<uint64_t>(*this);
         }
 
         bool operator==(const position& other) const {

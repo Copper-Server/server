@@ -15,6 +15,7 @@
 #include <src/storage/world_data.hpp>
 
 namespace copper_server::api::world {
+    fast_task::protected_value<std::unordered_map<uint64_t, base_objects::events::event<uint64_t>>> _ticking_clock;
     storage::worlds_data* worlds_data = nullptr;
 
     void register_worlds_data(storage::worlds_data& worlds) {
@@ -25,9 +26,13 @@ namespace copper_server::api::world {
     }
 
     void unregister_worlds_data() {
-        if (worlds_data)
+        if (worlds_data) {
+            on_tick().clear();
+            _ticking_clock.set([](auto& map) {
+                map.clear();
+            });
             worlds_data = nullptr;
-        else
+        } else
             throw std::runtime_error("Worlds already unregistered");
     }
 
@@ -287,5 +292,28 @@ namespace copper_server::api::world {
 
     base_objects::events::event<double>& on_tps_changed() {
         return get_worlds().on_tps_changed;
+    }
+
+    base_objects::events::event<uint64_t>& on_tick() {
+        return get_worlds().on_tick;
+    }
+
+    base_objects::events::event<uint64_t>& ticking_clock(uint64_t notify_each) {
+        if (notify_each <= 1)
+            return on_tick();
+        else
+            return _ticking_clock.set([notify_each](auto& map) -> auto& {
+                if (auto it = map.find(notify_each); it != map.end())
+                    return it->second;
+                else {
+                    auto& res = map[notify_each];
+                    on_tick().join([notify_each](auto tick) {
+                        if (tick % notify_each == 0)
+                            ticking_clock(notify_each).notify(tick);
+                        return false;
+                    });
+                    return res;
+                }
+            });
     }
 }

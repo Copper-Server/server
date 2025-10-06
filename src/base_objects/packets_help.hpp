@@ -450,6 +450,7 @@ namespace copper_server::base_objects {
         using llama_variant = api::id::source<var_int32, api::id::registry_source::llama_variant>;
         using axolotl_variant = api::id::source<var_int32, api::id::registry_source::axolotl_variant>;
 
+        using entity_pose = api::id::source<var_int32, api::id::registry_source::entity_pose>;
         using entity_id = api::id::source<var_int32, api::id::registry_source::entity_id>;
 
         int32_t value = 0;

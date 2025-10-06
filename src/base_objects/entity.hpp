@@ -16,6 +16,7 @@
 #include <src/base_objects/bounds.hpp>
 #include <src/base_objects/entity/animation.hpp>
 #include <src/base_objects/entity/event.hpp>
+#include <src/base_objects/entity/metadata.hpp>
 #include <src/base_objects/events/sync_event.hpp>
 #include <src/base_objects/slot.hpp>
 #include <src/base_objects/weather.hpp>
@@ -122,6 +123,7 @@ namespace copper_server {
             } spawn_restriction;
 
             std::optional<living_entity_data_t> living_entity_data;
+            std::optional<int32_t> spawn_egg;
 
             enbt::compound data;
 
@@ -184,6 +186,7 @@ namespace copper_server {
 
                 void (*entity_animation)(entity& self, entity&, base_objects::entity_animation animation) = nullptr;
                 void (*entity_event)(entity& self, entity&, base_objects::entity_event status) = nullptr;
+                void (*entity_metadata)(entity& self, entity&) = nullptr;
 
                 void (*entity_add_effect)(entity& self, entity&, uint32_t id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) = nullptr;
                 void (*entity_remove_effect)(entity& self, entity&, uint32_t id) = nullptr;
@@ -218,50 +221,7 @@ namespace copper_server {
 
             std::shared_ptr<world_processor> processor;
 
-            struct metadata_sync {
-                uint8_t index =0;
-
-                enum class type_t : uint8_t {
-                    byte,
-                    varint,
-                    varlong,
-                    _float,
-                    _string,
-                    text,
-                    opt_text,
-                    slot,
-                    boolean,
-                    euler_angle,
-                    postion,
-                    opt_position,
-                    direction,
-                    entity_refrence,
-                    block_state,
-                    opt_block_state,
-                    nbt,
-                    particle,
-                    particles,
-                    villager_data,
-                    opt_varint,
-                    pose,
-                    cat_variant,
-                    cow_variant,
-                    wolf_variant,
-                    wolf_sound_variant,
-                    frog_variant,
-                    pig_variant,
-                    chicken_variant,
-                    global_pos,
-                    painting_variant,
-                    sniffer_state,
-                    armadillo_state,
-                    vector3,
-                    quaternion,
-                };
-                type_t type = type_t::byte;
-            };
-
-            std::unordered_map<std::string, metadata_sync> metadata;
+            std::vector<double> eye_height_in_each_pose;
 
 
             //entity can be added without reload, but it could be removed only by `reset_entities`
@@ -278,8 +238,10 @@ namespace copper_server {
             static void initialize_entities(); //INTERNAL, used to assign processors
 
 
+            static entity_data& initialization_get(uint16_t id);
             static uint16_t player_entity_id;
         };
+
 
         struct entity {
             struct effect {
@@ -384,7 +346,6 @@ namespace copper_server {
                     update_processing((int32_t)processing_region.center_x, (int32_t)processing_region.center_z, render_distance);
                 }
 
-
                 void flush_processing() {
                     auto diameter = processing_region.radius + processing_region.radius + 1;
                     processed_chunks = bit_list_array<>(diameter * diameter);
@@ -430,20 +391,7 @@ namespace copper_server {
             storage::world_data* current_world() const;
 
             //nbt {
-            //  float health = 20;
-            //  uint8_t food = 20;
-            //  float saturation = 5;
-            //  float breath = 10;
-            //  int32_t level = 0;
-            //  int32_t required_experience = 0;
-            //  int32_t experience = 0;
-            //  int32_t fall_distance = 0;
             //  uint8_t selected_item = 0; //hotbar, 0..8
-            //
-            //  bool is_sleeping = false;
-            //  bool on_ground = false;
-            //  bool is_sprinting = false;
-            //  bool is_sneaking = false;
             //
             //  calculated_values {
             //      float absorption_health;
@@ -468,18 +416,31 @@ namespace copper_server {
             //  }
             //}
 
+
+            entity_metadata::entity_pose get_pose() const;
+            void set_pose(entity_metadata::entity_pose);
+            double eye_height() const;
+
             bool kill();
             void force_kill();
             void erase(); //same as force_kill but without animation and other handling(pre_death_callback not called)
             bool is_died();
-            const entity_data& const_data();
+            const entity_data& const_data() const;
 
             entity_ref copy() const;
+
+
+            void moved(util::VECTOR pos);
+            void moved(util::VECTOR pos, float yaw, float pitch);
+            void moved(util::VECTOR pos, float yaw, float pitch, bool on_ground);
+
+            void rotated(float yaw, float pitch);
+            void rotated(float yaw, float pitch, bool on_ground);
+
 
             void teleport(util::VECTOR pos);
             void teleport(util::VECTOR pos, float yaw, float pitch);
             void teleport(util::VECTOR pos, float yaw, float pitch, bool on_ground);
-
 
             void set_ride_entity(entity_ref entity);
             void remove_ride_entity();
@@ -573,6 +534,12 @@ namespace copper_server {
             bool hitboxes_touching_x(double min, double max);
             bool hitboxes_touching_y(double min, double max);
             bool hitboxes_touching_z(double min, double max);
+
+            std::unordered_map<std::string, entity_metadata> metadata;
+
+
+            void update_metadata();
+
 
             entity();
             ~entity();

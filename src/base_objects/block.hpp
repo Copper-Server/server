@@ -66,7 +66,7 @@ namespace copper_server {
             float blast_resistance = 0;
             int32_t map_color_rgb = 0;
             int32_t block_entity_id = 0; //used only when is_block_entity == true, like interact and storage
-            int32_t default_drop_item_id = 0;
+            int32_t item_id = 0;
             int32_t experience = 0;
             block_id_t general_block_id = 0; //does not represent state
             block_id_t default_state = 0;
@@ -206,7 +206,7 @@ namespace copper_server {
                   blast_resistance(copy.blast_resistance),
                   map_color_rgb(copy.map_color_rgb),
                   block_entity_id(copy.block_entity_id),
-                  default_drop_item_id(copy.default_drop_item_id),
+                  item_id(copy.item_id),
                   experience(copy.experience),
                   general_block_id(copy.general_block_id),
                   default_state(copy.default_state),
@@ -247,7 +247,7 @@ namespace copper_server {
                   blast_resistance(std::move(copy.blast_resistance)),
                   map_color_rgb(std::move(copy.map_color_rgb)),
                   block_entity_id(std::move(copy.block_entity_id)),
-                  default_drop_item_id(std::move(copy.default_drop_item_id)),
+                  item_id(std::move(copy.item_id)),
                   experience(std::move(copy.experience)),
                   general_block_id(std::move(copy.general_block_id)),
                   default_state(std::move(copy.default_state)),

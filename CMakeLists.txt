@@ -18,6 +18,7 @@ add_compile_definitions(tasks_enable_preemptive_scheduler_preview=false)
 
 FILE(GLOB REFLECTION_FILES CONFIGURE_DEPENDS
   src/api/packets.hpp
+  src/base_objects/entity/metadata.hpp
   src/base_objects/component.hpp
   src/base_objects/dye_color.hpp
   src/base_objects/packets_help.hpp
@@ -40,7 +41,6 @@ build_resource_merge_json("copper_server" "${CMAKE_CURRENT_SOURCE_DIR}/resources
 build_resources("copper_server" "out/built_resources" "${RESOURCE_FILES}" RESOURCE_FILES_include RESOURCE_FILES_build compressed)
 create_resources_header("resources" "${RESOURCE_FILES_include}")
 create_reflect_map("${CMAKE_CURRENT_SOURCE_DIR}/src/util/reflect" "${REFLECTION_FILES}")
-
 
 IF(MSVC)
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>") #I hate using this for library/commandline. Its just breaks, COMMANDLINE_LIBTYPE and COMMANDLINE_SHARED_LIBS are just not working as excepted

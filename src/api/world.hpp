@@ -102,6 +102,9 @@ namespace copper_server::api::world {
     base_objects::events::event<int32_t>& on_world_loaded();
     base_objects::events::event<int32_t>& on_world_unloaded();
     base_objects::events::event<double>& on_tps_changed();
+    base_objects::events::event<uint64_t>& on_tick();
+
+    base_objects::events::event<uint64_t>& ticking_clock(uint64_t notify_each = 1); //0 and 1 is same ticking speed, used global ticking speed
 
     bool registered();
 }

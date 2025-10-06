@@ -69,6 +69,42 @@ if(${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/main.cpp IS_NEWER_THAN ${CMAKE_CURREN
 
     message(STATUS "reflect_map tool built successfully")
 endif()
+if(${CMAKE_CURRENT_SOURCE_DIR}/entity_proxy_gen/main.cpp IS_NEWER_THAN ${CMAKE_CURRENT_SOURCE_DIR}/entity_proxy_gen.exe)
+    message(STATUS "Configuring entity_proxy_gen tool...")
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/entity_proxy_gen/out)
+    if(WIN32)
+        set(entity_proxy_gen_triplet x64-windows-static)
+        set(entity_proxy_gen_build_type RelWithDebInfo)
+    elseif(UNIX)
+        set(entity_proxy_gen_triplet x64-linux)
+        set(entity_proxy_gen_build_type Release)
+    endif()
+
+    execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/entity_proxy_gen -DCMAKE_TOOLCHAIN_FILE=${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=${entity_proxy_gen_build_type} -DVCPKG_TARGET_TRIPLET=${entity_proxy_gen_triplet}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/entity_proxy_gen/out
+        RESULT_VARIABLE result
+        OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/entity_proxy_gen/out/entity_proxy_gen.log
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/entity_proxy_gen/out/entity_proxy_gen_error.log
+    )
+
+    if(result)
+        message(FATAL_ERROR "Failed to build entity_proxy_gen, see entity_proxy_gen_error.log for details in ${CMAKE_CURRENT_SOURCE_DIR}/tools/entity_proxy_gen/out")
+    endif()
+
+    message(STATUS "Building entity_proxy_gen tool...")
+    execute_process(COMMAND ${CMAKE_COMMAND} --build . --config Release --target entity_proxy_gen
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/entity_proxy_gen/out
+        RESULT_VARIABLE result
+        OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/entity_proxy_gen/out/entity_proxy_gen_build.log
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/entity_proxy_gen/out/entity_proxy_gen_build_error.log
+    )
+
+    if(result)
+        message(FATAL_ERROR "Failed to build entity_proxy_gen, see entity_proxy_gen_build_error.log for details in ${CMAKE_CURRENT_SOURCE_DIR}/tools/entity_proxy_gen/out")
+    endif()
+
+    message(STATUS "entity_proxy_gen tool built successfully")
+endif()
 
 
 
@@ -288,6 +324,19 @@ function(create_reflect_map output_file FILES)
     #file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
 endfunction(create_reflect_map)
 
+function(create_mappings)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/entity_proxy_gen)
+    execute_process(
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/entity_proxy_gen.exe "${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/entities.json" "${CMAKE_CURRENT_SOURCE_DIR}/src/api/entity_proxy.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/api/bin/entity_proxy.cpp" 
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE result
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/entity_proxy_gen/${result_name}_error.log
+    )
+    if(result)
+        message(FATAL_ERROR "Failed to create mapping for /resources/registry/entities.json")
+    endif()
+    #file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
+endfunction(create_mappings)
 
 function(execute_gradle project_dir args)
     if(WIN32)
@@ -325,17 +374,16 @@ endfunction(run_mojang_extractor)
 function(perform_extraction)
     message(STATUS "Extracting data from vanilla server")
     run_mojang_extractor()
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/generated/data/minecraft DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources)
-    file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/resources/minecraft ${CMAKE_CURRENT_SOURCE_DIR}/resources/data)
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/generated/reports/registries.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
-    file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/registries.json ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/protocol.json)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
+    file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/resources/data)
+    file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/generated/data/minecraft ${CMAKE_CURRENT_SOURCE_DIR}/resources/data)
+    file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/generated/reports/registries.json ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/protocol.json)
 
     run_extractor()
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/block_entity_types.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/block_properties.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/block_shapes.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/blocks.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
-    file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/blocks.json ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/blocks.senbt)
+    file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/blocks.json ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/blocks.senbt)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/composter_increase_chance.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/entities.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/entity_pose.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
@@ -349,6 +397,8 @@ function(perform_extraction)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/spawn_egg.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/status_effects.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/synced_registries.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
+
+    create_mappings()
 endfunction(perform_extraction)
 
 function(prepare_resources)

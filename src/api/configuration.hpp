@@ -108,6 +108,7 @@ namespace copper_server::api::configuration {
             bool prevent_proxy_connections = false; //	If the ISP/AS sent from the server is different from the one from Mojang Studios' authentication server, the player is kicked.
             bool enable_encryption = true;
             bool send_nbt_data_in_chunk = true; //enabled by default to be same as vanilla server, this option exists to allow 'fix' chunk ban and reduce network consumption, should not affect gameplay for regular players
+            bool skip_unregistered_packets = false; //if set, the player could send packets and would'nt be kicked, could be useful for disabling some functionality. For example disabling specific base/play_engine/* plugin
 
             enum class connection_conflict_t {
                 kick_connected,
@@ -116,50 +117,6 @@ namespace copper_server::api::configuration {
                 = connection_conflict_t::kick_connected;
         } protocol;
 
-        //in this struct everything can be disabled by setting to zero
-        struct AntiCheat {
-            struct Fly {
-                bool prevent_illegal_flying = true; //when player not have fly attribute then these checks will be performed for player
-                std::chrono::milliseconds allow_flying_time = std::chrono::milliseconds(200);
-            } fly;
-
-            struct Speed {
-                bool prevent_illegal_speed = true;
-                float max_speed = 0.3f; //overspeed threshold
-            } speed;
-
-            struct XRay {
-                uint32_t visibility_distance = 0; //hides blocks that are farther than this distance(in blocks)
-                bool send_fake_blocks = false;
-                bool hide_surrounded_blocks = false;
-                std::unordered_set<std::string> block_ids = {};
-            } xray;
-
-            bool check_block_breaking_time = true;
-
-            float reach_threshold = 0.2f;
-
-            struct KillAura {
-                float angle_threshold = 5.0f;
-                bool enable = true;
-            } killaura;
-
-            bool nofall = true;
-
-            struct Scaffold {
-                //list of checks
-                bool enable_all = true;
-            } scaffold;
-
-            struct FastPlace {
-                uint32_t max_clicks = 4;
-            } fastplace;
-
-            struct Movement {
-                bool detect_baritone = true;
-                bool no_slow_down = true;
-            } movement;
-        } anti_cheat;
 
         struct Mojang {
             static constexpr std::string_view session_server = "sessionserver.mojang.com";
@@ -195,7 +152,8 @@ namespace copper_server::api::configuration {
             bool offline_mode : 1 = false;
             bool prevent_chat_reports : 1 = false; //if true then chat reports will be prevented despite `mojang.enforce_secure_profile` setting
             bool world_debug_mode : 1 = false;     //disables disk usage for worlds
-            bool frozen_config : 1 = false;        //disables file and uses default values
+            bool frozen_config : 1 = false;        //disables the config file and uses default values set at compile time(still modifable on runtime)
+            bool enable_debug_task_thread_naming : 1 = false; //optional
 
 
             std::filesystem::path get_storage_path() const {

@@ -15,6 +15,55 @@ namespace copper_server::util {
     extern const double pi;
 
     template <class T>
+    struct XYZW {
+        T x;
+        T y;
+        T z;
+        T w;
+
+        bool operator==(const XYZW& comp) {
+            return x == comp.x && y == comp.y && z == comp.z && w == comp.w;
+        }
+
+        bool operator!=(const XYZW& comp) {
+            return x != comp.x || y != comp.y || z != comp.z || w != comp.w;
+        }
+
+        XYZW& operator+=(const XYZW& other) {
+            x += other.x;
+            y += other.y;
+            z += other.z;
+            w += other.w;
+            return *this;
+        }
+
+        XYZW& operator-=(const XYZW& other) {
+            x -= other.x;
+            y -= other.y;
+            z -= other.z;
+            w -= other.w;
+            return *this;
+        }
+
+        XYZW& operator*=(const XYZW& other) {
+            x *= other.x;
+            y *= other.y;
+            z *= other.z;
+            w *= other.w;
+            return *this;
+        }
+
+        XYZW& operator/=(const XYZW& other) {
+            x /= other.x;
+            y /= other.y;
+            z /= other.z;
+            w /= other.w;
+            return *this;
+        }
+    };
+
+
+    template <class T>
     struct XYZ {
         T x;
         T y;
@@ -97,101 +146,128 @@ namespace copper_server::util {
         }
     };
 
-    typedef XY<double> ANGLE;
-
     struct ANGLE_DEG {
-        double x;
-        double y;
+        double pitch;
+        double yaw;
 
         bool operator==(const ANGLE_DEG& comp) {
-            return x == comp.x && y == comp.y;
+            return pitch == comp.pitch && yaw == comp.yaw;
         }
 
         bool operator!=(const ANGLE_DEG& comp) {
-            return x != comp.x || y != comp.y;
+            return pitch != comp.pitch || yaw != comp.yaw;
         }
 
         ANGLE_DEG& operator+=(const ANGLE_DEG& other) {
-            x += other.x;
-            y += other.y;
+            pitch += other.pitch;
+            yaw += other.yaw;
             return *this;
         }
 
         ANGLE_DEG& operator-=(const ANGLE_DEG& other) {
-            x -= other.x;
-            y -= other.y;
+            pitch -= other.pitch;
+            yaw -= other.yaw;
             return *this;
         }
 
         ANGLE_DEG& operator*=(const ANGLE_DEG& other) {
-            x *= other.x;
-            y *= other.y;
+            pitch *= other.pitch;
+            yaw *= other.yaw;
             return *this;
         }
 
         ANGLE_DEG& operator/=(const ANGLE_DEG& other) {
-            x /= other.x;
-            y /= other.y;
+            pitch /= other.pitch;
+            yaw /= other.yaw;
             return *this;
         }
     };
 
     struct ANGLE_RAD {
-        double x;
-        double y;
+        double pitch;
+        double yaw;
 
         bool operator==(ANGLE_RAD comp) {
-            return x == comp.x && y == comp.y;
+            return pitch == comp.pitch && yaw == comp.yaw;
         }
 
         bool operator!=(ANGLE_RAD comp) {
-            return x != comp.x || y != comp.y;
+            return pitch != comp.pitch || yaw != comp.yaw;
         }
 
         ANGLE_RAD& operator+=(ANGLE_RAD other) {
-            x += other.x;
-            y += other.y;
+            pitch += other.pitch;
+            yaw += other.yaw;
             return *this;
         }
 
         ANGLE_RAD& operator-=(ANGLE_RAD other) {
-            x -= other.x;
-            y -= other.y;
+            pitch -= other.pitch;
+            yaw -= other.yaw;
             return *this;
         }
 
         ANGLE_RAD& operator*=(ANGLE_RAD other) {
-            x *= other.x;
-            y *= other.y;
+            pitch *= other.pitch;
+            yaw *= other.yaw;
             return *this;
         }
 
         ANGLE_RAD& operator/=(ANGLE_RAD other) {
-            x /= other.x;
-            y /= other.y;
+            pitch /= other.pitch;
+            yaw /= other.yaw;
             return *this;
         }
     };
 
-    typedef XY<double> YAW_PITCH;
     typedef XY<uint8_t> YAW_PITCH_256;
 
-    template <class T>
-    inline void moved(XYZ<T>& pos, ANGLE rot, T distance) {
-        T x_cos = cos(rot.x);
-        pos.x += cos(rot.y) * x_cos * distance;
-        pos.y += sin(rot.y) * x_cos * distance;
-        pos.z += sin(rot.x) * distance;
+    constexpr double DEG_TO_RAD = 3.14159265358979323846 / 180.0;
+
+    inline double sind(double degrees) {
+        return std::sin(degrees * DEG_TO_RAD);
+    }
+
+    inline double cosd(double degrees) {
+        return std::cos(degrees * DEG_TO_RAD);
+    }
+
+    inline double tand(double degrees) {
+        return std::tan(degrees * DEG_TO_RAD);
     }
 
     template <class T>
-    inline XYZ<T> moved(ANGLE rot, T distance) {
-        XYZ<T> res;
-        T x_cos = cos(rot.x);
-        res.x = cos(rot.y) * x_cos * distance;
-        res.y = sin(rot.y) * x_cos * distance;
-        res.z = sin(rot.x) * distance;
+    inline XYZ<T> moved(ANGLE_RAD rot, T distance) {
+        T cos_pitch = cos(rot.pitch);
+        XYZ<T> offset;
+        offset.x = static_cast<T>(cos(rotation.yaw) * cos_pitch * distance);
+        offset.y = static_cast<T>(sin(rotation.yaw) * cos_pitch * distance);
+        offset.z = static_cast<T>(sin(rotation.pitch) * distance);
         return res;
+    }
+
+    template <class T>
+    inline XYZ<T> moved(const XYZ<T>& startPosition, const ANGLE_RAD& rotation, T distance) {
+        XYZ<T> finalPosition = startPosition;
+        finalPosition += moved(rotation, distance);
+        return finalPosition;
+    }
+
+    template <class T>
+    inline XYZ<T> moved(ANGLE_DEG rot, T distance) {
+        T cos_pitch = cosd(rot.pitch);
+        XYZ<T> offset;
+        offset.x = static_cast<T>(cosd(rotation.yaw) * cos_pitch * distance);
+        offset.y = static_cast<T>(sind(rotation.yaw) * cos_pitch * distance);
+        offset.z = static_cast<T>(sind(rotation.pitch) * distance);
+        return res;
+    }
+
+    template <class T>
+    inline XYZ<T> moved(const XYZ<T>& startPosition, const ANGLE_DEG& rotation, T distance) {
+        XYZ<T> finalPosition = startPosition;
+        finalPosition += moved(rotation, distance);
+        return finalPosition;
     }
 
     VECTOR convert(ANGLE_DEG rot);
@@ -219,9 +295,6 @@ namespace copper_server::util {
         return std::sqrt(distance_sq(p0, p1));
     }
 
-    YAW_PITCH to_yaw_pitch(ANGLE_DEG val);
-    YAW_PITCH to_yaw_pitch(ANGLE_RAD val);
-    YAW_PITCH to_yaw_pitch(VECTOR val);
     YAW_PITCH_256 to_yaw_pitch_256(ANGLE_DEG val);
     YAW_PITCH_256 to_yaw_pitch_256(ANGLE_RAD val);
     YAW_PITCH_256 to_yaw_pitch_256(VECTOR val);

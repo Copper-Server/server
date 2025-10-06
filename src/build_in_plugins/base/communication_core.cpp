@@ -97,7 +97,7 @@ namespace copper_server::build_in_plugins {
             if (!packet.signature)
                 return false;
             std::unique_ptr<EVP_PKEY, EVP_PKEY_str_free> key;
-            client.packets_state.internal_data.get([&key](auto& data) {
+            client.packets_state.get_play_data([&key](auto& data) {
                 if (data.signature) {
                     const unsigned char* p = data.signature->public_key.data();
                     key.reset(d2i_PUBKEY(NULL, &p, (long)data.signature->public_key.size()));
@@ -121,7 +121,7 @@ namespace copper_server::build_in_plugins {
             OPENSSL_CHECK(EVP_DigestVerifyUpdate(ctx.get(), &message_len, sizeof(message_len)), "Failed to use EVP_DigestVerifyUpdate");
             OPENSSL_CHECK(EVP_DigestVerifyUpdate(ctx.get(), packet.message.value.data(), message_len), "Failed to use EVP_DigestVerifyUpdate");
 
-            client.packets_state.internal_data.get([&ctx](auto& data) {
+            client.packets_state.get_play_data([&ctx](auto& data) {
                 int32_t signs_len = (int32_t)data.last_seen_messages.size();
                 OPENSSL_CHECK(EVP_DigestVerifyUpdate(ctx.get(), &signs_len, sizeof(signs_len)), "Failed to use EVP_DigestVerifyUpdate");
                 for (auto& it : data.last_seen_messages)
@@ -210,6 +210,23 @@ namespace copper_server::build_in_plugins {
                 }
                 return false;
             });
+
+            register_packet_processor([](api::packets::server_bound::play::command_suggestion&& packet, base_objects::SharedClientData& client) {
+                base_objects::command_context context(client, true);
+                auto suggestions = api::command::get_manager().request_suggestions(packet.command_text.value, context);
+                auto pos = packet.command_text.value.find_last_of(" /");
+                if (pos == std::string::npos)
+                    pos = 0;
+                client << api::client::play::command_suggestions{
+                    .suggestion_transaction_id = packet.suggestion_transaction_id,
+                    .start = (int32_t)pos,
+                    .length = int32_t(packet.command_text.value.size() - pos),
+                    .matches = suggestions
+                                   .convert_fn([](auto& it) {
+                                       return api::client::play::command_suggestions::match{.set = it};
+                                   })
+                };
+            });
             register_packet_processor([](api::packets::server_bound::play::chat_command&& packet, base_objects::SharedClientData& client) {
                 base_objects::command_context context(client, true);
                 try {
@@ -244,8 +261,13 @@ namespace copper_server::build_in_plugins {
                     client << api::client::play::disconnect{.reason = _on_invalid_new_signature()};
                     return;
                 }
-                client.packets_state.internal_data.set([&packet](base_objects::SharedClientData::packets_state_t::internal_data_t& data) {
-                    data.signature = std::make_unique<base_objects::SharedClientData::packets_state_t::internal_data_t::signature_t>(packet.uuid, packet.expiries_at, packet.public_key, packet.key_signature);
+                client.packets_state.get_play_data([&packet](base_objects::SharedClientData::packets_state_t::play_data_t& data) {
+                    data.signature = std::make_unique<base_objects::SharedClientData::packets_state_t::play_data_t::signature_t>(
+                        packet.uuid,
+                        packet.expiries_at,
+                        packet.public_key,
+                        packet.key_signature
+                    );
                 });
                 piu new_data;
                 new_data.actions.push(piu::header{client.data->uuid});
@@ -360,7 +382,15 @@ namespace copper_server::build_in_plugins {
                 api::players::iterate_online([&msg, &client](base_objects::SharedClientData& oclient) {
                     if (oclient.chat_mode == base_objects::SharedClientData::ChatMode::ENABLED) {
                         api::packets::client_bound::play::player_chat personal{msg};
-                        personal.index = oclient.packets_state.local_chat_counter++;
+                        if (!oclient.enable_filtering)
+                            personal.filter = api::packets::client_bound::play::player_chat::no_filter{};
+                        if (!oclient.enable_chat_colors) {
+                            personal.unsigned_content.and_then([](auto& chat) { chat.removeColorRecursive(); });
+                            personal.sender_name.removeColorRecursive();
+                        }
+
+                        personal.index
+                            = oclient.packets_state.local_chat_counter++;
                         oclient << std::move(personal);
                     }
                     return false;
@@ -369,7 +399,7 @@ namespace copper_server::build_in_plugins {
 
             register_packet_processor([this](api::packets::server_bound::play::chat_ack&& packet, base_objects::SharedClientData& client) {
                 std::unique_lock lock(messages_order);
-                client.packets_state.internal_data.set([&](auto& data) {
+                client.packets_state.get_play_data([&](auto& data) {
                     int32_t count = std::max<int32_t>(packet.count, 20);
                     for (size_t i = 0; i < count; i++) {
                         std::visit(

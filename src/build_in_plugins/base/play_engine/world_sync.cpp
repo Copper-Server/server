@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ * Copyright 2025-Present Danyil Melnytskyi. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License"). You may not use
  * this file except in compliance with the License. You can obtain a copy
@@ -7,6 +7,7 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <src/api/client.hpp>
+#include <src/api/command.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/entity_id_map.hpp>
 #include <src/api/players.hpp>
@@ -17,11 +18,8 @@
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 
-namespace copper_server::build_in_plugins {
-    //handles clients with play state, allows players to access world and other things through api
-
-    class PlayEngine : public PluginAutoRegister<"base/play_engine", PlayEngine> {
-
+namespace copper_server::build_in_plugins::play_engine {
+    class world_sync : public PluginAutoRegister<"base/play_engine/world_sync", world_sync> {
         static fast_task::future_ptr<void> send_async(auto& client, auto&& packet) {
             return fast_task::future<void>::start([client, packet = std::move(packet)]() mutable { *client << std::move(packet); });
         }
@@ -160,6 +158,11 @@ namespace copper_server::build_in_plugins {
                 };
         };
 
+        static void entity_metadata(base_objects::entity& self, base_objects::entity& target) {
+            if (self.assigned_player)
+                *self.assigned_player << api::client::play::set_entity_data::create(target);
+        };
+
         static void entity_finish_break(base_objects::entity& self, base_objects::entity& target, int64_t x, int64_t y, int64_t z) {
             if (self.assigned_player)
                 *self.assigned_player << api::client::play::block_destruction{
@@ -179,9 +182,9 @@ namespace copper_server::build_in_plugins {
                     .x = target.position.x,
                     .y = target.position.y,
                     .z = target.position.z,
-                    .pitch = target.rotation.y,
-                    .yaw = target.rotation.x,
-                    .head_yaw = target.head_rotation.x,
+                    .pitch = target.rotation.pitch,
+                    .yaw = target.rotation.yaw,
+                    .head_yaw = target.head_rotation.yaw,
                     .data = *target.get_object_field().or_else([]() { return std::optional<int>(0); }),
                     .velocity_x = velocity.x,
                     .velocity_y = velocity.y,
@@ -218,7 +221,7 @@ namespace copper_server::build_in_plugins {
             if (self.assigned_player)
                 *self.assigned_player << api::client::play::rotate_head{
                     .id = target.protocol_id,
-                    .head_yaw = rot.x
+                    .head_yaw = rot.yaw
                 };
         };
 
@@ -283,8 +286,8 @@ namespace copper_server::build_in_plugins {
             if (self.assigned_player)
                 *self.assigned_player << api::client::play::move_entity_rot{
                     .id = target.protocol_id,
-                    .yaw = rot.x,
-                    .pitch = rot.y,
+                    .yaw = rot.yaw,
+                    .pitch = rot.pitch,
                     .on_ground = target.is_on_ground()
                 };
         };
@@ -299,8 +302,8 @@ namespace copper_server::build_in_plugins {
                     .velocity_x = target.motion.x,
                     .velocity_y = target.motion.y,
                     .velocity_z = target.motion.z,
-                    .yaw = (float)target.rotation.x,
-                    .pitch = (float)target.rotation.y,
+                    .yaw = (float)target.rotation.yaw,
+                    .pitch = (float)target.rotation.pitch,
                     .on_ground = target.is_on_ground()
                 };
         };
@@ -709,6 +712,7 @@ namespace copper_server::build_in_plugins {
             proc.entity_deinit = entity_deinit;
             proc.entity_detach = entity_detach;
             proc.entity_event = entity_event;
+            proc.entity_metadata = entity_metadata;
             proc.entity_finish_break = entity_finish_break;
             proc.entity_init = entity_init;
             proc.entity_iteract = entity_iteract;
@@ -741,13 +745,13 @@ namespace copper_server::build_in_plugins {
         }
 
     public:
-        PlayEngine() {}
+        world_sync() {}
 
-        ~PlayEngine() noexcept {}
+        ~world_sync() noexcept {}
 
         void OnInitialization(const PluginRegistrationPtr& _) override {
             base_objects::entity_data::register_entity_world_processor(make_processor(), "minecraft:player");
-            register_packet_processor([]([[maybe_unused]] api::packets::server_bound::play::chunk_batch_received&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            register_packet_processor([](api::packets::server_bound::play::chunk_batch_received&& packet, base_objects::SharedClientData& client) {
                 client.packets_state.chunk_batch_size = (int32_t)std::ceil(packet.chunks_per_tick);
 
                 uint32_t expected = client.packets_state.await_ack_chunk_batches.load(); // Read the current value
@@ -756,66 +760,8 @@ namespace copper_server::build_in_plugins {
                         return;
                 throw std::invalid_argument("There's no batches to acknowledge");
             });
+
             register_packet_processor([](api::packets::server_bound::play::client_tick_end&&, base_objects::SharedClientData& client) {
-            });
-        }
-
-        void OnCommandsLoadComplete(const std::shared_ptr<PluginRegistration>&, base_objects::command_root_browser& root) override {
-            api::players::iterate_online([&manager = root.get_manager()](base_objects::SharedClientData& client) {
-                if (!client.is_virtual)
-                    client << api::client::play::commands::create(manager);
-                return false;
-            });
-        }
-
-        static void push_player_info_action(api::client::play::player_info_update& res, base_objects::SharedClientData& client_ref) {
-            using piu = api::client::play::player_info_update;
-            res.actions.push(piu::header{client_ref.data->uuid});
-            res.actions.push(
-                piu::add_player{
-                    .name = client_ref.name,
-                    .properties
-                    = to_list_array(client_ref.data->properties)
-                          .convert_fn([](auto&& mojang) {
-                              return piu::add_player::property{
-                                  .name = std::move(mojang.name),
-                                  .value = std::move(mojang.value),
-                                  .signature = std::move(mojang.signature)
-                              };
-                          })
-                }
-            );
-            res.actions.push(piu::listed{.should = client_ref.allow_server_listings});
-            res.actions.push(piu::set_gamemode{.gamemode = client_ref.player_data.gamemode});
-            res.actions.push(piu::set_hat_visible{.visible = client_ref.skin_parts.data.hat_enabled});
-            res.actions.push(piu::set_ping{.milliseconds = (int32_t)client_ref.ping.count()});
-        }
-
-        void OnPlay_pre_initialize(base_objects::SharedClientData& client_ref) override {
-            using piu = api::client::play::player_info_update;
-            base_objects::network::response response = base_objects::network::response::empty();
-
-            piu all_players;
-            piu new_player;
-            push_player_info_action(new_player, client_ref);
-            api::players::iterate_online([&new_player, &all_players, &client_ref](base_objects::SharedClientData& client) {
-                if (&client != &client_ref && !client.is_virtual) {
-                    push_player_info_action(all_players, client);
-                    client << piu{new_player};
-                }
-                return false;
-            });
-            client_ref << std::move(all_players);
-            client_ref << std::move(new_player);
-        }
-
-        void PlayerLeave(base_objects::SharedClientData& client_ref) override {
-            api::players::iterate_online([&client_ref](base_objects::SharedClientData& client) {
-                if (&client != &client_ref && !client.is_virtual)
-                    client << api::client::play::player_info_remove{
-                        .uuids = {client_ref.data->uuid}
-                    };
-                return false;
             });
         }
     };

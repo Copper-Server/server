@@ -37,10 +37,13 @@ int main() {
         fast_task::scheduler::shut_down();
     });
     try {
-        size_t working_threads = api::configuration::get().server.working_threads;
-        fast_task::scheduler::reduce_executor(fast_task::scheduler::total_executors());
-        fast_task::scheduler::create_executor(working_threads);
-        fast_task::task::task::enable_task_naming = false;
+        {
+            size_t working_threads = api::configuration::get().server.working_threads;
+            bool enable_naming = api::configuration::get().server.enable_debug_task_thread_naming;
+            fast_task::scheduler::reduce_executor(fast_task::scheduler::total_executors());
+            fast_task::scheduler::create_executor(working_threads);
+            fast_task::task::task::enable_task_naming = enable_naming;
+        }
 
 
         api::log::commands::init();

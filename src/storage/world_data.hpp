@@ -506,6 +506,7 @@ namespace copper_server::storage {
         void set_block(const base_objects::full_block_data& block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
         void set_block(base_objects::full_block_data&& block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
         void remove_block(int64_t global_x, int64_t global_y, int64_t global_z);
+        base_objects::block get_block(int64_t global_x, int64_t global_y, int64_t global_z);
         void get_block(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block& block)>& func, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& block_entity);
         void query_block(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block& block)>& func, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& block_entity, const std::function<void()>& fault);
 
@@ -577,6 +578,7 @@ namespace copper_server::storage {
 
         void entity_animation(base_objects::entity&, base_objects::entity_animation animation);
         void entity_event(base_objects::entity&, base_objects::entity_event status);
+        void entity_metadata(base_objects::entity&);
 
 
         void entity_add_effect(base_objects::entity&, uint32_t id, uint32_t duration, uint8_t amplifier = 1, bool ambient = false, bool show_particles = true, bool show_icon = true, bool use_blend = false);
@@ -664,6 +666,7 @@ namespace copper_server::storage {
         base_objects::events::event<int32_t> on_world_loaded;
         base_objects::events::event<int32_t> on_world_unloaded;
         base_objects::events::event<double> on_tps_changed;
+        base_objects::events::event<uint64_t> on_tick;
         uint64_t ticks_per_second = 20;
         int32_t base_world_id = -1;
 

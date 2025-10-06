@@ -44,10 +44,15 @@ namespace copper_server::api::players {
 
     namespace handlers {
         extern base_objects::events::event<base_objects::client_data_holder> on_disconnect;
+        extern base_objects::events::sync_event_no_cancel<base_objects::SharedClientData&> on_tab_listing_changed;
+        extern base_objects::events::sync_event_no_cancel<base_objects::SharedClientData&> on_skin_parts_changed;
+        extern base_objects::events::sync_event_no_cancel<base_objects::SharedClientData&> on_gamemode_changed;
     }
 
     void login_complete_to_cfg(base_objects::SharedClientData& player);
     size_t online_players();
+    void set_gamemode(uint8_t gamemode, base_objects::SharedClientData&);
+    void set_tab_listing(bool enable, base_objects::SharedClientData&);
     base_objects::client_data_holder allocate_special_player(const std::function<void(base_objects::SharedClientData&, base_objects::network::response&&)>& callback);
     base_objects::client_data_holder allocate_player(api::network::tcp::session* session = nullptr);
     size_t size();
@@ -74,3 +79,4 @@ namespace copper_server::api::players {
 }
 
 #endif /* SRC_API_PLAYERS */
+

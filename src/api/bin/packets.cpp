@@ -7,11 +7,13 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <src/api/configuration.hpp>
+#include <src/api/entity_proxy.hpp>
 #include <src/api/packets.hpp>
 #include <src/api/permissions.hpp>
 #include <src/api/players.hpp>
 #include <src/api/registers.hpp>
 #include <src/base_objects/commands.hpp>
+#include <src/base_objects/recipe.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/base_objects/slot.hpp>
 #include <src/storage/world_data.hpp>
@@ -317,6 +319,10 @@ namespace copper_server {
             return value.to_packet();
         }
 
+        void slot::read(base_objects::slot& res) && {
+            res.from_packet(std::move(*this));
+        }
+
         namespace client_bound {
             namespace play {
                 commands build_commands(const base_objects::command_manager& manager) {
@@ -349,6 +355,9 @@ namespace copper_server {
                         commanands.nodes.push_back(std::move(node));
                     }
                     return commanands;
+                }
+
+                recipe_display recipe_display::create(const base_object::recipe& recipe) {
                 }
 
                 commands commands::create(const base_objects::command_manager& manager) {
@@ -500,6 +509,15 @@ namespace copper_server {
                     update.sky_light = convert_light(std::move(sky_light));
                     update.block_light = convert_light(std::move(block_light));
                     return update;
+                }
+
+                set_entity_data set_entity_data::create(base_objects::entity& entity) {
+                    set_entity_data result;
+                    result.id = entity.protocol_id;
+                    api::entity_proxy::iterate_all(entity, [&result](auto id, auto& metadata) {
+                        result.metadata.push_back({id, metadata});
+                    });
+                    return result;
                 }
 
                 bundle_delimiter::bundle_delimiter() {}
