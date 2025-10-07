@@ -18,6 +18,7 @@
 #include <src/base_objects/packets_help.hpp>
 #include <src/base_objects/palette_container.hpp>
 #include <src/base_objects/parsers.hpp>
+#include <src/base_objects/particle_data.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/slot.hpp>
 #include <src/util/calculations.hpp>
@@ -48,7 +49,7 @@ namespace copper_server {
 
     //this api allows users to handle clients and simulate them if needed, also supports serialization to string for debug purposes
     // note: because this api uses reflection under the hood, recommended to enable build cache to reduce the build time
-    // the api implements the latest protocol implementation: 772(1.21.8)
+    // the api implements the latest protocol implementation: 773(1.21.9)
     namespace api::packets {
         using base_objects::Angle;
         using base_objects::any_of;
@@ -242,99 +243,6 @@ namespace copper_server {
             static recipe_display create(const base_objects::recipe&);
         };
 
-        struct particle_data {
-            struct block : public enum_item<1> {
-                var_int32::block_state id;
-            };
-
-            struct block_marker : public enum_item<2> {
-                var_int32::block_state id;
-            };
-
-            struct dust : public enum_item<13> {
-                int32_t rgb;
-                float scale;
-            };
-
-            struct dust_color_transition : public enum_item<14> {
-                int32_t from_rgb;
-                int32_t to_rgb;
-                float scale;
-            };
-
-            struct entity_effect : public enum_item<20> {
-                int32_t argb;
-            };
-
-            struct falling_dust : public enum_item<28> {
-                var_int32::block_state id;
-            };
-
-            struct tinted_leaves : public enum_item<35> {
-                int32_t rgb;
-            };
-
-            struct sculk_charge : public enum_item<37> {
-                float roll;
-            };
-
-            struct item : public enum_item<46> {
-                slot item;
-            };
-
-            struct vibration : public enum_item<47> {
-                struct block : public enum_item<0> {
-                    position block_pos;
-                };
-
-                struct entity : public enum_item<1> {
-                    var_int32::entity_id id;
-                    float eye_height;
-                };
-
-                partial_enum_switch<var_int32::position_source_type, block, entity> data;
-                var_int32 travel_ticks;
-            };
-
-            struct trail : public enum_item<48> {
-                double x;
-                double y;
-                double z;
-                int32_t rgb;
-                var_int32 duration;
-            };
-
-            struct shriek : public enum_item<102> {
-                var_int32 delay;
-            };
-
-            struct dust_pillar : public enum_item<108> {
-                var_int32::block_state id;
-            };
-
-            struct block_crumble : public enum_item<112> {
-                var_int32::block_state id;
-            };
-
-            partial_enum_switch<
-                var_int32::particle_type,
-                block,
-                block_marker,
-                dust,
-                dust_color_transition,
-                entity_effect,
-                falling_dust,
-                tinted_leaves,
-                sculk_charge,
-                item,
-                vibration,
-                trail,
-                shriek,
-                dust_pillar,
-                block_crumble>
-                data;
-        };
-
         struct teleport_flags {
             enum class flags_f {
                 x_relative = 0x1,
@@ -350,6 +258,214 @@ namespace copper_server {
             using enum flags_f;
 
             enum_as_flag<flags_f, int32_t> flags;
+        };
+
+        struct debug_sub_scription_type {
+            struct dedicated_server_tick_time : public enum_item<0> {}; //TODO check
+
+            struct bees : public enum_item<1> {
+                std::optional<base_objects::position> hive_pos;
+                std::optional<base_objects::position> flower_pos;
+                var_int32 travel_ticks;
+                list_array<base_objects::position> black_listed_hives;
+            };
+
+            struct brains : public enum_item<2> {
+                string_sized<32767> name;
+                string_sized<32767> profession;
+                int32_t xp;
+                float health;
+                float max_health;
+                string_sized<32767> inventory;
+                bool wants_golem;
+                int32_t anger_level;
+                list_array<string_sized<32767>> activities;
+                list_array<string_sized<32767>> behaviors;
+                list_array<string_sized<32767>> memories;
+                list_array<string_sized<32767>> gossips;
+                list_array<base_objects::position> pois;
+                list_array<base_objects::position> potential_work_pois;
+            };
+
+            struct breezes : public enum_item<3> {
+                std::optional<var_int32> attack_target;
+                std::optional<base_objects::position> jump_target;
+            };
+
+            struct goal_selectors : public enum_item<4> {
+                struct goal {
+                    var_int32 priority;
+                    bool is_running;
+                    string_sized<255> name;
+                };
+
+                list_array<goal> goals;
+            };
+
+            struct entity_paths : public enum_item<5> {
+                struct path_t {
+                    struct node_t {
+                        enum class type_t { //TODO get values from extractor
+                            blocked,
+                            open,
+                            walkable,
+                            walkable_door,
+                            trapdoor,
+                            powder_snow,
+                            danger_powder_snow,
+                            fence,
+                            lava,
+                            water,
+                            water_border,
+                            rail,
+                            unpassable_rail,
+                            danger_fire,
+                            damage_fire,
+                            danger_other,
+                            damage_other,
+                            door_open,
+                            door_wood_closed,
+                            door_iron_closed,
+                            breach,
+                            leaves,
+                            sticky_honey,
+                            cocoa,
+                            damage_cautious,
+                            danger_trapdoor,
+                        };
+
+                        int32_t x;
+                        int32_t y;
+                        int32_t z;
+                        float path_lenght;
+                        float penalty_value;
+                        bool visited;
+                        enum_as<type_t, var_int32> type;
+                        float heap_weight;
+                    };
+
+                    bool reaches_target;
+                    int32_t current_node_index;
+                    base_objects::position target;
+                    list_array<node_t> nodes;
+                };
+
+                path_t path;
+                float max_node_distance;
+            };
+
+            struct entity_block_intersections : public enum_item<6> {
+                enum class type_t {
+                    in_block = 0,
+                    in_fluid = 1,
+                    in_air
+                };
+                enum_as<type_t, var_int32> type;
+            };
+
+            struct bee_hives : public enum_item<7> {
+                var_int32::block_type type;
+                var_int32 bees_in;
+                var_int32 honey_level;
+                bool is_sedated;
+            };
+
+            struct pois : public enum_item<8> {
+                base_objects::position target;
+                var_int32::poi_type type;
+                var_int32 free_ticked_count;
+            };
+
+            struct redstone_wire_orientations : public enum_item<9> {
+                enum class direction : uint8_t {
+                    down = 0,
+                    up = 1,
+                    north = 2,
+                    south = 3,
+                    west = 4,
+                    east = 5,
+                };
+
+                enum class side_bias : uint8_t {
+                    left = 0,
+                    right = 1,
+                };
+
+                uint8_t up_val : 3;
+                uint8_t front_ortho_idx : 2;
+                uint8_t bias_val : 1;
+
+                direction get_up() const;
+                side_bias get_bias() const;
+                direction get_front() const;
+
+                void set_up(direction up);
+                void set_bias(side_bias bias);
+                void set_front(direction front);
+
+                uint8_t to_packet() const;
+                static redstone_wire_orientations from_packet(uint8_t val);
+            };
+
+            struct village_sections : public enum_item<10> {
+                //TODO check
+            };
+
+            struct raids : public enum_item<11> {
+                list_array<base_objects::position> value;
+            };
+
+            struct structures : public enum_item<12> {
+                struct block_box {
+                    base_objects::position min;
+                    base_objects::position max;
+                };
+
+                struct piece {
+                    block_box bounding;
+                    bool is_start;
+                };
+
+                struct item {
+                    block_box bounding;
+                    list_array<piece> pieces;
+                };
+
+                list_array<item> value;
+            };
+
+            struct game_event_listeners : public enum_item<13> {
+                var_int32 listener_radius;
+            };
+
+            struct neighbor_updates : public enum_item<14> {
+                base_objects::position pos;
+            };
+
+            struct game_events : public enum_item<15> {
+                var_int32::game_event event;
+                util::VECTOR pos;
+            };
+
+            enum_switch<
+                var_int32,
+                dedicated_server_tick_time,
+                bees,
+                brains,
+                breezes,
+                goal_selectors,
+                entity_paths,
+                entity_block_intersections,
+                bee_hives,
+                pois,
+                redstone_wire_orientations,
+                village_sections,
+                raids,
+                structures,
+                game_event_listeners,
+                neighbor_updates,
+                game_events>
+                action;
         };
 
         namespace client_bound {
@@ -541,6 +657,10 @@ namespace copper_server {
                 struct show_dialog : public packet<0x12> {
                     enbt::value dialog;
                 };
+
+                struct code_of_conduct : public packet<0x13> {
+                    string_sized<32767> text;
+                };
             }
 
             decl_variant(
@@ -563,7 +683,8 @@ namespace copper_server {
                 configuration::custom_report_details,
                 configuration::server_links,
                 configuration::clear_dialog,
-                configuration::show_dialog
+                configuration::show_dialog,
+                configuration::code_of_conduct
             );
 
 
@@ -593,9 +714,7 @@ namespace copper_server {
                     Angle yaw;
                     Angle head_yaw;
                     var_int32 data;
-                    short velocity_x;
-                    short velocity_y;
-                    short velocity_z;
+                    base_objects::velocity velocity;
                 };
 
                 struct animate : public packet<0x02> {
@@ -943,33 +1062,53 @@ namespace copper_server {
                     std::optional<util::VECTOR> source_pos = std::nullopt;
                 };
 
-                struct debug_sample : public packet<0x1A> {
+                struct debug__block_value : public packet<0x1A> {
+                    base_objects::position pos;
+                    std::optional<debug_sub_scription_type> data; //TODO check
+                };
+
+                struct debug__chunk_value : public packet<0x1B> {
+                    int32_t z;
+                    int32_t x;
+                    std::optional<debug_sub_scription_type> data; //TODO check
+                };
+
+                struct debug__entity_value : public packet<0x1C> {
+                    var_int32::entity_id id;
+                    std::optional<debug_sub_scription_type> data; //TODO check
+                };
+
+                struct debug__event : public packet<0x1D> {
+                    debug_sub_scription_type data; //TODO check
+                };
+
+                struct debug_sample : public packet<0x1E> {
                     list_array<int64_t> sample;
                     var_int32 sample_type;
                 };
 
-                struct delete_chat : public packet<0x1B> {
+                struct delete_chat : public packet<0x21> {
                     var_int32 message_id;
                     std::optional<std::array<uint8_t, 256>> signature = std::nullopt;
                 };
 
-                struct disconnect : public packet<0x1C>, disconnect_after {
+                struct disconnect : public packet<0x20>, disconnect_after {
                     Chat reason;
                 };
 
-                struct disguised_chat : public packet<0x1D> {
+                struct disguised_chat : public packet<0x21> {
                     Chat message;
                     or_<var_int32::chat_type, chat_type> type;
                     Chat sender;
                     std::optional<Chat> target_name = std::nullopt;
                 };
 
-                struct entity_event : public packet<0x1E> {
+                struct entity_event : public packet<0x22> {
                     var_int32::entity_id id;
                     int8_t status;
                 };
 
-                struct entity_position_sync : public packet<0x1F> {
+                struct entity_position_sync : public packet<0x23> {
                     var_int32::entity_id id;
                     double x;
                     double y;
@@ -982,7 +1121,7 @@ namespace copper_server {
                     bool on_ground;
                 };
 
-                struct explode : public packet<0x20> {
+                struct explode : public packet<0x24> {
                     struct player_delta_velocity_t {
                         double x;
                         double y;
@@ -993,16 +1132,16 @@ namespace copper_server {
                     double y;
                     double z;
                     std::optional<player_delta_velocity_t> player_delta_velocity = std::nullopt;
-                    particle_data particle;
+                    base_objects::particle_data particle;
                     or_<var_int32::sound_event, base_objects::sound_event> sound;
                 };
 
-                struct forget_level_chunk : public packet<0x21> {
+                struct forget_level_chunk : public packet<0x25> {
                     int32_t z;
                     int32_t x;
                 };
 
-                struct game_event : public packet<0x22> {
+                struct game_event : public packet<0x26> {
                     struct no_respawn_block_available : public enum_item<0> {
                         float _ignored = 0.0f;
 
@@ -1100,18 +1239,23 @@ namespace copper_server {
                         event;
                 };
 
-                struct horse_screen_open : public packet<0x23> {
+                struct game_test_highlight_pos : public packet<0x27> {
+                    base_objects::position absolute_pos;
+                    base_objects::position relative_pos;
+                };
+
+                struct horse_screen_open : public packet<0x28> {
                     var_int32 window_id;
                     var_int32 columns_count;
                     api::id::entity id;
                 };
 
-                struct hurt_animation : public packet<0x24> {
+                struct hurt_animation : public packet<0x29> {
                     var_int32::entity_id id;
                     float yaw;
                 };
 
-                struct initialize_border : public packet<0x25> {
+                struct initialize_border : public packet<0x2A> {
                     double x;
                     double z;
                     double old_diameter;
@@ -1122,11 +1266,11 @@ namespace copper_server {
                     var_int32 warning_time;
                 };
 
-                struct keep_alive : public packet<0x26> {
+                struct keep_alive : public packet<0x2B> {
                     uint64_t keep_alive_id;
                 };
 
-                struct level_chunk_with_light : public packet<0x27> {
+                struct level_chunk_with_light : public packet<0x2C> {
                     struct height_map {
                         enum class type_e : uint8_t {
                             world_surface = 1,
@@ -1168,7 +1312,7 @@ namespace copper_server {
                     static level_chunk_with_light create(const storage::chunk_data&, const storage::world_data&);
                 };
 
-                struct level_event : public packet<0x28> {
+                struct level_event : public packet<0x2D> {
                     enum class event_id : uint16_t {
                         dispenser_dispenses = 1000,
                         dispenser_dispense_fail = 1001,
@@ -1259,7 +1403,7 @@ namespace copper_server {
                     bool disable_volume;
                 };
 
-                struct level_particles : public packet<0x29> {
+                struct level_particles : public packet<0x2E> {
                     bool long_distance;
                     bool always_visible;
                     double x;
@@ -1270,10 +1414,10 @@ namespace copper_server {
                     float offset_z;
                     float max_speed;
                     int32_t particle_count;
-                    particle_data particle;
+                    base_objects::particle_data particle;
                 };
 
-                struct light_update : public packet<0x2A> {
+                struct light_update : public packet<0x2F> {
                     int32_t x;
                     int32_t z;
                     list_array<uint64_t> sky_light_mask;
@@ -1287,7 +1431,7 @@ namespace copper_server {
                     static light_update create(const storage::chunk_data&);
                 };
 
-                struct login : public packet<0x2B> {
+                struct login : public packet<0x30> {
                     struct death_location_t {
                         identifier world;
                         position location;
@@ -1315,7 +1459,7 @@ namespace copper_server {
                     bool enforce_secure_chat;
                 };
 
-                struct map_item_data : public packet<0x2C> {
+                struct map_item_data : public packet<0x31> {
                     struct icon {
                         enum class type_e : uint8_t {
                             white_arrow = 0,
@@ -1376,7 +1520,7 @@ namespace copper_server {
                     color_patch patch;
                 };
 
-                struct merchant_offers : public packet<0x2D> {
+                struct merchant_offers : public packet<0x32> {
                     struct trade {
                         struct trade_item {
                             var_int32::item item_id;
@@ -1404,7 +1548,7 @@ namespace copper_server {
                     bool can_restock;
                 };
 
-                struct move_entity_pos : public packet<0x2E> {
+                struct move_entity_pos : public packet<0x33> {
                     var_int32::entity_id id;
                     short delta_x;
                     short delta_y;
@@ -1412,7 +1556,7 @@ namespace copper_server {
                     bool on_ground;
                 };
 
-                struct move_entity_pos_rot : public packet<0x2F> {
+                struct move_entity_pos_rot : public packet<0x34> {
                     var_int32::entity_id id;
                     short delta_x;
                     short delta_y;
@@ -1422,7 +1566,7 @@ namespace copper_server {
                     bool on_ground;
                 };
 
-                struct move_minecart_along_track : public packet<0x30> {
+                struct move_minecart_along_track : public packet<0x35> {
                     struct step {
                         double x;
                         double y;
@@ -1439,14 +1583,14 @@ namespace copper_server {
                     list_array<step> steps;
                 };
 
-                struct move_entity_rot : public packet<0x31> {
+                struct move_entity_rot : public packet<0x36> {
                     var_int32::entity_id id;
                     Angle yaw;
                     Angle pitch;
                     bool on_ground;
                 };
 
-                struct move_vehicle : public packet<0x32> {
+                struct move_vehicle : public packet<0x37> {
                     double x;    //absolute
                     double y;    //absolute
                     double z;    //absolute
@@ -1454,7 +1598,7 @@ namespace copper_server {
                     Angle pitch; //absolute
                 };
 
-                struct open_book : public packet<0x33> {
+                struct open_book : public packet<0x38> {
                     enum class hand_e : uint8_t {
                         main = 0,
                         off = 1,
@@ -1462,31 +1606,31 @@ namespace copper_server {
                     enum_as<hand_e, var_int32> hand;
                 };
 
-                struct open_screen : public packet<0x34> {
+                struct open_screen : public packet<0x39> {
                     var_int32 window_id;
                     var_int32::menu window_type;
                     Chat window_title;
                 };
 
-                struct open_sign_editor : public packet<0x35> {
+                struct open_sign_editor : public packet<0x3A> {
                     position location;
                     bool is_front_text;
                 };
 
-                struct ping : public packet<0x36> {
+                struct ping : public packet<0x3B> {
                     int32_t id;
                 };
 
-                struct pong_response : public packet<0x37> {
+                struct pong_response : public packet<0x3C> {
                     uint64_t id;
                 };
 
-                struct place_ghost_recipe : public packet<0x38> {
+                struct place_ghost_recipe : public packet<0x3D> {
                     var_int32 window_id;
                     recipe_display display;
                 };
 
-                struct player_abilities : public packet<0x39> {
+                struct player_abilities : public packet<0x3E> {
                     enum class flags_f : uint8_t {
                         invulnerable = 0x1,
                         flying = 0x2,
@@ -1500,7 +1644,7 @@ namespace copper_server {
                     float fov_modifier;
                 };
 
-                struct player_chat : public packet<0x3A> {
+                struct player_chat : public packet<0x3F> {
                     struct previous_message {
                         value_optional<var_int32, std::array<uint8_t, 256>> message_id_or_signature;
                     };
@@ -1528,22 +1672,22 @@ namespace copper_server {
                     std::optional<Chat> target_name = std::nullopt;
                 };
 
-                struct player_combat_end : public packet<0x3B> {
+                struct player_combat_end : public packet<0x40> {
                     var_int32 duration;
                 };
 
-                struct player_combat_enter : public packet<0x3C> {};
+                struct player_combat_enter : public packet<0x41> {};
 
-                struct player_combat_kill : public packet<0x3D> {
+                struct player_combat_kill : public packet<0x42> {
                     var_int32 player_id;
                     Chat message;
                 };
 
-                struct player_info_remove : public packet<0x3E> {
+                struct player_info_remove : public packet<0x43> {
                     list_array<enbt::raw_uuid> uuids;
                 };
 
-                struct player_info_update : public packet<0x3F> {
+                struct player_info_update : public packet<0x44> {
                     struct add_player {
                         string_sized<16> name;
 
@@ -1604,7 +1748,7 @@ namespace copper_server {
                         actions;
                 };
 
-                struct player_look_at : public packet<0x40> {
+                struct player_look_at : public packet<0x45> {
                     enum class using_position_e : uint8_t {
                         feet = 0,
                         eyes = 1,
@@ -1623,7 +1767,7 @@ namespace copper_server {
                     std::optional<entity_target> entity = std::nullopt;
                 };
 
-                struct player_position : public packet<0x41> {
+                struct player_position : public packet<0x46> {
                     ordered_id<var_int32, "sync/player_position"> teleport_id;
                     double x;
                     double y;
@@ -1636,12 +1780,12 @@ namespace copper_server {
                     teleport_flags flags;
                 };
 
-                struct player_rotation : public packet<0x42> {
+                struct player_rotation : public packet<0x47> {
                     float yaw;
                     float pitch;
                 };
 
-                struct recipe_book_add : public packet<0x43> {
+                struct recipe_book_add : public packet<0x48> {
                     struct recipe {
                         enum class flags_f : uint8_t {
                             show_notification = 0x1,
@@ -1661,11 +1805,11 @@ namespace copper_server {
                     bool replace;
                 };
 
-                struct recipe_book_remove : public packet<0x44> {
+                struct recipe_book_remove : public packet<0x49> {
                     list_array<var_int32::recipe> recipe_ids;
                 };
 
-                struct recipe_book_settings : public packet<0x45> {
+                struct recipe_book_settings : public packet<0x4A> {
                     bool crafting_recipe_open = false;
                     bool crafting_recipe_filter_active = false;
                     bool smelting_recipe_open = false;
@@ -1676,25 +1820,25 @@ namespace copper_server {
                     bool smoker_recipe_filter_active = false;
                 };
 
-                struct remove_entities : public packet<0x46> {
+                struct remove_entities : public packet<0x4B> {
                     list_array<var_int32::entity_id> ids;
                 };
 
-                struct remove_mob_effect : public packet<0x47> {
+                struct remove_mob_effect : public packet<0x4C> {
                     var_int32::entity_id id;
                     var_int32::mob_effect effect_id;
                 };
 
-                struct reset_score : public packet<0x48> {
+                struct reset_score : public packet<0x4D> {
                     string_sized<32767> entity_name;
                     std::optional<string_sized<32767>> objective_name = std::nullopt;
                 };
 
-                struct resource_pack_pop : public packet<0x49> {
+                struct resource_pack_pop : public packet<0x4E> {
                     std::optional<enbt::raw_uuid> uuid = std::nullopt;
                 };
 
-                struct resource_pack_push : public packet<0x4A> {
+                struct resource_pack_push : public packet<0x4F> {
                     enbt::raw_uuid uuid;
                     string_sized<32767> url;
                     string_sized<40> hash; //0 or 40, other values waste bandwidth
@@ -1702,7 +1846,7 @@ namespace copper_server {
                     std::optional<Chat> prompt_message = std::nullopt;
                 };
 
-                struct respawn : public packet<0x4B> {
+                struct respawn : public packet<0x50> {
                     struct death_location_t {
                         identifier dimension_name;
                         position location;
@@ -1727,12 +1871,12 @@ namespace copper_server {
                     enum_as_flag<flags_f, uint8_t> flags;
                 };
 
-                struct rotate_head : public packet<0x4C> {
+                struct rotate_head : public packet<0x51> {
                     var_int32::entity_id id;
                     Angle head_yaw; //new angle
                 };
 
-                struct section_blocks_update : public packet<0x4D> {
+                struct section_blocks_update : public packet<0x52> {
                     struct position_t {
                         uint64_t x : 22;
                         uint64_t z : 22;
@@ -1758,65 +1902,67 @@ namespace copper_server {
                     list_array<block_entry> block;
                 };
 
-                struct select_advancements_tab : public packet<0x4E> {
+                struct select_advancements_tab : public packet<0x53> {
                     std::optional<identifier> id = std::nullopt;
                 };
 
-                struct server_data : public packet<0x4F> {
+                struct server_data : public packet<0x54> {
                     Chat motd;
                     std::optional<list_array<uint8_t>> icon_png = std::nullopt;
                 };
 
-                struct set_action_bar_text : public packet<0x50> {
+                struct set_action_bar_text : public packet<0x55> {
                     Chat text;
                 };
 
-                struct set_border_center : public packet<0x51> {
+                struct set_border_center : public packet<0x56> {
                     double x;
                     double z;
                 };
 
-                struct set_border_lerp_size : public packet<0x52> {
+                struct set_border_lerp_size : public packet<0x57> {
                     double old_diameter;
                     double new_diameter;
                     var_int64 speed_milliseconds;
                 };
 
-                struct set_border_size : public packet<0x53> {
+                struct set_border_size : public packet<0x58> {
                     double diameter;
                 };
 
-                struct set_border_warning_delay : public packet<0x54> {
+                struct set_border_warning_delay : public packet<0x59> {
                     var_int32 warn_time;
                 };
 
-                struct set_border_warning_distance : public packet<0x55> {
+                struct set_border_warning_distance : public packet<0x5A> {
                     var_int32 meters;
                 };
 
-                struct set_camera : public packet<0x56> {
+                struct set_camera : public packet<0x5B> {
                     var_int32::entity_id id;
                 };
 
-                struct set_chunk_cache_center : public packet<0x57> {
+                struct set_chunk_cache_center : public packet<0x5C> {
                     var_int32 x;
                     var_int32 z;
                 };
 
-                struct set_chunk_cache_radius : public packet<0x58> {
+                struct set_chunk_cache_radius : public packet<0x5D> {
                     var_int32 distance;
                 };
 
-                struct set_cursor_item : public packet<0x59> {
+                struct set_cursor_item : public packet<0x5E> {
                     slot item;
                 };
 
-                struct set_default_spawn_position : public packet<0x5A> {
+                struct set_default_spawn_position : public packet<0x5F> {
+                    var_int32::dimension id;
                     position location;
-                    float angle;
+                    float yaw;
+                    float pitch;
                 };
 
-                struct set_display_objective : public packet<0x5B> {
+                struct set_display_objective : public packet<0x60> {
                     enum class position_e : uint8_t {
                         list = 0,
                         sidebar = 1,
@@ -1843,7 +1989,7 @@ namespace copper_server {
                     string_sized<32767> name;
                 };
 
-                struct set_entity_data : public packet<0x5C> {
+                struct set_entity_data : public packet<0x61> {
                     var_int32::entity_id id;
 
                     struct metadata_item_t {
@@ -1851,25 +1997,23 @@ namespace copper_server {
                         base_objects::entity_metadata value;
                     };
 
-                    list_array_siz_from_packet<metadata_item_t> metadata; //index 0xFF is end
-                    const uint8_t end_index = 0xFF;                       //this is safe because the sizeof(metadata_item_t) is more than 1 and this item would be not counted to metadata size because of the roundup by division in decoder
+                    list_array_siz_from_packet<metadata_item_t> metadata;
+                    base_objects::constant_value<(uint8_t)0xFF> end_index;              //this is safe because the sizeof(metadata_item_t) is more than 1 and this item would be not counted to metadata size because of the roundup by division in decoder
 
                     static set_entity_data create(base_objects::entity& entity);
                 };
 
-                struct set_entity_link : public packet<0x5D> {
+                struct set_entity_link : public packet<0x62> {
                     api::id::entity attached_id;
                     api::id::entity holding_id;
                 };
 
-                struct set_entity_motion : public packet<0x5E> {
+                struct set_entity_motion : public packet<0x63> {
                     var_int32::entity_id id;
-                    int16_t velocity_x;
-                    int16_t velocity_y;
-                    int16_t velocity_z;
+                    base_objects::velocity velocity;
                 };
 
-                struct set_equipment : public packet<0x5F> {
+                struct set_equipment : public packet<0x64> {
                     struct equipment {
                         enum class slot_place_e {
                             main_hand = 0,
@@ -1891,23 +2035,23 @@ namespace copper_server {
                     list_array_depend<equipment> equipments;
                 };
 
-                struct set_experience : public packet<0x60> {
+                struct set_experience : public packet<0x65> {
                     limited_num<float, 0.0f, 1.0f> bar;
                     var_int32 level;
                     var_int32 total_experience;
                 };
 
-                struct set_health : public packet<0x61> {
+                struct set_health : public packet<0x66> {
                     float health;
                     var_int32 food;
                     limited_num<float, 0.0f, 5.0f> saturation;
                 };
 
-                struct set_held_slot : public packet<0x62> {
+                struct set_held_slot : public packet<0x67> {
                     var_int32 slot;
                 };
 
-                struct set_objective : public packet<0x63> {
+                struct set_objective : public packet<0x68> {
                     struct blank : public enum_item<0> {};
 
                     struct styled : public enum_item<1> {
@@ -1936,17 +2080,17 @@ namespace copper_server {
                     enum_switch<int8_t, create, remove, update> mode;
                 };
 
-                struct set_passengers : public packet<0x64> {
+                struct set_passengers : public packet<0x69> {
                     var_int32::entity_id id;
                     list_array<var_int32::entity_id> passengers;
                 };
 
-                struct set_player_inventory : public packet<0x65> {
+                struct set_player_inventory : public packet<0x6A> {
                     var_int32 slot;
                     struct slot data;
                 };
 
-                struct set_player_team : public packet<0x66> {
+                struct set_player_team : public packet<0x6B> {
                     enum class friendly_f : int8_t {
                         allow_friendly_fire = 0x1,
                         can_see_invisible = 0x2,
@@ -2001,7 +2145,7 @@ namespace copper_server {
                     enum_switch<int8_t, create, remove, update, add_entries, remove_entries> mode;
                 };
 
-                struct set_score : public packet<0x67> {
+                struct set_score : public packet<0x6C> {
                     struct blank : public enum_item<0> {};
 
                     struct styled : public enum_item<1> {
@@ -2019,31 +2163,31 @@ namespace copper_server {
                     std::optional<enum_switch<var_int32, blank, styled, fixed>> default_format = std::nullopt;
                 };
 
-                struct set_simulation_distance : public packet<0x68> {
+                struct set_simulation_distance : public packet<0x6D> {
                     var_int32 distance;
                 };
 
-                struct set_subtitle_text : public packet<0x69> {
+                struct set_subtitle_text : public packet<0x6E> {
                     Chat text;
                 };
 
-                struct set_time : public packet<0x6A> {
+                struct set_time : public packet<0x6F> {
                     uint64_t world_age;
                     uint64_t time_of_day;
                     bool time_of_day_increment;
                 };
 
-                struct set_title_text : public packet<0x6B> {
+                struct set_title_text : public packet<0x70> {
                     Chat text;
                 };
 
-                struct set_titles_animation : public packet<0x6C> {
+                struct set_titles_animation : public packet<0x71> {
                     int32_t fade_in;
                     int32_t stay;
                     int32_t fadeout;
                 };
 
-                struct sound_entity : public packet<0x6D> {
+                struct sound_entity : public packet<0x72> {
                     or_<var_int32::sound_event, base_objects::sound_event> sound;
                     var_int32 category;
                     var_int32::entity_id id;
@@ -2052,7 +2196,7 @@ namespace copper_server {
                     int64_t seed;
                 };
 
-                struct sound : public packet<0x6E> {
+                struct sound : public packet<0x73> {
                     or_<var_int32::sound_event, base_objects::sound_event> sound;
                     var_int32 category;
                     int32_t x;
@@ -2063,9 +2207,9 @@ namespace copper_server {
                     int64_t seed;
                 };
 
-                struct start_configuration : public packet<0x6F> {};
+                struct start_configuration : public packet<0x74> {};
 
-                struct stop_sound : public packet<0x70> {
+                struct stop_sound : public packet<0x75> {
                     struct source : public flag_item<0x1, 0x1, 1> {
                         var_int32 source;
                     };
@@ -2077,33 +2221,33 @@ namespace copper_server {
                     flags_list<int8_t, source, sound_name> flags;
                 };
 
-                struct store_cookie : public packet<0x71> {
+                struct store_cookie : public packet<0x76> {
                     identifier key;
                     list_array_sized<uint8_t, 5120> payload;
                 };
 
-                struct system_chat : public packet<0x72> {
+                struct system_chat : public packet<0x77> {
                     Chat content;
                     bool is_overlay = false;
                 };
 
-                struct tab_list : public packet<0x73> {
+                struct tab_list : public packet<0x78> {
                     Chat header;
                     Chat footer;
                 };
 
-                struct tag_query : public packet<0x74> {
+                struct tag_query : public packet<0x79> {
                     var_int32 tag_query_id; //managed by client
                     enbt::value nbt;
                 };
 
-                struct take_item_entity : public packet<0x75> {
+                struct take_item_entity : public packet<0x7A> {
                     var_int32::entity_id collected_id;
                     var_int32::entity_id collectors_id;
                     var_int32 items_count;
                 };
 
-                struct teleport_entity : public packet<0x76> {
+                struct teleport_entity : public packet<0x7B> {
                     var_int32::entity_id id;
                     double x;
                     double y;
@@ -2117,7 +2261,7 @@ namespace copper_server {
                     bool on_ground;
                 };
 
-                struct test_instance_block_status : public packet<0x77> {
+                struct test_instance_block_status : public packet<0x7C> {
                     struct volume_t {
                         double x;
                         double y;
@@ -2128,21 +2272,21 @@ namespace copper_server {
                     std::optional<volume_t> volume = std::nullopt;
                 };
 
-                struct ticking_state : public packet<0x78> {
+                struct ticking_state : public packet<0x7D> {
                     float tick_rate;
                     bool is_frozen;
                 };
 
-                struct ticking_step : public packet<0x79> {
+                struct ticking_step : public packet<0x7E> {
                     var_int32 steps;
                 };
 
-                struct transfer : public packet<0x7A> {
+                struct transfer : public packet<0x7F> {
                     std::string host;
                     var_int32 port;
                 };
 
-                struct update_advancements : public packet<0x7B> {
+                struct update_advancements : public packet<0x80> {
                     struct display {
                         struct background_texture : public flag_item<0x1, 0x1, 1> {
                             identifier texture;
@@ -2190,7 +2334,7 @@ namespace copper_server {
                     bool show;
                 };
 
-                struct update_attributes : public packet<0x7C> {
+                struct update_attributes : public packet<0x81> {
                     //clients execute add operation first then add_percent and at the end multiply
                     enum class operation_e {
                         add = 0,
@@ -2214,7 +2358,7 @@ namespace copper_server {
                     list_array<property> properties;
                 };
 
-                struct update_mob_effect : public packet<0x7D> {
+                struct update_mob_effect : public packet<0x82> {
                     enum class flags_f : int8_t {
                         is_ambient = 0x1,
                         show_particles = 0x2,
@@ -2229,7 +2373,7 @@ namespace copper_server {
                     enum_as_flag<flags_f, int8_t> flags;
                 };
 
-                struct update_recipes : public packet<0x7E> {
+                struct update_recipes : public packet<0x83> {
                     struct property {
                         identifier set_id;
                         list_array<var_int32::item> items;
@@ -2244,7 +2388,7 @@ namespace copper_server {
                     list_array<stonecuter_recipe> stonecuter_recipes;
                 };
 
-                struct update_tags : public packet<0x7F> {
+                struct update_tags : public packet<0x84> {
                     struct tag {
                         identifier tag_name;
                         list_array<var_int32> values;
@@ -2258,12 +2402,12 @@ namespace copper_server {
                     list_array<entry> entries;
                 };
 
-                struct projectile_power : public packet<0x80> {
+                struct projectile_power : public packet<0x85> {
                     var_int32::entity_id id;
                     double power;
                 };
 
-                struct custom_report_details : public packet<0x81> {
+                struct custom_report_details : public packet<0x86> {
                     struct detail {
                         string_sized<128> title;
                         string_sized<4096> description;
@@ -2272,7 +2416,7 @@ namespace copper_server {
                     list_array_sized<detail, 32> details;
                 };
 
-                struct server_links : public packet<0x82> {
+                struct server_links : public packet<0x87> {
                     enum class link_type : uint8_t {
                         bug_report = 0,
                         community_guidelines = 1,
@@ -2295,7 +2439,7 @@ namespace copper_server {
                     list_array<link> links;
                 };
 
-                struct waypoint : public packet<0x83> {
+                struct waypoint : public packet<0x88> {
                     enum class operation_e {
                         track = 0,
                         untrack = 1,
@@ -2331,9 +2475,9 @@ namespace copper_server {
                     enum_switch<var_int32, here, near, far, far_away> type;
                 };
 
-                struct clear_dialog : public packet<0x84> {};
+                struct clear_dialog : public packet<0x89> {};
 
-                struct show_dialog : public packet<0x85> {
+                struct show_dialog : public packet<0x8A> {
                     or_<var_int32::dialog, enbt::value> dialog;
                 };
             }
@@ -2366,6 +2510,10 @@ namespace copper_server {
                 play::custom_chat_completions,
                 play::custom_payload,
                 play::damage_event,
+                play::debug__block_value,
+                play::debug__chunk_value,
+                play::debug__entity_value,
+                play::debug__event,
                 play::debug_sample,
                 play::delete_chat,
                 play::disconnect,
@@ -2375,6 +2523,7 @@ namespace copper_server {
                 play::explode,
                 play::forget_level_chunk,
                 play::game_event,
+                play::game_test_highlight_pos,
                 play::horse_screen_open,
                 play::hurt_animation,
                 play::initialize_border,
@@ -2632,6 +2781,8 @@ namespace copper_server {
                     identifier id;
                     enbt::value payload;
                 };
+
+                struct accept_code_of_conduct : public packet<0x09> {};
             }
 
             decl_variant(
@@ -2644,7 +2795,8 @@ namespace copper_server {
                 configuration::pong,
                 configuration::resource_pack,
                 configuration::select_known_packs,
-                configuration::custom_click_action
+                configuration::custom_click_action,
+                configuration::accept_code_of_conduct
             );
 
             namespace play {
@@ -2821,7 +2973,7 @@ namespace copper_server {
                     list_array_sized_siz_from_packet<uint8_t, 32767> payload;
                 };
 
-                struct debug_sample_subscription : public packet<0x16> {
+                struct debug_subscription_request : public packet<0x16> {
                     var_int32 sample_type;
                 };
 
@@ -3270,7 +3422,75 @@ namespace copper_server {
                 };
             }
 
-            decl_variant(play_packet, play::accept_teleportation, play::block_entity_tag_query, play::bundle_item_selected, play::change_difficulty, play::change_gamemode, play::chat_ack, play::chat_command, play::chat_command_signed, play::chat, play::chat_session_update, play::chunk_batch_received, play::client_command, play::client_tick_end, play::client_information, play::command_suggestion, play::configuration_acknowledged, play::container_button_click, play::container_click, play::container_close, play::container_slot_state_changed, play::cookie_response, play::custom_payload, play::debug_sample_subscription, play::edit_book, play::entity_tag_query, play::interact, play::jigsaw_generate, play::keep_alive, play::lock_difficulty, play::move_player_pos, play::move_player_pos_rot, play::move_player_rot, play::move_player_status_only, play::move_vehicle, play::paddle_boat, play::pick_item_from_block, play::pick_item_from_entity, play::ping_request, play::place_recipe, play::player_abilities, play::player_action, play::player_command, play::player_input, play::player_loaded, play::pong, play::recipe_book_change_settings, play::recipe_book_seen_recipe, play::rename_item, play::resource_pack, play::seen_advancements, play::select_trade, play::set_beacon, play::set_carried_item, play::set_command_block, play::set_command_minecart, play::set_creative_mode_slot, play::set_jigsaw_block, play::set_structure_block, play::set_test_block, play::sign_update, play::swing, play::teleport_to_entity, play::test_instance_block_action, play::use_item_on, play::use_item, play::custom_click_action);
+            decl_variant( //
+                play_packet,
+                play::accept_teleportation,
+                play::block_entity_tag_query,
+                play::bundle_item_selected,
+                play::change_difficulty,
+                play::change_gamemode,
+                play::chat_ack,
+                play::chat_command,
+                play::chat_command_signed,
+                play::chat,
+                play::chat_session_update,
+                play::chunk_batch_received,
+                play::client_command,
+                play::client_tick_end,
+                play::client_information,
+                play::command_suggestion,
+                play::configuration_acknowledged,
+                play::container_button_click,
+                play::container_click,
+                play::container_close,
+                play::container_slot_state_changed,
+                play::cookie_response,
+                play::custom_payload,
+                play::debug_subscription_request,
+                play::edit_book,
+                play::entity_tag_query,
+                play::interact,
+                play::jigsaw_generate,
+                play::keep_alive,
+                play::lock_difficulty,
+                play::move_player_pos,
+                play::move_player_pos_rot,
+                play::move_player_rot,
+                play::move_player_status_only,
+                play::move_vehicle,
+                play::paddle_boat,
+                play::pick_item_from_block,
+                play::pick_item_from_entity,
+                play::ping_request,
+                play::place_recipe,
+                play::player_abilities,
+                play::player_action,
+                play::player_command,
+                play::player_input,
+                play::player_loaded,
+                play::pong,
+                play::recipe_book_change_settings,
+                play::recipe_book_seen_recipe,
+                play::rename_item,
+                play::resource_pack,
+                play::seen_advancements,
+                play::select_trade,
+                play::set_beacon,
+                play::set_carried_item,
+                play::set_command_block,
+                play::set_command_minecart,
+                play::set_creative_mode_slot,
+                play::set_jigsaw_block,
+                play::set_structure_block,
+                play::set_test_block,
+                play::sign_update,
+                play::swing,
+                play::teleport_to_entity,
+                play::test_instance_block_action,
+                play::use_item_on,
+                play::use_item,
+                play::custom_click_action
+            );
         }
 
         decl_variant(

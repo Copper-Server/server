@@ -158,6 +158,12 @@ namespace copper_server::base_objects {
         std::strong_ordering operator<=>(const packet& other) const = default;
     };
 
+    template <auto id>
+    struct constant_value {
+        using value = ic<id>;
+        std::strong_ordering operator<=>(const constant_value& other) const = default;
+    };
+
     template <int32_t value>
     struct enum_item {
         using item_id = ic<value>;
@@ -225,6 +231,18 @@ namespace copper_server::base_objects {
         }
 
         auto operator<=>(const identifier& other) const = default;
+    };
+
+    struct degrees {
+        float value;
+
+        int8_t to_packet() {
+            return (int8_t)floor(value * 256.0f / 360.0f);
+        }
+
+        static float from_packet(int8_t packedDegrees) {
+            return float(int16_t(packedDegrees) * 360) / 256.0f;
+        }
     };
 
     template <size_t size>
@@ -967,7 +985,7 @@ namespace copper_server::base_objects {
             return *this;
         }
 
-        operator double() {
+        explicit operator double() {
             return (value * 360.0) / (3.14159265358979323846 * 2);
         }
 

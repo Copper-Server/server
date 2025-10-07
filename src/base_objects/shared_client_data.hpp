@@ -145,7 +145,7 @@ namespace copper_server {
                         };
 
                         screen(base_objects::SharedClientData& client);
-                        virtual ~screen() = 0;
+                        virtual ~screen() {};
                         void close();                                                //packet only
                         void set_data(int16_t prop, int16_t data);                   //packet only
                         void set_slot(int32_t slot, const base_objects::slot&);      //packet only
@@ -215,7 +215,7 @@ namespace copper_server {
                     int32_t screen_counter = 0;
 
                     void init_main_screen(std::unique_ptr<main_screen_i> _screen) {
-                        current_screen->current_id = 0;
+                        _screen->current_id = 0;
                         main_screen = std::move(_screen);
                     }
 

@@ -66,6 +66,8 @@ namespace copper_server::util::encoding::enbt {
             || std::is_same_v<base_objects::var_int64, Type>
         )
             res.value = (typename Type::underlying_type)value;
+        else if constexpr (std::is_same_v<base_objects::velocity, Type>)
+            res = {value["x"], value["y"], value["z"]};
         else if constexpr (std::is_same_v<Chat, Type>)
             res = Chat::fromEnbt(value);
         else if constexpr (std::is_same_v<base_objects::optional_var_int32, Type> || std::is_same_v<base_objects::optional_var_int64, Type>) {
@@ -379,7 +381,16 @@ namespace copper_server::util::encoding::enbt {
             || std::is_same_v<base_objects::var_int64, Type>
         )
             res.value = (typename Type::underlying_type)stream.read();
-        else if constexpr (std::is_same_v<Chat, Type>)
+        else if constexpr (std::is_same_v<base_objects::velocity, Type>) {
+            stream.iterate([&res](auto& name, auto& value) {
+                if (name == "x")
+                    res.x = value.read();
+                else if (name == "y")
+                    res.y = value.read();
+                else if (name == "z")
+                    res.z = value.read();
+            });
+        } else if constexpr (std::is_same_v<Chat, Type>)
             res = Chat::fromEnbt(stream.read());
         else if constexpr (std::is_same_v<base_objects::optional_var_int32, Type> || std::is_same_v<base_objects::optional_var_int64, Type>) {
             stream.read_optional([&res](auto& has_stream) {

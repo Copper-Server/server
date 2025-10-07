@@ -52,6 +52,12 @@ namespace copper_server::util::encoding::enbt {
             || std::is_same_v<base_objects::var_int64, Type>
         )
             res = value.value;
+        else if constexpr (std::is_same_v<base_objects::velocity, Type>)
+            res = ::enbt::compound{
+                {"x", value.x},
+                {"y", value.y},
+                {"z", value.z}
+            };
         else if constexpr (std::is_same_v<Chat, Type>)
             res = value.ToENBT();
         else if constexpr (std::is_same_v<base_objects::optional_var_int32, Type>) {
@@ -189,6 +195,8 @@ namespace copper_server::util::encoding::enbt {
             || std::is_same_v<base_objects::var_int64, Type>
         )
             res.write(value.value);
+        else if constexpr (std::is_same_v<base_objects::velocity, Type>)
+            res.write_compound(3).write("x", value.x).write("y", value.y).write("z", value.z);
         else if constexpr (std::is_same_v<Chat, Type>)
             res.write(value.ToENBT());
         else if constexpr (std::is_same_v<base_objects::optional_var_int32, Type> || std::is_same_v<base_objects::optional_var_int64, Type>) {

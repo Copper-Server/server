@@ -33,7 +33,7 @@
         continue;                                        \
     }
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::base {
     //provides and manages chat system
     struct CommunicationCorePlugin : public PluginAutoRegister<"base/communication_core", CommunicationCorePlugin> {
         fast_task::task_mutex messages_order;
@@ -385,12 +385,12 @@ namespace copper_server::build_in_plugins {
                         if (!oclient.enable_filtering)
                             personal.filter = api::packets::client_bound::play::player_chat::no_filter{};
                         if (!oclient.enable_chat_colors) {
-                            personal.unsigned_content.and_then([](auto& chat) { chat.removeColorRecursive(); });
+                            if (personal.unsigned_content)
+                                personal.unsigned_content->removeColorRecursive();
                             personal.sender_name.removeColorRecursive();
                         }
 
-                        personal.index
-                            = oclient.packets_state.local_chat_counter++;
+                        personal.index = oclient.packets_state.local_chat_counter++;
                         oclient << std::move(personal);
                     }
                     return false;

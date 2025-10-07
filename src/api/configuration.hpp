@@ -66,6 +66,7 @@ namespace copper_server::api::configuration {
             bool sync_chunk_writes = false;
             bool enable_command_block = false;
             bool reduced_debug_screen = false;
+            bool enable_code_of_conduct = false;
 
             struct {
                 bool spawn_animals = true;

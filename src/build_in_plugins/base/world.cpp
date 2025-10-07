@@ -24,7 +24,7 @@
 #include <src/util/conversions.hpp>
 #include <src/util/task_management.hpp>
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::base {
     struct chunk_speed_data {
         int64_t x;
         int64_t z;

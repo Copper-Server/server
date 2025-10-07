@@ -12,7 +12,7 @@
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/plugin/main.hpp>
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::base::minecraft {
     struct brand : public PluginAutoRegister<"base/minecraft/brand", brand> {
         void OnLoad(const PluginRegistrationPtr& self) override {
             pluginManagement.bindPluginOn("minecraft:brand", self, PluginManagement::registration_on::configuration);

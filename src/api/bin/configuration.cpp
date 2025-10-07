@@ -112,6 +112,7 @@ namespace copper_server::api::configuration {
         cfg.game_play.sync_chunk_writes = game_play["sync_chunk_writes"].or_apply(cfg.game_play.sync_chunk_writes);
         cfg.game_play.enable_command_block = game_play["enable_command_block"].or_apply(cfg.game_play.enable_command_block);
         cfg.game_play.reduced_debug_screen = game_play["reduced_debug_screen"].or_apply(cfg.game_play.reduced_debug_screen);
+        cfg.game_play.enable_code_of_conduct = game_play["enable_code_of_conduct"].or_apply(cfg.game_play.enable_code_of_conduct);
         if (game_play.contains("enabled_features")) {
             cfg.game_play.enabled_features.clear();
             auto enabled_features = js_array::get_array(game_play["enabled_features"]);
@@ -132,6 +133,7 @@ namespace copper_server::api::configuration {
         auto protocol = js_object::get_object(data["protocol"]);
         cfg.protocol.compression_threshold = protocol["compression_threshold"].or_apply(cfg.protocol.compression_threshold);
         cfg.protocol.rate_limit = protocol["rate_limit"].or_apply(cfg.protocol.rate_limit);
+        cfg.protocol.max_unacknowledged_chunk_batches = protocol["max_unacknowledged_chunk_batches"].or_apply(cfg.protocol.max_unacknowledged_chunk_batches);
         cfg.protocol.handle_legacy = protocol["handle_legacy"].or_apply(cfg.protocol.handle_legacy);
         cfg.protocol.new_client_buffer = protocol["new_client_buffer"].or_apply(cfg.protocol.new_client_buffer);
         cfg.protocol.buffer = protocol["buffer"].or_apply(cfg.protocol.buffer);
@@ -145,66 +147,15 @@ namespace copper_server::api::configuration {
         cfg.protocol.prevent_proxy_connections = protocol["prevent_proxy_connections"].or_apply(cfg.protocol.prevent_proxy_connections);
         cfg.protocol.enable_encryption = protocol["enable_encryption"].or_apply(cfg.protocol.enable_encryption);
         cfg.protocol.send_nbt_data_in_chunk = protocol["send_nbt_data_in_chunk"].or_apply(cfg.protocol.send_nbt_data_in_chunk);
+        cfg.protocol.skip_unregistered_packets = protocol["skip_unregistered_packets"].or_apply(cfg.protocol.skip_unregistered_packets);
         set_from_string(cfg.protocol.connection_conflict, protocol["connection_conflict"].or_apply(to_string(cfg.protocol.connection_conflict)));
-    }
-
-    void merge_configs_anti_cheat(server_configuration& cfg, js_object& data) {
-        auto anti_cheat = js_object::get_object(data["anti_cheat"]);
-        {
-            auto fly = js_object::get_object(anti_cheat["fly"]);
-            cfg.anti_cheat.fly.prevent_illegal_flying = fly["prevent_illegal_flying"].or_apply(cfg.anti_cheat.fly.prevent_illegal_flying);
-            cfg.anti_cheat.fly.allow_flying_time = std::chrono::milliseconds((int64_t)fly["allow_flying_time"].or_apply(cfg.anti_cheat.fly.allow_flying_time.count()));
-        }
-        {
-            auto speed = js_object::get_object(anti_cheat["speed"]);
-            cfg.anti_cheat.speed.prevent_illegal_speed = speed["prevent_illegal_speed"].or_apply(cfg.anti_cheat.speed.prevent_illegal_speed);
-            cfg.anti_cheat.speed.max_speed = speed["max_speed"].or_apply(cfg.anti_cheat.speed.max_speed);
-        }
-        {
-            auto xray = js_object::get_object(anti_cheat["xray"]);
-            cfg.anti_cheat.xray.visibility_distance = xray["visibility_distance"].or_apply(cfg.anti_cheat.xray.visibility_distance);
-            cfg.anti_cheat.xray.send_fake_blocks = xray["send_fake_blocks"].or_apply(cfg.anti_cheat.xray.send_fake_blocks);
-            cfg.anti_cheat.xray.hide_surrounded_blocks = xray["hide_surrounded_blocks"].or_apply(cfg.anti_cheat.xray.hide_surrounded_blocks);
-            {
-                auto block_ids = js_array::get_array(anti_cheat["block_ids"]);
-                if (block_ids.empty()) {
-                    for (auto& id : cfg.anti_cheat.xray.block_ids)
-                        block_ids.push_back(id);
-                } else {
-                    size_t arr_siz = block_ids.size();
-                    for (size_t i = 0; i < arr_siz; i++)
-                        cfg.anti_cheat.xray.block_ids.emplace((std::string)block_ids[i]);
-                }
-            }
-        }
-        cfg.anti_cheat.check_block_breaking_time = anti_cheat["check_block_breaking_time"].or_apply(cfg.anti_cheat.check_block_breaking_time);
-        cfg.anti_cheat.reach_threshold = anti_cheat["reach_threshold"].or_apply(cfg.anti_cheat.reach_threshold);
-
-        {
-            auto killaura = js_object::get_object(anti_cheat["killaura"]);
-            cfg.anti_cheat.killaura.angle_threshold = killaura["angle_threshold"].or_apply(cfg.anti_cheat.killaura.angle_threshold);
-            cfg.anti_cheat.killaura.enable = killaura["enable"].or_apply(cfg.anti_cheat.killaura.enable);
-        }
-        cfg.anti_cheat.nofall = anti_cheat["nofall"].or_apply(cfg.anti_cheat.nofall);
-        {
-            auto scaffold = js_object::get_object(anti_cheat["scaffold"]);
-            cfg.anti_cheat.scaffold.enable_all = scaffold["enable_all"].or_apply(cfg.anti_cheat.scaffold.enable_all);
-        }
-        {
-
-            auto fastplace = js_object::get_object(anti_cheat["fastplace"]);
-            cfg.anti_cheat.fastplace.max_clicks = fastplace["max_clicks"].or_apply(cfg.anti_cheat.fastplace.max_clicks);
-        }
-        {
-            auto movement = js_object::get_object(anti_cheat["movement"]);
-            cfg.anti_cheat.movement.detect_baritone = movement["detect_baritone"].or_apply(cfg.anti_cheat.movement.detect_baritone);
-            cfg.anti_cheat.movement.no_slow_down = movement["no_slow_down"].or_apply(cfg.anti_cheat.movement.no_slow_down);
-        }
     }
 
     void merge_configs_mojang(server_configuration& cfg, js_object& data) {
         auto mojang = js_object::get_object(data["mojang"]);
         cfg.mojang.enforce_secure_profile = mojang["enforce_secure_profile"].or_apply(cfg.mojang.enforce_secure_profile);
+        cfg.mojang.enable_snoop_stats = mojang["enable_snoop_stats"].or_apply(cfg.mojang.enable_snoop_stats);
+        cfg.mojang.prevent_proxy_connections = mojang["prevent_proxy_connections"].or_apply(cfg.mojang.prevent_proxy_connections);
     }
 
     void merge_configs_status(server_configuration& cfg, js_object& data) {
@@ -241,6 +192,9 @@ namespace copper_server::api::configuration {
         cfg.server.offline_mode = server["offline_mode"].or_apply(cfg.server.offline_mode);
         cfg.server.max_players = server["max_players"].or_apply(cfg.server.max_players);
         cfg.server.world_debug_mode = server["world_debug_mode"].or_apply(cfg.server.world_debug_mode);
+        cfg.server.frozen_config = server["frozen_config"].or_apply(cfg.server.frozen_config);
+        if (server.contains("enable_debug_task_thread_naming"))
+            cfg.server.enable_debug_task_thread_naming = server["enable_debug_task_thread_naming"];
         if (server.contains("working_threads"))
             cfg.server.working_threads = server["working_threads"];
         if (server.contains("ssl_key_length"))
@@ -321,7 +275,6 @@ namespace copper_server::api::configuration {
         merge_configs_world(cfg, data);
         merge_configs_game_play(cfg, data);
         merge_configs_protocol(cfg, data);
-        merge_configs_anti_cheat(cfg, data);
         merge_configs_mojang(cfg, data);
         merge_configs_status(cfg, data);
         merge_configs_server(cfg, data);

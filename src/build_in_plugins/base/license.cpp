@@ -10,7 +10,7 @@
 #include <src/base_objects/commands.hpp>
 #include <src/plugin/main.hpp>
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::base {
 
 #pragma region apache
     char apache_license[]

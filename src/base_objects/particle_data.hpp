@@ -6,8 +6,10 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#ifndef SRC_BASE_OBJECTS_PARTICLE_DATA
-#define SRC_BASE_OBJECTS_PARTICLE_DATA
+#ifndef SRC_BASE_OBJECTS_PACKETS_PARTICLE_DATA
+#define SRC_BASE_OBJECTS_PACKETS_PARTICLE_DATA
+#include <src/base_objects/chat.hpp>
+#include <src/base_objects/packets_help.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/slot.hpp>
 #include <string>
@@ -16,95 +18,96 @@
 
 namespace copper_server::base_objects {
     struct particle_data {
-        using values = std::variant<int, float, std::string, slot, base_objects::position>;
-        std::vector<values> data;
+        struct block : public enum_item<1> {
+            var_int32::block_state id;
+        };
 
-        static particle_data minecraft(int32_t id) {
-            particle_data data;
-            data.data.push_back(id);
-            return data;
-        }
+        struct block_marker : public enum_item<2> {
+            var_int32::block_state id;
+        };
 
-        static particle_data minecraft_block(int32_t id) {
-            particle_data data;
-            data.data.push_back(id);
-            return data;
-        }
+        struct dust : public enum_item<13> {
+            int32_t rgb;
+            float scale;
+        };
 
-        static particle_data minecraft_block_marker(int32_t id) {
-            particle_data data;
-            data.data.push_back(id);
-            return data;
-        }
+        struct dust_color_transition : public enum_item<14> {
+            int32_t from_rgb;
+            int32_t to_rgb;
+            float scale;
+        };
 
-        static particle_data minecraft_dust_color(float r, float g, float b, float scale) {
-            particle_data data;
-            data.data.push_back(r);
-            data.data.push_back(g);
-            data.data.push_back(b);
-            data.data.push_back(scale);
-            return data;
-        }
+        struct entity_effect : public enum_item<20> {
+            int32_t argb;
+        };
 
-        static particle_data minecraft_dust_color_transition(float from_red, float from_green, float from_blue, float to_red, float to_green, float to_blue, float scale) {
-            particle_data data;
-            data.data.push_back(from_red);
-            data.data.push_back(from_green);
-            data.data.push_back(from_blue);
-            data.data.push_back(to_red);
-            data.data.push_back(to_green);
-            data.data.push_back(to_blue);
-            data.data.push_back(scale);
-            return data;
-        }
+        struct falling_dust : public enum_item<28> {
+            var_int32::block_state id;
+        };
 
-        //ARGB components
-        static particle_data minecraft_entity_effect(int32_t color) {
-            particle_data data;
-            data.data.push_back(color);
-            return data;
-        }
+        struct tinted_leaves : public enum_item<35> {
+            int32_t rgb;
+        };
 
-        static particle_data minecraft_falling_dust(int32_t block_state) {
-            particle_data data;
-            data.data.push_back(block_state);
-            return data;
-        }
+        struct sculk_charge : public enum_item<37> {
+            float roll;
+        };
 
-        static particle_data minecraft_item(slot item) {
-            particle_data data;
-            data.data.push_back(item);
-            return data;
-        }
+        struct item : public enum_item<46> {
+            base_objects::slot item;
+        };
 
-        static particle_data minecraft_vibration(base_objects::position pos, int32_t ticks) {
-            particle_data data;
-            data.data.push_back(0i32);
-            data.data.push_back(pos);
-            data.data.push_back(ticks);
-            return data;
-        }
+        struct vibration : public enum_item<47> {
+            struct block : public enum_item<0> {
+                position block_pos;
+            };
 
-        static particle_data minecraft_vibration(int32_t entity_id, float eye_height, int32_t ticks) {
-            particle_data data;
-            data.data.push_back(1i32);
-            data.data.push_back(entity_id);
-            data.data.push_back(eye_height);
-            data.data.push_back(ticks);
-            return data;
-        }
+            struct entity : public enum_item<1> {
+                var_int32::entity_id id;
+                float eye_height;
+            };
 
-        static particle_data minecraft_shriek(int32_t delay) {
-            particle_data data;
-            data.data.push_back(delay);
-            return data;
-        }
+            partial_enum_switch<var_int32::position_source_type, block, entity> data;
+            var_int32 travel_ticks;
+        };
 
-        static particle_data minecraft_dust_pillar(int32_t block_state) {
-            particle_data data;
-            data.data.push_back(block_state);
-            return data;
-        }
+        struct trail : public enum_item<48> {
+            double x;
+            double y;
+            double z;
+            int32_t rgb;
+            var_int32 duration;
+        };
+
+        struct shriek : public enum_item<102> {
+            var_int32 delay;
+        };
+
+        struct dust_pillar : public enum_item<108> {
+            var_int32::block_state id;
+        };
+
+        struct block_crumble : public enum_item<112> {
+            var_int32::block_state id;
+        };
+
+        partial_enum_switch<
+            var_int32::particle_type,
+            block,
+            block_marker,
+            dust,
+            dust_color_transition,
+            entity_effect,
+            falling_dust,
+            tinted_leaves,
+            sculk_charge,
+            item,
+            vibration,
+            trail,
+            shriek,
+            dust_pillar,
+            block_crumble>
+            data;
     };
 }
 #endif /* SRC_BASE_OBJECTS_PARTICLE_DATA */

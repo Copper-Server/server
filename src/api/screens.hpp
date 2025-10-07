@@ -77,12 +77,12 @@ namespace copper_server::api::screens {
             }
 
             void clicked(const click_data& click) override final {
-                switch (data.mode) {
+                switch (click.mode) {
                 case 0:
                 case 1:
-                    if (data.button == 0)
+                    if (click.button == 0)
                         menu_left_click(click.slot);
-                    else if (data.button == 1)
+                    else if (click.button == 1)
                         menu_right_click(click.slot);
                     break;
                 case 3:
@@ -402,7 +402,7 @@ namespace copper_server::api::screens {
     using generic_9x4 = detail::generic<9, 4>;
     using generic_9x5 = detail::generic<9, 5>;
     using generic_9x6 = detail::generic<9, 6>;
-    using generic_9x6 = detail::generic<3, 3>;
+    using generic_3x3 = detail::generic<3, 3>;
 
     class chest : public generic_9x3 {
         util::XYZ<int32_t> pos;

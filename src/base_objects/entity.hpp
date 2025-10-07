@@ -74,7 +74,7 @@ namespace copper_server {
             int32_t max_track_distance = 0;
             int32_t track_tick_interval = 0;
 
-            uint16_t entity_id = 0;
+            int32_t entity_id = 0;
 
             bool drag_applied_after_acceleration = false;
             bool is_summonable = false;
@@ -226,10 +226,10 @@ namespace copper_server {
 
             //entity can be added without reload, but it could be removed only by `reset_entities`
             //multi threaded
-            static const entity_data& get_entity(uint16_t id);
+            static const entity_data& get_entity(int32_t id);
             static const entity_data& get_entity(const std::string& id);
             static list_array<int32_t> get_entity_ids();
-            static uint16_t register_entity(entity_data);
+            static int32_t register_entity(entity_data);
             static const entity_data& view(const entity& entity);
             static void register_entity_world_processor(std::shared_ptr<world_processor> processor, const std::string& id);
 
@@ -238,8 +238,8 @@ namespace copper_server {
             static void initialize_entities(); //INTERNAL, used to assign processors
 
 
-            static entity_data& initialization_get(uint16_t id);
-            static uint16_t player_entity_id;
+            static entity_data& initialization_get(int32_t id);
+            static int32_t player_entity_id;
         };
 
 
@@ -477,10 +477,10 @@ namespace copper_server {
             void add_saturation(float saturation);
             void reduce_saturation(float saturation);
 
-            float get_breath() const;
-            void set_breath(float breath);
-            void add_breath(float breath);
-            void reduce_breath(float breath);
+            int32_t get_breath() const;
+            void set_breath(int32_t breath);
+            void add_breath(int32_t breath);
+            void reduce_breath(int32_t breath);
 
             int32_t get_level() const;
             void set_level(int32_t level);
@@ -526,8 +526,8 @@ namespace copper_server {
             void place_block(int64_t global_x, uint64_t global_y, int64_t global_z, base_objects::const_block_entity_ref);
             void place_block(int64_t global_x, uint64_t global_y, int64_t global_z, block_entity&&);
 
-            static entity_ref create(uint16_t id);
-            static entity_ref create(uint16_t id, const enbt::compound_const_ref& nbt);
+            static entity_ref create(int32_t id);
+            static entity_ref create(int32_t id, const enbt::compound_const_ref& nbt);
             static entity_ref create(const std::string& id);
             static entity_ref create(const std::string& id, const enbt::compound_const_ref& nbt);
 
@@ -556,7 +556,7 @@ namespace copper_server {
 
             bool is_player(); //returns true if entity_id belongs to player
 
-            uint16_t get_entity_type_id() const {
+            int32_t get_entity_type_id() const {
                 return entity_id;
             }
 
@@ -568,7 +568,7 @@ namespace copper_server {
         private:
             friend struct entity_data;
             friend struct enbt::io_helper::serialization<entity_ref>;
-            uint16_t entity_id = 0;
+            int32_t entity_id = 0;
             bool died = false;
         };
     }

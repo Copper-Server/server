@@ -424,8 +424,8 @@ namespace copper_server {
                 return cached_block_entity_id[id];
             }
 
-            inline int32_t default_drop_item_id() const {
-                return cached_default_drop_item_id[id];
+            inline int32_t item_id() const {
+                return cached_item_id[id];
             }
 
             inline int32_t experience() const {
@@ -572,7 +572,7 @@ namespace copper_server {
             static list_array<float> cached_blast_resistance;
             static list_array<int32_t> cached_map_color_rgb;
             static list_array<int32_t> cached_block_entity_id;
-            static list_array<int32_t> cached_default_drop_item_id;
+            static list_array<int32_t> cached_item_id;
             static list_array<int32_t> cached_experience;
             static list_array<block_id_t> cached_general_block_id;
             static list_array<block_id_t> cached_default_state;
@@ -600,7 +600,7 @@ namespace copper_server {
             inline float blast_resistance() const { return block.blast_resistance(); }
             inline int32_t map_color_rgb() const { return block.map_color_rgb(); }
             inline int32_t block_entity_id() const { return block.block_entity_id(); }
-            inline int32_t default_drop_item_id() const { return block.default_drop_item_id(); }
+            inline int32_t item_id() const { return block.item_id(); }
             inline int32_t experience() const { return block.experience(); }
             inline block_id_t default_state() const { return block.default_state(); }
             inline uint8_t luminance() const { return block.luminance(); }
@@ -639,7 +639,7 @@ namespace copper_server {
             inline float blast_resistance() const { return block.blast_resistance(); }
             inline int32_t map_color_rgb() const { return block.map_color_rgb(); }
             inline int32_t block_entity_id() const { return block.block_entity_id(); }
-            inline int32_t default_drop_item_id() const { return block.default_drop_item_id(); }
+            inline int32_t item_id() const { return block.item_id(); }
             inline int32_t experience() const { return block.experience(); }
             inline block_id_t default_state() const { return block.default_state(); }
             inline uint8_t luminance() const { return block.luminance(); }
@@ -680,7 +680,7 @@ namespace copper_server {
             inline float blast_resistance() const { return block.blast_resistance(); }
             inline int32_t map_color_rgb() const { return block.map_color_rgb(); }
             inline int32_t block_entity_id() const { return block.block_entity_id(); }
-            inline int32_t default_drop_item_id() const { return block.default_drop_item_id(); }
+            inline int32_t item_id() const { return block.item_id(); }
             inline int32_t experience() const { return block.experience(); }
             inline block_id_t default_state() const { return block.default_state(); }
             inline uint8_t luminance() const { return block.luminance(); }

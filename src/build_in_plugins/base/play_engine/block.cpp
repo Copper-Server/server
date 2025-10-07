@@ -17,7 +17,7 @@
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::base::play_engine {
     //handles clients with play state, allows players to access world and other things through api
 
     struct block : public PluginAutoRegister<"base/play_engine/block", block> {

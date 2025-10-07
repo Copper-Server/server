@@ -11,7 +11,7 @@
 #include <src/base_objects/commands.hpp>
 #include <src/plugin/main.hpp>
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::tools {
     struct scheduled : public PluginAutoRegister<"tools/scheduled", scheduled> {
         void OnInitialization(const PluginRegistrationPtr&) override {
             api::configuration::get() ^ "scheduled" ^ "on_start" ^ "command" |= enbt::fixed_array{enbt::value("version")};

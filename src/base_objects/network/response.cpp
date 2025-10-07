@@ -6,8 +6,10 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <cmath>
 #include <library/enbt/enbt.hpp>
 #include <src/base_objects/network/response.hpp>
+#include <src/util/calculations.hpp>
 
 namespace copper_server::base_objects::network {
     namespace util {
@@ -69,6 +71,67 @@ namespace copper_server::base_objects::network {
 
     void response::item::write_id(uint8_t id) {
         _write_value_tem(id, data, std::endian::little);
+    }
+
+    //private static final int field_62269 = 15;
+    //private static final int MAX_15_BIT_INT = 32767;
+    //private static final double field_62270 = 32766.0;
+    //private static final int field_62271 = 2;
+    //private static final int SLOW_BIT_MASK = 3;
+    //private static final int field_62272 = 4;
+    //private static final int field_62273 = 3;
+    //private static final int field_62274 = 18;
+    //private static final int field_62275 = 33;
+    //public static final double field_62267 = 1.7179869183E10;
+    //public static final double field_62268 = 3.051944088384301E-5;
+    //
+    //public static boolean hasFastMarkerBit(int maxDirectionalVelocity) {
+    //	return (maxDirectionalVelocity & 4) == 4;
+    //}
+    //
+    //public static Vec3d readVelocity(ByteBuf buf) {
+    //	int i = buf.readUnsignedByte();
+    //	if (i == 0) {
+    //		return Vec3d.ZERO;
+    //	} else {
+    //		int j = buf.readUnsignedByte();
+    //		long l = buf.readUnsignedInt();
+    //		long m = l << 16 | (long)(j << 8) | (long)i;
+    //		long n = (long)(i & 3);
+    //		if (hasFastMarkerBit(i)) {
+    //			n |= ((long)VarInts.read(buf) & 4294967295L) << 2;
+    //		}
+    //
+    //		return new Vec3d(fromLong(m >> 3) * (double)n, fromLong(m >> 18) * (double)n, fromLong(m >> 33) * (double)n);
+    //	}
+    //}
+
+
+    void response::item::write_value(velocity val) {
+        static constexpr double threshold = double(1.0) / 32766;
+        double x = copper_server::util::minecraft::packets::velocity_clamp(val.x);
+        double y = copper_server::util::minecraft::packets::velocity_clamp(val.y);
+        double z = copper_server::util::minecraft::packets::velocity_clamp(val.z);
+
+        double max_value = std::max({std::abs(x), std::abs(y), std::abs(z)});
+        if (max_value < threshold) {
+            write_value((uint8_t)0);
+        } else {
+            int64_t rounded = (int64_t)std::ceil(max_value);
+            if (rounded == 0)
+                rounded = 1;
+            bool extended_mark = (rounded & 3L) != rounded;
+            int64_t scaling_factor = extended_mark ? rounded & 3 | 4 : rounded;
+            int64_t x_quantized = int64_t(copper_server::util::minecraft::packets::velocity_round(x / rounded)) << 3;
+            int64_t y_quantized = int64_t(copper_server::util::minecraft::packets::velocity_round(y / rounded)) << 18;
+            int64_t z_quantized = int64_t(copper_server::util::minecraft::packets::velocity_round(z / rounded)) << 33;
+            int64_t compacted = scaling_factor | x_quantized | y_quantized | z_quantized;
+            write_value(uint8_t(compacted & 0xFF));
+            write_value(uint8_t((compacted >> 8) & 0xFF));
+            write_value(int32_t(compacted >> 16));
+            if (extended_mark)
+                write_var32((int32_t)(rounded >> 2));
+        }
     }
 
     void response::item::write_value(const enbt::raw_uuid& val) {

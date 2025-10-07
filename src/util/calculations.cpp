@@ -91,6 +91,19 @@ namespace copper_server::util {
         }
 
         namespace packets {
+            double velocity_round(double value) {
+                return std::round((value * 0.5 + 0.5) * 32766.0);
+            }
+
+            double velocity_deround(int64_t value) {
+                return std::min((double)(value & 32767L), 32766.0) * 2.0 / 32766.0 - 1.0;
+            }
+
+            double velocity_clamp(double value) {
+                static constexpr double max = double(1ui64 << 34) - 1;
+                static constexpr double min = -(max);
+                return isnan(value) ? 0.0 : std::clamp(value, min, max);
+            }
             XYZ<int16_t> velocity(VECTOR rot) {
                 return {(int16_t)(rot.x * 8000), (int16_t)(rot.y * 8000), (int16_t)(rot.z * 8000)};
             }
@@ -115,6 +128,5 @@ namespace copper_server::util {
                 };
             }
         }
-
     }
 }

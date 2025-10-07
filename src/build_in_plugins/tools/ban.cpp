@@ -16,7 +16,7 @@
 #include <src/plugin/registration.hpp>
 #include <src/storage/enbt_list_storage.hpp>
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::tools {
     class ban : public PluginAutoRegister<"tools/ban", ban> {
         storage::enbt_list_storage banned_players;
         storage::enbt_list_storage banned_ips;

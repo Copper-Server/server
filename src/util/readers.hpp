@@ -13,6 +13,8 @@
 #include <exception>
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
+#include <src/base_objects/velocity.hpp>
+#include <src/util/calculations.hpp>
 #include <src/util/nbt.hpp>
 #include <string>
 
@@ -229,6 +231,29 @@ namespace copper_server {
             for (int32_t i = 0; i < len; i++)
                 res.push_back(read());
             return res;
+        }
+
+        base_objects::velocity read_velocity() {
+            int32_t first_byte = read_value<int8_t>();
+            if (first_byte == 0) {
+                return {0, 0, 0};
+            } else {
+                int32_t second_byte = read_value<int8_t>();
+                int64_t compressed = read_value<int32_t>();
+                int64_t packed_value = compressed << 16 | int64_t(second_byte << 8) | int64_t(first_byte);
+                int64_t scaling_factor = (first_byte & 3);
+
+                if ((first_byte & 4) == 4) {
+                    int32_t extended_part = read_var<int32_t>();
+                    scaling_factor |= ((int64_t)extended_part & 0xFFFFFFFF) << 2;
+                }
+
+                return base_objects::velocity{
+                    util::minecraft::packets::velocity_deround(packed_value >> 3) * (double)scaling_factor,
+                    util::minecraft::packets::velocity_deround(packed_value >> 18) * (double)scaling_factor,
+                    util::minecraft::packets::velocity_deround(packed_value >> 33) * (double)scaling_factor
+                };
+            }
         }
 
     private:

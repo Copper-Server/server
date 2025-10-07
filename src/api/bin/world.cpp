@@ -9,6 +9,7 @@
 #include <functional>
 #include <src/api/configuration.hpp>
 #include <src/api/packets.hpp>
+#include <src/api/world.hpp>
 #include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
@@ -232,37 +233,40 @@ namespace copper_server::api::world {
             .time_of_day = (uint64_t)world->day_time,
             .time_of_day_increment = world->increase_time,
         } << api::packets::client_bound::play::set_default_spawn_position{
+            //TODO move respawn data to to api::configuration for globals and get respawn data for player if it has custom one
+            .id = world->world_id,
             .location = {(int32_t)world->spawn_data.x, (int32_t)world->spawn_data.y, (int32_t)world->spawn_data.z},
-            .angle = world->spawn_data.angle,
+            .yaw = world->spawn_data.yaw,
+            .pitch = world->spawn_data.pitch,
         };
     }
 
     void transfer(
-        [[maybe_unused]] base_objects::client_data_holder& client_ref,
+        [[maybe_unused]] base_objects::entity_ref& entity,
         [[maybe_unused]] int32_t world_id,
         [[maybe_unused]] util::VECTOR position,
         [[maybe_unused]] util::ANGLE_DEG rotation,
         [[maybe_unused]] util::VECTOR velocity,
-        [[maybe_unused]] std::function<void(storage::world_data& world)> callback = nullptr
+        [[maybe_unused]] std::function<void(storage::world_data& world)> callback
     ) {
         //TODO
     }
 
     void transfer(
-        [[maybe_unused]] base_objects::client_data_holder& client_ref,
+        [[maybe_unused]] base_objects::entity_ref& entity,
         [[maybe_unused]] int32_t world_id,
         [[maybe_unused]] util::VECTOR position,
         [[maybe_unused]] util::ANGLE_DEG rotation,
-        [[maybe_unused]] std::function<void(storage::world_data& world)> callback = nullptr
+        [[maybe_unused]] std::function<void(storage::world_data& world)> callback
     ) {
         //TODO
     }
 
     void transfer(
-        [[maybe_unused]] base_objects::client_data_holder& client_ref,
+        [[maybe_unused]] base_objects::entity_ref& entity,
         [[maybe_unused]] int32_t world_id,
         [[maybe_unused]] util::VECTOR position,
-        [[maybe_unused]] std::function<void(storage::world_data& world)> callback = nullptr
+        [[maybe_unused]] std::function<void(storage::world_data& world)> callback
     ) {
         //TODO
     }

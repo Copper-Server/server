@@ -1294,7 +1294,7 @@ namespace copper_server::storage {
     }
 
     void world_data::entity_metadata(base_objects::entity& self) {
-        entity_notify_change_all<&ew_processor::entity_event>(this, entities, self);
+        entity_notify_change_all<&ew_processor::entity_metadata>(this, entities, self);
     }
 
     void world_data::entity_add_effect(base_objects::entity& self, uint32_t effect_id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) {
@@ -1617,7 +1617,8 @@ namespace copper_server::storage {
 
         {
             auto _spawn_data = load_from_nbt.at("spawn_data").as_compound();
-            spawn_data.angle = _spawn_data.at("angle");
+            spawn_data.yaw = _spawn_data.at("yaw");
+            spawn_data.pitch = _spawn_data.at("pitch");
             spawn_data.radius = _spawn_data.at("radius");
             spawn_data.x = _spawn_data.at("x");
             spawn_data.y = _spawn_data.at("y");
@@ -1698,7 +1699,8 @@ namespace copper_server::storage {
         world_data_file["generator_id"] = generator_id;
 
         world_data_file["spawn_data"] = enbt::compound{
-            {"angle", spawn_data.angle},
+            {"yaw", spawn_data.yaw},
+            {"pitch", spawn_data.pitch},
             {"radius", spawn_data.radius},
             {"x", spawn_data.x},
             {"y", spawn_data.y},
@@ -1786,9 +1788,9 @@ namespace copper_server::storage {
         limit_on_load.enable();
     }
 
-    void world_data::update_spawn_data(int64_t x, int64_t z, int64_t radius, float angle) {
+    void world_data::update_spawn_data(int64_t x, int64_t z, int64_t radius, float yaw, float pitch) {
         std::unique_lock lock(mutex);
-        spawn_data = {x, z, radius, 0, angle};
+        spawn_data = {x, z, radius, 0, yaw, pitch};
         loading_tickets.at(world_spawn_ticket_id).point = {
             convert_chunk_global_pos(x),
             convert_chunk_global_pos(z),

@@ -240,16 +240,16 @@ namespace copper_server::util {
     inline XYZ<T> moved(ANGLE_RAD rot, T distance) {
         T cos_pitch = cos(rot.pitch);
         XYZ<T> offset;
-        offset.x = static_cast<T>(cos(rotation.yaw) * cos_pitch * distance);
-        offset.y = static_cast<T>(sin(rotation.yaw) * cos_pitch * distance);
-        offset.z = static_cast<T>(sin(rotation.pitch) * distance);
-        return res;
+        offset.x = static_cast<T>(cos(rot.yaw) * cos_pitch * distance);
+        offset.y = static_cast<T>(sin(rot.yaw) * cos_pitch * distance);
+        offset.z = static_cast<T>(sin(rot.pitch) * distance);
+        return offset;
     }
 
     template <class T>
-    inline XYZ<T> moved(const XYZ<T>& startPosition, const ANGLE_RAD& rotation, T distance) {
+    inline XYZ<T> moved(const XYZ<T>& startPosition, const ANGLE_RAD& rot, T distance) {
         XYZ<T> finalPosition = startPosition;
-        finalPosition += moved(rotation, distance);
+        finalPosition += moved(rot, distance);
         return finalPosition;
     }
 
@@ -257,16 +257,16 @@ namespace copper_server::util {
     inline XYZ<T> moved(ANGLE_DEG rot, T distance) {
         T cos_pitch = cosd(rot.pitch);
         XYZ<T> offset;
-        offset.x = static_cast<T>(cosd(rotation.yaw) * cos_pitch * distance);
-        offset.y = static_cast<T>(sind(rotation.yaw) * cos_pitch * distance);
-        offset.z = static_cast<T>(sind(rotation.pitch) * distance);
-        return res;
+        offset.x = static_cast<T>(cosd(rot.yaw) * cos_pitch * distance);
+        offset.y = static_cast<T>(sind(rot.yaw) * cos_pitch * distance);
+        offset.z = static_cast<T>(sind(rot.pitch) * distance);
+        return offset;
     }
 
     template <class T>
-    inline XYZ<T> moved(const XYZ<T>& startPosition, const ANGLE_DEG& rotation, T distance) {
+    inline XYZ<T> moved(const XYZ<T>& startPosition, const ANGLE_DEG& rot, T distance) {
         XYZ<T> finalPosition = startPosition;
-        finalPosition += moved(rotation, distance);
+        finalPosition += moved(rot, distance);
         return finalPosition;
     }
 
@@ -304,6 +304,9 @@ namespace copper_server::util {
         VECTOR velocity(VECTOR pos, VECTOR target, double speed);
 
         namespace packets {
+            double velocity_clamp(double value);
+            double velocity_round(double value);
+            double velocity_deround(int64_t value);
             XYZ<int16_t> velocity(VECTOR rot);
             XYZ<int16_t> delta_move(XYZ<float> pos);
             XY<int16_t> delta_move(XY<float> pos);
@@ -329,14 +332,14 @@ namespace std {
     template <>
     struct hash<copper_server::util::ANGLE_DEG> {
         size_t operator()(const copper_server::util::ANGLE_DEG& val) const {
-            return hash<double>()(val.x) ^ hash<double>()(val.y);
+            return hash<double>()(val.pitch) ^ hash<double>()(val.yaw);
         }
     };
 
     template <>
     struct hash<copper_server::util::ANGLE_RAD> {
         size_t operator()(const copper_server::util::ANGLE_RAD& val) const {
-            return hash<double>()(val.x) ^ hash<double>()(val.y);
+            return hash<double>()(val.pitch) ^ hash<double>()(val.yaw);
         }
     };
 }

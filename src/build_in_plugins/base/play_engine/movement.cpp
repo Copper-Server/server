@@ -10,6 +10,7 @@
 #include <src/api/command.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/entity_id_map.hpp>
+#include <src/api/entity_proxy.hpp>
 #include <src/api/players.hpp>
 #include <src/api/registers.hpp>
 #include <src/api/world.hpp>
@@ -18,7 +19,7 @@
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::base::play_engine {
     struct movement : public PluginAutoRegister<"base/play_engine/movement", movement> {
         movement() {}
 
@@ -116,9 +117,12 @@ namespace copper_server::build_in_plugins {
                     return;
 
                 auto& entity = *client.player_data.assigned_entity;
-                entity.ride_entity.and_then([&](auto& riding_entity) {
-                    //TODO update metadata
-                });
+                if (entity.ride_entity) {
+                    api::entity_proxy::oak_boat boat(**entity.ride_entity);
+                    boat.left_paddle_moving() = packet.left_paddle_turning;
+                    boat.right_paddle_moving() = packet.left_paddle_turning;
+                    (*entity.ride_entity)->update_metadata();
+                }
             });
         }
     };

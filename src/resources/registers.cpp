@@ -1235,9 +1235,14 @@ namespace copper_server::resources {
     }
 
     void load_file_recipe(js_object&& variant_js, const std::string& id, [[maybe_unused]] bool send_via_network_body = true) {
-        enbt::compound res;
-        res = util::conversions::json::from_json(variant_js.get());
-        api::recipe::set_recipe(id, std::move(res));
+        check_override(recipe_table, id, "recipe");
+
+        base_objects::recipe res;
+        res.category = (std::string)variant_js["category"];
+        res.group = (std::string)variant_js["group"];
+        //TODO complete
+
+        recipe_table[id] = std::move(res);
     }
 
     void load_file_recipe(const std::filesystem::path& file_path, const std::string& id) {
@@ -1819,7 +1824,7 @@ namespace copper_server::resources {
 
             it.second["proto_invert"] = std::move(invert);
         }
-        api::registers::current_protocol_id = 772;
+        api::registers::current_protocol_id = 773;
         api::registers::current_protocol_registers = std::move(res);
     }
 
@@ -1974,13 +1979,13 @@ namespace copper_server::resources {
                                 for (auto&& [in_pack_name, in_pack_decl] : in_pack_data)
                                     process_pack(in_pack_decl, in_pack_name, pack_id, false, send_via_network_body);
                             } else
-                                loaded_packs().push_back({.namespace_ = "minecraft", .id = pack_id, .version = "1.21.8"});
+                                loaded_packs().push_back({.namespace_ = "minecraft", .id = pack_id, .version = "1.21.9"});
                         }
                     }
                 }
             }
         }
-        loaded_packs().push_back({.namespace_ = namespace_, .id = id, .version = "1.21.8"});
+        loaded_packs().push_back({.namespace_ = namespace_, .id = id, .version = "1.21.9"});
     }
 
     void process_pack(boost::json::object& parsed, const std::string& namespace_, const std::string& id) {

@@ -542,15 +542,15 @@ namespace enbt::io_helper {
 namespace copper_server {
     namespace base_objects {
         struct entities_storage {
-            std::unordered_map<uint16_t, entity_data> _registry;
-            std::unordered_map<std::string, uint16_t> _name_to_id;
+            std::unordered_map<int32_t, entity_data> _registry;
+            std::unordered_map<std::string, int32_t> _name_to_id;
             std::unordered_map<std::string, std::shared_ptr<entity_data::world_processor>> entity_processors;
-            uint16_t id_adder = 0;
+            int32_t id_adder = 0;
         };
 
         fast_task::protected_value<entities_storage> data_for_entities;
 
-        const entity_data& entity_data::get_entity(uint16_t id) {
+        const entity_data& entity_data::get_entity(int32_t id) {
             return data_for_entities.get([&](auto& data) -> const entity_data& {
                 auto it = data._registry.find(id);
                 if (it == data._registry.end())
@@ -580,10 +580,10 @@ namespace copper_server {
             });
         }
 
-        uint16_t entity_data::register_entity(entity_data entity) {
+        int32_t entity_data::register_entity(entity_data entity) {
             return data_for_entities.set([&](auto& data) {
-                uint16_t id = data.id_adder++;
-                if (data.id_adder == 0) {
+                int32_t id = data.id_adder++;
+                if (data.id_adder <= 0) {
                     --data.id_adder;
                     throw std::runtime_error("Too many entities.");
                 }
@@ -598,7 +598,7 @@ namespace copper_server {
             return get_entity(entity.entity_id);
         }
 
-        entity_data& entity_data::initialization_get(uint16_t id) {
+        entity_data& entity_data::initialization_get(int32_t id) {
             return data_for_entities.set([&](auto& data) -> entity_data& {
                 auto it = data._registry.find(id);
                 if (it == data._registry.end())
@@ -632,7 +632,7 @@ namespace copper_server {
             });
         }
 
-        uint16_t entity_data::player_entity_id;
+        int32_t entity_data::player_entity_id;
 
         entity::entity() {}
 
@@ -1076,7 +1076,7 @@ namespace copper_server {
             set_saturation(get_saturation() - saturation);
         }
 
-        float entity::get_breath() const {
+        int32_t entity::get_breath() const {
             auto it = metadata.find("breath");
             if (it == metadata.end())
                 return 0;
@@ -1084,7 +1084,7 @@ namespace copper_server {
                 return std::get<entity_metadata::var_int>(it->second.value).value;
         }
 
-        void entity::set_breath(float breath) {
+        void entity::set_breath(int32_t breath) {
             auto& meta = metadata["AIR"];
             meta.value = entity_metadata::var_int{.value = breath};
             if (assigned_player)
@@ -1097,11 +1097,11 @@ namespace copper_server {
                 };
         }
 
-        void entity::add_breath(float breath) {
+        void entity::add_breath(int32_t breath) {
             set_breath(get_breath() + breath);
         }
 
-        void entity::reduce_breath(float breath) {
+        void entity::reduce_breath(int32_t breath) {
             set_breath(get_breath() - breath);
         }
 
@@ -1321,7 +1321,7 @@ namespace copper_server {
         void entity::place_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] block_entity&&) {
         }
 
-        entity_ref entity::create(uint16_t id) {
+        entity_ref entity::create(int32_t id) {
             auto it = entity_data::get_entity(id);
             entity_ref res = new entity();
             res->entity_id = id;
@@ -1331,7 +1331,7 @@ namespace copper_server {
             return res;
         }
 
-        entity_ref entity::create(uint16_t id, const enbt::compound_const_ref& nbt) {
+        entity_ref entity::create(int32_t id, const enbt::compound_const_ref& nbt) {
             auto it = entity_data::get_entity(id);
             entity_ref res = new entity();
             res->entity_id = id;

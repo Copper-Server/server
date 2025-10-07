@@ -18,13 +18,14 @@
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::base::play_engine {
     struct commands : public PluginAutoRegister<"base/play_engine/commands", commands> {
         commands() {}
 
         ~commands() noexcept {}
 
         void OnInitialization(const PluginRegistrationPtr& _) override {
+            log::info("Loading");
             register_packet_processor([](api::packets::server_bound::play::client_command&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 if (packet.action_id == api::packets::server_bound::play::client_command::action_id_e::perform_respawn) {
                     //TODO client << api::client::play::respawn{};

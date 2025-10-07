@@ -9,9 +9,11 @@
 #ifndef SRC_BASE_OBJECTS_ENTITY_METADATA
 #define SRC_BASE_OBJECTS_ENTITY_METADATA
 #include <src/api/id.hpp>
+#include <src/base_objects/Chat.hpp>
 #include <src/base_objects/packets_help.hpp>
 #include <src/base_objects/particle_data.hpp>
 #include <src/base_objects/position.hpp>
+#include <src/base_objects/slot.hpp>
 #include <src/util/calculations.hpp>
 
 namespace copper_server::base_objects {
@@ -74,7 +76,7 @@ namespace copper_server::base_objects {
                 east = 5
             };
 
-            enum_as<var_int32, enum_t> value = direction::down;
+            enum_as<enum_t, var_int32> value = direction::down;
         };
 
         struct optional_living_entity_reference : public enum_item<13> {
@@ -95,7 +97,7 @@ namespace copper_server::base_objects {
         };
 
         struct particles : public enum_item<17> {
-            std::vector<particle> value;
+            list_array<particle> value;
         };
 
         struct villager_data : public enum_item<18> {
@@ -130,7 +132,7 @@ namespace copper_server::base_objects {
                 inhaling = 17, //1.21.3
             };
 
-            enum_as<var_int32, enum_t> value = entity_pose::standing;
+            enum_as<enum_t, var_int32> value = entity_pose::standing;
         };
 
         struct cat_variant : public enum_item<21> {
@@ -291,12 +293,15 @@ namespace copper_server::base_objects {
             weathering_copper_state,
             vector3,
             vector4,
-            resolvable_profile
-        >
+            resolvable_profile>
             value;
 
-
-        ;
+        entity_metadata() = default;
+        entity_metadata(const entity_metadata& other) = default;
+        entity_metadata(entity_metadata&& other) = default;
+        entity_metadata& operator=(const entity_metadata& other) = default;
+        entity_metadata& operator=(entity_metadata&& other) = default;
+        ~entity_metadata() = default;
     };
 }
 

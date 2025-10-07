@@ -18,7 +18,7 @@
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 
-namespace copper_server::build_in_plugins::play_engine {
+namespace copper_server::build_in_plugins::base::play_engine {
     class world_sync : public PluginAutoRegister<"base/play_engine/world_sync", world_sync> {
         static fast_task::future_ptr<void> send_async(auto& client, auto&& packet) {
             return fast_task::future<void>::start([client, packet = std::move(packet)]() mutable { *client << std::move(packet); });
@@ -174,7 +174,7 @@ namespace copper_server::build_in_plugins::play_engine {
 
         static void entity_init(base_objects::entity& self, base_objects::entity& target) {
             if (self.assigned_player) {
-                auto velocity = util::minecraft::packets::velocity(target.motion);
+                auto velocity = target.motion;
                 *self.assigned_player << api::client::play::add_entity{
                     .id = target.protocol_id,
                     .uuid = api::entity_id_map::get_uuid(target.protocol_id),
@@ -186,9 +186,7 @@ namespace copper_server::build_in_plugins::play_engine {
                     .yaw = target.rotation.yaw,
                     .head_yaw = target.head_rotation.yaw,
                     .data = *target.get_object_field().or_else([]() { return std::optional<int>(0); }),
-                    .velocity_x = velocity.x,
-                    .velocity_y = velocity.y,
-                    .velocity_z = velocity.z
+                    .velocity = {velocity.x, velocity.y, velocity.z}
                 };
             }
         };
@@ -227,12 +225,9 @@ namespace copper_server::build_in_plugins::play_engine {
 
         static void entity_motion_changes(base_objects::entity& self, base_objects::entity& target, [[maybe_unused]] util::VECTOR mot) {
             if (self.assigned_player) {
-                auto velocity = util::minecraft::packets::velocity(mot);
                 *self.assigned_player << api::client::play::set_entity_motion{
                     .id = target.protocol_id,
-                    .velocity_x = velocity.x,
-                    .velocity_y = velocity.y,
-                    .velocity_z = velocity.z
+                    .velocity = {mot.x, mot.y, mot.z}
                 };
             }
         };
@@ -676,7 +671,6 @@ namespace copper_server::build_in_plugins::play_engine {
                     if (make_tick) {
                         if (!player.packets_state.is_play_fully_initialized) {
                             player.packets_state.is_play_fully_initialized = true;
-                            auto [yaw, pitch] = util::to_yaw_pitch(self.rotation);
                             *self.assigned_player << api::client::play::player_position{
                                 .x = self.position.x,
                                 .y = self.position.y,
@@ -684,8 +678,8 @@ namespace copper_server::build_in_plugins::play_engine {
                                 .velocity_x = self.motion.x,
                                 .velocity_y = self.motion.y,
                                 .velocity_z = self.motion.z,
-                                .yaw = (float)yaw,
-                                .pitch = (float)pitch,
+                                .yaw = (float)self.rotation.yaw,
+                                .pitch = (float)self.rotation.pitch,
                                 .flags = api::packets::teleport_flags{}
                             };
                         }

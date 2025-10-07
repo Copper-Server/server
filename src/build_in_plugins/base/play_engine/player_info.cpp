@@ -18,14 +18,14 @@
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::base::play_engine {
     struct player_info : public PluginAutoRegister<"base/play_engine/player_info", player_info> {
         player_info() {}
 
         ~player_info() noexcept {}
 
         void OnInitialization(const PluginRegistrationPtr& _) override {
-            register_event(api::players::handlers::on_gamemode_changed, [](auto& client) {
+            register_event(api::players::handlers::on_gamemode_changed, [](base_objects::SharedClientData& client) {
                 using piu = api::client::play::player_info_update;
                 piu current;
                 current.actions.push(piu::header{client.data->uuid});
@@ -36,7 +36,7 @@ namespace copper_server::build_in_plugins {
                     return false;
                 });
             });
-            register_event(api::players::handlers::on_tab_listing_changed, [](auto& client) {
+            register_event(api::players::handlers::on_tab_listing_changed, [](base_objects::SharedClientData& client) {
                 using piu = api::client::play::player_info_update;
                 piu current;
                 current.actions.push(piu::header{client.data->uuid});
@@ -47,7 +47,7 @@ namespace copper_server::build_in_plugins {
                     return false;
                 });
             });
-            register_event(api::players::handlers::on_skin_parts_changed, [](auto& client) {
+            register_event(api::players::handlers::on_skin_parts_changed, [](base_objects::SharedClientData& client) {
                 using piu = api::client::play::player_info_update;
                 piu current;
                 current.actions.push(piu::header{client.data->uuid});

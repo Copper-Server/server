@@ -381,7 +381,8 @@ namespace copper_server::storage {
             int64_t z = 0;
             int64_t radius = 0;
             int64_t y = 0; //y is calculated by heightmap
-            float angle = 0;
+            float yaw = 0;
+            float pitch = 0;
         } spawn_data;
 
         double border_center_x = 0;
@@ -426,7 +427,7 @@ namespace copper_server::storage {
             return path;
         }
 
-        void update_spawn_data(int64_t x, int64_t z, int64_t radius, float angle);
+        void update_spawn_data(int64_t x, int64_t z, int64_t radius, float yaw, float pitch);
         size_t add_loading_ticket(base_objects::world::loading_point_ticket&& ticket);
         void remove_loading_ticket(size_t id);
         size_t loaded_chunks_count();

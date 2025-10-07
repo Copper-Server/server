@@ -14,7 +14,7 @@
 #include <src/base_objects/commands.hpp>
 #include <src/plugin/main.hpp>
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::tools {
     struct protocol : public PluginAutoRegister<"tools/protocol", protocol> {
         bool debug_mode = false;
         std::string now = std::format("{:%Y_%m_%d__%H_%M_%OS}", std::chrono::current_zone()->to_local(std::chrono::system_clock::now()));

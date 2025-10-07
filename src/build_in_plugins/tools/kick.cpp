@@ -16,7 +16,7 @@
 #include <src/base_objects/commands.hpp>
 #include <src/plugin/main.hpp>
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::tools {
     struct kick : public PluginAutoRegister<"tools/kick", kick> {
         void OnCommandsLoad(const PluginRegistrationPtr&, base_objects::command_root_browser& browser) override {
             using predicate = base_objects::parser;

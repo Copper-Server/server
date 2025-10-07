@@ -6,6 +6,7 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <library/fast_task/include/files.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/dialogs.hpp>
 #include <src/api/id.hpp>
@@ -29,6 +30,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             keep_alive_solution ka_solution;
             list_array<PluginRegistrationPtr> active_plugins{};
             std::unordered_map<enbt::raw_uuid, ResourcePackData> pending_resource_packs;
+            bool code_of_conduct_is_accepted = false;
 
             static extra_data_t& get(base_objects::SharedClientData& client) {
                 return *client.packets_state.internal_data.set([&](auto& data) {
@@ -478,7 +480,57 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             client.sendPacket(base_objects::network::response(data));
         }
 
+        static void send_code_of_conduct_from_file(base_objects::SharedClientData& client, const std::filesystem::path& path) {
+            fast_task::files::async_iofstream read(path, std::ios::in);
+            if (!read.is_open()) {
+                static std::string generic_code_of_conduct = "Be nice!";
+                client << api::packets::client_bound::configuration::code_of_conduct{.text = generic_code_of_conduct};
+            } else {
+                //read all and send to player
+                std::string res;
+                read.seekg(0, std::ios::end);
+                res.resize(read.tellg());
+                read.seekg(0, std::ios::beg);
+                read.read(res.data(), res.size());
+                client << api::packets::client_bound::configuration::code_of_conduct{.text = res}; //TODO add caching
+            }
+        }
+
+        static void send_code_of_conduct(base_objects::SharedClientData& client) {
+            auto codeofconduct_path = api::configuration::get().server.get_storage_path() / "codeofconduct";
+            auto player_code_of_conduct = codeofconduct_path / (client.locale + ".txt");
+            auto default_code_of_conduct = codeofconduct_path / ("en_us.txt");
+            if (std::filesystem::exists(player_code_of_conduct)) {
+                send_code_of_conduct_from_file(client, player_code_of_conduct);
+                return;
+            } else if (std::filesystem::exists(default_code_of_conduct)) {
+                send_code_of_conduct_from_file(client, default_code_of_conduct);
+                return;
+            } else {
+                std::optional<std::filesystem::path> random_code_of_conduct;
+                for (auto& entry : std::filesystem::directory_iterator(codeofconduct_path)) {
+                    if (entry.path().extension() == ".txt") {
+                        random_code_of_conduct = entry.path();
+                        break;
+                    }
+                }
+                if (random_code_of_conduct.has_value()) {
+                    send_code_of_conduct_from_file(client, random_code_of_conduct.value());
+                    return;
+                }
+            }
+
+            static std::string generic_code_of_conduct = "Be nice!";
+            client << api::packets::client_bound::configuration::code_of_conduct{.text = generic_code_of_conduct};
+        }
+
         static void make_finish(base_objects::SharedClientData& client) {
+            if (api::configuration::get().game_play.enable_code_of_conduct) {
+                if (!extra_data_t::get(client).code_of_conduct_is_accepted) {
+                    send_code_of_conduct(client);
+                    return;
+                }
+            }
             auto& data = extra_data_t::get(client);
             if (data.packs_requested) {
                 if (data.active_plugins.empty()) {
@@ -488,7 +540,6 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 }
             }
         }
-
 
         void OnRegister(const PluginRegistrationPtr&) override {
             using client_information = api::packets::server_bound::configuration::client_information;
@@ -500,6 +551,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             using client_bound_resource_pack = api::packets::client_bound::configuration::resource_pack_push;
             using select_known_packs = api::packets::server_bound::configuration::select_known_packs;
             using custom_click_action = api::packets::server_bound::configuration::custom_click_action;
+            using accept_code_of_conduct = api::packets::server_bound::configuration::accept_code_of_conduct;
 
             register_packet_viewer([](const client_bound_resource_pack& packet, base_objects::SharedClientData& client) {
                 extra_data_t::get(client).pending_resource_packs[packet.uuid] = {.required = packet.forced};
@@ -558,9 +610,15 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             register_packet_viewer([](const api::packets::server_bound::configuration::finish_configuration&, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).packs_requested) {
                     if (extra_data_t::get(client).active_plugins.empty()) {
-                        if (extra_data_t::get(client).pending_resource_packs.empty())
-                            return false;
-                        else
+                        if (extra_data_t::get(client).pending_resource_packs.empty()) {
+                            if (api::configuration::get().game_play.enable_code_of_conduct) {
+                                if (extra_data_t::get(client).code_of_conduct_is_accepted)
+                                    return false;
+                                else
+                                    client << api::packets::client_bound::play::disconnect{.reason = "Code of conduct acceptance is required."};
+                            } else
+                                return false;
+                        } else
                             client << api::packets::client_bound::play::disconnect{.reason = "Pending resource packs."};
                     } else
                         client << api::packets::client_bound::play::disconnect{.reason = "Requested more data."};
@@ -614,6 +672,9 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             });
             register_packet_processor([](custom_click_action&& packet, base_objects::SharedClientData& client) {
                 api::dialogs::pass_dialog(packet.id, client, std::move(packet.payload));
+            });
+            register_packet_processor([](accept_code_of_conduct&& packet, base_objects::SharedClientData& client) {
+                extra_data_t::get(client).code_of_conduct_is_accepted = true;
             });
         }
     };

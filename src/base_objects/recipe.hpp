@@ -292,6 +292,7 @@ namespace copper_server::base_objects {
         uint32_t id;
         bool show_notification;
         bool highlight_as_new;
+        bool allow_override;
 
         std::string_view get_data_name() const {
             return std::visit(

@@ -9,6 +9,7 @@
 #ifndef SRC_BASE_OBJECTS_POSITION
 #define SRC_BASE_OBJECTS_POSITION
 #include <cstdint>
+
 namespace copper_server::base_objects {
     struct position {
         int64_t x : 26;

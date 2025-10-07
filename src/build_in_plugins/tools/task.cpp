@@ -12,7 +12,7 @@
 #include <src/plugin/main.hpp>
 #include <src/api/client.hpp>
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::tools {
     struct task : public PluginAutoRegister<"tools/task", task> {
         void OnInitialization(const PluginRegistrationPtr&) override {
             if (fast_task::debug::is_debug_enabled()) {

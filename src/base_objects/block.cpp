@@ -43,7 +43,7 @@ namespace copper_server::base_objects {
     list_array<float> block::cached_blast_resistance;
     list_array<int32_t> block::cached_map_color_rgb;
     list_array<int32_t> block::cached_block_entity_id;
-    list_array<int32_t> block::cached_default_drop_item_id;
+    list_array<int32_t> block::cached_item_id;
     list_array<int32_t> block::cached_experience;
     list_array<block_id_t> block::cached_general_block_id;
     list_array<block_id_t> block::cached_default_state;
@@ -247,10 +247,10 @@ namespace copper_server::base_objects {
                 cached_block_entity_id[i++] = it->block_entity_id;
         }
         {
-            cached_default_drop_item_id.resize(full_block_data_.size()).commit();
+            cached_item_id.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_default_drop_item_id[i++] = it->default_drop_item_id;
+                cached_item_id[i++] = it->item_id;
         }
         {
             cached_experience.resize(full_block_data_.size()).commit();

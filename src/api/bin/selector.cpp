@@ -450,28 +450,28 @@ namespace copper_server::api {
             if (x_rotation->is_inverted) {
                 if (x_rotation->min && x_rotation->max)
                     entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.x < x_rotation->min && entity->rotation.x < x_rotation->max;
+                        return entity->rotation.pitch < x_rotation->min && entity->rotation.pitch < x_rotation->max;
                     });
                 else if (x_rotation->min)
                     entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.x < x_rotation->min;
+                        return entity->rotation.pitch < x_rotation->min;
                     });
                 else if (x_rotation->max)
                     entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.x > x_rotation->max;
+                        return entity->rotation.pitch > x_rotation->max;
                     });
             } else {
                 if (x_rotation->min && x_rotation->max)
                     entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.x >= x_rotation->min && entity->rotation.x >= x_rotation->max;
+                        return entity->rotation.pitch >= x_rotation->min && entity->rotation.pitch >= x_rotation->max;
                     });
                 else if (x_rotation->min)
                     entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.x >= x_rotation->min;
+                        return entity->rotation.pitch >= x_rotation->min;
                     });
                 else if (x_rotation->max)
                     entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.x <= x_rotation->max;
+                        return entity->rotation.pitch <= x_rotation->max;
                     });
             }
         }
@@ -479,28 +479,28 @@ namespace copper_server::api {
             if (y_rotation->is_inverted) {
                 if (y_rotation->min && y_rotation->max)
                     entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.y < y_rotation->min && entity->rotation.y > y_rotation->max;
+                        return entity->rotation.yaw < y_rotation->min && entity->rotation.yaw > y_rotation->max;
                     });
                 else if (y_rotation->min)
                     entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.y < y_rotation->min;
+                        return entity->rotation.yaw < y_rotation->min;
                     });
                 else if (y_rotation->max)
                     entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.y > y_rotation->max;
+                        return entity->rotation.yaw > y_rotation->max;
                     });
             } else {
                 if (y_rotation->min && y_rotation->max)
                     entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.y >= y_rotation->min && entity->rotation.y >= y_rotation->max;
+                        return entity->rotation.yaw >= y_rotation->min && entity->rotation.yaw >= y_rotation->max;
                     });
                 else if (y_rotation->min)
                     entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.y >= y_rotation->min;
+                        return entity->rotation.yaw >= y_rotation->min;
                     });
                 else if (y_rotation->max)
                     entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.y <= y_rotation->max;
+                        return entity->rotation.yaw <= y_rotation->max;
                     });
             }
         }

@@ -13,9 +13,11 @@
 #include <src/util/reflect/calculations.hpp>
 #include <src/util/reflect/component.hpp>
 #include <src/util/reflect/dye_color.hpp>
+#include <src/util/reflect/metadata.hpp>
 #include <src/util/reflect/packets.hpp>
 #include <src/util/reflect/packets_help.hpp>
 #include <src/util/reflect/parsers.hpp>
+#include <src/util/reflect/particle_data.hpp>
 
 namespace copper_server::api::packets {
     using namespace base_objects;
@@ -39,23 +41,23 @@ namespace copper_server::api::packets {
 
     template <size_t size>
     struct type_selector<string_sized<size>> : std::integral_constant<size_t, 3> {};
-    
+
     template <size_t size>
     struct type_selector<bitset_fixed<size>> : std::integral_constant<size_t, 4> {};
 
     template <class T, size_t size>
     struct type_selector<list_array_sized<T, size>> : std::integral_constant<size_t, 5> {};
 
-    template <class T, auto ... dep_v>
+    template <class T, auto... dep_v>
     struct type_selector<list_array_no_size<T, dep_v...>> : std::integral_constant<size_t, 6> {};
 
-    template <class T, size_t size, auto ... dep_v>
+    template <class T, size_t size, auto... dep_v>
     struct type_selector<list_array_sized_no_size<T, size, dep_v...>> : std::integral_constant<size_t, 7> {};
 
     template <class T, size_t size>
     struct type_selector<list_array_sized_siz_from_packet<T, size>> : std::integral_constant<size_t, 8> {};
 
-    template <class T, class  Ts>
+    template <class T, class Ts>
     struct type_selector<sized_entry<T, Ts>> : std::integral_constant<size_t, 9> {};
 
     template <class T, size_t size>
@@ -69,7 +71,10 @@ namespace copper_server::api::packets {
 
     template <class T, size_t size>
     struct type_selector<std::array<T, size>> : std::integral_constant<size_t, 13> {};
-    
+
+    template <auto V>
+    struct type_selector<base_objects::constant_value<V>> : std::integral_constant<size_t, 14> {};
+
     template <class type>
     concept is_limited_num = type_selector<type>::value == 1;
 
@@ -83,7 +88,7 @@ namespace copper_server::api::packets {
     concept is_bitset_fixed = type_selector<type>::value == 4;
 
     template <class type>
-    concept is_list_array_sized = type_selector<type>::value == 5 || type_selector<type>::value == 7 ||  type_selector<type>::value == 8;
+    concept is_list_array_sized = type_selector<type>::value == 5 || type_selector<type>::value == 7 || type_selector<type>::value == 8;
 
     template <class type>
     concept is_list_array_fixed = type_selector<type>::value == 10;
@@ -93,6 +98,9 @@ namespace copper_server::api::packets {
 
     template <class type>
     concept is_std_array = type_selector<type>::value == 13;
+
+    template <class type>
+    concept is_constant_value = type_selector<type>::value == 14;
 
     template <class type>
     concept is_no_size = is_value_template_base_of<no_size, type>;
@@ -141,6 +149,7 @@ namespace copper_server::api::packets {
 
 #pragma warning(push)
 #pragma warning(disable : 4702)
+
         template <class T>
         void serialize_entry(std::string& res, size_t spacing, const T& value) {
             using Type = std::decay_t<T>;
@@ -148,13 +157,17 @@ namespace copper_server::api::packets {
                 serialize_entry(res, spacing, value.to_packet());
             } else if constexpr (std::is_same_v<identifier, Type>)
                 res += "\"" + value.value + "\"";
-            else if constexpr (is_string_sized<Type>)
+            else if constexpr (is_constant_value<Type>) {
+                serialize_entry(res, spacing, Type::value::value);
+            } else if constexpr (is_string_sized<Type>)
                 res += "\"" + value.value + "\"";
             else if constexpr (std::is_same_v<json_text_component, Type>)
                 res += "\"" + value.value + "\"";
             else if constexpr (std::is_same_v<var_int32, Type>)
                 res += std::to_string(value.value);
-            else if constexpr (is_template_base_of<base_objects::box, Type>) 
+            else if constexpr (std::is_same_v<base_objects::velocity, Type>)
+                res += "{ x = " + std::to_string(value.x) + ", y = " + std::to_string(value.y) + ", z = " + std::to_string(value.z) + " }";
+            else if constexpr (is_template_base_of<base_objects::box, Type>)
                 serialize_entry(res, spacing, value);
             else if constexpr (std::is_same_v<var_int64, Type>)
                 res += std::to_string(value.value);

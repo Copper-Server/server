@@ -15,7 +15,7 @@
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::base::play_engine {
     struct key_commands : public PluginAutoRegister<"base/play_engine/key_commands", key_commands> {
         key_commands() {}
 
@@ -75,7 +75,7 @@ namespace copper_server::build_in_plugins {
                     auto& client_entity = client.player_data.assigned_entity;
                     if (entity && client_entity) {
                         if (entity->current_world() == client_entity->current_world())
-                            client.player_data.assigned_entity->teleport(entity->position, entity->rotation.x, entity->rotation.y);
+                            client.player_data.assigned_entity->teleport(entity->position, (float)entity->rotation.pitch, (float)entity->rotation.yaw);
                         else if (entity->current_world())
                             api::world::transfer(client_entity, entity->current_world()->world_id, entity->position, entity->rotation);
                     }

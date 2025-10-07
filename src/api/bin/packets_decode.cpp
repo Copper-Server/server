@@ -16,9 +16,11 @@
 #include <src/util/reflect/calculations.hpp>
 #include <src/util/reflect/component.hpp>
 #include <src/util/reflect/dye_color.hpp>
+#include <src/util/reflect/metadata.hpp>
 #include <src/util/reflect/packets.hpp>
 #include <src/util/reflect/packets_help.hpp>
 #include <src/util/reflect/parsers.hpp>
+#include <src/util/reflect/particle_data.hpp>
 #include <src/util/templates.hpp>
 
 namespace copper_server::api::packets {
@@ -79,6 +81,9 @@ namespace copper_server::api::packets {
     template <class T, size_t size>
     struct type_selector<std::array<T, size>> : std::integral_constant<size_t, 13> {};
 
+    template <auto V>
+    struct type_selector<base_objects::constant_value<V>> : std::integral_constant<size_t, 14> {};
+
     template <class type>
     concept is_limited_num = type_selector<type>::value == 1;
 
@@ -102,6 +107,9 @@ namespace copper_server::api::packets {
 
     template <class type>
     concept is_std_array = type_selector<type>::value == 13;
+
+    template <class type>
+    concept is_constant_value = type_selector<type>::value == 14;
 
     template <class type>
     concept is_no_size = is_value_template_base_of<no_size, type>;
@@ -207,7 +215,12 @@ namespace copper_server::api::packets {
             value = Type::from_packet(std::move(res));
         } else if constexpr (std::is_same_v<identifier, Type>)
             value.value = stream.read_identifier();
-        else if constexpr (is_std_array<Type>)
+        else if constexpr (is_constant_value<Type>) {
+            decltype(Type::value::value) check;
+            decode_entry(context, stream, check, prev);
+            if (check != Type::value::value)
+                throw std::runtime_error("The value is not equal to excepted.");
+        } else if constexpr (is_std_array<Type>)
             for (auto& it : value)
                 decode_entry(context, stream, it, prev);
         else if constexpr (is_string_sized<Type>)
@@ -218,6 +231,8 @@ namespace copper_server::api::packets {
             value.value = stream.read_var<int32_t>();
         else if constexpr (std::is_same_v<var_int64, Type>)
             value.value = stream.read_var<int64_t>();
+        else if constexpr (std::is_same_v<base_objects::velocity, Type>)
+            value = stream.read_velocity();
         else if constexpr (std::is_same_v<optional_var_int32, Type>) {
             auto res = stream.read_var<int32_t>();
             if (res)
@@ -475,7 +490,7 @@ namespace copper_server::api::packets {
     server_bound_packet decode_server_packet(SharedClientData& context, ArrayStream& stream) {
         T res = T();
         decode_entry(context, stream, res, &res);
-        
+
 
         if constexpr (std::is_constructible_v<server_bound::handshake_packet, T>) {
             return server_bound_packet(server_bound::handshake_packet(std::move(res)));

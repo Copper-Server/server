@@ -19,7 +19,7 @@
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::base::play_engine {
     struct inventory : public PluginAutoRegister<"base/play_engine/inventory", inventory> {
         inventory() {}
 
@@ -41,7 +41,7 @@ namespace copper_server::build_in_plugins {
             register_packet_processor([](api::packets::server_bound::play::set_carried_item&& packet, base_objects::SharedClientData& client) {
                 if (packet.slot >= 0 && packet.slot <= 7)
                     if (client.player_data.assigned_entity)
-                        client.player_data.assigned_entity->set_selected_item(packet.slot);
+                        client.player_data.assigned_entity->set_selected_item((uint8_t)packet.slot);
             });
             register_packet_processor([](api::packets::server_bound::play::set_creative_mode_slot&& packet, base_objects::SharedClientData& client) {
                 if (client.player_data.assigned_entity && client.player_data.gamemode == 1) {
@@ -220,7 +220,7 @@ namespace copper_server::build_in_plugins {
             void add_item(base_objects::slot& item) {
                 auto& inv = client.player_data.assigned_entity->inventory;
                 if (item) {
-                    for (size_t i = 9; i <= 44; i++) {
+                    for (uint32_t i = 9; i <= 44; i++) {
                         if (inv.find((int32_t)i) != inv.end()) {
                             if (inv[i].is_same_def(*item)) {
                                 auto max_stack = inv[i].access_component<base_objects::component::max_stack_size>().size;
@@ -238,8 +238,8 @@ namespace copper_server::build_in_plugins {
                     }
                 }
                 if (item) {
-                    for (size_t i = 9; i <= 44; i++) {
-                        if (inv.find((int32_t)i) == inv.end()) {
+                    for (uint32_t i = 9; i <= 44; i++) {
+                        if (inv.find(i) == inv.end()) {
                             inv[i] = std::move(*item);
                             set_slot(i, inv[i]);
                             item = std::nullopt;
@@ -450,7 +450,7 @@ namespace copper_server::build_in_plugins {
                     case 2: // end left drag
                         if (drag_mode == DragMode::LEFT && carry_item) {
                             int32_t total_items = carry_item->count;
-                            int32_t slots_count = drag_slots.size();
+                            int32_t slots_count = (int32_t)drag_slots.size();
                             if (slots_count > 0) {
                                 int32_t per_slot = total_items / slots_count;
                                 int32_t remainder = total_items % slots_count;
@@ -513,7 +513,7 @@ namespace copper_server::build_in_plugins {
                     if (carry_item) {
                         auto& item_to_collect = *carry_item;
                         auto max_stack = item_to_collect.access_component<base_objects::component::max_stack_size>().size.value;
-                        for (size_t i = 9; i <= 44; ++i) {
+                        for (uint32_t i = 9; i <= 44; ++i) {
                             if (item_to_collect.count >= max_stack)
                                 break;
                             if (inv.count(i) && inv[i].is_same_def(item_to_collect)) {
@@ -573,7 +573,7 @@ namespace copper_server::build_in_plugins {
                                 written_book_content.raw_title = std::string(*title);
                                 written_book_content.resolved = false;
                                 written_book_content.pages = book.pages.take().convert_fn([](base_objects::component::writable_book_content::page&& page) {
-                                    base_objects::component::written_book_content::page{
+                                    return base_objects::component::written_book_content::page{
                                         .raw = std::move(page.raw),
                                         .filtered = std::move(page.filtered)
                                     };

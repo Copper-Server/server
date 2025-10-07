@@ -38,7 +38,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
     using container_slot_state_changed = api::packets::server_bound::play::container_slot_state_changed;
     using cookie_response = api::packets::server_bound::play::cookie_response;
     using custom_payload = api::packets::server_bound::play::custom_payload;
-    using debug_sample_subscription = api::packets::server_bound::play::debug_sample_subscription;
+    using debug_subscription_request = api::packets::server_bound::play::debug_subscription_request;
     using edit_book = api::packets::server_bound::play::edit_book;
     using entity_tag_query = api::packets::server_bound::play::entity_tag_query;
     using interact = api::packets::server_bound::play::interact;
@@ -78,6 +78,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
     using use_item_on = api::packets::server_bound::play::use_item_on;
     using use_item = api::packets::server_bound::play::use_item;
     using custom_click_action = api::packets::server_bound::play::custom_click_action;
+
 
     struct tcp_play : public PluginAutoRegister<"network/tcp_play", tcp_play> {
         struct extra_data_t {
@@ -296,7 +297,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     plugin->OnPlayHandle(plugin, packet.channel, packet.payload, client);
             });
 
-            register_packet_processor([]([[maybe_unused]] debug_sample_subscription&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            register_packet_processor([]([[maybe_unused]] debug_subscription_request&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 

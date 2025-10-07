@@ -86,7 +86,7 @@ namespace copper_server::base_objects {
 
         template <class T>
         void remove_component() {
-            return components.erase(T::item_id::value);
+            components.erase(T::item_id::value);
         }
 
         void add_component(component&& copy) {

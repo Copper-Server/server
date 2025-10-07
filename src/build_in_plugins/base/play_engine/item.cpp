@@ -17,7 +17,7 @@
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::base::play_engine {
     struct item : public PluginAutoRegister<"base/play_engine/item", item> {
         item() {}
 

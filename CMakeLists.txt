@@ -22,6 +22,7 @@ FILE(GLOB REFLECTION_FILES CONFIGURE_DEPENDS
   src/base_objects/component.hpp
   src/base_objects/dye_color.hpp
   src/base_objects/packets_help.hpp
+  src/base_objects/particle_data.hpp
   src/base_objects/parsers.hpp
   src/util/calculations.hpp
 )

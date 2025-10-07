@@ -20,7 +20,7 @@
 #include <src/storage/list_storage.hpp>
 #include <src/storage/permissions_manager.hpp>
 
-namespace copper_server::build_in_plugins {
+namespace copper_server::build_in_plugins::tools {
     void apply_group(const std::string& group_name, base_objects::player& pd) {
         api::permissions::enum_group_values(group_name, [&](const std::string& perm_tag) {
             if (perm_tag.starts_with("action.")) {
