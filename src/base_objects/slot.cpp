@@ -110,20 +110,6 @@ namespace copper_server::base_objects {
     item_id_t::item_id_t(const std::string& id)
         : id(slot_data::get_slot_data(id).internal_id) {}
 
-    item_id_t::item_id_t(uint32_t id)
-        : id(id) {}
-
-    item_id_t::item_id_t(const item_id_t& id)
-        : id(id.id) {}
-
-    item_id_t::item_id_t()
-        : id(0) {}
-
-    item_id_t& item_id_t::operator=(const item_id_t& copy) {
-        id = copy.id;
-        return *this;
-    }
-
     const std::string& item_id_t::to_name() const {
         return slot_data::get_slot_data(id).id;
     }
@@ -181,6 +167,14 @@ namespace copper_server::base_objects {
     void slot_data::enumerate_slot_data(const std::function<void(static_slot_data&)>& fn) {
         for (auto& block : full_item_data_)
             fn(*block);
+    }
+
+    list_array<int32_t> slot_data::get_slot_data_ids() {
+        list_array<int32_t> res;
+        res.reserve(full_item_data_.size());
+        for (auto& block : full_item_data_)
+            res.push_back(block->internal_id);
+        return res;
     }
 
     copper_server::api::packets::slot slot_data::to_packet() const {

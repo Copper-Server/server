@@ -1585,7 +1585,7 @@ namespace copper_server::resources {
                     block_data->is_liquid = states & 0b0000100000;
                     block_data->is_solid = states & 0b0001000000;
                     block_data->is_full_cube = states & 0b0010000000;
-                    block_data->tickable = states & 0b0100000000 ? block_data->tickable : base_objects::static_block_data::tick_opt::no_tick;
+                    block_data->is_tickable = states & 0b0100000000;
                     block_data->has_random_ticks = states & 0b0100000000;
                     block_data->has_comparator_output = states & 0b1000000000;
                 })

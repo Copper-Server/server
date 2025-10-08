@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-Present Danyil Melnytskyi. All Rights Reserved.
+ * Copyright 2025-Present Danyil Melnytskyi. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License"). You may not use
  * this file except in compliance with the License. You can obtain a copy
@@ -156,13 +156,17 @@ int main(int argc, char* argv[]) {
 
     for (const auto& entity_pair : root) {
         std::string entity_name = sanitize_name(entity_pair.first);
+        auto id = entity_pair.second.get<int>("id");
+
+
         out << "    struct " << entity_name << " {\n";
         out << "        base_objects::entity& e;\n\n";
         out << "        " << entity_name << "(base_objects::entity& e): e(e) {}\n\n";
 
+
         std::vector<MetadataField> fields;
         try {
-            global_iterate_all << "        case " << entity_pair.second.get<int>("id") << ": " << entity_name << "(e).iterate_all(std::move(func)); break;\n";
+            global_iterate_all << "        case " << id << ": " << entity_name << "(e).iterate_all(std::move(func)); break;\n";
             for (const auto& metadata_item : entity_pair.second.get_child("metadata")) {
                 MetadataField field;
                 field.field_name = metadata_item.second.get<std::string>("field_name");
@@ -175,6 +179,15 @@ int main(int argc, char* argv[]) {
             std::cerr << "Warning: Could not find metadata for " << entity_name << ". " << e.what() << std::endl;
         }
 
+        out << "        static base_objects::entity_ref create();\n";
+        out_impl << "    base_objects::entity_ref " << entity_name << "::create() {\n";
+        out_impl << "        return base_objects::entity::create(" << id << ");\n";
+        out_impl << "    }\n\n";
+
+        out << "        static base_objects::entity_ref create(const enbt::compound_const_ref& nbt);\n";
+        out_impl << "    base_objects::entity_ref " << entity_name << "::create(const enbt::compound_const_ref& nbt) {\n";
+        out_impl << "        return base_objects::entity::create(" << id << ", nbt);\n";
+        out_impl << "    }\n\n";
 
         out << "        void iterate_all(std::move_only_function<void(uint8_t index, base_objects::entity_metadata&)>&& func);\n";
         out_impl << "    void " << entity_name << "::iterate_all(std::move_only_function<void(uint8_t index, base_objects::entity_metadata&)>&& func) {\n";

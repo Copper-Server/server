@@ -32,22 +32,22 @@ namespace enbt::io_helper {
 
     template <>
     struct compact_matrix_simple_cast<base_objects::block[16][16][16]> {
-        using direct_type = std::uint32_t;
+        using direct_type = std::int32_t;
     };
 
     template <>
     struct compact_matrix_simple_cast<light_data::light_item[16][16][8]> {
-        using direct_type = std::uint32_t;
+        using direct_type = std::uint8_t;
     };
 
     template <>
     struct compact_matrix_simple_cast<int32_t[4][4][4]> {
-        using direct_type = std::uint32_t;
+        using direct_type = std::int32_t;
     };
 
     template <>
     struct serialization_simple_cast<base_objects::block> {
-        using direct_type = std::uint32_t;
+        using direct_type = std::int32_t;
     };
 
     template <>
@@ -315,8 +315,8 @@ namespace copper_server::storage {
             size_t y_ = 0;
             for (auto& y : x.as_array()) {
                 size_t z_ = 0;
-                for (auto z : y.as_ui32_array()) {
-                    data[x_][y_][z_].set_raw(z);
+                for (auto z : y.as_i32_array()) {
+                    data[x_][y_][z_].id = (int32_t)z;
                     has_tickable_blocks = data[x_][y_][z_].is_tickable();
                     ++z_;
                 }
@@ -724,9 +724,9 @@ namespace copper_server::storage {
                 } pos;
 
                 pos.value = random_engine();
-                if (sub_chunk.blocks[pos.dec.x][pos.dec.y][pos.dec.z].is_tickable())
-                    if (sub_chunk.blocks[pos.dec.x][pos.dec.y][pos.dec.z].tickable == base_objects::block::tick_opt::block_tickable)
-                        sub_chunk.blocks[pos.dec.x][pos.dec.y][pos.dec.z].tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, pos.dec.x, pos.dec.y, pos.dec.z, true);
+                auto block = sub_chunk.blocks[pos.dec.x][pos.dec.y][pos.dec.z];
+                if (block.is_tickable())
+                    block.tick(world, sub_chunk, chunk_x, sub_chunk_y, chunk_z, pos.dec.x, pos.dec.y, pos.dec.z, true);
                 --max_random_tick_per_sub_chunk;
             }
             sub_chunk_y++;
@@ -828,10 +828,9 @@ namespace copper_server::storage {
                 pos.x = _pos >> 8;
                 pos.y = (_pos >> 4) & 0xF;
                 pos.z = _pos & 0xF;
-
-                if (sub_chunk.blocks[pos.x][pos.y][pos.z].is_tickable())
-                    if (sub_chunk.blocks[pos.x][pos.y][pos.z].tickable == base_objects::block::tick_opt::block_tickable)
-                        sub_chunk.blocks[pos.x][pos.y][pos.z].tick(world, sub_chunk, chunk_x, y, chunk_z, pos.x, pos.y, pos.z, false);
+                auto block = sub_chunk.blocks[pos.x][pos.y][pos.z];
+                if (block.is_tickable())
+                    block.tick(world, sub_chunk, chunk_x, y, chunk_z, pos.x, pos.y, pos.z, false);
             }
             ++y;
         }

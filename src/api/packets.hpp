@@ -261,7 +261,7 @@ namespace copper_server {
         };
 
         struct debug_sub_scription_type {
-            struct dedicated_server_tick_time : public enum_item<0> {}; //TODO check
+            struct dedicated_server_tick_time : public enum_item<0> {};
 
             struct bees : public enum_item<1> {
                 std::optional<base_objects::position> hive_pos;
@@ -305,7 +305,7 @@ namespace copper_server {
             struct entity_paths : public enum_item<5> {
                 struct path_t {
                     struct node_t {
-                        enum class type_t { //TODO get values from extractor
+                        enum class type_t {
                             blocked,
                             open,
                             walkable,
@@ -372,7 +372,7 @@ namespace copper_server {
 
             struct pois : public enum_item<8> {
                 base_objects::position target;
-                var_int32::poi_type type;
+                var_int32::point_of_interest_type type;
                 var_int32 free_ticked_count;
             };
 
@@ -407,9 +407,7 @@ namespace copper_server {
                 static redstone_wire_orientations from_packet(uint8_t val);
             };
 
-            struct village_sections : public enum_item<10> {
-                //TODO check
-            };
+            struct village_sections : public enum_item<10> {};
 
             struct raids : public enum_item<11> {
                 list_array<base_objects::position> value;
@@ -447,7 +445,7 @@ namespace copper_server {
                 util::VECTOR pos;
             };
 
-            enum_switch<
+            using value = enum_switch<
                 var_int32,
                 dedicated_server_tick_time,
                 bees,
@@ -464,8 +462,26 @@ namespace copper_server {
                 structures,
                 game_event_listeners,
                 neighbor_updates,
-                game_events>
-                action;
+                game_events>;
+
+            using optional = enum_switch< //TODO add new type `optional_enum_switch` to represent enum_id->optional->value
+                var_int32,
+                dedicated_server_tick_time,
+                bees,
+                brains,
+                breezes,
+                goal_selectors,
+                entity_paths,
+                entity_block_intersections,
+                bee_hives,
+                pois,
+                redstone_wire_orientations,
+                village_sections,
+                raids,
+                structures,
+                game_event_listeners,
+                neighbor_updates,
+                game_events>;
         };
 
         namespace client_bound {
@@ -1064,22 +1080,22 @@ namespace copper_server {
 
                 struct debug__block_value : public packet<0x1A> {
                     base_objects::position pos;
-                    std::optional<debug_sub_scription_type> data; //TODO check
+                    debug_sub_scription_type::optional data;
                 };
 
                 struct debug__chunk_value : public packet<0x1B> {
                     int32_t z;
                     int32_t x;
-                    std::optional<debug_sub_scription_type> data; //TODO check
+                    debug_sub_scription_type::optional data;
                 };
 
                 struct debug__entity_value : public packet<0x1C> {
                     var_int32::entity_id id;
-                    std::optional<debug_sub_scription_type> data; //TODO check
+                    debug_sub_scription_type::optional data;
                 };
 
                 struct debug__event : public packet<0x1D> {
-                    debug_sub_scription_type data; //TODO check
+                    debug_sub_scription_type::value data;
                 };
 
                 struct debug_sample : public packet<0x1E> {
@@ -1128,12 +1144,21 @@ namespace copper_server {
                         double z;
                     };
 
+                    struct block_particle {
+                        base_objects::particle_data particle;
+                        float scaling;
+                        float speed;
+                    };
+
                     double x;
                     double y;
                     double z;
+                    float radius;
+                    int32_t count;
                     std::optional<player_delta_velocity_t> player_delta_velocity = std::nullopt;
                     base_objects::particle_data particle;
                     or_<var_int32::sound_event, base_objects::sound_event> sound;
+                    list_array<block_particle> block_particles;
                 };
 
                 struct forget_level_chunk : public packet<0x25> {
@@ -1247,7 +1272,7 @@ namespace copper_server {
                 struct horse_screen_open : public packet<0x28> {
                     var_int32 window_id;
                     var_int32 columns_count;
-                    api::id::entity id;
+                    api::id::entity_id id;
                 };
 
                 struct hurt_animation : public packet<0x29> {
@@ -1437,7 +1462,7 @@ namespace copper_server {
                         position location;
                     };
 
-                    api::id::entity id;
+                    api::id::entity_id id;
                     bool is_hardcore;
                     list_array<identifier> dimension_names;
                     var_int32 max_players;
@@ -1782,7 +1807,9 @@ namespace copper_server {
 
                 struct player_rotation : public packet<0x47> {
                     float yaw;
+                    bool yaw_is_relative;
                     float pitch;
+                    bool pitch_is_relative;
                 };
 
                 struct recipe_book_add : public packet<0x48> {
@@ -2004,8 +2031,8 @@ namespace copper_server {
                 };
 
                 struct set_entity_link : public packet<0x62> {
-                    api::id::entity attached_id;
-                    api::id::entity holding_id;
+                    api::id::entity_id attached_id;
+                    api::id::entity_id holding_id;
                 };
 
                 struct set_entity_motion : public packet<0x63> {
@@ -2974,7 +3001,7 @@ namespace copper_server {
                 };
 
                 struct debug_subscription_request : public packet<0x16> {
-                    var_int32 sample_type;
+                    list_array<var_int32::debug_subscription> sample_types;
                 };
 
                 struct edit_book : public packet<0x17> {
@@ -3379,7 +3406,7 @@ namespace copper_server {
                     };
                     position location;
                     enum_as<action_e, var_int32> action;
-                    std::optional<var_int32::test_instance> test_id = std::nullopt;
+                    std::optional<var_int32::test_instance_type> test_id = std::nullopt;
                     var_int32 size_x;
                     var_int32 size_y;
                     var_int32 size_z;

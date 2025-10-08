@@ -42,49 +42,19 @@ namespace copper_server::api::id {
         painting_variant,
         pig_variant,
         recipe,
-        test_environment,
-        test_instance,
         trim_material,
         trim_pattern,
         wolf_sound_variant,
         wolf_variant,
         worldgen__biome,
-
-        attribute,
-        block_state,
         block_type,
         block_entity_type,
-        data_component_type,
         dimension,
         entity_type,
         fluid,
         game_event,
-        position_source_type,
         item,
-        menu,
-        mob_effect,
-        particle_type,
         potion,
-        recipe_serializer,
-        recipe_type,
-        sound_event,
-        stat_type,
-        custom_stat,
-        command_argument_type,
-        activity,
-        memory_module_type,
-        schedule,
-        sensor_type,
-        motive,
-        villager_profession,
-        villager_type,
-        poi_type,
-        loot_condition_type,
-        loot_function_type,
-        loot_nbt_provider_type,
-        loot_number_provider_type,
-        loot_pool_entry_type,
-        loot_score_provider_type,
         villager_variant,
         fox_variant,
         parrot_variant,
@@ -95,8 +65,94 @@ namespace copper_server::api::id {
         llama_variant,
         axolotl_variant,
 
-        entity_pose,
 
+        activity,
+        attribute,
+        block_predicate_type,
+        chunk_status,
+        command_argument_type,
+        consume_effect_type,
+        creative_mode_tab,
+        custom_stat,
+        data_component_predicate_type,
+        data_component_type,
+        debug_subscription,
+        decorated_pot_pattern,
+        dialog_action_type,
+        dialog_body_type,
+        dialog_type,
+        enchantment_effect_component_type,
+        enchantment_entity_effect_type,
+        enchantment_level_based_value_type,
+        enchantment_location_based_effect_type,
+        enchantment_provider_type,
+        enchantment_value_effect_type,
+        entity_sub_predicate_type,
+        float_provider_type,
+        height_provider_type,
+        incoming_rpc_methods,
+        input_control_type,
+        int_provider_type,
+        loot_condition_type,
+        loot_function_type,
+        loot_nbt_provider_type,
+        loot_number_provider_type,
+        loot_pool_entry_type,
+        loot_score_provider_type,
+        map_decoration_type,
+        memory_module_type,
+        menu,
+        mob_effect,
+        number_format_type,
+        outgoing_rpc_methods,
+        particle_type,
+        point_of_interest_type,
+        pos_rule_test,
+        position_source_type,
+        recipe_book_category,
+        recipe_display,
+        recipe_serializer,
+        recipe_type,
+        rule_block_entity_modifier,
+        rule_test,
+        schedule,
+        sensor_type,
+        slot_display,
+        sound_event,
+        spawn_condition_type,
+        stat_type,
+        test_environment_definition_type,
+        test_function,
+        test_instance_type,
+        ticket_type,
+        trigger_type,
+        villager_profession,
+        villager_type,
+        worldgen__biome_source,
+        worldgen__block_state_provider_type,
+        worldgen__carver,
+        worldgen__chunk_generator,
+        worldgen__density_function_type,
+        worldgen__feature,
+        worldgen__feature_size_type,
+        worldgen__foliage_placer_type,
+        worldgen__material_condition,
+        worldgen__material_rule,
+        worldgen__placement_modifier_type,
+        worldgen__pool_alias_binding,
+        worldgen__root_placer_type,
+        worldgen__structure_piece,
+        worldgen__structure_placement,
+        worldgen__structure_pool_element,
+        worldgen__structure_processor,
+        worldgen__structure_type,
+        worldgen__tree_decorator_type,
+        worldgen__trunk_placer_type,
+
+        
+        block_state,
+        motive,
+        entity_pose,
         entity_id,
     };
 
@@ -126,48 +182,48 @@ namespace copper_server::api::id {
         using reg_source = std::integral_constant<registry_source, sourc>;
         Value value{};
 
-        constexpr source() {}
+        source() {}
 
 #pragma warning(push)
 #pragma warning(disable : 4244)
 
         template <source_allow_cast<Value> T>
-        constexpr source(T value)
+        source(T value)
             : value(static_cast<Value>(value)) {}
 
 #pragma warning(pop)
 
-        constexpr source(Value value) : value(value) {}
+        source(Value value) : value(value) {}
 
-        constexpr source(const source& value) : value(value.value) {}
+        source(const source& value) : value(value.value) {}
 
-        constexpr source(source&& value) noexcept
+        source(source&& value) noexcept
             : value(std::move(value.value)) {}
 
-        constexpr source(std::string_view value) : value((Value)detail::to_registry_source_value(sourc, std::string(value))) {}
+        source(std::string_view value) : value((Value)detail::to_registry_source_value(sourc, std::string(value))) {}
 
-        constexpr source(const std::string& value) : value((Value)detail::to_registry_source_value(sourc, value)) {}
+        source(const std::string& value) : value((Value)detail::to_registry_source_value(sourc, value)) {}
 
         template <size_t N>
-        constexpr source(const char (&value)[N]) : value((Value)detail::to_registry_source_value(sourc, value)) {}
+        source(const char (&value)[N]) : value((Value)detail::to_registry_source_value(sourc, value)) {}
 
-        constexpr source(const char* value) : value((Value)detail::to_registry_source_value(sourc, value)) {}
+        source(const char* value) : value((Value)detail::to_registry_source_value(sourc, value)) {}
 
-        constexpr source& operator=(const source& other) {
+        source& operator=(const source& other) {
             value = other.value;
             return *this;
         }
 
-        constexpr source& operator=(source&& other) noexcept {
+        source& operator=(source&& other) noexcept {
             value = std::move(other.value);
             return *this;
         }
 
-        constexpr operator Value&() {
+        operator Value&() {
             return value;
         }
 
-        constexpr operator const Value&() const {
+        operator const Value&() const {
             return value;
         }
 
@@ -182,7 +238,7 @@ namespace copper_server::api::id {
         }
 
         template <source_allow_cast<Value> T>
-        constexpr operator T() const {
+        operator T() const {
             if constexpr (requires { typename Value::underlying_type; })
                 return (T)(typename Value::underlying_type)value;
             else
@@ -198,28 +254,28 @@ namespace copper_server::api::id {
         using reg_source = std::integral_constant<registry_source, sourc>;
         value_type value;
 
-        constexpr source_set() {}
+        source_set() {}
 
-        constexpr source_set(const source_set& value) : value(value.value) {}
+        source_set(const source_set& value) : value(value.value) {}
 
-        constexpr source_set(source_set&& value) noexcept
+        source_set(source_set&& value) noexcept
             : value(std::move(value.value)) {}
 
-        constexpr source_set(std::string_view value) : value(value.starts_with('#') ? value_type(detail::to_registry_source_handle(sourc, value)) : value_type(detail::to_registry_source_value(sourc, std::string(value)))) {}
+        source_set(std::string_view value) : value(value.starts_with('#') ? value_type(detail::to_registry_source_handle(sourc, value)) : value_type(detail::to_registry_source_value(sourc, std::string(value)))) {}
 
-        constexpr source_set(const std::string& value) : value(value.starts_with('#') ? value_type(detail::to_registry_source_handle(sourc, value)) : value_type(detail::to_registry_source_value(sourc, value))) {}
+        source_set(const std::string& value) : value(value.starts_with('#') ? value_type(detail::to_registry_source_handle(sourc, value)) : value_type(detail::to_registry_source_value(sourc, value))) {}
 
         template <size_t N>
-        constexpr source_set(const char (&value)[N]) : source_set(std::string_view(value, N)) {}
+        source_set(const char (&value)[N]) : source_set(std::string_view(value, N)) {}
 
-        constexpr source_set(const char* value) : source_set(std::string_view(value)) {}
+        source_set(const char* value) : source_set(std::string_view(value)) {}
 
-        constexpr source_set& operator=(const source_set& other) {
+        source_set& operator=(const source_set& other) {
             value = other.value;
             return *this;
         }
 
-        constexpr source_set& operator=(source_set&& other) noexcept {
+        source_set& operator=(source_set&& other) noexcept {
             value = std::move(other.value);
             return *this;
         }
@@ -282,47 +338,47 @@ namespace copper_server::api::id {
         using reg_source = std::integral_constant<registry_source, registry_source::entity_id>;
         Value value{};
 
-        constexpr source() {}
+        source() {}
 
         template <source_allow_cast<Value> T>
-        constexpr source(T value)
+        source(T value)
             : value(static_cast<Value>(value)) {}
 
-        constexpr source(Value value) : value(value) {}
+        source(Value value) : value(value) {}
 
-        constexpr source(const source& value) : value(value.value) {}
+        source(const source& value) : value(value.value) {}
 
-        constexpr source(source&& value) noexcept
+        source(source&& value) noexcept
             : value(std::move(value.value)) {}
 
-        constexpr source(std::string_view value) : value((Value)detail::to_registry_source_value(registry_source::entity_id, std::string(value))) {}
+        source(std::string_view value) : value((Value)detail::to_registry_source_value(registry_source::entity_id, std::string(value))) {}
 
-        constexpr source(const std::string& value) : value((Value)detail::to_registry_source_value(registry_source::entity_id, value)) {}
+        source(const std::string& value) : value((Value)detail::to_registry_source_value(registry_source::entity_id, value)) {}
 
         template <size_t N>
-        constexpr source(const char (&value)[N]) : value((Value)detail::to_registry_source_value(registry_source::entity_id, value)) {}
+        source(const char (&value)[N]) : value((Value)detail::to_registry_source_value(registry_source::entity_id, value)) {}
 
-        constexpr source(const char* value) : value((Value)detail::to_registry_source_value(registry_source::entity_id, value)) {}
+        source(const char* value) : value((Value)detail::to_registry_source_value(registry_source::entity_id, value)) {}
 
-        constexpr source(const base_objects::entity_ref& value) : value((Value)detail::to_registry_source_entity(value)) {}
+        source(const base_objects::entity_ref& value) : value((Value)detail::to_registry_source_entity(value)) {}
 
-        constexpr source(const enbt::raw_uuid& value) : value((Value)detail::to_registry_source_entity(value)) {}
+        source(const enbt::raw_uuid& value) : value((Value)detail::to_registry_source_entity(value)) {}
 
-        constexpr source& operator=(const source& other) {
+        source& operator=(const source& other) {
             value = other.value;
             return *this;
         }
 
-        constexpr source& operator=(source&& other) noexcept {
+        source& operator=(source&& other) noexcept {
             value = std::move(other.value);
             return *this;
         }
 
-        constexpr operator Value&() {
+        operator Value&() {
             return value;
         }
 
-        constexpr operator const Value&() const {
+        operator const Value&() const {
             return value;
         }
 
@@ -345,7 +401,7 @@ namespace copper_server::api::id {
         }
 
         template <source_allow_cast<Value> T>
-        constexpr operator T() const {
+        operator T() const {
             if constexpr (requires { typename Value::underlying_type; })
                 return (T)(typename Value::underlying_type)value;
             else
@@ -379,48 +435,19 @@ namespace copper_server::api::id {
     using painting_variant = source<int32_t, registry_source::painting_variant>;
     using pig_variant = source<int32_t, registry_source::pig_variant>;
     using recipe = source<int32_t, registry_source::recipe>;
-    using test_environment = source<int32_t, registry_source::test_environment>;
-    using test_instance = source<int32_t, registry_source::test_instance>;
     using trim_material = source<int32_t, registry_source::trim_material>;
     using trim_pattern = source<int32_t, registry_source::trim_pattern>;
     using wolf_sound_variant = source<int32_t, registry_source::wolf_sound_variant>;
     using wolf_variant = source<int32_t, registry_source::wolf_variant>;
     using worldgen__biome = source<int32_t, registry_source::worldgen__biome>;
-    using attribute = source<int32_t, registry_source::attribute>;
-    using block_state = source<int32_t, registry_source::block_state>;
     using block_type = source<int32_t, registry_source::block_type>;
     using block_entity_type = source<int32_t, registry_source::block_entity_type>;
-    using data_component_type = source<int32_t, registry_source::data_component_type>;
     using dimension = source<int32_t, registry_source::dimension>;
     using entity_type = source<int32_t, registry_source::entity_type>;
     using fluid = source<int32_t, registry_source::fluid>;
     using game_event = source<int32_t, registry_source::game_event>;
-    using position_source_type = source<int32_t, registry_source::position_source_type>;
     using item = source<int32_t, registry_source::item>;
-    using menu = source<int32_t, registry_source::menu>;
-    using mob_effect = source<int32_t, registry_source::mob_effect>;
-    using particle_type = source<int32_t, registry_source::particle_type>;
     using potion = source<int32_t, registry_source::potion>;
-    using recipe_serializer = source<int32_t, registry_source::recipe_serializer>;
-    using recipe_type = source<int32_t, registry_source::recipe_type>;
-    using sound_event = source<int32_t, registry_source::sound_event>;
-    using stat_type = source<int32_t, registry_source::stat_type>;
-    using custom_stat = source<int32_t, registry_source::custom_stat>;
-    using command_argument_type = source<int32_t, registry_source::command_argument_type>;
-    using activity = source<int32_t, registry_source::activity>;
-    using memory_module_type = source<int32_t, registry_source::memory_module_type>;
-    using schedule = source<int32_t, registry_source::schedule>;
-    using sensor_type = source<int32_t, registry_source::sensor_type>;
-    using motive = source<int32_t, registry_source::motive>;
-    using villager_profession = source<int32_t, registry_source::villager_profession>;
-    using villager_type = source<int32_t, registry_source::villager_type>;
-    using poi_type = source<int32_t, registry_source::poi_type>;
-    using loot_condition_type = source<int32_t, registry_source::loot_condition_type>;
-    using loot_function_type = source<int32_t, registry_source::loot_function_type>;
-    using loot_nbt_provider_type = source<int32_t, registry_source::loot_nbt_provider_type>;
-    using loot_number_provider_type = source<int32_t, registry_source::loot_number_provider_type>;
-    using loot_pool_entry_type = source<int32_t, registry_source::loot_pool_entry_type>;
-    using loot_score_provider_type = source<int32_t, registry_source::loot_score_provider_type>;
     using villager_variant = source<int32_t, registry_source::villager_variant>;
     using fox_variant = source<int32_t, registry_source::fox_variant>;
     using parrot_variant = source<int32_t, registry_source::parrot_variant>;
@@ -432,8 +459,94 @@ namespace copper_server::api::id {
     using axolotl_variant = source<int32_t, registry_source::axolotl_variant>;
 
 
+    using activity = source<int32_t, registry_source::activity>;
+    using attribute = source<int32_t, registry_source::attribute>;
+    using block_predicate_type = source<int32_t, registry_source::block_predicate_type>;
+    using chunk_status = source<int32_t, registry_source::chunk_status>;
+    using command_argument_type = source<int32_t, registry_source::command_argument_type>;
+    using consume_effect_type = source<int32_t, registry_source::consume_effect_type>;
+    using creative_mode_tab = source<int32_t, registry_source::creative_mode_tab>;
+    using custom_stat = source<int32_t, registry_source::custom_stat>;
+    using data_component_predicate_type = source<int32_t, registry_source::data_component_predicate_type>;
+    using data_component_type = source<int32_t, registry_source::data_component_type>;
+    using debug_subscription = source<int32_t, registry_source::debug_subscription>;
+    using decorated_pot_pattern = source<int32_t, registry_source::decorated_pot_pattern>;
+    using dialog_action_type = source<int32_t, registry_source::dialog_action_type>;
+    using dialog_body_type = source<int32_t, registry_source::dialog_body_type>;
+    using dialog_type = source<int32_t, registry_source::dialog_type>;
+    using enchantment_effect_component_type = source<int32_t, registry_source::enchantment_effect_component_type>;
+    using enchantment_entity_effect_type = source<int32_t, registry_source::enchantment_entity_effect_type>;
+    using enchantment_level_based_value_type = source<int32_t, registry_source::enchantment_level_based_value_type>;
+    using enchantment_location_based_effect_type = source<int32_t, registry_source::enchantment_location_based_effect_type>;
+    using enchantment_provider_type = source<int32_t, registry_source::enchantment_provider_type>;
+    using enchantment_value_effect_type = source<int32_t, registry_source::enchantment_value_effect_type>;
+    using entity_sub_predicate_type = source<int32_t, registry_source::entity_sub_predicate_type>;
+    using float_provider_type = source<int32_t, registry_source::float_provider_type>;
+    using height_provider_type = source<int32_t, registry_source::height_provider_type>;
+    using incoming_rpc_methods = source<int32_t, registry_source::incoming_rpc_methods>;
+    using input_control_type = source<int32_t, registry_source::input_control_type>;
+    using int_provider_type = source<int32_t, registry_source::int_provider_type>;
+    using loot_condition_type = source<int32_t, registry_source::loot_condition_type>;
+    using loot_function_type = source<int32_t, registry_source::loot_function_type>;
+    using loot_nbt_provider_type = source<int32_t, registry_source::loot_nbt_provider_type>;
+    using loot_number_provider_type = source<int32_t, registry_source::loot_number_provider_type>;
+    using loot_pool_entry_type = source<int32_t, registry_source::loot_pool_entry_type>;
+    using loot_score_provider_type = source<int32_t, registry_source::loot_score_provider_type>;
+    using map_decoration_type = source<int32_t, registry_source::map_decoration_type>;
+    using memory_module_type = source<int32_t, registry_source::memory_module_type>;
+    using menu = source<int32_t, registry_source::menu>;
+    using mob_effect = source<int32_t, registry_source::mob_effect>;
+    using number_format_type = source<int32_t, registry_source::number_format_type>;
+    using outgoing_rpc_methods = source<int32_t, registry_source::outgoing_rpc_methods>;
+    using particle_type = source<int32_t, registry_source::particle_type>;
+    using point_of_interest_type = source<int32_t, registry_source::point_of_interest_type>;
+    using pos_rule_test = source<int32_t, registry_source::pos_rule_test>;
+    using position_source_type = source<int32_t, registry_source::position_source_type>;
+    using recipe_book_category = source<int32_t, registry_source::recipe_book_category>;
+    using recipe_display = source<int32_t, registry_source::recipe_display>;
+    using recipe_serializer = source<int32_t, registry_source::recipe_serializer>;
+    using recipe_type = source<int32_t, registry_source::recipe_type>;
+    using rule_block_entity_modifier = source<int32_t, registry_source::rule_block_entity_modifier>;
+    using rule_test = source<int32_t, registry_source::rule_test>;
+    using schedule = source<int32_t, registry_source::schedule>;
+    using sensor_type = source<int32_t, registry_source::sensor_type>;
+    using slot_display = source<int32_t, registry_source::slot_display>;
+    using sound_event = source<int32_t, registry_source::sound_event>;
+    using spawn_condition_type = source<int32_t, registry_source::spawn_condition_type>;
+    using stat_type = source<int32_t, registry_source::stat_type>;
+    using test_environment_definition_type = source<int32_t, registry_source::test_environment_definition_type>;
+    using test_function = source<int32_t, registry_source::test_function>;
+    using test_instance_type = source<int32_t, registry_source::test_instance_type>;
+    using ticket_type = source<int32_t, registry_source::ticket_type>;
+    using trigger_type = source<int32_t, registry_source::trigger_type>;
+    using villager_profession = source<int32_t, registry_source::villager_profession>;
+    using villager_type = source<int32_t, registry_source::villager_type>;
+    using worldgen__biome_source = source<int32_t, registry_source::worldgen__biome_source>;
+    using worldgen__block_state_provider_type = source<int32_t, registry_source::worldgen__block_state_provider_type>;
+    using worldgen__carver = source<int32_t, registry_source::worldgen__carver>;
+    using worldgen__chunk_generator = source<int32_t, registry_source::worldgen__chunk_generator>;
+    using worldgen__density_function_type = source<int32_t, registry_source::worldgen__density_function_type>;
+    using worldgen__feature = source<int32_t, registry_source::worldgen__feature>;
+    using worldgen__feature_size_type = source<int32_t, registry_source::worldgen__feature_size_type>;
+    using worldgen__foliage_placer_type = source<int32_t, registry_source::worldgen__foliage_placer_type>;
+    using worldgen__material_condition = source<int32_t, registry_source::worldgen__material_condition>;
+    using worldgen__material_rule = source<int32_t, registry_source::worldgen__material_rule>;
+    using worldgen__placement_modifier_type = source<int32_t, registry_source::worldgen__placement_modifier_type>;
+    using worldgen__pool_alias_binding = source<int32_t, registry_source::worldgen__pool_alias_binding>;
+    using worldgen__root_placer_type = source<int32_t, registry_source::worldgen__root_placer_type>;
+    using worldgen__structure_piece = source<int32_t, registry_source::worldgen__structure_piece>;
+    using worldgen__structure_placement = source<int32_t, registry_source::worldgen__structure_placement>;
+    using worldgen__structure_pool_element = source<int32_t, registry_source::worldgen__structure_pool_element>;
+    using worldgen__structure_processor = source<int32_t, registry_source::worldgen__structure_processor>;
+    using worldgen__structure_type = source<int32_t, registry_source::worldgen__structure_type>;
+    using worldgen__tree_decorator_type = source<int32_t, registry_source::worldgen__tree_decorator_type>;
+    using worldgen__trunk_placer_type = source<int32_t, registry_source::worldgen__trunk_placer_type>;
+
+
+    using block_state = source<int32_t, registry_source::block_state>;
+    using motive = source<int32_t, registry_source::motive>;
     using entity_pose = source<int32_t, registry_source::entity_pose>;
-    using entity = source<int32_t, registry_source::entity_id>;
+    using entity_id = source<int32_t, registry_source::entity_id>;
 
     namespace set {
         using banner_pattern = source_set<registry_source::banner_pattern>;

@@ -12,11 +12,11 @@
 #include <library/list_array.hpp>
 #include <optional>
 #include <src/base_objects/chat.hpp>
+#include <src/base_objects/component.hpp>
 #include <src/base_objects/dye_color.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/util/readers.hpp>
 #include <string>
-#include <src/base_objects/component.hpp>
 
 namespace enbt::io_helper {
     class value_write_stream;
@@ -51,11 +51,20 @@ namespace copper_server::base_objects {
         uint32_t id;
 
         item_id_t(const std::string& id);
-        item_id_t(uint32_t id);
-        item_id_t(const item_id_t& id);
-        item_id_t();
 
-        item_id_t& operator=(const item_id_t& id);
+        constexpr item_id_t(uint32_t id)
+            : id(id) {}
+
+        constexpr item_id_t(const item_id_t& id)
+            : id(id.id) {}
+
+        constexpr item_id_t()
+            : id(0) {}
+
+        constexpr item_id_t& operator=(const item_id_t& copy) {
+            id = copy.id;
+            return *this;
+        }
 
         const std::string& to_name() const;
         static_slot_data& get_data() const;
@@ -140,6 +149,7 @@ namespace copper_server::base_objects {
         static_slot_data& get_slot_data() const;
 
         static void enumerate_slot_data(const std::function<void(static_slot_data&)>& fn);
+        static list_array<int32_t> get_slot_data_ids();
 
 
         enbt::compound to_enbt() const;
