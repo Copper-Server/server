@@ -9,8 +9,8 @@
 #ifndef SRC_BASE_OBJECTS_ENTITY_METADATA
 #define SRC_BASE_OBJECTS_ENTITY_METADATA
 #include <src/api/id.hpp>
+#include <src/api/packets/types.hpp>
 #include <src/base_objects/Chat.hpp>
-#include <src/base_objects/packets_help.hpp>
 #include <src/base_objects/particle_data.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/slot.hpp>

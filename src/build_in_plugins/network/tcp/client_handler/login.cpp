@@ -9,7 +9,8 @@
 #include <src/api/configuration.hpp>
 #include <src/api/mojang/session_server.hpp>
 #include <src/api/network/tcp.hpp>
-#include <src/api/packets.hpp>
+#include <src/api/packets/client_bound/login.hpp>
+#include <src/api/packets/server_bound/login.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/plugin/main.hpp>
@@ -113,7 +114,7 @@ namespace copper_server::build_in_plugins::network::tcp {
             using key = api::packets::server_bound::login::key;
             using login_acknowledged = api::packets::server_bound::login::login_acknowledged;
 
-            register_packet_processor([](hello&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](hello&& packet, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).stage != 0) {
                     client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 0").ToStr()}};
                     return;
@@ -157,7 +158,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                 } else
                     switch_to_plugin_processing_stage(client);
             });
-            register_packet_processor([](cookie_response&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](cookie_response&& packet, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).stage == 2) {
                     if (auto plugin = pluginManagement.get_bind_cookies(PluginManagement::registration_on::login, packet.key); plugin) {
                         auto response = plugin->OnLoginCookie(plugin, packet.key, packet.payload ? *packet.payload : list_array<uint8_t>{}, !!packet.payload, client);
@@ -166,7 +167,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                 } else
                     client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 2").ToStr()}};
             });
-            register_packet_processor([](custom_query_answer&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](custom_query_answer&& packet, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).stage == 2) {
                     if ((int32_t)packet.query_message_id == extra_data_t::get(client).plugin_query_id)
                         ++extra_data_t::get(client).plugin_query_id;
@@ -189,7 +190,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                 } else
                     client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 2").ToStr()}};
             });
-            register_packet_processor([](key&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](key&& packet, base_objects::SharedClientData& client) {
                 if (extra_data_t::get(client).stage == 1) {
                     auto vft = to_list_array(packet.verify_token);
                     if (!api::network::tcp::decrypt_data(vft)) {
@@ -221,7 +222,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                 } else
                     client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 1").ToStr()}};
             });
-            register_packet_processor([](login_acknowledged&&, base_objects::SharedClientData&) {});
+            api::packets::processor(*this, [](login_acknowledged&&, base_objects::SharedClientData&) {});
         }
     };
 }

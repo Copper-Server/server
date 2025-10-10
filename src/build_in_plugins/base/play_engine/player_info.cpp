@@ -6,10 +6,11 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/client.hpp>
 #include <src/api/command.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/entity_id_map.hpp>
+#include <src/api/packets/client_bound/play.hpp>
+#include <src/api/packets/server_bound/play.hpp>
 #include <src/api/players.hpp>
 #include <src/api/registers.hpp>
 #include <src/api/world.hpp>
@@ -26,7 +27,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         void OnInitialization(const PluginRegistrationPtr& _) override {
             register_event(api::players::handlers::on_gamemode_changed, [](base_objects::SharedClientData& client) {
-                using piu = api::client::play::player_info_update;
+                using piu = api::packets::client_bound::play::player_info_update;
                 piu current;
                 current.actions.push(piu::header{client.data->uuid});
                 current.actions.push(piu::set_gamemode{.gamemode = client.player_data.gamemode});
@@ -37,7 +38,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 });
             });
             register_event(api::players::handlers::on_tab_listing_changed, [](base_objects::SharedClientData& client) {
-                using piu = api::client::play::player_info_update;
+                using piu = api::packets::client_bound::play::player_info_update;
                 piu current;
                 current.actions.push(piu::header{client.data->uuid});
                 current.actions.push(piu::listed{.should = client.enable_tab_listings});
@@ -48,7 +49,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 });
             });
             register_event(api::players::handlers::on_skin_parts_changed, [](base_objects::SharedClientData& client) {
-                using piu = api::client::play::player_info_update;
+                using piu = api::packets::client_bound::play::player_info_update;
                 piu current;
                 current.actions.push(piu::header{client.data->uuid});
                 current.actions.push(piu::set_hat_visible{.visible = client.skin_parts.data.hat_enabled});
@@ -60,8 +61,8 @@ namespace copper_server::build_in_plugins::base::play_engine {
             });
         }
 
-        static void push_player_info_action(api::client::play::player_info_update& res, base_objects::SharedClientData& client_ref) {
-            using piu = api::client::play::player_info_update;
+        static void push_player_info_action(api::packets::client_bound::play::player_info_update& res, base_objects::SharedClientData& client_ref) {
+            using piu = api::packets::client_bound::play::player_info_update;
             res.actions.push(piu::header{client_ref.data->uuid});
             res.actions.push(
                 piu::add_player{
@@ -84,7 +85,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
         }
 
         void OnPlay_pre_initialize(base_objects::SharedClientData& client_ref) override {
-            using piu = api::client::play::player_info_update;
+            using piu = api::packets::client_bound::play::player_info_update;
             base_objects::network::response response = base_objects::network::response::empty();
 
             piu all_players;
@@ -104,7 +105,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
         void PlayerLeave(base_objects::SharedClientData& client_ref) override {
             api::players::iterate_online([&client_ref](base_objects::SharedClientData& client) {
                 if (&client != &client_ref && !client.is_virtual)
-                    client << api::client::play::player_info_remove{
+                    client << api::packets::client_bound::play::player_info_remove{
                         .uuids = {client_ref.data->uuid}
                     };
                 return false;

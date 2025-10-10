@@ -6,116 +6,16 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/log.hpp>
+#ifndef SRC_API_BIN_PACKETS_GENERIC_ENCODE
+#define SRC_API_BIN_PACKETS_GENERIC_ENCODE
+
 #include <src/api/network/tcp.hpp>
-#include <src/api/packets.hpp>
 #include <src/base_objects/shared_client_data.hpp>
-#include <src/base_objects/slot.hpp>
-#include <src/util/reflect.hpp>
-#include <src/util/reflect/calculations.hpp>
-#include <src/util/reflect/component.hpp>
-#include <src/util/reflect/dye_color.hpp>
-#include <src/util/reflect/metadata.hpp>
-#include <src/util/reflect/packets.hpp>
-#include <src/util/reflect/packets_help.hpp>
-#include <src/util/reflect/parsers.hpp>
-#include <src/util/reflect/particle_data.hpp>
 #include <tuple>
 
+#include <src/api/bin/packets/generic.hpp>
+
 namespace copper_server::api::packets {
-    using namespace base_objects;
-
-    template <template <auto...> class Base, auto... Ts>
-    static void value_test(Base<Ts...>&) {}
-
-    template <template <auto...> class, class, class = void>
-    constexpr bool is_value_template_base_of = false;
-    template <template <auto...> class Base, class Derived>
-    constexpr bool is_value_template_base_of<Base, Derived, std::void_t<decltype(value_test<Base>(std::declval<Derived&>()))>> = true;
-
-    template <class T>
-    struct type_selector : std::integral_constant<size_t, 0> {};
-
-    template <class T, T min, T max>
-    struct type_selector<limited_num<T, min, max>> : std::integral_constant<size_t, 1> {};
-
-    template <class S, class ST, ST S::* M, class... Ts>
-    struct type_selector<flags_list_from<S, ST, M, Ts...>> : std::integral_constant<size_t, 2> {};
-
-    template <size_t size>
-    struct type_selector<string_sized<size>> : std::integral_constant<size_t, 3> {};
-
-    template <size_t size>
-    struct type_selector<bitset_fixed<size>> : std::integral_constant<size_t, 4> {};
-
-    template <class T, size_t size>
-    struct type_selector<list_array_sized<T, size>> : std::integral_constant<size_t, 5> {};
-
-    template <class T, auto... dep_v>
-    struct type_selector<list_array_no_size<T, dep_v...>> : std::integral_constant<size_t, 6> {};
-
-    template <class T, size_t size, auto... dep_v>
-    struct type_selector<list_array_sized_no_size<T, size, dep_v...>> : std::integral_constant<size_t, 7> {};
-
-    template <class T, size_t size>
-    struct type_selector<list_array_sized_siz_from_packet<T, size>> : std::integral_constant<size_t, 8> {};
-
-    template <class T, class Ts>
-    struct type_selector<sized_entry<T, Ts>> : std::integral_constant<size_t, 9> {};
-
-    template <class T, size_t size>
-    struct type_selector<list_array_fixed<T, size>> : std::integral_constant<size_t, 10> {};
-
-    template <class T>
-    struct type_selector<list_array_siz_from_packet<T>> : std::integral_constant<size_t, 11> {};
-
-    template <class T, util::CTS id>
-    struct type_selector<ordered_id<T, id>> : std::integral_constant<size_t, 12> {};
-
-    template <class T, size_t size>
-    struct type_selector<std::array<T, size>> : std::integral_constant<size_t, 13> {};
-
-    template <auto V>
-    struct type_selector<base_objects::constant_value<V>> : std::integral_constant<size_t, 14> {};
-
-    template <class type>
-    concept is_limited_num = type_selector<type>::value == 1;
-
-    template <class type>
-    concept is_flags_list_from = type_selector<type>::value == 2;
-
-    template <class type>
-    concept is_string_sized = type_selector<type>::value == 3;
-
-    template <class type>
-    concept is_bitset_fixed = type_selector<type>::value == 4;
-
-    template <class type>
-    concept is_list_array_sized = type_selector<type>::value == 5 || type_selector<type>::value == 7 || type_selector<type>::value == 8;
-
-    template <class type>
-    concept is_list_array_fixed = type_selector<type>::value == 10;
-
-    template <class type>
-    concept is_ordered_id = type_selector<type>::value == 12;
-
-    template <class type>
-    concept is_std_array = type_selector<type>::value == 13;
-
-    template <class type>
-    concept is_constant_value = type_selector<type>::value == 14;
-
-    template <class type>
-    concept is_no_size = is_value_template_base_of<no_size, type>;
-
-    template <class type>
-    concept requires_check = is_limited_num<type> || is_string_sized<type> || is_list_array_sized<type> || is_list_array_fixed<type> || is_no_size<type> || is_bitset_fixed<type>;
-
-    template <typename T, typename... Ts>
-    struct contains_type : std::disjunction<std::is_same<T, Ts>...> {};
-
-    template <typename T, typename... Ts>
-    inline constexpr bool contains_type_v = contains_type<T, Ts...>::value;
 
     template <class T, class... VisitedTypes>
     consteval bool need_preprocess_result() {
@@ -158,7 +58,7 @@ namespace copper_server::api::packets {
         } else if constexpr (std::is_same_v<var_int64, T>) {
         } else if constexpr (std::is_same_v<optional_var_int32, T>) {
         } else if constexpr (std::is_same_v<optional_var_int64, T>) {
-        } else if constexpr (std::is_same_v<position, T>) {
+        } else if constexpr (std::is_same_v<base_objects::position, T>) {
         } else if constexpr (std::is_arithmetic_v<T>) {
         } else if constexpr (std::is_same_v<std::string, T>) {
         } else if constexpr (std::is_same_v<enbt::raw_uuid, T>) {
@@ -177,15 +77,7 @@ namespace copper_server::api::packets {
             || std::is_same_v<enbt::simple_array_ui16, T>
             || std::is_same_v<enbt::simple_array_ui32, T>
             || std::is_same_v<enbt::simple_array_ui64, T>
-            || std::is_same_v<T, client_bound::status_packet>
-            || std::is_same_v<T, client_bound::login_packet>
-            || std::is_same_v<T, client_bound::configuration_packet>
-            || std::is_same_v<T, client_bound::play_packet>
-            || std::is_same_v<T, server_bound::handshake_packet>
-            || std::is_same_v<T, server_bound::status_packet>
-            || std::is_same_v<T, server_bound::login_packet>
-            || std::is_same_v<T, server_bound::configuration_packet>
-            || std::is_same_v<T, server_bound::play_packet>
+            || std::is_same_v<T, client_bound::play::play_packet>
             || std::is_arithmetic_v<T>
         ) {
         } else if constexpr (std::is_base_of_v<base_objects::palette_container, T>) {
@@ -223,14 +115,8 @@ namespace copper_server::api::packets {
     template <class T>
     concept need_preprocess_result_v = need_preprocess_result<T>();
 
-    namespace __internal {
-        bool visit_packet_viewer(client_bound_packet& packet, SharedClientData& context);
-        bool visit_packet_viewer(server_bound_packet& packet, SharedClientData& context);
-        void visit_packet_post_send_viewer(client_bound_packet& packet, base_objects::SharedClientData& context);
-    }
-
     template <class T>
-    void serialize_entry(base_objects::network::response::item& res, SharedClientData& context, T&& value) {
+    void serialize_entry(base_objects::network::response::item& res, base_objects::SharedClientData& context, T&& value) {
         using Type = std::decay_t<T>;
         if constexpr (is_convertible_to_packet_form<Type>) {
             serialize_entry(res, context, value.to_packet());
@@ -238,7 +124,7 @@ namespace copper_server::api::packets {
             res.write_identifier(value.value);
         else if constexpr (is_constant_value<Type>) {
             auto to_write = Type::value::value;
-            serialize_entry(res, context, std::move(to_write));
+            serialize_entry(res, context, to_write);
         } else if constexpr (is_std_array<Type>)
             for (auto& it : value)
                 serialize_entry(res, context, it);
@@ -262,7 +148,7 @@ namespace copper_server::api::packets {
                 res.write_var64(*value + 1);
             else
                 res.write_var64(0);
-        } else if constexpr (std::is_same_v<position, Type>)
+        } else if constexpr (std::is_same_v<base_objects::position, Type>)
             res.write_value(value.get());
         else if constexpr (std::is_arithmetic_v<Type>)
             res.write_value(value);
@@ -492,7 +378,7 @@ namespace copper_server::api::packets {
     }
 
     template <class T, class T_prev>
-    void preprocess_structure(SharedClientData& context, T& value, T_prev& prev) {
+    void preprocess_structure(base_objects::SharedClientData& context, T& value, T_prev& prev) {
         if constexpr (is_no_size<T>) {
             if constexpr (is_template_base_of<_list_array_impl::list_array, T>)
                 if (value.size() != T::get_depended_size(context, prev))
@@ -568,7 +454,7 @@ namespace copper_server::api::packets {
         } else if constexpr (std::is_same_v<var_int64, T>) {
         } else if constexpr (std::is_same_v<optional_var_int32, T>) {
         } else if constexpr (std::is_same_v<optional_var_int64, T>) {
-        } else if constexpr (std::is_same_v<position, T>) {
+        } else if constexpr (std::is_same_v<base_objects::position, T>) {
         } else if constexpr (std::is_arithmetic_v<T>) {
         } else if constexpr (std::is_same_v<std::string, T>) {
         } else if constexpr (std::is_same_v<enbt::raw_uuid, T>) {
@@ -587,15 +473,7 @@ namespace copper_server::api::packets {
             || std::is_same_v<enbt::simple_array_ui16, T>
             || std::is_same_v<enbt::simple_array_ui32, T>
             || std::is_same_v<enbt::simple_array_ui64, T>
-            || std::is_same_v<T, client_bound::status_packet>
-            || std::is_same_v<T, client_bound::login_packet>
-            || std::is_same_v<T, client_bound::configuration_packet>
-            || std::is_same_v<T, client_bound::play_packet>
-            || std::is_same_v<T, server_bound::handshake_packet>
-            || std::is_same_v<T, server_bound::status_packet>
-            || std::is_same_v<T, server_bound::login_packet>
-            || std::is_same_v<T, server_bound::configuration_packet>
-            || std::is_same_v<T, server_bound::play_packet>
+            || std::is_same_v<T, client_bound::play::play_packet>
             || std::is_arithmetic_v<T>
         ) {
         } else if constexpr (std::is_base_of_v<base_objects::palette_container, T>) {
@@ -652,17 +530,7 @@ namespace copper_server::api::packets {
                 using I = std::decay_t<decltype(item)>;
                 if constexpr (is_packet<I>) {
                     serialize_packet(res, context, item);
-                } else if constexpr (
-                    std::is_same_v<I, client_bound::status_packet>
-                    || std::is_same_v<I, client_bound::login_packet>
-                    || std::is_same_v<I, client_bound::configuration_packet>
-                    || std::is_same_v<I, client_bound::play_packet>
-                    || std::is_same_v<I, server_bound::handshake_packet>
-                    || std::is_same_v<I, server_bound::status_packet>
-                    || std::is_same_v<I, server_bound::login_packet>
-                    || std::is_same_v<I, server_bound::configuration_packet>
-                    || std::is_same_v<I, server_bound::play_packet>
-                ) {
+                } else if constexpr (std::is_same_v<I, client_bound::play::play_packet>) {
                     std::visit([&](auto& it) { serialize_packet(res, context, it); }, item);
                 } else if (is_template_base_of<_list_array_impl::list_array, I>) {
                     for (auto& it : item)
@@ -672,9 +540,8 @@ namespace copper_server::api::packets {
         }
     }
 
-    template <class T>
-    void make_preprocess_packet_(base_objects::SharedClientData& context, T& value) {
-        using Type = std::decay_t<T>;
+    template <class Type>
+    void make_preprocess(base_objects::SharedClientData& context, Type& value) {
         if constexpr (need_preprocess_result_v<Type>) {
             preprocess_structure(context, value, value);
             if constexpr (could_be_preprocessed<Type, Type>)
@@ -682,123 +549,43 @@ namespace copper_server::api::packets {
         }
     }
 
-    void make_preprocess_packet(base_objects::SharedClientData& context, client_bound_packet& packet) {
-        std::visit(
-            [&](auto& mode) {
-                return std::visit(
-                    [&](auto& it) {
-                        make_preprocess_packet_(context, it);
-                    },
-                    mode
-                );
-            },
-            packet
-        );
-    }
-
-    void make_preprocess_packet(base_objects::SharedClientData& context, server_bound_packet& packet) {
-        std::visit(
-            [&](auto& mode) {
-                return std::visit(
-                    [&](auto& it) {
-                        make_preprocess_packet_(context, it);
-                    },
-                    mode
-                );
-            },
-            packet
-        );
-    }
-
-    bool send(SharedClientData& client, client_bound_packet&& packet) {
-        if (!client.is_active())
+    template <class Ops, class Type>
+    bool make_send(base_objects::SharedClientData& context, Type&& value) {
+        if (!context.is_active())
             return false;
-        make_preprocess_packet(client, packet);
-        if (__internal::visit_packet_viewer(packet, client))
+        make_preprocess(context, value);
+        if (Ops::send_viewer().notify(value, context))
             return false;
-        bool sw_status = false;
-        bool sw_login = false;
-        bool sw_configuration = false;
-        bool sw_play = false;
-        client.sendPacket(
-            std::visit(
-                [&](auto& mode) -> base_objects::network::response {
-                    return std::visit(
-                        [&]<class P>(P& it) -> base_objects::network::response {
-                            base_objects::network::response res;
-                            serialize_packet(res, client, it);
-                            if constexpr (std::is_base_of_v<disconnect_after, P>)
-                                res.do_disconnect_after_send = true;
-                            if constexpr (std::is_base_of_v<switches_to::status, P>)
-                                sw_status = true;
-                            else if constexpr (std::is_base_of_v<switches_to::login, P>)
-                                sw_login = true;
-                            else if constexpr (std::is_base_of_v<switches_to::configuration, P>)
-                                sw_configuration = true;
-                            else if constexpr (std::is_base_of_v<switches_to::play, P>)
-                                sw_play = true;
-                            return res;
-                        },
-                        mode
-                    );
-                },
-                packet
-            )
-        );
-        if (sw_status)
-            client << switches_to::status{};
-        if (sw_login)
-            client << switches_to::login{};
-        if (sw_configuration)
-            client << switches_to::configuration{};
-        if (sw_play)
-            client << switches_to::play{};
+        base_objects::network::response res;
+        serialize_packet(res, context, value);
+        if constexpr (std::is_base_of_v<disconnect_after, Type>)
+            res.do_disconnect_after_send = true;
+        context.sendPacket(std::move(res));
 
-        __internal::visit_packet_post_send_viewer(packet, client);
+        if constexpr (std::is_base_of_v<switches_to::status, Type>)
+            context << switches_to::status{};
+        else if constexpr (std::is_base_of_v<switches_to::login, Type>)
+            context << switches_to::login{};
+        else if constexpr (std::is_base_of_v<switches_to::config, Type>)
+            context << switches_to::config{};
+        else if constexpr (std::is_base_of_v<switches_to::play, Type>)
+            context << switches_to::play{};
+
+        Ops::post_send_viewer().notify(value, context);
         return true;
     }
 
-    base_objects::network::response internal_encode(SharedClientData& client, client_bound_packet&& packet) {
-        make_preprocess_packet(client, packet);
-        return std::visit(
-            [&client](auto& mode) -> base_objects::network::response {
-                return std::visit(
-                    [&client](auto& it) -> base_objects::network::response {
-                        base_objects::network::response res;
-                        serialize_packet(res, client, it);
-                        return res;
-                    },
-                    mode
-                );
-            },
-            packet
-        );
-    }
+    
 
-    base_objects::network::response internal_encode(SharedClientData& client, server_bound_packet&& packet) {
-        make_preprocess_packet(client, packet);
-        return std::visit(
-            [&client](auto& mode) -> base_objects::network::response {
-                return std::visit(
-                    [&client](auto& it) -> base_objects::network::response {
-                        base_objects::network::response res;
-                        serialize_packet(res, client, it);
-                        return res;
-                    },
-                    mode
-                );
-            },
-            packet
-        );
-    }
-
-    base_objects::network::response encode(client_bound_packet&& packet) {
-        SharedClientData client;
-        return internal_encode(client, std::move(packet));
-    }
-
-    base_objects::network::response encode(server_bound_packet&& packet) {
-        SharedClientData client;
-        return internal_encode(client, std::move(packet));
+    template <class Ops, class Type>
+    base_objects::network::response make_encode(base_objects::SharedClientData& context, Type&& value) {
+        make_preprocess(context, value);
+        base_objects::network::response res;
+        serialize_packet(res, context, value);
+        if constexpr (std::is_base_of_v<disconnect_after, Type>)
+            res.do_disconnect_after_send = true;
+        return res;
     }
 }
+
+#endif /* SRC_API_BIN_PACKETS_GENERIC_ENCODE */

@@ -31,13 +31,15 @@ namespace copper_server::build_in_plugins::tools {
                         app_item("client_disconnected {}\n", client->get_session()->id);
                 return false;
             });
-            register_packet_post_send_viewer([this](api::packets::client_bound_packet& packet, base_objects::SharedClientData& client) {
+
+            api::packets::client_bound_ops::post_send_viewer(*this, [this](auto& packet, base_objects::SharedClientData& client) {
                 if (debug_mode && client.get_session())
-                    app_item(api::packets::stringize_packet(packet) + '\n', client.get_session()->id);
+                    app_item("client_bound " + api::packets::stringize(packet) + '\n', client.get_session()->id);
             });
-            register_packet_viewer([this](api::packets::server_bound_packet& packet, base_objects::SharedClientData& client) {
+
+            api::packets::server_bound_ops::receive_viewer(*this, [this](auto& packet, base_objects::SharedClientData& client) {
                 if (debug_mode && client.get_session())
-                    app_item(api::packets::stringize_packet(packet) + '\n', client.get_session()->id);
+                    app_item("server_bound " + api::packets::stringize(packet) + '\n', client.get_session()->id);
                 return false;
             });
         }

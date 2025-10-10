@@ -8,6 +8,7 @@
  */
 #ifndef SRC_BASE_OBJECTS_POSITION
 #define SRC_BASE_OBJECTS_POSITION
+#include <bit>
 #include <cstdint>
 
 namespace copper_server::base_objects {

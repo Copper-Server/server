@@ -10,7 +10,7 @@
 #define SRC_BASE_OBJECTS_PARSERS
 #include <cstdint>
 #include <library/enbt/enbt.hpp>
-#include <src/base_objects/packets_help.hpp>
+#include <src/api/packets/types.hpp>
 #include <string>
 #include <unordered_map>
 

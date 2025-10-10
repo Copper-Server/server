@@ -29,17 +29,22 @@ namespace copper_server {
         using client_data_holder = atomic_holder<SharedClientData>;
     }
 
-    namespace api::packets::server_bound::configuration {
+    namespace api::packets::server_bound::config {
         struct select_known_packs;
     }
 
     namespace api::packets::events {
-        template <class Packet>
-        auto& viewer();
-        template <class Packet>
-        auto& viewer_post_send();
-        template <class Packet>
-        auto& processor();
+        template <class packet>
+        base_objects::events::sync_event<packet&, base_objects::SharedClientData&>& send_viewer();
+
+        template <class packet>
+        base_objects::events::sync_event_no_cancel<packet&, base_objects::SharedClientData&>& post_send_viewer();
+
+        template <class packet>
+        base_objects::events::sync_event<packet&, base_objects::SharedClientData&>& receive_viewer();
+
+        template <class packet>
+        base_objects::events::sync_event_single<packet&&, base_objects::SharedClientData&>& processor();
     }
 
     namespace __internal {
@@ -81,11 +86,15 @@ namespace copper_server {
         }
 
         void register_packet_post_send_viewer(auto&& fn) {
-            register_event(api::packets::events::viewer_post_send<__internal::first_argument_type<decltype(fn)>>(), std::move(fn));
+            register_event(api::packets::events::post_send_viewer<__internal::first_argument_type<decltype(fn)>>(), std::move(fn));
         }
 
-        void register_packet_viewer(auto&& fn) {
-            register_event(api::packets::events::viewer<__internal::first_argument_type<decltype(fn)>>(), std::move(fn));
+        void register_packet_send_viewer(auto&& fn) {
+            register_event(api::packets::events::send_viewer<__internal::first_argument_type<decltype(fn)>>(), std::move(fn));
+        }
+
+        void register_packet_receive_viewer(auto&& fn) {
+            register_event(api::packets::events::receive_viewer<__internal::first_argument_type<decltype(fn)>>(), std::move(fn));
         }
 
         template <class... Args>
@@ -201,7 +210,6 @@ namespace copper_server {
 
         //args: self, chanel, client
         virtual login_response OnLoginStart(const std::shared_ptr<PluginRegistration>&, const std::string&, base_objects::SharedClientData&) {
-
             return {login_response::none{}};
         }
 
@@ -226,7 +234,7 @@ namespace copper_server {
         }
 
         //returns true if the plugin completed its work in configuration
-        virtual bool OnConfiguration_gotKnownPacks(base_objects::SharedClientData&, const api::packets::server_bound::configuration::select_known_packs&) {
+        virtual bool OnConfiguration_gotKnownPacks(base_objects::SharedClientData&, const api::packets::server_bound::config::select_known_packs&) {
             return true;
         }
 

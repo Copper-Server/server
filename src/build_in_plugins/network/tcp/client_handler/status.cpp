@@ -7,7 +7,8 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <src/api/configuration.hpp>
-#include <src/api/packets.hpp>
+#include <src/api/packets/client_bound/status.hpp>
+#include <src/api/packets/server_bound/status.hpp>
 #include <src/api/players.hpp>
 #include <src/api/registers.hpp>
 #include <src/base_objects/shared_client_data.hpp>
@@ -89,7 +90,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                 if (!players.empty()) {
                     res += ",\"sample\":[";
                     for (auto& it : players) {
-                        res += "{\"name\":\"" + it.first + "\",\"id\":\"" + UUID2String(it.second) + "\"},";
+                        res += "{\"name\":\"" + it.first + "\",\"id\":\"" + it.second.to_string() + "\"},";
                     }
                     res.pop_back();
                     res += "]";
@@ -115,12 +116,12 @@ namespace copper_server::build_in_plugins::network::tcp {
             using status_req = api::packets::server_bound::status::status_request;
             using ping_req = api::packets::server_bound::status::ping_response;
 
-            register_packet_processor([](status_req&&, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](status_req&&, base_objects::SharedClientData& client) {
                 client << api::packets::client_bound::status::status_response{
                     .json_response = build_response(client)
                 };
             });
-            register_packet_processor([](ping_req&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](ping_req&& packet, base_objects::SharedClientData& client) {
                 client << api::packets::client_bound::status::pong_response{
                     .timestamp = packet.timestamp
                 };

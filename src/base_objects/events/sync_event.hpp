@@ -18,7 +18,7 @@
 namespace copper_server::base_objects::events {
     template <class... Args>
     struct sync_event : public base_event {
-        using function = std::function<bool(Args...)>;
+        using function = std::move_only_function<bool(Args...)>;
 
         event_register_id operator+=(function func) {
             return join(func);
@@ -26,7 +26,7 @@ namespace copper_server::base_objects::events {
 
         template <class Fn>
         event_register_id operator+=(Fn&& func) {
-            return join(util::convertible_function<bool, Args...>::make_proxy_from_callable(std::forward<Fn>(func)));
+            return join(std::forward<Fn>(func) /*util::convertible_function<bool, Args...>::make_proxy_from_callable(std::forward<Fn>(func))*/);
         }
 
         bool operator()(Args... args) {
@@ -51,7 +51,7 @@ namespace copper_server::base_objects::events {
 
         template <class Fn>
         event_register_id join(Fn&& func, priority priority = priority::avg) {
-            return join(util::convertible_function<bool, Args...>::make_proxy_from_callable(std::forward<Fn>(func)), priority);
+            return join(std::forward<Fn>(func) /*util::convertible_function<bool, Args...>::make_proxy_from_callable(std::forward<Fn>(func)), priority*/);
         }
 
         bool leave(event_register_id func, priority priority = priority::avg) {
@@ -145,7 +145,7 @@ namespace copper_server::base_objects::events {
 
     template <typename... Args>
     struct sync_event_no_cancel : public base_event {
-        using function = std::function<void(Args...)>;
+        using function = std::move_only_function<void(Args...)>;
 
         event_register_id operator+=(function func) {
             return join(func);
@@ -153,7 +153,8 @@ namespace copper_server::base_objects::events {
 
         template <class Fn>
         event_register_id operator+=(Fn&& func) {
-            return join(util::convertible_function<void, Args...>::make_proxy_from_callable(std::forward<Fn>(func)));
+            return join(std::forward<Fn>(func) /*util::convertible_function<void, Args...>::make_proxy_from_callable(std::forward<Fn>(func))*/
+            );
         }
 
         void operator()(Args... args) {
@@ -172,7 +173,7 @@ namespace copper_server::base_objects::events {
 
         template <class Fn>
         event_register_id join(Fn&& func, priority _ = priority::avg) {
-            return join(util::convertible_function<void, Args...>::make_proxy_from_callable(std::forward<Fn>(func)));
+            return join(std::forward<Fn>(func) /*util::convertible_function<void, Args...>::make_proxy_from_callable(std::forward<Fn>(func))*/);
         }
 
         bool leave(event_register_id func) {
@@ -207,7 +208,7 @@ namespace copper_server::base_objects::events {
 
     template <typename... Args>
     struct sync_event_single : public base_event {
-        using function = std::function<void(Args...)>;
+        using function = std::move_only_function<void(Args...)>;
 
         event_register_id operator+=(function func) {
             return join(func);
@@ -215,7 +216,7 @@ namespace copper_server::base_objects::events {
 
         template <class Fn>
         event_register_id operator+=(Fn&& func) {
-            return join(util::convertible_function<void, Args...>::make_proxy_from_callable(std::forward<Fn>(func)));
+            return join(std::forward<Fn>(func) /*util::convertible_function<void, Args...>::make_proxy_from_callable(std::forward<Fn>(func))*/);
         }
 
         void operator()(Args... args) {
@@ -234,7 +235,7 @@ namespace copper_server::base_objects::events {
 
         template <class Fn>
         event_register_id join(Fn&& func, priority _ = priority::avg) {
-            return join(util::convertible_function<void, Args...>::make_proxy_from_callable(std::forward<Fn>(func)));
+            return join(std::forward<Fn>(func) /*util::convertible_function<void, Args...>::make_proxy_from_callable(std::forward<Fn>(func))*/);
         }
 
         bool leave(event_register_id func) {

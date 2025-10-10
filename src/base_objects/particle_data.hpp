@@ -8,8 +8,8 @@
  */
 #ifndef SRC_BASE_OBJECTS_PACKETS_PARTICLE_DATA
 #define SRC_BASE_OBJECTS_PACKETS_PARTICLE_DATA
+#include <src/api/packets/types.hpp>
 #include <src/base_objects/chat.hpp>
-#include <src/base_objects/packets_help.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/slot.hpp>
 #include <string>

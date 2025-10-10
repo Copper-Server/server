@@ -6,18 +6,29 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#ifndef SRC_BASE_OBJECTS_PACKETS_HELP
-#define SRC_BASE_OBJECTS_PACKETS_HELP
+
+#ifndef SRC_API_PACKETS_TYPES
+#define SRC_API_PACKETS_TYPES
 #include <algorithm>
 #include <cstdint>
 #include <library/list_array.hpp>
 #include <src/api/id.hpp>
+#include <src/base_objects/events/sync_event.hpp>
 #include <src/util/cts.hpp>
 #include <string>
 #include <unordered_map>
 #include <variant>
 
 namespace copper_server::base_objects {
+    struct SharedClientData;
+    class command_manager;
+    struct recipe;
+}
+
+namespace copper_server::api::packets {
+    namespace events {
+        extern base_objects::events::sync_event_no_cancel<base_objects::SharedClientData&> client_state_changed;
+    }
     //reflect_map skip_begin
     template <class T>
     static constexpr bool is_enum_item = requires { T::item_id::value; };
@@ -121,6 +132,13 @@ namespace copper_server::base_objects {
         return true;
     }
 
+    template <class... T>
+    struct generic_variant : public std::variant<T...> {
+        using base = std::variant<T...>;
+        using base::variant;
+        using base::operator=;
+    };
+
     //reflect_map skip_end
     namespace switches_to {
         struct status {
@@ -133,9 +151,9 @@ namespace copper_server::base_objects {
             std::strong_ordering operator<=>(const login& other) const = default;
         };
 
-        struct configuration {
-            constexpr configuration() = default;
-            std::strong_ordering operator<=>(const configuration& other) const = default;
+        struct config {
+            constexpr config() = default;
+            std::strong_ordering operator<=>(const config& other) const = default;
         };
 
         struct play {
@@ -364,6 +382,7 @@ namespace copper_server::base_objects {
         constexpr operator const std::string&() const& {
             return value;
         }
+
         auto operator<=>(const json_text_component& other) const = default;
     };
 
@@ -550,7 +569,6 @@ namespace copper_server::base_objects {
             value = other.value;
             return *this;
         }
-
 
         constexpr operator int32_t&() {
             return value;
@@ -823,14 +841,14 @@ namespace copper_server::base_objects {
         get_world_blocks_height,
     };
 
-    size_t get_size_source_value(SharedClientData&, size_source);
+    size_t get_size_source_value(base_objects::SharedClientData&, size_source);
 
     //this type provides way to get size of array while decoding, the values would also be checked to be equal to size of the container
     template <auto... DependedValues>
     struct no_size {
         template <class T>
-        static size_t get_depended_size(SharedClientData& context, const T& val) {
-            static auto get_value = [](SharedClientData& context, const T& val, auto&& it) -> size_t {
+        static size_t get_depended_size(base_objects::SharedClientData& context, const T& val) {
+            static auto get_value = [](base_objects::SharedClientData& context, const T& val, auto&& it) -> size_t {
                 if constexpr (std::is_same_v<std::decay_t<decltype(it)>, size_source>)
                     return get_size_source_value(context, it);
                 else if constexpr (is_template_base_of<depends_next, std::decay_t<decltype(val.*it)>>) {
@@ -858,11 +876,14 @@ namespace copper_server::base_objects {
     template <class T, size_t size>
     struct list_array_sized : public list_array<T> {
         using list_array<T>::list_array;
-        static constexpr inline size_t max_size = size;
+        using list_array<T>::operator=;
+
+        list_array_sized() : list_array<T>() {}
+        list_array_sized(list_array<T>&& mov) : list_array<T>(std::move(mov)) {}
 
         list_array_sized(const list_array<T>& copy) : list_array<T>(copy) {}
 
-        list_array_sized(list_array<T>&& mov) : list_array<T>(std::move(mov)) {}
+        static constexpr inline size_t max_size = size;
 
         auto operator<=>(const list_array_sized& other) const = default;
     };
@@ -870,11 +891,14 @@ namespace copper_server::base_objects {
     template <class T, size_t size, auto... DependedValues>
     struct list_array_sized_no_size : public no_size<DependedValues...>, list_array_sized<T, size> {
         using list_array_sized<T, size>::list_array_sized;
-        static constexpr inline size_t max_size = size;
+        using list_array_sized<T, size>::operator=;
+
+        list_array_sized_no_size(): list_array_sized<T, size>() {}
+        list_array_sized_no_size(list_array<T>&& mov) : list_array_sized<T, size>(std::move(mov)) {}
 
         list_array_sized_no_size(const list_array<T>& copy) : list_array_sized<T, size>(copy) {}
 
-        list_array_sized_no_size(list_array<T>&& mov) : list_array_sized<T, size>(std::move(mov)) {}
+        static constexpr inline size_t max_size = size;
 
         auto operator<=>(const list_array_sized_no_size& other) const = default;
     };
@@ -882,10 +906,12 @@ namespace copper_server::base_objects {
     template <class T, auto... DependedValues>
     struct list_array_no_size : public no_size<DependedValues...>, list_array<T> {
         using list_array<T>::list_array;
+        using list_array<T>::operator=;
+
+        list_array_no_size(): list_array<T>() {}
+        list_array_no_size(list_array<T>&& mov) : list_array<T>(std::move(mov)) {}
 
         list_array_no_size(const list_array<T>& copy) : list_array<T>(copy) {}
-
-        list_array_no_size(list_array<T>&& mov) : list_array<T>(std::move(mov)) {}
 
         auto operator<=>(const list_array_no_size& other) const = default;
     };
@@ -893,10 +919,15 @@ namespace copper_server::base_objects {
     template <class T, size_t size>
     struct list_array_sized_siz_from_packet : public size_from_packet, list_array_sized<T, size> {
         using list_array_sized<T, size>::list_array_sized;
+        using list_array_sized<T, size>::operator=;
+        list_array_sized_siz_from_packet(): list_array_sized<T, size>() {}
+
+        list_array_sized_siz_from_packet(list_array<T>&& mov) : list_array_sized<T, size>(std::move(mov)) {}
 
         list_array_sized_siz_from_packet(const list_array<T>& copy) : list_array_sized<T, size>(copy) {}
 
-        list_array_sized_siz_from_packet(list_array<T>&& mov) : list_array_sized<T, size>(std::move(mov)) {}
+        static constexpr inline size_t max_size = size;
+
 
         auto operator<=>(const list_array_sized_siz_from_packet& other) const = default;
     };
@@ -911,14 +942,28 @@ namespace copper_server::base_objects {
 
     template <class T, size_t size>
     struct list_array_fixed : public list_array<T> {
-        static constexpr inline size_t required_size = size;
         using list_array<T>::list_array;
+        using list_array<T>::operator=;
+
+        list_array_fixed(): list_array<T>() {}
+        list_array_fixed(const list_array<T>& copy) : list_array<T>(copy) {}
+
+        list_array_fixed(list_array<T>&& mov) : list_array<T>(std::move(mov)) {}
+
+        static constexpr inline size_t required_size = size;
         auto operator<=>(const list_array_fixed& other) const = default;
     };
 
     template <class T>
     struct list_array_siz_from_packet : public size_from_packet, list_array<T> {
         using list_array<T>::list_array;
+        using list_array<T>::operator=;
+
+        list_array_siz_from_packet(): list_array<T>() {}
+        list_array_siz_from_packet(const list_array<T>& copy) : list_array<T>(copy) {}
+
+        list_array_siz_from_packet(list_array<T>&& mov) : list_array<T>(std::move(mov)) {}
+
         auto operator<=>(const list_array_siz_from_packet& other) const = default;
     };
 
@@ -957,11 +1002,16 @@ namespace copper_server::base_objects {
     template <struct_depends T>
     struct list_array_depend : public list_array<T> {
         using list_array<T>::list_array;
-        bool decoding_flag = false;
+        using list_array<T>::operator=;
+
+        list_array_depend() : list_array<T>() {}
 
         list_array_depend(const list_array<T>& copy) : list_array<T>(copy) {}
 
         list_array_depend(list_array<T>&& mov) : list_array<T>(std::move(mov)) {}
+
+        bool decoding_flag = false;
+
 
         auto operator<=>(const list_array_depend& other) const = default;
     };
@@ -1738,4 +1788,135 @@ namespace copper_server::base_objects {
     };
 }
 
-#endif /* SRC_BASE_OBJECTS_PACKETS_HELP */
+namespace copper_server::base_objects {
+
+    template <auto value>
+    using constant_value = api::packets::constant_value<value>;
+
+    template <int32_t value>
+    using enum_item = api::packets::enum_item<value>;
+
+    template <int32_t value>
+    using default_enum_item = api::packets::default_enum_item<value>;
+    template <size_t value, size_t mask, ptrdiff_t order>
+    using flag_item = api::packets::flag_item<value, mask, order>;
+
+    template <class T, class R>
+    static constexpr bool could_be_preprocessed = api::packets::could_be_preprocessed<T, R>;
+
+    template <class type>
+    concept is_convertible_to_packet_form = api::packets::is_convertible_to_packet_form<type>;
+
+    template <is_convertible_to_packet_form type>
+    using convertible_to_packet_type = api::packets::convertible_to_packet_type<type>;
+
+    using identifier = api::packets::identifier;
+    using degrees = api::packets::degrees;
+
+    template <size_t size>
+    using string_sized = api::packets::string_sized<size>;
+    using json_text_component = api::packets::json_text_component;
+    template <class T, T min, T max>
+    using limited_num = api::packets::limited_num<T, min, max>;
+
+    using var_int32 = api::packets::var_int32;
+    using var_int64 = api::packets::var_int64;
+    using optional_var_int32 = api::packets::optional_var_int32;
+    using optional_var_int64 = api::packets::optional_var_int64;
+
+    template <class Value, class T>
+    using value_optional = api::packets::value_optional<Value, T>;
+    //if value would be zero, next fields ignored
+    template <class Value>
+    using depends_next = api::packets::depends_next<Value>;
+
+    using size_source = api::packets::size_source;
+
+    template <auto... DependedValues>
+    using no_size = api::packets::no_size<DependedValues...>;
+
+    template <class T, size_t size>
+    using list_array_sized = api::packets::list_array_sized<T, size>;
+
+    template <class T, size_t size, auto... DependedValues>
+    using list_array_sized_no_size = api::packets::list_array_sized_no_size<T, size, DependedValues...>;
+
+    template <class T, auto... DependedValues>
+    using list_array_no_size = api::packets::list_array_no_size<T, DependedValues...>;
+
+    template <class T, size_t size>
+    using list_array_sized_siz_from_packet = api::packets::list_array_sized_siz_from_packet<T, size>;
+
+    template <class T, class T_size>
+    using sized_entry = api::packets::sized_entry<T, T_size>;
+
+    template <class T, size_t size>
+    using list_array_fixed = api::packets::list_array_fixed<T, size>;
+    template <class T>
+    using list_array_siz_from_packet = api::packets::list_array_siz_from_packet<T>;
+
+    template <size_t size>
+    using bitset_fixed = api::packets::bitset_fixed<size>;
+
+    template <class T, T flag, auto depend_prev_class>
+    using item_depend = api::packets::item_depend<T, flag, depend_prev_class>;
+
+    template <class T>
+    concept is_item_depend = api::packets::is_item_depend<T>;
+
+    template <class T>
+    concept struct_depends = api::packets::struct_depends<T>;
+
+    template <struct_depends T>
+    using list_array_depend = api::packets::list_array_depend<T>;
+
+    template <class Variant0, class Variant1>
+    using or_ = api::packets::or_<Variant0, Variant1>;
+
+    template <class Variant0, class Variant1>
+    using bool_or = api::packets::bool_or<Variant0, Variant1>;
+
+    template <class T>
+    using packet_compress = api::packets::packet_compress<T>;
+
+    template <class T>
+    using id_set = api::packets::id_set<T>;
+
+    using Angle = api::packets::Angle;
+
+    template <class Enum, class T>
+    using enum_as = api::packets::enum_as<Enum, T>;
+
+    template <class ValueType, class... Ty>
+    using enum_switch = api::packets::enum_switch<ValueType, Ty...>;
+
+    template <class header, class... Ty>
+    using enum_set = api::packets::enum_set<header, Ty...>;
+
+    template <class flag_type, class... Ty>
+    using flags_list = api::packets::flags_list<flag_type, Ty...>;
+
+    template <class Source, class SourceType, SourceType Source::* source_name, class... Ty>
+    using flags_list_from = api::packets::flags_list_from<Source, SourceType, source_name, Ty...>;
+
+    template <class Enum, class T>
+    using enum_as_flag = api::packets::enum_as_flag<Enum, T>;
+
+    template <class base_type, class... Ty>
+    using any_of = api::packets::any_of<base_type, Ty...>;
+
+    template <class value_type, class... Ty>
+    using partial_enum_switch = api::packets::partial_enum_switch<value_type, Ty...>;
+
+    template <class T>
+    using ignored = api::packets::ignored<T>;
+
+    template <class T, util::CTS id>
+    using ordered_id = api::packets::ordered_id<T, id>;
+}
+
+copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::api::packets::switches_to::status);
+copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::api::packets::switches_to::login);
+copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::api::packets::switches_to::config);
+copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::api::packets::switches_to::play);
+#endif /* SRC_API_PACKETS_TYPES */

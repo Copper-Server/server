@@ -150,23 +150,29 @@ namespace copper_server::util{
     struct convertible_function {
         template <class... OArgs>
             requires((sizeof...(Args) == sizeof...(OArgs)) && (is_convertible<OArgs, Args> && ...))
-        struct holder : public std::function<Ret(OArgs...)> {
-            using std::function<Ret(OArgs...)>::function;
+        struct holder : public std::move_only_function<Ret(OArgs...)> {
+            using std::move_only_function<Ret(OArgs...)>::move_only_function;
 
-            std::function<Ret(Args...)> make_proxy() && {
+            std::move_only_function<Ret(Args...)> make_proxy() && {
                 return [fn = std::move(*this)](Args... args) {
                     return fn(make_cast<OArgs>(std::forward<Args>(args))...);
                 };
             }
         };
 
+        template <class... OArgs>
+        using cast_is_required = std::disjunction<std::is_same<OArgs, Args>...>;
+
+
         template <class Func>
         static auto make_proxy_from_callable(Func&& func) {
             using functor_trait = function_traits<std::decay_t<Func>>;
             using args_tuple = typename functor_trait::argument_tuple;
-            using convertible_func = typename apply_tuple_to<holder, args_tuple>::type;
-
-            return convertible_func(std::forward<Func>(func)).make_proxy();
+            if constexpr (apply_tuple_to<cast_is_required, args_tuple>::type::value) {
+                using convertible_func = typename apply_tuple_to<holder, args_tuple>::type;
+                return convertible_func(std::forward<Func>(func)).make_proxy();
+            } else
+                return std::forward<Func>(func);
         }
     };
 }

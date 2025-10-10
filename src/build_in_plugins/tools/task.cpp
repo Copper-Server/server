@@ -8,9 +8,10 @@
  */
 #include <library/fast_task/include/debug.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/packets/client_bound/play.hpp>
+#include <src/api/packets/server_bound/play.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/plugin/main.hpp>
-#include <src/api/client.hpp>
 
 namespace copper_server::build_in_plugins::tools {
     struct task : public PluginAutoRegister<"tools/task", task> {
@@ -32,7 +33,7 @@ namespace copper_server::build_in_plugins::tools {
             task.add_child("make_snapshot")
                 .set_callback("command.task.make_snapshot", [](const list_array<predicate>& args, base_objects::command_context& context) {
                     if (fast_task::debug::is_debug_enabled()){
-                        context.executor << api::client::play::system_chat{.content = "The introspection api is disabled for tasking library."};
+                        context.executor << api::packets::client_bound::play::system_chat{.content = "The introspection api is disabled for tasking library."};
                         return;
                     }
                     fast_task::thread([]() {

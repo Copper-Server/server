@@ -7,9 +7,10 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <src/api/ban.hpp>
-#include <src/api/client.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/log.hpp>
+#include <src/api/packets/client_bound/play.hpp>
+#include <src/api/packets/server_bound/play.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/plugin/main.hpp>
@@ -70,11 +71,11 @@ namespace copper_server::build_in_plugins::tools {
                             return;
 
                         if (banned_players.contains(player_name)) {
-                            context.executor << api::client::play::system_chat{.content = {"Player " + player_name + " has been already banned."}};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = {"Player " + player_name + " has been already banned."}};
                             return;
                         }
                         banned_players.add(player_name, {});
-                        context.executor << api::client::play::system_chat{.content = {"Player " + player_name + " has been banned."}};
+                        context.executor << api::packets::client_bound::play::system_chat{.content = {"Player " + player_name + " has been banned."}};
                     })
                     .add_child({"reason", "ban player with reason", "/ban player reason"}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                     .set_callback("command.ban:reason", [this](const list_array<predicate>& args, base_objects::command_context& context) {
@@ -83,11 +84,11 @@ namespace copper_server::build_in_plugins::tools {
                         if (api::ban::on_ban({player_name, context.executor.name, reason}))
                             return;
                         if (banned_players.contains(player_name)) {
-                            context.executor << api::client::play::system_chat{.content = {"Player " + player_name + " has been already banned."}};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = {"Player " + player_name + " has been already banned."}};
                             return;
                         }
                         banned_players.add(player_name, reason);
-                        context.executor << api::client::play::system_chat{.content = {"Player " + player_name + " has been banned"}};
+                        context.executor << api::packets::client_bound::play::system_chat{.content = {"Player " + player_name + " has been banned"}};
                     });
             }
             {
@@ -98,11 +99,11 @@ namespace copper_server::build_in_plugins::tools {
                                        if (api::ban::on_pardon({player_name, context.executor.name, ""}))
                                            return;
                                        if (!banned_players.contains(player_name)) {
-                                           context.executor << api::client::play::system_chat{.content = {"Player " + player_name + " has not been banned."}};
+                                           context.executor << api::packets::client_bound::play::system_chat{.content = {"Player " + player_name + " has not been banned."}};
                                            return;
                                        }
                                        banned_players.remove(player_name);
-                                       context.executor << api::client::play::system_chat{.content = {"Player " + player_name + " has been pardoned."}};
+                                       context.executor << api::packets::client_bound::play::system_chat{.content = {"Player " + player_name + " has been pardoned."}};
                                    });
                 browser.add_child({"unban", "pardon alias"}).add_child(pardon);
             }
@@ -116,9 +117,9 @@ namespace copper_server::build_in_plugins::tools {
                         bool max_reached = false;
                         auto banned = banned_players.keys(100, max_reached);
                         if (banned.size() == 0) {
-                            context.executor << api::client::play::system_chat{.content = {"There are no banned players."}};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = {"There are no banned players."}};
                         } else if (banned.size() == 1) {
-                            context.executor << api::client::play::system_chat{.content = {"There is only one banned player:" + banned.back()}};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = {"There is only one banned player:" + banned.back()}};
                         } else {
                             std::string last_item = banned.back();
                             banned.pop_back();
@@ -131,7 +132,7 @@ namespace copper_server::build_in_plugins::tools {
                                 message += "and " + last_item + '.';
                             } else
                                 message += last_item + ", ...";
-                            context.executor << api::client::play::system_chat{.content = {message}};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = {message}};
                         }
                     });
 
@@ -149,7 +150,7 @@ namespace copper_server::build_in_plugins::tools {
                                 }
                             );
                             message.erase(message.size() - 1, 1);
-                            context.executor << api::client::play::system_chat{.content = {message}};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = {message}};
                         });
 
                     players
@@ -157,7 +158,7 @@ namespace copper_server::build_in_plugins::tools {
                         .add_child({"player", "returns if the player in list", "/banlist players contains player"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                         .set_callback("command.banlist.players.contains", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                             auto& player_name = std::get<pred_string>(args[0]).value;
-                            context.executor << api::client::play::system_chat{.content = {"Player " + player_name + (banned_players.contains(player_name) ? " is in the list." : " is not in the list.")}};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = {"Player " + player_name + (banned_players.contains(player_name) ? " is in the list." : " is not in the list.")}};
                         });
                 }
                 {
@@ -167,9 +168,9 @@ namespace copper_server::build_in_plugins::tools {
                         bool max_reached = false;
                         auto banned = banned_ips.keys(100, max_reached);
                         if (banned.size() == 0) {
-                            context.executor << api::client::play::system_chat{.content = {"There are no banned ips."}};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = {"There are no banned ips."}};
                         } else if (banned.size() == 1) {
-                            context.executor << api::client::play::system_chat{.content = {"There is only one banned ip:" + banned.back()}};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = {"There is only one banned ip:" + banned.back()}};
                         } else {
                             std::string last_item = banned.back();
                             banned.pop_back();
@@ -182,7 +183,7 @@ namespace copper_server::build_in_plugins::tools {
                                 message += "and " + last_item + '.';
                             } else
                                 message += last_item + ", ...";
-                            context.executor << api::client::play::system_chat{.content = {message}};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = {message}};
                         }
                     });
                     ips
@@ -198,7 +199,7 @@ namespace copper_server::build_in_plugins::tools {
                                     message += "...\n";
                                 }
                             );
-                            context.executor << api::client::play::system_chat{.content = {message}};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = {message}};
                         });
 
                     ips
@@ -206,7 +207,7 @@ namespace copper_server::build_in_plugins::tools {
                         .add_child({"player", "returns if IP in list", "/banlist ips contains ip"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                         .set_callback("command.banlist.ips.contains", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                             auto& ip = std::get<pred_string>(args[0]).value;
-                            context.executor << api::client::play::system_chat{.content = {"IP " + ip + (banned_players.contains(ip) ? " is in the list." : " is not in the list.")}};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = {"IP " + ip + (banned_players.contains(ip) ? " is in the list." : " is not in the list.")}};
                         });
                 }
             }
@@ -218,11 +219,11 @@ namespace copper_server::build_in_plugins::tools {
                         api::ban::on_ban_ip({ip, context.executor.name, ""});
 
                         if (banned_ips.contains(ip)) {
-                            context.executor << api::client::play::system_chat{.content = {"IP " + ip + " has been already banned."}};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = {"IP " + ip + " has been already banned."}};
                             return;
                         }
                         banned_ips.add(ip, {});
-                        context.executor << api::client::play::system_chat{.content = {"IP " + ip + " has been banned."}};
+                        context.executor << api::packets::client_bound::play::system_chat{.content = {"IP " + ip + " has been banned."}};
                     })
                     .add_child({"reason", "ban ip with reason", "/ban-ip ip reason"}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                     .set_callback("command.ban-ip:reason", [this](const list_array<predicate>& args, base_objects::command_context& context) {
@@ -230,11 +231,11 @@ namespace copper_server::build_in_plugins::tools {
                         auto& reason = std::get<pred_string>(args[1]).value;
                         api::ban::on_ban_ip({ip, context.executor.name, reason});
                         if (banned_ips.contains(ip)) {
-                            context.executor << api::client::play::system_chat{.content = {"IP " + ip + " has been already banned."}};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = {"IP " + ip + " has been already banned."}};
                             return;
                         }
                         banned_ips.add(ip, reason);
-                        context.executor << api::client::play::system_chat{.content = {"IP " + ip + " has been banned."}};
+                        context.executor << api::packets::client_bound::play::system_chat{.content = {"IP " + ip + " has been banned."}};
                     });
             }
             {
@@ -245,12 +246,12 @@ namespace copper_server::build_in_plugins::tools {
                                           api::ban::on_pardon_ip({ip, context.executor.name, ""});
 
                                           if (!banned_ips.contains(ip)) {
-                                              context.executor << api::client::play::system_chat{.content = {"IP " + ip + " has not been banned."}};
+                                              context.executor << api::packets::client_bound::play::system_chat{.content = {"IP " + ip + " has not been banned."}};
                                               return;
                                           }
 
                                           banned_ips.remove(ip);
-                                          context.executor << api::client::play::system_chat{.content = {"IP " + ip + " has been pardoned."}};
+                                          context.executor << api::packets::client_bound::play::system_chat{.content = {"IP " + ip + " has been pardoned."}};
                                       });
                 browser.add_child({"unban-ip", "pardon-ip alias"}).add_child(pardon_ip);
             }

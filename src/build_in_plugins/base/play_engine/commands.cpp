@@ -6,10 +6,11 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/client.hpp>
 #include <src/api/command.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/entity_id_map.hpp>
+#include <src/api/packets/client_bound/play.hpp>
+#include <src/api/packets/server_bound/play.hpp>
 #include <src/api/players.hpp>
 #include <src/api/registers.hpp>
 #include <src/api/world.hpp>
@@ -26,11 +27,11 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         void OnInitialization(const PluginRegistrationPtr& _) override {
             log::info("Loading");
-            register_packet_processor([](api::packets::server_bound::play::client_command&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](api::packets::server_bound::play::client_command&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 if (packet.action_id == api::packets::server_bound::play::client_command::action_id_e::perform_respawn) {
-                    //TODO client << api::client::play::respawn{};
+                    //TODO client <<  api::packets::client_bound::play::respawn{};
                 } else if (packet.action_id == api::packets::server_bound::play::client_command::action_id_e::request_stats) {
-                    //TODO client << api::client::play::award_stats{
+                    //TODO client <<  api::packets::client_bound::play::award_stats{
                     //    .
                     //};
                 }
@@ -40,7 +41,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
         void OnCommandsLoadComplete(const std::shared_ptr<PluginRegistration>&, base_objects::command_root_browser& root) override {
             api::players::iterate_online([&manager = root.get_manager()](base_objects::SharedClientData& client) {
                 if (!client.is_virtual)
-                    client << api::client::play::commands::create(manager);
+                    client << api::packets::client_bound::play::commands::create(manager);
                 return false;
             });
         }

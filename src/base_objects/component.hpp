@@ -13,10 +13,10 @@
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <optional>
+#include <src/api/packets/types.hpp>
 #include <src/base_objects/box.hpp>
 #include <src/base_objects/chat.hpp>
 #include <src/base_objects/dye_color.hpp>
-#include <src/base_objects/packets_help.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/util/cts.hpp>
 #include <src/util/readers.hpp>

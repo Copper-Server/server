@@ -6,11 +6,12 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/client.hpp>
 #include <src/api/log.hpp>
+#include <src/api/packets/client_bound/config.hpp>
 #include <src/base_objects/network/response.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/plugin/main.hpp>
+#include <src/util/readers.hpp>
 
 namespace copper_server::build_in_plugins::base::minecraft {
     struct brand : public PluginAutoRegister<"base/minecraft/brand", brand> {
@@ -21,7 +22,7 @@ namespace copper_server::build_in_plugins::base::minecraft {
         bool OnConfiguration(base_objects::SharedClientData& client) override {
             base_objects::network::response::item r;
             r.write_string("CopperServer");
-            client << api::client::configuration::custom_payload{
+            client << api::packets::client_bound::config::custom_payload{
                 .channel = "minecraft:brand",
                 .payload = r.data
             };

@@ -6,10 +6,11 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/client.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/console.hpp>
 #include <src/api/log.hpp>
+#include <src/api/packets/client_bound/play.hpp>
+#include <src/api/packets/server_bound/play.hpp>
 #include <src/api/permissions.hpp>
 #include <src/api/players.hpp>
 #include <src/api/server.hpp>
@@ -31,11 +32,11 @@ namespace copper_server::build_in_plugins::tools {
                         std::get<pred_string>(args[0]).value
                     );
                     if (!target) {
-                        context.executor << api::client::play::system_chat{.content = "Player not found"};
+                        context.executor << api::packets::client_bound::play::system_chat{.content = "Player not found"};
                         return;
                     }
                     if (api::permissions::has_rights("misc.operator_protection.kick", *target)) {
-                        context.executor << api::client::play::system_chat{.content = "You can't kick this player"};
+                        context.executor << api::packets::client_bound::play::system_chat{.content = "You can't kick this player"};
                         return;
                     }
                     api::players::calls::on_player_kick({target, "kicked by admin"});
@@ -47,11 +48,11 @@ namespace copper_server::build_in_plugins::tools {
                         std::get<pred_string>(args[0]).value
                     );
                     if (!target) {
-                        context.executor << api::client::play::system_chat{.content = "Player not found"};
+                        context.executor << api::packets::client_bound::play::system_chat{.content = "Player not found"};
                         return;
                     }
                     if (api::permissions::has_rights("misc.operator_protection.kick", *target)) {
-                        context.executor << api::client::play::system_chat{.content = "You can't kick this player"};
+                        context.executor << api::packets::client_bound::play::system_chat{.content = "You can't kick this player"};
                         return;
                     }
                     api::players::calls::on_player_kick({target, Chat::parseToChat(std::get<pred_string>(args[1]).value)});

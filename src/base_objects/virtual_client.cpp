@@ -29,22 +29,5 @@ namespace copper_server::base_objects {
         client->is_virtual = true;
         client->packets_state.protocol_version = api::registers::current_protocol_id;
         client->packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::play;
-        client->special_callback = [this](base_objects::SharedClientData& _, network::response&& resp) {
-            resp.data.for_each([&](base_objects::network::response::item& it) {
-                if (!packet_processor)
-                    return;
-                if (it.data.empty())
-                    return;
-                ArrayStream arr(it.data.data(), it.data.size());
-                packet_processor(api::packets::decode_client_play(*client, arr));
-            });
-            if (resp.is_disconnect())
-                if (requested_disconnect)
-                    requested_disconnect();
-        };
-    }
-
-    void virtual_client::send(api::packets::server_bound::play_packet&& packet) {
-        api::packets::make_process(*client, std::move(packet));
     }
 }

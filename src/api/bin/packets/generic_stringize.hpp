@@ -6,108 +6,13 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#ifndef SRC_API_BIN_PACKETS_GENERIC_STRINGIZE
+#define SRC_API_BIN_PACKETS_GENERIC_STRINGIZE
 #include <library/enbt/senbt.hpp>
-#include <src/api/packets.hpp>
-#include <src/base_objects/slot.hpp>
-#include <src/util/reflect.hpp>
-#include <src/util/reflect/calculations.hpp>
-#include <src/util/reflect/component.hpp>
-#include <src/util/reflect/dye_color.hpp>
-#include <src/util/reflect/metadata.hpp>
-#include <src/util/reflect/packets.hpp>
-#include <src/util/reflect/packets_help.hpp>
-#include <src/util/reflect/parsers.hpp>
-#include <src/util/reflect/particle_data.hpp>
+
+#include <src/api/bin/packets/generic.hpp>
 
 namespace copper_server::api::packets {
-    using namespace base_objects;
-
-    template <template <auto...> class Base, auto... Ts>
-    static void value_test(Base<Ts...>&) {}
-
-    template <template <auto...> class, class, class = void>
-    constexpr bool is_value_template_base_of = false;
-    template <template <auto...> class Base, class Derived>
-    constexpr bool is_value_template_base_of<Base, Derived, std::void_t<decltype(value_test<Base>(std::declval<Derived&>()))>> = true;
-
-    template <class T>
-    struct type_selector : std::integral_constant<size_t, 0> {};
-
-    template <class T, T min, T max>
-    struct type_selector<limited_num<T, min, max>> : std::integral_constant<size_t, 1> {};
-
-    template <class S, class ST, ST S::* M, class... Ts>
-    struct type_selector<flags_list_from<S, ST, M, Ts...>> : std::integral_constant<size_t, 2> {};
-
-    template <size_t size>
-    struct type_selector<string_sized<size>> : std::integral_constant<size_t, 3> {};
-
-    template <size_t size>
-    struct type_selector<bitset_fixed<size>> : std::integral_constant<size_t, 4> {};
-
-    template <class T, size_t size>
-    struct type_selector<list_array_sized<T, size>> : std::integral_constant<size_t, 5> {};
-
-    template <class T, auto... dep_v>
-    struct type_selector<list_array_no_size<T, dep_v...>> : std::integral_constant<size_t, 6> {};
-
-    template <class T, size_t size, auto... dep_v>
-    struct type_selector<list_array_sized_no_size<T, size, dep_v...>> : std::integral_constant<size_t, 7> {};
-
-    template <class T, size_t size>
-    struct type_selector<list_array_sized_siz_from_packet<T, size>> : std::integral_constant<size_t, 8> {};
-
-    template <class T, class Ts>
-    struct type_selector<sized_entry<T, Ts>> : std::integral_constant<size_t, 9> {};
-
-    template <class T, size_t size>
-    struct type_selector<list_array_fixed<T, size>> : std::integral_constant<size_t, 10> {};
-
-    template <class T>
-    struct type_selector<list_array_siz_from_packet<T>> : std::integral_constant<size_t, 11> {};
-
-    template <class T, util::CTS id>
-    struct type_selector<ordered_id<T, id>> : std::integral_constant<size_t, 12> {};
-
-    template <class T, size_t size>
-    struct type_selector<std::array<T, size>> : std::integral_constant<size_t, 13> {};
-
-    template <auto V>
-    struct type_selector<base_objects::constant_value<V>> : std::integral_constant<size_t, 14> {};
-
-    template <class type>
-    concept is_limited_num = type_selector<type>::value == 1;
-
-    template <class type>
-    concept is_flags_list_from = type_selector<type>::value == 2;
-
-    template <class type>
-    concept is_string_sized = type_selector<type>::value == 3;
-
-    template <class type>
-    concept is_bitset_fixed = type_selector<type>::value == 4;
-
-    template <class type>
-    concept is_list_array_sized = type_selector<type>::value == 5 || type_selector<type>::value == 7 || type_selector<type>::value == 8;
-
-    template <class type>
-    concept is_list_array_fixed = type_selector<type>::value == 10;
-
-    template <class type>
-    concept is_ordered_id = type_selector<type>::value == 12;
-
-    template <class type>
-    concept is_std_array = type_selector<type>::value == 13;
-
-    template <class type>
-    concept is_constant_value = type_selector<type>::value == 14;
-
-    template <class type>
-    concept is_no_size = is_value_template_base_of<no_size, type>;
-
-    template <class type>
-    concept requires_check = is_limited_num<type> || is_string_sized<type> || is_list_array_sized<type> || is_list_array_fixed<type> || is_no_size<type> || is_bitset_fixed<type>;
-
     namespace sp {
         template <class T>
         void serialize_entry(std::string& res, size_t spacing, const T& value);
@@ -181,7 +86,7 @@ namespace copper_server::api::packets {
                     res += std::to_string(*value);
                 else
                     res += "null";
-            } else if constexpr (std::is_same_v<position, Type>)
+            } else if constexpr (std::is_same_v<base_objects::position, Type>)
                 res += "{.x = " + std::to_string(value.x) + ".z = " + std::to_string(value.z) + ".y = " + std::to_string(value.y) + "}";
             else if constexpr (std::is_same_v<bool, Type>)
                 res += value ? "true" : "false";
@@ -391,7 +296,7 @@ namespace copper_server::api::packets {
 #pragma warning(pop)
 
         template <class T>
-        void serialize_packet(std::string& res, size_t spacing, T& value) {
+        void serialize_packet(std::string& res, size_t spacing, const T& value) {
             using Type = std::decay_t<T>;
             if constexpr (is_packet<Type>) {
                 serialize_entry(res, spacing, value);
@@ -405,17 +310,7 @@ namespace copper_server::api::packets {
                     res += "\n" + std::string(spacing + 4, ' ') + std::string(name) + ": ";
                     if constexpr (is_packet<I>) {
                         serialize_packet(res, spacing + 4, item);
-                    } else if constexpr (
-                        std::is_same_v<I, client_bound::status_packet>
-                        || std::is_same_v<I, client_bound::login_packet>
-                        || std::is_same_v<I, client_bound::configuration_packet>
-                        || std::is_same_v<I, client_bound::play_packet>
-                        || std::is_same_v<I, server_bound::handshake_packet>
-                        || std::is_same_v<I, server_bound::status_packet>
-                        || std::is_same_v<I, server_bound::login_packet>
-                        || std::is_same_v<I, server_bound::configuration_packet>
-                        || std::is_same_v<I, server_bound::play_packet>
-                    ) {
+                    } else if constexpr (std::is_same_v<I, client_bound::play::play_packet>) {
                         std::visit([&](auto& it) { serialize_packet(res, spacing + 4, it); }, item);
                     } else if (is_template_base_of<_list_array_impl::list_array, Type>) {
                         res += "[";
@@ -442,111 +337,7 @@ namespace copper_server::api::packets {
             }
         }
     }
-
-    std::string stringize_packet(const client_bound::status_packet& packet) {
-        return std::visit(
-            [](auto& it) -> std::string {
-                std::string res;
-                sp::serialize_packet(res, 0, it);
-                return res;
-            },
-            packet
-        );
-    }
-
-    std::string stringize_packet(const client_bound::login_packet& packet) {
-        return std::visit(
-            [](auto& it) -> std::string {
-                std::string res;
-                sp::serialize_packet(res, 0, it);
-                return res;
-            },
-            packet
-        );
-    }
-
-    std::string stringize_packet(const client_bound::configuration_packet& packet) {
-        return std::visit(
-            [](auto& it) -> std::string {
-                std::string res;
-                sp::serialize_packet(res, 0, it);
-                return res;
-            },
-            packet
-        );
-    }
-
-    std::string stringize_packet(const client_bound::play_packet& packet) {
-        return std::visit(
-            [](auto& it) -> std::string {
-                std::string res;
-                sp::serialize_packet(res, 0, it);
-                return res;
-            },
-            packet
-        );
-    }
-
-    std::string stringize_packet(const server_bound::handshake_packet& packet) {
-        return std::visit(
-            [](auto& it) -> std::string {
-                std::string res;
-                sp::serialize_packet(res, 0, it);
-                return res;
-            },
-            packet
-        );
-    }
-
-    std::string stringize_packet(const server_bound::status_packet& packet) {
-        return std::visit(
-            [](auto& it) -> std::string {
-                std::string res;
-                sp::serialize_packet(res, 0, it);
-                return res;
-            },
-            packet
-        );
-    }
-
-    std::string stringize_packet(const server_bound::login_packet& packet) {
-        return std::visit(
-            [](auto& it) -> std::string {
-                std::string res;
-                sp::serialize_packet(res, 0, it);
-                return res;
-            },
-            packet
-        );
-    }
-
-    std::string stringize_packet(const server_bound::configuration_packet& packet) {
-        return std::visit(
-            [](auto& it) -> std::string {
-                std::string res;
-                sp::serialize_packet(res, 0, it);
-                return res;
-            },
-            packet
-        );
-    }
-
-    std::string stringize_packet(const server_bound::play_packet& packet) {
-        return std::visit(
-            [](auto& it) -> std::string {
-                std::string res;
-                sp::serialize_packet(res, 0, it);
-                return res;
-            },
-            packet
-        );
-    }
-
-    std::string stringize_packet(const client_bound_packet& packet) {
-        return std::visit([](auto& it) { return stringize_packet(it); }, packet);
-    }
-
-    std::string stringize_packet(const server_bound_packet& packet) {
-        return std::visit([](auto& it) { return stringize_packet(it); }, packet);
-    }
 }
+
+
+#endif /* SRC_API_BIN_PACKETS_GENERIC_STRINGIZE */

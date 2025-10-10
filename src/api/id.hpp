@@ -13,6 +13,7 @@
 #include <src/api/tags.hpp>
 #include <src/base_objects/atomic_holder.hpp>
 #include <string>
+#include <variant>
 
 namespace enbt {
     struct raw_uuid;

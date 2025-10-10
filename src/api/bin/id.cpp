@@ -12,7 +12,7 @@
 #include <src/api/tags.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/entity.hpp>
-#include <src/base_objects/packets_help.hpp>
+#include <src/api/packets/types.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/storage/world_data.hpp>

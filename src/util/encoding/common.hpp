@@ -8,10 +8,11 @@
  */
 #ifndef SRC_UTIL_ENCODING_COMMON
 #define SRC_UTIL_ENCODING_COMMON
-#include <src/base_objects/packets_help.hpp>
+#include <src/api/packets/types.hpp>
+#include <src/base_objects/box.hpp>
 #include <src/base_objects/chat.hpp>
 #include <src/base_objects/position.hpp>
-#include <src/base_objects/box.hpp>
+#include <src/util/cts.hpp>
 #include <src/util/reflect.hpp>
 
 

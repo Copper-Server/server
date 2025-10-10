@@ -8,6 +8,7 @@
  */
 #ifndef SRC_UTIL_REFLECT
 #define SRC_UTIL_REFLECT
+#include <array>
 #include <charconv>
 #include <string>
 

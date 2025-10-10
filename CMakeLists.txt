@@ -17,7 +17,8 @@ set(FAST_TASK_ENABLE_DEBUG_API OFF)
 add_compile_definitions(tasks_enable_preemptive_scheduler_preview=false)
 
 FILE(GLOB REFLECTION_FILES CONFIGURE_DEPENDS
-  src/api/packets.hpp
+  src/api/packets/*.hpp
+  src/api/packets/*/*.hpp
   src/base_objects/entity/metadata.hpp
   src/base_objects/component.hpp
   src/base_objects/dye_color.hpp

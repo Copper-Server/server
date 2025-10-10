@@ -6,9 +6,10 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/client.hpp>
 #include <src/api/command.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/packets/client_bound/play.hpp>
+#include <src/api/packets/server_bound/play.hpp>
 #include <src/api/players.hpp>
 #include <src/api/registers.hpp>
 #include <src/api/world.hpp>
@@ -24,17 +25,17 @@ namespace copper_server::build_in_plugins::base::play_engine {
         ~item() noexcept {}
 
         void OnInitialization(const PluginRegistrationPtr& _) override {
-            register_packet_processor([]([[maybe_unused]] api::packets::server_bound::play::interact&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::interact&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
 
-            register_packet_processor([]([[maybe_unused]] api::packets::server_bound::play::jigsaw_generate&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::jigsaw_generate&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            register_packet_processor([]([[maybe_unused]] api::packets::server_bound::play::use_item_on&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::use_item_on&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
-            register_packet_processor([]([[maybe_unused]] api::packets::server_bound::play::use_item&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::use_item&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 //TODO
             });
         }

@@ -6,7 +6,8 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/client.hpp>
+#include <src/api/packets/client_bound/play.hpp>
+#include <src/api/packets/server_bound/play.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/internal/permissions.hpp>
 #include <src/api/log.hpp>
@@ -91,13 +92,13 @@ namespace copper_server::build_in_plugins::tools {
             using cmd_pred_string = base_objects::parsers::command::string;
             auto permissions = browser.add_child("permissions");
             permissions.add_child("reload").set_callback("command.permissions.reload", [this](const list_array<predicate>&, base_objects::command_context& context) {
-                context.executor << api::client::play::system_chat{.content = "Reloading permissions..."};
+                context.executor << api::packets::client_bound::play::system_chat{.content = "Reloading permissions..."};
                 api::permissions::make_sync();
                 api::players::iterate_online([&](base_objects::SharedClientData& client_ref) {
                     update_perm(client_ref);
                     return false;
                 });
-                context.executor << api::client::play::system_chat{.content = "Permissions reload complete."};
+                context.executor << api::packets::client_bound::play::system_chat{.content = "Permissions reload complete."};
             });
             {
                 auto list = permissions.add_child("list");
@@ -112,9 +113,9 @@ namespace copper_server::build_in_plugins::tools {
                     });
 
                     if (enumerate.empty())
-                        context.executor << api::client::play::system_chat{.content = "There no groups."};
+                        context.executor << api::packets::client_bound::play::system_chat{.content = "There no groups."};
                     else if (enumerate.size() == 1)
-                        context.executor << api::client::play::system_chat{.content = "There only one group: " + enumerate[0]};
+                        context.executor << api::packets::client_bound::play::system_chat{.content = "There only one group: " + enumerate[0]};
                     else {
                         std::string buf;
                         buf.reserve(enumerate.sum([](const std::string& val) {
@@ -125,7 +126,7 @@ namespace copper_server::build_in_plugins::tools {
                             buf += it + "\n";
                         if (overflow)
                             buf += "...\n";
-                        context.executor << api::client::play::system_chat{.content = std::move(buf)};
+                        context.executor << api::packets::client_bound::play::system_chat{.content = std::move(buf)};
                     }
                 });
                 list.add_child("permission").set_callback("command.permissions.list.permission", [](const list_array<predicate>&, base_objects::command_context& context) {
@@ -139,9 +140,9 @@ namespace copper_server::build_in_plugins::tools {
                     });
 
                     if (enumerate.empty())
-                        context.executor << api::client::play::system_chat{.content = "There no permissions."};
+                        context.executor << api::packets::client_bound::play::system_chat{.content = "There no permissions."};
                     else if (enumerate.size() == 1)
-                        context.executor << api::client::play::system_chat{.content = "There only one permission: " + enumerate[0]};
+                        context.executor << api::packets::client_bound::play::system_chat{.content = "There only one permission: " + enumerate[0]};
                     else {
                         std::string buf;
                         buf.reserve(enumerate.sum([](const std::string& val) {
@@ -153,7 +154,7 @@ namespace copper_server::build_in_plugins::tools {
                             buf += it + "\n";
                         if (overflow)
                             buf += "...\n";
-                        context.executor << api::client::play::system_chat{.content = std::move(buf)};
+                        context.executor << api::packets::client_bound::play::system_chat{.content = std::move(buf)};
                     }
                 });
             }
@@ -189,12 +190,12 @@ namespace copper_server::build_in_plugins::tools {
                     .set_callback("command.op", [this](const list_array<predicate>& args, base_objects::command_context& context) {
                         auto& player_name = std::get<pred_string>(args[0]).value;
                         if (op_list.contains(player_name)) {
-                            context.executor << api::client::play::system_chat{.content = "This player already operator."};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = "This player already operator."};
                             return;
                         }
                         op_list.add(player_name);
                         api::players::iterate_online([&player_name](auto& client) {
-                            client << api::client::play::system_chat{.content = "Player " + player_name + " is now operator."};
+                            client << api::packets::client_bound::play::system_chat{.content = "Player " + player_name + " is now operator."};
                             return false;
                         });
 
@@ -219,7 +220,7 @@ namespace copper_server::build_in_plugins::tools {
                         if (!target)
                             update_perm(*target);
                         api::players::iterate_online([&player_name](auto& client) {
-                            client << api::client::play::system_chat{.content = "Player " + player_name + " is no more operator."};
+                            client << api::packets::client_bound::play::system_chat{.content = "Player " + player_name + " is no more operator."};
                             return false;
                         });
                     });
@@ -252,7 +253,7 @@ namespace copper_server::build_in_plugins::tools {
                     event = base_objects::entity_event::set_op_4;
                 break;
             }
-            client_ref << api::client::play::entity_event{
+            client_ref << api::packets::client_bound::play::entity_event{
                 .id = client_ref.player_data.assigned_entity->protocol_id,
                 .status = (int8_t)event
             };

@@ -11,11 +11,13 @@
 #include <src/api/console.hpp>
 #include <src/api/internal/console.hpp>
 #include <src/api/log.hpp>
-#include <src/api/packets.hpp>
+#include <src/api/packets/client_bound/play.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/virtual_client.hpp>
+#include <src/util/readers.hpp>
+
 #include <src/plugin/main.hpp>
 #include <src/storage/list_storage.hpp>
 
@@ -68,10 +70,13 @@ namespace copper_server::build_in_plugins {
                     .to_container<std::vector>();
             });
 
-            console_data.packet_processor = [](const api::packets::client_bound::play_packet& packet) {
-                std::visit(
-                    [](auto& it) {
-                        using T = std::decay_t<decltype(it)>;
+            console_data.set_special_callback([](base_objects::virtual_client& _, base_objects::SharedClientData& client, base_objects::network::response&& resp) {
+                resp.data.for_each([&](base_objects::network::response::item& data) {
+                    if (data.data.empty())
+                        return;
+                    ArrayStream arr(data.data.data(), data.data.size());
+
+                    api::packets::client_bound_play_ops::client_decode(client, arr, []<class T>(auto& client, T&& it) {
                         if constexpr (std::is_same_v<T, api::packets::client_bound::play::disguised_chat>) {
                             if (!it.target_name)
                                 api::log::info("message", "[" + it.sender.to_ansi_console() + "] " + it.message.to_ansi_console());
@@ -83,10 +88,9 @@ namespace copper_server::build_in_plugins {
                             else
                                 api::log::info("console [overlay]", it.content.to_ansi_console());
                         }
-                    },
-                    packet
-                );
-            };
+                    });
+                });
+            });
 
             console_data.client->player_data.permission_groups = {"console", "operator"};
 

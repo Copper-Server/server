@@ -6,10 +6,11 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/client.hpp>
 #include <src/api/command.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/entity_id_map.hpp>
+#include <src/api/packets/client_bound/play.hpp>
+#include <src/api/packets/server_bound/play.hpp>
 #include <src/api/players.hpp>
 #include <src/api/registers.hpp>
 #include <src/api/world.hpp>
@@ -26,17 +27,17 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_add_effect(base_objects::entity& self, base_objects::entity& target, uint32_t id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) {
             if (self.assigned_player) {
-                api::client::play::update_mob_effect::flags_f f{};
+                api::packets::client_bound::play::update_mob_effect::flags_f f{};
                 if (ambient)
-                    f = f | api::client::play::update_mob_effect::flags_f::is_ambient;
+                    f = f | api::packets::client_bound::play::update_mob_effect::flags_f::is_ambient;
                 if (show_particles)
-                    f = f | api::client::play::update_mob_effect::flags_f::show_particles;
+                    f = f | api::packets::client_bound::play::update_mob_effect::flags_f::show_particles;
                 if (show_icon)
-                    f = f | api::client::play::update_mob_effect::flags_f::show_icon;
+                    f = f | api::packets::client_bound::play::update_mob_effect::flags_f::show_icon;
                 if (use_blend)
-                    f = f | api::client::play::update_mob_effect::flags_f::blend;
+                    f = f | api::packets::client_bound::play::update_mob_effect::flags_f::blend;
 
-                *self.assigned_player << api::client::play::update_mob_effect{
+                *self.assigned_player << api::packets::client_bound::play::update_mob_effect{
                     .id = target.protocol_id,
                     .effect = id,
                     .amplifier = amplifier,
@@ -48,16 +49,16 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_animation(base_objects::entity& self, base_objects::entity& target, base_objects::entity_animation animation) {
             if (self.assigned_player) {
-                *self.assigned_player << api::client::play::animate{
+                *self.assigned_player << api::packets::client_bound::play::animate{
                     .id = target.protocol_id,
-                    .animation = static_cast<api::client::play::animate::animation_e>(animation)
+                    .animation = static_cast<api::packets::client_bound::play::animate::animation_e>(animation)
                 };
             }
         };
 
         static void entity_attach(base_objects::entity& self, base_objects::entity& target, base_objects::entity_ref& other_id) {
             if (self.assigned_player && other_id)
-                *self.assigned_player << api::client::play::set_entity_link{
+                *self.assigned_player << api::packets::client_bound::play::set_entity_link{
                     .attached_id = other_id->protocol_id,
                     .holding_id = target.protocol_id
                 };
@@ -65,15 +66,15 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_attack(base_objects::entity& self, base_objects::entity& target, [[maybe_unused]] base_objects::entity_ref& other_id) {
             if (self.assigned_player)
-                *self.assigned_player << api::client::play::animate{
+                *self.assigned_player << api::packets::client_bound::play::animate{
                     .id = target.protocol_id,
-                    .animation = api::client::play::animate::swing_main_arm
+                    .animation = api::packets::client_bound::play::animate::swing_main_arm
                 };
         };
 
         static void entity_break(base_objects::entity& self, base_objects::entity& target, int64_t x, int64_t y, int64_t z, uint8_t state) {
             if (self.assigned_player)
-                *self.assigned_player << api::client::play::block_destruction{
+                *self.assigned_player << api::packets::client_bound::play::block_destruction{
                     .id = target.protocol_id,
                     .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                     .destroy_stage = state
@@ -82,7 +83,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_cancel_break(base_objects::entity& self, base_objects::entity& target, int64_t x, int64_t y, int64_t z) {
             if (self.assigned_player)
-                *self.assigned_player << api::client::play::block_destruction{
+                *self.assigned_player << api::packets::client_bound::play::block_destruction{
                     .id = target.protocol_id,
                     .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                     .destroy_stage = 10
@@ -91,7 +92,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_damage(base_objects::entity& self, base_objects::entity& target, [[maybe_unused]] float health, int32_t type_id, const std::optional<util::VECTOR>& pos) {
             if (self.assigned_player)
-                *self.assigned_player << api::client::play::damage_event{
+                *self.assigned_player << api::packets::client_bound::play::damage_event{
                     .id = target.protocol_id,
                     .source_damage_type_id = type_id,
                     .source_pos = pos
@@ -100,7 +101,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_damage_with_source(base_objects::entity& self, base_objects::entity& target, [[maybe_unused]] float health, int32_t type_id, base_objects::entity_ref& source, const std::optional<util::VECTOR>& pos) {
             if (self.assigned_player && source)
-                *self.assigned_player << api::client::play::damage_event{
+                *self.assigned_player << api::packets::client_bound::play::damage_event{
                     .id = target.protocol_id,
                     .source_damage_type_id = type_id,
                     .source_id = source->protocol_id,
@@ -111,7 +112,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_damage_with_sources(base_objects::entity& self, base_objects::entity& target, [[maybe_unused]] float health, int32_t type_id, base_objects::entity_ref& source, base_objects::entity_ref& source_direct, const std::optional<util::VECTOR>& pos) {
             if (self.assigned_player && source && source_direct)
-                *self.assigned_player << api::client::play::damage_event{
+                *self.assigned_player << api::packets::client_bound::play::damage_event{
                     .id = target.protocol_id,
                     .source_damage_type_id = type_id,
                     .source_id = source->protocol_id,
@@ -122,12 +123,12 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_death(base_objects::entity& self, base_objects::entity& target) {
             if (self.assigned_player) {
-                *self.assigned_player << api::client::play::entity_event{
+                *self.assigned_player << api::packets::client_bound::play::entity_event{
                     .id = target.protocol_id,
                     .status = (int8_t)base_objects::entity_event::entity_died
                 };
                 //TODO add delay
-                *self.assigned_player << api::client::play::entity_event{
+                *self.assigned_player << api::packets::client_bound::play::entity_event{
                     .id = target.protocol_id,
                     .status = (int8_t)base_objects::entity_event::death_smoke
                 };
@@ -136,7 +137,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_deinit(base_objects::entity& self, base_objects::entity& target) {
             if (self.assigned_player) {
-                *self.assigned_player << api::client::play::remove_entities{
+                *self.assigned_player << api::packets::client_bound::play::remove_entities{
                     .ids{target.protocol_id}
                 };
             }
@@ -144,7 +145,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_detach(base_objects::entity& self, base_objects::entity& target, [[maybe_unused]] base_objects::entity_ref& other) {
             if (self.assigned_player)
-                *self.assigned_player << api::client::play::set_entity_link{
+                *self.assigned_player << api::packets::client_bound::play::set_entity_link{
                     .attached_id = (int32_t)target.protocol_id,
                     .holding_id = -1
                 };
@@ -152,7 +153,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_event(base_objects::entity& self, base_objects::entity& target, base_objects::entity_event status) {
             if (self.assigned_player)
-                *self.assigned_player << api::client::play::entity_event{
+                *self.assigned_player << api::packets::client_bound::play::entity_event{
                     .id = target.protocol_id,
                     .status = (int8_t)status
                 };
@@ -160,12 +161,12 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_metadata(base_objects::entity& self, base_objects::entity& target) {
             if (self.assigned_player)
-                *self.assigned_player << api::client::play::set_entity_data::create(target);
+                *self.assigned_player << api::packets::client_bound::play::set_entity_data::create(target);
         };
 
         static void entity_finish_break(base_objects::entity& self, base_objects::entity& target, int64_t x, int64_t y, int64_t z) {
             if (self.assigned_player)
-                *self.assigned_player << api::client::play::block_destruction{
+                *self.assigned_player << api::packets::client_bound::play::block_destruction{
                     .id = target.protocol_id,
                     .location = {(int)x, (int)y, (int)z},
                     .destroy_stage = 11
@@ -175,7 +176,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
         static void entity_init(base_objects::entity& self, base_objects::entity& target) {
             if (self.assigned_player) {
                 auto velocity = target.motion;
-                *self.assigned_player << api::client::play::add_entity{
+                *self.assigned_player << api::packets::client_bound::play::add_entity{
                     .id = target.protocol_id,
                     .uuid = api::entity_id_map::get_uuid(target.protocol_id),
                     .type = target.get_entity_type_id(),
@@ -193,23 +194,23 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_iteract(base_objects::entity& self, base_objects::entity& target, [[maybe_unused]] base_objects::entity_ref& other) {
             if (self.assigned_player)
-                *self.assigned_player << api::client::play::animate{
+                *self.assigned_player << api::packets::client_bound::play::animate{
                     .id = target.protocol_id,
-                    .animation = api::client::play::animate::swing_main_arm
+                    .animation = api::packets::client_bound::play::animate::swing_main_arm
                 };
         };
 
         static void entity_iteract_block(base_objects::entity& self, base_objects::entity& target, auto, auto, auto) {
             if (self.assigned_player)
-                *self.assigned_player << api::client::play::animate{
+                *self.assigned_player << api::packets::client_bound::play::animate{
                     .id = target.protocol_id,
-                    .animation = api::client::play::animate::swing_main_arm
+                    .animation = api::packets::client_bound::play::animate::swing_main_arm
                 };
         };
 
         static void entity_leaves_ride(base_objects::entity& self, base_objects::entity& target, base_objects::entity_ref& other) {
             if (self.assigned_player && other)
-                *self.assigned_player << api::client::play::set_passengers{
+                *self.assigned_player << api::packets::client_bound::play::set_passengers{
                     .id = target.protocol_id,
                     .passengers = other->ride_by_entity.convert_fn([](auto& entity) { return (base_objects::var_int32)entity->protocol_id; })
                 };
@@ -217,7 +218,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_look_changes(base_objects::entity& self, base_objects::entity& target, util::ANGLE_DEG rot) {
             if (self.assigned_player)
-                *self.assigned_player << api::client::play::rotate_head{
+                *self.assigned_player << api::packets::client_bound::play::rotate_head{
                     .id = target.protocol_id,
                     .head_yaw = rot.yaw
                 };
@@ -225,7 +226,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_motion_changes(base_objects::entity& self, base_objects::entity& target, [[maybe_unused]] util::VECTOR mot) {
             if (self.assigned_player) {
-                *self.assigned_player << api::client::play::set_entity_motion{
+                *self.assigned_player << api::packets::client_bound::play::set_entity_motion{
                     .id = target.protocol_id,
                     .velocity = {mot.x, mot.y, mot.z}
                 };
@@ -235,7 +236,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
         static void entity_move(base_objects::entity& self, base_objects::entity& target, util::VECTOR dif) {
             if (self.assigned_player) {
                 auto delta = util::minecraft::packets::delta_move({(float)dif.x, (float)dif.y, (float)dif.z});
-                *self.assigned_player << api::client::play::move_entity_pos{
+                *self.assigned_player << api::packets::client_bound::play::move_entity_pos{
                     .id = target.protocol_id,
                     .delta_x = delta.x,
                     .delta_y = delta.y,
@@ -247,23 +248,23 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_place_block(base_objects::entity& self, base_objects::entity& target, bool is_main_hand, [[maybe_unused]] int64_t x, [[maybe_unused]] int64_t y, [[maybe_unused]] int64_t z, [[maybe_unused]] const base_objects::block& block) {
             if (self.assigned_player)
-                *self.assigned_player << api::client::play::animate{
+                *self.assigned_player << api::packets::client_bound::play::animate{
                     .id = target.protocol_id,
-                    .animation = is_main_hand ? api::client::play::animate::swing_main_arm : api::client::play::animate::swing_offhand
+                    .animation = is_main_hand ? api::packets::client_bound::play::animate::swing_main_arm : api::packets::client_bound::play::animate::swing_offhand
                 };
         };
 
         static void entity_place_block_entity(base_objects::entity& self, base_objects::entity& target, bool is_main_hand, [[maybe_unused]] int64_t x, [[maybe_unused]] int64_t y, [[maybe_unused]] int64_t z, auto) {
             if (self.assigned_player)
-                *self.assigned_player << api::client::play::animate{
+                *self.assigned_player << api::packets::client_bound::play::animate{
                     .id = target.protocol_id,
-                    .animation = is_main_hand ? api::client::play::animate::swing_main_arm : api::client::play::animate::swing_offhand
+                    .animation = is_main_hand ? api::packets::client_bound::play::animate::swing_main_arm : api::packets::client_bound::play::animate::swing_offhand
                 };
         };
 
         static void entity_remove_effect(base_objects::entity& self, base_objects::entity& target, uint32_t id) {
             if (self.assigned_player)
-                *self.assigned_player << api::client::play::remove_mob_effect{
+                *self.assigned_player << api::packets::client_bound::play::remove_mob_effect{
                     .id = target.protocol_id,
                     .effect_id = id
                 };
@@ -271,7 +272,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_rides(base_objects::entity& self, [[maybe_unused]] base_objects::entity& target, base_objects::entity_ref& other_entity) {
             if (self.assigned_player && other_entity)
-                *self.assigned_player << api::client::play::set_passengers{
+                *self.assigned_player << api::packets::client_bound::play::set_passengers{
                     .id = target.protocol_id,
                     .passengers = other_entity->ride_by_entity.convert_fn([](auto& entity) { return (base_objects::var_int32)entity->protocol_id; })
                 };
@@ -279,7 +280,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_rotation_changes(base_objects::entity& self, base_objects::entity& target, util::ANGLE_DEG rot) {
             if (self.assigned_player)
-                *self.assigned_player << api::client::play::move_entity_rot{
+                *self.assigned_player << api::packets::client_bound::play::move_entity_rot{
                     .id = target.protocol_id,
                     .yaw = rot.yaw,
                     .pitch = rot.pitch,
@@ -289,7 +290,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_teleport(base_objects::entity& self, base_objects::entity& target, util::VECTOR pos) {
             if (self.assigned_player)
-                *self.assigned_player << api::client::play::entity_position_sync{
+                *self.assigned_player << api::packets::client_bound::play::entity_position_sync{
                     .id = target.protocol_id,
                     .x = pos.x,
                     .y = pos.y,
@@ -308,7 +309,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 if (self.current_world()) {
                     if (self.world_syncing_data.chunk_processed(x, z))
                         self.current_world()->get_chunk_at(x, z, [&self](storage::chunk_data& chunk) {
-                            *self.assigned_player << api::client::play::chunks_biomes::create(chunk);
+                            *self.assigned_player << api::packets::client_bound::play::chunks_biomes::create(chunk);
                         });
                 }
             }
@@ -317,7 +318,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
         static void notify_block_change(base_objects::entity& self, int64_t x, int64_t y, int64_t z, const base_objects::block& block) {
             if (self.assigned_player) {
                 if (self.world_syncing_data.chunk_processed(x, z))
-                    *self.assigned_player << api::client::play::block_update{
+                    *self.assigned_player << api::packets::client_bound::play::block_update{
                         .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                         .block = block.id
                     };
@@ -340,13 +341,13 @@ namespace copper_server::build_in_plugins::base::play_engine {
                                 block_id = block.id;
                             }
                         );
-                        *self.assigned_player << api::client::play::level_event{
-                            .event = api::client::play::level_event::event_id::block_break_and_sound,
+                        *self.assigned_player << api::packets::client_bound::play::level_event{
+                            .event = api::packets::client_bound::play::level_event::event_id::block_break_and_sound,
                             .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                             .data = block_id,
                             .disable_volume = false
                         };
-                        *self.assigned_player << api::client::play::block_update{
+                        *self.assigned_player << api::packets::client_bound::play::block_update{
                             .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                             .block = block.id
                         };
@@ -357,11 +358,11 @@ namespace copper_server::build_in_plugins::base::play_engine {
         static void notify_block_entity_change(base_objects::entity& self, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block_entity) {
             if (self.assigned_player) {
                 if (self.world_syncing_data.chunk_processed(x, z)) {
-                    *self.assigned_player << api::client::play::block_update{
+                    *self.assigned_player << api::packets::client_bound::play::block_update{
                         .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                         .block = block_entity.block.id
                     };
-                    *self.assigned_player << api::client::play::block_entity_data{
+                    *self.assigned_player << api::packets::client_bound::play::block_entity_data{
                         .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                         .type = block_entity.block.block_entity_id(),
                         .data = block_entity.data
@@ -386,13 +387,13 @@ namespace copper_server::build_in_plugins::base::play_engine {
                                 block_id = block.id;
                             }
                         );
-                        *self.assigned_player << api::client::play::level_event{
-                            .event = api::client::play::level_event::event_id::block_break_and_sound,
+                        *self.assigned_player << api::packets::client_bound::play::level_event{
+                            .event = api::packets::client_bound::play::level_event::event_id::block_break_and_sound,
                             .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                             .data = block_id,
                             .disable_volume = false
                         };
-                        *self.assigned_player << api::client::play::block_update{
+                        *self.assigned_player << api::packets::client_bound::play::block_update{
                             .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                             .block = block_entity.block.id
                         };
@@ -407,84 +408,84 @@ namespace copper_server::build_in_plugins::base::play_engine {
                         [x, y, z, &self](auto& it) mutable {
                             using T = std::decay_t<decltype(it)>;
                             if constexpr (std::is_same_v<T, base_objects::world::block_action::noteblock_activated>) {
-                                *self.assigned_player << api::client::play::block_event{
+                                *self.assigned_player << api::packets::client_bound::play::block_event{
                                     .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                                     .action_id = 0,
                                     .action_param = 0,
                                     .block = "minecraft:note_block"
                                 };
                             } else if constexpr (std::is_same_v<T, base_objects::world::block_action::piston_extend>) {
-                                *self.assigned_player << api::client::play::block_event{
+                                *self.assigned_player << api::packets::client_bound::play::block_event{
                                     .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                                     .action_id = 0,
                                     .action_param = (uint8_t)it.dir,
                                     .block = "minecraft:piston"
                                 };
                             } else if constexpr (std::is_same_v<T, base_objects::world::block_action::piston_retract>) {
-                                *self.assigned_player << api::client::play::block_event{
+                                *self.assigned_player << api::packets::client_bound::play::block_event{
                                     .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                                     .action_id = 1,
                                     .action_param = (uint8_t)it.dir,
                                     .block = "minecraft:piston"
                                 };
                             } else if constexpr (std::is_same_v<T, base_objects::world::block_action::piston_canceled>) {
-                                *self.assigned_player << api::client::play::block_event{
+                                *self.assigned_player << api::packets::client_bound::play::block_event{
                                     .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                                     .action_id = 2,
                                     .action_param = (uint8_t)it.dir,
                                     .block = "minecraft:piston"
                                 };
                             } else if constexpr (std::is_same_v<T, base_objects::world::block_action::chest_opened>) {
-                                *self.assigned_player << api::client::play::block_event{
+                                *self.assigned_player << api::packets::client_bound::play::block_event{
                                     .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                                     .action_id = 1,
                                     .action_param = (uint8_t)it.count,
                                     .block = "minecraft:chest"
                                 };
                             } else if constexpr (std::is_same_v<T, base_objects::world::block_action::reset_spawner>) {
-                                *self.assigned_player << api::client::play::block_event{
+                                *self.assigned_player << api::packets::client_bound::play::block_event{
                                     .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                                     .action_id = 1,
                                     .action_param = 0,
                                     .block = "minecraft:spawner"
                                 };
                             } else if constexpr (std::is_same_v<T, base_objects::world::block_action::end_gateway_activated>) {
-                                *self.assigned_player << api::client::play::block_event{
+                                *self.assigned_player << api::packets::client_bound::play::block_event{
                                     .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                                     .action_id = 1,
                                     .action_param = 0,
                                     .block = "minecraft:end_gateway"
                                 };
                             } else if constexpr (std::is_same_v<T, base_objects::world::block_action::shulker_box_closed>) {
-                                *self.assigned_player << api::client::play::block_event{
+                                *self.assigned_player << api::packets::client_bound::play::block_event{
                                     .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                                     .action_id = 0,
                                     .action_param = 0,
                                     .block = "minecraft:shulker_box"
                                 };
                             } else if constexpr (std::is_same_v<T, base_objects::world::block_action::shulker_box_opened>) {
-                                *self.assigned_player << api::client::play::block_event{
+                                *self.assigned_player << api::packets::client_bound::play::block_event{
                                     .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                                     .action_id = 0,
                                     .action_param = 1,
                                     .block = "minecraft:shulker_box"
                                 };
                             } else if constexpr (std::is_same_v<T, base_objects::world::block_action::shulker_box_opened_count>) {
-                                *self.assigned_player << api::client::play::block_event{
+                                *self.assigned_player << api::packets::client_bound::play::block_event{
                                     .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                                     .action_id = 1,
                                     .action_param = (uint8_t)it.count,
                                     .block = "minecraft:shulker_box"
                                 };
                             } else if constexpr (std::is_same_v<T, base_objects::world::block_action::bell_ring>) {
-                                *self.assigned_player << api::client::play::block_event{
+                                *self.assigned_player << api::packets::client_bound::play::block_event{
                                     .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                                     .action_id = 1,
                                     .action_param = (uint8_t)it.dir,
                                     .block = "minecraft:bell"
                                 };
                             } else if constexpr (std::is_same_v<T, base_objects::world::block_action::decorated_block_woble>) {
-                                *self.assigned_player << api::client::play::block_event{
+                                *self.assigned_player << api::packets::client_bound::play::block_event{
                                     .location = {(int32_t)x, (int32_t)y, (int32_t)z},
                                     .action_id = 1,
                                     .action_param = !it.successful,
@@ -503,7 +504,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
             //    if (self.world_syncing_data.chunk_in_bounds(x, z)) {
             //if (self.assigned_player->packets_state.chunk_batch_size > self.assigned_player->packets_state.chunks_sent) {
             //    ++self.assigned_player->packets_state.chunks_sent;
-            //        send_async(self.assigned_player, api::client::play::level_chunk_with_light::create(chunk, *self.current_world()));
+            //        send_async(self.assigned_player,  api::packets::client_bound::play::level_chunk_with_light::create(chunk, *self.current_world()));
             //        self.world_syncing_data.mark_chunk(x, z, true);
             //}
             //    }
@@ -516,7 +517,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                     if (self.assigned_player->is_active()) {
                         if (self.assigned_player->packets_state.chunk_batch_size > self.assigned_player->packets_state.chunks_sent) {
                             ++self.assigned_player->packets_state.chunks_sent;
-                            send_async(self.assigned_player, api::client::play::level_chunk_with_light::create(chunk, *self.current_world()));
+                            send_async(self.assigned_player, api::packets::client_bound::play::level_chunk_with_light::create(chunk, *self.current_world()));
                             self.world_syncing_data.mark_chunk(x, z, true);
                         }
                     }
@@ -528,7 +529,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
             if (self.assigned_player)
                 if (self.world_syncing_data.chunk_in_bounds(x, z))
                     if (self.world_syncing_data.chunk_processed(x, z))
-                        *self.assigned_player << api::client::play::light_update::create(chunk);
+                        *self.assigned_player << api::packets::client_bound::play::light_update::create(chunk);
         };
 
         static void notify_sub_chunk(base_objects::entity& self, int64_t x, [[maybe_unused]] int64_t y, int64_t z, [[maybe_unused]] const base_objects::world::sub_chunk_data& chunk) {
@@ -539,7 +540,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                             ++self.assigned_player->packets_state.chunks_sent;
                             self.current_world()->get_chunk_at(x, z, [&](auto& chunk) {
                                 if (self.assigned_player->is_active()) {
-                                    send_async(self.assigned_player, api::client::play::level_chunk_with_light::create(chunk, *self.current_world()));
+                                    send_async(self.assigned_player, api::packets::client_bound::play::level_chunk_with_light::create(chunk, *self.current_world()));
                                     self.world_syncing_data.mark_chunk(x, z, true);
                                 }
                             });
@@ -549,7 +550,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
             }
         };
 
-        static void notify_sub_chunk_blocks(base_objects::entity& self, int64_t x, [[maybe_unused]] int64_t y, int64_t z, [[maybe_unused]] const base_objects::world::sub_chunk_data& chunk) { //TODO use api::client::play::section_blocks_update
+        static void notify_sub_chunk_blocks(base_objects::entity& self, int64_t x, [[maybe_unused]] int64_t y, int64_t z, [[maybe_unused]] const base_objects::world::sub_chunk_data& chunk) { //TODO use  api::packets::client_bound::play::section_blocks_update
             if (self.assigned_player) {
                 if (self.world_syncing_data.chunk_in_bounds(x, z)) {
                     if (self.current_world()) {
@@ -558,7 +559,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                             self.current_world()
                                 ->get_chunk_at(x, z, [&](auto& chunk) {
                                     if (self.assigned_player->is_active()) {
-                                        send_async(self.assigned_player, api::client::play::level_chunk_with_light::create(chunk, *self.current_world()));
+                                        send_async(self.assigned_player, api::packets::client_bound::play::level_chunk_with_light::create(chunk, *self.current_world()));
                                         self.world_syncing_data.mark_chunk(x, z, true);
                                     }
                                 });
@@ -573,7 +574,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 if (self.world_syncing_data.chunk_in_bounds(x, z)) {
                     if (self.current_world()) {
                         self.current_world()->get_chunk_at(x, z, [&](auto& chunk) {
-                            *self.assigned_player << api::client::play::light_update::create(chunk);
+                            *self.assigned_player << api::packets::client_bound::play::light_update::create(chunk);
                         });
                     }
                 }
@@ -584,7 +585,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
             if (self.assigned_player) {
                 if (self.current_world()) {
                     auto& player_data = self.assigned_player->player_data;
-                    *self.assigned_player << api::client::play::respawn{
+                    *self.assigned_player << api::packets::client_bound::play::respawn{
                         .dimension_type = api::registers::dimensionTypes.at(new_world.get_world_type()).id,
                         .dimension_name = new_world.world_name,
                         .seed_hashed = new_world.get_hashed_seed(),
@@ -592,10 +593,10 @@ namespace copper_server::build_in_plugins::base::play_engine {
                         .previous_gamemode = (api::packets::optional_gamemode_e)player_data.gamemode,
                         .is_debug = new_world.world_generator_data.contains("debug") ? (bool)new_world.world_generator_data["debug"] : false,
                         .is_flat = new_world.world_generator_data.contains("flat") ? (bool)new_world.world_generator_data["flat"] : false,
-                        .death_location = player_data.last_death_location ? std::make_optional(api::client::play::respawn::death_location_t(player_data.last_death_location->world_id, {(int32_t)player_data.last_death_location->x, (int32_t)player_data.last_death_location->y, (int32_t)player_data.last_death_location->z})) : std::nullopt,
+                        .death_location = player_data.last_death_location ? std::make_optional(api::packets::client_bound::play::respawn::death_location_t(player_data.last_death_location->world_id, {(int32_t)player_data.last_death_location->x, (int32_t)player_data.last_death_location->y, (int32_t)player_data.last_death_location->z})) : std::nullopt,
                         .portal_cooldown = 0,
                         .sea_level = new_world.world_generator_data.contains("sea_level") ? (bool)new_world.world_generator_data["sea_level"] : 60,
-                        .flags = api::client::play::respawn::keep_attributes | api::client::play::respawn::keep_metadata
+                        .flags = api::packets::client_bound::play::respawn::keep_attributes | api::packets::client_bound::play::respawn::keep_metadata
                     };
                     self.world_syncing_data.flush_processing();
                 }
@@ -641,7 +642,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                                                 serialization_futs.push_back(
                                                     fast_task::future<void>::start(
                                                         [&, chunk]() {
-                                                            auto packet = send_async(self.assigned_player, api::client::play::level_chunk_with_light::create(**chunk, *self.current_world()));
+                                                            auto packet = send_async(self.assigned_player, api::packets::client_bound::play::level_chunk_with_light::create(**chunk, *self.current_world()));
                                                             fast_task::lock_guard guard(packet_futs_lock);
                                                             packet_futs.push_back(std::move(packet));
                                                         }
@@ -671,7 +672,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                     if (make_tick) {
                         if (!player.packets_state.is_play_fully_initialized) {
                             player.packets_state.is_play_fully_initialized = true;
-                            *self.assigned_player << api::client::play::player_position{
+                            *self.assigned_player << api::packets::client_bound::play::player_position{
                                 .x = self.position.x,
                                 .y = self.position.y,
                                 .z = self.position.z,
@@ -685,7 +686,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                         }
                         if (self.current_world())
                             if (!self.current_world()->ticking_frozen)
-                                *self.assigned_player << api::client::play::ticking_step{.steps = 1};
+                                *self.assigned_player << api::packets::client_bound::play::ticking_step{.steps = 1};
                     }
                 }
             }
@@ -745,7 +746,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         void OnInitialization(const PluginRegistrationPtr& _) override {
             base_objects::entity_data::register_entity_world_processor(make_processor(), "minecraft:player");
-            register_packet_processor([](api::packets::server_bound::play::chunk_batch_received&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](api::packets::server_bound::play::chunk_batch_received&& packet, base_objects::SharedClientData& client) {
                 client.packets_state.chunk_batch_size = (int32_t)std::ceil(packet.chunks_per_tick);
 
                 uint32_t expected = client.packets_state.await_ack_chunk_batches.load(); // Read the current value
@@ -755,7 +756,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 throw std::invalid_argument("There's no batches to acknowledge");
             });
 
-            register_packet_processor([](api::packets::server_bound::play::client_tick_end&&, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](api::packets::server_bound::play::client_tick_end&&, base_objects::SharedClientData& client) {
             });
         }
     };

@@ -6,9 +6,10 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/client.hpp>
 #include <src/api/command.hpp>
 #include <src/api/entity_id_map.hpp>
+#include <src/api/packets/client_bound/play.hpp>
+#include <src/api/packets/server_bound/play.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/entity.hpp>
@@ -22,13 +23,13 @@ namespace copper_server::build_in_plugins::base::play_engine {
         ~key_commands() noexcept {}
 
         void OnInitialization(const PluginRegistrationPtr& _) override {
-            register_packet_processor([]([[maybe_unused]] api::packets::server_bound::play::lock_difficulty&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::lock_difficulty&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 base_objects::command_context context(client);
                 context.apply_executor_data();
                 api::command::get_manager().execute_command("lock_difficulty " + std::string(packet.is_locked ? "true" : "false"), context);
             });
 
-            register_packet_processor([]([[maybe_unused]] api::packets::server_bound::play::change_difficulty&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::change_difficulty&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 base_objects::command_context context(client);
                 context.apply_executor_data();
                 std::string diff;
@@ -49,7 +50,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 api::command::get_manager().execute_command("difficulty " + diff, context);
             });
 
-            register_packet_processor([]([[maybe_unused]] api::packets::server_bound::play::change_gamemode&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::change_gamemode&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 base_objects::command_context context(client);
                 context.apply_executor_data();
                 std::string gam;
@@ -69,7 +70,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
                 api::command::get_manager().execute_command("gamemode " + gam, context);
             });
-            register_packet_processor([]([[maybe_unused]] api::packets::server_bound::play::teleport_to_entity&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::teleport_to_entity&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 if (client.player_data.gamemode == (uint8_t)api::packets::gamemode_e::spectator) {
                     auto entity = api::entity_id_map::get_entity(packet.uuid);
                     auto& client_entity = client.player_data.assigned_entity;

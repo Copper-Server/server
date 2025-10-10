@@ -354,19 +354,6 @@ namespace copper_server {
                 WriteValue<ArrayT>(it, data);
     }
 
-    static std::string UUID2String(const enbt::raw_uuid& uuid) {
-        char buf[36];
-        size_t index = 0;
-        for (size_t i = 0; i < 16; i++) {
-            if (i == 4 || i == 6 || i == 8 || i == 10)
-                buf[index++] = '-';
-            uint8_t tmp = uuid.data[i];
-            buf[index++] = "0123456789abcdef"[tmp >> 4];
-            buf[index++] = "0123456789abcdef"[tmp & 0x0F];
-        }
-        return std::string(buf, 36);
-    }
-
     static util::NBT ReadNBT(ArrayStream& data) {
         size_t readed = 0;
         util::NBT res(util::NBT::readNBT(data.data_read(), data.size_read(), readed));
