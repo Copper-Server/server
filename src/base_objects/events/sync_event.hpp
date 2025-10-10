@@ -36,22 +36,22 @@ namespace copper_server::base_objects::events {
         event_register_id join(function func, priority priority = priority::avg) {
             switch (priority) {
             case priority::high:
-                return addOne(heigh_priority, func);
+                return addOne(heigh_priority, std::move(func));
             case priority::upper_avg:
-                return addOne(upper_avg_priority, func);
+                return addOne(upper_avg_priority, std::move(func));
             case priority::avg:
-                return addOne(avg_priority, func);
+                return addOne(avg_priority, std::move(func));
             case priority::lower_avg:
-                return addOne(lower_avg_priority, func);
+                return addOne(lower_avg_priority, std::move(func));
             case priority::low:
-                return addOne(low_priority, func);
+                return addOne(low_priority, std::move(func));
             }
             throw std::runtime_error("Invalid priority");
         }
 
         template <class Fn>
         event_register_id join(Fn&& func, priority priority = priority::avg) {
-            return join(std::forward<Fn>(func) /*util::convertible_function<bool, Args...>::make_proxy_from_callable(std::forward<Fn>(func)), priority*/);
+            return join(function(std::forward<Fn>(func)) /*util::convertible_function<bool, Args...>::make_proxy_from_callable(std::forward<Fn>(func)), priority*/);
         }
 
         bool leave(event_register_id func, priority priority = priority::avg) {
@@ -131,7 +131,7 @@ namespace copper_server::base_objects::events {
             do {
                 id.id = dis(gen);
             } while (map.find(id.id) != map.end());
-            map[id.id] = func;
+            map[id.id] = std::move(func);
             return id;
         }
 
@@ -167,13 +167,13 @@ namespace copper_server::base_objects::events {
             do {
                 id.id = dis(gen);
             } while (regs.find(id.id) != regs.end());
-            regs[id.id] = func;
+            regs[id.id] = std::move(func);
             return id;
         }
 
         template <class Fn>
         event_register_id join(Fn&& func, priority _ = priority::avg) {
-            return join(std::forward<Fn>(func) /*util::convertible_function<void, Args...>::make_proxy_from_callable(std::forward<Fn>(func))*/);
+            return join(function(std::forward<Fn>(func)) /*util::convertible_function<void, Args...>::make_proxy_from_callable(std::forward<Fn>(func))*/);
         }
 
         bool leave(event_register_id func) {
@@ -228,14 +228,14 @@ namespace copper_server::base_objects::events {
                 throw std::runtime_error("The event already registered.");
             std::uniform_int_distribution<uint64_t> dis;
             event_register_id id{.id = dis(gen)};
-            fun = func;
+            fun = std::move(func);
             curr_id = id.id;
             return id;
         }
 
         template <class Fn>
         event_register_id join(Fn&& func, priority _ = priority::avg) {
-            return join(std::forward<Fn>(func) /*util::convertible_function<void, Args...>::make_proxy_from_callable(std::forward<Fn>(func))*/);
+            return join(function(std::forward<Fn>(func)) /*util::convertible_function<void, Args...>::make_proxy_from_callable(std::forward<Fn>(func))*/);
         }
 
         bool leave(event_register_id func) {

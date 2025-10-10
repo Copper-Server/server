@@ -305,13 +305,12 @@ namespace copper_server::api::packets {
         }
     }
 
-    template <class Ops, class Type>
-    bool decoder_make_process(base_objects::SharedClientData& context, Type&& value) {
+    template <class Ops, class T>
+    bool decoder_make_process(base_objects::SharedClientData& context, T&& value) {
         if (Ops::receive_viewer().notify(value, context))
             return false;
 
-        Ops::processor().notify(std::move(value), context);
-
+        using Type = std::decay_t<T>;
         if constexpr (std::is_base_of_v<switches_to::status, Type>)
             context << switches_to::status{};
         else if constexpr (std::is_base_of_v<switches_to::login, Type>)
@@ -320,6 +319,8 @@ namespace copper_server::api::packets {
             context << switches_to::config{};
         else if constexpr (std::is_base_of_v<switches_to::play, Type>)
             context << switches_to::play{};
+
+        Ops::processor().notify(std::move(value), context);
 
         return true;
     }

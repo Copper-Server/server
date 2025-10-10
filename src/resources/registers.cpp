@@ -1979,13 +1979,13 @@ namespace copper_server::resources {
                                 for (auto&& [in_pack_name, in_pack_decl] : in_pack_data)
                                     process_pack(in_pack_decl, in_pack_name, pack_id, false, send_via_network_body);
                             } else
-                                loaded_packs().push_back({.namespace_ = "minecraft", .id = pack_id, .version = "1.21.9"});
+                                loaded_packs().push_back({.namespace_ = "minecraft", .id = pack_id, .version = "1.21.10"});
                         }
                     }
                 }
             }
         }
-        loaded_packs().push_back({.namespace_ = namespace_, .id = id, .version = "1.21.9"});
+        loaded_packs().push_back({.namespace_ = namespace_, .id = id, .version = "1.21.10"});
     }
 
     void process_pack(boost::json::object& parsed, const std::string& namespace_, const std::string& id) {

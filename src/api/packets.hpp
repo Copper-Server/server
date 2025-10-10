@@ -23,7 +23,7 @@
 
 //this api allows users to handle clients and simulate them if needed, also supports serialization to string for debug purposes
 // note: because this api uses reflection under the hood, recommended to enable build cache to reduce the build time
-// the api implements the latest protocol implementation: 773(1.21.9)
+// the api implements the latest protocol implementation: 773(1.21.10)
 namespace copper_server::api::packets {
     using server_bound_ops = direction_ops<
         server_bound_handshake_ops,

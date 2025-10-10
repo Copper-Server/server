@@ -298,9 +298,7 @@ namespace copper_server::api::packets {
         template <class T>
         void serialize_packet(std::string& res, size_t spacing, const T& value) {
             using Type = std::decay_t<T>;
-            if constexpr (is_packet<Type>) {
-                serialize_entry(res, spacing, value);
-            } else if constexpr (std::is_base_of_v<compound_packet, Type>) {
+            if constexpr (std::is_base_of_v<compound_packet, Type>) {
                 res += std::string(reflect::get_pretty_type_name<Type>()) + "<compound> {";
                 bool processed = false;
                 reflect::for_each_field_with_name(value, [&res, spacing, &processed](auto& item, auto name) {
@@ -334,7 +332,8 @@ namespace copper_server::api::packets {
                     res += "\n" + std::string(spacing, ' ');
 
                 res += "}";
-            }
+            } else if constexpr (is_packet<Type>)
+                serialize_entry(res, spacing, value);
         }
     }
 }

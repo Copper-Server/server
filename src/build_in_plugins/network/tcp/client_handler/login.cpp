@@ -222,7 +222,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                 } else
                     client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 1").ToStr()}};
             });
-            api::packets::processor(*this, [](login_acknowledged&&, base_objects::SharedClientData&) {});
+            api::packets::processor(*this, [](login_acknowledged&&, base_objects::SharedClientData&) {}); //TODO add checks
         }
     };
 }

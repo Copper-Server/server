@@ -74,10 +74,6 @@ namespace copper_server::api::packets {
         };
     }
 
-    template <class type>
-    concept is_packet = requires(type& d) {
-        type::packet_id::value;
-    };
 
     struct SharedClientData;
     template <auto value>
@@ -166,7 +162,7 @@ namespace copper_server::api::packets {
         std::strong_ordering operator<=>(const disconnect_after& other) const = default;
     };
 
-    struct compound_packet {
+    struct compound_packet { //declares packet as compound the decoder doesn't work for this packet
         std::strong_ordering operator<=>(const compound_packet& other) const = default;
     };
 
@@ -174,6 +170,11 @@ namespace copper_server::api::packets {
     struct packet {
         using packet_id = ic<id>;
         std::strong_ordering operator<=>(const packet& other) const = default;
+    };
+
+    template <class type>
+    concept is_packet = requires(type& d) {
+        type::packet_id::value;
     };
 
     template <auto id>

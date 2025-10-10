@@ -21,6 +21,7 @@ namespace copper_server {
                 {"769", 769},
                 {"768", 768},
                 {"767", 767},
+                {"1.21.10", 773},
                 {"1.21.9", 773},
                 {"1.21.8", 772},
                 {"1.21.7", 771},
@@ -37,7 +38,7 @@ namespace copper_server {
 
         const char* protocol_to_java_name(int32_t id) {
             static const std::unordered_map<int32_t, const char*> map{
-                {773, "1.21.9"},
+                {773, "1.21.10"},
                 {772, "1.21.8"},
                 {771, "1.21.6"},
                 {770, "1.21.5"},

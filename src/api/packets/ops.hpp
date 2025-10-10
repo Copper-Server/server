@@ -146,7 +146,7 @@ namespace copper_server::api::packets {
 
             static auto once_init = []() {
                 (
-                    packet_ops<packets>::processor().join([](auto&& packet, base_objects::SharedClientData& client) {
+                    packet_ops<packets>::processor().join([](auto& packet, base_objects::SharedClientData& client) {
                         result.notify(std::move(packet), client);
                     }),
                     ...
@@ -259,7 +259,7 @@ namespace copper_server::api::packets {
 
             static auto once_init = []() {
                 (
-                    states::send_viewer().join([](auto& packet, base_objects::SharedClientData& client) {
+                    states::send_viewer().join([](auto&& packet, base_objects::SharedClientData& client) {
                         return result.notify(packet, client);
                     }),
                     ...
@@ -274,7 +274,7 @@ namespace copper_server::api::packets {
 
             static auto once_init = []() {
                 (
-                    states::post_send_viewer().join([](auto& packet, base_objects::SharedClientData& client) {
+                    states::post_send_viewer().join([](auto&& packet, base_objects::SharedClientData& client) {
                         result.notify(packet, client);
                     }),
                     ...
@@ -290,7 +290,7 @@ namespace copper_server::api::packets {
 
             static auto once_init = []() {
                 (
-                    states::receive_viewer().join([](auto& packet, base_objects::SharedClientData& client) {
+                    states::receive_viewer().join([](auto&& packet, base_objects::SharedClientData& client) {
                         return result.notify(packet, client);
                     }),
                     ...
@@ -430,7 +430,7 @@ namespace copper_server::api::packets {
 
             static auto once_init = []() {
                 (
-                    directions::send_viewer().join([](auto& packet, base_objects::SharedClientData& client) {
+                    directions::send_viewer().join([](auto&& packet, base_objects::SharedClientData& client) {
                         return result.notify(packet, client);
                     }),
                     ...
@@ -445,7 +445,7 @@ namespace copper_server::api::packets {
 
             static auto once_init = []() {
                 (
-                    directions::post_send_viewer().join([](auto& packet, base_objects::SharedClientData& client) {
+                    directions::post_send_viewer().join([](auto&& packet, base_objects::SharedClientData& client) {
                         result.notify(packet, client);
                     }),
                     ...
@@ -461,7 +461,7 @@ namespace copper_server::api::packets {
 
             static auto once_init = []() {
                 (
-                    directions::receive_viewer().join([](auto& packet, base_objects::SharedClientData& client) {
+                    directions::receive_viewer().join([](auto&& packet, base_objects::SharedClientData& client) {
                         return result.notify(packet, client);
                     }),
                     ...

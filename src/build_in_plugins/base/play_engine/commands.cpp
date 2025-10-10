@@ -26,7 +26,6 @@ namespace copper_server::build_in_plugins::base::play_engine {
         ~commands() noexcept {}
 
         void OnInitialization(const PluginRegistrationPtr& _) override {
-            log::info("Loading");
             api::packets::processor(*this, [](api::packets::server_bound::play::client_command&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 if (packet.action_id == api::packets::server_bound::play::client_command::action_id_e::perform_respawn) {
                     //TODO client <<  api::packets::client_bound::play::respawn{};

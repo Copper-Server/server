@@ -145,7 +145,6 @@ namespace copper_server::api::packets::client_bound::config {
 
 namespace copper_server::api::packets {
     extern template packet_ops<client_bound::config::cookie_request>;
-    extern template packet_ops<client_bound::config::cookie_request>;
     extern template packet_ops<client_bound::config::custom_payload>;
     extern template packet_ops<client_bound::config::disconnect>;
     extern template packet_ops<client_bound::config::finish_configuration>;

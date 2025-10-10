@@ -518,14 +518,7 @@ namespace copper_server::api::packets {
     template <class T>
     void serialize_packet(base_objects::network::response& res, base_objects::SharedClientData& context, T& value) {
         using Type = std::decay_t<T>;
-        if constexpr (is_packet<Type>) {
-            base_objects::network::response::item it;
-            it.write_id(Type::packet_id::value);
-            serialize_entry(it, context, value);
-            res += it;
-            if constexpr (std::is_base_of_v<compound_packet, disconnect_after>)
-                res.do_disconnect_after_send = true;
-        } else if constexpr (std::is_base_of_v<compound_packet, Type>) {
+        if constexpr (std::is_base_of_v<compound_packet, Type>) {
             reflect::for_each_field(value, [&res, &context](auto& item) {
                 using I = std::decay_t<decltype(item)>;
                 if constexpr (is_packet<I>) {
@@ -537,6 +530,15 @@ namespace copper_server::api::packets {
                         serialize_packet(res, context, it);
                 }
             });
+            if constexpr (std::is_base_of_v<disconnect_after, Type>)
+                res.do_disconnect_after_send = true;
+        } else if constexpr (is_packet<Type>) {
+            base_objects::network::response::item it;
+            it.write_id(Type::packet_id::value);
+            serialize_entry(it, context, value);
+            res += it;
+            if constexpr (std::is_base_of_v<disconnect_after, Type>)
+                res.do_disconnect_after_send = true;
         }
     }
 
@@ -549,8 +551,9 @@ namespace copper_server::api::packets {
         }
     }
 
-    template <class Ops, class Type>
-    bool make_send(base_objects::SharedClientData& context, Type&& value) {
+    template <class Ops, class T>
+    bool make_send(base_objects::SharedClientData& context, T&& value) {
+        using Type = std::decay_t<T>;
         if (!context.is_active())
             return false;
         make_preprocess(context, value);
@@ -575,7 +578,6 @@ namespace copper_server::api::packets {
         return true;
     }
 
-    
 
     template <class Ops, class Type>
     base_objects::network::response make_encode(base_objects::SharedClientData& context, Type&& value) {
