@@ -17,6 +17,7 @@
         "zlib",
         "cpptrace",
         "lionkor-commandline",
+        "concurrentqueue",
         {
             "name": "liburing",
             "platform": "linux"

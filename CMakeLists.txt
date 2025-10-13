@@ -61,6 +61,7 @@ find_package(Boost REQUIRED COMPONENTS context json bimap iostreams)
 find_package(ZLIB REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(utf8cpp CONFIG REQUIRED)
+find_package(concurrentqueue CONFIG REQUIRED)
 
 add_subdirectory("library/fast_task")
 add_subdirectory("library/commandline")
@@ -74,7 +75,7 @@ FILE(GLOB_RECURSE SRCFILES CONFIGURE_DEPENDS
 )
 add_executable(CopperServer src/main.cpp)
 target_sources(CopperServer PRIVATE ${SRCFILES} ${RESOURCE_FILES_build})
-include_directories(${Boost_INCLUDE_DIRS} ${CC_INCLUDE_DIR} ${ZLIB_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${utf8cpp_INCLUDE_DIRS})
+include_directories(${Boost_INCLUDE_DIRS} ${CC_INCLUDE_DIR} ${ZLIB_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${utf8cpp_INCLUDE_DIRS} ${concurrentqueue_INCLUDE_DIRS})
 
 IF(MSVC)
   target_compile_options(CopperServer PRIVATE /utf-8)

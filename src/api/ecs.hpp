@@ -49,8 +49,7 @@ namespace copper_server::api::ecs {
     struct entity;
 
     template <class T>
-    class mutable_component {
-    public:
+    struct mutable_component {
         // Rule of 5: This object is a temporary handle, it should not be copied.
         // Moving is okay, as it transfers the responsibility of marking dirty.
         mutable_component(const mutable_component&) = delete;
@@ -105,44 +104,30 @@ namespace copper_server::api::ecs {
         uint32_t generation;
 
         template <class component>
-        std::optional<mutable_component<component>> try_modify() {
+        [[nodiscard]] std::optional<mutable_component<component>> try_modify() {
             void* comp_ptr = detail::get_entity_component(id, generation, detail::get_component_id<component>());
             if (comp_ptr)
                 return mutable_component(static_cast<component*>(comp_ptr), this);
             return std::nullopt;
         }
 
-        template <class component, class FN>
-        void try_modify(FN&& callback) {
-            auto res = try_modify<component>();
-            if (res)
-                callback(*res);
-        }
-
         template <class component>
-        mutable_component<component> modify() {
+        [[nodiscard]] mutable_component<component> modify() {
             auto res = try_modify<component>();
             assert(bool(res) && "Component requested via modify() does not exist on this entity!");
             return *res;
         }
 
-        template <class component, class FN>
-        void try_get(FN&& callback) const {
-            auto res = try_get<component>();
-            if (res)
-                callback(*res);
-        }
-
         template <class component>
-        const component* try_get() const {
+        [[nodiscard]] const component* try_get() const {
             return static_cast<const component*>(detail::get_entity_component(id, generation, detail::get_component_id<component>()));
         }
 
         template <class component>
-        const component& get() const {
+        [[nodiscard]] const component& get() const {
             auto res = try_get<component>();
-            assert(comp_ptr != nullptr && "Component requested via get() does not exist on this entity!");
-            return *comp_ptr;
+            assert(res != nullptr && "Component requested via get() does not exist on this entity!");
+            return *res;
         }
 
         //the components changes would not be accessible util next tick, all changes buffered
@@ -154,13 +139,16 @@ namespace copper_server::api::ecs {
         //the components changes would not be accessible util next tick, all changes buffered
         template <class component>
         void set(component&& move) {
-            detail::queue_set_entity_component(id, generation, detail::get_component_id<component>(), &move);
+            queue_set_entity_component(id, generation, detail::get_component_id<component>(), &move);
+            //this is safe, the internal implementation moves to heap
         }
 
+        //the components changes would not be accessible util next tick, all changes buffered
         template <class component>
         void set(const component& copy) {
             component tmp(copy); //would be moved to internal cache
-            detail::queue_set_entity_component(id, generation, detail::get_component_id<component>(), &tmp);
+            queue_set_entity_component(id, generation, detail::get_component_id<component>(), &tmp);
+            //this is safe, the internal implementation moves to heap
         }
 
         //the components changes would not be accessible util next tick, all changes cached
@@ -170,7 +158,7 @@ namespace copper_server::api::ecs {
         }
 
         template <class component>
-        bool has() const {
+        [[nodiscard]] bool has() const {
             return detail::has_entity_component(id, generation, detail::get_component_id<component>());
         }
 
@@ -180,7 +168,7 @@ namespace copper_server::api::ecs {
 
     private:
         template <class T>
-        friend class mutable_component;
+        friend struct mutable_component;
 
         void mark_dirty_impl(component_id comp_id) {
             detail::queue_mark_dirty(id, generation, comp_id);
@@ -194,29 +182,29 @@ namespace copper_server::api::ecs {
         query(int32_t world_id) : id(world_id) {}
 
         template <class... without_components>
-        query<params..., detail::query_without<without_components...>> without() {
+        [[nodiscard]] query<params..., detail::query_without<without_components...>> without() {
             return query<params..., detail::query_without<without_components...>>{id};
         }
 
         template <class... reads_components>
-        query<params..., detail::query_reads<reads_components...>> reads() {
+        [[nodiscard]] query<params..., detail::query_reads<reads_components...>> reads() {
             return query<params..., detail::query_reads<reads_components...>>{id};
         }
 
         template <class... writes_components>
-        query<params..., detail::query_writes<writes_components...>> writes() {
+        [[nodiscard]] query<params..., detail::query_writes<writes_components...>> writes() {
             return query<params..., detail::query_writes<writes_components...>>{id};
         }
 
         template <class... with_dirty_components>
-        query<params..., detail::query_with_dirty<with_dirty_components...>> with_dirty() {
+        [[nodiscard]] query<params..., detail::query_with_dirty<with_dirty_components...>> with_dirty() {
             return query<params..., detail::query_with_dirty<with_dirty_components...>>{id};
         }
 
         //this operation marks all written components as dirty,
         // this only viable when the query definitely modifies ALL written items in query
         // using mindlessly would lead to system overload with too much unnecessary updates
-        auto request_implicit_marking() {
+        [[nodiscard]] auto request_implicit_marking() {
             struct implicit_marking_struct {
                 implicit_marking_struct(const query<params...>& q) : internal(q) {}
 
@@ -235,11 +223,11 @@ namespace copper_server::api::ecs {
             return implicit_marking_struct(*this);
         }
 
-        auto begin() {
+        [[nodiscard]] auto begin() {
             return begin_impl<false>();
         }
 
-        auto end() {
+        [[nodiscard]] auto end() {
             return decltype(begin())();
         }
 
@@ -302,12 +290,12 @@ namespace copper_server::api::ecs {
         fast_task::future_ptr<bool> transfer_entity_async(entity& entity);              //the old world local registry received from entity's internal data
         fast_task::future_ptr<entity> create_entity_async(const entity_recipe& recipe); //the recipe should be static or live longer than future_ptr
 
-        bool register_entity(entity& entity);
-        bool unregister_entity(entity& entity);
-        bool transfer_entity(entity& entity);
-        entity create_entity(const entity_recipe& recipe);
+        [[nodiscard]] bool register_entity_and_block(entity& entity);
+        [[nodiscard]] bool unregister_entity_and_block(entity& entity);
+        [[nodiscard]] bool transfer_entity_and_block(entity& entity);
+        [[nodiscard]] entity create_entity_and_wait(const entity_recipe& recipe);
 
-        query<> view() {
+        [[nodiscard]] query<> view() {
             return query<>{id};
         }
 
@@ -316,7 +304,7 @@ namespace copper_server::api::ecs {
     };
 
     namespace global_registry {
-        query<> view() {
+        [[nodiscard]] query<> view() {
             return query<>{};
         }
 
@@ -327,7 +315,7 @@ namespace copper_server::api::ecs {
         }
 
         fast_task::future_ptr<entity> create_entity_async(const entity_recipe& recipe); //the recipe should be static or live longer than future_ptr
-        entity create_entity(const entity_recipe& recipe);
+        [[nodiscard]] entity create_entity_and_wait(const entity_recipe& recipe);
     }
 
     struct system_interface {
@@ -358,8 +346,8 @@ namespace copper_server::api::ecs {
 
     private:
         void add_system_impl(std::unique_ptr<system_interface> system, detail::system_info& info);
-        struct data_t;
-        data_t* data;
+        struct scheduler_data;
+        scheduler_data* data;
     };
 }
 
