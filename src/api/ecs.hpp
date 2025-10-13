@@ -8,418 +8,307 @@
  */
 #ifndef SRC_API_ECS
 #define SRC_API_ECS
-#include <atomic>
-#include <cstdint>
-#include <functional>
-#include <library/fast_task.hpp>
-#include <type_traits>
-#include <vector>
+#include <src/api/detail/ecs.hpp>
 
 //entity component system
 namespace copper_server::api::ecs {
-    using component_id = uint32_t;
-
-    template <class... components>
-    struct dependent {};
-
-    namespace detail {
-        struct component_type_info {
-            using constructor_fn = void (*)(void* memory);
-            using destructor_fn = void (*)(void* memory);
-            using move_constructor_fn = void (*)(void* destination, void* source);
-            using move_fn = void (*)(void* destination, void* source);
-
-            size_t size = 0;
-            size_t alignment = 0;
-            constructor_fn construct = nullptr;
-            move_constructor_fn move_construct = nullptr;
-            destructor_fn destroy = nullptr;
-            move_fn move = nullptr;
-        };
-
-        struct system_info {
-            std::type_info info;
-            std::vector<component_id> write_dependencies; // Components the system writes
-            std::vector<component_id> read_dependencies;  // Components the system only reads
-        };
-
-        extern std::atomic<component_id> next_component_id;
-        extern std::vector<component_type_info> component_info_registry;
-        extern fast_task::mutex registry_mutex;
-
-        template <class T>
-            requires std::is_constructible_v<T> && std::is_nothrow_destructible_v<T> && std::is_nothrow_move_constructible_v<T>
-        component_id get_component_id() {
-            static const component_id id = next_component_id++;
-            if (id >= component_info_registry.size() || component_info_registry[id].size == 0) {
-                std::lock_guard<std::mutex> lock(registry_mutex);
-
-                if (id >= component_info_registry.size())
-                    component_info_registry.resize(id + 1);
-
-                if (component_info_registry[id].size == 0) {
-                    component_info_registry[id] = {
-                        .size = sizeof(T),
-                        .alignment = alignof(T),
-                        .construct = [](void* mem) { new (mem) T(); },
-                        .move_construct = [](void* dest, void* src) { new (dest) T(std::move(*static_cast<T*>(src))); },
-                        .destroy = [](void* mem) { static_cast<T*>(mem)->~T(); },
-                        .move = [](void* dest, void* src) {
-                            new (dest) T(std::move(*static_cast<T*>(src)));
-                            static_cast<T*>(src)->~T(); //
-                        }
-                    };
-                }
-            }
-            return id;
-        }
-
-        template <class T>
-        struct extract_dependent_types {
-            static auto create() {
-                return std::vector<component_id>{};
-            }
-        };
-
-        template <class... components>
-        struct extract_dependent_types<dependent<components...>> {
-            static auto create() {
-                return std::vector<component_id>{get_component_id<components>()...};
-            }
-        };
-
-        template <class T>
-        concept has_write_depends = requires {
-            typename T::writes;
-        };
-
-        template <class T>
-        struct write_depends_extract {
-            using create = extract_dependent_types<void>;
-        };
-
-        template <has_write_depends T>
-        struct write_depends_extract {
-            using create = extract_dependent_types<typename T::writes>;
-        };
-
-        template <class T>
-        concept has_read_depends = requires {
-            typename T::reads;
-        };
-
-        template <class T>
-        struct read_depends_extract {
-            using create = extract_dependent_types<void>;
-        };
-
-        template <has_read_depends T>
-        struct read_depends_extract {
-            using create = extract_dependent_types<typename T::reads>;
-        };
-
-        template <class T>
-        const system_info& get_system_info() {
-            static const system_info info = {
-                .info = typeid(T),
-                .write_dependencies = write_depends_extract<T>::create::create(),
-                .read_dependencies = read_depends_extract<T>::create::create(),
-            };
-            return info;
-        }
-
-        void* get_entity_component(int32_t id, uint32_t generation, component_id component_id);
-        void queue_set_entity_component(int32_t id, uint32_t generation, component_id component_id, void* component);
-        void queue_remove_entity_component(int32_t id, uint32_t generation, component_id component_id);
-        void queue_destroy_entity(int32_t id, uint32_t generation);
-        bool has_entity_component(int32_t id, uint32_t generation, component_id component_id);
-
-        struct iteration_handle {
-            struct iteration_data;
-            iteration_data* data = nullptr; //if data == nullptr the iteration reached the end
-            iteration_handle() = default;
-            iteration_handle(const iteration_handle&) = delete;
-
-            iteration_handle(iteration_handle&& other) noexcept : data(other.data) {
-                other.data = nullptr;
-            }
-
-            iteration_handle& operator=(const iteration_handle&) = delete;
-
-            iteration_handle& operator=(iteration_handle&& other) noexcept {
-                data = other.data;
-                other.data = nullptr;
-            }
-
-            ~iteration_handle();
-
-            std::pair<size_t, void**> next(); //no op if data == nullptr, returns the chunk
-        };
-
-        iteration_handle iterate_components(int32_t world_id, component_id* components, size_t components_size, component_id* without_components, size_t without_components_size);
-        iteration_handle iterate_components_global(component_id* components, size_t components_size, component_id* without_components, size_t without_components_size);
-    }
-
     struct entity_recipe {
-        entity_recipe& with(entity_recipe& id) {
-            if (!_is_frozen)
-                component_ids.insert(component_ids.end(), id.component_ids.begin(), id.component_ids.end());
+        entity_recipe& with(const entity_recipe& recipe) {
+            if (!is_frozen_) {
+                component_ids.reserve(component_ids.size() + recipe.component_ids.size());
+                component_ids.insert(component_ids.end(), recipe.component_ids.begin(), recipe.component_ids.end());
+            }
             return *this;
         }
 
         entity_recipe& with(component_id id) {
-            if (!_is_frozen)
+            if (!is_frozen_)
                 component_ids.push_back(id);
             return *this;
         }
 
         template <class component>
         entity_recipe& with() {
-            if (!_is_frozen)
+            if (!is_frozen_)
                 component_ids.push_back(detail::get_component_id<component>());
             return *this;
         }
 
         void freeze();
-        bool is_frozen() const{
-            return _is_frozen;
+
+        bool is_frozen() const {
+            return is_frozen_;
         }
+
         const std::vector<component_id>& get_ids() const;
 
     private:
         std::vector<component_id> component_ids;
-        bool _is_frozen = false;
+        bool is_frozen_ = false;
+    };
+    struct entity;
+
+    template <class T>
+    class mutable_component {
+    public:
+        // Rule of 5: This object is a temporary handle, it should not be copied.
+        // Moving is okay, as it transfers the responsibility of marking dirty.
+        mutable_component(const mutable_component&) = delete;
+        mutable_component& operator=(const mutable_component&) = delete;
+
+        mutable_component(mutable_component&& other) noexcept
+            : component_ptr_(other.component_ptr_), owner_entity_(other.owner_entity_) {
+            other.component_ptr_ = nullptr;
+        }
+
+        mutable_component& operator=(mutable_component&& other) noexcept {
+            if (this != &other) {
+                mark_dirty_if_valid();
+                component_ptr_ = other.component_ptr_;
+                owner_entity_ = other.owner_entity_;
+                other.component_ptr_ = nullptr;
+            }
+            return *this;
+        }
+
+        ~mutable_component() {
+            mark_dirty_if_valid();
+        }
+
+        T* operator->() const {
+            return component_ptr_;
+        }
+
+        T& operator*() const {
+            return *component_ptr_;
+        }
+
+    private:
+        // Only the entity can create this object.
+        friend struct entity;
+
+        mutable_component(T* ptr, entity* owner)
+            : component_ptr_(ptr), owner_entity_(owner) {}
+
+        void mark_dirty_if_valid() {
+            if (component_ptr_)
+                // This calls a new method on entity that we need to add.
+                owner_entity_->mark_dirty_impl(detail::get_component_id<T>());
+        }
+
+        T* component_ptr_;
+        entity* owner_entity_;
     };
 
     struct entity {
         int32_t id;
         uint32_t generation;
 
-        //the components would not be accessible util next tick
+        template <class component>
+        std::optional<mutable_component<component>> try_modify() {
+            void* comp_ptr = detail::get_entity_component(id, generation, detail::get_component_id<component>());
+            if (comp_ptr)
+                return mutable_component(static_cast<component*>(comp_ptr), this);
+            return std::nullopt;
+        }
+
+        template <class component, class FN>
+        void try_modify(FN&& callback) {
+            auto res = try_modify<component>();
+            if (res)
+                callback(*res);
+        }
+
+        template <class component>
+        mutable_component<component> modify() {
+            auto res = try_modify<component>();
+            assert(bool(res) && "Component requested via modify() does not exist on this entity!");
+            return *res;
+        }
+
+        template <class component, class FN>
+        void try_get(FN&& callback) const {
+            auto res = try_get<component>();
+            if (res)
+                callback(*res);
+        }
+
+        template <class component>
+        const component* try_get() const {
+            return static_cast<const component*>(detail::get_entity_component(id, generation, detail::get_component_id<component>()));
+        }
+
+        template <class component>
+        const component& get() const {
+            auto res = try_get<component>();
+            assert(comp_ptr != nullptr && "Component requested via get() does not exist on this entity!");
+            return *comp_ptr;
+        }
+
+        //the components changes would not be accessible util next tick, all changes buffered
         template <class component, class... args>
         void add(args&&... args) {
             set(component(std::forward<args>(args)...));
         }
 
+        //the components changes would not be accessible util next tick, all changes buffered
         template <class component>
-        component& get() {
-            return *static_cast<component*>(detail::get_entity_component(id, generation, detail::get_component_id<component>()));
+        void set(component&& move) {
+            detail::queue_set_entity_component(id, generation, detail::get_component_id<component>(), &move);
         }
 
         template <class component>
-        const component& get() const {
-            return *static_cast<const component*>(detail::get_entity_component(id, generation, detail::get_component_id<component>()));
+        void set(const component& copy) {
+            component tmp(copy); //would be moved to internal cache
+            detail::queue_set_entity_component(id, generation, detail::get_component_id<component>(), &tmp);
         }
 
-        //the components would not be accessible and changed util next tick
-        template <class component>
-        void set(component&& component) {
-            detail::queue_set_entity_component(id, generation, detail::get_component_id<component>(), &component);
-        }
-
-        //the components would be accessible util next tick
+        //the components changes would not be accessible util next tick, all changes cached
         template <class component>
         void remove() {
             detail::queue_remove_entity_component(id, generation, detail::get_component_id<component>());
         }
 
         template <class component>
-        bool has() {
+        bool has() const {
             return detail::has_entity_component(id, generation, detail::get_component_id<component>());
         }
 
         void destroy() {
             detail::queue_destroy_entity(id, generation);
         }
-    };
 
-    template <class... components>
-    struct query_iterator {
-        std::tuple<components*...> component_arrays;
-        size_t current_index_in_chunk = 0;
-        size_t max_chunk_size = 0;
-        detail::iteration_handle handle;
+    private:
+        template <class T>
+        friend class mutable_component;
 
-
-        using iterator_category = std::input_iterator_tag;
-        using difference_type = std::ptrdiff_t;
-        using value_type = std::tuple<components*...>;
-        using pointer = value_type*;
-        using reference = value_type&;
-
-        query_iterator() = default;
-
-        query_iterator(detail::iteration_handle&& handle) : handle(std::move(handle)) {
-            operator++();
-        }
-
-        query_iterator(const query_iterator&) = delete;
-        query_iterator& operator=(const query_iterator&) = delete;
-
-        query_iterator(query_iterator&& other) noexcept : handle(std::move(other.handle)), component_arrays(std::move(other.component_arrays)), current_index_in_chunk(other.current_index_in_chunk), max_chunk_size(other.max_chunk_size) {
-            other.current_index_in_chunk = 0;
-            other.max_chunk_size = 0;
-        }
-
-        query_iterator& operator=(query_iterator&& other) noexcept {
-            handle = std::move(other.handle);
-            component_arrays = std::move(other.component_arrays);
-            current_index_in_chunk = other.current_index_in_chunk;
-            max_chunk_size = other.max_chunk_size;
-            other.current_index_in_chunk = 0;
-            other.max_chunk_size = 0;
-        }
-
-        query_iterator& operator++() {
-            if (current_index_in_chunk < max_chunk_size)
-                current_index_in_chunk++;
-            else {
-                auto [chunk_size, chunk] = handle.next();
-                max_chunk_size = chunk_size;
-                current_index_in_chunk = 0;
-                [chunk, this]<size_t... Is>(std::index_sequence<Is...>) {
-                    reinterpret_cast<void*&>(std::get<Is>(component_arrays)) = chunk[Is];
-                }(std::make_index_sequence<sizeof...(components)>{});
-            }
-            return *this;
-        }
-
-        bool operator==(const query_iterator& other) const {
-            return handle.data == other.handle.data;
-        }
-
-        bool operator!=(const query_iterator& other) const {
-            return !(*this == other);
-        }
-
-        std::tuple<components*...> operator*() {
-            return std::make_tuple((std::get<components*>(component_arrays) + current_index_in_chunk)...);
+        void mark_dirty_impl(component_id comp_id) {
+            detail::queue_mark_dirty(id, generation, comp_id);
         }
     };
 
-    template <class... components>
+    template <class... params>
     struct query {
-        using iterator = query_iterator<components...>;
+        query() : id() {}
+
+        query(int32_t world_id) : id(world_id) {}
 
         template <class... without_components>
-        struct without_query {
-            without_query(int32_t world_id) : world_id(world_id) {}
+        query<params..., detail::query_without<without_components...>> without() {
+            return query<params..., detail::query_without<without_components...>>{id};
+        }
 
-            iterator begin() {
-                static component_id _components[] = {detail::get_component_id<components>()...};
-                static component_id _without_components[] = {detail::get_component_id<without_components>()...};
+        template <class... reads_components>
+        query<params..., detail::query_reads<reads_components...>> reads() {
+            return query<params..., detail::query_reads<reads_components...>>{id};
+        }
 
-                return iterator{
-                    detail::iterate_components(
-                        id,
-                        _components,
-                        sizeof...(components),
-                        _without_components,
-                        sizeof...(without_components)
-                    )
-                };
-            }
+        template <class... writes_components>
+        query<params..., detail::query_writes<writes_components...>> writes() {
+            return query<params..., detail::query_writes<writes_components...>>{id};
+        }
 
-            iterator end() {
-                return iterator{detail::iteration_handle{}};
-            }
+        template <class... with_dirty_components>
+        query<params..., detail::query_with_dirty<with_dirty_components...>> with_dirty() {
+            return query<params..., detail::query_with_dirty<with_dirty_components...>>{id};
+        }
 
-        private:
-            int32_t world_id;
-        };
+        //this operation marks all written components as dirty,
+        // this only viable when the query definitely modifies ALL written items in query
+        // using mindlessly would lead to system overload with too much unnecessary updates
+        auto request_implicit_marking() {
+            struct implicit_marking_struct {
+                implicit_marking_struct(const query<params...>& q) : internal(q) {}
 
-        query(int32_t world_id) : world_id(world_id) {}
+                auto begin() {
+                    return internal.template begin_impl<true>();
+                }
 
-        iterator begin() {
-            static component_id _components[] = {detail::get_component_id<components>()...};
+                auto end() {
+                    return decltype(begin())();
+                }
 
-            return iterator{
-                detail::iterate_components(
-                    world_id,
-                    _components,
-                    sizeof...(components),
-                    nullptr,
-                    0
-                )
+            private:
+                query<params...> internal;
             };
+
+            return implicit_marking_struct(*this);
         }
 
-        iterator end() {
-            return iterator{detail::iteration_handle{}};
+        auto begin() {
+            return begin_impl<false>();
         }
 
-        template <class... without_components>
-        without_query<without_components...> without() {
-            return without_query<without_components...>{};
+        auto end() {
+            return decltype(begin())();
         }
 
     private:
-        int32_t world_id;
-    };
+        template <bool explicit_marking>
+        auto begin_impl() {
+            using traits = detail::query_traits<params...>;
+            const auto& all_ids = traits::get_all_component_ids();
+            const auto& without_ids = traits::get_without_ids();
+            const auto& dirty_ids = traits::get_dirty_ids();
 
-    template <class... components>
-    struct global_query {
-        using iterator = query_iterator<components...>;
+            const std::vector<component_id>* writes_ids_ptr;
+            if constexpr (implicit_marking_enabled) {
+                static const std::vector<component_id> empty_vec;
+                writes_ids_ptr = &empty_vec;
+            } else
+                writes_ids_ptr = &traits::get_writes_ids();
+            const auto& writes_ids = *writes_ids_ptr;
 
-        template <class... without_components>
-        struct without_query {
-            without_query() = default;
+            detail::iteration_handle handle
+                = id
+                      ? detail::iterate_components(
+                            *id,
+                            all_ids.data(),
+                            all_ids.size(),
+                            without_ids.data(),
+                            without_ids.size(),
+                            writes_ids.data(),
+                            writes_ids.size(),
+                            dirty_ids.data(),
+                            dirty_ids.size()
+                        )
+                      : detail::iterate_components_global(
+                            all_ids.data(),
+                            all_ids.size(),
+                            without_ids.data(),
+                            without_ids.size(),
+                            writes_ids.data(),
+                            writes_ids.size(),
+                            dirty_ids.data(),
+                            dirty_ids.size()
+                        );
 
-            iterator begin() {
-                static component_id _components[] = {detail::get_component_id<components>()...};
-                static component_id _without_components[] = {detail::get_component_id<without_components>()...};
-
-                return iterator{
-                    detail::iterate_components_global(
-                        _components,
-                        sizeof...(components),
-                        _without_components,
-                        sizeof...(without_components)
-                    )
-                };
-            }
-
-            iterator end() {
-                return iterator{detail::iteration_handle{}};
-            }
-        };
-
-        query() = default;
-
-        iterator begin() {
-            static component_id _components[] = {detail::get_component_id<components>()...};
-
-            return iterator{
-                detail::iterate_components_global(
-                    _components,
-                    sizeof...(components),
-                    nullptr,
-                    0
-                )
-            };
+            return typename detail::apply_tuple_to_iter<
+                detail::query_iterator,
+                implicit_marking_enabled,
+                detail::has_dirty_filter_v<params...>,
+                typename util::apply_tuple_to<detail::dirty_marker, typename traits::WriteTypes>::type,
+                typename traits::IteratorTuple>::type(std::move(handle));
         }
 
-        iterator end() {
-            return iterator{detail::iteration_handle{}};
-        }
-
-        template <class... without_components>
-        without_query<without_components...> without() {
-            return without_query<without_components...>{};
-        }
+        std::optional<int32_t> id;
     };
 
     struct world_local_registry {
         world_local_registry(int32_t id) : id(id) {}
 
-        fast_task::future_ptr<bool> register_entity(entity& entity);
-        fast_task::future_ptr<bool> unregister_entity(entity& entity);
-        fast_task::future_ptr<bool> transfer_entity(entity& entity); //the old world local registry received from entity's internal data
-        fast_task::future_ptr<entity> create_entity(entity_recipe& recipe);
+        fast_task::future_ptr<bool> register_entity_async(entity& entity);
+        fast_task::future_ptr<bool> unregister_entity_async(entity& entity);
+        fast_task::future_ptr<bool> transfer_entity_async(entity& entity);              //the old world local registry received from entity's internal data
+        fast_task::future_ptr<entity> create_entity_async(const entity_recipe& recipe); //the recipe should be static or live longer than future_ptr
 
-        template <class... components>
-        query<components...> view() {
-            return query<components...>{id};
+        bool register_entity(entity& entity);
+        bool unregister_entity(entity& entity);
+        bool transfer_entity(entity& entity);
+        entity create_entity(const entity_recipe& recipe);
+
+        query<> view() {
+            return query<>{id};
         }
 
     private:
@@ -427,9 +316,8 @@ namespace copper_server::api::ecs {
     };
 
     namespace global_registry {
-        template <class... components>
-        global_query<components...> view() {
-            return global_query<components...>{};
+        query<> view() {
+            return query<>{};
         }
 
         //recomended to use this to avoid short locks on fully loaded server
@@ -438,7 +326,8 @@ namespace copper_server::api::ecs {
             detail::get_component_id<component>();
         }
 
-        fast_task::future_ptr<entity> create_entity(entity_recipe& recipe);
+        fast_task::future_ptr<entity> create_entity_async(const entity_recipe& recipe); //the recipe should be static or live longer than future_ptr
+        entity create_entity(const entity_recipe& recipe);
     }
 
     struct system_interface {
@@ -460,7 +349,7 @@ namespace copper_server::api::ecs {
 
         template <typename T>
         void add_system() {
-            _add_system(std::make_unique<T>(), detail::get_system_info<T>());
+            add_system_impl(std::make_unique<T>(), detail::get_system_info<T>());
         }
 
         // Called each tick to run all systems in parallel
@@ -468,7 +357,7 @@ namespace copper_server::api::ecs {
         void execute_frame(world_local_registry& registry);
 
     private:
-        void _add_system(std::unique_ptr<system_interface> system, detail::system_info& info);
+        void add_system_impl(std::unique_ptr<system_interface> system, detail::system_info& info);
         struct data_t;
         data_t* data;
     };
