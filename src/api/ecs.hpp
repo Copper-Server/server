@@ -46,58 +46,6 @@ namespace copper_server::api::ecs {
         std::vector<component_id> component_ids;
         bool is_frozen_ = false;
     };
-    struct entity;
-
-    template <class T>
-    struct mutable_component {
-        // Rule of 5: This object is a temporary handle, it should not be copied.
-        // Moving is okay, as it transfers the responsibility of marking dirty.
-        mutable_component(const mutable_component&) = delete;
-        mutable_component& operator=(const mutable_component&) = delete;
-
-        mutable_component(mutable_component&& other) noexcept
-            : component_ptr_(other.component_ptr_), owner_entity_(other.owner_entity_) {
-            other.component_ptr_ = nullptr;
-        }
-
-        mutable_component& operator=(mutable_component&& other) noexcept {
-            if (this != &other) {
-                mark_dirty_if_valid();
-                component_ptr_ = other.component_ptr_;
-                owner_entity_ = other.owner_entity_;
-                other.component_ptr_ = nullptr;
-            }
-            return *this;
-        }
-
-        ~mutable_component() {
-            mark_dirty_if_valid();
-        }
-
-        T* operator->() const {
-            return component_ptr_;
-        }
-
-        T& operator*() const {
-            return *component_ptr_;
-        }
-
-    private:
-        // Only the entity can create this object.
-        friend struct entity;
-
-        mutable_component(T* ptr, entity* owner)
-            : component_ptr_(ptr), owner_entity_(owner) {}
-
-        void mark_dirty_if_valid() {
-            if (component_ptr_)
-                // This calls a new method on entity that we need to add.
-                owner_entity_->mark_dirty_impl(detail::get_component_id<T>());
-        }
-
-        T* component_ptr_;
-        entity* owner_entity_;
-    };
 
     struct entity {
         int32_t id;
@@ -107,7 +55,7 @@ namespace copper_server::api::ecs {
         [[nodiscard]] std::optional<mutable_component<component>> try_modify() {
             void* comp_ptr = detail::get_entity_component(id, generation, detail::get_component_id<component>());
             if (comp_ptr)
-                return mutable_component(static_cast<component*>(comp_ptr), this);
+                return mutable_component(static_cast<component*>(comp_ptr), id, generation);
             return std::nullopt;
         }
 
@@ -139,16 +87,13 @@ namespace copper_server::api::ecs {
         //the components changes would not be accessible util next tick, all changes buffered
         template <class component>
         void set(component&& move) {
-            queue_set_entity_component(id, generation, detail::get_component_id<component>(), &move);
-            //this is safe, the internal implementation moves to heap
+            queue_set_entity_component(id, generation, detail::get_component_id<component>(), std::move(move));
         }
 
         //the components changes would not be accessible util next tick, all changes buffered
         template <class component>
         void set(const component& copy) {
-            component tmp(copy); //would be moved to internal cache
-            queue_set_entity_component(id, generation, detail::get_component_id<component>(), &tmp);
-            //this is safe, the internal implementation moves to heap
+            queue_set_entity_component(id, generation, detail::get_component_id<component>(), component(copy));
         }
 
         //the components changes would not be accessible util next tick, all changes cached
@@ -164,14 +109,6 @@ namespace copper_server::api::ecs {
 
         void destroy() {
             detail::queue_destroy_entity(id, generation);
-        }
-
-    private:
-        template <class T>
-        friend struct mutable_component;
-
-        void mark_dirty_impl(component_id comp_id) {
-            detail::queue_mark_dirty(id, generation, comp_id);
         }
     };
 
@@ -240,7 +177,7 @@ namespace copper_server::api::ecs {
             const auto& dirty_ids = traits::get_dirty_ids();
 
             const std::vector<component_id>* writes_ids_ptr;
-            if constexpr (implicit_marking_enabled) {
+            if constexpr (explicit_marking) {
                 static const std::vector<component_id> empty_vec;
                 writes_ids_ptr = &empty_vec;
             } else
@@ -273,9 +210,8 @@ namespace copper_server::api::ecs {
 
             return typename detail::apply_tuple_to_iter<
                 detail::query_iterator,
-                implicit_marking_enabled,
                 detail::has_dirty_filter_v<params...>,
-                typename util::apply_tuple_to<detail::dirty_marker, typename traits::WriteTypes>::type,
+                std::conditional_t<explicit_marking, typename util::apply_tuple_to<detail::iterator_view_dirty_mark, typename traits::WriteTypes>::type, detail::iterator_view>,
                 typename traits::IteratorTuple>::type(std::move(handle));
         }
 
@@ -322,11 +258,7 @@ namespace copper_server::api::ecs {
         using reads = dependent<>;
         using writes = dependent<>;
 
-        virtual ~system_interface() = default;
-
-        virtual void setup() {}
-
-        virtual void shutdown() {}
+        virtual ~system_interface() noexcept = default;
 
         virtual void tick() = 0;
     };
@@ -341,13 +273,13 @@ namespace copper_server::api::ecs {
         }
 
         // Called each tick to run all systems in parallel
-        //   also calls the dependency_graph if system_registry_changed
+        //  also builds the dependency graph if system added
         void execute_frame(world_local_registry& registry);
 
     private:
         void add_system_impl(std::unique_ptr<system_interface> system, detail::system_info& info);
         struct scheduler_data;
-        scheduler_data* data;
+        std::unique_ptr<scheduler_data> data;
     };
 }
 

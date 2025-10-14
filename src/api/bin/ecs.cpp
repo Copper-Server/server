@@ -16,18 +16,19 @@
 
 namespace copper_server::api::ecs {
     struct archetype_hash {
-        //0x9e3779b9 is golden ratio constant
+        static constexpr inline auto golden_ratio = 0x9e3779b9;
+
         size_t operator()(const std::vector<component_id>& ids) const {
             size_t seed = ids.size();
             for (auto id : ids)
-                seed ^= id + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+                seed ^= id + golden_ratio + (seed << 6) + (seed >> 2);
             return seed;
         }
 
         size_t operator()(component_id* ids, size_t size) const {
             size_t seed = size;
             for (size_t i = 0; i < size; i++)
-                seed ^= ids[i] + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+                seed ^= ids[i] + golden_ratio + (seed << 6) + (seed >> 2);
             return seed;
         }
     };
@@ -155,12 +156,12 @@ namespace copper_server::api::ecs {
             }
         }
 
-        bool matches_query(component_id* components, size_t components_size, component_id* without_components, size_t without_components_size) {
-            for (size_t i = 0; i < components_size; i++)
-                if (!component_index_map.contains(components[i]))
+        bool matches_query(std::span<component_id> components, std::span<component_id> without_components) {
+            for (auto component : components)
+                if (!component_index_map.contains(component))
                     return false;
-            for (size_t i = 0; i < without_components_size; i++)
-                if (component_index_map.contains(without_components[i]))
+            for (auto component : without_components)
+                if (component_index_map.contains(component))
                     return false;
             return true;
         }
@@ -253,18 +254,6 @@ namespace copper_server::api::ecs {
         uint32_t generation = 0;
     };
 
-    struct mutation_queue_item {
-        int32_t entity_id;
-        uint32_t generation;
-        component_id component;
-        std::vector<char> data; //if nullptr the component will be removed
-
-        ~mutation_queue_item() noexcept {
-            if (data.size())
-                detail::component_info_registry[component].destroy(data.data());
-        }
-    };
-
     struct entity_destroy_queue_item {
         int32_t id;
         uint32_t generation;
@@ -298,7 +287,7 @@ namespace copper_server::api::ecs {
     std::vector<entity_record> records;
 
     list_array<int32_t> free_entity_ids;
-    moodycamel::ConcurrentQueue<mutation_queue_item> mutation_queue;
+    moodycamel::ConcurrentQueue<detail::mutation_queue_item> mutation_queue;
     moodycamel::ConcurrentQueue<entity_destroy_queue_item> entity_destroy_queue;
     moodycamel::ConcurrentQueue<entity_dirty_mark_item> marking_queue;
     moodycamel::ConcurrentQueue<entity_allocation_request*> creation_queue;
@@ -580,9 +569,9 @@ namespace copper_server::api::ecs {
                     ready_queue.pop_front();
                 }
 
-                fast_task::future_tool::for_each(systems_in_current_stage, [&](size_t system_index) {
+                fast_task::future_tool::for_each_wait(systems_in_current_stage, [&](size_t system_index) {
                     systems[system_index].instance->tick();
-                })->wait();
+                });
 
                 systems_executed_count += systems_in_current_stage.size();
 
@@ -607,11 +596,9 @@ namespace copper_server::api::ecs {
         }
     };
 
-    scheduler::scheduler() : data(new scheduler_data{}) {}
+    scheduler::scheduler() : data(std::make_unique<scheduler_data>()) {}
 
-    scheduler::~scheduler() {
-        delete data;
-    }
+    scheduler::~scheduler() {}
 
     archetype* map_new_archtype(archetype* old, component_id new_id) {
         std::vector<component_id> next_key = old->component_ids;
@@ -655,6 +642,13 @@ namespace copper_server::api::ecs {
     }
 
     namespace mutation_processing {
+        struct pre_allocated_mutation_op {
+            int32_t entity_id;
+            component_id component;
+            archetype* to_archetype;
+            std::vector<char> data; //if nullptr the component will be removed
+        };
+
         struct prepared_move_op {
             int32_t entity_id;
             archetype* from_archetype;
@@ -670,7 +664,7 @@ namespace copper_server::api::ecs {
             std::vector<char> data;
         };
 
-        struct parralel_creation_op {
+        struct parallel_creation_op {
             entity_allocation_request* request;
             archetype* target_archetype;
         };
@@ -688,7 +682,7 @@ namespace copper_server::api::ecs {
         }
 
         template <class T, class FN>
-        void parralel_drain(::moodycamel::ConcurrentQueue<T>& queue, FN&& process_func) {
+        void parallel_drain(::moodycamel::ConcurrentQueue<T>& queue, FN&& process_func) {
             auto num_workers = std::thread::hardware_concurrency();
             std::vector<fast_task::future_ptr<void>> worker_futures;
             worker_futures.reserve(num_workers);
@@ -747,10 +741,9 @@ namespace copper_server::api::ecs {
             return parallel_batches;
         }
 
-        grouped_mutation_ops prepare_mutations(std::vector<mutation_queue_item>&& all_moves) {
+        grouped_mutation_ops prepare_mutations() {
             grouped_mutation_ops res;
-
-            fast_task::future_tool::for_each_move(all_moves, [&](mutation_queue_item&& item) {
+            consume_all_(mutation_queue, [&](detail::mutation_queue_item&& item) {
                 if (records.size() <= item.entity_id || records[item.entity_id].generation != item.generation)
                     return;
 
@@ -767,23 +760,15 @@ namespace copper_server::api::ecs {
                     return;
                 }
 
+
                 archetype* to_archetype = nullptr;
                 if (item.data.empty()) {
-                    if (auto it = from_archetype->remove_transition_cache.find(item.component); it != from_archetype->remove_transition_cache.end())
-                        to_archetype = it->second;
-                    else {
-                        std::lock_guard lock(archetypes_mutex);
+                    if (auto it = from_archetype->remove_transition_cache.find(item.component); it == from_archetype->remove_transition_cache.end())
                         to_archetype = map_new_archtype(from_archetype, item.component);
-                    }
                 } else {
-                    if (auto it = from_archetype->add_transition_cache.find(item.component); it != from_archetype->add_transition_cache.end())
-                        to_archetype = it->second;
-                    else {
-                        std::lock_guard lock(archetypes_mutex);
+                    if (auto it = from_archetype->add_transition_cache.find(item.component); it == from_archetype->add_transition_cache.end())
                         to_archetype = map_new_archtype(from_archetype, item.component);
-                    }
                 }
-
                 res.prepared_moves.enqueue(
                     prepared_move_op{
                         item.entity_id,
@@ -794,12 +779,12 @@ namespace copper_server::api::ecs {
                         std::move(item.data)
                     }
                 );
-            })->wait();
+            });
             return res;
         }
 
-        std::vector<parralel_creation_op> prepare_creation_requests() {
-            std::vector<parralel_creation_op> res;
+        std::vector<parallel_creation_op> prepare_creation_requests() {
+            std::vector<parallel_creation_op> res;
             consume_all_(creation_queue, [&](entity_allocation_request* item) {
                 res.emplace_back(item, map_get_archtype(item->recipe.get_ids()));
             });
@@ -849,7 +834,7 @@ namespace copper_server::api::ecs {
         }
 
         void process_transfers() {
-            parralel_drain(transfer_queue, [](entity_transfer_request* transfer) {
+            parallel_drain(transfer_queue, [](entity_transfer_request* transfer) {
                 fast_task::unique_lock lock(transfer->mut);
                 transfer->success = false;
                 if (records.size() > transfer->id) {
@@ -866,7 +851,7 @@ namespace copper_server::api::ecs {
         }
 
         void process_dirty_marking() {
-            parralel_drain(marking_queue, [](entity_dirty_mark_item&& mark) {
+            parallel_drain(marking_queue, [](entity_dirty_mark_item&& mark) {
                 auto& record = records.at(mark.id);
                 if (record.generation != mark.generation)
                     if (auto component_index = record.type->component_index_map.find(mark.component); component_index != record.type->component_index_map.end())
@@ -874,8 +859,8 @@ namespace copper_server::api::ecs {
             });
         }
 
-        void process_creation(std::vector<parralel_creation_op>&& creation_requests) {
-            fast_task::future_tool::for_each_move(std::move(creation_requests), [&](parralel_creation_op&& reg) {
+        void process_creation(std::vector<parallel_creation_op>&& creation_requests) {
+            fast_task::future_tool::for_each_move(std::move(creation_requests), [&](parallel_creation_op&& reg) {
                 auto [item, arch] = reg;
                 fast_task::lock_guard message_lock(item->mut);
                 fast_task::lock_guard arch_lock(arch->arch_mutex);
@@ -887,23 +872,26 @@ namespace copper_server::api::ecs {
 
         void proceed_mutations() {
             process_destruction_queue();
-            execute_mutations(prepare_mutations(collect_all_(mutation_queue)));
+            execute_mutations(prepare_mutations());
             process_transfers();
             process_dirty_marking();
             process_creation(prepare_creation_requests());
         }
     }
+
     void scheduler::execute_frame(world_local_registry& registry) {
+        mutation_processing::proceed_mutations();
+
         if (data->graph_is_dirty)
             data->build_tree();
-
         data->proceed_tree();
-        for (const std::unique_ptr<archetype>& archetype_ptr : archetypes)
+
+        fast_task::future_tool::for_each_wait(archetypes, [](const std::unique_ptr<archetype>& archetype_ptr) {
             for (std::unique_ptr<chunk>& ch : archetype_ptr->chunks)
                 for (auto& flags : archetype_ptr->dirty_flags(ch.get()))
                     for (auto& flag_word : flags)
                         flag_word.store(0, std::memory_order_relaxed);
-        mutation_processing::proceed_mutations();
+        });
     }
 
     void scheduler::add_system_impl(std::unique_ptr<system_interface> system, detail::system_info& info) {
@@ -931,12 +919,8 @@ namespace copper_server::api::ecs {
             }
         }
 
-        void queue_set_entity_component(int32_t id, uint32_t generation, component_id component_id, void* component) {
-            auto& info = component_info_registry.at(component_id);
-            mutation_queue_item queue{id, generation, component_id};
-            queue.data.resize(info.size);
-            info.move_construct(queue.data.data(), component);
-            if (!mutation_queue.enqueue(std::move(queue)))
+        void queue_command(detail::mutation_queue_item&& command) {
+            if (!mutation_queue.enqueue(std::move(command)))
                 throw std::bad_alloc();
         }
 
@@ -951,6 +935,8 @@ namespace copper_server::api::ecs {
         }
 
         void queue_mark_dirty(int32_t id, uint32_t generation, component_id component_id) {
+            if (!marking_queue.enqueue(entity_dirty_mark_item{id, generation, component_id}))
+                throw std::bad_alloc();
         }
 
         bool has_entity_component(int32_t id, uint32_t generation, component_id component_id) {
@@ -978,26 +964,26 @@ namespace copper_server::api::ecs {
             std::vector<void*> component_arrays;
             bool has_dirty_components_filter = false;
 
-            void calculate_data(component_id* components, size_t components_size, component_id* dirty_components, size_t dirty_components_size, component_id* mark_dirty_components, size_t mark_dirty_components_size) {
+            void calculate_data(std::span<component_id> components, std::span<component_id> dirty_components, std::span<component_id> mark_dirty_components) {
                 for (auto& res : arch_data) {
                     auto& index_map = res.type->component_index_map;
                     auto& offsets = res.type->layout.component_offsets;
 
-                    res.required_layout_offsets.reserve(components_size);
-                    for (size_t i = 0; i < components_size; i++)
-                        res.required_layout_offsets.push_back(offsets[index_map.at(components[i])]);
+                    res.required_layout_offsets.reserve(components.size());
+                    for (auto component : components)
+                        res.required_layout_offsets.push_back(offsets[index_map.at(component)]);
 
-                    res.required_dirty_comp_indices.reserve(dirty_components_size);
-                    for (size_t i = 0; i < dirty_components_size; i++)
-                        if (auto it = index_map.find(dirty_components[i]); it != index_map.end())
+                    res.required_dirty_comp_indices.reserve(dirty_components.size());
+                    for (auto component : dirty_components)
+                        if (auto it = index_map.find(component); it != index_map.end())
                             res.required_dirty_comp_indices.push_back(it->second);
 
-                    res.make_dirty_comp_indices.reserve(mark_dirty_components_size);
-                    for (size_t i = 0; i < mark_dirty_components_size; i++)
-                        if (auto it = index_map.find(mark_dirty_components[i]); it != index_map.end())
+                    res.make_dirty_comp_indices.reserve(mark_dirty_components.size());
+                    for (auto component : mark_dirty_components)
+                        if (auto it = index_map.find(component); it != index_map.end())
                             res.make_dirty_comp_indices.push_back(it->second);
                 }
-                if (dirty_components_size)
+                if (dirty_components.size())
                     has_dirty_components_filter = true;
             }
 
@@ -1077,18 +1063,27 @@ namespace copper_server::api::ecs {
                     return false;
 
                 auto& active_arch_data = arch_data[current_archetype_index];
-                auto& active_chunk = active_arch_data.type->chunks[current_chunk_index];
+                auto& active_chunk = active_arch_data.type->chunks[current_chunk_index - 1];
                 for (uint32_t comp_index : active_arch_data.required_dirty_comp_indices)
                     if (!active_arch_data.type->is_dirty(active_chunk.get(), comp_index, entity_index))
                         return false;
                 return true;
             }
+
+            std::pair<int32_t, uint32_t> get_current_entity(size_t entity_index) {
+                if (current_chunk_index == 0)
+                    return {0, UINT32_MAX};
+
+                auto& active_arch_data = arch_data[current_archetype_index];
+                auto& active_chunk = active_arch_data.type->chunks[current_chunk_index - 1];
+                auto id = active_chunk.get()->entities()[entity_index];
+
+                auto& record = records.at(id);
+                return {id, record.generation};
+            }
         };
 
-        iteration_handle::~iteration_handle() {
-            if (data != nullptr)
-                delete data;
-        }
+        iteration_handle::~iteration_handle() {}
 
         std::pair<size_t, void**> iteration_handle::next() {
             if (data == nullptr)
@@ -1108,30 +1103,36 @@ namespace copper_server::api::ecs {
             return data->is_entity_match(entity_index);
         }
 
-        iteration_handle iterate_components(int32_t world_id, component_id* components, size_t components_size, component_id* without_components, size_t without_components_size, component_id* modifies_components, size_t modifies_components_size, component_id* with_dirty_components, size_t with_dirty_components_size) {
+        std::pair<int32_t, uint32_t> iteration_handle::get_current_entity(size_t entity_index) {
+            if (data == nullptr)
+                return {0, -1};
+            return data->get_current_entity(entity_index);
+        }
+
+        iteration_handle iterate_components(int32_t world_id, std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components) {
             iteration_handle handle;
-            handle.data = new iteration_handle::iteration_data{
-                .world_id = world_id
-            };
+            handle.data = std::make_unique<iteration_handle::iteration_data>();
+            handle.data->world_id = world_id;
+
             for (const auto& archetype_ptr : archetypes)
-                if (archetype_ptr->matches_query(components, components_size, without_components, without_components_size))
+                if (archetype_ptr->matches_query(components, without_components))
                     handle.data->arch_data.push_back(archetype_ptr.get());
 
-            handle.data->calculate_data(components, components_size, with_dirty_components, with_dirty_components_size, modifies_components, modifies_components_size);
-            handle.data->component_arrays.resize(components_size);
+            handle.data->calculate_data(components, with_dirty_components, writes_components);
+            handle.data->component_arrays.resize(components.size());
             return handle;
         }
 
-        iteration_handle iterate_components_global(component_id* components, size_t components_size, component_id* without_components, size_t without_components_size, component_id* modifies_components, size_t modifies_components_size, component_id* with_dirty_components, size_t with_dirty_components_size) {
+        iteration_handle iterate_components_global(std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components) {
             iteration_handle handle;
-            handle.data = new iteration_handle::iteration_data{};
+            handle.data = std::make_unique<iteration_handle::iteration_data>();
 
             for (const auto& archetype_ptr : archetypes)
-                if (archetype_ptr->matches_query(components, components_size, without_components, without_components_size))
+                if (archetype_ptr->matches_query(components, without_components))
                     handle.data->arch_data.push_back(archetype_ptr.get());
 
-            handle.data->calculate_data(components, components_size, with_dirty_components, with_dirty_components_size, modifies_components, modifies_components_size);
-            handle.data->component_arrays.resize(components_size);
+            handle.data->calculate_data(components, with_dirty_components, writes_components);
+            handle.data->component_arrays.resize(components.size());
             return handle;
         }
     }

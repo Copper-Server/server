@@ -11,12 +11,14 @@
 #include <atomic>
 #include <cstdint>
 #include <library/fast_task.hpp>
+#include <span>
 #include <src/util/templates.hpp>
 #include <type_traits>
 #include <vector>
 
 namespace copper_server::api::ecs {
     using component_id = uint32_t;
+    struct entity;
 
     template <class... components>
     struct dependent {};
@@ -124,28 +126,52 @@ namespace copper_server::api::ecs {
             return info;
         }
 
+        struct mutation_queue_item {
+            int32_t entity_id;
+            uint32_t generation;
+            component_id component;
+            std::vector<char> data; //if nullptr the component will be removed
+
+            ~mutation_queue_item() noexcept {
+                if (data.size())
+                    detail::component_info_registry[component].destroy(data.data());
+            }
+        };
+
+        void queue_command(mutation_queue_item&&);
+
         void* get_entity_component(int32_t id, uint32_t generation, component_id component_id);
-        void queue_set_entity_component(int32_t id, uint32_t generation, component_id component_id, void* component);
-        void queue_remove_entity_component(int32_t id, uint32_t generation, component_id component_id);
+
+        //this function moves the component to heap allocated buffer, accepts reference to the component.
+        template <class component>
+        void queue_set_entity_component(int32_t id, uint32_t generation, component_id component_id, component&& component) {
+            auto& info = component_info_registry.at(component_id);
+            mutation_queue_item queue{id, generation, component_id};
+            queue.data.resize(info.size);
+            info.move_construct(queue.data.data(), &component);
+            queue_command(std::move(queue));
+        }
+
+        void queue_remove_entity_component(int32_t id, uint32_t generation, component_id component_id) {
+            queue_command(mutation_queue_item{id, generation, component_id});
+        }
+
         void queue_destroy_entity(int32_t id, uint32_t generation);
         void queue_mark_dirty(int32_t id, uint32_t generation, component_id component_id);
         bool has_entity_component(int32_t id, uint32_t generation, component_id component_id);
 
         struct iteration_handle {
             struct iteration_data;
-            iteration_data* data = nullptr; //if data == nullptr the iteration reached the end
+            std::unique_ptr<iteration_data> data;
             iteration_handle() = default;
             iteration_handle(const iteration_handle&) = delete;
 
-            iteration_handle(iteration_handle&& other) noexcept : data(other.data) {
-                other.data = nullptr;
-            }
+            iteration_handle(iteration_handle&& other) noexcept : data(std::move(other.data)) {}
 
             iteration_handle& operator=(const iteration_handle&) = delete;
 
             iteration_handle& operator=(iteration_handle&& other) noexcept {
-                data = other.data;
-                other.data = nullptr;
+                data = std::move(other.data);
             }
 
             ~iteration_handle();
@@ -154,10 +180,11 @@ namespace copper_server::api::ecs {
 
             void mark_component_dirty(component_id, size_t index);
             bool is_entity_match(size_t current_index_in_chunk) const;
+            std::pair<int32_t, uint32_t> get_current_entity(size_t current_index_in_chunk);
         };
 
-        iteration_handle iterate_components(int32_t world_id, component_id* components, size_t components_size, component_id* without_components, size_t without_components_size, component_id* modifies_components, size_t modifies_components_size, component_id* with_dirty_components, size_t with_dirty_components_size);
-        iteration_handle iterate_components_global(component_id* components, size_t components_size, component_id* without_components, size_t without_components_size, component_id* modifies_components, size_t modifies_components_size, component_id* with_dirty_components, size_t with_dirty_components_size);
+        iteration_handle iterate_components(int32_t world_id, std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components);
+        iteration_handle iterate_components_global(std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components);
 
         template <class... components>
         struct query_reads {};
@@ -281,16 +308,14 @@ namespace copper_server::api::ecs {
                 rest_tuple>;
         };
 
-        template <class... written_components>
-        struct dirty_marker {
-            dirty_marker(iteration_handle& handle, size_t index) : handle(handle), index(index) {}
+        struct iterator_view {
+            iterator_view(iteration_handle& handle, size_t index) : handle(handle), index(index) {}
 
-            ~dirty_marker() = default;
+            ~iterator_view() = default;
 
-            template <class component>
-                requires(has_duplicates_in_tuple<written_components..., component>::value)
-            void mark() {
-                handle.mark_component_dirty(detail::get_component_id<component>(), index);
+            entity current_entity() {
+                auto it = handle.get_current_entity(index);
+                return {it.first, it.second};
             }
 
         private:
@@ -298,12 +323,34 @@ namespace copper_server::api::ecs {
             size_t index;
         };
 
-        template <template <bool, bool, class, class...> class T, bool dirty, bool has_dirty_filter, class dirty_mark, class Tuple>
+        template <class... written_components>
+        struct iterator_view_dirty_mark {
+            iterator_view_dirty_mark(iteration_handle& handle, size_t index) : handle(handle), index(index) {}
+
+            ~iterator_view_dirty_mark() = default;
+
+            template <class component>
+                requires(has_duplicates_in_tuple<written_components..., component>::value)
+            void mark_dirty() {
+                handle.mark_component_dirty(detail::get_component_id<component>(), index);
+            }
+
+            entity current_entity() {
+                auto it = handle.get_current_entity(index);
+                return {it.first, it.second};
+            }
+
+        private:
+            iteration_handle& handle;
+            size_t index;
+        };
+
+        template <template <bool, class, class...> class T, bool has_dirty_filter, class iterator_viewer, class Tuple>
         struct apply_tuple_to_iter;
 
-        template <template <bool, bool, class, class...> class T, bool dirty, bool has_dirty_filter, class dirty_mark, class... Args>
-        struct apply_tuple_to_iter<T, dirty, has_dirty_filter, dirty_mark, std::tuple<Args...>> {
-            using type = T<dirty, has_dirty_filter, dirty_mark, Args...>;
+        template <template <bool, class, class...> class T, bool has_dirty_filter, class iterator_viewer, class... Args>
+        struct apply_tuple_to_iter<T, has_dirty_filter, iterator_viewer, std::tuple<Args...>> {
+            using type = T<has_dirty_filter, dirty_mark, Args...>;
         };
 
         template <class...>
@@ -318,9 +365,9 @@ namespace copper_server::api::ecs {
         template <class... TArgs>
         inline constexpr bool has_dirty_filter_v = has_dirty_filter<TArgs...>::value;
 
-        template <bool explicit_marking, bool has_dirty_filt, class dirty_mark, class... components>
+        template <bool has_dirty_filt, class iterator_viewer, class... components>
         struct query_iterator {
-            using value_type = std::conditional_t<explicit_marking, std::tuple<components&..., dirty_mark>, std::tuple<components&...>>;
+            using value_type = std::tuple<iterator_viewer, components&...>;
 
             using iterator_category = std::input_iterator_tag;
             using difference_type = std::ptrdiff_t;
@@ -373,13 +420,10 @@ namespace copper_server::api::ecs {
             }
 
             reference operator*() {
-                if constexpr (explicit_marking)
-                    return std::tuple_cat(
-                        std::tie((*(std::get<components*>(component_arrays) + current_index_in_chunk))...),
-                        std::make_tuple(dirty_mark{handle, current_index_in_chunk})
-                    );
-                else
-                    return std::tie((*(std::get<components*>(component_arrays) + current_index_in_chunk))...);
+                return std::tuple_cat(
+                    std::make_tuple(iterator_viewer{handle, current_index_in_chunk}),
+                    std::tie((*(std::get<components*>(component_arrays) + current_index_in_chunk))...)
+                );
             }
 
         private:
@@ -417,13 +461,19 @@ namespace copper_server::api::ecs {
             using MetaTuple = detail::build_meta_tuple<Params...>;
             using ReadTypes = typename detail::extract_by_access<MetaTuple, detail::read_operation_query>::type;
             using WriteTypes = typename detail::extract_by_access<MetaTuple, detail::write_operation_query>::type;
+            using WithoutTypes = typename detail::extract_by_access<MetaTuple, detail::query_without>::type;
             using IteratorTuple = typename detail::build_iterator_tuple_from_meta<MetaTuple>::type;
 
             static_assert(!detail::has_duplicates_in_tuple<ReadTypes>::value, "COMPILE ERROR: A component was requested for read-access multiple times in the same query.");
 
             static_assert(!detail::has_duplicates_in_tuple<WriteTypes>::value, "COMPILE ERROR: A component was requested for write-access multiple times in the same query.");
 
+            static_assert(detail::are_tuples_disjoint<ReadTypes, WithoutTypes>::value, "COMPILE ERROR: A component was requested for read, but the component also been requested to be skipped. The query result would be always empty.");
+
+            static_assert(detail::are_tuples_disjoint<WriteTypes, WithoutTypes>::value, "COMPILE ERROR: A component was requested for write, but the component also been requested to be skipped. The query result would be always empty.");
+
             static_assert(detail::are_tuples_disjoint<ReadTypes, WriteTypes>::value, "COMPILE ERROR: A component was requested for both read and write access. Use .writes() for mutable access.");
+
 
             static const std::vector<component_id>& get_all_component_ids() {
                 static const std::vector<component_id> ids = compute_component_ids<read_operation_query, write_operation_query>();
@@ -464,7 +514,53 @@ namespace copper_server::api::ecs {
             }
         };
     }
+
+    template <class T>
+    struct mutable_component {
+        mutable_component(const mutable_component&) = delete;
+        mutable_component& operator=(const mutable_component&) = delete;
+
+        mutable_component(mutable_component&& other) noexcept
+            : component_ptr_(other.component_ptr_), owner_entity_(other.owner_entity_) {
+            other.component_ptr_ = nullptr;
+        }
+
+        mutable_component& operator=(mutable_component&& other) noexcept {
+            if (this != &other) {
+                mark_dirty_if_valid();
+                component_ptr_ = other.component_ptr_;
+                owner_entity_ = other.owner_entity_;
+                other.component_ptr_ = nullptr;
+            }
+            return *this;
+        }
+
+        ~mutable_component() {
+            mark_dirty_if_valid();
+        }
+
+        T* operator->() const {
+            return component_ptr_;
+        }
+
+        T& operator*() const {
+            return *component_ptr_;
+        }
+
+    private:
+        friend struct entity;
+
+        mutable_component(T* ptr, int32_t owner_entity, uint32_t generation)
+            : component_ptr_(ptr), owner_entity_(owner_entity), generation(generation) {}
+
+        void mark_dirty_if_valid() {
+            if (component_ptr_)
+                detail::queue_mark_dirty(owner_entity_, generation, detail::get_component_id<T>());
+        }
+
+        T* component_ptr_;
+        int32_t owner_entity_;
+        uint32_t generation;
+    };
 }
-
-
 #endif /* SRC_API_DETAIL_ECS */
