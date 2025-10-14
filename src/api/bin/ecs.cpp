@@ -239,11 +239,7 @@ namespace copper_server::api::ecs {
     }
 
     fast_task::task_mutex archetypes_mutex;
-    std::unordered_map<
-        std::vector<component_id>,
-        archetype*,
-        archetype_hash>
-        archetype_lookup;
+    std::unordered_map<size_t, std::vector<archetype*>> archetype_lookup;
 
     std::vector<std::unique_ptr<archetype>> archetypes;
 
@@ -600,45 +596,39 @@ namespace copper_server::api::ecs {
 
     scheduler::~scheduler() {}
 
+    archetype* map_get_archtype(const std::vector<component_id>& sorted_ids) {
+        const size_t hash = archetype_hash{}(sorted_ids);
+        auto bucket_it = archetype_lookup.find(hash);
+        if (bucket_it != archetype_lookup.end()) {
+            for (archetype* arch : bucket_it->second) {
+                if (arch->component_ids == sorted_ids)
+                    return arch;
+            }
+        }
+
+        auto new_archetype_ptr = std::make_unique<archetype>();
+        new_archetype_ptr->component_ids = sorted_ids;
+        new_archetype_ptr->hash = hash;
+        new_archetype_ptr->component_index_map.reserve(sorted_ids.size());
+        new_archetype_ptr->calculate_layout();
+
+        auto arch = new_archetype_ptr.get();
+        archetypes.push_back(std::move(new_archetype_ptr));
+        archetype_lookup[hash].push_back(arch);
+        return arch;
+    }
+
     archetype* map_new_archtype(archetype* old, component_id new_id) {
         std::vector<component_id> next_key = old->component_ids;
         next_key.push_back(new_id);
         std::sort(next_key.begin(), next_key.end());
 
-        archetype* next_archetype = nullptr;
-        if (auto it = archetype_lookup.find(next_key); it != archetype_lookup.end()) {
-            next_archetype = it->second;
-        } else {
-            auto new_archetype_ptr = std::make_unique<archetype>();
-            new_archetype_ptr->component_ids = next_key;
-            new_archetype_ptr->hash = archetype_hash{}(next_key);
-            new_archetype_ptr->component_index_map.reserve(next_key.size());
-            new_archetype_ptr->calculate_layout();
 
-            next_archetype = new_archetype_ptr.get();
-            archetypes.push_back(std::move(new_archetype_ptr));
-            archetype_lookup[next_key] = next_archetype;
-        }
+        archetype* next_archetype = map_get_archtype(next_key);
 
         old->add_transition_cache[new_id] = next_archetype;
         next_archetype->remove_transition_cache[new_id] = old;
         return next_archetype;
-    }
-
-    archetype* map_get_archtype(const std::vector<component_id>& decl) {
-        auto& arch = archetype_lookup[decl];
-
-        if (arch == nullptr) {
-            auto new_archetype_ptr = std::make_unique<archetype>();
-            new_archetype_ptr->component_ids = decl;
-            new_archetype_ptr->hash = archetype_hash{}(decl);
-            new_archetype_ptr->component_index_map.reserve(decl.size());
-            new_archetype_ptr->calculate_layout();
-
-            arch = new_archetype_ptr.get();
-            archetypes.push_back(std::move(new_archetype_ptr));
-        }
-        return arch;
     }
 
     namespace mutation_processing {
@@ -1138,15 +1128,23 @@ namespace copper_server::api::ecs {
     }
 
     void entity_recipe::freeze() {
+        if (is_frozen_)
+            return;
         is_frozen_ = true;
         std::sort(component_ids.begin(), component_ids.end());
         component_ids.erase(
             std::unique(component_ids.begin(), component_ids.end()),
             component_ids.end()
         );
+        hash = archetype_hash{}(component_ids);
     }
 
     const std::vector<component_id>& entity_recipe::get_ids() const {
         return component_ids;
+    }
+
+    size_t entity_recipe::get_hash() const {
+        assert(is_frozen_ && "Cannot get hash from an unfrozen recipe!");
+        return hash;
     }
 }

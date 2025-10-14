@@ -42,8 +42,11 @@ namespace copper_server::api::ecs {
 
         const std::vector<component_id>& get_ids() const;
 
+        size_t get_hash() const;
+
     private:
         std::vector<component_id> component_ids;
+        size_t hash = 0;
         bool is_frozen_ = false;
     };
 
