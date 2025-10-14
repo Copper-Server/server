@@ -23,6 +23,13 @@ namespace copper_server::api::ecs {
     template <class... components>
     struct dependent {};
 
+    enum class structural_changes {
+        no_changes,
+        modified,
+        added,
+        removed
+    };
+
     namespace detail {
         struct component_type_info {
             using constructor_fn = void (*)(void* memory);
@@ -181,10 +188,11 @@ namespace copper_server::api::ecs {
             void mark_component_dirty(component_id, size_t index);
             bool is_entity_match(size_t current_index_in_chunk) const;
             std::pair<int32_t, uint32_t> get_current_entity(size_t current_index_in_chunk);
+            structural_changes get_component_change_state(size_t entity_index, component_id cid);
         };
 
-        iteration_handle iterate_components(int32_t world_id, std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components);
-        iteration_handle iterate_components_global(std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components);
+        iteration_handle iterate_components(int32_t world_id, std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components, std::span<component_id> with_changes);
+        iteration_handle iterate_components_global(std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components, std::span<component_id> with_changes);
 
         template <class... components>
         struct query_reads {};
@@ -198,9 +206,14 @@ namespace copper_server::api::ecs {
         template <class... components>
         struct query_without {};
 
+        template <class... components>
+        struct query_with_changes {};
+
         struct read_operation_query {};
 
         struct write_operation_query {};
+
+        struct filter_with_changes {};
 
         struct filter_with_dirty {};
 
@@ -233,6 +246,11 @@ namespace copper_server::api::ecs {
         template <typename... Comps>
         struct process_single_param<query_without<Comps...>> {
             using type = std::tuple<std::pair<strip_const_t<Comps>, filter_without>...>;
+        };
+
+        template <typename... Comps>
+        struct process_single_param<query_with_changes<Comps...>> {
+            using type = std::tuple<std::pair<strip_const_t<Comps>, filter_with_changes>...>;
         };
 
         // This will be our final, ordered list of components and their access types
@@ -318,6 +336,11 @@ namespace copper_server::api::ecs {
                 return {it.first, it.second};
             }
 
+            template <class component>
+            structural_changes get_change_state() {
+                return handle.get_component_change_state(index);
+            }
+
         private:
             iteration_handle& handle;
             size_t index;
@@ -340,32 +363,40 @@ namespace copper_server::api::ecs {
                 return {it.first, it.second};
             }
 
+            template <class component>
+            structural_changes get_change_state() {
+                return handle.get_component_change_state(index);
+            }
+
         private:
             iteration_handle& handle;
             size_t index;
         };
 
-        template <template <bool, class, class...> class T, bool has_dirty_filter, class iterator_viewer, class Tuple>
+        template <template <bool, class, class...> class T, bool requires_shifting, class iterator_viewer, class Tuple>
         struct apply_tuple_to_iter;
 
-        template <template <bool, class, class...> class T, bool has_dirty_filter, class iterator_viewer, class... Args>
-        struct apply_tuple_to_iter<T, has_dirty_filter, iterator_viewer, std::tuple<Args...>> {
-            using type = T<has_dirty_filter, dirty_mark, Args...>;
+        template <template <bool, class, class...> class T, bool requires_shifting, class iterator_viewer, class... Args>
+        struct apply_tuple_to_iter<T, requires_shifting, iterator_viewer, std::tuple<Args...>> {
+            using type = T<requires_shifting, dirty_mark, Args...>;
         };
 
         template <class...>
-        struct has_dirty_filter : std::false_type {};
+        struct is_requires_shifting : std::false_type {};
 
         template <class... T, class... TArgs>
-        struct has_dirty_filter<query_with_dirty<T...>, TArgs...> : std::true_type {};
+        struct is_requires_shifting<query_with_dirty<T...>, TArgs...> : std::true_type {};
+
+        template <class... T, class... TArgs>
+        struct is_requires_shifting<query_with_changes<T...>, TArgs...> : std::true_type {};
 
         template <class T, class... TArgs>
-        struct has_dirty_filter<T, TArgs...> : has_dirty_filter<TArgs...> {};
+        struct is_requires_shifting<T, TArgs...> : is_requires_shifting<TArgs...> {};
 
         template <class... TArgs>
-        inline constexpr bool has_dirty_filter_v = has_dirty_filter<TArgs...>::value;
+        inline constexpr bool is_requires_shifting_v = is_requires_shifting<TArgs...>::value;
 
-        template <bool has_dirty_filt, class iterator_viewer, class... components>
+        template <bool requires_shifting, class iterator_viewer, class... components>
         struct query_iterator {
             using value_type = std::tuple<iterator_viewer, components&...>;
 
@@ -404,7 +435,7 @@ namespace copper_server::api::ecs {
             }
 
             query_iterator& operator++() {
-                if constexpr (has_dirty_filt)
+                if constexpr (requires_shifting)
                     sifting_increment();
                 else
                     fast_increment();
@@ -462,6 +493,7 @@ namespace copper_server::api::ecs {
             using ReadTypes = typename detail::extract_by_access<MetaTuple, detail::read_operation_query>::type;
             using WriteTypes = typename detail::extract_by_access<MetaTuple, detail::write_operation_query>::type;
             using WithoutTypes = typename detail::extract_by_access<MetaTuple, detail::query_without>::type;
+            using WithChangesTypes = typename detail::extract_by_access<MetaTuple, detail::query_with_changes>::type;
             using IteratorTuple = typename detail::build_iterator_tuple_from_meta<MetaTuple>::type;
 
             static_assert(!detail::has_duplicates_in_tuple<ReadTypes>::value, "COMPILE ERROR: A component was requested for read-access multiple times in the same query.");
@@ -477,6 +509,11 @@ namespace copper_server::api::ecs {
 
             static const std::vector<component_id>& get_all_component_ids() {
                 static const std::vector<component_id> ids = compute_component_ids<read_operation_query, write_operation_query>();
+                return ids;
+            }
+
+            static const std::vector<component_id>& get_with_changes_ids() {
+                static const std::vector<component_id> ids = compute_component_ids<filter_with_changes>();
                 return ids;
             }
 

@@ -275,7 +275,7 @@ endfunction(id_proxy_gen)
 function(create_mappings)
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
     execute_process(
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/entity_proxy_gen.exe "${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/entities.json" "${CMAKE_CURRENT_SOURCE_DIR}/src/api/entity_proxy.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/api/bin/entity_proxy.cpp" 
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/entity_proxy_gen.exe "${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/entities.json" "${CMAKE_CURRENT_SOURCE_DIR}/src/generated/entity/components.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/generated/entity/wrappers.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/generated/entity/factory.hpp" 
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         RESULT_VARIABLE result
         ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/entities_error.log

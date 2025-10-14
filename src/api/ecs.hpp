@@ -141,6 +141,11 @@ namespace copper_server::api::ecs {
             return query<params..., detail::query_with_dirty<with_dirty_components...>>{id};
         }
 
+        template <class... with_changed_components>
+        [[nodiscard]] query<params..., detail::query_with_changes<with_changed_components...>> with_changes() {
+            return query<params..., detail::query_with_changes<with_changed_components...>>{id};
+        }
+
         //this operation marks all written components as dirty,
         // this only viable when the query definitely modifies ALL written items in query
         // using mindlessly would lead to system overload with too much unnecessary updates
@@ -178,6 +183,7 @@ namespace copper_server::api::ecs {
             const auto& all_ids = traits::get_all_component_ids();
             const auto& without_ids = traits::get_without_ids();
             const auto& dirty_ids = traits::get_dirty_ids();
+            const auto& changes_ids = traits::get_with_changes_ids();
 
             const std::vector<component_id>* writes_ids_ptr;
             if constexpr (explicit_marking) {
@@ -191,29 +197,23 @@ namespace copper_server::api::ecs {
                 = id
                       ? detail::iterate_components(
                             *id,
-                            all_ids.data(),
-                            all_ids.size(),
-                            without_ids.data(),
-                            without_ids.size(),
-                            writes_ids.data(),
-                            writes_ids.size(),
-                            dirty_ids.data(),
-                            dirty_ids.size()
+                            {all_ids.data(), all_ids.size()},
+                            {without_ids.data(), without_ids.size()},
+                            {writes_ids.data(), writes_ids.size()},
+                            {dirty_ids.data(), dirty_ids.size()},
+                            {changes_ids.data(), changes_ids.size()}
                         )
                       : detail::iterate_components_global(
-                            all_ids.data(),
-                            all_ids.size(),
-                            without_ids.data(),
-                            without_ids.size(),
-                            writes_ids.data(),
-                            writes_ids.size(),
-                            dirty_ids.data(),
-                            dirty_ids.size()
+                            {all_ids.data(), all_ids.size()},
+                            {without_ids.data(), without_ids.size()},
+                            {writes_ids.data(), writes_ids.size()},
+                            {dirty_ids.data(), dirty_ids.size()},
+                            {changes_ids.data(), changes_ids.size()}
                         );
 
             return typename detail::apply_tuple_to_iter<
                 detail::query_iterator,
-                detail::has_dirty_filter_v<params...>,
+                detail::is_requires_shifting_v<params...>,
                 std::conditional_t<explicit_marking, typename util::apply_tuple_to<detail::iterator_view_dirty_mark, typename traits::WriteTypes>::type, detail::iterator_view>,
                 typename traits::IteratorTuple>::type(std::move(handle));
         }

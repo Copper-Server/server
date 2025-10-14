@@ -248,7 +248,10 @@ namespace copper_server::api::ecs {
         chunk* chunk;
         int32_t chunk_index = 0;
         uint32_t generation = 0;
+        std::atomic<archetype*> archetype_before_mutation = nullptr;
     };
+
+    static inline constexpr auto siz = sizeof(entity_record);
 
     struct entity_destroy_queue_item {
         int32_t id;
@@ -781,7 +784,7 @@ namespace copper_server::api::ecs {
             return res;
         }
 
-        void execute_mutations(grouped_mutation_ops mutations) {
+        void execute_mutations(grouped_mutation_ops mutations, ::moodycamel::ConcurrentQueue<int32_t>& arch_type_changes) {
             consume_all_(mutations.prepared_updates, [](prepared_in_place_update_op& update) {
                 auto& record = records.at(update.entity_id);
                 auto& component_info = detail::component_info_registry.at(update.comp_id);
@@ -793,6 +796,7 @@ namespace copper_server::api::ecs {
                 record.type->mark_dirty(record.chunk, component_index, record.chunk_index);
             });
 
+
             for (auto& batch : group_disjoint_moves(collect_all_(mutations.prepared_moves))) {
                 fast_task::future_tool::for_each_move(batch, [&](prepared_move_op&& move) {
                     archetype* arch1 = move.from_archetype;
@@ -803,6 +807,12 @@ namespace copper_server::api::ecs {
                     if (reinterpret_cast<uintptr_t>(arch1) > reinterpret_cast<uintptr_t>(arch2))
                         std::swap(arch1, arch2);
 
+                    {
+                        auto& record = records[move.entity_id];
+                        archetype* expected = nullptr;
+                        if (record.archetype_before_mutation.compare_exchange_strong(expected, record.type, std::memory_order_relaxed))
+                            arch_type_changes.enqueue(move.entity_id);
+                    }
                     std::unique_lock lock1(arch1->arch_mutex);
                     std::unique_lock lock2(arch2->arch_mutex);
 
@@ -860,9 +870,9 @@ namespace copper_server::api::ecs {
             })->wait();
         }
 
-        void proceed_mutations() {
+        void proceed_mutations(::moodycamel::ConcurrentQueue<int32_t>& arch_type_changes) {
             process_destruction_queue();
-            execute_mutations(prepare_mutations());
+            execute_mutations(prepare_mutations(), arch_type_changes);
             process_transfers();
             process_dirty_marking();
             process_creation(prepare_creation_requests());
@@ -870,7 +880,8 @@ namespace copper_server::api::ecs {
     }
 
     void scheduler::execute_frame(world_local_registry& registry) {
-        mutation_processing::proceed_mutations();
+        ::moodycamel::ConcurrentQueue<int32_t> arch_type_changes;
+        mutation_processing::proceed_mutations(arch_type_changes);
 
         if (data->graph_is_dirty)
             data->build_tree();
@@ -881,6 +892,10 @@ namespace copper_server::api::ecs {
                 for (auto& flags : archetype_ptr->dirty_flags(ch.get()))
                     for (auto& flag_word : flags)
                         flag_word.store(0, std::memory_order_relaxed);
+        });
+
+        mutation_processing::parallel_drain(arch_type_changes, [](int32_t id) {
+            records[id].archetype_before_mutation = nullptr;
         });
     }
 
@@ -950,11 +965,11 @@ namespace copper_server::api::ecs {
             size_t current_archetype_index = 0;
             size_t current_chunk_index = 0;
             std::vector<arch_data_t> arch_data;
+            std::vector<component_id> with_changes;
             std::optional<int32_t> world_id;
             std::vector<void*> component_arrays;
-            bool has_dirty_components_filter = false;
 
-            void calculate_data(std::span<component_id> components, std::span<component_id> dirty_components, std::span<component_id> mark_dirty_components) {
+            void calculate_data(std::span<component_id> components, std::span<component_id> dirty_components, std::span<component_id> mark_dirty_components, std::span<component_id> with_changes_) {
                 for (auto& res : arch_data) {
                     auto& index_map = res.type->component_index_map;
                     auto& offsets = res.type->layout.component_offsets;
@@ -973,8 +988,7 @@ namespace copper_server::api::ecs {
                         if (auto it = index_map.find(component); it != index_map.end())
                             res.make_dirty_comp_indices.push_back(it->second);
                 }
-                if (dirty_components.size())
-                    has_dirty_components_filter = true;
+                with_changes = {with_changes_.begin(), with_changes_.end()};
             }
 
             // CRITICAL: after changing check mark_component_dirty for correctnes
@@ -1054,9 +1068,29 @@ namespace copper_server::api::ecs {
 
                 auto& active_arch_data = arch_data[current_archetype_index];
                 auto& active_chunk = active_arch_data.type->chunks[current_chunk_index - 1];
-                for (uint32_t comp_index : active_arch_data.required_dirty_comp_indices)
-                    if (!active_arch_data.type->is_dirty(active_chunk.get(), comp_index, entity_index))
-                        return false;
+                if (active_arch_data.required_dirty_comp_indices.size()) {
+                    for (uint32_t comp_index : active_arch_data.required_dirty_comp_indices)
+                        if (!active_arch_data.type->is_dirty(active_chunk.get(), comp_index, entity_index))
+                            return false;
+                }
+
+                if (with_changes.size()) {
+                    auto id = active_chunk.get()->entities()[entity_index];
+                    auto& record = records.at(id);
+                    archetype* before_arch = record.archetype_before_mutation.load(std::memory_order_relaxed);
+                    if (record.archetype_before_mutation.load(std::memory_order_relaxed) != nullptr) {
+                        for (auto component_id_ : with_changes) {
+                            bool existed_before = before_arch->component_index_map.contains(component_id_);
+                            bool exists_after = record.type->component_index_map.contains(component_id_);
+
+                            if (!existed_before && exists_after)
+                                return true;
+                            else if (existed_before && !exists_after)
+                                return true;
+                        }
+                    }
+                    return false;
+                }
                 return true;
             }
 
@@ -1070,6 +1104,45 @@ namespace copper_server::api::ecs {
 
                 auto& record = records.at(id);
                 return {id, record.generation};
+            }
+
+            structural_changes get_component_change_state(size_t entity_index, component_id cid) {
+                auto& active_arch_data = arch_data[current_archetype_index];
+                auto& active_chunk = active_arch_data.type->chunks[current_chunk_index - 1];
+                auto id = active_chunk.get()->entities()[entity_index];
+
+                auto& record = records.at(id);
+
+                archetype* before_arch = record.archetype_before_mutation.load(std::memory_order_relaxed);
+                if (before_arch == nullptr) {
+                    auto it = active_arch_data.type->component_index_map.find(cid);
+                    if (it != active_arch_data.type->component_index_map.end()) {
+                        uint32_t component_index_in_archetype = it->second;
+                        if (active_arch_data.type->is_dirty(active_chunk.get(), component_index_in_archetype, entity_index))
+                            return structural_changes::modified;
+                    }
+                    return structural_changes::no_changes;
+                }
+
+                archetype* after_arch = record.type;
+
+                bool existed_before = before_arch->component_index_map.contains(cid);
+                bool exists_after = after_arch->component_index_map.contains(cid);
+
+                if (!existed_before && exists_after)
+                    return structural_changes::added;
+                else if (existed_before && !exists_after) {
+                    return structural_changes::removed;
+                } else if (existed_before && exists_after) {
+                    auto it = active_arch_data.type->component_index_map.find(cid);
+                    if (it != active_arch_data.type->component_index_map.end()) {
+                        uint32_t component_index_in_archetype = it->second;
+                        if (active_arch_data.type->is_dirty(active_chunk.get(), component_index_in_archetype, entity_index))
+                            return structural_changes::modified;
+                    }
+                    return structural_changes::no_changes;
+                } else
+                    return structural_changes::no_changes;
             }
         };
 
@@ -1099,7 +1172,13 @@ namespace copper_server::api::ecs {
             return data->get_current_entity(entity_index);
         }
 
-        iteration_handle iterate_components(int32_t world_id, std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components) {
+        structural_changes iteration_handle::get_component_change_state(size_t entity_index, component_id cid) {
+            if (data == nullptr)
+                return structural_changes::no_changes;
+            return data->get_component_change_state(entity_index, cid);
+        }
+
+        iteration_handle iterate_components(int32_t world_id, std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components, std::span<component_id> with_changes) {
             iteration_handle handle;
             handle.data = std::make_unique<iteration_handle::iteration_data>();
             handle.data->world_id = world_id;
@@ -1108,12 +1187,12 @@ namespace copper_server::api::ecs {
                 if (archetype_ptr->matches_query(components, without_components))
                     handle.data->arch_data.push_back(archetype_ptr.get());
 
-            handle.data->calculate_data(components, with_dirty_components, writes_components);
+            handle.data->calculate_data(components, with_dirty_components, writes_components, with_changes);
             handle.data->component_arrays.resize(components.size());
             return handle;
         }
 
-        iteration_handle iterate_components_global(std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components) {
+        iteration_handle iterate_components_global(std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components, std::span<component_id> with_changes) {
             iteration_handle handle;
             handle.data = std::make_unique<iteration_handle::iteration_data>();
 
@@ -1121,7 +1200,7 @@ namespace copper_server::api::ecs {
                 if (archetype_ptr->matches_query(components, without_components))
                     handle.data->arch_data.push_back(archetype_ptr.get());
 
-            handle.data->calculate_data(components, with_dirty_components, writes_components);
+            handle.data->calculate_data(components, with_dirty_components, writes_components, with_changes);
             handle.data->component_arrays.resize(components.size());
             return handle;
         }
