@@ -176,6 +176,26 @@ namespace copper_server::api::ecs {
             return decltype(begin())();
         }
 
+        template <class FN>
+        void for_each_chunk(FN&& fn) {
+            begin().chunk_iterate(std::forward<FN>(fn));
+        }
+
+        template <class FN>
+        void for_each_chunk_view(FN&& fn) {
+            begin().chunk_iterate_view(std::forward<FN>(fn));
+        }
+
+        template <class FN>
+        void par_for_each_chunk(FN&& fn) {
+            begin().chunk_iterate_parralel(std::forward<FN>(fn));
+        }
+
+        template <class FN>
+        void par_for_each_chunk_view(FN&& fn) {
+            begin().chunk_iterate_parralel_view(std::forward<FN>(fn));
+        }
+
     private:
         template <bool explicit_marking>
         auto begin_impl() {

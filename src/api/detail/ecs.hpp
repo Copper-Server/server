@@ -184,11 +184,23 @@ namespace copper_server::api::ecs {
             ~iteration_handle();
 
             std::pair<size_t, void**> next(); //no op if data == nullptr, returns the chunk
+            bool is_end() const;
 
             void mark_component_dirty(component_id, size_t index);
             bool is_entity_match(size_t current_index_in_chunk) const;
             std::pair<int32_t, uint32_t> get_current_entity(size_t current_index_in_chunk);
             structural_changes get_component_change_state(size_t entity_index, component_id cid);
+
+            struct preserved_state {
+                size_t archetype_index;
+                size_t chunk_index;
+                void mark_component_dirty(iteration_handle&, component_id, size_t index);
+                bool is_entity_match(iteration_handle&, size_t current_index_in_chunk) const;
+                std::pair<int32_t, uint32_t> get_current_entity(iteration_handle&, size_t current_index_in_chunk);
+                structural_changes get_component_change_state(iteration_handle&, size_t entity_index, component_id cid);
+            };
+
+            preserved_state preserve_state();
         };
 
         iteration_handle iterate_components(int32_t world_id, std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components, std::span<component_id> with_changes);
@@ -348,12 +360,14 @@ namespace copper_server::api::ecs {
 
         template <class... written_components>
         struct iterator_view_dirty_mark {
+            using written = std::tuple<written_components...>;
+
             iterator_view_dirty_mark(iteration_handle& handle, size_t index) : handle(handle), index(index) {}
 
             ~iterator_view_dirty_mark() = default;
 
             template <class component>
-                requires(has_duplicates_in_tuple<written_components..., component>::value)
+                requires((std::is_same_v<written_components, component> || ...))
             void mark_dirty() {
                 handle.mark_component_dirty(detail::get_component_id<component>(), index);
             }
@@ -371,6 +385,102 @@ namespace copper_server::api::ecs {
         private:
             iteration_handle& handle;
             size_t index;
+        };
+
+        struct iterator_view_chunk {
+            iterator_view_chunk(iteration_handle& handle) : handle(handle) {}
+
+            ~iterator_view_chunk() = default;
+
+            entity current_entity(size_t index) {
+                auto it = handle.get_current_entity(index);
+                return {it.first, it.second};
+            }
+
+            template <class component>
+            structural_changes get_change_state(size_t index) {
+                return handle.get_component_change_state(index);
+            }
+
+        private:
+            iteration_handle& handle;
+        };
+
+        template <class... written_components>
+        struct iterator_view_chunk_dirty_mark {
+            using written = std::tuple<written_components...>;
+
+            iterator_view_chunk_dirty_mark(iteration_handle& handle) : handle(handle) {}
+
+            ~iterator_view_chunk_dirty_mark() = default;
+
+            template <class component>
+                requires((std::is_same_v<written_components, component> || ...))
+            void mark_dirty(size_t index) {
+                handle.mark_component_dirty(detail::get_component_id<component>(), index);
+            }
+
+            entity current_entity(size_t index) {
+                auto it = handle.get_current_entity(index);
+                return {it.first, it.second};
+            }
+
+            template <class component>
+            structural_changes get_change_state(size_t index) {
+                return handle.get_component_change_state(index);
+            }
+
+        private:
+            iteration_handle& handle;
+        };
+
+        struct iterator_view_chunk_parralel {
+            iterator_view_chunk_parralel(iteration_handle& handle) : handle(handle), state(handle.preserve_state()) {}
+
+            ~iterator_view_chunk_parralel() = default;
+
+            entity current_entity(size_t index) {
+                auto it = state.get_current_entity(handle, index);
+                return {it.first, it.second};
+            }
+
+            template <class component>
+            structural_changes get_change_state(size_t index) {
+                return state.get_component_change_state(index);
+            }
+
+        private:
+            iteration_handle& handle;
+            iteration_handle::preserved_state state;
+        };
+
+        template <class... written_components>
+        struct iterator_view_chunk_parralel_dirty_mark {
+            using written = std::tuple<written_components...>;
+
+            iterator_view_chunk_parralel_dirty_mark(iteration_handle& handle) : handle(handle), state(handle.preserve_state()) {}
+
+            ~iterator_view_chunk_parralel_dirty_mark() = default;
+
+            template <class component>
+                requires((std::is_same_v<written_components, component> || ...))
+            void mark_dirty(size_t index) {
+                state.mark_component_dirty(handle, detail::get_component_id<component>(), index);
+            }
+
+            entity current_entity(size_t index) {
+                auto it = state.get_current_entity(handle, index);
+                return {it.first, it.second};
+            }
+
+            template <class component>
+            structural_changes get_change_state(size_t index) {
+                return state.get_component_change_state(handle, index);
+            }
+
+        private:
+            iteration_handle& handle;
+            iteration_handle::preserved_state state;
         };
 
         template <template <bool, class, class...> class T, bool requires_shifting, class iterator_viewer, class Tuple>
@@ -405,7 +515,7 @@ namespace copper_server::api::ecs {
             using pointer = value_type*;
             using reference = value_type;
 
-            value_type component_arrays;
+            std::tuple<components*...> component_arrays;
             size_t current_index_in_chunk = 0;
             size_t max_chunk_size = 0;
             iteration_handle handle;
@@ -443,7 +553,7 @@ namespace copper_server::api::ecs {
             }
 
             bool operator==(const query_iterator& other) const {
-                return handle.data == other.handle.data;
+                return handle.is_end() == other.handle.is_end();
             }
 
             bool operator!=(const query_iterator& other) const {
@@ -455,6 +565,72 @@ namespace copper_server::api::ecs {
                     std::make_tuple(iterator_viewer{handle, current_index_in_chunk}),
                     std::tie((*(std::get<components*>(component_arrays) + current_index_in_chunk))...)
                 );
+            }
+
+            template <class FN>
+            void chunk_iterate(FN&& fn) {
+                query_iterator end;
+                while (*this != end) {
+                    std::apply(fn, std::tuple_cat(component_arrays, std::make_tuple(max_chunk_size)));
+                    apply_next();
+                }
+            }
+
+            template <class FN>
+            void chunk_iterate_view(FN&& fn) {
+                query_iterator end;
+                while (*this != end) {
+                    if constexpr (std::is_same_v<iterator_view, iterator_viewer>())
+                        std::apply(fn, std::tuple_cat(std::make_tuple(iterator_view{*this}), component_arrays, std::make_tuple(max_chunk_size)));
+                    else
+                        std::apply(fn, std::tuple_cat(std::make_tuple(typename util::apply_tuple_to<iterator_view_chunk_dirty_mark, typename iterator_viewer::written>::type{*this}), component_arrays, std::make_tuple(max_chunk_size)));
+                    apply_next();
+                }
+            }
+
+            template <class FN>
+            void chunk_iterate_parralel(FN&& fn) {
+                std::vector<fast_task::cancelable_future_ptr<void>> futures;
+                query_iterator end;
+                while (*this != end) {
+                    futures.push_back(fast_task::cancelable_future<void>::start([component_arrays, max_chunk_size, &fn]() { std::apply(fn, std::tuple_cat(component_arrays, std::make_tuple(max_chunk_size))); }));
+                    apply_next();
+                }
+
+                try {
+                    for (auto& future_ : futures)
+                        future_->wait();
+                } catch (...) {
+                    for (auto& future_ : futures)
+                        future_->cancel();
+                    throw;
+                }
+            }
+
+            template <class FN>
+            void chunk_iterate_parralel_view(FN&& fn) {
+                std::vector<fast_task::cancelable_future_ptr<void>> futures;
+                query_iterator end;
+                while (*this != end) {
+                    if constexpr (std::is_same_v<iterator_view, iterator_viewer>())
+                        futures.push_back(fast_task::cancelable_future<void>::start([view = iterator_view_chunk_parralel{*this}, max_chunk_size, component_arrays, &fn]() mutable {
+                            std::apply(fn, std::tuple_cat(std::make_tuple(std::move(view)), component_arrays, std::make_tuple(max_chunk_size)));
+                        }));
+                    else
+                        futures.push_back(fast_task::cancelable_future<void>::start([view = typename util::apply_tuple_to<iterator_view_chunk_parralel_dirty_mark, typename iterator_viewer::written>::type{*this}, max_chunk_size, component_arrays, &fn]() mutable {
+                            std::apply(fn, std::tuple_cat(std::make_tuple(std::move(view)), component_arrays, std::make_tuple(max_chunk_size)));
+                        }));
+                    apply_next();
+                }
+
+                try {
+                    for (auto& future_ : futures)
+                        future_->wait();
+                } catch (...) {
+                    for (auto& future_ : futures)
+                        future_->cancel();
+                    throw;
+                }
             }
 
         private:
@@ -505,7 +681,6 @@ namespace copper_server::api::ecs {
             static_assert(detail::are_tuples_disjoint<WriteTypes, WithoutTypes>::value, "COMPILE ERROR: A component was requested for write, but the component also been requested to be skipped. The query result would be always empty.");
 
             static_assert(detail::are_tuples_disjoint<ReadTypes, WriteTypes>::value, "COMPILE ERROR: A component was requested for both read and write access. Use .writes() for mutable access.");
-
 
             static const std::vector<component_id>& get_all_component_ids() {
                 static const std::vector<component_id> ids = compute_component_ids<read_operation_query, write_operation_query>();

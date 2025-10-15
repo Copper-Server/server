@@ -1038,22 +1038,40 @@ namespace copper_server::api::ecs {
                 return {0, nullptr};
             }
 
+            bool is_end() const {
+                return current_archetype_index >= arch_data.size();
+            }
+
             // CRITICAL: this function depends on next() function, changes on using current_chunk_index
             //  would impact the current chunk retrivial
             //  this function used for explicit dirty marking
             void mark_component_dirty(component_id component, size_t entity_index) {
-                if (current_archetype_index >= arch_data.size())
+                mark_component_dirty(current_archetype_index, current_chunk_index, component, entity_index);
+            }
+
+            bool is_entity_match(size_t entity_index) const {
+                return is_entity_match(current_archetype_index, current_chunk_index, entity_index);
+            }
+
+            std::pair<int32_t, uint32_t> get_current_entity(size_t entity_index) {
+                return get_current_entity(current_archetype_index, current_chunk_index, entity_index);
+            }
+
+            structural_changes get_component_change_state(size_t entity_index, component_id cid) {
+                return get_component_change_state(current_archetype_index, current_chunk_index, entity_index, cid);
+            }
+
+            void mark_component_dirty(size_t archetype_index, size_t chunk_index, component_id component, size_t entity_index) {
+                if (archetype_index >= arch_data.size())
                     return;
 
-                arch_data_t& data = arch_data[current_archetype_index];
+                arch_data_t& data = arch_data[archetype_index];
                 archetype* archetype = data.type;
 
-                // CRITICAL: The next() function increments current_chunk_index *before* it returns.
-                // This means the chunk the user is currently iterating over is at the *previous* index.
-                if (current_chunk_index == 0)
-                    return; // This should not happen if called from a valid iterator, but as a safeguard:
+                if (chunk_index == 0)
+                    return;
 
-                std::unique_ptr<chunk>& chunk = archetype->chunks[current_chunk_index - 1];
+                std::unique_ptr<chunk>& chunk = archetype->chunks[chunk_index - 1];
 
                 auto it = archetype->component_index_map.find(component);
                 if (it != archetype->component_index_map.end()) {
@@ -1062,12 +1080,12 @@ namespace copper_server::api::ecs {
                 }
             }
 
-            bool is_entity_match(size_t entity_index) const {
-                if (current_chunk_index == 0)
+            bool is_entity_match(size_t archetype_index, size_t chunk_index, size_t entity_index) const {
+                if (chunk_index == 0)
                     return false;
 
-                auto& active_arch_data = arch_data[current_archetype_index];
-                auto& active_chunk = active_arch_data.type->chunks[current_chunk_index - 1];
+                auto& active_arch_data = arch_data[archetype_index];
+                auto& active_chunk = active_arch_data.type->chunks[chunk_index - 1];
                 if (active_arch_data.required_dirty_comp_indices.size()) {
                     for (uint32_t comp_index : active_arch_data.required_dirty_comp_indices)
                         if (!active_arch_data.type->is_dirty(active_chunk.get(), comp_index, entity_index))
@@ -1094,21 +1112,21 @@ namespace copper_server::api::ecs {
                 return true;
             }
 
-            std::pair<int32_t, uint32_t> get_current_entity(size_t entity_index) {
-                if (current_chunk_index == 0)
+            std::pair<int32_t, uint32_t> get_current_entity(size_t archetype_index, size_t chunk_index, size_t entity_index) {
+                if (chunk_index == 0)
                     return {0, UINT32_MAX};
 
-                auto& active_arch_data = arch_data[current_archetype_index];
-                auto& active_chunk = active_arch_data.type->chunks[current_chunk_index - 1];
+                auto& active_arch_data = arch_data[archetype_index];
+                auto& active_chunk = active_arch_data.type->chunks[chunk_index - 1];
                 auto id = active_chunk.get()->entities()[entity_index];
 
                 auto& record = records.at(id);
                 return {id, record.generation};
             }
 
-            structural_changes get_component_change_state(size_t entity_index, component_id cid) {
-                auto& active_arch_data = arch_data[current_archetype_index];
-                auto& active_chunk = active_arch_data.type->chunks[current_chunk_index - 1];
+            structural_changes get_component_change_state(size_t archetype_index, size_t chunk_index, size_t entity_index, component_id cid) {
+                auto& active_arch_data = arch_data[archetype_index];
+                auto& active_chunk = active_arch_data.type->chunks[chunk_index - 1];
                 auto id = active_chunk.get()->entities()[entity_index];
 
                 auto& record = records.at(id);
@@ -1155,6 +1173,13 @@ namespace copper_server::api::ecs {
                 return data->next();
         }
 
+        bool iteration_handle::is_end() const {
+            if (data == nullptr)
+                return true;
+            else
+                return data->is_end();
+        }
+
         void iteration_handle::mark_component_dirty(component_id component, size_t index) {
             if (data != nullptr)
                 data->mark_component_dirty(component, index);
@@ -1176,6 +1201,36 @@ namespace copper_server::api::ecs {
             if (data == nullptr)
                 return structural_changes::no_changes;
             return data->get_component_change_state(entity_index, cid);
+        }
+
+        void iteration_handle::preserved_state::mark_component_dirty(iteration_handle& handle, component_id cid, size_t index) {
+            if (handle.data != nullptr)
+                handle.data->mark_component_dirty(archetype_index, chunk_index, cid, index);
+        }
+
+        bool iteration_handle::preserved_state::is_entity_match(iteration_handle& handle, size_t current_index_in_chunk) const {
+            if (handle.data == nullptr)
+                return false;
+            return handle.data->is_entity_match(archetype_index, chunk_index, current_index_in_chunk);
+        }
+
+        std::pair<int32_t, uint32_t> iteration_handle::preserved_state::get_current_entity(iteration_handle& handle, size_t current_index_in_chunk) {
+            if (handle.data == nullptr)
+                return {0, -1};
+            return handle.data->get_current_entity(archetype_index, chunk_index, current_index_in_chunk);
+        }
+
+        structural_changes iteration_handle::preserved_state::get_component_change_state(iteration_handle& handle, size_t entity_index, component_id cid) {
+            if (handle.data == nullptr)
+                return structural_changes::no_changes;
+            return handle.data->get_component_change_state(archetype_index, chunk_index, entity_index, cid);
+        }
+
+        iteration_handle::preserved_state iteration_handle::preserve_state() {
+            if (data)
+                return {data->current_archetype_index, data->current_chunk_index};
+            else
+                return {0, 0};
         }
 
         iteration_handle iterate_components(int32_t world_id, std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components, std::span<component_id> with_changes) {
