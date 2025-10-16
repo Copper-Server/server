@@ -10,10 +10,11 @@
 #include <library/fast_task/include/files.hpp>
 #include <library/list_array.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/ecs/base_components.hpp>
+#include <src/api/entity.hpp>
 #include <src/api/players.hpp>
 #include <src/api/selector.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 
@@ -176,10 +177,9 @@ namespace copper_server::api::players {
             base_objects::command_context context(caller, true);
             sel.flags.only_players = true;
             sel.flags.only_entities = false;
-            sel.select(context, [&callback](base_objects::entity& entity) {
-                auto pl = entity.assigned_player;
-                if (pl)
-                    callback(*pl);
+            sel.select(context, [&callback](api::ecs::entity entity) {
+                if (entity.has<api::ecs::com::assigned_player>())
+                    callback(*entity.get<api::ecs::com::assigned_player>().player);
             });
         }
 
@@ -440,7 +440,7 @@ namespace copper_server::api::players {
         }
         if (player.assigned_entity)
             compound.write("assigned_entity", [&player](auto& stream) {
-                base_objects::entity::store_to_file(player.assigned_entity, stream);
+                api::entity::store_to_file(*player.assigned_entity, stream);
             });
         file.flush();
     }
@@ -461,7 +461,7 @@ namespace copper_server::api::players {
             if (std::filesystem::exists(file_path))
                 throw std::runtime_error("Failed to open file: " + file_path.string());
             else {
-                player.assigned_entity = base_objects::entity::create("minecraft:player");
+                player.assigned_entity = api::entity::create("minecraft:player");
                 save_player(std::move(player), uuid);
             }
             return load_player(uuid);
@@ -518,14 +518,14 @@ namespace copper_server::api::players {
                     .force_all_collect();
             })
             .collect("assigned_entity", [&player](enbt::io_helper::value_read_stream& stream) {
-                player.assigned_entity = base_objects::entity::load_from_file(stream);
+                player.assigned_entity = api::entity::load_from_file(stream);
             })
             .collect("local_data", [&player](enbt::io_helper::value_read_stream& stream) {
                 player.local_data = stream.read();
             })
             .make_collect();
         if (!player.assigned_entity)
-            player.assigned_entity = base_objects::entity::create("minecraft:player");
+            player.assigned_entity = api::entity::create("minecraft:player");
         return player;
     }
 }

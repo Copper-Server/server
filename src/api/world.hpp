@@ -73,7 +73,7 @@ namespace copper_server::api::world {
     void sync_settings(base_objects::SharedClientData& client_ref); //sends world settings to client
 
     void transfer(
-        base_objects::entity_ref& entity,
+        api::ecs::entity entity,
         int32_t world_id,
         util::VECTOR position,
         util::ANGLE_DEG rotation,
@@ -82,7 +82,7 @@ namespace copper_server::api::world {
     );
 
     void transfer(
-        base_objects::entity_ref& entity,
+        api::ecs::entity entity,
         int32_t world_id,
         util::VECTOR position,
         util::ANGLE_DEG rotation,
@@ -90,14 +90,14 @@ namespace copper_server::api::world {
     );
 
     void transfer(
-        base_objects::entity_ref& entity,
+        api::ecs::entity entity,
         int32_t world_id,
         util::VECTOR position,
         std::function<void(storage::world_data& world)> callback = nullptr
     );
 
-    void register_entity(int32_t world_id, base_objects::entity_ref& entity_ref);
-    void unregister_entity(int32_t world_id, base_objects::entity_ref& entity_ref);
+    void register_entity(int32_t world_id, api::ecs::entity entity_ref);
+    void unregister_entity(int32_t world_id, api::ecs::entity entity_ref);
 
     base_objects::events::event<int32_t>& on_world_loaded();
     base_objects::events::event<int32_t>& on_world_unloaded();

@@ -9,7 +9,8 @@
 #ifndef SRC_API_SCREENS
 #define SRC_API_SCREENS
 #include <cstdint>
-#include <src/base_objects/entity.hpp>
+#include <functional>
+#include <src/api/entity.hpp>
 #include <src/base_objects/events/sync_event.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/base_objects/slot.hpp>
@@ -117,7 +118,7 @@ namespace copper_server::api::screens {
     }
 
     class horse : public base_screen {
-        base_objects::entity_ref entity;
+        api::ecs::entity entity;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -134,7 +135,7 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        horse(base_objects::SharedClientData& client, base_objects::entity_ref entity);
+        horse(base_objects::SharedClientData& client, api::ecs::entity entity);
         virtual ~horse();
     };
 
@@ -435,7 +436,7 @@ namespace copper_server::api::screens {
     };
 
     class minecart_chest : public generic_9x3 {
-        base_objects::entity_ref entity;
+        api::ecs::entity entity;
 
     public:
         bool has_item(int32_t) const override;
@@ -444,7 +445,7 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        minecart_chest(base_objects::SharedClientData& client, base_objects::entity_ref entity);
+        minecart_chest(base_objects::SharedClientData& client, api::ecs::entity entity);
         virtual ~minecart_chest();
     };
 
@@ -582,7 +583,7 @@ namespace copper_server::api::screens {
     };
 
     class merchant : public base_screen {
-        base_objects::entity_ref entity;
+        api::ecs::entity entity;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -604,7 +605,7 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        merchant(base_objects::SharedClientData& client, base_objects::entity_ref entity);
+        merchant(base_objects::SharedClientData& client, api::ecs::entity entity);
         virtual ~merchant();
     };
 

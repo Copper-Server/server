@@ -28,13 +28,14 @@
 #include <src/api/bin/packets/generic_auto.hpp>
 
 #include <src/api/configuration.hpp>
-#include <src/api/permissions.hpp>
+#include <src/api/ecs/base_components.hpp>
+#include <src/api/entity.hpp>
 #include <src/api/entity_proxy.hpp>
+#include <src/api/permissions.hpp>
 #include <src/api/registers.hpp>
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/storage/world_data.hpp>
-#include <src/base_objects/entity.hpp>
 
 namespace copper_server::api::packets {
     auto_define_packet_ops(client_bound::play::bundle_delimiter);
@@ -362,9 +363,9 @@ namespace copper_server::api::packets::client_bound::play {
         return update;
     }
 
-    set_entity_data set_entity_data::create(base_objects::entity& entity) {
+    set_entity_data set_entity_data::create(api::ecs::entity entity) {
         set_entity_data result;
-        result.id = entity.protocol_id;
+        result.id = entity.get<api::ecs::com::protocol_id>().value;
         api::entity_proxy::iterate_all(entity, [&result](auto id, auto& metadata) {
             result.metadata.push_back({id, metadata});
         });

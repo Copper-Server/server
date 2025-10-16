@@ -6,8 +6,8 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#ifndef SRC_API_DETAIL_ECS
-#define SRC_API_DETAIL_ECS
+#ifndef SRC_API_ECS_DETAIL
+#define SRC_API_ECS_DETAIL
 #include <atomic>
 #include <cstdint>
 #include <library/fast_task.hpp>
@@ -100,12 +100,7 @@ namespace copper_server::api::ecs {
 
         template <class T>
         struct write_depends_extract {
-            using create = extract_dependent_types<void>;
-        };
-
-        template <has_write_depends T>
-        struct write_depends_extract {
-            using create = extract_dependent_types<typename T::writes>;
+            using create = std::conditional_t<has_write_depends<T>, extract_dependent_types<typename T::writes>, extract_dependent_types<void>>;
         };
 
         template <class T>
@@ -115,12 +110,7 @@ namespace copper_server::api::ecs {
 
         template <class T>
         struct read_depends_extract {
-            using create = extract_dependent_types<void>;
-        };
-
-        template <has_read_depends T>
-        struct read_depends_extract {
-            using create = extract_dependent_types<typename T::reads>;
+            using create = std::conditional_t<has_read_depends<T>, extract_dependent_types<typename T::reads>, extract_dependent_types<void>>;
         };
 
         template <class T>
@@ -151,11 +141,11 @@ namespace copper_server::api::ecs {
 
         //this function moves the component to heap allocated buffer, accepts reference to the component.
         template <class component>
-        void queue_set_entity_component(int32_t id, uint32_t generation, component_id component_id, component&& component) {
+        void queue_set_entity_component(int32_t id, uint32_t generation, component_id component_id, component&& comp) {
             auto& info = component_info_registry.at(component_id);
             mutation_queue_item queue{id, generation, component_id};
             queue.data.resize(info.size);
-            info.move_construct(queue.data.data(), &component);
+            info.move_construct(queue.data.data(), &comp);
             queue_command(std::move(queue));
         }
 
@@ -166,6 +156,7 @@ namespace copper_server::api::ecs {
         void queue_destroy_entity(int32_t id, uint32_t generation);
         void queue_mark_dirty(int32_t id, uint32_t generation, component_id component_id);
         bool has_entity_component(int32_t id, uint32_t generation, component_id component_id);
+        std::optional<int32_t> get_entity_assigned_to_world(int32_t id, uint32_t generation);
 
         struct iteration_handle {
             struct iteration_data;
@@ -343,10 +334,7 @@ namespace copper_server::api::ecs {
 
             ~iterator_view() = default;
 
-            entity current_entity() {
-                auto it = handle.get_current_entity(index);
-                return {it.first, it.second};
-            }
+            entity current_entity();
 
             template <class component>
             structural_changes get_change_state() {
@@ -488,7 +476,7 @@ namespace copper_server::api::ecs {
 
         template <template <bool, class, class...> class T, bool requires_shifting, class iterator_viewer, class... Args>
         struct apply_tuple_to_iter<T, requires_shifting, iterator_viewer, std::tuple<Args...>> {
-            using type = T<requires_shifting, dirty_mark, Args...>;
+            using type = T<requires_shifting, iterator_viewer, Args...>;
         };
 
         template <class...>
@@ -668,8 +656,8 @@ namespace copper_server::api::ecs {
             using MetaTuple = detail::build_meta_tuple<Params...>;
             using ReadTypes = typename detail::extract_by_access<MetaTuple, detail::read_operation_query>::type;
             using WriteTypes = typename detail::extract_by_access<MetaTuple, detail::write_operation_query>::type;
-            using WithoutTypes = typename detail::extract_by_access<MetaTuple, detail::query_without>::type;
-            using WithChangesTypes = typename detail::extract_by_access<MetaTuple, detail::query_with_changes>::type;
+            using WithoutTypes = typename detail::extract_by_access<MetaTuple, detail::filter_without>::type;
+            using WithChangesTypes = typename detail::extract_by_access<MetaTuple, detail::filter_with_changes>::type;
             using IteratorTuple = typename detail::build_iterator_tuple_from_meta<MetaTuple>::type;
 
             static_assert(!detail::has_duplicates_in_tuple<ReadTypes>::value, "COMPILE ERROR: A component was requested for read-access multiple times in the same query.");
@@ -775,4 +763,4 @@ namespace copper_server::api::ecs {
         uint32_t generation;
     };
 }
-#endif /* SRC_API_DETAIL_ECS */
+#endif /* SRC_API_ECS_DETAIL */

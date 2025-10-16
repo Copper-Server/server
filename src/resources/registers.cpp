@@ -11,13 +11,13 @@
 #include <library/enbt/io_tools.hpp>
 #include <resources/include.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/entity.hpp>
 #include <src/api/log.hpp>
 #include <src/api/recipe.hpp>
 #include <src/api/registers.hpp>
 #include <src/api/tags.hpp>
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/data_packs/known_pack.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/util/conversions.hpp>
 #include <src/util/json_helpers.hpp>
 
@@ -177,7 +177,7 @@ namespace copper_server::resources {
         api::tags::loading_stage_end();
     }
 
-    void hardcoded_values_for_entity(base_objects::entity_data& entity_data) {
+    void hardcoded_values_for_entity(api::entity_data& entity_data) {
         if (entity_data.living_entity_data || entity_data.name == "player") {
             entity_data.acceleration = 0.08f;
             entity_data.drag_vertical = 0.02f;
@@ -273,10 +273,10 @@ namespace copper_server::resources {
         auto parsed = boost::json::parse(resources::registry::entities);
         for (auto& [id, obj_] : parsed.as_object()) {
             auto& obj = obj_.as_object();
-            base_objects::entity_data entity_data;
+            api::entity_data entity_data;
             entity_data.id = std::string(id);
             if (obj.contains("max_health")) {
-                base_objects::entity_data::living_entity_data_t living_data;
+                api::entity_data::living_entity_data_t living_data;
                 living_data.base_health = obj.at("max_health").to_number<float>();
                 living_data.step_height = obj.at("step_height").to_number<float>();
                 living_data.can_freeze = obj.at("can_freeze").as_bool();
@@ -337,8 +337,8 @@ namespace copper_server::resources {
 
                 auto& location = spawn_restriction_js.at("location").as_string();
                 auto& heightmap = spawn_restriction_js.at("heightmap").as_string();
-                using enum base_objects::entity_data::spawn_restriction_t::location_e;
-                using enum base_objects::entity_data::spawn_restriction_t::heightmap_e;
+                using enum api::entity_data::spawn_restriction_t::location_e;
+                using enum api::entity_data::spawn_restriction_t::heightmap_e;
                 if (heightmap == "SURFACE")
                     entity_data.spawn_restriction.heightmap = surface;
                 else if (heightmap == "OCEAN_FLOOR")
@@ -362,7 +362,7 @@ namespace copper_server::resources {
             entity_data.eye_height = obj.at("eye_height").to_number<float>();
 
             hardcoded_values_for_entity(entity_data);
-            base_objects::entity_data::register_entity(std::move(entity_data));
+            api::entity_data::register_entity(std::move(entity_data));
         }
     }
 
@@ -2229,7 +2229,7 @@ namespace copper_server::resources {
         load_blocks();
         initialize_entities();
         prepare_built_in_pack();
-        base_objects::entity_data::initialize_entities();
+        api::entity_data::initialize_entities();
         {
             //complete initialization
             for (auto&& [name, decl] : parsed_items.as_object()) {
@@ -2247,7 +2247,7 @@ namespace copper_server::resources {
                     auto item_id = std::stoi(item);
                     auto entity_id = entity.to_number<int32_t>();
                     base_objects::slot_data::get_slot_data(item_id).spawn_entity = entity_id;
-                    base_objects::entity_data::initialization_get(entity_id).spawn_egg = std::make_optional(item_id);
+                    api::entity_data::initialization_get(entity_id).spawn_egg = std::make_optional(item_id);
                 }
             }
             {

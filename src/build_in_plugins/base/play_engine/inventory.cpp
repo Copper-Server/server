@@ -8,7 +8,9 @@
  */
 #include <src/api/command.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/entity.hpp>
 #include <src/api/entity_id_map.hpp>
+#include <src/api/entity_proxy.hpp>
 #include <src/api/packets/client_bound/play.hpp>
 #include <src/api/packets/server_bound/play.hpp>
 #include <src/api/players.hpp>
@@ -16,7 +18,6 @@
 #include <src/api/registers.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 
@@ -42,40 +43,56 @@ namespace copper_server::build_in_plugins::base::play_engine {
             api::packets::processor(*this, [](api::packets::server_bound::play::set_carried_item&& packet, base_objects::SharedClientData& client) {
                 if (packet.slot >= 0 && packet.slot <= 7)
                     if (client.player_data.assigned_entity)
-                        client.player_data.assigned_entity->set_selected_item((uint8_t)packet.slot);
+                        api::entity(*client.player_data.assigned_entity).set_selected_item((uint8_t)packet.slot);
             });
             api::packets::processor(*this, [](api::packets::server_bound::play::set_creative_mode_slot&& packet, base_objects::SharedClientData& client) {
                 if (client.player_data.assigned_entity && client.player_data.gamemode == 1) {
                     base_objects::slot slot = base_objects::slot::from_packet(std::move(packet.item));
+                    auto e = api::entity_proxy::player{*client.player_data.assigned_entity};
                     if (slot)
-                        client.player_data.assigned_entity->inventory[packet.slot] = std::move(*slot);
+                        e.inventory()[packet.slot] = std::move(*slot);
                     else
-                        client.player_data.assigned_entity->inventory.erase(packet.slot);
+                        e.inventory().erase(packet.slot);
                 }
             });
             api::packets::processor(*this, [](api::packets::server_bound::play::pick_item_from_block&& packet, base_objects::SharedClientData& client) {
                 if (client.player_data.assigned_entity) {
-                    auto& e = *client.player_data.assigned_entity;
+                    auto e = api::entity{*client.player_data.assigned_entity};
+                    auto player = api::entity_proxy::player{*client.player_data.assigned_entity};
+
                     if (e.current_world()) {
-                        if (!packet.include_data) {
-                            auto block = e.current_world()->get_block(packet.location.x, packet.location.y, packet.location.z);
-                            auto item = block.getStaticData().item_id;
-                            e.inventory.at(36 + e.get_selected_item()) = base_objects::slot_data::create_item(item);
-                        } else {
-                            //TODO
-                        }
+                        int32_t item_id = 0;
+                        enbt::value data;
+                        e.current_world()->get_block(
+                            packet.location.x,
+                            packet.location.y,
+                            packet.location.z,
+                            [&](auto block) {
+                                item_id = block.getStaticData().item_id;
+                            },
+                            [&](auto block, auto& edata) {
+                                item_id = block.getStaticData().item_id;
+                                if (packet.include_data)
+                                    data = edata;
+                            }
+                        );
+                        auto item = base_objects::slot_data::create_item(item_id);
+                        if (packet.include_data)
+                            item.add_component(base_objects::component::block_entity_data{.data = std::move(data)});
+
+                        player.inventory().at(36 + player.held_slot()) = std::move(item);
                     }
                 }
             });
             api::packets::processor(*this, [](api::packets::server_bound::play::pick_item_from_entity&& packet, base_objects::SharedClientData& client) {
                 if (client.player_data.assigned_entity) {
-                    auto& e = *client.player_data.assigned_entity;
+                    auto e = api::entity_proxy::player{*client.player_data.assigned_entity};
                     auto oe = packet.id.get_entity();
                     if (oe) {
-                        auto item = oe->const_data().spawn_egg;
+                        auto item = api::entity(*oe).const_data().spawn_egg;
 
                         if (item) {
-                            /*auto& slot_data =*/e.inventory.at(36 + e.get_selected_item()) = base_objects::slot_data::create_item(*item);
+                            /*auto& slot_data =*/e.inventory().at(36 + e.held_slot()) = base_objects::slot_data::create_item(*item);
                             //if (packet.include_data) {
                             //    //TODO
                             //}
@@ -201,7 +218,8 @@ namespace copper_server::build_in_plugins::base::play_engine {
             }
 
             virtual bool has_item(int32_t slot) const override {
-                return client.player_data.assigned_entity->inventory.contains(slot);
+                auto player = api::entity_proxy::player{*client.player_data.assigned_entity};
+                return player.inventory().contains(slot);
             }
 
             virtual int32_t max_size() const override {
@@ -209,16 +227,19 @@ namespace copper_server::build_in_plugins::base::play_engine {
             }
 
             virtual base_objects::slot_data& get_slot(int32_t slot) override {
-                return client.player_data.assigned_entity->inventory.at(slot);
+                auto player = api::entity_proxy::player{*client.player_data.assigned_entity};
+                return player.inventory().at(slot);
             }
 
             void iterate(std::move_only_function<void(base_objects::slot_data&, int32_t)>&& fn) override {
-                for (auto& [slot, data] : client.player_data.assigned_entity->inventory)
+                auto player = api::entity_proxy::player{*client.player_data.assigned_entity};
+                for (auto& [slot, data] : player.inventory())
                     fn(data, slot);
             }
 
             void add_item(base_objects::slot& item) {
-                auto& inv = client.player_data.assigned_entity->inventory;
+                auto player = api::entity_proxy::player{*client.player_data.assigned_entity};
+                auto& inv = player.inventory();
                 if (item) {
                     for (uint32_t i = 9; i <= 44; i++) {
                         if (inv.find((int32_t)i) != inv.end()) {
@@ -268,7 +289,8 @@ namespace copper_server::build_in_plugins::base::play_engine {
             void event_button_click(int32_t button_id) override {} //NOTING
 
             void event_click(click_data& data) override {
-                auto& inv = client.player_data.assigned_entity->inventory;
+                auto player = api::entity_proxy::player{*client.player_data.assigned_entity};
+                auto& inv = player.inventory();
                 switch (data.mode) {
                 case 0: {                // normal mouse click
                     if (data.slot < 0) { // Click outside inventory
@@ -541,7 +563,8 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
             void event_request_bundle_item_take(int32_t bundle_slot_id, int32_t in_bundle_slot_id) override {
                 if (client.player_data.assigned_entity) {
-                    auto& inv = client.player_data.assigned_entity->inventory;
+                    auto player = api::entity_proxy::player{*client.player_data.assigned_entity};
+                    auto& inv = player.inventory();
                     if (auto bundle_slot = inv.find(bundle_slot_id); bundle_slot != inv.end()) {
                         if (bundle_slot->second.has_component<base_objects::component::bundle_contents>()) {
                             auto& bundle = bundle_slot->second.get_component<base_objects::component::bundle_contents>();
@@ -558,7 +581,8 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
             void event_book_edit_request(int32_t slot_id, const list_array<std::string_view>& text, const std::optional<std::string_view>& title) override {
                 if (client.player_data.assigned_entity) {
-                    auto& inv = client.player_data.assigned_entity->inventory;
+                    auto player = api::entity_proxy::player{*client.player_data.assigned_entity};
+                    auto& inv = player.inventory();
                     if (auto book_slot = inv.find(slot_id); book_slot != inv.end()) {
                         if (book_slot->second.has_component<base_objects::component::writable_book_content>()) {
                             auto& book = book_slot->second.get_component<base_objects::component::writable_book_content>();

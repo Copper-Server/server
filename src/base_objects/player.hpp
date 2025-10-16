@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
+#include <src/api/ecs.hpp>
 #include <src/base_objects/atomic_holder.hpp>
 #include <string>
 #include <unordered_set>
@@ -91,7 +92,7 @@ namespace copper_server::base_objects {
         //[runtime] calculated from permission_groups
         list_array<std::string> instant_granted_actions;
 
-        entity_ref assigned_entity;
+        std::optional<api::ecs::entity> assigned_entity;
 
         //for server plugins
         enbt::compound local_data;

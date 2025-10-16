@@ -8,16 +8,16 @@
  */
 #include <library/enbt/enbt.hpp>
 #include <library/fast_task.hpp>
+#include <src/api/ecs.hpp>
 #include <src/api/selector.hpp>
 #include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/entity.hpp>
 
 namespace copper_server::api::entity_id_map {
     struct id_s {
         std::vector<int32_t> id;
         enbt::raw_uuid uuid;
-        base_objects::entity_ref assigned_entity;
+        api::ecs::entity assigned_entity;
     };
 
     using id_sp = std::shared_ptr<id_s>;
@@ -157,7 +157,7 @@ namespace copper_server::api::entity_id_map {
         return it->second->uuid;
     }
 
-    void assign_entity(int32_t id, base_objects::entity_ref entity) {
+    void assign_entity(int32_t id, api::ecs::entity entity) {
         std::unique_lock lock(mutex);
         auto it = ids_l.find(id);
         if (it == ids_l.end())
@@ -165,7 +165,7 @@ namespace copper_server::api::entity_id_map {
         it->second->assigned_entity = entity;
     }
 
-    void assign_entity(const enbt::raw_uuid& uuid, base_objects::entity_ref entity) {
+    void assign_entity(const enbt::raw_uuid& uuid, api::ecs::entity entity) {
         std::unique_lock lock(mutex);
         auto it = ids_r.find(uuid);
         if (it == ids_r.end())
@@ -173,19 +173,19 @@ namespace copper_server::api::entity_id_map {
         it->second->assigned_entity = entity;
     }
 
-    base_objects::entity_ref get_entity(int32_t id) {
+    std::optional<api::ecs::entity> get_entity(int32_t id) {
         std::unique_lock lock(mutex);
         auto it = ids_l.find(id);
         if (it == ids_l.end())
-            return nullptr;
+            return std::nullopt;
         return it->second->assigned_entity;
     }
 
-    base_objects::entity_ref get_entity(const enbt::raw_uuid& id) {
+    std::optional<api::ecs::entity> get_entity(const enbt::raw_uuid& id) {
         std::unique_lock lock(mutex);
         auto it = ids_r.find(id);
         if (it == ids_r.end())
-            return nullptr;
+            return std::nullopt;
         return it->second->assigned_entity;
     }
 
@@ -220,7 +220,7 @@ namespace copper_server::api::entity_id_map {
         throw std::runtime_error("Id not found");
     }
 
-    void apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(base_objects::entity&)>&& callback) {
+    void apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(api::ecs::entity)>&& callback) {
         api::selector sel;
         sel.build_selector(selector);
         base_objects::command_context context(caller, true);

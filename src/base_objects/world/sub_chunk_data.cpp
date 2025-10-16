@@ -6,7 +6,6 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/world/sub_chunk_data.hpp>
 
 namespace copper_server::base_objects::world {

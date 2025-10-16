@@ -14,7 +14,6 @@
 #include <src/api/registers.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 

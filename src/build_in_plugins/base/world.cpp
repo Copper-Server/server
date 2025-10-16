@@ -9,7 +9,6 @@
 #include <library/enbt/senbt.hpp>
 #include <library/fast_task/include/files.hpp>
 #include <src/api/configuration.hpp>
-#include <src/api/entity_id_map.hpp>
 #include <src/api/id.hpp>
 #include <src/api/internal/world.hpp>
 #include <src/api/log.hpp>
@@ -17,7 +16,6 @@
 #include <src/api/players.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 #include <src/storage/world_data.hpp>

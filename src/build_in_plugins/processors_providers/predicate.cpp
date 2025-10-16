@@ -6,6 +6,7 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/api/ecs/base_components.hpp>
 #include <src/api/entity_id_map.hpp>
 #include <src/api/predicate.hpp>
 #include <src/api/registers.hpp>
@@ -36,10 +37,10 @@ namespace copper_server::build_in_plugins::processors_providers {
     }
 
     bool __entity_check([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] enbt::raw_uuid entity_uuid) {
-        base_objects::entity_ref entity = api::entity_id_map::get_entity(entity_uuid);
+        auto entity = api::entity_id_map::get_entity(entity_uuid);
         if (!entity)
             return false;
-        auto entity_const_data = entity->const_data();
+        auto entity_const_data = entity->get<api::ecs::com::entity_type>().const_data();
         if (predicate.contains("type"))
             if (entity_const_data.id != (std::string)predicate.at("type"))
                 return false;

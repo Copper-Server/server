@@ -6,15 +6,15 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/packets/client_bound/play.hpp>
-#include <src/api/packets/server_bound/play.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/entity.hpp>
 #include <src/api/internal/permissions.hpp>
 #include <src/api/log.hpp>
+#include <src/api/packets/client_bound/play.hpp>
+#include <src/api/packets/server_bound/play.hpp>
 #include <src/api/permissions.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/entity/event.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
@@ -254,7 +254,7 @@ namespace copper_server::build_in_plugins::tools {
                 break;
             }
             client_ref << api::packets::client_bound::play::entity_event{
-                .id = client_ref.player_data.assigned_entity->protocol_id,
+                .id = api::entity(*client_ref.player_data.assigned_entity).get_protocol_id(),
                 .status = (int8_t)event
             };
         }

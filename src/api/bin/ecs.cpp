@@ -35,6 +35,8 @@ namespace copper_server::api::ecs {
 
     constexpr uint32_t CHUNK_CAPACITY = 256;
 
+    struct archetype;
+
     struct chunk {
         std::unique_ptr<char[]> memory_block;
         std::optional<int32_t> world_bind;
@@ -49,12 +51,6 @@ namespace copper_server::api::ecs {
         std::atomic_uint64_t* atomic_drity_flags(size_t offset) {
             return reinterpret_cast<std::atomic_uint64_t*>(memory_block.get() + offset);
         }
-
-        chunk() = default;
-
-        chunk(archetype* arch, std::optional<int32_t> world_id)
-            : memory_block(std::make_unique_for_overwrite<char[]>(arch->layout.chunk_size_bytes)),
-              world_bind(world_id) {}
 
         bool has_free_slot() {
             return entity_count < CHUNK_CAPACITY;
@@ -132,7 +128,7 @@ namespace copper_server::api::ecs {
                 layout.component_offsets.resize(component_ids.size());
                 layout.dirty_flags_offsets.resize(component_ids.size());
                 size_t current_offset = sizeof(int32_t) * CHUNK_CAPACITY;
-                for (size_t i = 0; i < component_ids.size(); ++i) {
+                for (uint32_t i = 0; i < component_ids.size(); ++i) {
                     component_id id = component_ids[i];
                     const auto& info = detail::component_info_registry[id];
 
@@ -179,20 +175,20 @@ namespace copper_server::api::ecs {
                 return arch->chunks[list.back()].get();
         }
 
-        auto new_chunk = std::make_unique<chunk>(arch, world_id);
+        auto new_chunk = std::make_unique<chunk>(std::make_unique_for_overwrite<char[]>(arch->layout.chunk_size_bytes), world_id);
         chunk* chunk_ptr = new_chunk.get();
 
         arch->chunks.push_back(std::move(new_chunk));
-        uint32_t new_chunk_index = arch->chunks.size() - 1;
+        uint32_t new_chunk_index = uint32_t(arch->chunks.size() - 1);
         chunk_ptr->global_index = new_chunk_index;
 
         if (world_id) {
             auto& world_free_list = arch->world_available_chunks[*world_id];
             world_free_list.push_back(new_chunk_index);
-            chunk_ptr->last_free_list_index = world_free_list.size() - 1;
+            chunk_ptr->last_free_list_index = uint32_t(world_free_list.size() - 1);
         } else {
             arch->global_available_chunks.push_back(new_chunk_index);
-            chunk_ptr->last_free_list_index = arch->global_available_chunks.size() - 1;
+            chunk_ptr->last_free_list_index = uint32_t(arch->global_available_chunks.size() - 1);
         }
 
         return chunk_ptr;
@@ -212,7 +208,7 @@ namespace copper_server::api::ecs {
     }
 
     void release_empty_chunk_swap_pop(archetype* arch, uint32_t index_to_remove) {
-        uint32_t last_index = arch->chunks.size() - 1;
+        uint32_t last_index = uint32_t(arch->chunks.size() - 1);
         chunk* moved_chunk = arch->chunks[last_index].get();
 
         if (index_to_remove != last_index) {
@@ -235,7 +231,7 @@ namespace copper_server::api::ecs {
     void add_to_free_list(archetype* arch, chunk* chunk_to_add) {
         auto& list = select_free_list(arch, chunk_to_add->world_bind);
         list.push_back(chunk_to_add->global_index);
-        chunk_to_add->last_free_list_index = list.size() - 1;
+        chunk_to_add->last_free_list_index = uint32_t(list.size() - 1);
     }
 
     fast_task::task_mutex archetypes_mutex;
@@ -378,7 +374,7 @@ namespace copper_server::api::ecs {
 
     entity allocate_entity(archetype* in, std::optional<int32_t> world) {
         if (free_entity_ids.empty()) {
-            int32_t id = records.size();
+            int32_t id = int32_t(records.size());
             records.resize(records.size() + 1);
             auto& record = records.at(id);
             record.type = in;
@@ -688,7 +684,7 @@ namespace copper_server::api::ecs {
                 }));
             }
 
-            return fast_task::when_all(std::move(worker_futures));
+            fast_task::future_tool::wait_all(std::move(worker_futures));
         }
 
         template <class T>
@@ -929,11 +925,6 @@ namespace copper_server::api::ecs {
                 throw std::bad_alloc();
         }
 
-        void queue_remove_entity_component(int32_t id, uint32_t generation, component_id component_id) {
-            if (!mutation_queue.enqueue(mutation_queue_item{id, generation, component_id}))
-                throw std::bad_alloc();
-        }
-
         void queue_destroy_entity(int32_t id, uint32_t generation) {
             if (!entity_destroy_queue.enqueue(entity_destroy_queue_item{id, generation}))
                 throw std::bad_alloc();
@@ -950,6 +941,14 @@ namespace copper_server::api::ecs {
                 return record.type->component_index_map.contains(component_id);
             else
                 return false;
+        }
+
+        std::optional<int32_t> get_entity_assigned_to_world(int32_t id, uint32_t generation) {
+            auto& record = records.at(id);
+            if (record.generation == generation)
+                return record.chunk->world_bind;
+            else
+                return std::nullopt;
         }
 
         struct iteration_handle::iteration_data {
@@ -994,8 +993,8 @@ namespace copper_server::api::ecs {
             // CRITICAL: after changing check mark_component_dirty for correctnes
             std::pair<size_t, void**> next() {
                 while (current_archetype_index < arch_data.size()) {
-                    arch_data_t& data = arch_data[current_archetype_index];
-                    archetype* archetype = data.type;
+                    arch_data_t& adata = arch_data[current_archetype_index];
+                    archetype* archetype = adata.type;
 
                     while (current_chunk_index < archetype->chunks.size()) {
                         std::unique_ptr<chunk>& chunk = archetype->chunks[current_chunk_index];
@@ -1003,9 +1002,9 @@ namespace copper_server::api::ecs {
 
                         if (world_match) {
                             bool dirty_match = true;
-                            if (!data.required_dirty_comp_indices.empty()) {
+                            if (!adata.required_dirty_comp_indices.empty()) {
                                 dirty_match = false;
-                                for (uint32_t comp_index : data.required_dirty_comp_indices) {
+                                for (uint32_t comp_index : adata.required_dirty_comp_indices) {
                                     auto flags = archetype->dirty_flags(chunk.get(), comp_index);
                                     uint64_t combined_mask = 0;
                                     for (const auto& flag_word : flags) {
@@ -1019,11 +1018,11 @@ namespace copper_server::api::ecs {
                             }
 
                             if (dirty_match) {
-                                for (uint32_t comp_index : data.make_dirty_comp_indices)
+                                for (uint32_t comp_index : adata.make_dirty_comp_indices)
                                     archetype->mark_dirty_entities(chunk.get(), comp_index);
 
-                                for (size_t i = 0; i < data.required_layout_offsets.size(); i++)
-                                    component_arrays[i] = chunk->memory_block.get() + data.required_layout_offsets[i];
+                                for (size_t i = 0; i < adata.required_layout_offsets.size(); i++)
+                                    component_arrays[i] = chunk->memory_block.get() + adata.required_layout_offsets[i];
 
                                 ++current_chunk_index;
                                 return {chunk->entity_count, component_arrays.data()};
@@ -1065,8 +1064,7 @@ namespace copper_server::api::ecs {
                 if (archetype_index >= arch_data.size())
                     return;
 
-                arch_data_t& data = arch_data[archetype_index];
-                archetype* archetype = data.type;
+                archetype* archetype = arch_data[archetype_index].type;
 
                 if (chunk_index == 0)
                     return;
@@ -1233,6 +1231,21 @@ namespace copper_server::api::ecs {
                 return {0, 0};
         }
 
+        entity iterator_view::current_entity() {
+            auto it = handle.get_current_entity(index);
+            return {it.first, it.second};
+        }
+
+        entity iterator_view_chunk::current_entity(size_t index) {
+            auto it = handle.get_current_entity(index);
+            return {it.first, it.second};
+        }
+
+        entity iterator_view_chunk_parralel::current_entity(size_t index) {
+            auto it = state.get_current_entity(handle, index);
+            return {it.first, it.second};
+        }
+
         iteration_handle iterate_components(int32_t world_id, std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components, std::span<component_id> with_changes) {
             iteration_handle handle;
             handle.data = std::make_unique<iteration_handle::iteration_data>();
@@ -1261,9 +1274,9 @@ namespace copper_server::api::ecs {
         }
     }
 
-    void entity_recipe::freeze() {
+    entity_recipe& entity_recipe::freeze() {
         if (is_frozen_)
-            return;
+            return *this;
         is_frozen_ = true;
         std::sort(component_ids.begin(), component_ids.end());
         component_ids.erase(
@@ -1271,6 +1284,7 @@ namespace copper_server::api::ecs {
             component_ids.end()
         );
         hash = archetype_hash{}(component_ids);
+        return *this;
     }
 
     const std::vector<component_id>& entity_recipe::get_ids() const {

@@ -8,10 +8,10 @@
  */
 #include <library/enbt/senbt.hpp>
 #include <library/list_array.hpp>
+#include <src/api/ecs/base_components.hpp>
 #include <src/api/permissions.hpp>
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 #include <src/storage/world_data.hpp>
@@ -22,13 +22,13 @@ namespace copper_server::base_objects {
     void command_context::apply_executor_data() {
         if (!executor.player_data.assigned_entity)
             return;
-        auto pos = executor.player_data.assigned_entity->position;
-        auto rot = util::to_yaw_pitch_256(executor.player_data.assigned_entity->rotation);
-        auto mot = executor.player_data.assigned_entity->motion;
+        auto pos = executor.player_data.assigned_entity->get<api::ecs::com::position>();
+        auto rot = util::to_yaw_pitch_256(executor.player_data.assigned_entity->get<api::ecs::com::rotation>());
+        auto mot = executor.player_data.assigned_entity->get<api::ecs::com::motion>();
 
-        if (executor.player_data.assigned_entity->current_world()) {
-            other_data["world_id"] = executor.player_data.assigned_entity->current_world()->world_id;
-            other_data["world_name"] = executor.player_data.assigned_entity->current_world()->world_name;
+        if (api::entity(*executor.player_data.assigned_entity).current_world()) {
+            other_data["world_id"] = api::entity(*executor.player_data.assigned_entity).current_world()->world_id;
+            other_data["world_name"] = api::entity(*executor.player_data.assigned_entity).current_world()->world_name;
         }
 
         other_data["x"] = pos.x;

@@ -11,13 +11,8 @@
 #include <functional>
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
+#include <src/api/ecs.hpp>
 #include <src/base_objects/atomic_holder.hpp>
-
-namespace copper_server::base_objects {
-    struct entity;
-    struct SharedClientData;
-    using entity_ref = atomic_holder<entity>;
-}
 
 namespace copper_server::api::entity_id_map {
     //used for ender_dragon and other entities, when the client uses entity_id + offset to specify part of entity it has interacted
@@ -29,16 +24,16 @@ namespace copper_server::api::entity_id_map {
     [[nodiscard]] int32_t remove_id(const enbt::raw_uuid& uuid);
     [[nodiscard]] int32_t get_id(const enbt::raw_uuid& uuid);
     [[nodiscard]] enbt::raw_uuid get_uuid(int32_t id);
-    /*nodiscard*/ void assign_entity(int32_t id, base_objects::entity_ref entity);
-    /*nodiscard*/ void assign_entity(const enbt::raw_uuid& uuid, base_objects::entity_ref entity);
-    [[nodiscard]] base_objects::entity_ref get_entity(int32_t id);
-    [[nodiscard]] base_objects::entity_ref get_entity(const enbt::raw_uuid& uuid);
+    /*nodiscard*/ void assign_entity(int32_t id, api::ecs::entity entity);
+    /*nodiscard*/ void assign_entity(const enbt::raw_uuid& uuid, api::ecs::entity entity);
+    [[nodiscard]] std::optional<api::ecs::entity> get_entity(int32_t id);
+    [[nodiscard]] std::optional<api::ecs::entity> get_entity(const enbt::raw_uuid& uuid);
     [[nodiscard]] bool has_id(int32_t id);
     [[nodiscard]] bool has_uuid(const enbt::raw_uuid& uuid);
     [[nodiscard]] list_array<int32_t> query_ids();
     [[nodiscard]] uint8_t id_index(int32_t id); //gets index of allocated id
 
-    void apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(base_objects::entity&)>&& callback);
+    void apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(api::ecs::entity)>&& callback);
 }
 
 #endif /* SRC_API_ENTITY_ID_MAP */

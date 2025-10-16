@@ -8,14 +8,12 @@
  */
 #include <src/api/command.hpp>
 #include <src/api/configuration.hpp>
-#include <src/api/entity_id_map.hpp>
 #include <src/api/packets/client_bound/play.hpp>
 #include <src/api/packets/server_bound/play.hpp>
 #include <src/api/players.hpp>
 #include <src/api/registers.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 

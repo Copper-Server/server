@@ -8,7 +8,7 @@
  */
 #ifndef SRC_API_ECS
 #define SRC_API_ECS
-#include <src/api/detail/ecs.hpp>
+#include <src/api/ecs/detail.hpp>
 
 //entity component system
 namespace copper_server::api::ecs {
@@ -34,7 +34,7 @@ namespace copper_server::api::ecs {
             return *this;
         }
 
-        void freeze();
+        entity_recipe& freeze();
 
         bool is_frozen() const {
             return is_frozen_;
@@ -82,9 +82,9 @@ namespace copper_server::api::ecs {
         }
 
         //the components changes would not be accessible util next tick, all changes buffered
-        template <class component, class... args>
-        void add(args&&... args) {
-            set(component(std::forward<args>(args)...));
+        template <class component, class... Args>
+        void add(Args&&... args) {
+            set(component(std::forward<Args>(args)...));
         }
 
         //the components changes would not be accessible util next tick, all changes buffered
@@ -112,6 +112,22 @@ namespace copper_server::api::ecs {
 
         void destroy() {
             detail::queue_destroy_entity(id, generation);
+        }
+
+        bool is_assigned_to_world(int32_t world_id) const {
+            return detail::get_entity_assigned_to_world(id, generation) == world_id;
+        }
+
+        std::optional<int32_t> get_assinged_world_id() const {
+            return detail::get_entity_assigned_to_world(id, generation);
+        }
+
+        bool operator==(const entity& other) const {
+            return id == other.id && generation == other.generation;
+        }
+
+        bool operator!=(const entity& other) const {
+            return id != other.id || generation != other.generation;
         }
     };
 
@@ -306,4 +322,5 @@ namespace copper_server::api::ecs {
     };
 }
 
+#include <src/api/ecs/late_definition.hpp>
 #endif /* SRC_API_ECS */

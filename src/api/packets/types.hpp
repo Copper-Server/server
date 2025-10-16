@@ -759,6 +759,7 @@ namespace copper_server::api::packets {
         using entity_id = api::id::source<optional_var_int32, api::id::registry_source::entity_id>;
 
         using std::optional<int32_t>::optional;
+        using std::optional<int32_t>::operator=;
 
         operator int32_t() const {
             if (has_value())
@@ -771,6 +772,7 @@ namespace copper_server::api::packets {
     struct optional_var_int64 : public std::optional<int64_t> { //encoded same as var_int64 but if set the value incremented and checked for overflow, if not set encoded as 0
         using underlying_type = int32_t;
         using std::optional<int64_t>::optional;
+        using std::optional<int64_t>::operator=;
 
         operator int64_t() const {
             if (has_value())

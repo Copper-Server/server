@@ -8,11 +8,10 @@
  */
 #include <src/api/entity_id_map.hpp>
 #include <src/api/permissions.hpp>
+#include <src/api/selector.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
-#include <src/api/selector.hpp>
 
 namespace copper_server::api {
 
@@ -301,13 +300,13 @@ namespace copper_server::api {
         build_selector_parse(selector_string);
     }
 
-    bool selector::select(base_objects::command_context& context, std::function<void(base_objects::entity&)>&& fn) const {
-        list_array<base_objects::entity_ref> entities;
-        base_objects::entity_ref self_entity;
+    bool selector::select(base_objects::command_context& context, std::function<void(api::ecs::entity)>&& fn) const {
+        list_array<api::ecs::entity> entities;
+        api::ecs::entity self_entity;
         if (context.other_data.contains("entity_id"))
             self_entity = api::entity_id_map::get_entity((int32_t)context.other_data.at("entity_id"));
         else
-            self_entity = context.executor.player_data.assigned_entity;
+            self_entity = *context.executor.player_data.assigned_entity;
 
         if (flags.nearest || distance || x || y || z) {
             double check_x = context.other_data.at("x");

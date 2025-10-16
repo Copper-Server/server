@@ -8,9 +8,9 @@
  */
 #include <functional>
 #include <src/api/configuration.hpp>
+#include <src/api/ecs/base_components.hpp>
 #include <src/api/packets.hpp>
 #include <src/api/world.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/storage/world_data.hpp>
@@ -200,9 +200,10 @@ namespace copper_server::api::world {
                 = get_worlds().get(id)->world_name;
 
             auto& ass_ent = client_ref.player_data.assigned_entity;
-            ass_ent->position.x = 0.5 + (double)x;
-            ass_ent->position.y = (double)pos_y;
-            ass_ent->position.z = 0.5 + (double)z;
+            auto pos = ass_ent->modify<api::ecs::com::position>();
+            pos->x = 0.5 + (double)x;
+            pos->y = (double)pos_y;
+            pos->z = 0.5 + (double)z;
         }
 
         return {id, client_ref.player_data.world_id};
@@ -242,7 +243,7 @@ namespace copper_server::api::world {
     }
 
     void transfer(
-        [[maybe_unused]] base_objects::entity_ref& entity,
+        [[maybe_unused]] api::ecs::entity entity,
         [[maybe_unused]] int32_t world_id,
         [[maybe_unused]] util::VECTOR position,
         [[maybe_unused]] util::ANGLE_DEG rotation,
@@ -253,7 +254,7 @@ namespace copper_server::api::world {
     }
 
     void transfer(
-        [[maybe_unused]] base_objects::entity_ref& entity,
+        [[maybe_unused]] api::ecs::entity entity,
         [[maybe_unused]] int32_t world_id,
         [[maybe_unused]] util::VECTOR position,
         [[maybe_unused]] util::ANGLE_DEG rotation,
@@ -263,7 +264,7 @@ namespace copper_server::api::world {
     }
 
     void transfer(
-        [[maybe_unused]] base_objects::entity_ref& entity,
+        [[maybe_unused]] api::ecs::entity entity,
         [[maybe_unused]] int32_t world_id,
         [[maybe_unused]] util::VECTOR position,
         [[maybe_unused]] std::function<void(storage::world_data& world)> callback
@@ -271,11 +272,11 @@ namespace copper_server::api::world {
         //TODO
     }
 
-    void register_entity(int32_t world_id, base_objects::entity_ref& entity_ref) {
+    void register_entity(int32_t world_id, api::ecs::entity entity_ref) {
         get_worlds().get(world_id)->register_entity(entity_ref);
     }
 
-    void unregister_entity(int32_t world_id, base_objects::entity_ref& entity_ref) {
+    void unregister_entity(int32_t world_id, api::ecs::entity entity_ref) {
         get_worlds().get(world_id)->unregister_entity(entity_ref);
     }
 

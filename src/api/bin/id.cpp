@@ -6,13 +6,14 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/api/ecs/base_components.hpp>
+#include <src/api/entity.hpp>
 #include <src/api/entity_id_map.hpp>
 #include <src/api/id.hpp>
+#include <src/api/packets/types.hpp>
 #include <src/api/registers.hpp>
 #include <src/api/tags.hpp>
 #include <src/api/world.hpp>
-#include <src/base_objects/entity.hpp>
-#include <src/api/packets/types.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/storage/world_data.hpp>
@@ -245,7 +246,7 @@ namespace copper_server::api::id::detail {
         case registry_source::block_entity_type:
             return base_objects::block::get_block_entity((base_objects::block_id_t)value).name;
         case registry_source::entity_type:
-            return base_objects::entity_data::get_entity((uint16_t)value).id;
+            return api::entity_data::get_entity((uint16_t)value).id;
         case registry_source::fluid:
             return (std::string)api::registers::view_reg_pro_name("minecraft:fluid", value);
         case registry_source::game_event:
@@ -505,7 +506,7 @@ namespace copper_server::api::id::detail {
         case registry_source::block_entity_type:
             return base_objects::block::get_block(value).block_entity_id;
         case registry_source::entity_type:
-            return base_objects::entity_data::get_entity(value).entity_id;
+            return api::entity_data::get_entity(value).entity_id;
         case registry_source::fluid:
             return api::registers::view_reg_pro_id("minecraft:fluid", value);
         case registry_source::game_event:
@@ -789,7 +790,7 @@ namespace copper_server::api::id::detail {
         case registry_source::block_entity_type:
             return base_objects::block::get_block_entities();
         case registry_source::entity_type:
-            return base_objects::entity_data::get_entity_ids();
+            return api::entity_data::get_entity_ids();
         case registry_source::fluid:
             return api::registers::reg_ids("minecraft:fluid");
         case registry_source::game_event:
@@ -817,7 +818,7 @@ namespace copper_server::api::id::detail {
         }
     }
 
-    base_objects::entity_ref from_registry_source_entity(int32_t value) {
+    std::optional<api::ecs::entity> from_registry_source_entity(int32_t value) {
         return api::entity_id_map::get_entity(value);
     }
 
@@ -825,8 +826,8 @@ namespace copper_server::api::id::detail {
         return api::entity_id_map::id_index(value);
     }
 
-    int32_t to_registry_source_entity(const base_objects::entity_ref& value) {
-        return value->protocol_id;
+    int32_t to_registry_source_entity(api::ecs::entity value) {
+        return value.get<api::ecs::com::protocol_id>().value;
     }
 
     int32_t to_registry_source_entity(const enbt::raw_uuid& value) {

@@ -8,10 +8,11 @@
  */
 #include <library/enbt/io_tools.hpp>
 #include <library/fast_task.hpp>
+#include <src/api/ecs/base_components.hpp>
+#include <src/api/entity.hpp>
 #include <src/api/entity_id_map.hpp>
 #include <src/api/packets.hpp>
 #include <src/api/world.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/storage/world_data.hpp>
 #include <src/util/calculations.hpp>
@@ -60,42 +61,44 @@ namespace enbt::io_helper {
     };
 
     template <>
-    struct serialization<entity_ref> {
-        static void read(entity_ref& res, value_read_stream& read_stream) {
-            read_stream
+    struct serialization<api::ecs::entity> {
+        static void read(api::ecs::entity res, value_read_stream& read_stream) {
+            read_stream //TODO replace this with standard format
                 .read_compound()
-                .collect("died", [&](auto& stream) { res->died = stream.read(); })
-                .collect_as("entity_id", res->entity_id)
-                .collect_as("id", res->id)
-                .collect("motion", [&](auto& stream) { enbt::io_helper::serialization_read(res->motion, stream); })
-                .collect("position", [&](auto& stream) { enbt::io_helper::serialization_read(res->position, stream); })
-                .collect("rotation", [&](auto& stream) { enbt::io_helper::serialization_read(res->rotation, stream); })
-                .collect("head_rotation", [&](auto& stream) { enbt::io_helper::serialization_read(res->head_rotation, stream); })
-                .collect("inventory", [&](auto& stream) { enbt::io_helper::serialization_read(res->inventory, stream); })
-                .collect("custom_inventory", [&](auto& stream) { enbt::io_helper::serialization_read(res->custom_inventory, stream); })
-                .collect("nbt", [&](auto& stream) { res->nbt = stream.read(); })
-                .collect("server_data", [&](auto& stream) { res->server_data = stream.read(); })
+                .collect("died", [&](auto& stream) { if (stream.read()) res.add<api::ecs::com::dead_mark>(); })
+                .collect_as("entity_id", res.modify<api::ecs::com::entity_type>()->type)
+                .collect_as("id", res.modify<api::ecs::com::uuid>()->id)
+                .collect("motion", [&](auto& stream) { enbt::io_helper::serialization_read<util::VECTOR>(*res.modify<api::ecs::com::motion>(), stream); })
+                .collect("position", [&](auto& stream) { enbt::io_helper::serialization_read<util::VECTOR>(*res.modify<api::ecs::com::position>(), stream); })
+                .collect("rotation", [&](auto& stream) { enbt::io_helper::serialization_read<util::ANGLE_DEG>(*res.modify<api::ecs::com::rotation>(), stream); })
+                .collect("head_rotation", [&](auto& stream) { enbt::io_helper::serialization_read<util::ANGLE_DEG>(*res.modify<api::ecs::com::head_rotation>(), stream); })
+                .collect("inventory", [&](auto& stream) { enbt::io_helper::serialization_read(res.modify<api::ecs::com::inventory>()->value, stream); })
+                .collect("custom_inventory", [&](auto& stream) { enbt::io_helper::serialization_read(res.modify<api::ecs::com::custom_inventory>()->value, stream); })
+                .collect("nbt", [&](auto& stream) { res.modify<api::ecs::com::nbt>()->data = stream.read(); })
+                .collect("server_data", [&](auto& stream) { res.modify<api::ecs::com::server_nbt>()->data = stream.read(); })
                 .collect("bound_world", [&](auto& stream) {
                     std::string world_id = stream.read();
                     api::world::get(world_id, [&res](storage::world_data& it) {
                         it.register_entity(res);
                     });
-                    if (!res->world_syncing_data.world)
+
+                    if (!res.get<api::ecs::com::world_syncing>().world)
                         throw std::runtime_error("World " + world_id + " not found.");
                 })
                 .collect("hidden_effects", [&](auto& stream) {
+                    auto res_effects = res.modify<api::ecs::com::effects>();
                     stream.iterate(
-                        [&res](auto size) { res->hidden_effects.reserve(size); },
-                        [&res](std::string_view id, value_read_stream& effects) {
+                        [&res_effects](auto size) { res_effects->hidden_effects.reserve(size); },
+                        [&res_effects](std::string_view id, value_read_stream& effects) {
                             uint32_t id_ = 0;
                             auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
                             if (parsing_res.ec == std::errc{}) {
-                                list_array<entity::effect> set_effects;
+                                list_array<api::ecs::com::effects::effect> set_effects;
                                 effects.iterate(
-                                    [&res, id_](auto size) { res->hidden_effects[id_].reserve(size); },
-                                    [&res, id_](value_read_stream& effect_) {
+                                    [&res_effects, id_](auto size) { res_effects->hidden_effects[id_].reserve(size); },
+                                    [&res_effects, id_](value_read_stream& effect_) {
                                         auto effect = effect_.read();
-                                        res->hidden_effects[id_].push_back(entity::effect{
+                                        res_effects->hidden_effects[id_].push_back(api::ecs::com::effects::effect{
                                             .duration = effect.at("duration"),
                                             .id = effect.at("id"),
                                             .amplifier = effect.at("amplifier"),
@@ -110,13 +113,14 @@ namespace enbt::io_helper {
                     );
                 })
                 .collect("active_effects", [&](auto& stream) {
+                    auto res_effects = res.modify<api::ecs::com::effects>();
                     stream.iterate(
-                        [&res](auto size) { res->active_effects.reserve(size); },
-                        [&res](value_read_stream& effect_) {
+                        [&res_effects](auto size) { res_effects->active_effects.reserve(size); },
+                        [&res_effects](value_read_stream& effect_) {
                             auto effect = effect_.read();
-                            res->active_effects.emplace(
+                            res_effects->active_effects.emplace(
                                 effect.at("id"),
-                                entity::effect{
+                                api::ecs::com::effects::effect{
                                     .duration = effect.at("duration"),
                                     .id = effect.at("id"),
                                     .amplifier = effect.at("amplifier"),
@@ -133,8 +137,8 @@ namespace enbt::io_helper {
                         [&res](auto size) { res->ride_by_entity.reserve(size); },
                         [&res](value_read_stream& value) {
                             auto ride_entity = entity::load_from_file(value);
-                            if (res->world_syncing_data.world)
-                                res->world_syncing_data.world->register_entity(ride_entity);
+                            if (res->current_world())
+                                res->current_world()->register_entity(ride_entity);
                             ride_entity->set_ride_entity(res);
                         }
                     );
@@ -155,7 +159,7 @@ namespace enbt::io_helper {
                 .make_collect();
         }
 
-        static void write(const entity_ref& value, value_write_stream& write_stream) {
+        static void write(api::ecs::entity value, value_write_stream& write_stream) {
             auto compound = write_stream.write_compound(14 + bool(value->attached_to) + bool(value->current_world()));
             compound.write("died", value->died)
                 .write("entity_id", value->entity_id)
@@ -172,7 +176,7 @@ namespace enbt::io_helper {
                     enbt::io_helper::serialization_write(value->rotation, stream);
                 })
                 .write("head_rotation", [&value](value_write_stream& stream) {
-                    enbt::io_helper::serialization_write(value->head_rotation, stream);
+                    enbt::io_helper::serialization_write<util::ANGLE_DEG>(value.get<api::ecs::com::head_rotation>(), stream);
                 })
                 .write("inventory", [&value](value_write_stream& stream) {
                     enbt::io_helper::serialization_write(value->inventory, stream);
@@ -245,7 +249,7 @@ namespace enbt::io_helper {
                 compound.write("bound_world", value->current_world()->world_name);
         }
 
-        static void read(entity_ref& res, const enbt::value& from) {
+        static void read(api::ecs::entity res, const enbt::value& from) {
             for (auto& [name, value] : from.as_compound()) {
                 if (name == "died")
                     res->died = value;
@@ -274,7 +278,7 @@ namespace enbt::io_helper {
                     api::world::get(world_id, [&res](storage::world_data& it) {
                         it.register_entity(res);
                     });
-                    if (!res->world_syncing_data.world)
+                    if (!res->current_world())
                         throw std::runtime_error("World " + world_id + " not found.");
                 } else if (name == "hidden_effects") {
                     res->hidden_effects.reserve(value.size());
@@ -314,8 +318,8 @@ namespace enbt::io_helper {
                     res->ride_by_entity.reserve(value.size());
                     for (auto& entity : value.as_array()) {
                         auto ride_entity = entity::load_from_enbt(entity.as_compound());
-                        if (res->world_syncing_data.world)
-                            res->world_syncing_data.world->register_entity(ride_entity);
+                        if (res->current_world())
+                            res->current_world()->register_entity(ride_entity);
                         ride_entity->set_ride_entity(res);
                     }
                 } else if (name == "attached_to") {
@@ -328,7 +332,7 @@ namespace enbt::io_helper {
             }
         }
 
-        static void write(const entity_ref& value, enbt::value& to) {
+        static void write(ecs::entity value, enbt::value& to) {
             enbt::compound compound{
                 {"died", value->died},
                 {"id", value->id},
@@ -540,7 +544,7 @@ namespace enbt::io_helper {
 }
 
 namespace copper_server {
-    namespace base_objects {
+    namespace api {
         struct entities_storage {
             std::unordered_map<int32_t, entity_data> _registry;
             std::unordered_map<std::string, int32_t> _name_to_id;
@@ -594,8 +598,8 @@ namespace copper_server {
             });
         }
 
-        const entity_data& entity_data::view(const entity& entity) {
-            return get_entity(entity.entity_id);
+        const entity_data& entity_data::view(ecs::entity entity) {
+            return entity.get<ecs::com::entity_type>().const_data();
         }
 
         entity_data& entity_data::initialization_get(int32_t id) {
@@ -634,35 +638,46 @@ namespace copper_server {
 
         int32_t entity_data::player_entity_id;
 
-        entity::entity() {}
-
-        entity::~entity() {}
-
         storage::world_data* entity::current_world() const {
-            return world_syncing_data.world;
+            return handle.get<ecs::com::world_syncing>().world;
         }
 
-        entity_ref entity::copy() const {
-            entity_ref res = new entity();
-            res->died = died;
-            res->entity_id = entity_id;
-            res->nbt = nbt;
-            res->position = position;
-            return res;
+        int32_t entity::get_protocol_id() const {
+            return handle.get<api::ecs::com::protocol_id>().value;
+        }
+        
+        util::VECTOR entity::get_position() const{
+            return handle.get<api::ecs::com::position>();
         }
 
-        void resolve_entity(std::variant<entity_ref, enbt::raw_uuid>& it) {
+        util::VECTOR entity::get_motion() const {
+            return handle.get<api::ecs::com::motion>();
+        }
+
+        util::ANGLE_DEG entity::get_rotation() const {
+            return handle.get<api::ecs::com::rotation>();
+        }
+
+        util::ANGLE_DEG entity::get_head_rotation() const {
+            return handle.get<api::ecs::com::head_rotation>();
+        }
+
+        ecs::entity entity::copy() const {
+            return handle.copy();
+        }
+
+        void resolve_entity(std::variant<ecs::entity, enbt::raw_uuid>& it) {
             if (std::holds_alternative<enbt::raw_uuid>(it)) {
                 auto entity = api::entity_id_map::get_entity(std::get<enbt::raw_uuid>(it));
                 if (entity)
-                    it = entity;
+                    it = *entity;
             }
         }
 
-        void reduce_effects(std::unordered_map<uint32_t, list_array<entity::effect>>& hidden_effects, std::unordered_map<uint32_t, entity::effect>& active_effects) {
+        void reduce_effects(ecs::com::effects& eff) { //TODO replace with system
             list_array<uint32_t> expired_effects;
 
-            for (auto& [id, effect] : active_effects) {
+            for (auto& [id, effect] : eff.active_effects) {
                 if (!effect.duration) {
                     expired_effects.push_back(id);
                     continue;
@@ -671,7 +686,7 @@ namespace copper_server {
                     effect.duration--;
             }
 
-            for (auto& [id, effects] : hidden_effects) {
+            for (auto& [id, effects] : eff.hidden_effects) {
                 for (auto& effect : effects) {
                     if (!effect.duration)
                         continue;
@@ -679,45 +694,43 @@ namespace copper_server {
                         effect.duration--;
                 }
 
-                effects.remove_if([](const entity::effect& effect) {
+                effects.remove_if([](const ecs::com::effects::effect& effect) {
                     return !effect.duration;
                 });
-                effects.sort([](const entity::effect& effect0, const entity::effect& effect1) {
+                effects.sort([](ecs::com::effects::effect& effect0, ecs::com::effects::effect& effect1) {
                     return effect0.amplifier > effect1.amplifier;
                 });
             }
             for (auto& id : expired_effects) {
-                if (hidden_effects.contains(id))
-                    active_effects.at(id) = hidden_effects.at(id).take_front();
+                if (eff.hidden_effects.contains(id))
+                    eff.active_effects.at(id) = eff.hidden_effects.at(id).take_front();
                 else
-                    active_effects.erase(id);
+                    eff.active_effects.erase(id);
             }
         }
 
         void entity::tick() {
-            if (attached_to)
-                resolve_entity(*attached_to);
 
-            for (auto& it : attached)
-                resolve_entity(it);
+            if (handle.has<ecs::com::attached_to>())
+                resolve_entity(handle.modify<ecs::com::attached_to>()->other);
+
+            if (handle.has<ecs::com::attached>())
+                for (auto& it : handle.modify<ecs::com::attached>()->ride_by_entity)
+                    resolve_entity(it);
 
             auto proc = const_data().processor;
             if (proc)
                 if (proc->on_tick)
-                    proc->on_tick(*this);
-            reduce_effects(hidden_effects, active_effects);
+                    proc->on_tick(handle);
+            reduce_effects(*handle.modify<ecs::com::effects>());
         }
 
-        entity_metadata::entity_pose entity::get_pose() const {
-            auto it = metadata.find("POSE");
-            if (it == metadata.end())
-                return entity_metadata::entity_pose{.value = entity_metadata::entity_pose::standing};
-            else
-                return std::get<entity_metadata::entity_pose>(it->second.value);
+        base_objects::entity_metadata::entity_pose entity::get_pose() const {
+            return handle.get<ecs::com::pose>().value;
         }
 
-        void entity::set_pose(entity_metadata::entity_pose pose) {
-            metadata["POSE"].value = pose;
+        void entity::set_pose(base_objects::entity_metadata::entity_pose pose) {
+            handle.modify<ecs::com::pose>()->value = pose;
         }
 
         double entity::eye_height() const {
@@ -725,142 +738,145 @@ namespace copper_server {
         }
 
         bool entity::kill() {
-            if (!const_data().pre_death_callback(*this, false))
+            if (!const_data().pre_death_callback(handle, false))
                 return false;
 
-            died = true;
-
-            if (world_syncing_data.world)
-                world_syncing_data.world->entity_death(*this);
+            handle.add<ecs::com::dead_mark>();
             return true;
         }
 
         void entity::force_kill() {
-            const_data().pre_death_callback(*this, true);
-            died = true;
-
-            if (world_syncing_data.world)
-                world_syncing_data.world->entity_death(*this);
+            const_data().pre_death_callback(handle, true);
+            handle.add<ecs::com::dead_mark>();
         }
 
         void entity::erase() {
-            died = true;
-
-            if (world_syncing_data.world)
-                world_syncing_data.world->entity_deinit(*this);
+            if (current_world())
+                current_world()->entity_deinit(handle);
         }
 
-        bool entity::is_died() {
-            return died;
+        bool entity::is_died() const {
+            return handle.has<ecs::com::dead_mark>();
         }
 
         const entity_data& entity::const_data() const {
-            return entity_data::get_entity(entity_id);
+            return entity_data::view(handle);
         }
 
         bool entity::hitboxes_touching_x(double min, double max) {
+            auto& position = handle.get<api::ecs::com::position>();
+            auto& bounds = handle.get<api::ecs::com::bounding_box>();
             return (position.x - bounds.xz) >= min && (position.x + bounds.xz) <= max;
         }
 
         bool entity::hitboxes_touching_y(double min, double max) {
+            auto& position = handle.get<api::ecs::com::position>();
+            auto& bounds = handle.get<api::ecs::com::bounding_box>();
             return (position.y) >= min && (position.y + bounds.y) <= max;
         }
 
         bool entity::hitboxes_touching_z(double min, double max) {
+            auto& position = handle.get<api::ecs::com::position>();
+            auto& bounds = handle.get<api::ecs::com::bounding_box>();
             return (position.z - bounds.xz) >= min && (position.z + bounds.xz) <= max;
-        }
-        
-        void entity::update_metadata(){
-            if (world_syncing_data.world)
-                world_syncing_data.world->entity_metadata(*this);
         }
 
         void entity::moved(util::VECTOR pos) {
-            if (world_syncing_data.world)
-                world_syncing_data.world->entity_move(*this, pos);
-            position = pos;
+            if (current_world())
+                current_world()->entity_move(handle, pos);
+            *handle.modify<api::ecs::com::position>() = pos;
         }
 
         void entity::moved(util::VECTOR pos, float yaw, float pitch) {
-            if (world_syncing_data.world) {
-                world_syncing_data.world->entity_move(*this, pos);
-                world_syncing_data.world->entity_rotation_changes(*this, {yaw, pitch});
+            if (current_world()) {
+                current_world()->entity_move(handle, pos);
+                current_world()->entity_rotation_changes(handle, {yaw, pitch});
             }
-            position = pos;
-            rotation = {yaw, pitch};
+            *handle.modify<api::ecs::com::position>() = pos;
+            *handle.modify<api::ecs::com::rotation>() = {yaw, pitch};
         }
 
         void entity::moved(util::VECTOR pos, float yaw, float pitch, bool on_ground) {
-            if (world_syncing_data.world) {
-                world_syncing_data.world->entity_move(*this, pos);
-                world_syncing_data.world->entity_rotation_changes(*this, {yaw, pitch});
+            if (current_world()) {
+                current_world()->entity_move(handle, pos);
+                current_world()->entity_rotation_changes(handle, {yaw, pitch});
             }
-            position = pos;
-            rotation = {yaw, pitch};
+            *handle.modify<api::ecs::com::position>() = pos;
+            *handle.modify<api::ecs::com::rotation>() = {yaw, pitch};
             set_on_ground(on_ground);
         }
 
         void entity::rotated(float yaw, float pitch) {
-            if (world_syncing_data.world)
-                world_syncing_data.world->entity_rotation_changes(*this, {yaw, pitch});
-            rotation = {yaw, pitch};
+            if (current_world())
+                current_world()->entity_rotation_changes(handle, {yaw, pitch});
+            *handle.modify<api::ecs::com::rotation>() = {yaw, pitch};
         }
 
         void entity::rotated(float yaw, float pitch, bool on_ground) {
-            if (world_syncing_data.world)
-                world_syncing_data.world->entity_rotation_changes(*this, {yaw, pitch});
-            rotation = {yaw, pitch};
+            if (current_world())
+                current_world()->entity_rotation_changes(handle, {yaw, pitch});
+            *handle.modify<api::ecs::com::rotation>() = {yaw, pitch};
             set_on_ground(on_ground);
         }
 
         void entity::teleport(util::VECTOR pos) {
-            if (world_syncing_data.world)
-                world_syncing_data.world->entity_teleport(*this, pos);
-            position = pos;
+            if (current_world())
+                current_world()->entity_teleport(handle, pos);
+            *handle.modify<api::ecs::com::position>() = pos;
+            auto assigned_player = handle.get<ecs::com::assigned_player>().player;
+            auto protocol_id = handle.get<ecs::com::protocol_id>().value;
+            auto mot = handle.get<ecs::com::motion>();
+            auto rot = handle.get<ecs::com::rotation>();
             if (assigned_player)
                 *assigned_player << api::packets::client_bound::play::entity_position_sync{
                     .id = protocol_id,
                     .x = pos.x,
                     .y = pos.y,
                     .z = pos.z,
-                    .velocity_x = motion.x,
-                    .velocity_y = motion.y,
-                    .velocity_z = motion.z,
-                    .yaw = (float)rotation.yaw,
-                    .pitch = (float)rotation.pitch,
+                    .velocity_x = mot.x,
+                    .velocity_y = mot.y,
+                    .velocity_z = mot.z,
+                    .yaw = (float)rot.yaw,
+                    .pitch = (float)rot.pitch,
                     .on_ground = is_on_ground()
                 };
         }
 
         void entity::teleport(util::VECTOR pos, float yaw, float pitch) {
-            if (world_syncing_data.world) {
-                world_syncing_data.world->entity_teleport(*this, pos);
-                world_syncing_data.world->entity_rotation_changes(*this, {yaw, pitch});
+            if (current_world()) {
+                current_world()->entity_teleport(handle, pos);
+                current_world()->entity_rotation_changes(handle, {yaw, pitch});
             }
-            position = pos;
-            rotation = {yaw, pitch};
+            auto assigned_player = handle.get<ecs::com::assigned_player>().player;
+            auto protocol_id = handle.get<ecs::com::protocol_id>().value;
+            *handle.modify<api::ecs::com::position>() = pos;
+            auto mot = handle.get<ecs::com::motion>();
+            auto& rot = *handle.modify<api::ecs::com::rotation>() = {yaw, pitch};
             if (assigned_player)
                 *assigned_player << api::packets::client_bound::play::entity_position_sync{
                     .id = protocol_id,
                     .x = pos.x,
                     .y = pos.y,
                     .z = pos.z,
-                    .velocity_x = motion.x,
-                    .velocity_y = motion.y,
-                    .velocity_z = motion.z,
-                    .yaw = (float)rotation.yaw,
-                    .pitch = (float)rotation.pitch,
+                    .velocity_x = mot.x,
+                    .velocity_y = mot.y,
+                    .velocity_z = mot.z,
+                    .yaw = (float)rot.yaw,
+                    .pitch = (float)rot.pitch,
                     .on_ground = is_on_ground()
                 };
         }
 
         void entity::teleport(util::VECTOR pos, float yaw, float pitch, bool on_ground) {
-            if (world_syncing_data.world) {
-                world_syncing_data.world->entity_teleport(*this, pos);
-                world_syncing_data.world->entity_rotation_changes(*this, {yaw, pitch});
+            if (current_world()) {
+                current_world()->entity_teleport(handle, pos);
+                current_world()->entity_rotation_changes(handle, {yaw, pitch});
             }
-            position = pos;
-            rotation = {yaw, pitch};
+            auto assigned_player = handle.get<ecs::com::assigned_player>().player;
+            auto protocol_id = handle.get<ecs::com::protocol_id>().value;
+            *handle.modify<api::ecs::com::position>() = pos;
+            auto mot = handle.get<ecs::com::motion>();
+            *handle.modify<api::ecs::com::rotation>() = {yaw, pitch};
             set_on_ground(on_ground);
             if (assigned_player)
                 *assigned_player << api::packets::client_bound::play::entity_position_sync{
@@ -868,32 +884,30 @@ namespace copper_server {
                     .x = pos.x,
                     .y = pos.y,
                     .z = pos.z,
-                    .velocity_x = motion.x,
-                    .velocity_y = motion.y,
-                    .velocity_z = motion.z,
-                    .yaw = (float)rotation.yaw,
-                    .pitch = (float)rotation.pitch,
+                    .velocity_x = mot.x,
+                    .velocity_y = mot.y,
+                    .velocity_z = mot.z,
+                    .yaw = (float)yaw,
+                    .pitch = (float)pitch,
                     .on_ground = is_on_ground()
                 };
         }
 
-        void entity::set_ride_entity(entity_ref entity) {
-            if (entity)
-                if (world_syncing_data.world) {
-                    if (entity->world_syncing_data.world == world_syncing_data.world) {
-                        world_syncing_data.world->entity_rides(*this, entity->world_syncing_data.assigned_world_id);
-                        ride_entity = entity;
-                        return;
-                    }
+        void entity::set_ride_entity(ecs::entity entity) {
+            if (current_world()) {
+                if (entity->current_world() == current_world()) {
+                    current_world()->entity_rides(handle, handle.get<ecs::com::world_syncing>().assigned_world_id);
+                    ride_entity = entity;
+                    return;
                 }
-            ride_entity = std::nullopt;
+            }
         }
 
         void entity::remove_ride_entity() {
             if (ride_entity)
-                if (world_syncing_data.world) {
-                    if ((*ride_entity)->world_syncing_data.world == world_syncing_data.world) {
-                        world_syncing_data.world->entity_leaves_ride(*this, (*ride_entity)->world_syncing_data.assigned_world_id);
+                if (current_world()) {
+                    if ((*ride_entity)->current_world() == current_world()) {
+                        current_world()->entity_leaves_ride(handle, (*ride_entity)->world_syncing_data.assigned_world_id);
                         ride_entity = std::nullopt;
                         return;
                     }
@@ -916,66 +930,66 @@ namespace copper_server {
                 if (effect.amplifier >= amplifier) {
                     if (effect.duration < duration)
                         hidden_effects[id_].push_back(to_add_effect);
-                    if (world_syncing_data.world)
-                        world_syncing_data.world->entity_add_effect(*this, id_, duration, amplifier, ambient, show_particles, show_icon, use_blend);
+                    if (current_world())
+                        current_world()->entity_add_effect(handle, id_, duration, amplifier, ambient, show_particles, show_icon, use_blend);
                     return;
                 } else
                     hidden_effects[id_].push_back(effect);
             }
             active_effects[id_] = to_add_effect;
-            if (world_syncing_data.world)
-                world_syncing_data.world->entity_add_effect(*this, id_, duration, amplifier, ambient, show_particles, show_icon, use_blend);
+            if (current_world())
+                current_world()->entity_add_effect(handle, id_, duration, amplifier, ambient, show_particles, show_icon, use_blend);
         }
 
         void entity::remove_effect(uint32_t id_) {
             active_effects.erase(id_);
             hidden_effects.erase(id_);
-            if (world_syncing_data.world)
-                world_syncing_data.world->entity_remove_effect(*this, id_);
+            if (current_world())
+                current_world()->entity_remove_effect(handle, id_);
         }
 
         void entity::remove_all_effects() {
-            if (world_syncing_data.world)
+            if (current_world())
                 for (auto& [id_, effect] : active_effects)
-                    world_syncing_data.world->entity_remove_effect(*this, id_);
+                    current_world()->entity_remove_effect(handle, id_);
             active_effects.clear();
             hidden_effects.clear();
         }
 
         bool entity::is_sleeping() const {
-            return world_syncing_data.is_sleeping;
+            return handle.get<ecs::com::world_syncing>().is_sleeping;
         }
 
         bool entity::is_on_ground() const {
-            return world_syncing_data.on_ground;
+            return handle.get<ecs::com::world_syncing>().on_ground;
         }
 
         bool entity::is_sneaking() const {
-            return world_syncing_data.is_sneaking;
+            return handle.get<ecs::com::world_syncing>().is_sneaking;
         }
 
         bool entity::is_sprinting() const {
-            return world_syncing_data.is_sprinting;
+            return handle.get<ecs::com::world_syncing>().is_sprinting;
         }
 
         void entity::set_sleeping(bool sleeping) {
-            if (world_syncing_data.world)
-                world_syncing_data.is_sleeping = sleeping;
+            if (current_world())
+                handle.modify<ecs::com::world_syncing>()->is_sleeping = sleeping;
         }
 
         void entity::set_on_ground(bool on_ground) {
-            if (world_syncing_data.world)
-                world_syncing_data.on_ground = on_ground;
+            if (current_world())
+                handle.modify<ecs::com::world_syncing>()->on_ground = on_ground;
         }
 
         void entity::set_sneaking(bool sneaking) {
-            if (world_syncing_data.world)
-                world_syncing_data.is_sneaking = sneaking;
+            if (current_world())
+                handle.modify<ecs::com::world_syncing>()->is_sneaking = sneaking;
         }
 
         void entity::set_sprinting(bool sprinting) {
-            if (world_syncing_data.world)
-                world_syncing_data.is_sprinting = sprinting;
+            if (current_world())
+                handle.modify<ecs::com::world_syncing>()->is_sprinting = sprinting;
         }
 
         float entity::get_health() const {
@@ -1004,23 +1018,23 @@ namespace copper_server {
         }
 
         void entity::damage(float health, int32_t type_id, std::optional<util::VECTOR> pos) {
-            world_syncing_data.inactivity_counter = 0;
-            if (world_syncing_data.world)
-                world_syncing_data.world->entity_damage(*this, health, type_id, pos);
+            handle.modify<ecs::com::world_syncing>()->inactivity_counter = 0;
+            if (current_world())
+                current_world()->entity_damage(handle, health, type_id, pos);
             reduce_health(health);
         }
 
-        void entity::damage(float health, int32_t type_id, entity_ref& source, std::optional<util::VECTOR> pos) {
-            world_syncing_data.inactivity_counter = 0;
-            if (world_syncing_data.world)
-                world_syncing_data.world->entity_damage(*this, health, type_id, source, pos);
+        void entity::damage(float health, int32_t type_id, std::optional<ecs::entity> source, std::optional<util::VECTOR> pos) {
+            handle.modify<ecs::com::world_syncing>()->inactivity_counter = 0;
+            if (current_world())
+                current_world()->entity_damage(handle, health, type_id, source, pos);
             reduce_health(health);
         }
 
-        void entity::damage(float health, int32_t type_id, entity_ref& source, entity_ref& source_direct, std::optional<util::VECTOR> pos) {
-            world_syncing_data.inactivity_counter = 0;
-            if (world_syncing_data.world)
-                world_syncing_data.world->entity_damage(*this, health, type_id, source, source_direct, pos);
+        void entity::damage(float health, int32_t type_id, std::optional<ecs::entity> source, std::optional<ecs::entity> source_direct, std::optional<util::VECTOR> pos) {
+            handle.modify<ecs::com::world_syncing>()->inactivity_counter = 0;
+            if (current_world())
+                current_world()->entity_damage(handle, health, type_id, source, source_direct, pos);
             reduce_health(health);
         }
 
@@ -1250,28 +1264,26 @@ namespace copper_server {
         }
 
         void entity::look_at(float x, float y, float z) {
-            set_head_rotation(util::direction(position, util::VECTOR{x, y, z}));
+            set_head_rotation(util::direction(handle.get<api::ecs::com::position>(), util::VECTOR{x, y, z}));
         }
 
         void entity::look_at(util::VECTOR pos) {
-            set_head_rotation(util::direction(position, pos));
+            set_head_rotation(util::direction(handle.get<api::ecs::com::position>(), pos));
         }
 
-        void entity::look_at(const entity_ref& entity) {
-            if (entity) {
-                if (entity->world_syncing_data.world == world_syncing_data.world)
-                    look_at(entity->position);
-            }
+        void entity::look_at(ecs::entity entity) {
+            if (api::entity(entity).current_world() == current_world())
+                look_at(entity.get<api::ecs::com::position>());
         }
 
         util::VECTOR entity::get_motion() const {
-            return motion;
+            return handle.get<api::ecs::com::motion>();
         }
 
         void entity::set_motion(util::VECTOR mot) {
-            motion = mot;
-            if (world_syncing_data.world)
-                world_syncing_data.world->entity_motion_changes(*this, mot);
+            if (current_world())
+                current_world()->entity_motion_changes(handle, mot);
+            *handle.modify<api::ecs::com::motion>() = mot;
         }
 
         void entity::add_motion(util::VECTOR mot) {
@@ -1279,13 +1291,13 @@ namespace copper_server {
         }
 
         util::ANGLE_DEG entity::get_rotation() const {
-            return rotation;
+            return handle.get<api::ecs::com::rotation>();
         }
 
         void entity::set_rotation(util::ANGLE_DEG rot) {
-            rotation = rot;
-            if (world_syncing_data.world)
-                world_syncing_data.world->entity_rotation_changes(*this, rot);
+            if (current_world())
+                current_world()->entity_rotation_changes(handle, rot);
+            *handle.modify<api::ecs::com::rotation>() = rot;
         }
 
         void entity::add_rotation(util::ANGLE_DEG rot) {
@@ -1293,123 +1305,114 @@ namespace copper_server {
         }
 
         util::ANGLE_DEG entity::get_head_rotation() const {
-            return head_rotation;
+            return handle.get<api::ecs::com::head_rotation>();
         }
 
         void entity::set_head_rotation(util::ANGLE_DEG rot) {
-            head_rotation = rot;
-            if (world_syncing_data.world)
-                world_syncing_data.world->entity_look_changes(*this, rot);
+            if (current_world())
+                current_world()->entity_look_changes(handle, rot);
+            *handle.modify<api::ecs::com::head_rotation>() = rot;
         }
 
         void entity::add_head_rotation(util::ANGLE_DEG rot) {
             set_head_rotation(get_head_rotation() += rot);
         }
 
-        void entity::attack_from_this([[maybe_unused]] const entity_ref& entity) {
+        void entity::attack_from_this([[maybe_unused]] ecs::entity entity) {
         }
 
         void entity::breaking_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] uint32_t time) {
         }
 
-        void entity::place_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] const block&) {
+        void entity::place_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] const base_objects::block&) {
         }
 
         void entity::place_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] base_objects::const_block_entity_ref) {
         }
 
-        void entity::place_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] block_entity&&) {
+        void entity::place_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] base_objects::block_entity&&) {
         }
 
-        entity_ref entity::create(int32_t id) {
+        ecs::entity entity::create(int32_t id) {
             auto it = entity_data::get_entity(id);
-            entity_ref res = new entity();
-            res->entity_id = id;
-            res->bounds = it.base_bounds;
+            ecs::entity res = ecs::global_registry::create_entity_and_wait(it.recipe);
             if (it.create_callback)
-                it.create_callback(*res);
+                it.create_callback(res);
             return res;
         }
 
-        entity_ref entity::create(int32_t id, const enbt::compound_const_ref& nbt) {
+        ecs::entity entity::create(int32_t id, const enbt::compound_const_ref& nbt) {
             auto it = entity_data::get_entity(id);
-            entity_ref res = new entity();
-            res->entity_id = id;
-            res->bounds = it.base_bounds;
-            res->nbt = nbt;
+            ecs::entity res = ecs::global_registry::create_entity_and_wait(it.recipe);
+            res.modify<ecs::com::nbt>()->data = nbt;
             if (it.create_callback)
-                it.create_callback(*res);
+                it.create_callback(res);
             return res;
         }
 
-        entity_ref entity::create(const std::string& id) {
+        ecs::entity entity::create(const std::string& id) {
             auto it = entity_data::get_entity(id);
-            entity_ref res = new entity();
-            res->entity_id = it.entity_id;
-            res->bounds = it.base_bounds;
+            ecs::entity res = ecs::global_registry::create_entity_and_wait(it.recipe);
             if (it.create_callback)
-                it.create_callback(*res);
+                it.create_callback(res);
             return res;
         }
 
-        entity_ref entity::create(const std::string& id, const enbt::compound_const_ref& nbt) {
+        ecs::entity entity::create(const std::string& id, const enbt::compound_const_ref& nbt) {
             auto it = entity_data::get_entity(id);
-            entity_ref res = new entity();
-            res->entity_id = it.entity_id;
-            res->bounds = it.base_bounds;
+            ecs::entity res = ecs::global_registry::create_entity_and_wait(it.recipe);
+            res.modify<ecs::com::nbt>()->data = nbt;
             if (it.create_callback)
-                it.create_callback(*res);
-            else
-                res->nbt = nbt;
+                it.create_callback(res);
             return res;
         }
 
-        std::optional<int32_t> entity::get_object_field() {
-            auto& obj_field_getter = entity_data::get_entity(entity_id).get_object_field;
+        std::optional<int32_t> entity::get_object_field() const {
+            auto& obj_field_getter = entity_data::view(handle).get_object_field;
             if (!obj_field_getter)
                 return std::nullopt;
-            return obj_field_getter(*this);
+            return obj_field_getter(handle);
         }
 
-        bool entity::is_player() {
-            return entity_id == entity_data::player_entity_id;
+        bool entity::is_player() const {
+            return handle.get<ecs::com::entity_type>().type == entity_data::player_entity_id;
         }
 
-        void entity::store_to_file(const entity_ref& entity, enbt::io_helper::value_write_stream& w) {
+        void entity::store_to_file(ecs::entity entity, enbt::io_helper::value_write_stream& w) {
             enbt::io_helper::serialization_write(entity, w);
         }
 
-        entity_ref entity::load_from_file(enbt::io_helper::value_read_stream& w) {
-            entity_ref res = new entity();
+        ecs::entity entity::load_from_file(enbt::io_helper::value_read_stream& w) {
+            ecs::entity res = ecs::global_registry::create_entity_and_wait(ecs::entity_recipe().freeze()); //TODO use something else for this
             enbt::io_helper::serialization_read(res, w);
             try {
-                auto load_callback = entity_data::get_entity(res->entity_id).load_callback;
+                auto load_callback = entity_data::view(res).load_callback;
                 if (load_callback)
-                    load_callback(*res);
+                    load_callback(res);
             } catch (...) {
-                if (res->world_syncing_data.world)
-                    res->world_syncing_data.world->unregister_entity(res);
+                if (api::entity(res).current_world())
+                    api::entity(res).current_world()->unregister_entity(res);
                 throw;
             }
             return res;
         }
 
-        void entity::store_to_enbt(const entity_ref& entity, enbt::compound& w) {
+        void entity::store_to_enbt(ecs::entity entity, enbt::compound& w) {
             enbt::value tmp;
             enbt::io_helper::serialization_write(entity, tmp);
             w = std::move(tmp);
         }
 
-        entity_ref entity::load_from_enbt(const enbt::compound_const_ref& nbt) {
-            entity_ref res = new entity();
+        ecs::entity entity::load_from_enbt(const enbt::compound_const_ref& nbt) {
+            ecs::entity res = ecs::global_registry::create_entity_and_wait(ecs::entity_recipe().freeze()); //TODO use something else for this
             enbt::io_helper::serialization_read(res, (const enbt::value&)nbt);
             try {
-                auto load_callback = entity_data::get_entity(res->entity_id).load_callback;
+                auto load_callback = entity_data::view(res).load_callback;
                 if (load_callback)
-                    load_callback(*res);
+                    load_callback(res);
             } catch (...) {
-                if (res->world_syncing_data.world)
-                    res->world_syncing_data.world->unregister_entity(res);
+                if (api::entity(res).current_world())
+                    api::entity(res).current_world()->unregister_entity(res);
                 throw;
             }
             return res;

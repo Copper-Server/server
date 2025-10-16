@@ -18,6 +18,7 @@
 
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
+#include <src/api/ecs.hpp>
 #include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/bounds.hpp>
@@ -54,7 +55,7 @@ namespace copper_server::storage {
     public:
         base_objects::world::height_maps height_maps;
         std::vector<base_objects::world::sub_chunk_data> sub_chunks;
-        boost::unordered_flat_map<uint64_t, base_objects::entity_ref> stored_entities; //uses id from world
+        boost::unordered_flat_map<uint64_t, api::ecs::entity> stored_entities; //uses id from world
 
         //instead of using negative values for priority, schedule ticks in reverse order
         // -1 == 1, -2 == 2, etc... means higher value == lower priority
@@ -202,10 +203,10 @@ namespace copper_server::storage {
         virtual ~chunk_light_processor() {}
 
         //fired after entity_teleport and entity_move
-        virtual void process_entity_light_source([[maybe_unused]] world_data& world, [[maybe_unused]] const base_objects::entity& entity, [[maybe_unused]] util::VECTOR new_pos) {}
+        virtual void process_entity_light_source(world_data& world, api::ecs::entity entity, util::VECTOR new_pos) {}
 
         //fired after entity_look_changes
-        virtual void process_entity_light_source_rot([[maybe_unused]] world_data& world, [[maybe_unused]] const base_objects::entity& entity, [[maybe_unused]] util::ANGLE_DEG new_rot) {}
+        virtual void process_entity_light_source_rot(world_data& world, api::ecs::entity entity, util::ANGLE_DEG new_rot) {}
 
         virtual void process_chunk(world_data& world, int64_t chunk_x, int64_t chunk_z) = 0;
         virtual void process_sub_chunk(world_data& world, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z) = 0;
@@ -275,8 +276,8 @@ namespace copper_server::storage {
         fast_task::task_query limit_on_load;
         boost::unordered_flat_map<util::XY<int64_t>, FuturePtr<base_objects::atomic_holder<chunk_data>>, std::hash<util::XY<int64_t>>> on_load_process;
         boost::unordered_flat_map<util::XY<int64_t>, FuturePtr<bool>, std::hash<util::XY<int64_t>>> on_save_process;
-        boost::unordered_flat_map<size_t, base_objects::entity_ref> entities;
-        boost::unordered_flat_map<size_t, base_objects::entity_ref> to_load_entities;
+        boost::unordered_flat_map<size_t, api::ecs::entity> entities;
+        boost::unordered_flat_map<size_t, api::ecs::entity> to_load_entities;
         size_t local_entity_id_generator = 0;
         size_t world_spawn_ticket_id;
 
@@ -474,13 +475,13 @@ namespace copper_server::storage {
         void get_chunk_at(int64_t global_y, int64_t global_z, const std::function<void(chunk_data& chunk)>& func);
 
 
-        void for_each_entity(const std::function<void(const base_objects::entity_ref& entity)>& func);
-        void for_each_entity(base_objects::cubic_bounds_chunk bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
-        void for_each_entity(base_objects::cubic_bounds_chunk_radius bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
-        void for_each_entity(base_objects::cubic_bounds_chunk_radius_out bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
-        void for_each_entity(base_objects::spherical_bounds_chunk bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
-        void for_each_entity(base_objects::spherical_bounds_chunk_out bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
-        void for_each_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(const base_objects::entity_ref& entity)>& func);
+        void for_each_entity(const std::function<void(api::ecs::entity entity)>& func);
+        void for_each_entity(base_objects::cubic_bounds_chunk bounds, const std::function<void(api::ecs::entity entity)>& func);
+        void for_each_entity(base_objects::cubic_bounds_chunk_radius bounds, const std::function<void(api::ecs::entity entity)>& func);
+        void for_each_entity(base_objects::cubic_bounds_chunk_radius_out bounds, const std::function<void(api::ecs::entity entity)>& func);
+        void for_each_entity(base_objects::spherical_bounds_chunk bounds, const std::function<void(api::ecs::entity entity)>& func);
+        void for_each_entity(base_objects::spherical_bounds_chunk_out bounds, const std::function<void(api::ecs::entity entity)>& func);
+        void for_each_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(api::ecs::entity entity)>& func);
         void for_each_block_entity(base_objects::cubic_bounds_chunk bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
         void for_each_block_entity(base_objects::cubic_bounds_chunk_radius bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
         void for_each_block_entity(base_objects::cubic_bounds_chunk_radius_out bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
@@ -490,12 +491,12 @@ namespace copper_server::storage {
         void for_each_block_entity(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
 
 
-        void for_each_entity(base_objects::cubic_bounds_block bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
-        void for_each_entity(base_objects::cubic_bounds_block_radius bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
-        void for_each_entity(base_objects::cubic_bounds_block_radius_out bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
-        void for_each_entity(base_objects::spherical_bounds_block bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
-        void for_each_entity(base_objects::spherical_bounds_block_out bounds, const std::function<void(base_objects::entity_ref& entity)>& func);
-        void for_each_entity_at(int64_t global_x, int64_t global_z, const std::function<void(const base_objects::entity_ref& entity)>& func);
+        void for_each_entity(base_objects::cubic_bounds_block bounds, const std::function<void(api::ecs::entity entity)>& func);
+        void for_each_entity(base_objects::cubic_bounds_block_radius bounds, const std::function<void(api::ecs::entity entity)>& func);
+        void for_each_entity(base_objects::cubic_bounds_block_radius_out bounds, const std::function<void(api::ecs::entity entity)>& func);
+        void for_each_entity(base_objects::spherical_bounds_block bounds, const std::function<void(api::ecs::entity entity)>& func);
+        void for_each_entity(base_objects::spherical_bounds_block_out bounds, const std::function<void(api::ecs::entity entity)>& func);
+        void for_each_entity_at(int64_t global_x, int64_t global_z, const std::function<void(api::ecs::entity entity)>& func);
         void for_each_block_entity_at(int64_t global_x, int64_t global_z, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
         void for_each_block_entity_at(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
 
@@ -534,8 +535,8 @@ namespace copper_server::storage {
         void get_height_maps(int64_t chunk_x, int64_t chunk_z, const std::function<void(base_objects::world::height_maps& height_maps)>& func);
         void get_height_maps_at(int64_t chunk_x, int64_t chunk_z, const std::function<void(base_objects::world::height_maps& height_maps)>& func);
 
-        void register_entity(base_objects::entity_ref& entity);
-        void unregister_entity(base_objects::entity_ref& entity);
+        void register_entity(api::ecs::entity entity);
+        void unregister_entity(api::ecs::entity entity);
 
 
         void change_chunk_generator(const std::string& id);
@@ -548,45 +549,45 @@ namespace copper_server::storage {
 
 
 #pragma region Communication
-        void entity_init(base_objects::entity&);
+        void entity_init(api::ecs::entity);
 
-        void entity_teleport(base_objects::entity&, util::VECTOR new_pos); //TODO update chunk with it
-        void entity_move(base_objects::entity&, util::VECTOR move);        //TODO update chunk with it
-        void entity_look_changes(base_objects::entity&, util::ANGLE_DEG new_rotation);
-        void entity_rotation_changes(base_objects::entity&, util::ANGLE_DEG new_rotation);
-        void entity_motion_changes(base_objects::entity&, util::VECTOR new_motion); //TODO update chunk with it
+        void entity_teleport(api::ecs::entity, util::VECTOR new_pos); //TODO update chunk with it
+        void entity_move(api::ecs::entity, util::VECTOR move);        //TODO update chunk with it
+        void entity_look_changes(api::ecs::entity, util::ANGLE_DEG new_rotation);
+        void entity_rotation_changes(api::ecs::entity, util::ANGLE_DEG new_rotation);
+        void entity_motion_changes(api::ecs::entity, util::VECTOR new_motion); //TODO update chunk with it
 
-        void entity_rides(base_objects::entity&, size_t other_entity_id);       //TODO update chunk with it
-        void entity_leaves_ride(base_objects::entity&, size_t other_entity_id); //TODO update chunk with it
+        void entity_rides(api::ecs::entity, size_t other_entity_id);       //TODO update chunk with it
+        void entity_leaves_ride(api::ecs::entity, size_t other_entity_id); //TODO update chunk with it
 
-        void entity_attach(base_objects::entity&, size_t other_entity_id);
-        void entity_detach(base_objects::entity&, size_t other_entity_id);
+        void entity_attach(api::ecs::entity, size_t other_entity_id);
+        void entity_detach(api::ecs::entity, size_t other_entity_id);
 
-        void entity_damage(base_objects::entity&, float health, int32_t type_id, std::optional<util::VECTOR> pos);
-        void entity_damage(base_objects::entity&, float health, int32_t type_id, base_objects::entity_ref& source, std::optional<util::VECTOR> pos);
-        void entity_damage(base_objects::entity&, float health, int32_t type_id, base_objects::entity_ref& source, base_objects::entity_ref& source_direct, std::optional<util::VECTOR> pos);
+        void entity_damage(api::ecs::entity, float health, int32_t type_id, std::optional<util::VECTOR> pos);
+        void entity_damage(api::ecs::entity, float health, int32_t type_id, std::optional<api::ecs::entity> source, std::optional<util::VECTOR> pos);
+        void entity_damage(api::ecs::entity, float health, int32_t type_id, std::optional<api::ecs::entity> source, std::optional<api::ecs::entity> source_direct, std::optional<util::VECTOR> pos);
 
-        void entity_attack(base_objects::entity&, size_t other_entity_id);
-        void entity_iteract(base_objects::entity&, size_t other_entity_id);
-        void entity_iteract(base_objects::entity&, int64_t x, int64_t y, int64_t z);
+        void entity_attack(api::ecs::entity, size_t other_entity_id);
+        void entity_iteract(api::ecs::entity, size_t other_entity_id);
+        void entity_iteract(api::ecs::entity, int64_t x, int64_t y, int64_t z);
 
-        void entity_break(base_objects::entity&, int64_t x, int64_t y, int64_t z, uint8_t state); //form 0 to 9, other ignored
-        void entity_cancel_break(base_objects::entity&, int64_t x, int64_t y, int64_t z);
-        void entity_finish_break(base_objects::entity&, int64_t x, int64_t y, int64_t z);
-        void entity_place(base_objects::entity&, bool is_main_hand, int64_t x, int64_t y, int64_t z, base_objects::block);
-        void entity_place(base_objects::entity&, bool is_main_hand, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref);
-
-
-        void entity_animation(base_objects::entity&, base_objects::entity_animation animation);
-        void entity_event(base_objects::entity&, base_objects::entity_event status);
-        void entity_metadata(base_objects::entity&);
+        void entity_break(api::ecs::entity, int64_t x, int64_t y, int64_t z, uint8_t state); //form 0 to 9, other ignored
+        void entity_cancel_break(api::ecs::entity, int64_t x, int64_t y, int64_t z);
+        void entity_finish_break(api::ecs::entity, int64_t x, int64_t y, int64_t z);
+        void entity_place(api::ecs::entity, bool is_main_hand, int64_t x, int64_t y, int64_t z, base_objects::block);
+        void entity_place(api::ecs::entity, bool is_main_hand, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref);
 
 
-        void entity_add_effect(base_objects::entity&, uint32_t id, uint32_t duration, uint8_t amplifier = 1, bool ambient = false, bool show_particles = true, bool show_icon = true, bool use_blend = false);
-        void entity_remove_effect(base_objects::entity&, uint32_t id);
+        void entity_animation(api::ecs::entity, base_objects::entity_animation animation);
+        void entity_event(api::ecs::entity, base_objects::entity_event status);
+        void entity_metadata(api::ecs::entity);
 
-        void entity_death(base_objects::entity&);  //TODO update chunk with it
-        void entity_deinit(base_objects::entity&); //TODO update chunk with it
+
+        void entity_add_effect(api::ecs::entity, uint32_t id, uint32_t duration, uint8_t amplifier = 1, bool ambient = false, bool show_particles = true, bool show_icon = true, bool use_blend = false);
+        void entity_remove_effect(api::ecs::entity, uint32_t id);
+
+        void entity_death(api::ecs::entity);  //TODO update chunk with it
+        void entity_deinit(api::ecs::entity); //TODO update chunk with it
 
 
         void notify_block_event(const base_objects::world::block_action& action, int64_t x, int64_t y, int64_t z);
@@ -704,11 +705,11 @@ namespace copper_server::storage {
         int32_t create(const std::string& name);
         int32_t create(const std::string& name, const std::function<void(world_data& world)>& init);
 
-        void for_each_entity(const std::function<void(const base_objects::entity_ref& entity)>& func);
-        void for_each_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(const base_objects::entity_ref& entity)>& func);
+        void for_each_entity(const std::function<void(api::ecs::entity entity)>& func);
+        void for_each_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(api::ecs::entity entity)>& func);
 
-        void for_each_entity(int32_t world_id, const std::function<void(const base_objects::entity_ref& entity)>& func);
-        void for_each_entity(int32_t world_id, int64_t chunk_x, int64_t chunk_z, const std::function<void(const base_objects::entity_ref& entity)>& func);
+        void for_each_entity(int32_t world_id, const std::function<void(api::ecs::entity entity)>& func);
+        void for_each_entity(int32_t world_id, int64_t chunk_x, int64_t chunk_z, const std::function<void(api::ecs::entity entity)>& func);
 
         void for_each_world(const std::function<void(int32_t id, world_data& world)>& func);
 

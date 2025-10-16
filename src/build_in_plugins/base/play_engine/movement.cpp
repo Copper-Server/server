@@ -8,6 +8,7 @@
  */
 #include <src/api/command.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/entity.hpp>
 #include <src/api/entity_id_map.hpp>
 #include <src/api/entity_proxy.hpp>
 #include <src/api/packets/client_bound/play.hpp>
@@ -16,7 +17,6 @@
 #include <src/api/registers.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 
@@ -40,7 +40,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 if (!client.player_data.assigned_entity)
                     return;
 
-                auto& entity = *client.player_data.assigned_entity;
+                api::entity entity = {*client.player_data.assigned_entity};
                 bool moved = false;
                 client.packets_state.get_play_data([&](auto& data) {
                     ++data.shadow_movement.last_movement_packet;
@@ -48,9 +48,10 @@ namespace copper_server::build_in_plugins::base::play_engine {
                         moved = true;
                         return;
                     }
-                    auto delta_x = (entity.position.x - packet.x);
-                    auto delta_y = (entity.position.y - packet.y);
-                    auto delta_z = (entity.position.z - packet.z);
+                    auto pos = entity.get_position();
+                    auto delta_x = (pos.x - packet.x);
+                    auto delta_y = (pos.y - packet.y);
+                    auto delta_z = (pos.z - packet.z);
                     auto delta = delta_x + delta_y + delta_z;
                     auto squared_delta = delta * delta;
 
@@ -59,7 +60,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                         moved = true;
                     } else {
                         log::info(client.name + "\" moved too quickly! " + std::to_string(delta_x) + " " + std::to_string(delta_y) + " " + std::to_string(delta_z));
-                        entity.teleport(entity.position);
+                        entity.teleport(pos);
                     }
                 });
 
@@ -73,7 +74,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 if (!client.player_data.assigned_entity)
                     return;
 
-                auto& entity = *client.player_data.assigned_entity;
+                api::entity entity = {*client.player_data.assigned_entity};
                 bool moved = false;
                 client.packets_state.get_play_data([&](auto& data) {
                     ++data.shadow_movement.last_movement_packet;
@@ -81,9 +82,10 @@ namespace copper_server::build_in_plugins::base::play_engine {
                         moved = true;
                         return;
                     }
-                    auto delta_x = (entity.position.x - packet.x);
-                    auto delta_y = (entity.position.y - packet.y);
-                    auto delta_z = (entity.position.z - packet.z);
+                    auto pos = entity.get_position();
+                    auto delta_x = (pos.x - packet.x);
+                    auto delta_y = (pos.y - packet.y);
+                    auto delta_z = (pos.z - packet.z);
                     auto delta = delta_x + delta_y + delta_z;
                     auto squared_delta = delta * delta;
 
@@ -92,7 +94,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                         moved = true;
                     } else {
                         log::info(client.name + "\" moved too quickly! " + std::to_string(delta_x) + " " + std::to_string(delta_y) + " " + std::to_string(delta_z));
-                        entity.teleport(entity.position, packet.yaw, packet.pitch);
+                        entity.teleport(pos, packet.yaw, packet.pitch);
                     }
                 });
 
@@ -102,12 +104,12 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
             api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::move_player_rot&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 if (client.player_data.assigned_entity)
-                    client.player_data.assigned_entity->rotated(packet.yaw, packet.pitch, packet.flags | api::packets::server_bound::play::move_player_rot::flags_f::on_ground);
+                    api::entity(*client.player_data.assigned_entity).rotated(packet.yaw, packet.pitch, packet.flags | api::packets::server_bound::play::move_player_rot::flags_f::on_ground);
             });
 
             api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::move_player_status_only&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 if (client.player_data.assigned_entity)
-                    client.player_data.assigned_entity->set_on_ground(packet.flags | api::packets::server_bound::play::move_player_status_only::flags_f::on_ground);
+                    client.player_data.assigned_entity->modify<api::ecs::com::on_ground>()->value = packet.flags | api::packets::server_bound::play::move_player_status_only::flags_f::on_ground;
             });
 
             api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::move_vehicle&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
@@ -118,11 +120,10 @@ namespace copper_server::build_in_plugins::base::play_engine {
                     return;
 
                 auto& entity = *client.player_data.assigned_entity;
-                if (entity.ride_entity) {
-                    api::entity_proxy::oak_boat boat(**entity.ride_entity);
-                    boat.left_paddle_moving() = packet.left_paddle_turning;
-                    boat.right_paddle_moving() = packet.left_paddle_turning;
-                    (*entity.ride_entity)->update_metadata();
+                if (entity.has<api::ecs::com::ride_entity>()) {
+                    api::entity_proxy::oak_boat boat(entity.get<api::ecs::com::ride_entity>().other);
+                    boat.set_left_paddle_moving(packet.left_paddle_turning);
+                    boat.set_right_paddle_moving(packet.left_paddle_turning);
                 }
             });
         }

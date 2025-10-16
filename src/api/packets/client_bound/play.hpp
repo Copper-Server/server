@@ -1358,7 +1358,7 @@ namespace copper_server::api::packets::client_bound::play {
         list_array_siz_from_packet<metadata_item_t> metadata;
         constant_value<(uint8_t)0xFF> end_index; //this is safe because the sizeof(metadata_item_t) is more than 1 and this item would be not counted to metadata size because of the roundup by division in decoder
 
-        static set_entity_data create(base_objects::entity& entity);
+        static set_entity_data create(api::ecs::entity entity);
     };
 
     struct set_entity_link : public packet<0x62> {

@@ -10,10 +10,10 @@
 #include <boost/unordered/unordered_flat_set.hpp>
 #include <boost/unordered/unordered_map.hpp>
 #include <library/fast_task.hpp>
+#include <src/api/entity.hpp>
 #include <src/api/registers.hpp>
 #include <src/api/tags.hpp>
 #include <src/base_objects/block.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/slot.hpp>
 
 namespace copper_server::api::tags {
@@ -82,7 +82,7 @@ namespace copper_server::api::tags {
         case builtin_entry::enchantment:
             safety(return (int32_t)api::registers::enchantments.at(value).id;);
         case builtin_entry::entity_type:
-            safety(return base_objects::entity_data::get_entity(value).entity_id;);
+            safety(return api::entity_data::get_entity(value).entity_id;);
         case builtin_entry::fluid:;
             safety(return api::registers::view_reg_pro_id("minecraft:fluid", value););
         case builtin_entry::game_event:
@@ -197,7 +197,7 @@ namespace copper_server::api::tags {
                 ids_cache = items.convert_fn([entry](auto& it) { safety(return api::registers::enchantments.at(it).id;) });
                 break;
             case builtin_entry::entity_type:
-                ids_cache = items.convert_fn([entry](auto& it) { safety(return base_objects::entity_data::get_entity(it).entity_id;) });
+                ids_cache = items.convert_fn([entry](auto& it) { safety(return api::entity_data::get_entity(it).entity_id;) });
                 break;
             case builtin_entry::fluid:
                 ids_cache = items.convert_fn([entry](auto& it) { safety(return api::registers::view_reg_pro_id("minecraft:fluid", it);) });

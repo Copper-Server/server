@@ -6,11 +6,11 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/api/entity.hpp>
 #include <src/api/entity_proxy.hpp>
 #include <src/api/network/tcp.hpp>
 #include <src/api/packets.hpp>
 #include <src/api/world.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 
@@ -56,13 +56,14 @@ namespace copper_server::base_objects {
         if (!item)
             return;
         if (client.player_data.assigned_entity) {
-            if (client.player_data.assigned_entity->current_world()) {
-                auto entity = entity::create("minecraft:item");
-                api::entity_proxy::item proxy(*entity);
+            api::entity assigned_entity(*client.player_data.assigned_entity);
+            if (assigned_entity.current_world()) {
+                auto entity = api::entity::create("minecraft:item");
+                api::entity_proxy::item proxy(entity);
                 proxy.stack() = item;
-                entity->position = client.player_data.assigned_entity->position; //TODO add
-                entity->set_motion(util::moved<double>(client.player_data.assigned_entity->rotation, 2));
-                client.player_data.assigned_entity->current_world()->register_entity(entity);
+                entity.set<api::ecs::com::position>(assigned_entity.handle.get<api::ecs::com::position>());
+                *entity.modify<api::ecs::com::motion>() = util::moved<double>(assigned_entity.handle.get<api::ecs::com::rotation>(), 2);
+                assigned_entity.current_world()->register_entity(entity);
             }
         }
     }

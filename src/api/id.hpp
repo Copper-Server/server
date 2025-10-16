@@ -10,6 +10,7 @@
 #define SRC_API_ID
 #include <cstdint>
 #include <library/list_array.hpp>
+#include <src/api/ecs.hpp>
 #include <src/api/tags.hpp>
 #include <src/base_objects/atomic_holder.hpp>
 #include <string>
@@ -162,8 +163,8 @@ namespace copper_server::api::id {
         int32_t to_registry_source_value(registry_source source, const std::string& value);
         api::tags::tag_handle to_registry_source_handle(registry_source source, std::string_view value);
 
-        base_objects::entity_ref from_registry_source_entity(int32_t value);
-        int32_t to_registry_source_entity(const base_objects::entity_ref& value);
+        std::optional<api::ecs::entity> from_registry_source_entity(int32_t value);
+        int32_t to_registry_source_entity(api::ecs::entity value);
         int32_t to_registry_source_entity(const enbt::raw_uuid& value);
         uint8_t to_registry_source_entity_index(int32_t value);
 
@@ -361,7 +362,7 @@ namespace copper_server::api::id {
 
         source(const char* value) : value((Value)detail::to_registry_source_value(registry_source::entity_id, value)) {}
 
-        source(const base_objects::entity_ref& value) : value((Value)detail::to_registry_source_entity(value)) {}
+        source(api::ecs::entity value) : value((Value)detail::to_registry_source_entity(value)) {}
 
         source(const enbt::raw_uuid& value) : value((Value)detail::to_registry_source_entity(value)) {}
 
@@ -387,7 +388,7 @@ namespace copper_server::api::id {
             return detail::from_registry_source_value(registry_source::entity_id, value);
         }
 
-        base_objects::entity_ref get_entity() const {
+        std::optional<api::ecs::entity> get_entity() const {
             return detail::from_registry_source_entity(value);
         }
 

@@ -7,12 +7,12 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <src/api/command.hpp>
+#include <src/api/entity.hpp>
 #include <src/api/entity_id_map.hpp>
 #include <src/api/packets/client_bound/play.hpp>
 #include <src/api/packets/server_bound/play.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 
@@ -72,13 +72,17 @@ namespace copper_server::build_in_plugins::base::play_engine {
             });
             api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::teleport_to_entity&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
                 if (client.player_data.gamemode == (uint8_t)api::packets::gamemode_e::spectator) {
-                    auto entity = api::entity_id_map::get_entity(packet.uuid);
-                    auto& client_entity = client.player_data.assigned_entity;
-                    if (entity && client_entity) {
-                        if (entity->current_world() == client_entity->current_world())
-                            client.player_data.assigned_entity->teleport(entity->position, (float)entity->rotation.pitch, (float)entity->rotation.yaw);
-                        else if (entity->current_world())
-                            api::world::transfer(client_entity, entity->current_world()->world_id, entity->position, entity->rotation);
+                    auto entity_ = api::entity_id_map::get_entity(packet.uuid);
+                    auto& client_entity_ = client.player_data.assigned_entity;
+                    if (entity_ && client_entity_) {
+                        api::entity entity(*entity_);
+                        api::entity client_entity(*client_entity_);
+                        auto pos = entity.get_position();
+                        auto rot = entity.get_rotation();
+                        if (entity.current_world() == client_entity.current_world())
+                            client_entity.teleport(pos, (float)rot.pitch, (float)rot.yaw);
+                        else if (entity.current_world())
+                            api::world::transfer(*client_entity_, entity.current_world()->world_id, pos, rot);
                     }
                 }
             });
