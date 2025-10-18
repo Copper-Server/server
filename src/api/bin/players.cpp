@@ -526,6 +526,8 @@ namespace copper_server::api::players {
             .make_collect();
         if (!player.assigned_entity)
             player.assigned_entity = api::entity::create("minecraft:player");
+
+
         return player;
     }
 }

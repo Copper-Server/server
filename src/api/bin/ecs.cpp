@@ -291,11 +291,13 @@ namespace copper_server::api::ecs {
         struct parallel_allocation_op {
             entity_allocation_request* request;
             archetype* target_archetype;
+            world* w;
         };
 
         struct parallel_creation_op {
             entity_creation_request* request;
             archetype* target_archetype;
+            world* w;
         };
 
         struct parallel_copy_op {
@@ -306,6 +308,7 @@ namespace copper_server::api::ecs {
         struct parallel_transfer_op {
             entity_transfer_request* request;
             archetype* target_archetype;
+            world* w;
         };
 
         struct grouped_mutation_ops {
@@ -442,11 +445,11 @@ namespace copper_server::api::ecs {
             consume_all_(allocation_queue, [&](entity_allocation_request* item) {
                 if (item->world_id)
                     if (auto it = management.worlds.find(*item->world_id); it != management.worlds.end()) {
-                        res.emplace_back(item, it->second.map_get_archetype(item->recipe.get_ids()));
+                        res.emplace_back(item, it->second.map_get_archetype(item->recipe.get_ids()), &it->second);
                         return;
                     }
 
-                res.emplace_back(item, management.limbo.map_get_archetype(item->recipe.get_ids()));
+                res.emplace_back(item, management.limbo.map_get_archetype(item->recipe.get_ids()), &management.limbo);
             });
             return res;
         }
@@ -457,10 +460,10 @@ namespace copper_server::api::ecs {
             consume_all_(creation_queue, [&](entity_creation_request* item) {
                 if (item->world_id)
                     if (auto it = management.worlds.find(*item->world_id); it != management.worlds.end()) {
-                        res.emplace_back(item, it->second.map_get_archetype(item->calculated_recipe.get_ids()));
+                        res.emplace_back(item, it->second.map_get_archetype(item->calculated_recipe.get_ids()), &it->second);
                         return;
                     }
-                res.emplace_back(item, management.limbo.map_get_archetype(item->calculated_recipe.get_ids()));
+                res.emplace_back(item, management.limbo.map_get_archetype(item->calculated_recipe.get_ids()), &management.limbo);
             });
             return res;
         }
@@ -506,12 +509,12 @@ namespace copper_server::api::ecs {
                     std::unique_lock lock1(arch1->arch_mutex);
                     std::unique_lock lock2(arch2->arch_mutex);
 
-                    management.move_entity(move.entity_id, move.to_archetype);
+                    auto& record = management.records[move.entity_id];
+                    management.move_entity(move.entity_id, move.to_archetype, record.world_owner);
                     lock2.unlock();
                     lock1.unlock();
 
                     if (move.data.size()) {
-                        auto& record = management.records[move.entity_id];
                         auto& component_info = detail::component_info_registry.at(move.comp_id);
                         auto component_index = record.type->component_index_map.at(move.comp_id);
                         void* dest_ptr = record.chunk->memory_block.get() + record.type->layout.component_offsets[component_index] + (record.chunk_index * component_info.size);
@@ -533,10 +536,10 @@ namespace copper_server::api::ecs {
 
                         if (transfer->world_id)
                             if (auto it = management.worlds.find(*transfer->world_id); it != management.worlds.end()) {
-                                res.emplace_back(transfer, it->second.map_get_archetype(record.type->component_ids));
+                                res.emplace_back(transfer, it->second.map_get_archetype(record.type->component_ids), &it->second);
                                 return;
                             }
-                        res.emplace_back(transfer, management.limbo.map_get_archetype(record.type->component_ids));
+                        res.emplace_back(transfer, management.limbo.map_get_archetype(record.type->component_ids), &management.limbo);
                     }
                 }
             });
@@ -555,7 +558,7 @@ namespace copper_server::api::ecs {
                 std::unique_lock lock1(arch1->arch_mutex);
                 std::unique_lock lock2(arch2->arch_mutex);
 
-                management.move_entity(transfer.request->id, transfer.target_archetype);
+                management.move_entity(transfer.request->id, transfer.target_archetype, transfer.w);
                 lock2.unlock();
                 lock1.unlock();
 
@@ -576,10 +579,10 @@ namespace copper_server::api::ecs {
 
         void process_allocation(std::vector<parallel_allocation_op>&& creation_requests) {
             fast_task::future_tool::for_each_move(std::move(creation_requests), [&](parallel_allocation_op&& reg) {
-                auto [item, arch] = reg;
+                auto [item, arch, world] = reg;
                 fast_task::lock_guard message_lock(item->mut);
                 fast_task::lock_guard arch_lock(arch->arch_mutex);
-                item->result = management.allocate_entity(arch);
+                item->result = management.allocate_entity(arch, world);
                 item->ready = true;
                 item->cv.notify_one();
             })->wait();
@@ -587,10 +590,10 @@ namespace copper_server::api::ecs {
 
         void process_creation(std::vector<parallel_creation_op>&& creation_requests) {
             fast_task::future_tool::for_each_move(std::move(creation_requests), [&](parallel_creation_op&& reg) {
-                auto [item, arch] = reg;
+                auto [item, arch, world] = reg;
                 fast_task::lock_guard message_lock(item->mut);
                 fast_task::lock_guard arch_lock(arch->arch_mutex);
-                item->result = management.allocate_entity(arch);
+                item->result = management.allocate_entity(arch, world);
 
 
                 auto& record = management.records.at(item->result.id);
@@ -619,11 +622,10 @@ namespace copper_server::api::ecs {
                     return;
                 }
                 fast_task::lock_guard arch_lock(arch->arch_mutex);
-                item->result = management.allocate_entity(arch);
-
+                auto& other_record = management.records.at(item->other_entity.id);
+                item->result = management.allocate_entity(arch, other_record.world_owner);
 
                 auto& record = management.records.at(item->result->id);
-                auto& other_record = management.records.at(item->other_entity.id);
                 for (auto& [id, component_index] : arch->component_index_map) {
                     auto& component_info = detail::component_info_registry.at(id);
                     void* src_ptr = other_record.chunk->memory_block.get() + arch->layout.component_offsets[component_index] + (other_record.chunk_index * component_info.size);
@@ -721,20 +723,19 @@ namespace copper_server::api::ecs {
         }
 
         void queue_command(detail::mutation_queue_item&& command) {
-
-            if (!get_queues_for_entity(command.entity_id, command.generation)
+            if (!get_queues_for_entity(command.entity_id, command.generation) //TODO add check
                      ->mutation_queue.enqueue(std::move(command)))
                 throw std::bad_alloc();
         }
 
         void queue_destroy_entity(int32_t id, uint32_t generation) {
-            if (!get_queues_for_entity(id, generation)
+            if (!get_queues_for_entity(id, generation) //TODO add check
                      ->entity_destroy_queue.enqueue(entity_destroy_queue_item{id, generation}))
                 throw std::bad_alloc();
         }
 
         void queue_mark_dirty(int32_t id, uint32_t generation, component_id component_id) {
-            if (!get_queues_for_entity(id, generation)
+            if (!get_queues_for_entity(id, generation) //TODO add check
                      ->marking_queue.enqueue(entity_dirty_mark_item{id, generation, component_id}))
                 throw std::bad_alloc();
         }
@@ -776,7 +777,7 @@ namespace copper_server::api::ecs {
 
         fast_task::future_ptr<entity> create_entity(std::optional<int32_t> world_id, std::unique_ptr<components_holder> components) {
             auto request = std::make_unique<entity_creation_request>(std::move(components), world_id);
-            for (auto [id, ptr] : components->components_reference)
+            for (auto [id, ptr] : request->components->components_reference)
                 request->calculated_recipe.with(id);
             request->calculated_recipe.freeze();
 
@@ -794,7 +795,7 @@ namespace copper_server::api::ecs {
         fast_task::future_ptr<entity> create_entity(std::optional<int32_t> world_id, const api::ecs::entity_recipe& base_recipe, std::unique_ptr<components_holder> components) {
             auto request = std::make_unique<entity_creation_request>(std::move(components), world_id);
             request->calculated_recipe.with(base_recipe);
-            for (auto [id, ptr] : components->components_reference)
+            for (auto [id, ptr] : request->components->components_reference)
                 request->calculated_recipe.with(id);
             request->calculated_recipe.freeze();
 

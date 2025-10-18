@@ -462,10 +462,10 @@ void generate_factory_cpp_file(const std::string& components_path, const std::st
     for (const auto& entity : entities) {
         out << "            case " << entity.id << ": {\n";
         out << "                recipe\n";
-        for (const auto& field : entity.metadata_fields) {
+        for (const auto& field : entity.metadata_fields)
             if (field.type_name != "Boolean")
                 out << "                    .with<" << field.component_name << ">()\n";
-        }
+
         out << "                    .freeze();\n";
         out << "                break;\n";
         out << "            }\n";
@@ -576,6 +576,7 @@ int main(int argc, char* argv[]) {
     player_fields.push_back(MetadataField{"api::ecs::com::saturation"});
     player_fields.push_back(MetadataField{"api::ecs::com::inventory"});
     player_fields.push_back(MetadataField{"api::ecs::com::custom_inventory"});
+    player_fields.push_back(MetadataField{"api::ecs::com::assigned_player"});
 
     for (auto& entity : all_entities)
         if (entity.class_name == "player")

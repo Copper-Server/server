@@ -808,7 +808,14 @@ namespace copper_server::storage {
                 if (load_level > 31)
                     continue;
 
-                if (!entity.has<api::ecs::com::ride_entity>()) {
+                if (entity.has<api::ecs::com::ride_entity>()) {
+                    if (!entity.get<api::ecs::com::ride_entity>().other) {
+                        entity.get<api::ecs::com::entity_type>().tick(entity);
+                        if (entity.has<api::ecs::com::ride_by_entity>())
+                            for (auto ride_entity : entity.get<api::ecs::com::ride_by_entity>().ride_by)
+                                ride_entity.get<api::ecs::com::entity_type>().tick(ride_entity);
+                    }
+                } else {
                     entity.get<api::ecs::com::entity_type>().tick(entity);
                     if (entity.has<api::ecs::com::ride_by_entity>())
                         for (auto ride_entity : entity.get<api::ecs::com::ride_by_entity>().ride_by)
@@ -2810,6 +2817,9 @@ namespace copper_server::storage {
     void world_data::register_entity(api::ecs::entity entity) {
         if (entity.is_assigned_to_world(world_id))
             throw std::runtime_error("Entity already registered in another world");
+        if (!current_world_reg.register_entity_and_block(entity))
+            throw std::runtime_error("Failed to register entity");
+
         std::unique_lock lock(mutex);
         uint64_t id = local_entity_id_generator++;
         while (entities.contains(id))
@@ -2841,6 +2851,8 @@ namespace copper_server::storage {
             entities.erase(assigned_world_id);
             to_load_entities.erase(assigned_world_id);
             entity.modify<api::ecs::com::world_syncing>()->world = nullptr;
+            lock.unlock();
+            (void)current_world_reg.unregister_entity_and_block(entity);
         }
     }
 

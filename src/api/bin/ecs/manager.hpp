@@ -162,7 +162,7 @@ namespace copper_server::api::ecs {
                 }
 
                 constexpr auto atomics_alignment = std::hardware_destructive_interference_size;
-                constexpr auto atomics_map_size = (CHUNK_CAPACITY + (sizeof(std::atomic_uint64_t) * 8) - 1) / (sizeof(std::atomic_uint64_t) * 8);
+                constexpr auto atomics_map_size = (CHUNK_CAPACITY + (sizeof(std::atomic_uint64_t) * 8) - 1) / (sizeof(std::atomic_uint64_t) * 8) * sizeof(std::atomic_uint64_t);
 
                 for (size_t i = 0; i < component_ids.size(); ++i) {
                     current_offset = (current_offset + atomics_alignment - 1) & ~(atomics_alignment - 1);
@@ -270,6 +270,7 @@ namespace copper_server::api::ecs {
 
     struct world {
         int32_t id = 0;
+        size_t usages = 0;
         fast_task::task_rw_mutex world_mutex;
         std::unordered_map<size_t, std::vector<archetype*>> archetype_lookup;
         std::vector<std::unique_ptr<archetype>> archetypes;
@@ -340,7 +341,7 @@ namespace copper_server::api::ecs {
 
         //internal, should be used only by implementation
         //transfers the entity across archetypes and/or worlds
-        void move_entity(int32_t id, archetype* to) {
+        void move_entity(int32_t id, archetype* to, world* w) {
             auto& record = records.at(id);
             archetype* old_type = record.type;
 
@@ -367,12 +368,13 @@ namespace copper_server::api::ecs {
                     size_t old_offset = old_type->layout.component_offsets[old_component_index];
                     void* src_ptr = old_chunk->memory_block.get() + old_offset + (old_index * type_info.size);
 
-                    type_info.move(dest_ptr, src_ptr);
+                    type_info.move_construct(dest_ptr, src_ptr);
                 } else
                     type_info.construct(dest_ptr);
             }
 
             record.type = to;
+            record.world_owner = w;
             record.chunk = target_chunk;
             record.chunk_index = new_index;
             target_chunk->entity_count++;
@@ -414,10 +416,18 @@ namespace copper_server::api::ecs {
                     relation_index.erase(relations.first);
             }
             reverse_relation_index.erase(id);
+            guard.unlock();
+
+            for (auto& [component, pos] : record.type->component_index_map) {
+                const auto& type_info = detail::component_info_registry[component];
+                size_t offset = record.type->layout.component_offsets[pos];
+                void* dest_ptr = record.chunk->memory_block.get() + offset + (record.chunk_index * type_info.size);
+                type_info.destroy(dest_ptr);
+            }
         }
 
         //internal, should be used only by implementation
-        entity allocate_entity(archetype* in) {
+        entity allocate_entity(archetype* in, world* w) {
             int32_t id;
             if (free_entity_ids.empty()) {
                 id = int32_t(records.size());
@@ -426,11 +436,19 @@ namespace copper_server::api::ecs {
                 id = free_entity_ids.take_front();
             auto& record = records.at(id);
             record.type = in;
+            record.world_owner = w;
             record.chunk = in->get_free_chunk();
             record.chunk_index = record.chunk->entity_count;
             record.chunk->entity_count++;
             if (record.chunk->entity_count == CHUNK_CAPACITY)
                 in->remove_from_free_list(record.chunk);
+
+            for (auto& [component, pos] : in->component_index_map) {
+                const auto& type_info = detail::component_info_registry[component];
+                size_t offset = in->layout.component_offsets[pos];
+                void* dest_ptr = record.chunk->memory_block.get() + offset + (record.chunk_index * type_info.size);
+                type_info.construct(dest_ptr);
+            }
 
             record.generation = 0;
             return {id, record.generation};
@@ -506,20 +524,24 @@ namespace copper_server::api::ecs {
             std::lock_guard guard(manager_mutex);
             auto& world = worlds[id];
             world.id = id;
+            ++world.usages;
         }
 
         void disable_world(int32_t id) {
             std::lock_guard guard(manager_mutex);
-            if (auto it = worlds.find(id); it != worlds.end()) {
-                for (auto& arch : it->second.archetypes) {
-                    while (arch->chunks.size()) {
-                        auto& chunk = arch->chunks.back();
-                        auto entities = chunk->entities();
-                        move_entity(entities[0], limbo.map_get_archetype(arch->component_ids));
+            if (worlds[id].usages <= 1) {
+                if (auto it = worlds.find(id); it != worlds.end()) {
+                    for (auto& arch : it->second.archetypes) {
+                        while (arch->chunks.size()) {
+                            auto& chunk = arch->chunks.back();
+                            auto entities = chunk->entities();
+                            move_entity(entities[0], limbo.map_get_archetype(arch->component_ids), &limbo);
+                        }
                     }
                 }
-            }
-            worlds.erase(id);
+                worlds.erase(id);
+            } else
+                --worlds[id].usages;
         }
     };
 }

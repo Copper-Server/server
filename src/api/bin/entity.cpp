@@ -16,6 +16,7 @@
 #include <src/api/world.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/generated/entity/components.hpp>
+#include <src/generated/entity/factory.hpp>
 #include <src/storage/world_data.hpp>
 #include <src/util/calculations.hpp>
 
@@ -658,6 +659,7 @@ namespace copper_server {
                 for (auto& [id, entity] : data._registry) {
                     if (auto it = data.entity_processors.find(entity.id); it != data.entity_processors.end())
                         entity.processor = it->second;
+                    generated::entity::recipe_registration(id, entity.recipe);
                 }
                 player_entity_id = data._name_to_id.at("minecraft:player");
             });
@@ -1336,22 +1338,9 @@ namespace copper_server {
                 return std::move(construction).create_and_wait();
         }
 
-        ecs::entity init_entity(ecs::entity entity) {
-            if (entity.has<ecs::com::world_syncing>()) {
-                auto& ref = entity.get<ecs::com::world_syncing>().weak_reference;
-                if (ref) {
-                    api::world::get(*ref, [&entity](storage::world_data& world) {
-                        world.register_entity(entity);
-                    });
-                    if (entity.get<ecs::com::world_syncing>().world == nullptr)
-                        throw std::runtime_error("World " + *ref + " not found.");
-                }
-            }
-            return entity;
-        }
 
         ecs::entity entity::load_from_file(enbt::io_helper::value_read_stream& w) {
-            ecs::entity res = init_entity(construct_entity(w));
+            ecs::entity res = construct_entity(w);
             try {
                 auto load_callback = entity_data::view(res).load_callback;
                 if (load_callback)
@@ -1371,7 +1360,7 @@ namespace copper_server {
         }
 
         ecs::entity entity::load_from_enbt(const enbt::compound_const_ref& nbt) {
-            ecs::entity res = init_entity(construct_entity(nbt));
+            ecs::entity res = construct_entity(nbt);
             try {
                 auto load_callback = entity_data::view(res).load_callback;
                 if (load_callback)

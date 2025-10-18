@@ -137,7 +137,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 auto client_ref = api::players::get_player(client);
                 client.player_data = api::players::load_player(client.data->uuid);
                 client.player_data.assigned_entity->modify<api::ecs::com::uuid>()->id = client.data->uuid;
-                client.player_data.assigned_entity->set(api::ecs::com::assigned_player{client_ref});
+                client.player_data.assigned_entity->modify<api::ecs::com::assigned_player>()->player = client_ref;
 
                 bool world_debug = false;
                 bool world_flat = false;

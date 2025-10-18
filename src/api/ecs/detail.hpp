@@ -796,7 +796,7 @@ namespace copper_server::api::ecs {
         mutable_component& operator=(const mutable_component&) = delete;
 
         mutable_component(mutable_component&& other) noexcept
-            : component_ptr_(other.component_ptr_), owner_entity_(other.owner_entity_) {
+            : component_ptr_(other.component_ptr_), owner_entity_(other.owner_entity_), generation(other.generation) {
             other.component_ptr_ = nullptr;
         }
 
@@ -805,6 +805,7 @@ namespace copper_server::api::ecs {
                 mark_dirty_if_valid();
                 component_ptr_ = other.component_ptr_;
                 owner_entity_ = other.owner_entity_;
+                generation = other.generation;
                 other.component_ptr_ = nullptr;
             }
             return *this;
