@@ -236,16 +236,12 @@ namespace copper_server::api {
         void erase(); //same as force_kill but without animation and other handling(pre_death_callback not called)
         bool is_died() const;
         bool is_player() const;
-        const entity_data& const_data() const;
 
-        ecs::entity copy() const;
+        std::optional<ecs::entity> copy() const;
 
 
         int32_t get_protocol_id() const;
         util::VECTOR get_position() const;
-        util::VECTOR get_motion() const;
-        util::ANGLE_DEG get_rotation() const;
-        util::ANGLE_DEG get_head_rotation() const;
 
 
         void moved(util::VECTOR pos);
@@ -285,20 +281,20 @@ namespace copper_server::api {
         void damage(float health, int32_t type_id, std::optional<ecs::entity> source, std::optional<util::VECTOR> pos);
         void damage(float health, int32_t type_id, std::optional<ecs::entity> source, std::optional<ecs::entity> source_direct, std::optional<util::VECTOR> pos);
 
-        uint8_t get_food() const;
-        void set_food(uint8_t food);
-        void add_food(uint8_t food);
-        void reduce_food(uint8_t food);
+        int32_t get_food() const;
+        void set_food(int32_t food);
+        void add_food(int32_t food);
+        void reduce_food(int32_t food);
 
         float get_saturation() const;
         void set_saturation(float saturation);
         void add_saturation(float saturation);
         void reduce_saturation(float saturation);
 
-        float get_breath() const;
-        void set_breath(float breath);
-        void add_breath(float breath);
-        void reduce_breath(float breath);
+        int32_t get_breath() const;
+        void set_breath(int32_t breath);
+        void add_breath(int32_t breath);
+        void reduce_breath(int32_t breath);
 
         int32_t get_level() const;
         void set_level(int32_t level);

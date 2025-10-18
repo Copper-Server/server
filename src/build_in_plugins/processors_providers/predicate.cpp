@@ -7,13 +7,13 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <src/api/ecs/base_components.hpp>
+#include <src/api/entity.hpp>
 #include <src/api/entity_id_map.hpp>
 #include <src/api/predicate.hpp>
 #include <src/api/registers.hpp>
 #include <src/api/tags.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 
@@ -32,42 +32,48 @@ namespace copper_server::build_in_plugins::processors_providers {
         return false; //TODO
     }
 
+    bool __item_check([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] const base_objects::slot_data& item) {
+        return false; //TODO
+    }
+
     bool __location_check([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] util::VECTOR pos, [[maybe_unused]] util::ANGLE_DEG rot, [[maybe_unused]] storage::world_data& assigned_world) {
         return false; //TODO
     }
 
     bool __entity_check([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] enbt::raw_uuid entity_uuid) {
-        auto entity = api::entity_id_map::get_entity(entity_uuid);
-        if (!entity)
+        auto entity_ = api::entity_id_map::get_entity(entity_uuid);
+        if (!entity_)
             return false;
-        auto entity_const_data = entity->get<api::ecs::com::entity_type>().const_data();
+        api::entity entity(*entity_);
+        auto entity_const_data = entity.const_data();
         if (predicate.contains("type"))
             if (entity_const_data.id != (std::string)predicate.at("type"))
                 return false;
 
         if (predicate.contains("distance")) {
             auto distance = predicate["distance"].as_compound();
+            auto pos = entity.get_position();
             if (distance.contains("x"))
-                if (!diff_min_max(distance["x"], entity->position.x))
+                if (!diff_min_max(distance["x"], pos.x))
                     return false;
             if (distance.contains("y"))
-                if (!diff_min_max(distance["y"], entity->position.y))
+                if (!diff_min_max(distance["y"], pos.y))
                     return false;
             if (distance.contains("z"))
-                if (!diff_min_max(distance["z"], entity->position.z))
+                if (!diff_min_max(distance["z"], pos.z))
                     return false;
             if (distance.contains("absolute"))
                 if (
-                    !diff_min_max(distance["absolute"], entity->position.x)
-                    || !diff_min_max(distance["absolute"], entity->position.y)
-                    || !diff_min_max(distance["absolute"], entity->position.z)
+                    !diff_min_max(distance["absolute"], pos.x)
+                    || !diff_min_max(distance["absolute"], pos.y)
+                    || !diff_min_max(distance["absolute"], pos.z)
                 )
                     return false;
 
             if (distance.contains("horizontal"))
                 if (
-                    !diff_min_max(distance["horizontal"], entity->position.x)
-                    || !diff_min_max(distance["horizontal"], entity->position.z)
+                    !diff_min_max(distance["horizontal"], pos.x)
+                    || !diff_min_max(distance["horizontal"], pos.z)
                 )
                     return false;
         }
@@ -76,11 +82,9 @@ namespace copper_server::build_in_plugins::processors_providers {
             auto effects = predicate["effects"].as_compound();
             for (auto& [key, value] : effects) {
                 auto conditions = value.as_compound();
-                if (!entity->nbt.contains("effects"))
-                    return false;
 
                 auto id = api::registers::effects.at(key).id;
-                auto& effect = entity->active_effects.at(id);
+                auto& effect = entity_->get<api::ecs::com::effects>().active_effects.at(id);
                 if (conditions.contains("amplifier"))
                     if (!diff_min_max(conditions.at("amplifier"), effect.amplifier))
                         return false;
@@ -101,8 +105,7 @@ namespace copper_server::build_in_plugins::processors_providers {
 
         if (predicate.contains("equipment")) {
             auto equipment = predicate["equipment"].as_compound();
-            if (!entity->nbt.contains("inventory"))
-                return false;
+
             for (auto& [key, value] : equipment) {
                 auto item = value.as_compound();
                 uint32_t slot_ = 0;
@@ -120,105 +123,102 @@ namespace copper_server::build_in_plugins::processors_providers {
                     slot_ = entity_const_data.data.at("slots")["feet"];
                 } else if (key == "body") {
                     for (uint32_t body_slot_ : entity_const_data.data.at("slots")["body"].as_ui32_array()) {
-                        auto inventory = entity->nbt.at("inventory").as_dyn_array();
-                        if (!inventory.at(body_slot_).is_compound())
+                        auto& inventory = entity_->get<api::ecs::com::inventory>().value;
+                        if (!inventory.contains(body_slot_))
                             return false;
-                        auto item_ = inventory.at(body_slot_).as_compound();
-                        if (__item_check(item, item_))
+                        if (__item_check(item, inventory.at(body_slot_)))
                             return false;
                     }
                     continue;
                 } else if (key == "hand") {
                     for (uint32_t hand_slot_ : entity_const_data.data.at("slots")["hand"].as_ui32_array()) {
-                        auto inventory = entity->nbt.at("inventory").as_dyn_array();
-                        if (!inventory.at(hand_slot_).is_compound())
+                        auto& inventory = entity_->get<api::ecs::com::inventory>().value;
+                        if (!inventory.contains(hand_slot_))
                             return false;
-                        auto item_ = inventory.at(hand_slot_).as_compound();
-                        if (__item_check(item, item_))
+                        if (__item_check(item, inventory.at(hand_slot_)))
                             return false;
                     }
                     continue;
                 } else {
                     return false;
                 }
-                auto inventory = entity->nbt.at("inventory").as_dyn_array();
-                if (!inventory.at(slot_).is_compound())
+                auto& inventory = entity_->get<api::ecs::com::inventory>().value;
+                if (!inventory.contains(slot_))
                     return false;
-                auto item_ = inventory.at(slot_).as_compound();
-                if (__item_check(item, item_))
-                    return false;
-            }
-        }
-
-        if (predicate.contains("flags")) {
-            if (!entity->nbt.contains("flags"))
-                return false;
-            auto flags = predicate["flags"].as_compound();
-            auto entity_flags = entity->nbt.at("flags").as_compound();
-            for (auto& [key, value] : flags) {
-                if (!entity_flags.contains(key))
-                    return false;
-                if (entity_flags.at(key) != value)
+                if (__item_check(item, inventory.at(slot_)))
                     return false;
             }
         }
 
-        if (predicate.contains("location")) {
-            if (!entity->current_world())
-                return false;
-            auto location = predicate["location"].as_compound();
-            if (!__location_check(location, entity->position, entity->rotation, *entity->current_world()))
-                return false;
-        }
-
-        if (predicate.contains("nbt")) {
-            auto nbt = predicate["nbt"].as_compound();
-            auto& entity_nbt = entity->nbt;
-            for (auto& [key, value] : nbt) {
-                if (!entity_nbt.contains(key))
-                    return false;
-                if (entity_nbt.at(key) != value)
-                    return false;
-            }
-        }
-
-        if (predicate.contains("passenger")) {
-            auto passenger = predicate["passenger"].as_compound();
-            if (!entity->nbt.contains("passengers"))
-                return false;
-            auto passengers = entity->nbt.at("passengers").as_dyn_array();
-            for (auto& passenger_ : passengers) {
-                if (!passenger_.is_compound())
-                    return false;
-                if (__entity_check(passenger, passenger_))
-                    return false;
-            }
-        }
-
-        if (predicate.contains("slots")) {
-            //TODO
-        }
-
-        if (predicate.contains("stepping_on")) {
-            if (!entity->current_world())
-                return false;
-            auto stepping_on = predicate["stepping_on"].as_compound();
-            if (!__location_check(stepping_on, entity->position, entity->rotation, *entity->current_world()))
-                return false;
-        }
-
-        if (predicate.contains("movement_affected_by")) {
-            if (!entity->current_world())
-                return false;
-            auto movement_affected_by = predicate["movement_affected_by"].as_compound();
-            if (!__location_check(
-                    movement_affected_by,
-                    {entity->position.x, entity->position.y - 0.5, entity->position.z},
-                    entity->rotation,
-                    *entity->current_world()
-                ))
-                return false;
-        }
+        //if (predicate.contains("flags")) {
+        //    if (!entity->nbt.contains("flags"))
+        //        return false;
+        //    auto flags = predicate["flags"].as_compound();
+        //    auto entity_flags = entity->nbt.at("flags").as_compound();
+        //    for (auto& [key, value] : flags) {
+        //        if (!entity_flags.contains(key))
+        //            return false;
+        //        if (entity_flags.at(key) != value)
+        //            return false;
+        //    }
+        //}
+        //
+        //if (predicate.contains("location")) {
+        //    if (!entity->current_world())
+        //        return false;
+        //    auto location = predicate["location"].as_compound();
+        //    if (!__location_check(location, entity->position, entity->rotation, *entity->current_world()))
+        //        return false;
+        //}
+        //
+        //if (predicate.contains("nbt")) {
+        //    auto nbt = predicate["nbt"].as_compound();
+        //    auto& entity_nbt = entity->nbt;
+        //    for (auto& [key, value] : nbt) {
+        //        if (!entity_nbt.contains(key))
+        //            return false;
+        //        if (entity_nbt.at(key) != value)
+        //            return false;
+        //    }
+        //}
+        //
+        //if (predicate.contains("passenger")) {
+        //    auto passenger = predicate["passenger"].as_compound();
+        //    if (!entity->nbt.contains("passengers"))
+        //        return false;
+        //    auto passengers = entity->nbt.at("passengers").as_dyn_array();
+        //    for (auto& passenger_ : passengers) {
+        //        if (!passenger_.is_compound())
+        //            return false;
+        //        if (__entity_check(passenger, passenger_))
+        //            return false;
+        //    }
+        //}
+        //
+        //if (predicate.contains("slots")) {
+        //    //TODO
+        //}
+        //
+        //if (predicate.contains("stepping_on")) {
+        //    if (!entity->current_world())
+        //        return false;
+        //    auto stepping_on = predicate["stepping_on"].as_compound();
+        //    if (!__location_check(stepping_on, entity->position, entity->rotation, *entity->current_world()))
+        //        return false;
+        //}
+        //
+        //if (predicate.contains("movement_affected_by")) {
+        //    if (!entity->current_world())
+        //        return false;
+        //    auto movement_affected_by = predicate["movement_affected_by"].as_compound();
+        //    if (!__location_check(
+        //            movement_affected_by,
+        //            {entity->position.x, entity->position.y - 0.5, entity->position.z},
+        //            entity->rotation,
+        //            *entity->current_world()
+        //        ))
+        //        return false;
+        //}
 
         if (predicate.contains("team")) {
             //TODO
@@ -228,78 +228,78 @@ namespace copper_server::build_in_plugins::processors_providers {
             //TODO
         }
 
-        if (predicate.contains("vehicle")) {
-            if (!__entity_check(predicate["vehicle"].as_compound(), entity->nbt.at("vehicle")))
-                return false;
-        }
-
-        if (predicate.contains("movement")) {
-            auto movement = predicate["movement"].as_compound();
-            if (movement.contains("x"))
-                if (!diff_min_max(movement["x"], entity->motion.x))
-                    return false;
-            if (movement.contains("y"))
-                if (!diff_min_max(movement["y"], entity->motion.y))
-                    return false;
-            if (movement.contains("z"))
-                if (!diff_min_max(movement["z"], entity->motion.z))
-                    return false;
-            if (movement.contains("horizontal_speed"))
-                if (!diff_min_max(movement["horizontal_speed"], std::sqrt(entity->motion.x * entity->motion.x + entity->motion.z * entity->motion.z)))
-                    return false;
-
-            if (movement.contains("vertical_speed"))
-                if (!diff_min_max(movement["vertical_speed"], entity->motion.y))
-                    return false;
-
-            if (movement.contains("fall_distance"))
-                if (!diff_min_max(movement["fall_distance"], (double)entity->nbt.at("fall_distance")))
-                    return false;
-        }
-        if (predicate.contains("periodic_tick")) {
-            if (entity->nbt.contains("age")) {
-                int32_t age = entity->nbt.at("age");
-                if (age % (int32_t)predicate.at("periodic_tick") != 0)
-                    return false;
-            } else {
-                return false;
-            }
-        }
-
-        if (predicate.contains("type_specific")) {
-            auto type_specific = predicate["type_specific"].as_compound();
-            std::string type = type_specific.at("type");
-            if (type == "cat") {
-                //TODO
-            } else if (type == "fishing_hook") {
-                if (!entity->nbt.contains("in_open_water"))
-                    return false;
-                if (type_specific.contains("in_open_water"))
-                    if (entity->nbt.at("in_open_water") != type_specific.at("in_open_water"))
-                        return false;
-            } else if (type == "frog") {
-                //TODO
-            } else if (type == "lightning") {
-                //TODO
-            } else if (type == "player") {
-                //TODO
-            } else if (type == "raider") {
-                //TODO
-            } else if (type == "slime") {
-                //TODO
-            } else if (type == "wolf") {
-                //TODO
-            } else
-                return false;
-        }
-
-        if (predicate.contains("source_entity")) { //TODO check
-            auto source_entity = predicate["source_entity"].as_compound();
-            if (!entity->nbt.contains("source_entity"))
-                return false;
-            if (__entity_check(source_entity, entity->nbt.at("source_entity")))
-                return false;
-        }
+        //if (predicate.contains("vehicle")) {
+        //    if (!__entity_check(predicate["vehicle"].as_compound(), entity->nbt.at("vehicle")))
+        //        return false;
+        //}
+        //
+        //if (predicate.contains("movement")) {
+        //    auto movement = predicate["movement"].as_compound();
+        //    if (movement.contains("x"))
+        //        if (!diff_min_max(movement["x"], entity->motion.x))
+        //            return false;
+        //    if (movement.contains("y"))
+        //        if (!diff_min_max(movement["y"], entity->motion.y))
+        //            return false;
+        //    if (movement.contains("z"))
+        //        if (!diff_min_max(movement["z"], entity->motion.z))
+        //            return false;
+        //    if (movement.contains("horizontal_speed"))
+        //        if (!diff_min_max(movement["horizontal_speed"], std::sqrt(entity->motion.x * entity->motion.x + entity->motion.z * entity->motion.z)))
+        //            return false;
+        //
+        //    if (movement.contains("vertical_speed"))
+        //        if (!diff_min_max(movement["vertical_speed"], entity->motion.y))
+        //            return false;
+        //
+        //    if (movement.contains("fall_distance"))
+        //        if (!diff_min_max(movement["fall_distance"], (double)entity->nbt.at("fall_distance")))
+        //            return false;
+        //}
+        //if (predicate.contains("periodic_tick")) {
+        //    if (entity->nbt.contains("age")) {
+        //        int32_t age = entity->nbt.at("age");
+        //        if (age % (int32_t)predicate.at("periodic_tick") != 0)
+        //            return false;
+        //    } else {
+        //        return false;
+        //    }
+        //}
+        //
+        //if (predicate.contains("type_specific")) {
+        //    auto type_specific = predicate["type_specific"].as_compound();
+        //    std::string type = type_specific.at("type");
+        //    if (type == "cat") {
+        //        //TODO
+        //    } else if (type == "fishing_hook") {
+        //        if (!entity->nbt.contains("in_open_water"))
+        //            return false;
+        //        if (type_specific.contains("in_open_water"))
+        //            if (entity->nbt.at("in_open_water") != type_specific.at("in_open_water"))
+        //                return false;
+        //    } else if (type == "frog") {
+        //        //TODO
+        //    } else if (type == "lightning") {
+        //        //TODO
+        //    } else if (type == "player") {
+        //        //TODO
+        //    } else if (type == "raider") {
+        //        //TODO
+        //    } else if (type == "slime") {
+        //        //TODO
+        //    } else if (type == "wolf") {
+        //        //TODO
+        //    } else
+        //        return false;
+        //}
+        //
+        //if (predicate.contains("source_entity")) { //TODO check
+        //    auto source_entity = predicate["source_entity"].as_compound();
+        //    if (!entity->nbt.contains("source_entity"))
+        //        return false;
+        //    if (__entity_check(source_entity, entity->nbt.at("source_entity")))
+        //        return false;
+        //}
 
         if (predicate.contains("is_direct")) {
             //TODO

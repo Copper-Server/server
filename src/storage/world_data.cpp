@@ -1785,7 +1785,7 @@ namespace copper_server::storage {
     }
 
     world_data::world_data(int32_t world_id, const std::filesystem::path& path)
-        : path(path), world_id(world_id), limit_on_load(api::configuration::get().world.load_speed) {
+        : path(path), world_id(world_id), limit_on_load(api::configuration::get().world.load_speed), current_world_reg(world_id) {
         world_game_rules["reducedDebugInfo"] = api::configuration::get().game_play.reduced_debug_screen;
         if (!std::filesystem::exists(path))
             std::filesystem::create_directories(path);
@@ -3011,6 +3011,7 @@ namespace copper_server::storage {
                     entities.erase(id);
                 rr.unrelated_entities.clear();
             });
+            entity_tick_scheduler.execute_frame(current_world_reg);
             to_tick_chunks.for_each([&](auto&& chunk) {
                 chunk->tick_block_entity(rr, *this);
             });
@@ -3102,6 +3103,12 @@ namespace copper_server::storage {
                     chunk->tick_speed += std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
                     tick_local_time = actual_time;
                 });
+                {
+                    entity_tick_scheduler.execute_frame(current_world_reg);
+                    auto actual_time = std::chrono::high_resolution_clock::now();
+                    profiling.entity_tick_speed = std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
+                    tick_local_time = actual_time;
+                }
                 to_tick_chunks.for_each([&](auto&& chunk) {
                     chunk->tick_block_entity(rr, *this);
                     auto actual_time = std::chrono::high_resolution_clock::now();
@@ -3500,6 +3507,7 @@ namespace copper_server::storage {
     }
 
     void worlds_data::apply_tick(std::chrono::high_resolution_clock::time_point current_time) {
+        api::ecs::global_registry::global_tick();
         std::unique_lock lock(mutex);
         list_array<std::pair<int32_t, base_objects::atomic_holder<world_data>>> worlds_to_tick;
         for (auto& [id, world] : cached_worlds) {

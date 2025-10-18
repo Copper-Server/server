@@ -12,17 +12,11 @@
 #include <library/list_array.hpp>
 #include <src/api/ecs.hpp>
 #include <src/api/tags.hpp>
-#include <src/base_objects/atomic_holder.hpp>
 #include <string>
 #include <variant>
 
 namespace enbt {
     struct raw_uuid;
-}
-
-namespace copper_server::base_objects {
-    struct entity;
-    using entity_ref = atomic_holder<entity>;
 }
 
 namespace copper_server::api::id {

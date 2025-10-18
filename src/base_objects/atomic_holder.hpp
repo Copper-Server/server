@@ -49,7 +49,7 @@ namespace copper_server::base_objects {
             }
         }
 
-        atomic_holder(atomic_holder&& other)
+        atomic_holder(atomic_holder&& other) noexcept
             : data(other.data), ref_count(other.ref_count) {
             other.data = nullptr;
             other.ref_count = nullptr;
@@ -75,7 +75,7 @@ namespace copper_server::base_objects {
             return *this;
         }
 
-        atomic_holder& operator=(atomic_holder&& other) {
+        atomic_holder& operator=(atomic_holder&& other) noexcept {
             if (data == other.data)
                 return *this;
             decrease_counter();
@@ -86,7 +86,7 @@ namespace copper_server::base_objects {
             return *this;
         }
 
-        ~atomic_holder() {
+        ~atomic_holder() noexcept {
             decrease_counter();
         }
 

@@ -33,11 +33,6 @@
 #include <src/util/calculations.hpp>
 #include <src/util/task_management.hpp>
 
-namespace copper_server::base_objects {
-    struct entity;
-    using entity_ref = atomic_holder<entity>;
-}
-
 namespace copper_server::storage {
     class world_data;
     class worlds_data;
@@ -315,8 +310,11 @@ namespace copper_server::storage {
         void tick_update_day_light();
         void tick_run_local_scheduled_commands();
 
+        api::ecs::world_local_registry current_world_reg;
 
     public:
+        api::ecs::scheduler entity_tick_scheduler;
+
         int32_t get_chunk_y_count() const {
             return chunk_y_count;
         }
@@ -611,6 +609,8 @@ namespace copper_server::storage {
             std::chrono::high_resolution_clock::time_point last_tick = std::chrono::high_resolution_clock::now();
             uint64_t got_ticks = 0;
             double tps_for_world = 0;
+            std::chrono::milliseconds entity_tick_speed = std::chrono::milliseconds(0);
+
 
             //if set 0.1
             // total 1000 ticked chunks

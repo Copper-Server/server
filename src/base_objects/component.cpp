@@ -282,7 +282,7 @@ namespace copper_server::base_objects {
 
     component::component(const component& copy) : type(copy.type) {}
 
-    component::~component() = default;
+    component::~component() noexcept = default;
 
     component& component::operator=(component&& mov) noexcept {
         type = std::move(mov.type);

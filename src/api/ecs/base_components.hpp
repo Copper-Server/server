@@ -39,11 +39,11 @@ namespace copper_server {
 }
 
 namespace copper_server::api::ecs::com {
-    struct inventory { //optional
+    struct inventory { //some entities
         std::unordered_map<uint32_t, base_objects::slot_data> value;
     };
 
-    struct custom_inventory { //optional
+    struct custom_inventory { //player only
         std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot_data>> value;
     };
 
@@ -61,19 +61,20 @@ namespace copper_server::api::ecs::com {
         }
     };
 
-    struct assigned_player { //optional
+    struct assigned_player { //player only
         base_objects::client_data_holder player;
     };
 
-    struct spectating_players { //optional
+    struct spectating_players {
         list_array<base_objects::client_data_holder> players;
     };
 
-    struct world_syncing { //optional
+    struct world_syncing {
         bit_list_array<> processed_chunks;
         base_objects::cubic_bounds_chunk_radius processing_region;
         uint64_t assigned_world_id = (uint64_t)-1;
         storage::world_data* world = nullptr;
+        std::optional<std::string> weak_reference;
         uint32_t attached_to_distance = 0;
         uint32_t inactivity_counter = 0;
         uint16_t keep_alive_ticks = 0; //used for handling entity animation
@@ -179,19 +180,19 @@ namespace copper_server::api::ecs::com {
 
     struct dead_mark {}; //optional
 
-    struct ride_entity { //optional
-        entity other;
+    struct ride_entity {
+        std::optional<entity> other;
     };
 
-    struct ride_by_entity { //optional
+    struct ride_by_entity {
         list_array<entity> ride_by;
     };
 
-    struct attached_to { //optional
-        std::variant<entity, enbt::raw_uuid> other;
+    struct attached_to {
+        std::optional<std::variant<entity, enbt::raw_uuid>> other;
     };
 
-    struct attached { //optional
+    struct attached {
         list_array<std::variant<entity, enbt::raw_uuid>> ride_by_entity;
     };
 
@@ -204,6 +205,8 @@ namespace copper_server::api::ecs::com {
             bool particles : 1 = true;
             bool show_icon : 1 = true;
             bool use_blend : 1 = false; //for darkness
+
+            auto operator<=>(const effect&) const = default;
         };
 
         std::unordered_map<uint32_t, list_array<effect>> hidden_effects; //effects with lower amplifier than active effect but longer duration
@@ -265,7 +268,7 @@ namespace copper_server::api::ecs::com {
 
     struct experience {
         int32_t level = 0;
-        int32_t experience = 0;
+        int32_t exp = 0;
 
         static int32_t calculate_required_experience(int32_t level) {
             // clang-format off
@@ -327,34 +330,34 @@ namespace copper_server::api::ecs::com {
         }
 
         int32_t get_experience() const {
-            return experience;
+            return exp;
         }
 
-        void set_experience(int32_t exp) {
+        void set_experience(int32_t _exp) {
             int32_t add_levels = 0;
 
             auto required_exp = calculate_required_experience(get_level());
-            for (; required_exp <= exp; required_exp = calculate_required_experience(get_level())) {
-                exp -= required_exp;
+            for (; required_exp <= _exp; required_exp = calculate_required_experience(get_level())) {
+                _exp -= required_exp;
                 ++add_levels;
             }
 
             int32_t levels = get_level() + add_levels;
-            while (exp < 0 && levels) {
+            while (_exp < 0 && levels) {
                 levels--;
-                exp += calculate_required_experience(levels);
+                _exp += calculate_required_experience(levels);
             }
 
-            experience = exp;
+            exp = _exp;
             level = levels;
         }
 
         int32_t get_total_experience() {
-            return calculate_experience_from_level(level) + experience;
+            return calculate_experience_from_level(level) + exp;
         }
 
         float get_progress() {
-            return float((1.0 / calculate_required_experience(get_level())) * experience);
+            return float((1.0 / calculate_required_experience(get_level())) * exp);
         }
 
         void add_experience(int32_t experience) {
@@ -369,8 +372,8 @@ namespace copper_server::api::ecs::com {
     struct held_slot {
         uint8_t hotbar_slot;
     };
-    
-    struct saturation{
+
+    struct saturation {
         float value;
     };
 

@@ -1132,7 +1132,7 @@ namespace copper_server::base_objects {
         template <class T>
         component& operator=(const T& copy)
             requires std::is_constructible_v<base, T>;
-        ~component();
+        ~component() noexcept;
 
         bool operator==(const component& other) const;
         bool operator!=(const component& other) const;

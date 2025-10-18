@@ -8,6 +8,8 @@
  */
 #ifndef SRC_API_ECS
 #define SRC_API_ECS
+#include <cassert>
+#include <library/list_array.hpp>
 #include <src/api/ecs/detail.hpp>
 
 //entity component system
@@ -66,7 +68,7 @@ namespace copper_server::api::ecs {
         [[nodiscard]] mutable_component<component> modify() {
             auto res = try_modify<component>();
             assert(bool(res) && "Component requested via modify() does not exist on this entity!");
-            return *res;
+            return std::move(*res);
         }
 
         template <class component>
@@ -90,13 +92,13 @@ namespace copper_server::api::ecs {
         //the components changes would not be accessible util next tick, all changes buffered
         template <class component>
         void set(component&& move) {
-            queue_set_entity_component(id, generation, detail::get_component_id<component>(), std::move(move));
+            detail::queue_set_entity_component(id, generation, detail::get_component_id<component>(), std::move(move));
         }
 
         //the components changes would not be accessible util next tick, all changes buffered
         template <class component>
         void set(const component& copy) {
-            queue_set_entity_component(id, generation, detail::get_component_id<component>(), component(copy));
+            detail::queue_set_entity_component(id, generation, detail::get_component_id<component>(), component(copy));
         }
 
         //the components changes would not be accessible util next tick, all changes cached
@@ -106,9 +108,26 @@ namespace copper_server::api::ecs {
         }
 
         template <class component>
+        void add_relation(entity child) {
+            detail::queue_add_relation(detail::get_component_id<component>(), *this, child);
+        }
+
+        template <class component>
+        void remove_relation(entity child) {
+            detail::queue_remove_relation(detail::get_component_id<component>(), *this, child);
+        }
+
+        template <class component>
+        bool has_relation(entity child) {
+            return detail::has_relation(detail::get_component_id<component>(), *this, child);
+        }
+
+        template <class component>
         [[nodiscard]] bool has() const {
             return detail::has_entity_component(id, generation, detail::get_component_id<component>());
         }
+
+        std::optional<entity> copy_and_wait() const;
 
         void destroy() {
             detail::queue_destroy_entity(id, generation);
@@ -118,7 +137,7 @@ namespace copper_server::api::ecs {
             return detail::get_entity_assigned_to_world(id, generation) == world_id;
         }
 
-        std::optional<int32_t> get_assinged_world_id() const {
+        std::optional<int32_t> get_assigned_world_id() const {
             return detail::get_entity_assigned_to_world(id, generation);
         }
 
@@ -135,39 +154,63 @@ namespace copper_server::api::ecs {
     struct query {
         query() : id() {}
 
+        query(query&& mov) : id(mov.id), with_relations(std::move(mov.with_relations)) {}
+
         query(int32_t world_id) : id(world_id) {}
+
+        query& operator=(query&& mov) {
+            id = mov.id;
+            with_relations = std::move(mov.with_relations);
+            return *this;
+        }
+
+        template <class... with_components>
+        [[nodiscard]] query<params..., detail::query_with<with_components...>> with() {
+            return query<params..., detail::query_with<with_components...>>{id, std::move(with_relations)};
+        }
 
         template <class... without_components>
         [[nodiscard]] query<params..., detail::query_without<without_components...>> without() {
-            return query<params..., detail::query_without<without_components...>>{id};
+            return query<params..., detail::query_without<without_components...>>{id, std::move(with_relations)};
         }
 
         template <class... reads_components>
         [[nodiscard]] query<params..., detail::query_reads<reads_components...>> reads() {
-            return query<params..., detail::query_reads<reads_components...>>{id};
+            return query<params..., detail::query_reads<reads_components...>>{id, std::move(with_relations)};
         }
 
         template <class... writes_components>
         [[nodiscard]] query<params..., detail::query_writes<writes_components...>> writes() {
-            return query<params..., detail::query_writes<writes_components...>>{id};
+            return query<params..., detail::query_writes<writes_components...>>{id, std::move(with_relations)};
         }
 
         template <class... with_dirty_components>
         [[nodiscard]] query<params..., detail::query_with_dirty<with_dirty_components...>> with_dirty() {
-            return query<params..., detail::query_with_dirty<with_dirty_components...>>{id};
+            return query<params..., detail::query_with_dirty<with_dirty_components...>>{id, std::move(with_relations)};
+        }
+
+        template <class... with_clear_components>
+        [[nodiscard]] query<params..., detail::query_with_clear<with_clear_components...>> with_clear() {
+            return query<params..., detail::query_with_clear<with_clear_components...>>{id, std::move(with_relations)};
         }
 
         template <class... with_changed_components>
         [[nodiscard]] query<params..., detail::query_with_changes<with_changed_components...>> with_changes() {
-            return query<params..., detail::query_with_changes<with_changed_components...>>{id};
+            return query<params..., detail::query_with_changes<with_changed_components...>>{id, std::move(with_relations)};
+        }
+
+        template <class tag_component>
+        [[nodiscard]] query<params..., detail::has_relation_query<tag_component>> with_relation(entity child) {
+            with_relations.emplace_back(detail::get_component_id<tag_component>(), child);
+            return query<params..., detail::has_relation_query<tag_component>>{id, std::move(with_relations)};
         }
 
         //this operation marks all written components as dirty,
         // this only viable when the query definitely modifies ALL written items in query
         // using mindlessly would lead to system overload with too much unnecessary updates
-        [[nodiscard]] auto request_implicit_marking() {
+        [[nodiscard]] auto request_implicit_marking() && {
             struct implicit_marking_struct {
-                implicit_marking_struct(const query<params...>& q) : internal(q) {}
+                implicit_marking_struct(query<params...>&& q) : internal(std::move(q)) {}
 
                 auto begin() {
                     return internal.template begin_impl<true>();
@@ -181,7 +224,7 @@ namespace copper_server::api::ecs {
                 query<params...> internal;
             };
 
-            return implicit_marking_struct(*this);
+            return implicit_marking_struct(std::move(*this));
         }
 
         [[nodiscard]] auto begin() {
@@ -204,12 +247,12 @@ namespace copper_server::api::ecs {
 
         template <class FN>
         void par_for_each_chunk(FN&& fn) {
-            begin().chunk_iterate_parralel(std::forward<FN>(fn));
+            begin().chunk_iterate_parallel(std::forward<FN>(fn));
         }
 
         template <class FN>
         void par_for_each_chunk_view(FN&& fn) {
-            begin().chunk_iterate_parralel_view(std::forward<FN>(fn));
+            begin().chunk_iterate_parallel_view(std::forward<FN>(fn));
         }
 
     private:
@@ -217,8 +260,10 @@ namespace copper_server::api::ecs {
         auto begin_impl() {
             using traits = detail::query_traits<params...>;
             const auto& all_ids = traits::get_all_component_ids();
+            const auto& with_ids = traits::get_with_ids();
             const auto& without_ids = traits::get_without_ids();
             const auto& dirty_ids = traits::get_dirty_ids();
+            const auto& clean_ids = traits::get_clean_ids();
             const auto& changes_ids = traits::get_with_changes_ids();
 
             const std::vector<component_id>* writes_ids_ptr;
@@ -234,17 +279,23 @@ namespace copper_server::api::ecs {
                       ? detail::iterate_components(
                             *id,
                             {all_ids.data(), all_ids.size()},
+                            {with_ids.data(), with_ids.size()},
                             {without_ids.data(), without_ids.size()},
                             {writes_ids.data(), writes_ids.size()},
                             {dirty_ids.data(), dirty_ids.size()},
-                            {changes_ids.data(), changes_ids.size()}
+                            {clean_ids.data(), clean_ids.size()},
+                            {changes_ids.data(), changes_ids.size()},
+                            {with_relations.data(), with_relations.size()}
                         )
                       : detail::iterate_components_global(
                             {all_ids.data(), all_ids.size()},
+                            {with_ids.data(), with_ids.size()},
                             {without_ids.data(), without_ids.size()},
                             {writes_ids.data(), writes_ids.size()},
                             {dirty_ids.data(), dirty_ids.size()},
-                            {changes_ids.data(), changes_ids.size()}
+                            {clean_ids.data(), clean_ids.size()},
+                            {changes_ids.data(), changes_ids.size()},
+                            {with_relations.data(), with_relations.size()}
                         );
 
             return typename detail::apply_tuple_to_iter<
@@ -255,23 +306,49 @@ namespace copper_server::api::ecs {
         }
 
         std::optional<int32_t> id;
+        list_array<std::pair<component_id, entity>> with_relations;
     };
 
     struct world_local_registry {
-        world_local_registry(int32_t id) : id(id) {}
+        world_local_registry(int32_t id);
+        ~world_local_registry();
 
         fast_task::future_ptr<bool> register_entity_async(entity& entity);
         fast_task::future_ptr<bool> unregister_entity_async(entity& entity);
-        fast_task::future_ptr<bool> transfer_entity_async(entity& entity);              //the old world local registry received from entity's internal data
-        fast_task::future_ptr<entity> create_entity_async(const entity_recipe& recipe); //the recipe should be static or live longer than future_ptr
+        fast_task::future_ptr<bool> transfer_entity_async(entity& entity);                //the old world local registry received from entity's internal data
+        fast_task::future_ptr<entity> allocate_entity_async(const entity_recipe& recipe); //the recipe should be static or live longer than future_ptr
+
+        template <class... components>
+        fast_task::future_ptr<entity> create_entity_async(components&&... args) {
+            return detail::create_entity__cc(id, std::forward<components>(args)...);
+        }
+
+        template <class... components>
+        fast_task::future_ptr<entity> create_entity_with_recipe_async(const entity_recipe& recipe, components&&... args) {
+            return detail::create_entity_r_cc(id, recipe, std::forward<components>(args)...);
+        }
 
         [[nodiscard]] bool register_entity_and_block(entity& entity);
         [[nodiscard]] bool unregister_entity_and_block(entity& entity);
         [[nodiscard]] bool transfer_entity_and_block(entity& entity);
-        [[nodiscard]] entity create_entity_and_wait(const entity_recipe& recipe);
+        [[nodiscard]] entity allocate_entity_and_wait(const entity_recipe& recipe);
+
+        template <class... components>
+        entity create_entity_and_wait(components&&... args) {
+            return detail::create_entity__cc(id, std::forward<components>(args)...)->take();
+        }
+
+        template <class... components>
+        entity create_entity_with_recipe_and_wait(const entity_recipe& recipe, components&&... args) {
+            return detail::create_entity_r_cc(id, recipe, std::forward<components>(args)...)->take();
+        }
 
         [[nodiscard]] query<> view() {
             return query<>{id};
+        }
+
+        int32_t get_id() const {
+            return id;
         }
 
     private:
@@ -283,14 +360,45 @@ namespace copper_server::api::ecs {
             return query<>{};
         }
 
-        //recomended to use this to avoid short locks on fully loaded server
+        //recommended to use this to avoid short locks on fully loaded server
         template <class component>
         void register_component() {
             detail::get_component_id<component>();
         }
 
-        fast_task::future_ptr<entity> create_entity_async(const entity_recipe& recipe); //the recipe should be static or live longer than future_ptr
-        [[nodiscard]] entity create_entity_and_wait(const entity_recipe& recipe);
+        fast_task::future_ptr<entity> allocate_entity_async(const entity_recipe& recipe); //the recipe should be static or live longer than future_ptr
+        [[nodiscard]] entity allocate_entity_and_wait(const entity_recipe& recipe);
+
+        template <class... components>
+        fast_task::future_ptr<entity> create_entity_async(components&&... args) {
+            return detail::create_entity__cc(std::nullopt, std::forward<components>(args)...);
+        }
+
+        template <class... components>
+        fast_task::future_ptr<entity> create_entity_with_recipe_async(const entity_recipe& recipe, components&&... args) {
+            return detail::create_entity_r_cc(std::nullopt, recipe, std::forward<components>(args)...);
+        }
+
+        template <class... components>
+        entity create_entity_and_wait(components&&... args) {
+            return detail::create_entity__cc(std::nullopt, std::forward<components>(args)...)->take();
+        }
+
+        template <class... components>
+        entity create_entity_with_recipe_and_wait(const entity_recipe& recipe, components&&... args) {
+            return detail::create_entity_r_cc(std::nullopt, recipe, std::forward<components>(args)...)->take();
+        }
+
+        template <class... Params>
+        std::vector<entity> execute_query_immediate(query<Params...>&& query_obj) {
+            fast_task::unique_lock lock(detail::immediate_lock());
+            std::vector<entity> entity;
+            for (auto&& req : query_obj)
+                entity.push_back(std::get<0>(req).current_entity());
+            return entity;
+        }
+
+        void global_tick();
     }
 
     struct system_interface {
@@ -299,7 +407,7 @@ namespace copper_server::api::ecs {
 
         virtual ~system_interface() noexcept = default;
 
-        virtual void tick() = 0;
+        virtual void tick(world_local_registry& world) = 0;
     };
 
     struct scheduler {
@@ -323,4 +431,14 @@ namespace copper_server::api::ecs {
 }
 
 #include <src/api/ecs/late_definition.hpp>
+
+namespace std {
+    template <>
+    struct hash<copper_server::api::ecs::entity> {
+        size_t operator()(const copper_server::api::ecs::entity& ent) const noexcept {
+            return std::hash<int32_t>{}(ent.id) ^ (std::hash<uint32_t>{}(ent.generation) << 1);
+        }
+    };
+}
+
 #endif /* SRC_API_ECS */

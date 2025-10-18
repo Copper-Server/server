@@ -10,7 +10,7 @@
 #define SRC_API_ECS_DETAIL
 #include <atomic>
 #include <cstdint>
-#include <library/fast_task.hpp>
+#include <library/fast_task/include/future.hpp>
 #include <span>
 #include <src/util/templates.hpp>
 #include <type_traits>
@@ -18,6 +18,7 @@
 
 namespace copper_server::api::ecs {
     using component_id = uint32_t;
+    struct entity_recipe;
     struct entity;
 
     template <class... components>
@@ -35,12 +36,14 @@ namespace copper_server::api::ecs {
             using constructor_fn = void (*)(void* memory);
             using destructor_fn = void (*)(void* memory);
             using move_constructor_fn = void (*)(void* destination, void* source);
+            using copy_constructor_fn = void (*)(void* destination, void* source);
             using move_fn = void (*)(void* destination, void* source);
 
             size_t size = 0;
             size_t alignment = 0;
             constructor_fn construct = nullptr;
             move_constructor_fn move_construct = nullptr;
+            copy_constructor_fn copy_construct = nullptr;
             destructor_fn destroy = nullptr;
             move_fn move = nullptr;
         };
@@ -56,7 +59,10 @@ namespace copper_server::api::ecs {
         extern fast_task::mutex registry_mutex;
 
         template <class T>
-            requires std::is_constructible_v<T> && std::is_nothrow_destructible_v<T> && std::is_nothrow_move_constructible_v<T> && std::is_nothrow_move_assignable_v<T>
+            requires std::is_constructible_v<T>
+                     && std::is_nothrow_destructible_v<T>
+                     && std::is_nothrow_move_constructible_v<T>
+                     && std::is_nothrow_move_assignable_v<T>
         component_id get_component_id() {
             static const component_id id = next_component_id++;
             if (id >= component_info_registry.size()) {
@@ -74,10 +80,18 @@ namespace copper_server::api::ecs {
                         .destroy = [](void* mem) { static_cast<T*>(mem)->~T(); },
                         .move = [](void* dest, void* src) { *static_cast<T*>(dest) = std::move(*static_cast<T*>(src)); }
                     };
+                    if constexpr (std::is_copy_constructible_v<T>)
+                        component_info_registry[id].copy_construct = [](void* dest, void* src) { new (dest) T(*static_cast<T*>(src)); };
                 }
             }
             return id;
         }
+
+        struct components_holder {
+            std::vector<std::pair<component_id, void*>> components_reference;
+
+            virtual ~components_holder() = default;
+        };
 
         template <class T>
         struct extract_dependent_types {
@@ -155,16 +169,31 @@ namespace copper_server::api::ecs {
 
         void queue_destroy_entity(int32_t id, uint32_t generation);
         void queue_mark_dirty(int32_t id, uint32_t generation, component_id component_id);
+        bool queue_add_relation(component_id component_id, entity parent, entity child);
+        bool queue_remove_relation(component_id component_id, entity parent, entity child);
+        bool has_relation(component_id component_id, entity parent, entity child);
         bool has_entity_component(int32_t id, uint32_t generation, component_id component_id);
         std::optional<int32_t> get_entity_assigned_to_world(int32_t id, uint32_t generation);
 
+        fast_task::future_ptr<entity> create_entity(std::optional<int32_t> world_id, std::unique_ptr<components_holder> components);
+        fast_task::future_ptr<entity> create_entity(std::optional<int32_t> world_id, const entity_recipe& recipe, std::unique_ptr<components_holder> components);
+        fast_task::future_ptr<std::optional<entity>> copy_entity(std::optional<int32_t> world_id, const api::ecs::entity& base_entity);
+        fast_task::task_rw_mutex& immediate_lock();
+
+        template <class... components>
+        fast_task::future_ptr<entity> create_entity__cc(std::optional<int32_t> world_id, components&&... args);
+        template <class... components>
+        fast_task::future_ptr<entity> create_entity_r_cc(std::optional<int32_t> world_id, const entity_recipe& recipe, components&&... args);
+
+
         struct iteration_handle {
             struct iteration_data;
-            std::unique_ptr<iteration_data> data;
+            struct relational_iteration_data;
+            std::variant<iteration_data*, relational_iteration_data*, std::nullptr_t> data = nullptr;
             iteration_handle() = default;
             iteration_handle(const iteration_handle&) = delete;
 
-            iteration_handle(iteration_handle&& other) noexcept : data(std::move(other.data)) {}
+            iteration_handle(iteration_handle&& other) noexcept;
 
             iteration_handle& operator=(const iteration_handle&) = delete;
 
@@ -194,8 +223,28 @@ namespace copper_server::api::ecs {
             preserved_state preserve_state();
         };
 
-        iteration_handle iterate_components(int32_t world_id, std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components, std::span<component_id> with_changes);
-        iteration_handle iterate_components_global(std::span<component_id> components, std::span<component_id> without_components, std::span<component_id> writes_components, std::span<component_id> with_dirty_components, std::span<component_id> with_changes);
+        iteration_handle iterate_components(
+            int32_t world_id,
+            std::span<component_id> components,
+            std::span<component_id> with_components,
+            std::span<component_id> without_components,
+            std::span<component_id> writes_components,
+            std::span<component_id> with_dirty_components,
+            std::span<component_id> with_clean_components,
+            std::span<component_id> with_changes,
+            std::span<std::pair<component_id, entity>> with_relation
+        );
+
+        iteration_handle iterate_components_global(
+            std::span<component_id> components,
+            std::span<component_id> with_components,
+            std::span<component_id> without_components,
+            std::span<component_id> writes_components,
+            std::span<component_id> with_dirty_components,
+            std::span<component_id> with_clean_components,
+            std::span<component_id> with_changes,
+            std::span<std::pair<component_id, entity>> with_relation
+        );
 
         template <class... components>
         struct query_reads {};
@@ -207,10 +256,19 @@ namespace copper_server::api::ecs {
         struct query_with_dirty {};
 
         template <class... components>
+        struct query_with_clear {};
+
+        template <class... components>
         struct query_without {};
 
         template <class... components>
+        struct query_with {};
+
+        template <class... components>
         struct query_with_changes {};
+
+        template <class... _>
+        struct has_relation_query {};
 
         struct read_operation_query {};
 
@@ -220,14 +278,15 @@ namespace copper_server::api::ecs {
 
         struct filter_with_dirty {};
 
+        struct filter_with_clear {};
+
         struct filter_without {};
 
-        // --- New Metaprogramming to process params in order ---
+        struct filter_with {};
+
         template <typename T>
         using strip_const_t = std::remove_const_t<T>;
 
-        // Processes a single query parameter (e.g., query_reads<A, B>)
-        // and returns a meta-tuple: std::tuple<std::pair<A, read_operation_query>, std::pair<B, read_operation_query>>
         template <typename TQueryParam>
         struct process_single_param;
 
@@ -247,8 +306,18 @@ namespace copper_server::api::ecs {
         };
 
         template <typename... Comps>
+        struct process_single_param<query_with_clear<Comps...>> {
+            using type = std::tuple<std::pair<strip_const_t<Comps>, filter_with_clear>...>;
+        };
+
+        template <typename... Comps>
         struct process_single_param<query_without<Comps...>> {
             using type = std::tuple<std::pair<strip_const_t<Comps>, filter_without>...>;
+        };
+
+        template <typename... Comps>
+        struct process_single_param<query_with<Comps...>> {
+            using type = std::tuple<std::pair<strip_const_t<Comps>, filter_with>...>;
         };
 
         template <typename... Comps>
@@ -256,13 +325,17 @@ namespace copper_server::api::ecs {
             using type = std::tuple<std::pair<strip_const_t<Comps>, filter_with_changes>...>;
         };
 
-        // This will be our final, ordered list of components and their access types
+        template <typename... Comps>
+        struct process_single_param<has_relation_query<Comps...>> {
+            using type = std::tuple<>;
+        };
+
         template <class... Params>
         using build_meta_tuple = decltype(std::tuple_cat(
             std::declval<typename process_single_param<Params>::type>()...
         ));
 
-        // --- New Metaprogramming to build the iterator's result tuple from the meta-tuple ---
+
         template <typename TMetaPair>
         struct map_meta_pair_to_iterator_element;
 
@@ -283,6 +356,7 @@ namespace copper_server::api::ecs {
         struct build_iterator_tuple_from_meta<std::tuple<TMetaPairs...>> {
             using type = std::tuple<typename map_meta_pair_to_iterator_element<TMetaPairs>::type...>;
         };
+
 
         // --- TMP utility to check for duplicate types in a tuple ---
         template <typename TTuple>
@@ -360,10 +434,7 @@ namespace copper_server::api::ecs {
                 handle.mark_component_dirty(detail::get_component_id<component>(), index);
             }
 
-            entity current_entity() {
-                auto it = handle.get_current_entity(index);
-                return {it.first, it.second};
-            }
+            entity current_entity();
 
             template <class component>
             structural_changes get_change_state() {
@@ -380,10 +451,7 @@ namespace copper_server::api::ecs {
 
             ~iterator_view_chunk() = default;
 
-            entity current_entity(size_t index) {
-                auto it = handle.get_current_entity(index);
-                return {it.first, it.second};
-            }
+            entity current_entity(size_t index);
 
             template <class component>
             structural_changes get_change_state(size_t index) {
@@ -408,10 +476,7 @@ namespace copper_server::api::ecs {
                 handle.mark_component_dirty(detail::get_component_id<component>(), index);
             }
 
-            entity current_entity(size_t index) {
-                auto it = handle.get_current_entity(index);
-                return {it.first, it.second};
-            }
+            entity current_entity(size_t index);
 
             template <class component>
             structural_changes get_change_state(size_t index) {
@@ -422,15 +487,12 @@ namespace copper_server::api::ecs {
             iteration_handle& handle;
         };
 
-        struct iterator_view_chunk_parralel {
-            iterator_view_chunk_parralel(iteration_handle& handle) : handle(handle), state(handle.preserve_state()) {}
+        struct iterator_view_chunk_parallel {
+            iterator_view_chunk_parallel(iteration_handle& handle) : handle(handle), state(handle.preserve_state()) {}
 
-            ~iterator_view_chunk_parralel() = default;
+            ~iterator_view_chunk_parallel() = default;
 
-            entity current_entity(size_t index) {
-                auto it = state.get_current_entity(handle, index);
-                return {it.first, it.second};
-            }
+            entity current_entity(size_t index);
 
             template <class component>
             structural_changes get_change_state(size_t index) {
@@ -443,12 +505,12 @@ namespace copper_server::api::ecs {
         };
 
         template <class... written_components>
-        struct iterator_view_chunk_parralel_dirty_mark {
+        struct iterator_view_chunk_parallel_dirty_mark {
             using written = std::tuple<written_components...>;
 
-            iterator_view_chunk_parralel_dirty_mark(iteration_handle& handle) : handle(handle), state(handle.preserve_state()) {}
+            iterator_view_chunk_parallel_dirty_mark(iteration_handle& handle) : handle(handle), state(handle.preserve_state()) {}
 
-            ~iterator_view_chunk_parralel_dirty_mark() = default;
+            ~iterator_view_chunk_parallel_dirty_mark() = default;
 
             template <class component>
                 requires((std::is_same_v<written_components, component> || ...))
@@ -456,10 +518,7 @@ namespace copper_server::api::ecs {
                 state.mark_component_dirty(handle, detail::get_component_id<component>(), index);
             }
 
-            entity current_entity(size_t index) {
-                auto it = state.get_current_entity(handle, index);
-                return {it.first, it.second};
-            }
+            entity current_entity(size_t index);
 
             template <class component>
             structural_changes get_change_state(size_t index) {
@@ -486,7 +545,13 @@ namespace copper_server::api::ecs {
         struct is_requires_shifting<query_with_dirty<T...>, TArgs...> : std::true_type {};
 
         template <class... T, class... TArgs>
+        struct is_requires_shifting<query_with_clear<T...>, TArgs...> : std::true_type {};
+
+        template <class... T, class... TArgs>
         struct is_requires_shifting<query_with_changes<T...>, TArgs...> : std::true_type {};
+
+        //template <class... T, class... TArgs>
+        //struct is_requires_shifting<has_relation_query<T...>, TArgs...> : std::true_type {};
 
         template <class T, class... TArgs>
         struct is_requires_shifting<T, TArgs...> : is_requires_shifting<TArgs...> {};
@@ -577,7 +642,7 @@ namespace copper_server::api::ecs {
             }
 
             template <class FN>
-            void chunk_iterate_parralel(FN&& fn) {
+            void chunk_iterate_parallel(FN&& fn) {
                 std::vector<fast_task::cancelable_future_ptr<void>> futures;
                 query_iterator end;
                 while (*this != end) {
@@ -596,16 +661,16 @@ namespace copper_server::api::ecs {
             }
 
             template <class FN>
-            void chunk_iterate_parralel_view(FN&& fn) {
+            void chunk_iterate_parallel_view(FN&& fn) {
                 std::vector<fast_task::cancelable_future_ptr<void>> futures;
                 query_iterator end;
                 while (*this != end) {
                     if constexpr (std::is_same_v<iterator_view, iterator_viewer>())
-                        futures.push_back(fast_task::cancelable_future<void>::start([view = iterator_view_chunk_parralel{*this}, max_chunk_size, component_arrays, &fn]() mutable {
+                        futures.push_back(fast_task::cancelable_future<void>::start([view = iterator_view_chunk_parallel{*this}, max_chunk_size, component_arrays, &fn]() mutable {
                             std::apply(fn, std::tuple_cat(std::make_tuple(std::move(view)), component_arrays, std::make_tuple(max_chunk_size)));
                         }));
                     else
-                        futures.push_back(fast_task::cancelable_future<void>::start([view = typename util::apply_tuple_to<iterator_view_chunk_parralel_dirty_mark, typename iterator_viewer::written>::type{*this}, max_chunk_size, component_arrays, &fn]() mutable {
+                        futures.push_back(fast_task::cancelable_future<void>::start([view = typename util::apply_tuple_to<iterator_view_chunk_parallel_dirty_mark, typename iterator_viewer::written>::type{*this}, max_chunk_size, component_arrays, &fn]() mutable {
                             std::apply(fn, std::tuple_cat(std::make_tuple(std::move(view)), component_arrays, std::make_tuple(max_chunk_size)));
                         }));
                     apply_next();
@@ -690,8 +755,18 @@ namespace copper_server::api::ecs {
                 return ids;
             }
 
+            static const std::vector<component_id>& get_clear_ids() {
+                static const std::vector<component_id> ids = compute_component_ids<filter_with_clear>();
+                return ids;
+            }
+
             static const std::vector<component_id>& get_without_ids() {
                 static const std::vector<component_id> ids = compute_component_ids<filter_without>();
+                return ids;
+            }
+
+            static const std::vector<component_id>& get_with_ids() {
+                static const std::vector<component_id> ids = compute_component_ids<filter_with>();
                 return ids;
             }
 

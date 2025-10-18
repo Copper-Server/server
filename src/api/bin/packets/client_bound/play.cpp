@@ -366,9 +366,9 @@ namespace copper_server::api::packets::client_bound::play {
     set_entity_data set_entity_data::create(api::ecs::entity entity) {
         set_entity_data result;
         result.id = entity.get<api::ecs::com::protocol_id>().value;
-        api::entity_proxy::iterate_all(entity, [&result](auto id, auto& metadata) {
-            result.metadata.push_back({id, metadata});
-        });
+        //api::entity_proxy::iterate_all(entity, [&result](auto id, auto& metadata) {
+        //    result.metadata.push_back({id, metadata});
+        //});
         return result;
     }
 

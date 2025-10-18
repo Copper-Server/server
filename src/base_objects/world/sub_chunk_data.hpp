@@ -15,14 +15,10 @@
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 
-#include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/world/light_data.hpp>
 
 namespace copper_server::base_objects {
-    struct entity;
-    using entity_ref = atomic_holder<entity>;
-
     namespace world {
         struct sub_chunk_data {
             base_objects::block blocks[16][16][16];
