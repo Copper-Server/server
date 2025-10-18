@@ -36,14 +36,14 @@ namespace copper_server::api::ecs {
             using constructor_fn = void (*)(void* memory);
             using destructor_fn = void (*)(void* memory);
             using move_constructor_fn = void (*)(void* destination, void* source);
-            using copy_constructor_fn = void (*)(void* destination, void* source);
+            using copy_assignation_fn = void (*)(void* destination, void* source);
             using move_fn = void (*)(void* destination, void* source);
 
             size_t size = 0;
             size_t alignment = 0;
             constructor_fn construct = nullptr;
             move_constructor_fn move_construct = nullptr;
-            copy_constructor_fn copy_construct = nullptr;
+            copy_assignation_fn copy_assign = nullptr;
             destructor_fn destroy = nullptr;
             move_fn move = nullptr;
         };
@@ -63,6 +63,7 @@ namespace copper_server::api::ecs {
                      && std::is_nothrow_destructible_v<T>
                      && std::is_nothrow_move_constructible_v<T>
                      && std::is_nothrow_move_assignable_v<T>
+                     && std::is_copy_assignable_v<T>
         component_id get_component_id() {
             static const component_id id = next_component_id++;
             if (id >= component_info_registry.size()) {
@@ -77,11 +78,10 @@ namespace copper_server::api::ecs {
                         .alignment = alignof(T),
                         .construct = [](void* mem) { new (mem) T(); },
                         .move_construct = [](void* dest, void* src) { new (dest) T(std::move(*static_cast<T*>(src))); },
+                        .copy_assign = [](void* dest, void* src) { *static_cast<T*>(dest) = *static_cast<T*>(src); },
                         .destroy = [](void* mem) { static_cast<T*>(mem)->~T(); },
                         .move = [](void* dest, void* src) { *static_cast<T*>(dest) = std::move(*static_cast<T*>(src)); }
                     };
-                    if constexpr (std::is_copy_constructible_v<T>)
-                        component_info_registry[id].copy_construct = [](void* dest, void* src) { new (dest) T(*static_cast<T*>(src)); };
                 }
             }
             return id;
@@ -163,7 +163,7 @@ namespace copper_server::api::ecs {
             queue_command(std::move(queue));
         }
 
-        void queue_remove_entity_component(int32_t id, uint32_t generation, component_id component_id) {
+        inline void queue_remove_entity_component(int32_t id, uint32_t generation, component_id component_id) {
             queue_command(mutation_queue_item{id, generation, component_id});
         }
 

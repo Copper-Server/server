@@ -127,6 +127,7 @@ namespace copper_server::api::ecs {
             return detail::has_entity_component(id, generation, detail::get_component_id<component>());
         }
 
+        //could throw depending on components
         std::optional<entity> copy_and_wait() const;
 
         void destroy() {
@@ -356,7 +357,7 @@ namespace copper_server::api::ecs {
     };
 
     namespace global_registry {
-        [[nodiscard]] query<> view() {
+        inline [[nodiscard]] query<> view() {
             return query<>{};
         }
 

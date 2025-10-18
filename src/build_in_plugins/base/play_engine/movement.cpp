@@ -121,9 +121,11 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
                 auto& entity = *client.player_data.assigned_entity;
                 if (entity.has<api::ecs::com::ride_entity>()) {
-                    api::entity_proxy::oak_boat boat(entity.get<api::ecs::com::ride_entity>().other);
-                    boat.set_left_paddle_moving(packet.left_paddle_turning);
-                    boat.set_right_paddle_moving(packet.left_paddle_turning);
+                    if (entity.get<api::ecs::com::ride_entity>().other) {
+                        api::entity_proxy::oak_boat boat(*entity.get<api::ecs::com::ride_entity>().other);
+                        boat.set_left_paddle_moving(packet.left_paddle_turning);
+                        boat.set_right_paddle_moving(packet.left_paddle_turning);
+                    }
                 }
             });
         }

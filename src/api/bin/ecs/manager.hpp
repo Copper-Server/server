@@ -28,6 +28,28 @@ namespace copper_server::api::ecs {
         std::atomic<archetype*> archetype_before_mutation = nullptr;
         int32_t chunk_index = 0;
         uint32_t generation = 0;
+
+
+        entity_record() = default;
+
+        entity_record(const entity_record& mov) {
+            type = mov.type;
+            chunk = mov.chunk;
+            world_owner = mov.world_owner;
+            archetype_before_mutation = mov.archetype_before_mutation.load();
+            chunk_index = mov.chunk_index;
+            generation = mov.generation;
+        }
+
+        entity_record& operator=(const entity_record& mov) {
+            type = mov.type;
+            chunk = mov.chunk;
+            world_owner = mov.world_owner;
+            archetype_before_mutation = mov.archetype_before_mutation.load();
+            chunk_index = mov.chunk_index;
+            generation = mov.generation;
+            return *this;
+        }
     };
 
     struct archetype_hash {

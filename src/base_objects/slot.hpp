@@ -72,8 +72,18 @@ namespace copper_server::base_objects {
 
     struct slot_data {
         std::unordered_map<int32_t, component> components;
-        int32_t count = 0;
         int32_t id = 0;
+        int32_t count = 0;
+
+        slot_data();
+        slot_data(slot_data&& move) noexcept;
+        slot_data(const slot_data& copy);
+
+        slot_data(std::unordered_map<int32_t, component>&& components, int32_t id = 0, int32_t count = 0) noexcept;
+        slot_data(const std::unordered_map<int32_t, component>& components, int32_t id = 0, int32_t count = 0);
+        slot_data& operator=(const slot_data&);
+        slot_data& operator=(slot_data&&) noexcept;
+
 
         template <class T>
         T& get_component() {

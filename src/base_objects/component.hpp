@@ -1112,7 +1112,7 @@ namespace copper_server::base_objects {
 
 
         component();
-        component(component&& mov);
+        component(component&& mov) noexcept;
         component(const component& copy);
 
         template <class T>

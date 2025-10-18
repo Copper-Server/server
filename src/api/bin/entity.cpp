@@ -73,10 +73,10 @@ namespace enbt::io_helper {
                     stream.write(value.get<api::ecs::com::uuid>().id);
                 })
                 .write("nbt", [&value](value_write_stream& stream) {
-                    stream.write(value.get<api::ecs::com::nbt>().data);
+                    stream.write(value.get<api::ecs::com::nbt>().get());
                 })
                 .write("server_data", [&value](value_write_stream& stream) {
-                    stream.write(value.get<api::ecs::com::server_nbt>().data);
+                    stream.write(value.get<api::ecs::com::server_nbt>().get());
                 })
                 .write("motion", [&ee](value_write_stream& stream) {
                     enbt::io_helper::serialization_write(ee.get_motion(), stream);
@@ -92,19 +92,19 @@ namespace enbt::io_helper {
                 })
                 .write("inventory", [&value](value_write_stream& stream) {
                     if (value.has<api::ecs::com::inventory>())
-                        enbt::io_helper::serialization_write(value.get<api::ecs::com::inventory>().value, stream);
+                        enbt::io_helper::serialization_write(value.get<api::ecs::com::inventory>().get(), stream);
                     else
                         stream.write_compound(0);
                 })
                 .write("custom_inventory", [&value](value_write_stream& stream) {
                     if (value.has<api::ecs::com::custom_inventory>())
-                        enbt::io_helper::serialization_write(value.get<api::ecs::com::custom_inventory>().value, stream);
+                        enbt::io_helper::serialization_write(value.get<api::ecs::com::custom_inventory>().get(), stream);
                     else
                         stream.write_compound(0);
                 })
                 .write("active_effects", [&value](value_write_stream& stream) {
                     if (value.has<api::ecs::com::effects>()) {
-                        auto& active_effects = value.get<api::ecs::com::effects>().active_effects;
+                        auto& active_effects = value.get<api::ecs::com::effects>().active_effects();
                         stream.write_array(active_effects.size()).iterable(active_effects, [](auto& item, value_write_stream& item_stream) {
                             auto& [id, effect] = item;
                             item_stream
@@ -121,7 +121,7 @@ namespace enbt::io_helper {
                 })
                 .write("hidden_effects", [&value](value_write_stream& stream) {
                     if (value.has<api::ecs::com::effects>()) {
-                        auto& hidden_effects = value.get<api::ecs::com::effects>().hidden_effects;
+                        auto& hidden_effects = value.get<api::ecs::com::effects>().hidden_effects();
                         auto comp = stream.write_compound(hidden_effects.size());
                         for (auto& [id, effects] : hidden_effects) {
                             comp.write(std::to_string(id), [&effects](value_write_stream& effects_stream) {
@@ -181,20 +181,20 @@ namespace enbt::io_helper {
                 {"died", ee.is_died()},
                 {"entity_ud", ee.const_data().entity_id},
                 {"id", value.get<api::ecs::com::uuid>().id},
-                {"nbt", value.get<api::ecs::com::nbt>().data},
-                {"server_data", value.get<api::ecs::com::server_nbt>().data},
+                {"nbt", value.get<api::ecs::com::nbt>().get()},
+                {"server_data", value.get<api::ecs::com::server_nbt>().get()},
             };
             enbt::io_helper::serialization_write(ee.get_motion(), compound["motion"]);
             enbt::io_helper::serialization_write(ee.get_position(), compound["position"]);
             enbt::io_helper::serialization_write(ee.get_rotation(), compound["rotation"]);
             enbt::io_helper::serialization_write(ee.get_head_rotation(), compound["head_rotation"]);
             if (value.has<api::ecs::com::inventory>())
-                enbt::io_helper::serialization_write(value.get<api::ecs::com::inventory>().value, compound["inventory"]);
+                enbt::io_helper::serialization_write(value.get<api::ecs::com::inventory>().get(), compound["inventory"]);
             if (value.has<api::ecs::com::custom_inventory>())
-                enbt::io_helper::serialization_write(value.get<api::ecs::com::custom_inventory>().value, compound["custom_inventory"]);
+                enbt::io_helper::serialization_write(value.get<api::ecs::com::custom_inventory>().get(), compound["custom_inventory"]);
 
             if (value.has<api::ecs::com::effects>()) {
-                auto& active_effects = value.get<api::ecs::com::effects>().active_effects;
+                auto& active_effects = value.get<api::ecs::com::effects>().active_effects();
                 enbt::fixed_array arr;
                 arr.reserve(active_effects.size());
                 for (auto& [id, effect] : active_effects) {
@@ -211,7 +211,7 @@ namespace enbt::io_helper {
             };
             if (value.has<api::ecs::com::effects>()) {
 
-                auto& hidden_effects_ = value.get<api::ecs::com::effects>().hidden_effects;
+                auto& hidden_effects_ = value.get<api::ecs::com::effects>().hidden_effects();
                 enbt::compound hidden_effects;
                 hidden_effects.reserve(hidden_effects_.size());
                 for (auto& [id, effects] : hidden_effects_) {
@@ -281,27 +281,27 @@ namespace enbt::io_helper {
                 .collect("position", [&](auto& stream) { enbt::io_helper::serialization_read<util::VECTOR>(res.get<api::ecs::com::position>(), stream); })
                 .collect("rotation", [&](auto& stream) { enbt::io_helper::serialization_read<util::ANGLE_DEG>(res.get<api::ecs::com::rotation>(), stream); })
                 .collect("head_rotation", [&](auto& stream) { enbt::io_helper::serialization_read<util::ANGLE_DEG>(res.get<api::ecs::com::head_rotation>(), stream); })
-                .collect("inventory", [&](auto& stream) { enbt::io_helper::serialization_read(res.get<api::ecs::com::inventory>().value, stream); })
-                .collect("custom_inventory", [&](auto& stream) { enbt::io_helper::serialization_read(res.get<api::ecs::com::custom_inventory>().value, stream); })
-                .collect("nbt", [&](auto& stream) { res.get<api::ecs::com::nbt>().data = stream.read(); })
-                .collect("server_data", [&](auto& stream) { res.get<api::ecs::com::server_nbt>().data = stream.read(); })
+                .collect("inventory", [&](auto& stream) { enbt::io_helper::serialization_read(res.get<api::ecs::com::inventory>().get(), stream); })
+                .collect("custom_inventory", [&](auto& stream) { enbt::io_helper::serialization_read(res.get<api::ecs::com::custom_inventory>().get(), stream); })
+                .collect("nbt", [&](auto& stream) { res.get<api::ecs::com::nbt>().get() = stream.read(); })
+                .collect("server_data", [&](auto& stream) { res.get<api::ecs::com::server_nbt>().get() = stream.read(); })
                 .collect("bound_world", [&](auto& stream) {
                     res.get<api::ecs::com::world_syncing>().weak_reference = (std::string)stream.read();
                 })
                 .collect("hidden_effects", [&](auto& stream) {
                     auto res_effects = res.get<api::ecs::com::effects>();
                     stream.iterate(
-                        [&res_effects](auto size) { res_effects.hidden_effects.reserve(size); },
+                        [&res_effects](auto size) { res_effects.hidden_effects().reserve(size); },
                         [&res_effects](std::string_view id, value_read_stream& effects) {
                             uint32_t id_ = 0;
                             auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
                             if (parsing_res.ec == std::errc{}) {
                                 list_array<api::ecs::com::effects::effect> set_effects;
                                 effects.iterate(
-                                    [&res_effects, id_](auto size) { res_effects.hidden_effects[id_].reserve(size); },
+                                    [&res_effects, id_](auto size) { res_effects.hidden_effects()[id_].reserve(size); },
                                     [&res_effects, id_](value_read_stream& effect_) {
                                         auto effect = effect_.read();
-                                        res_effects.hidden_effects[id_].push_back(api::ecs::com::effects::effect{
+                                        res_effects.hidden_effects()[id_].push_back(api::ecs::com::effects::effect{
                                             .duration = effect.at("duration"),
                                             .id = effect.at("id"),
                                             .amplifier = effect.at("amplifier"),
@@ -318,10 +318,10 @@ namespace enbt::io_helper {
                 .collect("active_effects", [&](auto& stream) {
                     auto res_effects = res.get<api::ecs::com::effects>();
                     stream.iterate(
-                        [&res_effects](auto size) { res_effects.active_effects.reserve(size); },
+                        [&res_effects](auto size) { res_effects.active_effects().reserve(size); },
                         [&res_effects](value_read_stream& effect_) {
                             auto effect = effect_.read();
-                            res_effects.active_effects.emplace(
+                            res_effects.active_effects().emplace(
                                 effect.at("id"),
                                 api::ecs::com::effects::effect{
                                     .duration = effect.at("duration"),
@@ -380,17 +380,17 @@ namespace enbt::io_helper {
                 } else if (name == "head_rotation") {
                     enbt::io_helper::serialization_read<util::ANGLE_DEG>(res.get<api::ecs::com::head_rotation>(), value);
                 } else if (name == "inventory") {
-                    enbt::io_helper::serialization_read(res.get<api::ecs::com::inventory>(), value);
+                    enbt::io_helper::serialization_read(res.get<api::ecs::com::inventory>().get(), value);
                 } else if (name == "custom_inventory") {
-                    enbt::io_helper::serialization_read(res.get<api::ecs::com::custom_inventory>(), value);
+                    enbt::io_helper::serialization_read(res.get<api::ecs::com::custom_inventory>().get(), value);
                 } else if (name == "nbt") {
-                    res.get<api::ecs::com::nbt>().data = value;
+                    res.get<api::ecs::com::nbt>().get() = value;
                 } else if (name == "server_data")
-                    res.get<api::ecs::com::server_nbt>().data = value;
+                    res.get<api::ecs::com::server_nbt>().get() = value;
                 else if (name == "bound_world") {
                     res.get<api::ecs::com::world_syncing>().weak_reference = (std::string)value;
                 } else if (name == "hidden_effects") {
-                    auto& hidden_effects = res.get<api::ecs::com::effects>().hidden_effects;
+                    auto& hidden_effects = res.get<api::ecs::com::effects>().hidden_effects();
                     hidden_effects.reserve(value.size());
                     for (auto& [id, effects] : value.as_compound()) {
                         uint32_t id_ = 0;
@@ -409,7 +409,7 @@ namespace enbt::io_helper {
                         }
                     }
                 } else if (name == "active_effects") {
-                    auto& active_effects = res.get<api::ecs::com::effects>().active_effects;
+                    auto& active_effects = res.get<api::ecs::com::effects>().active_effects();
                     active_effects.reserve(value.size());
                     for (auto& [id, effect] : value.as_compound()) {
                         uint32_t id_ = 0;
@@ -692,7 +692,7 @@ namespace copper_server {
         void reduce_effects(ecs::com::effects& eff) { //TODO replace with system
             list_array<uint32_t> expired_effects;
 
-            for (auto& [id, effect] : eff.active_effects) {
+            for (auto& [id, effect] : eff.active_effects()) {
                 if (!effect.duration) {
                     expired_effects.push_back(id);
                     continue;
@@ -701,7 +701,7 @@ namespace copper_server {
                     effect.duration--;
             }
 
-            for (auto& [id, effects] : eff.hidden_effects) {
+            for (auto& [id, effects] : eff.hidden_effects()) {
                 for (auto& effect : effects) {
                     if (!effect.duration)
                         continue;
@@ -717,10 +717,10 @@ namespace copper_server {
                 });
             }
             for (auto& id : expired_effects) {
-                if (eff.hidden_effects.contains(id))
-                    eff.active_effects.at(id) = eff.hidden_effects.at(id).take_front();
+                if (eff.hidden_effects().contains(id))
+                    eff.active_effects().at(id) = eff.hidden_effects().at(id).take_front();
                 else
-                    eff.active_effects.erase(id);
+                    eff.active_effects().erase(id);
             }
         }
 
@@ -943,8 +943,8 @@ namespace copper_server {
                 .use_blend = use_blend,
             };
             auto effects = handle.modify<api::ecs::com::effects>();
-            auto& active_effects = effects->active_effects;
-            auto& hidden_effects = effects->hidden_effects;
+            auto& active_effects = effects->active_effects();
+            auto& hidden_effects = effects->hidden_effects();
             if (auto it = active_effects.find(id_); it != active_effects.end()) {
                 auto& effect = it->second;
                 if (effect.amplifier >= amplifier) {
@@ -963,8 +963,8 @@ namespace copper_server {
 
         void entity::remove_effect(uint32_t id_) {
             auto effects = handle.modify<api::ecs::com::effects>();
-            auto& active_effects = effects->active_effects;
-            auto& hidden_effects = effects->hidden_effects;
+            auto& active_effects = effects->active_effects();
+            auto& hidden_effects = effects->hidden_effects();
             active_effects.erase(id_);
             hidden_effects.erase(id_);
             if (current_world())
@@ -973,8 +973,8 @@ namespace copper_server {
 
         void entity::remove_all_effects() {
             auto effects = handle.modify<api::ecs::com::effects>();
-            auto& active_effects = effects->active_effects;
-            auto& hidden_effects = effects->hidden_effects;
+            auto& active_effects = effects->active_effects();
+            auto& hidden_effects = effects->hidden_effects();
             if (current_world())
                 for (auto& [id_, effect] : active_effects)
                     current_world()->entity_remove_effect(handle, id_);
@@ -1280,7 +1280,7 @@ namespace copper_server {
         ecs::entity entity::create(int32_t id, const enbt::compound_const_ref& nbt) {
             auto it = entity_data::get_entity(id);
             ecs::entity res = ecs::global_registry::allocate_entity_and_wait(it.recipe);
-            res.modify<ecs::com::nbt>()->data = nbt;
+            res.modify<ecs::com::nbt>()->get() = nbt;
             if (it.create_callback)
                 it.create_callback(res);
             return res;
@@ -1297,7 +1297,7 @@ namespace copper_server {
         ecs::entity entity::create(const std::string& id, const enbt::compound_const_ref& nbt) {
             auto it = entity_data::get_entity(id);
             ecs::entity res = ecs::global_registry::allocate_entity_and_wait(it.recipe);
-            res.modify<ecs::com::nbt>()->data = nbt;
+            res.modify<ecs::com::nbt>()->get() = nbt;
             if (it.create_callback)
                 it.create_callback(res);
             return res;

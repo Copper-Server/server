@@ -80,26 +80,30 @@ namespace copper_server::build_in_plugins::processors_providers {
 
         if (predicate.contains("effects")) {
             auto effects = predicate["effects"].as_compound();
+            auto& active_effects = entity_->get<api::ecs::com::effects>().active_effects();
             for (auto& [key, value] : effects) {
                 auto conditions = value.as_compound();
 
                 auto id = api::registers::effects.at(key).id;
-                auto& effect = entity_->get<api::ecs::com::effects>().active_effects.at(id);
-                if (conditions.contains("amplifier"))
-                    if (!diff_min_max(conditions.at("amplifier"), effect.amplifier))
-                        return false;
+                if (auto it = active_effects.find(id); it != active_effects.end()) {
+                    auto& effect = it->second;
+                    if (conditions.contains("amplifier"))
+                        if (!diff_min_max(conditions.at("amplifier"), effect.amplifier))
+                            return false;
 
-                if (conditions.contains("duration"))
-                    if (!diff_min_max(conditions.at("duration"), effect.duration))
-                        return false;
+                    if (conditions.contains("duration"))
+                        if (!diff_min_max(conditions.at("duration"), effect.duration))
+                            return false;
 
-                if (conditions.contains("ambient"))
-                    if ((bool)conditions.at("ambient") != effect.ambient)
-                        return false;
+                    if (conditions.contains("ambient"))
+                        if ((bool)conditions.at("ambient") != effect.ambient)
+                            return false;
 
-                if (conditions.contains("visible"))
-                    if ((bool)conditions.at("visible") != effect.particles)
-                        return false;
+                    if (conditions.contains("visible"))
+                        if ((bool)conditions.at("visible") != effect.particles)
+                            return false;
+                } else
+                    return false;
             }
         }
 
@@ -123,7 +127,7 @@ namespace copper_server::build_in_plugins::processors_providers {
                     slot_ = entity_const_data.data.at("slots")["feet"];
                 } else if (key == "body") {
                     for (uint32_t body_slot_ : entity_const_data.data.at("slots")["body"].as_ui32_array()) {
-                        auto& inventory = entity_->get<api::ecs::com::inventory>().value;
+                        auto& inventory = entity_->get<api::ecs::com::inventory>().get();
                         if (!inventory.contains(body_slot_))
                             return false;
                         if (__item_check(item, inventory.at(body_slot_)))
@@ -132,7 +136,7 @@ namespace copper_server::build_in_plugins::processors_providers {
                     continue;
                 } else if (key == "hand") {
                     for (uint32_t hand_slot_ : entity_const_data.data.at("slots")["hand"].as_ui32_array()) {
-                        auto& inventory = entity_->get<api::ecs::com::inventory>().value;
+                        auto& inventory = entity_->get<api::ecs::com::inventory>().get();
                         if (!inventory.contains(hand_slot_))
                             return false;
                         if (__item_check(item, inventory.at(hand_slot_)))
@@ -142,7 +146,7 @@ namespace copper_server::build_in_plugins::processors_providers {
                 } else {
                     return false;
                 }
-                auto& inventory = entity_->get<api::ecs::com::inventory>().value;
+                auto& inventory = entity_->get<api::ecs::com::inventory>().get();
                 if (!inventory.contains(slot_))
                     return false;
                 if (__item_check(item, inventory.at(slot_)))

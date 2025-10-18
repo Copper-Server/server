@@ -213,7 +213,7 @@ namespace copper_server::api::packets {
 
         constexpr identifier() {}
 
-        constexpr identifier(std::string&& value) : value(std::move(value)) {}
+        constexpr identifier(std::string&& value) noexcept : value(std::move(value)) {}
 
         constexpr identifier(const std::string& value) : value(value) {}
 
@@ -272,16 +272,16 @@ namespace copper_server::api::packets {
 
         constexpr string_sized() {}
 
-        constexpr string_sized(std::string&& value) : value(std::move(value)) {}
+        constexpr string_sized(std::string&& value) noexcept : value(std::move(value)) {}
 
         constexpr string_sized(const std::string& value) : value(value) {}
 
-        constexpr string_sized(string_sized<size>&& value) : value(std::move(value.value)) {}
+        constexpr string_sized(string_sized<size>&& value) noexcept : value(std::move(value.value)) {}
 
         constexpr string_sized(const string_sized<size>& value) : value(value.value) {}
 
         template <size_t other_size>
-        constexpr string_sized(string_sized<other_size>&& value) : value(std::move(value.value)) {}
+        constexpr string_sized(string_sized<other_size>&& value) noexcept : value(std::move(value.value)) {}
 
         template <size_t other_size>
         constexpr string_sized(const string_sized<other_size>& value) : value(value.value) {}
@@ -289,7 +289,7 @@ namespace copper_server::api::packets {
         template <size_t siz>
         constexpr string_sized(const char (&value)[siz]) : value(value) {}
 
-        constexpr string_sized& operator=(std::string&& other) {
+        constexpr string_sized& operator=(std::string&& other) noexcept {
             value = std::move(other);
             return *this;
         }
@@ -299,7 +299,7 @@ namespace copper_server::api::packets {
             return *this;
         }
 
-        constexpr string_sized& operator=(string_sized<size>&& other) {
+        constexpr string_sized& operator=(string_sized<size>&& other) noexcept {
             value = std::move(other.value);
             return *this;
         }
@@ -310,7 +310,7 @@ namespace copper_server::api::packets {
         }
 
         template <size_t other_size>
-        constexpr string_sized& operator=(string_sized<other_size>&& other) {
+        constexpr string_sized& operator=(string_sized<other_size>&& other) noexcept {
             other = std::move(value);
             return *this;
         }
@@ -341,18 +341,18 @@ namespace copper_server::api::packets {
         std::string value;
         json_text_component() = default;
 
-        constexpr json_text_component(std::string&& value) : value(std::move(value)) {}
+        constexpr json_text_component(std::string&& value) noexcept : value(std::move(value)) {}
 
         constexpr json_text_component(const std::string& value) : value(value) {}
 
-        constexpr json_text_component(json_text_component&& value) : value(std::move(value.value)) {}
+        constexpr json_text_component(json_text_component&& value) noexcept : value(std::move(value.value)) {}
 
         constexpr json_text_component(const json_text_component& value) : value(value.value) {}
 
         template <size_t siz>
         constexpr json_text_component(const char (&value)[siz]) : value(value) {}
 
-        constexpr json_text_component& operator=(std::string&& other) {
+        constexpr json_text_component& operator=(std::string&& other) noexcept {
             value = std::move(other);
             return *this;
         }
@@ -362,7 +362,7 @@ namespace copper_server::api::packets {
             return *this;
         }
 
-        constexpr json_text_component& operator=(json_text_component&& other) {
+        constexpr json_text_component& operator=(json_text_component&& other) noexcept {
             value = std::move(other.value);
             return *this;
         }
@@ -396,13 +396,13 @@ namespace copper_server::api::packets {
 
         constexpr limited_num() = default;
 
-        constexpr limited_num(T&& value) : value(std::move(value)) {}
+        constexpr limited_num(T&& value) noexcept : value(std::move(value)) {}
 
-        constexpr limited_num(const T& value) : value(value) {}
+        constexpr limited_num(const T& value) noexcept : value(value) {}
 
-        constexpr limited_num(const limited_num& value) : value(value.value) {}
+        constexpr limited_num(const limited_num& value) noexcept : value(value.value) {}
 
-        constexpr limited_num(limited_num&& value) : value(value.value) {}
+        constexpr limited_num(limited_num&& value) noexcept : value(value.value) {}
 
         constexpr limited_num& operator=(limited_num&& other) {
             value = std::move(other.value);
@@ -553,20 +553,20 @@ namespace copper_server::api::packets {
         constexpr var_int32() {}
 
         template <enum_concept T>
-        constexpr var_int32(T value) : value((int32_t)value) {}
+        constexpr var_int32(T value) noexcept : value((int32_t)value) {}
 
-        constexpr var_int32(int32_t value) : value(value) {}
+        constexpr var_int32(int32_t value) noexcept : value(value) {}
 
-        constexpr var_int32(var_int32&& value) : value(value.value) {}
+        constexpr var_int32(var_int32&& value) noexcept : value(value.value) {}
 
-        constexpr var_int32(const var_int32& value) : value(value.value) {}
+        constexpr var_int32(const var_int32& value) noexcept : value(value.value) {}
 
-        constexpr var_int32& operator=(var_int32&& other) {
+        constexpr var_int32& operator=(var_int32&& other) noexcept {
             value = std::move(other.value);
             return *this;
         }
 
-        constexpr var_int32& operator=(const var_int32& other) {
+        constexpr var_int32& operator=(const var_int32& other) noexcept {
             value = other.value;
             return *this;
         }
@@ -594,20 +594,20 @@ namespace copper_server::api::packets {
         constexpr var_int64() {}
 
         template <enum_concept T>
-        constexpr var_int64(T value) : value((int64_t)value) {}
+        constexpr var_int64(T value) noexcept : value((int64_t)value) {}
 
-        constexpr var_int64(int64_t value) : value(value) {}
+        constexpr var_int64(int64_t value) noexcept : value(value) {}
 
-        constexpr var_int64(var_int64&& value) : value(value.value) {}
+        constexpr var_int64(var_int64&& value) noexcept : value(value.value) {}
 
-        constexpr var_int64(const var_int64& value) : value(value.value) {}
+        constexpr var_int64(const var_int64& value) noexcept : value(value.value) {}
 
-        constexpr var_int64& operator=(var_int64&& other) {
+        constexpr var_int64& operator=(var_int64&& other) noexcept {
             value = std::move(other.value);
             return *this;
         }
 
-        constexpr var_int64& operator=(const var_int64& other) {
+        constexpr var_int64& operator=(const var_int64& other) noexcept {
             value = other.value;
             return *this;
         }
@@ -808,14 +808,14 @@ namespace copper_server::api::packets {
 
         constexpr depends_next(const depends_next& value) : value(value.value) {}
 
-        constexpr depends_next(depends_next&& value) : value(std::move(value.value)) {}
+        constexpr depends_next(depends_next&& value) noexcept : value(std::move(value.value)) {}
 
         constexpr depends_next& operator=(const depends_next& other) {
             value = other.value;
             return *this;
         }
 
-        constexpr depends_next& operator=(depends_next&& other) {
+        constexpr depends_next& operator=(depends_next&& other) noexcept {
             value = std::move(other.value);
             return *this;
         }
@@ -882,7 +882,8 @@ namespace copper_server::api::packets {
         using list_array<T>::operator=;
 
         list_array_sized() : list_array<T>() {}
-        list_array_sized(list_array<T>&& mov) : list_array<T>(std::move(mov)) {}
+
+        list_array_sized(list_array<T>&& mov) noexcept : list_array<T>(std::move(mov)) {}
 
         list_array_sized(const list_array<T>& copy) : list_array<T>(copy) {}
 
@@ -896,8 +897,9 @@ namespace copper_server::api::packets {
         using list_array_sized<T, size>::list_array_sized;
         using list_array_sized<T, size>::operator=;
 
-        list_array_sized_no_size(): list_array_sized<T, size>() {}
-        list_array_sized_no_size(list_array<T>&& mov) : list_array_sized<T, size>(std::move(mov)) {}
+        list_array_sized_no_size() : list_array_sized<T, size>() {}
+
+        list_array_sized_no_size(list_array<T>&& mov) noexcept : list_array_sized<T, size>(std::move(mov)) {}
 
         list_array_sized_no_size(const list_array<T>& copy) : list_array_sized<T, size>(copy) {}
 
@@ -911,8 +913,9 @@ namespace copper_server::api::packets {
         using list_array<T>::list_array;
         using list_array<T>::operator=;
 
-        list_array_no_size(): list_array<T>() {}
-        list_array_no_size(list_array<T>&& mov) : list_array<T>(std::move(mov)) {}
+        list_array_no_size() : list_array<T>() {}
+
+        list_array_no_size(list_array<T>&& mov) noexcept : list_array<T>(std::move(mov)) {}
 
         list_array_no_size(const list_array<T>& copy) : list_array<T>(copy) {}
 
@@ -925,7 +928,7 @@ namespace copper_server::api::packets {
         using list_array_sized<T, size>::operator=;
         list_array_sized_siz_from_packet(): list_array_sized<T, size>() {}
 
-        list_array_sized_siz_from_packet(list_array<T>&& mov) : list_array_sized<T, size>(std::move(mov)) {}
+        list_array_sized_siz_from_packet(list_array<T>&& mov) noexcept : list_array_sized<T, size>(std::move(mov)) {}
 
         list_array_sized_siz_from_packet(const list_array<T>& copy) : list_array_sized<T, size>(copy) {}
 
@@ -951,7 +954,7 @@ namespace copper_server::api::packets {
         list_array_fixed(): list_array<T>() {}
         list_array_fixed(const list_array<T>& copy) : list_array<T>(copy) {}
 
-        list_array_fixed(list_array<T>&& mov) : list_array<T>(std::move(mov)) {}
+        list_array_fixed(list_array<T>&& mov) noexcept : list_array<T>(std::move(mov)) {}
 
         static constexpr inline size_t required_size = size;
         auto operator<=>(const list_array_fixed& other) const = default;
@@ -965,7 +968,7 @@ namespace copper_server::api::packets {
         list_array_siz_from_packet(): list_array<T>() {}
         list_array_siz_from_packet(const list_array<T>& copy) : list_array<T>(copy) {}
 
-        list_array_siz_from_packet(list_array<T>&& mov) : list_array<T>(std::move(mov)) {}
+        list_array_siz_from_packet(list_array<T>&& mov) noexcept : list_array<T>(std::move(mov)) {}
 
         auto operator<=>(const list_array_siz_from_packet& other) const = default;
     };
@@ -1011,7 +1014,7 @@ namespace copper_server::api::packets {
 
         list_array_depend(const list_array<T>& copy) : list_array<T>(copy) {}
 
-        list_array_depend(list_array<T>&& mov) : list_array<T>(std::move(mov)) {}
+        list_array_depend(list_array<T>&& mov) noexcept : list_array<T>(std::move(mov)) {}
 
         bool decoding_flag = false;
 
@@ -1029,11 +1032,11 @@ namespace copper_server::api::packets {
 
         or_(const base& v) : base(v) {}
 
-        or_(base&& v) : base(std::move(v)) {}
+        or_(base&& v) noexcept : base(std::move(v)) {}
 
         or_(const or_& v) : base((const base&)v) {}
 
-        or_(or_&& v) : base(std::move((base&)v)) {}
+        or_(or_&& v) noexcept : base(std::move((base&)v)) {}
 
         or_(var_0&& v) : base(std::move(v)) {}
 
@@ -1048,7 +1051,7 @@ namespace copper_server::api::packets {
             return *this;
         }
 
-        or_& operator=(base&& v) {
+        or_& operator=(base&& v) noexcept {
             (base&)* this = std::move(v);
             return *this;
         }
@@ -1058,7 +1061,7 @@ namespace copper_server::api::packets {
             return *this;
         }
 
-        or_& operator=(or_&& v) {
+        or_& operator=(or_&& v) noexcept {
             (base&)* this = std::move((base&)v);
             return *this;
         }
@@ -1148,7 +1151,14 @@ namespace copper_server::api::packets {
 
         Angle(const Angle& value) : value(value.value) {}
 
+        Angle(Angle&& value) noexcept = default;
+
         Angle& operator=(const Angle& v) {
+            value = v.value;
+            return *this;
+        }
+
+        Angle& operator=(Angle&& v) noexcept {
             value = v.value;
             return *this;
         }
@@ -1167,6 +1177,11 @@ namespace copper_server::api::packets {
         Enum value;
 
         constexpr enum_as() : value() {}
+
+        constexpr enum_as(enum_as&&) noexcept = default;
+        constexpr enum_as(const enum_as&) noexcept = default;
+        constexpr enum_as& operator=(enum_as&&) noexcept = default;
+        constexpr enum_as& operator=(const enum_as&) noexcept = default;
 
         constexpr enum_as(Enum e) : value(e) {}
 
@@ -1213,11 +1228,11 @@ namespace copper_server::api::packets {
             *this = v;
         }
 
-        enum_switch(enum_switch&& v) {
+        enum_switch(enum_switch&& v) noexcept {
             *this = std::move(v);
         }
 
-        enum_switch(std::variant<Ty...>&& v) {
+        enum_switch(std::variant<Ty...>&& v) noexcept {
             *this = std::move(v);
         }
 
@@ -1234,10 +1249,10 @@ namespace copper_server::api::packets {
         }
 
         enum_switch& operator=(const enum_switch& v);
-        enum_switch& operator=(enum_switch&& v);
-        enum_switch& operator=(std::variant<Ty...>&& v);
+        enum_switch& operator=(enum_switch&& v) noexcept;
+        enum_switch& operator=(std::variant<Ty...>&& v) noexcept;
         enum_switch& operator=(const std::variant<Ty...>& v);
-        enum_switch& operator=(std::convertible_to<std::variant<Ty...>> auto&& v);
+        enum_switch& operator=(std::convertible_to<std::variant<Ty...>> auto&& v) noexcept;
         enum_switch& operator=(const std::convertible_to<std::variant<Ty...>> auto& v);
 
         template <class FN>
@@ -1276,13 +1291,13 @@ namespace copper_server::api::packets {
     }
 
     template <class ValueType, class... Ty>
-    enum_switch<ValueType, Ty...>& enum_switch<ValueType, Ty...>::operator=(enum_switch<ValueType, Ty...>&& v) {
+    enum_switch<ValueType, Ty...>& enum_switch<ValueType, Ty...>::operator=(enum_switch<ValueType, Ty...>&& v) noexcept {
         (base&)* this = std::move((base&)v);
         return *this;
     }
 
     template <class ValueType, class... Ty>
-    enum_switch<ValueType, Ty...>& enum_switch<ValueType, Ty...>::operator=(std::variant<Ty...>&& v) {
+    enum_switch<ValueType, Ty...>& enum_switch<ValueType, Ty...>::operator=(std::variant<Ty...>&& v) noexcept {
         (base&)* this = std::move(v);
         return *this;
     }
@@ -1294,7 +1309,7 @@ namespace copper_server::api::packets {
     }
 
     template <class ValueType, class... Ty>
-    enum_switch<ValueType, Ty...>& enum_switch<ValueType, Ty...>::operator=(std::convertible_to<std::variant<Ty...>> auto&& v) {
+    enum_switch<ValueType, Ty...>& enum_switch<ValueType, Ty...>::operator=(std::convertible_to<std::variant<Ty...>> auto&& v) noexcept {
         (base&)* this = std::move(v);
         return *this;
     }
@@ -1355,6 +1370,11 @@ namespace copper_server::api::packets {
         std::unordered_map<ptrdiff_t, std::variant<Ty...>> values; //order->value
 
         flags_list() {}
+
+        flags_list(flags_list&&) noexcept = default;
+        flags_list(const flags_list&) = default;
+        flags_list& operator=(flags_list&&) noexcept = default;
+        flags_list& operator=(const flags_list&) = default;
 
         static flags_list make(std::initializer_list<base> flags) {
             flags_list res;
@@ -1469,6 +1489,11 @@ namespace copper_server::api::packets {
 
         flags_list_from() {}
 
+        flags_list_from(flags_list_from&&) noexcept = default;
+        flags_list_from(const flags_list_from&) = default;
+        flags_list_from& operator=(flags_list_from&&) noexcept = default;
+        flags_list_from& operator=(const flags_list_from&) = default;
+
         static flags_list_from make(std::initializer_list<base> flags) {
             flags_list_from res;
             for (auto& it : flags)
@@ -1572,6 +1597,9 @@ namespace copper_server::api::packets {
 
         constexpr enum_as_flag() : value() {}
 
+        constexpr enum_as_flag(enum_as_flag&&) noexcept = default;
+        constexpr enum_as_flag(const enum_as_flag&) = default;
+
         constexpr enum_as_flag(Enum e) : value(e) {}
 
         constexpr enum_as_flag(T e) : value((Enum)e) {}
@@ -1579,6 +1607,9 @@ namespace copper_server::api::packets {
         constexpr T get() const {
             return (T)value;
         }
+
+        constexpr enum_as_flag& operator=(enum_as_flag&&) noexcept = default;
+        constexpr enum_as_flag& operator=(const enum_as_flag&) = default;
 
         constexpr auto operator<=>(const enum_as_flag& other) const = default;
 
@@ -1638,14 +1669,14 @@ namespace copper_server::api::packets {
 
         partial_enum_switch(const base& v) : base(v) {}
 
-        partial_enum_switch(base&& v) : base(std::move(v)) {}
+        partial_enum_switch(base&& v) noexcept : base(std::move(v)) {}
 
         partial_enum_switch(const partial_enum_switch& v) : base((const base&)v) {}
 
-        partial_enum_switch(partial_enum_switch&& v) : base(std::move((base&)v)) {}
+        partial_enum_switch(partial_enum_switch&& v) noexcept : base(std::move((base&)v)) {}
 
         template <std::constructible_from<base> T>
-        partial_enum_switch(T&& v) : base(std::move(v)) {}
+        partial_enum_switch(T&& v) noexcept : base(std::move(v)) {}
 
         template <std::constructible_from<base> T>
         partial_enum_switch(const T& v) : base(v) {}
@@ -1655,7 +1686,7 @@ namespace copper_server::api::packets {
             return *this;
         }
 
-        partial_enum_switch& operator=(base&& v) {
+        partial_enum_switch& operator=(base&& v) noexcept {
             (base&)* this = std::move(v);
             return *this;
         }
@@ -1665,7 +1696,7 @@ namespace copper_server::api::packets {
             return *this;
         }
 
-        partial_enum_switch& operator=(partial_enum_switch&& v) {
+        partial_enum_switch& operator=(partial_enum_switch&& v) noexcept {
             (base&)* this = std::move((base&)v);
             return *this;
         }
@@ -1718,15 +1749,15 @@ namespace copper_server::api::packets {
 
         ignored() : value() {}
 
-        ignored(ignored&& it) : value(std::move(it.value)) {}
+        ignored(ignored&& it) noexcept : value(std::move(it.value)) {}
 
         ignored(const ignored& it) : value(it.value) {}
 
-        ignored(T&& it) : value(std::move(it)) {}
+        ignored(T&& it) noexcept : value(std::move(it)) {}
 
         ignored(const T& it) : value(it) {}
 
-        ignored& operator=(T&& v) {
+        ignored& operator=(T&& v) noexcept {
             value = std::move(v);
             return *this;
         }
@@ -1736,7 +1767,7 @@ namespace copper_server::api::packets {
             return *this;
         }
 
-        ignored& operator=(ignored&& v) {
+        ignored& operator=(ignored&& v) noexcept {
             value = std::move(v.value);
             return *this;
         }
@@ -1769,7 +1800,7 @@ namespace copper_server::api::packets {
 
         constexpr ordered_id(const ordered_id& c) : value(c.value), is_valid(c.is_valid) {}
 
-        constexpr ordered_id(ordered_id&& m) : value(std::move(m.value)), is_valid(m.is_valid) {}
+        constexpr ordered_id(ordered_id&& m) noexcept : value(std::move(m.value)), is_valid(m.is_valid) {}
 
         constexpr ordered_id& operator=(const ordered_id& c) {
             value = c.value;
@@ -1777,7 +1808,7 @@ namespace copper_server::api::packets {
             return *this;
         }
 
-        constexpr ordered_id& operator=(ordered_id&& m) {
+        constexpr ordered_id& operator=(ordered_id&& m) noexcept {
             value = m.value;
             is_valid = m.is_valid;
             return *this;

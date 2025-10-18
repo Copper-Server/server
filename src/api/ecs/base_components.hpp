@@ -40,11 +40,75 @@ namespace copper_server {
 
 namespace copper_server::api::ecs::com {
     struct inventory { //some entities
-        std::unordered_map<uint32_t, base_objects::slot_data> value;
+        std::unique_ptr<std::unordered_map<uint32_t, base_objects::slot_data>> value;
+
+        inventory()
+            : value(std::make_unique<std::unordered_map<uint32_t, base_objects::slot_data>>()) {}
+
+        inventory(inventory&&) noexcept = default;
+        inventory& operator=(inventory&&) noexcept = default;
+
+        inventory(const inventory& other) {
+            if (other.value)
+                value = std::make_unique<std::unordered_map<uint32_t, base_objects::slot_data>>(*other.value);
+        }
+
+        inventory& operator=(const inventory& other) {
+            if (this != &other) {
+                if (other.value) {
+                    if (!value) {
+                        value = std::make_unique<std::unordered_map<uint32_t, base_objects::slot_data>>(*other.value);
+                    } else
+                        *value = *other.value;
+                } else
+                    value.reset();
+            }
+            return *this;
+        }
+
+        std::unordered_map<uint32_t, base_objects::slot_data>& get() {
+            return *value;
+        }
+
+        const std::unordered_map<uint32_t, base_objects::slot_data>& get() const {
+            return *value;
+        }
     };
 
     struct custom_inventory { //player only
-        std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot_data>> value;
+        std::unique_ptr<std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot_data>>> value;
+
+        custom_inventory()
+            : value(std::make_unique<std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot_data>>>()) {}
+
+        custom_inventory(custom_inventory&&) noexcept = default;
+        custom_inventory& operator=(custom_inventory&&) noexcept = default;
+
+        custom_inventory(const custom_inventory& other) {
+            if (other.value)
+                value = std::make_unique<std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot_data>>>(*other.value);
+        }
+
+        custom_inventory& operator=(const custom_inventory& other) {
+            if (this != &other) {
+                if (other.value) {
+                    if (!value) {
+                        value = std::make_unique<std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot_data>>>(*other.value);
+                    } else
+                        *value = *other.value;
+                } else
+                    value.reset();
+            }
+            return *this;
+        }
+
+        std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot_data>>& get() {
+            return *value;
+        }
+
+        const std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot_data>>& get() const {
+            return *value;
+        }
     };
 
     struct entity_type {
@@ -209,8 +273,55 @@ namespace copper_server::api::ecs::com {
             auto operator<=>(const effect&) const = default;
         };
 
-        std::unordered_map<uint32_t, list_array<effect>> hidden_effects; //effects with lower amplifier than active effect but longer duration
-        std::unordered_map<uint32_t, effect> active_effects;
+        std::unique_ptr<std::unordered_map<uint32_t, list_array<effect>>> hidden_effects_; //effects with lower amplifier than active effect but longer duration
+        std::unique_ptr<std::unordered_map<uint32_t, effect>> active_effects_;
+
+        effects() : hidden_effects_(std::make_unique<std::unordered_map<uint32_t, list_array<effect>>>()),
+                    active_effects_(std::make_unique<std::unordered_map<uint32_t, effect>>()) {}
+
+        effects(effects&&) noexcept = default;
+        effects& operator=(effects&&) noexcept = default;
+
+        effects(const effects& other) {
+            if (other.hidden_effects_)
+                hidden_effects_ = std::make_unique<std::unordered_map<uint32_t, list_array<effect>>>(*other.hidden_effects_);
+            if (other.active_effects_)
+                active_effects_ = std::make_unique<std::unordered_map<uint32_t, effect>>(*other.active_effects_);
+        }
+
+        effects& operator=(const effects& other) {
+            if (this != &other) {
+                if (other.hidden_effects_) {
+                    if (!hidden_effects_) {
+                        hidden_effects_ = std::make_unique<std::unordered_map<uint32_t, list_array<effect>>>(*other.hidden_effects_);
+                    } else
+                        *hidden_effects_ = *other.hidden_effects_;
+                } else if (other.active_effects_) {
+                    if (!active_effects_) {
+                        active_effects_ = std::make_unique<std::unordered_map<uint32_t, effect>>(*other.active_effects_);
+                    } else
+                        *active_effects_ = *other.active_effects_;
+                } else
+                    active_effects_.reset();
+            }
+            return *this;
+        }
+
+        std::unordered_map<uint32_t, list_array<effect>>& hidden_effects() {
+            return *hidden_effects_;
+        }
+
+        const std::unordered_map<uint32_t, list_array<effect>>& hidden_effects() const {
+            return *hidden_effects_;
+        }
+
+        std::unordered_map<uint32_t, effect>& active_effects() {
+            return *active_effects_;
+        }
+
+        const std::unordered_map<uint32_t, effect>& active_effects() const {
+            return *active_effects_;
+        }
     };
 
     struct uuid {
@@ -218,11 +329,75 @@ namespace copper_server::api::ecs::com {
     };
 
     struct nbt {
-        enbt::compound data;
+        std::unique_ptr<enbt::compound> value;
+
+        nbt()
+            : value(std::make_unique<enbt::compound>()) {}
+
+        nbt(nbt&&) noexcept = default;
+        nbt& operator=(nbt&&) noexcept = default;
+
+        nbt(const nbt& other) {
+            if (other.value)
+                value = std::make_unique<enbt::compound>(*other.value);
+        }
+
+        nbt& operator=(const nbt& other) {
+            if (this != &other) {
+                if (other.value) {
+                    if (!value) {
+                        value = std::make_unique<enbt::compound>(*other.value);
+                    } else
+                        *value = *other.value;
+                } else
+                    value.reset();
+            }
+            return *this;
+        }
+
+        enbt::compound& get() {
+            return *value;
+        }
+
+        const enbt::compound& get() const {
+            return *value;
+        }
     };
 
     struct server_nbt {
-        enbt::compound data;
+        std::unique_ptr<enbt::compound> value;
+
+        server_nbt()
+            : value(std::make_unique<enbt::compound>()) {}
+
+        server_nbt(server_nbt&&) noexcept = default;
+        server_nbt& operator=(server_nbt&&) noexcept = default;
+
+        server_nbt(const server_nbt& other) {
+            if (other.value)
+                value = std::make_unique<enbt::compound>(*other.value);
+        }
+
+        server_nbt& operator=(const server_nbt& other) {
+            if (this != &other) {
+                if (other.value) {
+                    if (!value) {
+                        value = std::make_unique<enbt::compound>(*other.value);
+                    } else
+                        *value = *other.value;
+                } else
+                    value.reset();
+            }
+            return *this;
+        }
+
+        enbt::compound& get() {
+            return *value;
+        }
+
+        const enbt::compound& get() const {
+            return *value;
+        }
     };
 
     struct protocol_id {

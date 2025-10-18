@@ -55,11 +55,11 @@ namespace copper_server::api::packets {
         else if constexpr (std::is_same_v<optional_var_int32, Type>) {
             auto res = stream.read_var<int32_t>();
             if (res)
-                value = res - 1;
+                value = optional_var_int32(res - 1);
         } else if constexpr (std::is_same_v<optional_var_int64, Type>) {
             auto res = stream.read_var<int64_t>();
             if (res)
-                value = res - 1;
+                value = optional_var_int64(res - 1);
         } else if constexpr (std::is_same_v<base_objects::position, Type>)
             value.set(stream.read_value<decltype(value.get())>());
         else if constexpr (std::is_arithmetic_v<Type>)

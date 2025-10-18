@@ -37,6 +37,7 @@ namespace copper_server::api::ecs {
         fast_task::task_mutex mut;
         fast_task::task_condition_variable cv;
         std::optional<entity> result;
+        std::exception_ptr ex;
         bool ready = false;
     };
 
@@ -510,7 +511,7 @@ namespace copper_server::api::ecs {
                     lock1.unlock();
 
                     if (move.data.size()) {
-                        auto& record = management.records.at(move.entity_id);
+                        auto& record = management.records[move.entity_id];
                         auto& component_info = detail::component_info_registry.at(move.comp_id);
                         auto component_index = record.type->component_index_map.at(move.comp_id);
                         void* dest_ptr = record.chunk->memory_block.get() + record.type->layout.component_offsets[component_index] + (record.chunk_index * component_info.size);
@@ -627,13 +628,11 @@ namespace copper_server::api::ecs {
                     auto& component_info = detail::component_info_registry.at(id);
                     void* src_ptr = other_record.chunk->memory_block.get() + arch->layout.component_offsets[component_index] + (other_record.chunk_index * component_info.size);
                     void* dest_ptr = record /*  */.chunk->memory_block.get() + arch->layout.component_offsets[component_index] + (record.chunk_index * component_info.size);
-                    if (component_info.copy_construct) {
-                        component_info.destroy(dest_ptr);
-                        try {
-                            component_info.copy_construct(dest_ptr, src_ptr);
-                        } catch (...) {
-                            component_info.construct(dest_ptr);
-                        }
+                    try {
+                        component_info.copy_assign(dest_ptr, src_ptr);
+                    } catch (...) {
+                        item->ex = std::current_exception();
+                        break;
                     }
                     record.type->mark_dirty(record.chunk, component_index, record.chunk_index);
                 }
@@ -820,7 +819,9 @@ namespace copper_server::api::ecs {
                 fast_task::unique_lock lock(unify);
                 while (!req->ready)
                     req->cv.wait(lock);
-                return std::move(req->result);
+                if (req->ex)
+                    std::rethrow_exception(req->ex);
+                return std::move(*req->result);
             });
         }
 
@@ -1458,8 +1459,8 @@ namespace copper_server::api::ecs {
                 data->calculate_data(components, with_clean_components, with_dirty_components, writes_components, with_changes);
                 data->component_arrays.resize(components.size());
                 handle.data = data.release();
-                return handle;
             }
+            return handle;
         }
     }
 

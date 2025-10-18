@@ -106,8 +106,8 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     }
                     auto& p_data = hold->player_data;
                     if (p_data.assigned_entity) {
-                        if (p_data.assigned_entity->get_assinged_world_id())
-                            api::world::unregister_entity(*p_data.assigned_entity->get_assinged_world_id(), *p_data.assigned_entity);
+                        if (p_data.assigned_entity->get_assigned_world_id())
+                            api::world::unregister_entity(*p_data.assigned_entity->get_assigned_world_id(), *p_data.assigned_entity);
 
                         api::players::save_player(std::move(hold->player_data), hold->data->uuid);
                         hold->player_data.assigned_entity->remove<api::ecs::com::assigned_player>();
@@ -258,7 +258,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
 
             api::packets::processor(*this, [](block_entity_tag_query&& packet, base_objects::SharedClientData& client) {
                 if (client.player_data.assigned_entity)
-                    if (client.player_data.assigned_entity->get_assinged_world_id()) {
+                    if (client.player_data.assigned_entity->get_assigned_world_id()) {
                         client.player_data.assigned_entity->get<api::ecs::com::world_syncing>().world->get_block(
                             packet.location.x,
                             packet.location.y,
@@ -314,7 +314,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 if (entity)
                     client << api::packets::client_bound::play::tag_query{
                         .tag_query_id = packet.tag_query_id,
-                        .nbt = entity->get<api::ecs::com::nbt>().data //TODO check if required adding more info to nbt
+                        .nbt = entity->get<api::ecs::com::nbt>().get() //TODO check if required adding more info to nbt
                     };
             });
 
@@ -356,7 +356,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             });
             api::packets::processor(*this, [](swing&& packet, base_objects::SharedClientData& client) {
                 if (client.player_data.assigned_entity)
-                    if (client.player_data.assigned_entity->get_assinged_world_id()) {
+                    if (client.player_data.assigned_entity->get_assigned_world_id()) {
                         client.player_data.assigned_entity->get<api::ecs::com::world_syncing>().world->locked([&](auto& world) {
                             world.entity_animation(
                                 *client.player_data.assigned_entity,

@@ -118,13 +118,37 @@ namespace copper_server::base_objects {
         return slot_data::get_slot_data(id);
     }
 
+    slot_data::slot_data() {}
+
+    slot_data::slot_data(slot_data&& move) noexcept : components(std::move(move.components)), id(move.id), count(move.count) {}
+
+    slot_data::slot_data(const slot_data& copy) : components(copy.components), id(copy.id), count(copy.count) {}
+
+    slot_data::slot_data(std::unordered_map<int32_t, component>&& components, int32_t id, int32_t count) noexcept : components(std::move(components)), id(id), count(count) {}
+
+    slot_data::slot_data(const std::unordered_map<int32_t, component>& components, int32_t id, int32_t count) : components(components), id(id), count(count) {}
+
+    slot_data& slot_data::operator=(const slot_data& copy) {
+        components = copy.components;
+        id = copy.id;
+        count = copy.count;
+        return *this;
+    }
+
+    slot_data& slot_data::operator=(slot_data&& move) noexcept {
+        components = std::move(move.components);
+        id = move.id;
+        count = move.count;
+        return *this;
+    }
+
     slot_data slot_data::create_item(const std::string& id, int32_t count) {
         try {
             auto res = named_full_item_data.at(id);
             return slot_data{
-                .components = res->default_components,
-                .count = count,
-                .id = res->internal_id,
+                res->default_components,
+                res->internal_id,
+                count
             };
         } catch (...) {
             throw std::runtime_error("Item not found: " + id);
@@ -134,9 +158,9 @@ namespace copper_server::base_objects {
     slot_data slot_data::create_item(uint32_t id, int32_t count) {
         auto res = full_item_data_.at(id);
         return slot_data{
-            .components = res->default_components,
-            .count = count,
-            .id = res->internal_id,
+            res->default_components,
+            res->internal_id,
+            count
         };
     }
 
@@ -210,9 +234,9 @@ namespace copper_server::base_objects {
     slot_data slot_data::from_packet(copper_server::api::packets::slot&& slot) {
         if (slot.count) {
             slot_data res{
-                .components = base_objects::slot_data::get_slot_data((int32_t)slot.id).default_components,
-                .count = slot.count,
-                .id = slot.id
+                base_objects::slot_data::get_slot_data((int32_t)slot.id).default_components,
+                slot.id,
+                slot.count
             };
 
             for (auto component : slot.to_remove)

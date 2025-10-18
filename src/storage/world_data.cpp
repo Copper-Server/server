@@ -16,11 +16,12 @@
 #include <library/fast_task/include/files.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/ecs/base_components.hpp>
+#include <src/api/entity.hpp>
 #include <src/api/log.hpp>
 #include <src/api/registers.hpp>
 #include <src/api/tags.hpp>
 #include <src/api/world.hpp>
-#include <src/api/entity.hpp>
+#include <src/base_objects/shared_client_data.hpp>
 #include <src/storage/world_data.hpp>
 #include <src/util/mojang/api/hash256.hpp>
 #include <src/util/task_management.hpp>
@@ -1084,8 +1085,9 @@ namespace copper_server::storage {
 
     template <auto fun, class... Args>
     inline void entity_notify_change(auto world, auto& entities, auto self, Args&&... args) {
-        auto chunk_x = convert_chunk_global_pos(self.position.x);
-        auto chunk_z = convert_chunk_global_pos(self.position.z);
+        auto pos = self.get<api::ecs::com::position>();
+        auto chunk_x = convert_chunk_global_pos(pos.x);
+        auto chunk_z = convert_chunk_global_pos(pos.z);
         for (auto& [id, entity] : entities) {
             if (entity != self) {
                 auto processor = entity.get<api::ecs::com::entity_type>().const_data().processor;

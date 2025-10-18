@@ -167,7 +167,6 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         static void entity_event(api::ecs::entity self, api::ecs::entity target, base_objects::entity_event status) {
             auto assigned_player = self.get<api::ecs::com::assigned_player>().player;
-            auto assigned_player = self.get<api::ecs::com::assigned_player>().player;
             if (assigned_player)
                 *assigned_player << api::packets::client_bound::play::entity_event{
                     .id = target.get<api::ecs::com::protocol_id>().value,
