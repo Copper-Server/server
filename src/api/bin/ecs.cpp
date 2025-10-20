@@ -154,7 +154,7 @@ namespace copper_server::api::ecs {
 
     struct system_node {
         std::unique_ptr<system_interface> instance;
-        detail::system_info& info;
+        const detail::system_info& info;
         size_t in_degree = 0;
     };
 
@@ -689,7 +689,7 @@ namespace copper_server::api::ecs {
         });
     }
 
-    void scheduler::add_system_impl(std::unique_ptr<system_interface> system, detail::system_info& info) {
+    void scheduler::add_system_impl(std::unique_ptr<system_interface> system, const detail::system_info& info) {
         fast_task::unique_lock world_guard(management.manager_mutex);
         data->systems.push_back(system_node(std::move(system), info));
         data->graph_is_dirty = true;

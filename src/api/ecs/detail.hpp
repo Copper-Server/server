@@ -49,7 +49,7 @@ namespace copper_server::api::ecs {
         };
 
         struct system_info {
-            std::type_info info;
+            const std::type_info& info;
             std::vector<component_id> write_dependencies; // Components the system writes
             std::vector<component_id> read_dependencies;  // Components the system only reads
         };
@@ -184,7 +184,6 @@ namespace copper_server::api::ecs {
         fast_task::future_ptr<entity> create_entity__cc(std::optional<int32_t> world_id, components&&... args);
         template <class... components>
         fast_task::future_ptr<entity> create_entity_r_cc(std::optional<int32_t> world_id, const entity_recipe& recipe, components&&... args);
-
 
         struct iteration_handle {
             struct iteration_data;
@@ -335,65 +334,63 @@ namespace copper_server::api::ecs {
             std::declval<typename process_single_param<Params>::type>()...
         ));
 
-
-        template <typename TMetaPair>
-        struct map_meta_pair_to_iterator_element;
-
-        template <typename T>
-        struct map_meta_pair_to_iterator_element<std::pair<T, read_operation_query>> {
-            using type = const T;
+        template <class TQueryParam>
+        struct map_meta_pair_to_iterator_element {
+            using type = std::tuple<>;
         };
 
-        template <typename T>
-        struct map_meta_pair_to_iterator_element<std::pair<T, write_operation_query>> {
-            using type = T;
+        template <class... Comps>
+        struct map_meta_pair_to_iterator_element<query_reads<Comps...>> {
+            using type = std::tuple<std::add_const_t<Comps>...>;
         };
 
-        template <typename TMetaTuple>
-        struct build_iterator_tuple_from_meta;
-
-        template <typename... TMetaPairs>
-        struct build_iterator_tuple_from_meta<std::tuple<TMetaPairs...>> {
-            using type = std::tuple<typename map_meta_pair_to_iterator_element<TMetaPairs>::type...>;
+        template <class... Comps>
+        struct map_meta_pair_to_iterator_element<query_writes<Comps...>> {
+            using type = std::tuple<Comps...>;
         };
+
+        template <class... Params>
+        using build_iterator_tuple_from_meta = decltype(std::tuple_cat(
+            std::declval<typename map_meta_pair_to_iterator_element<Params>::type>()...
+        ));
 
 
         // --- TMP utility to check for duplicate types in a tuple ---
-        template <typename TTuple>
+        template <class TTuple>
         struct has_duplicates_in_tuple;
 
         template <>
         struct has_duplicates_in_tuple<std::tuple<>> : std::false_type {};
 
-        template <typename T, typename... TRest>
+        template <class T, class... TRest>
         struct has_duplicates_in_tuple<std::tuple<T, TRest...>> {
             static constexpr bool is_t_in_rest = (std::is_same_v<T, TRest> || ...);
             static constexpr bool value = is_t_in_rest || has_duplicates_in_tuple<std::tuple<TRest...>>::value;
         };
 
         // --- TMP utility to check if two tuples have any types in common ---
-        template <typename TTuple1, typename TTuple2>
+        template <class TTuple1, class TTuple2>
         struct are_tuples_disjoint;
 
-        template <typename TTuple2>
+        template <class TTuple2>
         struct are_tuples_disjoint<std::tuple<>, TTuple2> : std::true_type {};
 
-        template <typename T1, typename... TRest1, typename... T2>
+        template <class T1, class... TRest1, class... T2>
         struct are_tuples_disjoint<std::tuple<T1, TRest1...>, std::tuple<T2...>> {
             static constexpr bool is_t1_in_tuple2 = (std::is_same_v<T1, T2> || ...);
             static constexpr bool value = !is_t1_in_tuple2 && are_tuples_disjoint<std::tuple<TRest1...>, std::tuple<T2...>>::value;
         };
 
         // --- TMP utility to extract component types from the meta-tuple based on access type ---
-        template <typename TMetaTuple, typename TAccessFilter>
+        template <class TMetaTuple, class TAccessFilter>
         struct extract_by_access;
 
-        template <typename TAccessFilter>
+        template <class TAccessFilter>
         struct extract_by_access<std::tuple<>, TAccessFilter> {
             using type = std::tuple<>;
         };
 
-        template <typename TComp, typename TAccess, typename... TRest, typename TAccessFilter>
+        template <class TComp, class TAccess, class... TRest, class TAccessFilter>
         struct extract_by_access<std::tuple<std::pair<TComp, TAccess>, TRest...>, TAccessFilter> {
             using rest_tuple = typename extract_by_access<std::tuple<TRest...>, TAccessFilter>::type;
 
@@ -412,7 +409,7 @@ namespace copper_server::api::ecs {
 
             template <class component>
             structural_changes get_change_state() {
-                return handle.get_component_change_state(index);
+                return handle.get_component_change_state(index, detail::get_component_id<component>());
             }
 
         private:
@@ -438,7 +435,7 @@ namespace copper_server::api::ecs {
 
             template <class component>
             structural_changes get_change_state() {
-                return handle.get_component_change_state(index);
+                return handle.get_component_change_state(index, detail::get_component_id<component>());
             }
 
         private:
@@ -455,7 +452,7 @@ namespace copper_server::api::ecs {
 
             template <class component>
             structural_changes get_change_state(size_t index) {
-                return handle.get_component_change_state(index);
+                return handle.get_component_change_state(index, detail::get_component_id<component>());
             }
 
         private:
@@ -480,7 +477,7 @@ namespace copper_server::api::ecs {
 
             template <class component>
             structural_changes get_change_state(size_t index) {
-                return handle.get_component_change_state(index);
+                return handle.get_component_change_state(index, detail::get_component_id<component>());
             }
 
         private:
@@ -496,7 +493,7 @@ namespace copper_server::api::ecs {
 
             template <class component>
             structural_changes get_change_state(size_t index) {
-                return state.get_component_change_state(index);
+                return state.get_component_change_state(index, detail::get_component_id<component>());
             }
 
         private:
@@ -522,7 +519,7 @@ namespace copper_server::api::ecs {
 
             template <class component>
             structural_changes get_change_state(size_t index) {
-                return state.get_component_change_state(handle, index);
+                return state.get_component_change_state(handle, index, detail::get_component_id<component>());
             }
 
         private:
@@ -691,9 +688,10 @@ namespace copper_server::api::ecs {
                 auto [chunk_size, chunk] = handle.next();
                 max_chunk_size = chunk_size;
                 current_index_in_chunk = 0;
-                [chunk, this]<size_t... Is>(std::index_sequence<Is...>) {
-                    reinterpret_cast<void*&>(std::get<Is>(component_arrays)) = chunk[Is];
-                }(std::make_index_sequence<sizeof...(components)>{});
+                if (chunk)
+                    [chunk, this]<size_t... Is>(std::index_sequence<Is...>) {
+                        ((std::get<Is>(component_arrays) = static_cast<std::tuple_element_t<Is, decltype(component_arrays)>>(chunk[Is])), ...);
+                    }(std::make_index_sequence<sizeof...(components)>{});
             }
 
             void fast_increment() {
@@ -713,6 +711,8 @@ namespace copper_server::api::ecs {
                     }
                     apply_next();
                 }
+                if (max_chunk_size == 0)
+                    apply_next();
             }
         };
 
@@ -723,7 +723,7 @@ namespace copper_server::api::ecs {
             using WriteTypes = typename detail::extract_by_access<MetaTuple, detail::write_operation_query>::type;
             using WithoutTypes = typename detail::extract_by_access<MetaTuple, detail::filter_without>::type;
             using WithChangesTypes = typename detail::extract_by_access<MetaTuple, detail::filter_with_changes>::type;
-            using IteratorTuple = typename detail::build_iterator_tuple_from_meta<MetaTuple>::type;
+            using IteratorTuple = detail::build_iterator_tuple_from_meta<Params...>;
 
             static_assert(!detail::has_duplicates_in_tuple<ReadTypes>::value, "COMPILE ERROR: A component was requested for read-access multiple times in the same query.");
 
@@ -735,38 +735,38 @@ namespace copper_server::api::ecs {
 
             static_assert(detail::are_tuples_disjoint<ReadTypes, WriteTypes>::value, "COMPILE ERROR: A component was requested for both read and write access. Use .writes() for mutable access.");
 
-            static const std::vector<component_id>& get_all_component_ids() {
-                static const std::vector<component_id> ids = compute_component_ids<read_operation_query, write_operation_query>();
+            static std::span<component_id> get_all_component_ids() {
+                static std::vector<component_id> ids = compute_component_ids<read_operation_query, write_operation_query>();
                 return ids;
             }
 
-            static const std::vector<component_id>& get_with_changes_ids() {
-                static const std::vector<component_id> ids = compute_component_ids<filter_with_changes>();
+            static std::span<component_id> get_with_changes_ids() {
+                static std::vector<component_id> ids = compute_component_ids<filter_with_changes>();
                 return ids;
             }
 
-            static const std::vector<component_id>& get_writes_ids() {
-                static const std::vector<component_id> ids = compute_component_ids<write_operation_query>();
+            static std::span<component_id> get_writes_ids() {
+                static std::vector<component_id> ids = compute_component_ids<write_operation_query>();
                 return ids;
             }
 
-            static const std::vector<component_id>& get_dirty_ids() {
-                static const std::vector<component_id> ids = compute_component_ids<filter_with_dirty>();
+            static std::span<component_id> get_dirty_ids() {
+                static std::vector<component_id> ids = compute_component_ids<filter_with_dirty>();
                 return ids;
             }
 
-            static const std::vector<component_id>& get_clear_ids() {
-                static const std::vector<component_id> ids = compute_component_ids<filter_with_clear>();
+            static std::span<component_id> get_clear_ids() {
+                static std::vector<component_id> ids = compute_component_ids<filter_with_clear>();
                 return ids;
             }
 
-            static const std::vector<component_id>& get_without_ids() {
-                static const std::vector<component_id> ids = compute_component_ids<filter_without>();
+            static std::span<component_id> get_without_ids() {
+                static std::vector<component_id> ids = compute_component_ids<filter_without>();
                 return ids;
             }
 
-            static const std::vector<component_id>& get_with_ids() {
-                static const std::vector<component_id> ids = compute_component_ids<filter_with>();
+            static std::span<component_id> get_with_ids() {
+                static std::vector<component_id> ids = compute_component_ids<filter_with>();
                 return ids;
             }
 

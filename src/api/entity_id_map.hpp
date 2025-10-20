@@ -33,7 +33,7 @@ namespace copper_server::api::entity_id_map {
     [[nodiscard]] list_array<int32_t> query_ids();
     [[nodiscard]] uint8_t id_index(int32_t id); //gets index of allocated id
 
-    void apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(api::ecs::entity)>&& callback);
+    void apply_selector(base_objects::shared_client_data& caller, const std::string& selector, std::function<void(api::ecs::entity)>&& callback);
 }
 
 #endif /* SRC_API_ENTITY_ID_MAP */

@@ -17,7 +17,7 @@ namespace copper_server {
     struct ArrayStream;
 
     namespace base_objects {
-        struct SharedClientData;
+        struct shared_client_data;
     }
 }
 
@@ -31,7 +31,7 @@ namespace copper_server::api::packets {
             play
         };
 
-        current_state get_state(base_objects::SharedClientData&);
+        current_state get_state(base_objects::shared_client_data&);
         size_t get_packet_id(ArrayStream&);
 
         template <class Ret, class Arg0, class... Rest>
@@ -53,20 +53,20 @@ namespace copper_server::api::packets {
     template <class packet>
     struct packet_ops {
         using packet_type = packet;
-        static base_objects::events::sync_event<packet&, base_objects::SharedClientData&>& send_viewer();
-        static base_objects::events::sync_event_no_cancel<packet&, base_objects::SharedClientData&>& post_send_viewer();
-        static base_objects::events::sync_event<packet&, base_objects::SharedClientData&>& receive_viewer();
-        static base_objects::events::sync_event_single<packet&&, base_objects::SharedClientData&>& processor();
+        static base_objects::events::sync_event<packet&, base_objects::shared_client_data&>& send_viewer();
+        static base_objects::events::sync_event_no_cancel<packet&, base_objects::shared_client_data&>& post_send_viewer();
+        static base_objects::events::sync_event<packet&, base_objects::shared_client_data&>& receive_viewer();
+        static base_objects::events::sync_event_single<packet&&, base_objects::shared_client_data&>& processor();
 
 
-        static bool send(base_objects::SharedClientData& client, packet&&);
-        static base_objects::network::response client_encode(base_objects::SharedClientData& context, packet&& packet);
+        static bool send(base_objects::shared_client_data& client, packet&&);
+        static base_objects::network::response client_encode(base_objects::shared_client_data& context, packet&& packet);
         static base_objects::network::response encode(packet&& packet);
 
-        static bool make_process(base_objects::SharedClientData& client, packet&&);
+        static bool make_process(base_objects::shared_client_data& client, packet&&);
 
         static packet decode(ArrayStream&);
-        static packet client_decode(base_objects::SharedClientData& context, ArrayStream&);
+        static packet client_decode(base_objects::shared_client_data& context, ArrayStream&);
         static std::string stringize(const packet&);
 
         template <class plugin>
@@ -95,12 +95,12 @@ namespace copper_server::api::packets {
         using packet_variants = std::variant<packets...>;
         using packet_ref_variants = std::variant<std::reference_wrapper<packets>...>;
 
-        static base_objects::events::sync_event<packet_ref_variants, base_objects::SharedClientData&>& send_viewer() {
-            static base_objects::events::sync_event<packet_ref_variants, base_objects::SharedClientData&> result;
+        static base_objects::events::sync_event<packet_ref_variants, base_objects::shared_client_data&>& send_viewer() {
+            static base_objects::events::sync_event<packet_ref_variants, base_objects::shared_client_data&> result;
 
             static auto once_init = []() {
                 (
-                    packet_ops<packets>::send_viewer().join([](auto& packet, base_objects::SharedClientData& client) {
+                    packet_ops<packets>::send_viewer().join([](auto& packet, base_objects::shared_client_data& client) {
                         return result.notify(packet, client);
                     }),
                     ...
@@ -110,12 +110,12 @@ namespace copper_server::api::packets {
             return result;
         }
 
-        static base_objects::events::sync_event_no_cancel<packet_ref_variants, base_objects::SharedClientData&>& post_send_viewer() {
-            static base_objects::events::sync_event_no_cancel<packet_ref_variants, base_objects::SharedClientData&> result;
+        static base_objects::events::sync_event_no_cancel<packet_ref_variants, base_objects::shared_client_data&>& post_send_viewer() {
+            static base_objects::events::sync_event_no_cancel<packet_ref_variants, base_objects::shared_client_data&> result;
 
             static auto once_init = []() {
                 (
-                    packet_ops<packets>::post_send_viewer().join([](auto& packet, base_objects::SharedClientData& client) {
+                    packet_ops<packets>::post_send_viewer().join([](auto& packet, base_objects::shared_client_data& client) {
                         result.notify(packet, client);
                     }),
                     ...
@@ -126,12 +126,12 @@ namespace copper_server::api::packets {
             return result;
         }
 
-        static base_objects::events::sync_event<packet_ref_variants, base_objects::SharedClientData&>& receive_viewer() {
-            static base_objects::events::sync_event<packet_ref_variants, base_objects::SharedClientData&> result;
+        static base_objects::events::sync_event<packet_ref_variants, base_objects::shared_client_data&>& receive_viewer() {
+            static base_objects::events::sync_event<packet_ref_variants, base_objects::shared_client_data&> result;
 
             static auto once_init = []() {
                 (
-                    packet_ops<packets>::receive_viewer().join([](auto& packet, base_objects::SharedClientData& client) {
+                    packet_ops<packets>::receive_viewer().join([](auto& packet, base_objects::shared_client_data& client) {
                         return result.notify(packet, client);
                     }),
                     ...
@@ -141,12 +141,12 @@ namespace copper_server::api::packets {
             return result;
         }
 
-        static base_objects::events::sync_event_single<packet_variants, base_objects::SharedClientData&>& processor() {
-            static base_objects::events::sync_event<packet_variants, base_objects::SharedClientData&> result;
+        static base_objects::events::sync_event_single<packet_variants, base_objects::shared_client_data&>& processor() {
+            static base_objects::events::sync_event<packet_variants, base_objects::shared_client_data&> result;
 
             static auto once_init = []() {
                 (
-                    packet_ops<packets>::processor().join([](auto& packet, base_objects::SharedClientData& client) {
+                    packet_ops<packets>::processor().join([](auto& packet, base_objects::shared_client_data& client) {
                         result.notify(std::move(packet), client);
                     }),
                     ...
@@ -156,7 +156,7 @@ namespace copper_server::api::packets {
             return result;
         }
 
-        static packet_variants client_decode(base_objects::SharedClientData& context, ArrayStream& stream) {
+        static packet_variants client_decode(base_objects::shared_client_data& context, ArrayStream& stream) {
             packet_variants result;
             client_decode(context, stream, [&result](auto& client, auto&& packet) {
                 result = std::move(packet);
@@ -165,10 +165,10 @@ namespace copper_server::api::packets {
         }
 
         template <class FN>
-        static decltype(auto) client_decode(base_objects::SharedClientData& context, ArrayStream& stream, FN&& fn) {
-            using fn_t = void (*)(base_objects::SharedClientData& context, ArrayStream& stream, FN&& fn);
+        static decltype(auto) client_decode(base_objects::shared_client_data& context, ArrayStream& stream, FN&& fn) {
+            using fn_t = void (*)(base_objects::shared_client_data& context, ArrayStream& stream, FN&& fn);
             static constexpr fn_t selector[]{
-                ([](base_objects::SharedClientData& context, ArrayStream& stream, FN&& fn) -> decltype(auto) {
+                ([](base_objects::shared_client_data& context, ArrayStream& stream, FN&& fn) -> decltype(auto) {
                     return fn(context, packet_ops<packets>::client_decode(context, stream));
                 })...
             };
@@ -196,7 +196,7 @@ namespace copper_server::api::packets {
 
         template <class plugin>
         static void send_viewer(plugin& self, auto&& fn) {
-            self.register_event(send_viewer(), [_fn = std::move(fn)](packet_ref_variants state, base_objects::SharedClientData& client) {
+            self.register_event(send_viewer(), [_fn = std::move(fn)](packet_ref_variants state, base_objects::shared_client_data& client) {
                 return std::visit(
                     [&_fn, &client](auto& packet) {
                         return _fn(packet.get(), client);
@@ -208,7 +208,7 @@ namespace copper_server::api::packets {
 
         template <class plugin>
         static void post_send_viewer(plugin& self, auto&& fn) {
-            self.register_event(post_send_viewer(), [_fn = std::move(fn)](packet_ref_variants state, base_objects::SharedClientData& client) {
+            self.register_event(post_send_viewer(), [_fn = std::move(fn)](packet_ref_variants state, base_objects::shared_client_data& client) {
                 std::visit(
                     [&_fn, &client](auto& packet) {
                         _fn(packet.get(), client);
@@ -220,7 +220,7 @@ namespace copper_server::api::packets {
 
         template <class plugin>
         static void receive_viewer(plugin& self, auto&& fn) {
-            self.register_event(receive_viewer(), [_fn = std::move(fn)](packet_ref_variants state, base_objects::SharedClientData& client) {
+            self.register_event(receive_viewer(), [_fn = std::move(fn)](packet_ref_variants state, base_objects::shared_client_data& client) {
                 return std::visit(
                     [&_fn, &client](auto& packet) {
                         return _fn(packet.get(), client);
@@ -232,7 +232,7 @@ namespace copper_server::api::packets {
 
         template <class plugin>
         static void processor(plugin& self, auto&& fn) {
-            self.register_event(processor(), [_fn = std::move(fn)](packet_variants state, base_objects::SharedClientData& client) {
+            self.register_event(processor(), [_fn = std::move(fn)](packet_variants state, base_objects::shared_client_data& client) {
                 std::visit(
                     [&_fn, &client](auto& packet) {
                         _fn(std::move(packet), client);
@@ -254,12 +254,12 @@ namespace copper_server::api::packets {
         using packet_variants = std::variant<typename states::packet_variants...>;
         using packet_ref_variants = std::variant<typename states::packet_ref_variants...>;
 
-        static base_objects::events::sync_event<packet_ref_variants, base_objects::SharedClientData&>& send_viewer() {
-            static base_objects::events::sync_event<packet_ref_variants, base_objects::SharedClientData&> result;
+        static base_objects::events::sync_event<packet_ref_variants, base_objects::shared_client_data&>& send_viewer() {
+            static base_objects::events::sync_event<packet_ref_variants, base_objects::shared_client_data&> result;
 
             static auto once_init = []() {
                 (
-                    states::send_viewer().join([](auto&& packet, base_objects::SharedClientData& client) {
+                    states::send_viewer().join([](auto&& packet, base_objects::shared_client_data& client) {
                         return result.notify(packet, client);
                     }),
                     ...
@@ -269,12 +269,12 @@ namespace copper_server::api::packets {
             return result;
         }
 
-        static base_objects::events::sync_event_no_cancel<packet_ref_variants, base_objects::SharedClientData&>& post_send_viewer() {
-            static base_objects::events::sync_event_no_cancel<packet_ref_variants, base_objects::SharedClientData&> result;
+        static base_objects::events::sync_event_no_cancel<packet_ref_variants, base_objects::shared_client_data&>& post_send_viewer() {
+            static base_objects::events::sync_event_no_cancel<packet_ref_variants, base_objects::shared_client_data&> result;
 
             static auto once_init = []() {
                 (
-                    states::post_send_viewer().join([](auto&& packet, base_objects::SharedClientData& client) {
+                    states::post_send_viewer().join([](auto&& packet, base_objects::shared_client_data& client) {
                         result.notify(packet, client);
                     }),
                     ...
@@ -285,12 +285,12 @@ namespace copper_server::api::packets {
             return result;
         }
 
-        static base_objects::events::sync_event<packet_ref_variants, base_objects::SharedClientData&>& receive_viewer() {
-            static base_objects::events::sync_event<packet_ref_variants, base_objects::SharedClientData&> result;
+        static base_objects::events::sync_event<packet_ref_variants, base_objects::shared_client_data&>& receive_viewer() {
+            static base_objects::events::sync_event<packet_ref_variants, base_objects::shared_client_data&> result;
 
             static auto once_init = []() {
                 (
-                    states::receive_viewer().join([](auto&& packet, base_objects::SharedClientData& client) {
+                    states::receive_viewer().join([](auto&& packet, base_objects::shared_client_data& client) {
                         return result.notify(packet, client);
                     }),
                     ...
@@ -300,12 +300,12 @@ namespace copper_server::api::packets {
             return result;
         }
 
-        static base_objects::events::sync_event_single<packet_variants, base_objects::SharedClientData&>& processor() {
-            static base_objects::events::sync_event<packet_variants, base_objects::SharedClientData&> result;
+        static base_objects::events::sync_event_single<packet_variants, base_objects::shared_client_data&>& processor() {
+            static base_objects::events::sync_event<packet_variants, base_objects::shared_client_data&> result;
 
             static auto once_init = []() {
                 (
-                    states::processor().join([](auto&& packet, base_objects::SharedClientData& client) {
+                    states::processor().join([](auto&& packet, base_objects::shared_client_data& client) {
                         result.notify(std::move(packet), client);
                     }),
                     ...
@@ -315,7 +315,7 @@ namespace copper_server::api::packets {
             return result;
         }
 
-        static packet_variants client_decode(base_objects::SharedClientData& context, ArrayStream& stream) {
+        static packet_variants client_decode(base_objects::shared_client_data& context, ArrayStream& stream) {
             packet_variants result;
             client_decode(context, stream, [&result](auto& client, auto&& packet) {
                 result = std::move(packet);
@@ -324,10 +324,10 @@ namespace copper_server::api::packets {
         }
 
         template <class FN>
-        static decltype(auto) client_decode(base_objects::SharedClientData& context, ArrayStream& stream, FN&& fn) {
-            using fn_t = void (*)(base_objects::SharedClientData& context, ArrayStream& stream, FN&& fn);
+        static decltype(auto) client_decode(base_objects::shared_client_data& context, ArrayStream& stream, FN&& fn) {
+            using fn_t = void (*)(base_objects::shared_client_data& context, ArrayStream& stream, FN&& fn);
             static constexpr fn_t selector[]{
-                ([](base_objects::SharedClientData& context, ArrayStream& stream, FN&& fn) -> decltype(auto) {
+                ([](base_objects::shared_client_data& context, ArrayStream& stream, FN&& fn) -> decltype(auto) {
                     return fn(context, states::client_decode(context, stream));
                 })...
             };
@@ -335,10 +335,10 @@ namespace copper_server::api::packets {
         }
 
         template <class FN>
-        static decltype(auto) client_decode_direct(base_objects::SharedClientData& context, ArrayStream& stream, FN&& fn) {
-            using fn_t = void (*)(base_objects::SharedClientData& context, ArrayStream& stream, FN&& fn);
+        static decltype(auto) client_decode_direct(base_objects::shared_client_data& context, ArrayStream& stream, FN&& fn) {
+            using fn_t = void (*)(base_objects::shared_client_data& context, ArrayStream& stream, FN&& fn);
             static constexpr fn_t selector[]{
-                ([](base_objects::SharedClientData& context, ArrayStream& stream, FN&& fn) -> decltype(auto) {
+                ([](base_objects::shared_client_data& context, ArrayStream& stream, FN&& fn) -> decltype(auto) {
                     return states::client_decode(context, stream, std::forward<FN>(fn));
                 })...
             };
@@ -347,7 +347,7 @@ namespace copper_server::api::packets {
 
         template <class plugin>
         static void send_viewer(plugin& self, auto&& fn) {
-            self.register_event(send_viewer(), [_fn = std::move(fn)](packet_ref_variants vars, base_objects::SharedClientData& client) {
+            self.register_event(send_viewer(), [_fn = std::move(fn)](packet_ref_variants vars, base_objects::shared_client_data& client) {
                 return std::visit(
                     [&_fn, &client](auto& state) {
                         return std::visit(
@@ -364,7 +364,7 @@ namespace copper_server::api::packets {
 
         template <class plugin>
         static void post_send_viewer(plugin& self, auto&& fn) {
-            self.register_event(post_send_viewer(), [_fn = std::move(fn)](packet_ref_variants vars, base_objects::SharedClientData& client) {
+            self.register_event(post_send_viewer(), [_fn = std::move(fn)](packet_ref_variants vars, base_objects::shared_client_data& client) {
                 std::visit(
                     [&_fn, &client](auto& state) {
                         std::visit(
@@ -381,7 +381,7 @@ namespace copper_server::api::packets {
 
         template <class plugin>
         static void receive_viewer(plugin& self, auto&& fn) {
-            self.register_event(receive_viewer(), [_fn = std::move(fn)](packet_ref_variants vars, base_objects::SharedClientData& client) {
+            self.register_event(receive_viewer(), [_fn = std::move(fn)](packet_ref_variants vars, base_objects::shared_client_data& client) {
                 return std::visit(
                     [&_fn, &client](auto& state) {
                         return std::visit(
@@ -398,7 +398,7 @@ namespace copper_server::api::packets {
 
         template <class plugin>
         static void processor(plugin& self, auto&& fn) {
-            self.register_event(processor(), [_fn = std::move(fn)](packet_variants vars, base_objects::SharedClientData& client) {
+            self.register_event(processor(), [_fn = std::move(fn)](packet_variants vars, base_objects::shared_client_data& client) {
                 std::visit(
                     [&_fn, &client](auto& state) {
                         std::visit(
@@ -425,12 +425,12 @@ namespace copper_server::api::packets {
         using packet_variants = std::variant<typename directions::packet_variants...>;
         using packet_ref_variants = std::variant<typename directions::packet_ref_variants...>;
 
-        static base_objects::events::sync_event<packet_ref_variants, base_objects::SharedClientData&>& send_viewer() {
-            static base_objects::events::sync_event<packet_ref_variants, base_objects::SharedClientData&> result;
+        static base_objects::events::sync_event<packet_ref_variants, base_objects::shared_client_data&>& send_viewer() {
+            static base_objects::events::sync_event<packet_ref_variants, base_objects::shared_client_data&> result;
 
             static auto once_init = []() {
                 (
-                    directions::send_viewer().join([](auto&& packet, base_objects::SharedClientData& client) {
+                    directions::send_viewer().join([](auto&& packet, base_objects::shared_client_data& client) {
                         return result.notify(packet, client);
                     }),
                     ...
@@ -440,12 +440,12 @@ namespace copper_server::api::packets {
             return result;
         }
 
-        static base_objects::events::sync_event_no_cancel<packet_ref_variants, base_objects::SharedClientData&>& post_send_viewer() {
-            static base_objects::events::sync_event_no_cancel<packet_ref_variants, base_objects::SharedClientData&> result;
+        static base_objects::events::sync_event_no_cancel<packet_ref_variants, base_objects::shared_client_data&>& post_send_viewer() {
+            static base_objects::events::sync_event_no_cancel<packet_ref_variants, base_objects::shared_client_data&> result;
 
             static auto once_init = []() {
                 (
-                    directions::post_send_viewer().join([](auto&& packet, base_objects::SharedClientData& client) {
+                    directions::post_send_viewer().join([](auto&& packet, base_objects::shared_client_data& client) {
                         result.notify(packet, client);
                     }),
                     ...
@@ -456,12 +456,12 @@ namespace copper_server::api::packets {
             return result;
         }
 
-        static base_objects::events::sync_event<packet_ref_variants, base_objects::SharedClientData&>& receive_viewer() {
-            static base_objects::events::sync_event<packet_ref_variants, base_objects::SharedClientData&> result;
+        static base_objects::events::sync_event<packet_ref_variants, base_objects::shared_client_data&>& receive_viewer() {
+            static base_objects::events::sync_event<packet_ref_variants, base_objects::shared_client_data&> result;
 
             static auto once_init = []() {
                 (
-                    directions::receive_viewer().join([](auto&& packet, base_objects::SharedClientData& client) {
+                    directions::receive_viewer().join([](auto&& packet, base_objects::shared_client_data& client) {
                         return result.notify(packet, client);
                     }),
                     ...
@@ -471,12 +471,12 @@ namespace copper_server::api::packets {
             return result;
         }
 
-        static base_objects::events::sync_event_single<packet_variants, base_objects::SharedClientData&>& processor() {
-            static base_objects::events::sync_event<packet_variants, base_objects::SharedClientData&> result;
+        static base_objects::events::sync_event_single<packet_variants, base_objects::shared_client_data&>& processor() {
+            static base_objects::events::sync_event<packet_variants, base_objects::shared_client_data&> result;
 
             static auto once_init = []() {
                 (
-                    directions::processor().join([](auto&& packet, base_objects::SharedClientData& client) {
+                    directions::processor().join([](auto&& packet, base_objects::shared_client_data& client) {
                         result.notify(std::move(packet), client);
                     }),
                     ...
@@ -486,7 +486,7 @@ namespace copper_server::api::packets {
             return result;
         }
 
-        static packet_variants client_decode(base_objects::SharedClientData& context, ArrayStream& stream) {
+        static packet_variants client_decode(base_objects::shared_client_data& context, ArrayStream& stream) {
             packet_variants result;
             client_decode(context, stream, [&result](auto& client, auto&& packet) {
                 result = std::move(packet);
@@ -495,10 +495,10 @@ namespace copper_server::api::packets {
         }
 
         template <class FN>
-        static decltype(auto) client_decode(base_objects::SharedClientData& context, ArrayStream& stream, FN&& fn) {
-            using fn_t = void (*)(base_objects::SharedClientData& context, ArrayStream& stream, FN&& fn);
+        static decltype(auto) client_decode(base_objects::shared_client_data& context, ArrayStream& stream, FN&& fn) {
+            using fn_t = void (*)(base_objects::shared_client_data& context, ArrayStream& stream, FN&& fn);
             static constexpr fn_t selector[]{
-                ([](base_objects::SharedClientData& context, ArrayStream& stream, FN&& fn) -> decltype(auto) {
+                ([](base_objects::shared_client_data& context, ArrayStream& stream, FN&& fn) -> decltype(auto) {
                     return fn(context, directions::client_decode(context, stream));
                 })...
             };
@@ -506,10 +506,10 @@ namespace copper_server::api::packets {
         }
 
         template <class FN>
-        static decltype(auto) client_decode_direct(base_objects::SharedClientData& context, ArrayStream& stream, FN&& fn) {
-            using fn_t = void (*)(base_objects::SharedClientData& context, ArrayStream& stream, FN&& fn);
+        static decltype(auto) client_decode_direct(base_objects::shared_client_data& context, ArrayStream& stream, FN&& fn) {
+            using fn_t = void (*)(base_objects::shared_client_data& context, ArrayStream& stream, FN&& fn);
             static constexpr fn_t selector[]{
-                ([](base_objects::SharedClientData& context, ArrayStream& stream, FN&& fn) -> decltype(auto) {
+                ([](base_objects::shared_client_data& context, ArrayStream& stream, FN&& fn) -> decltype(auto) {
                     return directions::client_decode_direct(context, stream, std::forward<FN>(fn));
                 })...
             };
@@ -518,7 +518,7 @@ namespace copper_server::api::packets {
 
         template <class plugin>
         static void send_viewer(plugin& self, auto&& fn) {
-            self.register_event(send_viewer(), [_fn = std::move(fn)](packet_ref_variants direction, base_objects::SharedClientData& client) {
+            self.register_event(send_viewer(), [_fn = std::move(fn)](packet_ref_variants direction, base_objects::shared_client_data& client) {
                 return std::visit(
                     [&_fn, &client](auto& vars) {
                         return std::visit(
@@ -540,7 +540,7 @@ namespace copper_server::api::packets {
 
         template <class plugin>
         static void post_send_viewer(plugin& self, auto&& fn) {
-            self.register_event(post_send_viewer(), [_fn = std::move(fn)](packet_ref_variants direction, base_objects::SharedClientData& client) {
+            self.register_event(post_send_viewer(), [_fn = std::move(fn)](packet_ref_variants direction, base_objects::shared_client_data& client) {
                 std::visit(
                     [&_fn, &client](auto& vars) {
                         std::visit(
@@ -562,7 +562,7 @@ namespace copper_server::api::packets {
 
         template <class plugin>
         static void receive_viewer(plugin& self, auto&& fn) {
-            self.register_event(receive_viewer(), [_fn = std::move(fn)](packet_ref_variants direction, base_objects::SharedClientData& client) {
+            self.register_event(receive_viewer(), [_fn = std::move(fn)](packet_ref_variants direction, base_objects::shared_client_data& client) {
                 std::visit(
                     [&_fn, &client](auto& vars) {
                         return std::visit(
@@ -584,7 +584,7 @@ namespace copper_server::api::packets {
 
         template <class plugin>
         static void processor(plugin& self, auto&& fn) {
-            self.register_event(processor(), [_fn = std::move(fn)](packet_variants direction, base_objects::SharedClientData& client) {
+            self.register_event(processor(), [_fn = std::move(fn)](packet_variants direction, base_objects::shared_client_data& client) {
                 std::visit(
                     [&_fn, &client](auto& vars) {
                         std::visit(
@@ -612,12 +612,12 @@ namespace copper_server::api::packets {
 
     template <class packet>
 
-    bool send(base_objects::SharedClientData& client, packet&& p) {
+    bool send(base_objects::shared_client_data& client, packet&& p) {
         return packet_ops<packet>::send(client, std::move(p));
     }
 
     template <class packet>
-    base_objects::network::response client_encode(base_objects::SharedClientData& client, packet&& p) {
+    base_objects::network::response client_encode(base_objects::shared_client_data& client, packet&& p) {
         return packet_ops<packet>::client_encode(client, std::move(p));
     }
 
@@ -632,7 +632,7 @@ namespace copper_server::api::packets {
     }
 
     template <class packet>
-    void make_process(base_objects::SharedClientData& client, packet&& p) {
+    void make_process(base_objects::shared_client_data& client, packet&& p) {
         return packet_ops<packet>::make_process(client, std::move(p));
     }
 
@@ -658,7 +658,7 @@ namespace copper_server::api::packets {
 }
 
 template <class packet>
-inline copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, packet&& p) {
+inline copper_server::base_objects::shared_client_data& operator<<(copper_server::base_objects::shared_client_data& client, packet&& p) {
     copper_server::api::packets::packet_ops<packet>::send(client, std::move(p));
     return client;
 }

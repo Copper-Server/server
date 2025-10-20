@@ -9,6 +9,7 @@
 #ifndef SRC_PLUGIN_REGISTRATION
 #define SRC_PLUGIN_REGISTRATION
 #include <library/list_array.hpp>
+#include <src/api/ecs.hpp>
 #include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/data_packs/known_pack.hpp>
 #include <src/base_objects/events/event.hpp>
@@ -23,10 +24,10 @@
 namespace copper_server {
     namespace base_objects {
         class command_root_browser;
-        struct SharedClientData;
+        struct shared_client_data;
         template <typename T>
         class atomic_holder;
-        using client_data_holder = atomic_holder<SharedClientData>;
+        using client_data_holder = atomic_holder<shared_client_data>;
     }
 
     namespace api::packets::server_bound::config {
@@ -35,16 +36,16 @@ namespace copper_server {
 
     namespace api::packets::events {
         template <class packet>
-        base_objects::events::sync_event<packet&, base_objects::SharedClientData&>& send_viewer();
+        base_objects::events::sync_event<packet&, base_objects::shared_client_data&>& send_viewer();
 
         template <class packet>
-        base_objects::events::sync_event_no_cancel<packet&, base_objects::SharedClientData&>& post_send_viewer();
+        base_objects::events::sync_event_no_cancel<packet&, base_objects::shared_client_data&>& post_send_viewer();
 
         template <class packet>
-        base_objects::events::sync_event<packet&, base_objects::SharedClientData&>& receive_viewer();
+        base_objects::events::sync_event<packet&, base_objects::shared_client_data&>& receive_viewer();
 
         template <class packet>
-        base_objects::events::sync_event_single<packet&&, base_objects::SharedClientData&>& processor();
+        base_objects::events::sync_event_single<packet&&, base_objects::shared_client_data&>& processor();
     }
 
     namespace __internal {
@@ -64,7 +65,7 @@ namespace copper_server {
         using first_argument_type = std::decay_t<decltype(first_argument_helper(std::declval<T>()))>;
     }
 
-    class PluginRegistration {
+    class plugin_registration {
         struct event_auto_cleanup_t {
             base_objects::events::base_event* event_obj;
             base_objects::events::event_register_id id;
@@ -75,11 +76,12 @@ namespace copper_server {
 
         list_array<event_auto_cleanup_t> cleanup_list;
         bool is_loaded = false;
-        friend class PluginManagement;
+        friend class plugin_management_system;
 
     public:
-        virtual void initializer(const std::shared_ptr<PluginRegistration>&) {};
-        virtual void deinitializer(const std::shared_ptr<PluginRegistration>&) {};
+        virtual const std::string& get_name() const = 0;
+        virtual void initializer(const std::shared_ptr<plugin_registration>&) {};
+        virtual void deinitializer(const std::shared_ptr<plugin_registration>&) {};
 
         void register_packet_processor(auto&& fn) {
             register_event(api::packets::events::processor<__internal::first_argument_type<decltype(fn)>>(), std::move(fn));
@@ -147,7 +149,7 @@ namespace copper_server {
             });
         }
 
-        virtual ~PluginRegistration() noexcept {
+        virtual ~plugin_registration() noexcept {
             clean_up_all_events();
         }
 
@@ -169,78 +171,78 @@ namespace copper_server {
 #pragma region Server
 
         //first initialisation
-        virtual void OnRegister(const std::shared_ptr<PluginRegistration>&) {}
+        virtual void on_register(const std::shared_ptr<plugin_registration>&) {}
 
         //called on initialization, default resources allocated, plugins registered
-        virtual void OnInitialization(const std::shared_ptr<PluginRegistration>&) {}
+        virtual void on_initialization(const std::shared_ptr<plugin_registration>&) {}
 
         //called after initialization
-        virtual void OnLoad(const std::shared_ptr<PluginRegistration>&) {}
+        virtual void on_load(const std::shared_ptr<plugin_registration>&) {}
 
-        //called after OnLoad, api is ready
-        virtual void OnPostLoad(const std::shared_ptr<PluginRegistration>&) {}
+        //called after on_load, api is ready
+        virtual void on_post_load(const std::shared_ptr<plugin_registration>&) {}
 
-        virtual void OnLoadComplete(const std::shared_ptr<PluginRegistration>&) {}
+        virtual void on_load_complete(const std::shared_ptr<plugin_registration>&) {}
 
-        virtual void OnUnload(const std::shared_ptr<PluginRegistration>&) {}
+        virtual void on_unload(const std::shared_ptr<plugin_registration>&) {}
 
-        virtual void OnPostUnload(const std::shared_ptr<PluginRegistration>&) {}
+        virtual void on_post_unload(const std::shared_ptr<plugin_registration>&) {}
 
-        virtual void OnUnloadComplete(const std::shared_ptr<PluginRegistration>&) {}
+        virtual void on_unload_complete(const std::shared_ptr<plugin_registration>&) {}
 
-        virtual void OnUnregister(const std::shared_ptr<PluginRegistration>&) {}
+        virtual void on_unregister(const std::shared_ptr<plugin_registration>&) {}
 
         //emergency unload to save important data, do not use any other api except configuration
-        virtual void OnFaultUnload(const std::shared_ptr<PluginRegistration>&) {}
+        virtual void on_fault_unload(const std::shared_ptr<plugin_registration>&) {}
 
-        virtual void OnCommandsLoad(const std::shared_ptr<PluginRegistration>&, base_objects::command_root_browser&) {}
+        virtual void on_commands_load(const std::shared_ptr<plugin_registration>&, base_objects::command_root_browser&) {}
 
-        virtual void OnCommandsLoadComplete(const std::shared_ptr<PluginRegistration>&, base_objects::command_root_browser&) {}
+        virtual void on_commands_load_complete(const std::shared_ptr<plugin_registration>&, base_objects::command_root_browser&) {}
 
-        virtual void OnConfigReload(const std::shared_ptr<PluginRegistration>&) {}
+        virtual void on_config_reload(const std::shared_ptr<plugin_registration>&) {}
 
 #pragma endregion
 
 #pragma region OnLogin
         //custom plugin handling
         //args: self, chanel, is_successful, client
-        virtual login_response OnLoginHandle(const std::shared_ptr<PluginRegistration>&, const std::string&, const list_array<uint8_t>&, bool, base_objects::SharedClientData&) {
+        virtual login_response on_login_handle(const std::shared_ptr<plugin_registration>&, const std::string&, const list_array<uint8_t>&, bool, base_objects::shared_client_data&) {
             return {login_response::none{}};
         }
 
         //args: self, chanel, client
-        virtual login_response OnLoginStart(const std::shared_ptr<PluginRegistration>&, const std::string&, base_objects::SharedClientData&) {
+        virtual login_response on_login_start(const std::shared_ptr<plugin_registration>&, const std::string&, base_objects::shared_client_data&) {
             return {login_response::none{}};
         }
 
         //args: self, chanel, is_successful, client
-        virtual login_response OnLoginCookie(const std::shared_ptr<PluginRegistration>&, const std::string&, const list_array<uint8_t>&, bool, base_objects::SharedClientData&) {
+        virtual login_response on_login_cookie(const std::shared_ptr<plugin_registration>&, const std::string&, const list_array<uint8_t>&, bool, base_objects::shared_client_data&) {
             return {login_response::none{}};
         }
 
 #pragma endregion
 
-#pragma region OnConfiguration
+#pragma region on_configuration
 
         //returns true if the plugin completed its work in configuration
-        virtual bool OnConfiguration(base_objects::SharedClientData&) {
+        virtual bool on_configuration(base_objects::shared_client_data&) {
             return false;
         }
 
         //returns true if the plugin completed its work in configuration
         //args: self, chanel, data, client
-        virtual bool OnConfigurationHandle(const std::shared_ptr<PluginRegistration>&, const std::string&, const list_array<uint8_t>&, base_objects::SharedClientData&) {
+        virtual bool on_configuration_handle(const std::shared_ptr<plugin_registration>&, const std::string&, const list_array<uint8_t>&, base_objects::shared_client_data&) {
             return true;
         }
 
         //returns true if the plugin completed its work in configuration
-        virtual bool OnConfiguration_gotKnownPacks(base_objects::SharedClientData&, const api::packets::server_bound::config::select_known_packs&) {
+        virtual bool on_configuration_got_known_packs(base_objects::shared_client_data&, const api::packets::server_bound::config::select_known_packs&) {
             return true;
         }
 
         //returns true if the plugin completed its work in configuration
         //args: self, cookie_id, data, client
-        virtual bool OnConfigurationCookie(const std::shared_ptr<PluginRegistration>&, const std::string&, const list_array<uint8_t>&, base_objects::SharedClientData&) {
+        virtual bool on_configuration_cookie(const std::shared_ptr<plugin_registration>&, const std::string&, const list_array<uint8_t>&, base_objects::shared_client_data&) {
             return true;
         }
 
@@ -249,40 +251,46 @@ namespace copper_server {
 #pragma region OnPlay
 
         //custom plugin handling
-        virtual void OnPlayHandle(const std::shared_ptr<PluginRegistration>&, const std::string&, const list_array<uint8_t>&, base_objects::SharedClientData&) {}
+        virtual void on_play_handle(const std::shared_ptr<plugin_registration>&, const std::string&, const list_array<uint8_t>&, base_objects::shared_client_data&) {}
 
-        virtual void OnPlayCookie(const std::shared_ptr<PluginRegistration>&, const std::string&, const list_array<uint8_t>&, base_objects::SharedClientData&) {}
+        virtual void on_play_cookie(const std::shared_ptr<plugin_registration>&, const std::string&, const list_array<uint8_t>&, base_objects::shared_client_data&) {}
 
-        virtual void OnPlay_pre_initialize(base_objects::SharedClientData&) {} //world is not available
+        virtual void on_play_pre_initialize(base_objects::shared_client_data&) {} //world is not available
 
-        virtual void OnPlay_initialize(base_objects::SharedClientData&) {}
+        virtual void on_play_initialize(base_objects::shared_client_data&) {}
 
-        virtual void OnPlay_initialize_compatible(base_objects::SharedClientData&) {}
+        virtual void on_play_initialize_compatible(base_objects::shared_client_data&) {}
 
-        virtual void OnPlay_post_initialize(base_objects::SharedClientData&) {}
+        virtual void on_play_post_initialize(base_objects::shared_client_data&) {}
 
-        virtual void OnPlay_post_initialize_compatible(base_objects::SharedClientData&) {}
+        virtual void on_play_post_initialize_compatible(base_objects::shared_client_data&) {}
 
-        virtual void OnPlay_uninitialized(base_objects::SharedClientData&) {}
+        virtual void on_play_uninitialized(base_objects::shared_client_data&) {}
 
-        virtual void OnPlay_uninitialized_compatible(base_objects::SharedClientData&) {}
+        virtual void on_play_uninitialized_compatible(base_objects::shared_client_data&) {}
 
         //player must be initialized for this call
-        virtual void PlayerJoined(base_objects::SharedClientData&) {}
+        virtual void player_joined(base_objects::shared_client_data&) {}
 
         //player data must be initialized for this call and uninitialized after
-        virtual void PlayerLeave(base_objects::SharedClientData&) {}
+        virtual void player_leave(base_objects::shared_client_data&) {}
 
         //notifies when player fully left, the send operation is disabled
-        virtual void PlayerLeft(base_objects::SharedClientData&) {}
+        virtual void player_left(base_objects::shared_client_data&) {}
 
         //TODO add more events
 
 
 #pragma endregion
+
+#pragma region ECS
+
+        virtual void register_systems(api::ecs::scheduler&) {}
+
+#pragma endregion
     };
 
-    using PluginRegistrationPtr = std::shared_ptr<PluginRegistration>;
+    using plugin_registration_ptr = std::shared_ptr<plugin_registration>;
 }
 
 #endif /* SRC_PLUGIN_REGISTRATION */

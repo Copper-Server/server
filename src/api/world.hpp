@@ -13,10 +13,10 @@
 #include <src/storage/world_data.hpp>
 
 namespace copper_server::base_objects {
-    struct SharedClientData;
+    struct shared_client_data;
     template <typename T>
     class atomic_holder;
-    using client_data_holder = atomic_holder<SharedClientData>;
+    using client_data_holder = atomic_holder<shared_client_data>;
 }
 
 namespace copper_server::api::world {
@@ -69,30 +69,30 @@ namespace copper_server::api::world {
 
 
     //gets client world, checks if world exists, returns pair of id and name, if world does not exists then returns default world and sets default position for player in new world
-    std::pair<int32_t, std::string> prepare_world(base_objects::SharedClientData& client_ref);
-    void sync_settings(base_objects::SharedClientData& client_ref); //sends world settings to client
+    std::pair<int32_t, std::string> prepare_world(base_objects::shared_client_data& client_ref);
+    void sync_settings(base_objects::shared_client_data& client_ref); //sends world settings to client
 
     void transfer(
         api::ecs::entity entity,
         int32_t world_id,
-        util::VECTOR position,
-        util::ANGLE_DEG rotation,
-        util::VECTOR velocity,
+        util::vector position,
+        util::angle_deg rotation,
+        util::vector velocity,
         std::function<void(storage::world_data& world)> callback = nullptr
     );
 
     void transfer(
         api::ecs::entity entity,
         int32_t world_id,
-        util::VECTOR position,
-        util::ANGLE_DEG rotation,
+        util::vector position,
+        util::angle_deg rotation,
         std::function<void(storage::world_data& world)> callback = nullptr
     );
 
     void transfer(
         api::ecs::entity entity,
         int32_t world_id,
-        util::VECTOR position,
+        util::vector position,
         std::function<void(storage::world_data& world)> callback = nullptr
     );
 

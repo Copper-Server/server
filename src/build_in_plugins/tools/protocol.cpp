@@ -15,7 +15,7 @@
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins::tools {
-    struct protocol : public PluginAutoRegister<"tools/protocol", protocol> {
+    struct protocol : public plugin_auto_register<"tools/protocol", protocol> {
         bool debug_mode = false;
         std::string now = std::format("{:%Y_%m_%d__%H_%M_%OS}", std::chrono::current_zone()->to_local(std::chrono::system_clock::now()));
 
@@ -24,7 +24,7 @@ namespace copper_server::build_in_plugins::tools {
             out << dat;
         }
 
-        void OnRegister(const PluginRegistrationPtr& _) override {
+        void on_register(const plugin_registration_ptr& _) override {
             register_event(api::players::handlers::on_disconnect, base_objects::events::priority::high, [this](const base_objects::client_data_holder& client) {
                 if (client)
                     if (debug_mode && client->get_session())
@@ -32,31 +32,34 @@ namespace copper_server::build_in_plugins::tools {
                 return false;
             });
 
-            api::packets::client_bound_ops::post_send_viewer(*this, [this](auto& packet, base_objects::SharedClientData& client) {
+            api::packets::client_bound_ops::post_send_viewer(*this, [this](auto& packet, base_objects::shared_client_data& client) {
                 if (debug_mode && client.get_session())
                     app_item("client_bound " + api::packets::stringize(packet) + '\n', client.get_session()->id);
             });
 
-            api::packets::server_bound_ops::receive_viewer(*this, [this](auto& packet, base_objects::SharedClientData& client) {
+            api::packets::server_bound_ops::receive_viewer(*this, [this](auto& packet, base_objects::shared_client_data& client) {
                 if (debug_mode && client.get_session())
                     app_item("server_bound " + api::packets::stringize(packet) + '\n', client.get_session()->id);
                 return false;
             });
         }
 
-
-        void OnCommandsLoad(const PluginRegistrationPtr&, base_objects::command_root_browser& browser) override {
+        void on_commands_load(const plugin_registration_ptr&, base_objects::command_root_browser& browser) override {
             using predicate = base_objects::parser;
 
             auto _protocol = browser.add_child("protocol").add_child("debug");
             _protocol.add_child({"enable", "enables protocol logging to debug", "/protocol debug enable"})
                 .set_callback("command.protocol.debug.enable", [this](const list_array<predicate>&, base_objects::command_context&) {
                     std::filesystem::create_directories(api::configuration::get().server.get_storage_path() / "protocol" / now);
+                    bool changed = debug_mode != true;
                     debug_mode = true;
+                    return changed;
                 });
             _protocol.add_child({"disable", "disables protocol logging to debug", "/protocol debug disable"})
                 .set_callback("command.protocol.debug.disable", [this](const list_array<predicate>&, base_objects::command_context&) {
+                    bool changed = debug_mode != false;
                     debug_mode = false;
+                    return changed;
                 });
         }
     };

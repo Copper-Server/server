@@ -22,7 +22,7 @@ namespace copper_server::build_in_plugins::network::tcp {
     using fast_task::networking::tcp_error;
     base_objects::network::tcp::client* tcp_handler = new universal_client_handle();
 
-    class TCPServerPlugin : public PluginAutoRegister<"network/tcp_server", TCPServerPlugin> {
+    class TCPServerPlugin : public plugin_auto_register<"network/tcp_server", TCPServerPlugin> {
         static void handler(fast_task::networking::tcp_network_stream& stream) {
             if (api::network::ip_filter(stream.remote_address()))
                 return;
@@ -79,7 +79,7 @@ namespace copper_server::build_in_plugins::network::tcp {
             register_event(api::server::shutdown_event, base_objects::events::priority::low, [this]() { if (tcp_server) stop(); return false; });
         }
 
-        void OnPostLoad(const PluginRegistrationPtr&) override {
+        void on_post_load(const plugin_registration_ptr&) override {
             if (!tcp_server) {
                 tcp_server = std::make_shared<fast_task::networking::tcp_network_server>(handler, api::configuration::get().server.ip + ":" + std::to_string(api::configuration::get().server.port));
                 tcp_server->set_configuration(fast_task::networking::tcp_configuration{.buffer_size = api::configuration::get().protocol.new_client_buffer, .allow_ip4 = true});
@@ -88,12 +88,12 @@ namespace copper_server::build_in_plugins::network::tcp {
                 start();
         }
 
-        void OnConfigReload(const PluginRegistrationPtr&) override {
+        void on_config_reload(const plugin_registration_ptr&) override {
             if (tcp_server)
                 tcp_server->set_configuration(fast_task::networking::tcp_configuration{.buffer_size = api::configuration::get().protocol.new_client_buffer, .allow_ip4 = true});
         }
 
-        void OnUnregister(const PluginRegistrationPtr&) override {
+        void on_unregister(const plugin_registration_ptr&) override {
             if (tcp_server)
                 stop();
         }

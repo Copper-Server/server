@@ -20,8 +20,8 @@ namespace copper_server {
     }
 
     namespace base_objects {
-        struct SharedClientData;
-        using client_data_holder = atomic_holder<SharedClientData>;
+        struct shared_client_data;
+        using client_data_holder = atomic_holder<shared_client_data>;
         struct entity;
         using entity_ref = atomic_holder<entity>;
 
@@ -404,24 +404,24 @@ namespace copper_server::api::ecs::com {
         int32_t value = 0;
     };
 
-    struct position : public util::VECTOR {
-        using util::VECTOR::XYZ;
-        using util::VECTOR::operator=;
+    struct position : public util::vector {
+        using util::vector::xyz;
+        using util::vector::operator=;
     };
 
-    struct rotation : public util::ANGLE_DEG {
-        using util::ANGLE_DEG::ANGLE_DEG;
-        using util::ANGLE_DEG::operator=;
+    struct rotation : public util::angle_deg {
+        using util::angle_deg::angle_deg;
+        using util::angle_deg::operator=;
     };
 
-    struct head_rotation : public util::ANGLE_DEG {
-        using util::ANGLE_DEG::ANGLE_DEG;
-        using util::ANGLE_DEG::operator=;
+    struct head_rotation : public util::angle_deg {
+        using util::angle_deg::angle_deg;
+        using util::angle_deg::operator=;
     };
 
-    struct motion : public util::VECTOR {
-        using util::VECTOR::XYZ;
-        using util::VECTOR::operator=;
+    struct motion : public util::vector {
+        using util::vector::xyz;
+        using util::vector::operator=;
     };
 
     struct on_ground {

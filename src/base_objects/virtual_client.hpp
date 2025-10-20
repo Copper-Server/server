@@ -28,8 +28,8 @@ namespace copper_server::base_objects {
         virtual ~virtual_client() = default;
 
         //sets the callback to receive raw packets, to decode them use the `cliend_bound_*_ops` from api/packets/client_bound/*.hpp
-        void set_special_callback(std::function<void(virtual_client&, base_objects::SharedClientData& self, base_objects::network::response&& response)>&& callback) {
-            client->special_callback = [this, cc = std::move(callback)](base_objects::SharedClientData& self, base_objects::network::response&& response) {
+        void set_special_callback(std::function<void(virtual_client&, base_objects::shared_client_data& self, base_objects::network::response&& response)>&& callback) {
+            client->special_callback = [this, cc = std::move(callback)](base_objects::shared_client_data& self, base_objects::network::response&& response) {
                 cc(*this, self, std::move(response));
             };
         }

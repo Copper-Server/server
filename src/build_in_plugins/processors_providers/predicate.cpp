@@ -36,7 +36,7 @@ namespace copper_server::build_in_plugins::processors_providers {
         return false; //TODO
     }
 
-    bool __location_check([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] util::VECTOR pos, [[maybe_unused]] util::ANGLE_DEG rot, [[maybe_unused]] storage::world_data& assigned_world) {
+    bool __location_check([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] util::vector pos, [[maybe_unused]] util::angle_deg rot, [[maybe_unused]] storage::world_data& assigned_world) {
         return false; //TODO
     }
 
@@ -328,7 +328,7 @@ namespace copper_server::build_in_plugins::processors_providers {
         if (!loot_context.contains("origin"))
             return false;
         auto origin = loot_context.at("origin").as_compound();
-        util::VECTOR pos = {origin.at("x"), origin.at("y"), origin.at("z")};
+        util::vector pos = {origin.at("x"), origin.at("y"), origin.at("z")};
         int32_t world_id;
         if (origin.contains("world_id"))
             world_id = origin.at("world_id");
@@ -485,7 +485,7 @@ namespace copper_server::build_in_plugins::processors_providers {
         if (!loot_context.contains("origin"))
             return false;
         auto origin = loot_context.at("origin").as_compound();
-        util::VECTOR pos = {origin.at("x"), origin.at("y"), origin.at("z")};
+        util::vector pos = {origin.at("x"), origin.at("y"), origin.at("z")};
         int32_t world_id;
         if (origin.contains("world"))
             world_id = origin.at("world");
@@ -569,8 +569,8 @@ namespace copper_server::build_in_plugins::processors_providers {
         return false;
     }
 
-    struct predicate : public PluginAutoRegister<"processors_provider/predicate", predicate> {
-        void OnInitialization(const PluginRegistrationPtr&) override {
+    struct predicate : public plugin_auto_register<"processors_provider/predicate", predicate> {
+        void on_initialization(const plugin_registration_ptr&) override {
             api::predicate::register_handler("all_of", [&](const enbt::compound_const_ref& predicate, const base_objects::command_context& context) {
                 for (auto& value : predicate["terms"].as_array()) {
                     if (!api::predicate::process_predicate(

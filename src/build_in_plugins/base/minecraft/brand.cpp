@@ -14,12 +14,12 @@
 #include <src/util/readers.hpp>
 
 namespace copper_server::build_in_plugins::base::minecraft {
-    struct brand : public PluginAutoRegister<"base/minecraft/brand", brand> {
-        void OnLoad(const PluginRegistrationPtr& self) override {
-            pluginManagement.bindPluginOn("minecraft:brand", self, PluginManagement::registration_on::configuration);
+    struct brand : public plugin_auto_register<"base/minecraft/brand", brand> {
+        void on_load(const plugin_registration_ptr& self) override {
+            plugin_management.bind_plugin_on("minecraft:brand", self, plugin_management_system::registration_on::configuration);
         }
 
-        bool OnConfiguration(base_objects::SharedClientData& client) override {
+        bool on_configuration(base_objects::shared_client_data& client) override {
             base_objects::network::response::item r;
             r.write_string("CopperServer");
             client << api::packets::client_bound::config::custom_payload{
@@ -29,7 +29,7 @@ namespace copper_server::build_in_plugins::base::minecraft {
             return client.client_brand.size();//end configuration if client already sent brand
         }
 
-        bool OnConfigurationHandle(const PluginRegistrationPtr& _, const std::string& chanel, const list_array<uint8_t>& data, base_objects::SharedClientData& client) override {
+        bool on_configuration_handle(const plugin_registration_ptr& _, const std::string& chanel, const list_array<uint8_t>& data, base_objects::shared_client_data& client) override {
             if (chanel == "minecraft:brand") {
                 ArrayStream stream(data.data(), data.size());
                 int32_t len = stream.read_var<int32_t>();

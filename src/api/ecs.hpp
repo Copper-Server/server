@@ -158,6 +158,8 @@ namespace copper_server::api::ecs {
         query(query&& mov) : id(mov.id), with_relations(std::move(mov.with_relations)) {}
 
         query(int32_t world_id) : id(world_id) {}
+        
+        query(std::optional<int32_t> id, list_array<std::pair<component_id, entity>>&& with_relations) : id(id), with_relations(std::move(with_relations)) {}
 
         query& operator=(query&& mov) {
             id = mov.id;
@@ -260,42 +262,38 @@ namespace copper_server::api::ecs {
         template <bool explicit_marking>
         auto begin_impl() {
             using traits = detail::query_traits<params...>;
-            const auto& all_ids = traits::get_all_component_ids();
-            const auto& with_ids = traits::get_with_ids();
-            const auto& without_ids = traits::get_without_ids();
-            const auto& dirty_ids = traits::get_dirty_ids();
-            const auto& clean_ids = traits::get_clean_ids();
-            const auto& changes_ids = traits::get_with_changes_ids();
+            auto all_ids = traits::get_all_component_ids();
+            auto with_ids = traits::get_with_ids();
+            auto without_ids = traits::get_without_ids();
+            auto dirty_ids = traits::get_dirty_ids();
+            auto clean_ids = traits::get_clear_ids();
+            auto changes_ids = traits::get_with_changes_ids();
 
-            const std::vector<component_id>* writes_ids_ptr;
-            if constexpr (explicit_marking) {
-                static const std::vector<component_id> empty_vec;
-                writes_ids_ptr = &empty_vec;
-            } else
-                writes_ids_ptr = &traits::get_writes_ids();
-            const auto& writes_ids = *writes_ids_ptr;
+            std::span<component_id> writes_ids;
+            if constexpr (explicit_marking)
+                writes_ids = traits::get_writes_ids();
 
             detail::iteration_handle handle
                 = id
                       ? detail::iterate_components(
                             *id,
-                            {all_ids.data(), all_ids.size()},
-                            {with_ids.data(), with_ids.size()},
-                            {without_ids.data(), without_ids.size()},
-                            {writes_ids.data(), writes_ids.size()},
-                            {dirty_ids.data(), dirty_ids.size()},
-                            {clean_ids.data(), clean_ids.size()},
-                            {changes_ids.data(), changes_ids.size()},
+                            all_ids,
+                            with_ids,
+                            without_ids,
+                            writes_ids,
+                            dirty_ids,
+                            clean_ids,
+                            changes_ids,
                             {with_relations.data(), with_relations.size()}
                         )
                       : detail::iterate_components_global(
-                            {all_ids.data(), all_ids.size()},
-                            {with_ids.data(), with_ids.size()},
-                            {without_ids.data(), without_ids.size()},
-                            {writes_ids.data(), writes_ids.size()},
-                            {dirty_ids.data(), dirty_ids.size()},
-                            {clean_ids.data(), clean_ids.size()},
-                            {changes_ids.data(), changes_ids.size()},
+                            all_ids,
+                            with_ids,
+                            without_ids,
+                            writes_ids,
+                            dirty_ids,
+                            clean_ids,
+                            changes_ids,
                             {with_relations.data(), with_relations.size()}
                         );
 
@@ -425,7 +423,7 @@ namespace copper_server::api::ecs {
         void execute_frame(world_local_registry& registry);
 
     private:
-        void add_system_impl(std::unique_ptr<system_interface> system, detail::system_info& info);
+        void add_system_impl(std::unique_ptr<system_interface> system, const detail::system_info& info);
         struct scheduler_data;
         std::unique_ptr<scheduler_data> data;
     };

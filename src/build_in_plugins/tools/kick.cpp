@@ -18,8 +18,8 @@
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins::tools {
-    struct kick : public PluginAutoRegister<"tools/kick", kick> {
-        void OnCommandsLoad(const PluginRegistrationPtr&, base_objects::command_root_browser& browser) override {
+    struct kick : public plugin_auto_register<"tools/kick", kick> {
+        void on_commands_load(const plugin_registration_ptr&, base_objects::command_root_browser& browser) override {
             using predicate = base_objects::parser;
             using pred_string = base_objects::parsers::string;
             using cmd_pred_string = base_objects::parsers::command::string;
@@ -28,34 +28,36 @@ namespace copper_server::build_in_plugins::tools {
                 .add_child("player", cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                 .set_callback("command.kick", [](const list_array<predicate>& args, base_objects::command_context& context) {
                     auto target = api::players::get_player(
-                        base_objects::SharedClientData::packets_state_t::protocol_state::play,
+                        base_objects::shared_client_data::packets_state_t::protocol_state::play,
                         std::get<pred_string>(args[0]).value
                     );
                     if (!target) {
                         context.executor << api::packets::client_bound::play::system_chat{.content = "Player not found"};
-                        return;
+                        return false;
                     }
                     if (api::permissions::has_rights("misc.operator_protection.kick", *target)) {
                         context.executor << api::packets::client_bound::play::system_chat{.content = "You can't kick this player"};
-                        return;
+                        return false;
                     }
                     api::players::calls::on_player_kick({target, "kicked by admin"});
+                    return true;
                 })
                 .add_child({"reason", "kick player with reason", "/kick player reason"}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                 .set_callback("command.kick", [](const list_array<predicate>& args, base_objects::command_context& context) {
                     auto target = api::players::get_player(
-                        base_objects::SharedClientData::packets_state_t::protocol_state::play,
+                        base_objects::shared_client_data::packets_state_t::protocol_state::play,
                         std::get<pred_string>(args[0]).value
                     );
                     if (!target) {
                         context.executor << api::packets::client_bound::play::system_chat{.content = "Player not found"};
-                        return;
+                        return false;
                     }
                     if (api::permissions::has_rights("misc.operator_protection.kick", *target)) {
                         context.executor << api::packets::client_bound::play::system_chat{.content = "You can't kick this player"};
-                        return;
+                        return false;
                     }
                     api::players::calls::on_player_kick({target, Chat::parseToChat(std::get<pred_string>(args[1]).value)});
+                    return true;
                 });
         }
     };

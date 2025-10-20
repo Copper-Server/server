@@ -116,7 +116,7 @@ namespace copper_server::api::packets {
     concept need_preprocess_result_v = need_preprocess_result<T>();
 
     template <class T>
-    void serialize_entry(base_objects::network::response::item& res, base_objects::SharedClientData& context, T&& value) {
+    void serialize_entry(base_objects::network::response::item& res, base_objects::shared_client_data& context, T&& value) {
         using Type = std::decay_t<T>;
         if constexpr (is_convertible_to_packet_form<Type>) {
             serialize_entry(res, context, value.to_packet());
@@ -157,7 +157,7 @@ namespace copper_server::api::packets {
         else if constexpr (std::is_same_v<enbt::raw_uuid, Type>)
             res.write_value(value);
         else if constexpr (std::is_same_v<Chat, Type>)
-            res.write_direct(util::NBT::build(value.ToENBT()).get_as_network());
+            res.write_direct(util::nbt::build(value.ToENBT()).get_as_network());
         else if constexpr (
             std::is_same_v<enbt::value, Type>
             || std::is_same_v<enbt::compound, Type>
@@ -173,7 +173,7 @@ namespace copper_server::api::packets {
             || std::is_same_v<enbt::simple_array_ui32, Type>
             || std::is_same_v<enbt::simple_array_ui64, Type>
         )
-            res.write_direct(util::NBT::build((const enbt::value&)value).get_as_network());
+            res.write_direct(util::nbt::build((const enbt::value&)value).get_as_network());
         else if constexpr (std::is_base_of_v<base_objects::palette_container, Type>) {
             std::visit(
                 [&]<class IT>(IT&& it) {
@@ -378,7 +378,7 @@ namespace copper_server::api::packets {
     }
 
     template <class T, class T_prev>
-    void preprocess_structure(base_objects::SharedClientData& context, T& value, T_prev& prev) {
+    void preprocess_structure(base_objects::shared_client_data& context, T& value, T_prev& prev) {
         if constexpr (is_no_size<T>) {
             if constexpr (is_template_base_of<_list_array_impl::list_array, T>)
                 if (value.size() != T::get_depended_size(context, prev))
@@ -516,7 +516,7 @@ namespace copper_server::api::packets {
     }
 
     template <class T>
-    void serialize_packet(base_objects::network::response& res, base_objects::SharedClientData& context, T& value) {
+    void serialize_packet(base_objects::network::response& res, base_objects::shared_client_data& context, T& value) {
         using Type = std::decay_t<T>;
         if constexpr (std::is_base_of_v<compound_packet, Type>) {
             reflect::for_each_field(value, [&res, &context](auto& item) {
@@ -543,7 +543,7 @@ namespace copper_server::api::packets {
     }
 
     template <class Type>
-    void make_preprocess(base_objects::SharedClientData& context, Type& value) {
+    void make_preprocess(base_objects::shared_client_data& context, Type& value) {
         if constexpr (need_preprocess_result_v<Type>) {
             preprocess_structure(context, value, value);
             if constexpr (could_be_preprocessed<Type, Type>)
@@ -552,7 +552,7 @@ namespace copper_server::api::packets {
     }
 
     template <class Ops, class T>
-    bool make_send(base_objects::SharedClientData& context, T&& value) {
+    bool make_send(base_objects::shared_client_data& context, T&& value) {
         using Type = std::decay_t<T>;
         if (!context.is_active())
             return false;
@@ -578,9 +578,8 @@ namespace copper_server::api::packets {
         return true;
     }
 
-
     template <class Ops, class Type>
-    base_objects::network::response make_encode(base_objects::SharedClientData& context, Type&& value) {
+    base_objects::network::response make_encode(base_objects::shared_client_data& context, Type&& value) {
         make_preprocess(context, value);
         base_objects::network::response res;
         serialize_packet(res, context, value);

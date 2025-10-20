@@ -26,8 +26,8 @@
 #include <src/plugin/registration.hpp>
 
 namespace copper_server {
-    class PluginRegistration;
-    using PluginRegistrationPtr = std::shared_ptr<PluginRegistration>;
+    class plugin_registration;
+    using plugin_registration_ptr = std::shared_ptr<plugin_registration>;
 
     namespace api::network::tcp {
         class session;
@@ -45,7 +45,7 @@ namespace copper_server {
         struct slot;
         struct slot_data;
 
-        struct SharedClientData {
+        struct shared_client_data {
             std::string name;
             std::string ip;
             std::shared_ptr<api::mojang::session_server::player_data> data;
@@ -53,7 +53,7 @@ namespace copper_server {
 
 
             std::string locale; //max 16 chars
-            list_array<PluginRegistrationPtr> compatible_plugins;
+            list_array<plugin_registration_ptr> compatible_plugins;
             uint8_t view_distance = 0;
             uint8_t simulation_distance = 0;
             enum class ChatMode : uint8_t {
@@ -144,7 +144,7 @@ namespace copper_server {
                             std::optional<hashed_slot_data> carry_item;
                         };
 
-                        screen(base_objects::SharedClientData& client);
+                        screen(base_objects::shared_client_data& client);
                         virtual ~screen() {};
                         void close();                                                //packet only
                         void set_data(int16_t prop, int16_t data);                   //packet only
@@ -191,11 +191,11 @@ namespace copper_server {
                         int32_t current_id;   //automatically assigned
                         int32_t state_id = 0; //incremented by one after each change
                         int32_t windows_type = 0;
-                        base_objects::SharedClientData& client;
+                        base_objects::shared_client_data& client;
                     };
 
                     struct main_screen_i : public screen {
-                        main_screen_i(base_objects::SharedClientData& client) : screen(client) {}
+                        main_screen_i(base_objects::shared_client_data& client) : screen(client) {}
 
                         virtual base_objects::slot& get_carried_item() = 0;
                     };
@@ -280,15 +280,15 @@ namespace copper_server {
 
             std::chrono::milliseconds ping = std::chrono::milliseconds(0);
 
-            void registerPlugin(PluginRegistrationPtr plugin) {
+            void register_plugin(plugin_registration_ptr plugin) {
                 compatible_plugins.push_back(plugin);
             }
 
-            void unregisterPlugin(PluginRegistrationPtr plugin) {
+            void unregisterPlugin(plugin_registration_ptr plugin) {
                 compatible_plugins.remove(plugin);
             }
 
-            bool isCompatiblePlugin(PluginRegistrationPtr plugin) {
+            bool isCompatiblePlugin(plugin_registration_ptr plugin) {
                 return compatible_plugins.contains(plugin);
             }
 
@@ -300,8 +300,8 @@ namespace copper_server {
                 sent = true;
             }
 
-            SharedClientData(api::network::tcp::session* ss = nullptr, void* assigned_data = nullptr, std::function<void(base_objects::SharedClientData& self, base_objects::network::response&&)> special_callback = nullptr);
-            ~SharedClientData();
+            shared_client_data(api::network::tcp::session* ss = nullptr, void* assigned_data = nullptr, std::function<void(base_objects::shared_client_data& self, base_objects::network::response&&)> special_callback = nullptr);
+            ~shared_client_data();
 
             void* getAssignedData() const {
                 return assigned_data;
@@ -329,28 +329,30 @@ namespace copper_server {
             //returns true if client could accept packets (works for virtual and real)
             bool is_active() const;
 
+            void deactivate(); //internal
+
         private:
             void send_indirect(base_objects::network::response&&);
             friend struct virtual_client;
-            std::function<void(base_objects::SharedClientData& self, base_objects::network::response&&)> special_callback;
+            std::function<void(base_objects::shared_client_data& self, base_objects::network::response&&)> special_callback;
             void* assigned_data;
             api::network::tcp::session* ss;
             bool sent = false;
         };
 
-        inline SharedClientData::packets_state_t::protocol_state operator|(SharedClientData::packets_state_t::protocol_state a, SharedClientData::packets_state_t::protocol_state b) {
-            return SharedClientData::packets_state_t::protocol_state(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+        inline shared_client_data::packets_state_t::protocol_state operator|(shared_client_data::packets_state_t::protocol_state a, shared_client_data::packets_state_t::protocol_state b) {
+            return shared_client_data::packets_state_t::protocol_state(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
         }
 
-        inline SharedClientData::packets_state_t::protocol_state operator&(SharedClientData::packets_state_t::protocol_state a, SharedClientData::packets_state_t::protocol_state b) {
-            return SharedClientData::packets_state_t::protocol_state(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
+        inline shared_client_data::packets_state_t::protocol_state operator&(shared_client_data::packets_state_t::protocol_state a, shared_client_data::packets_state_t::protocol_state b) {
+            return shared_client_data::packets_state_t::protocol_state(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
         }
 
-        inline SharedClientData::packets_state_t::protocol_state operator^(SharedClientData::packets_state_t::protocol_state a, SharedClientData::packets_state_t::protocol_state b) {
-            return SharedClientData::packets_state_t::protocol_state(static_cast<uint8_t>(a) ^ static_cast<uint8_t>(b));
+        inline shared_client_data::packets_state_t::protocol_state operator^(shared_client_data::packets_state_t::protocol_state a, shared_client_data::packets_state_t::protocol_state b) {
+            return shared_client_data::packets_state_t::protocol_state(static_cast<uint8_t>(a) ^ static_cast<uint8_t>(b));
         }
 
-        using client_data_holder = atomic_holder<SharedClientData>;
+        using client_data_holder = atomic_holder<shared_client_data>;
     }
 }
 #endif /* SRC_BASE_OBJECTS_SHARED_CLIENT_DATA */

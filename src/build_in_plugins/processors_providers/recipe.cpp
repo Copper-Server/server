@@ -98,8 +98,8 @@ namespace copper_server::build_in_plugins::processors_providers {
     }
 
     //provides processor and registers default handles, custom handles can be added via api
-    struct recipe : public PluginAutoRegister<"processors_provider/recipe", recipe> {
-        void OnInitialization(const PluginRegistrationPtr&) override {
+    struct recipe : public plugin_auto_register<"processors_provider/recipe", recipe> {
+        void on_initialization(const plugin_registration_ptr&) override {
             //api::recipe::register_handler("minecraft:blasting", handle_furnace);
             //api::recipe::register_handler("minecraft:smelting", handle_furnace);
             //api::recipe::register_handler("minecraft:smoking", handle_furnace);

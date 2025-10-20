@@ -15,8 +15,8 @@
 #include <span>
 
 namespace copper_server::base_objects {
-    struct SharedClientData;
-    using client_data_holder = atomic_holder<SharedClientData>;
+    struct shared_client_data;
+    using client_data_holder = atomic_holder<shared_client_data>;
 
     namespace network {
         struct response;
@@ -38,7 +38,7 @@ namespace copper_server::api::network::tcp {
         virtual bool is_active() = 0;
         virtual void disconnect() = 0;
         virtual base_objects::client_data_holder& shared_data_ref() = 0;
-        virtual base_objects::SharedClientData& shared_data() = 0;
+        virtual base_objects::shared_client_data& shared_data() = 0;
         virtual bool start_symmetric_encryption(const list_array<uint8_t>& encryption_key, const list_array<uint8_t>& encryption_iv) = 0;
 
         virtual void request_buffer(size_t) {}

@@ -15,10 +15,10 @@
 
 namespace copper_server::api::packets {
     namespace events {
-        base_objects::events::sync_event_no_cancel<base_objects::SharedClientData&> client_state_changed;
+        base_objects::events::sync_event_no_cancel<base_objects::shared_client_data&> client_state_changed;
     }
 
-    size_t get_size_source_value(base_objects::SharedClientData& context, size_source resource) {
+    size_t get_size_source_value(base_objects::shared_client_data& context, size_source resource) {
         switch (resource) {
         case size_source::get_world_chunks_height: {
             if (context.player_data.assigned_entity) {
@@ -42,8 +42,8 @@ namespace copper_server::api::packets {
     }
 }
 
-copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::api::packets::switches_to::status) {
-    client.packets_state.state = copper_server::base_objects::SharedClientData::packets_state_t::protocol_state::status;
+copper_server::base_objects::shared_client_data& operator<<(copper_server::base_objects::shared_client_data& client, copper_server::api::packets::switches_to::status) {
+    client.packets_state.state = copper_server::base_objects::shared_client_data::packets_state_t::protocol_state::status;
     client.packets_state.internal_data.set([](auto& data) {
         data.extra_data = nullptr;
     });
@@ -51,8 +51,8 @@ copper_server::base_objects::SharedClientData& operator<<(copper_server::base_ob
     return client;
 }
 
-copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::api::packets::switches_to::login) {
-    client.packets_state.state = copper_server::base_objects::SharedClientData::packets_state_t::protocol_state::login;
+copper_server::base_objects::shared_client_data& operator<<(copper_server::base_objects::shared_client_data& client, copper_server::api::packets::switches_to::login) {
+    client.packets_state.state = copper_server::base_objects::shared_client_data::packets_state_t::protocol_state::login;
     client.packets_state.internal_data.set([](auto& data) {
         data.extra_data = nullptr;
     });
@@ -60,8 +60,8 @@ copper_server::base_objects::SharedClientData& operator<<(copper_server::base_ob
     return client;
 }
 
-copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::api::packets::switches_to::config) {
-    client.packets_state.state = copper_server::base_objects::SharedClientData::packets_state_t::protocol_state::configuration;
+copper_server::base_objects::shared_client_data& operator<<(copper_server::base_objects::shared_client_data& client, copper_server::api::packets::switches_to::config) {
+    client.packets_state.state = copper_server::base_objects::shared_client_data::packets_state_t::protocol_state::configuration;
     copper_server::api::players::login_complete_to_cfg(client);
     client.packets_state.internal_data.set([](auto& data) {
         data.extra_data = nullptr;
@@ -70,8 +70,8 @@ copper_server::base_objects::SharedClientData& operator<<(copper_server::base_ob
     return client;
 }
 
-copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::api::packets::switches_to::play) {
-    client.packets_state.state = copper_server::base_objects::SharedClientData::packets_state_t::protocol_state::play;
+copper_server::base_objects::shared_client_data& operator<<(copper_server::base_objects::shared_client_data& client, copper_server::api::packets::switches_to::play) {
+    client.packets_state.state = copper_server::base_objects::shared_client_data::packets_state_t::protocol_state::play;
     client.packets_state.internal_data.set([](auto& data) {
         data.extra_data = nullptr;
     });

@@ -17,19 +17,19 @@
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins::base::play_engine {
-    struct key_commands : public PluginAutoRegister<"base/play_engine/key_commands", key_commands> {
+    struct key_commands : public plugin_auto_register<"base/play_engine/key_commands", key_commands> {
         key_commands() {}
 
         ~key_commands() noexcept {}
 
-        void OnInitialization(const PluginRegistrationPtr& _) override {
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::lock_difficulty&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+        void on_initialization(const plugin_registration_ptr& _) override {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::lock_difficulty&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 base_objects::command_context context(client);
                 context.apply_executor_data();
                 api::command::get_manager().execute_command("lock_difficulty " + std::string(packet.is_locked ? "true" : "false"), context);
             });
 
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::change_difficulty&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::change_difficulty&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 base_objects::command_context context(client);
                 context.apply_executor_data();
                 std::string diff;
@@ -50,7 +50,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 api::command::get_manager().execute_command("difficulty " + diff, context);
             });
 
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::change_gamemode&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::change_gamemode&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 base_objects::command_context context(client);
                 context.apply_executor_data();
                 std::string gam;
@@ -70,7 +70,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
                 api::command::get_manager().execute_command("gamemode " + gam, context);
             });
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::teleport_to_entity&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::teleport_to_entity&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 if (client.player_data.gamemode == (uint8_t)api::packets::gamemode_e::spectator) {
                     auto entity_ = api::entity_id_map::get_entity(packet.uuid);
                     auto& client_entity_ = client.player_data.assigned_entity;

@@ -16,8 +16,8 @@
 #include <src/base_objects/slot.hpp>
 
 namespace copper_server::api::screens {
-    using base_screen = base_objects::SharedClientData::packets_state_t::play_data_t::screen;
-    using click_data = base_objects::SharedClientData::packets_state_t::play_data_t::screen::click_data;
+    using base_screen = base_objects::shared_client_data::packets_state_t::play_data_t::screen;
+    using click_data = base_objects::shared_client_data::packets_state_t::play_data_t::screen::click_data;
 
     namespace detail {
         //the generic supports only sizes supported by protocol:
@@ -43,7 +43,7 @@ namespace copper_server::api::screens {
                 return false;
             }
 
-            generic(base_objects::SharedClientData& client);
+            generic(base_objects::shared_client_data& client);
             virtual ~generic();
 
             virtual void clicked(const click_data&) = 0;
@@ -57,7 +57,7 @@ namespace copper_server::api::screens {
         struct _generic_custom_menu : public generic<x, y> {
             std::unordered_map<int32_t, base_objects::slot_data&> inventory;
 
-            _generic_custom_menu(base_objects::SharedClientData& client) : generic<x, y>(client) {}
+            _generic_custom_menu(base_objects::shared_client_data& client) : generic<x, y>(client) {}
             virtual ~_generic_custom_menu() = default;
             
             bool the_container_is_frozen() const override final {
@@ -135,12 +135,12 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        horse(base_objects::SharedClientData& client, api::ecs::entity entity);
+        horse(base_objects::shared_client_data& client, api::ecs::entity entity);
         virtual ~horse();
     };
 
     class anvil : public base_screen {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -163,12 +163,12 @@ namespace copper_server::api::screens {
         virtual void closed();
         void set_repair_cost(int16_t);
 
-        anvil(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        anvil(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~anvil();
     };
 
     class beacon : public base_screen {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -193,12 +193,12 @@ namespace copper_server::api::screens {
         void set_first_potion(int16_t);
         void set_second_potion(int16_t);
 
-        beacon(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        beacon(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~beacon();
     };
 
     class furnace : public base_screen {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -225,18 +225,18 @@ namespace copper_server::api::screens {
         void set_progress(int16_t);
         void set_max_progress(int16_t);
 
-        furnace(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        furnace(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~furnace();
     };
 
     class blast_furnace : public furnace {
     public:
-        blast_furnace(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        blast_furnace(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~blast_furnace();
     };
 
     class brewing_stand : public base_screen {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -264,12 +264,12 @@ namespace copper_server::api::screens {
         void set_brew_time(int16_t);
         void set_fuel_left(int16_t);
 
-        brewing_stand(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        brewing_stand(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~brewing_stand();
     };
 
     class cartography_table : public base_screen {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -293,12 +293,12 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        cartography_table(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        cartography_table(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~cartography_table();
     };
 
     class crafter_3x3 : public base_screen {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -322,12 +322,12 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        crafter_3x3(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        crafter_3x3(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~crafter_3x3();
     };
 
     class crafting : public base_screen {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -350,12 +350,12 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        crafting(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        crafting(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~crafting();
     };
 
     class enchantment : public base_screen {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -393,7 +393,7 @@ namespace copper_server::api::screens {
         void set_enchantment_lvl_bottom(int32_t level);
 
 
-        enchantment(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        enchantment(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~enchantment();
     };
 
@@ -406,7 +406,7 @@ namespace copper_server::api::screens {
     using generic_3x3 = detail::generic<3, 3>;
 
     class chest : public generic_9x3 {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
 
     public:
         bool has_item(int32_t) const override;
@@ -416,13 +416,13 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        chest(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        chest(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~chest();
     };
 
     class large_chest : public generic_9x6 {
-        util::XYZ<int32_t> pos0;
-        util::XYZ<int32_t> pos1;
+        util::xyz<int32_t> pos0;
+        util::xyz<int32_t> pos1;
 
     public:
         bool has_item(int32_t) const override;
@@ -431,7 +431,7 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        large_chest(base_objects::SharedClientData& client, util::XYZ<int32_t> pos0, util::XYZ<int32_t> pos1);
+        large_chest(base_objects::shared_client_data& client, util::xyz<int32_t> pos0, util::xyz<int32_t> pos1);
         virtual ~large_chest();
     };
 
@@ -445,7 +445,7 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        minecart_chest(base_objects::SharedClientData& client, api::ecs::entity entity);
+        minecart_chest(base_objects::shared_client_data& client, api::ecs::entity entity);
         virtual ~minecart_chest();
     };
 
@@ -457,12 +457,12 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        ender_chest(base_objects::SharedClientData& client);
+        ender_chest(base_objects::shared_client_data& client);
         virtual ~ender_chest();
     };
 
     class barrel : public generic_9x3 {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
 
     public:
         bool has_item(int32_t) const override;
@@ -471,12 +471,12 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        barrel(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        barrel(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~barrel();
     };
 
     class grindstone : public base_screen {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -499,12 +499,12 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        grindstone(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        grindstone(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~grindstone();
     };
 
     class hopper : public base_screen {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -524,12 +524,12 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        hopper(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        hopper(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~hopper();
     };
 
     class lectern : public base_screen {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -556,12 +556,12 @@ namespace copper_server::api::screens {
         virtual void closed();
         void set_page_number(int16_t); //yes this is limited by protocol, see container_set_data packet
 
-        lectern(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        lectern(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~lectern();
     };
 
     class loom : public base_screen {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -578,7 +578,7 @@ namespace copper_server::api::screens {
         virtual void closed();
         void set_selected_pattern(int16_t);
 
-        loom(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        loom(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~loom();
     };
 
@@ -605,12 +605,12 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        merchant(base_objects::SharedClientData& client, api::ecs::entity entity);
+        merchant(base_objects::shared_client_data& client, api::ecs::entity entity);
         virtual ~merchant();
     };
 
     class shulker_box : public base_screen {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -630,12 +630,12 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        shulker_box(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        shulker_box(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~shulker_box();
     };
 
     class smithing : public base_screen {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -659,18 +659,18 @@ namespace copper_server::api::screens {
         virtual void clicked(const click_data&);
         virtual void closed();
 
-        smithing(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        smithing(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~smithing();
     };
 
     class smoker : public furnace {
     public:
-        smoker(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        smoker(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~smoker();
     };
 
     class stonecutter : public base_screen {
-        util::XYZ<int32_t> pos;
+        util::xyz<int32_t> pos;
         void event_place_recipe(int32_t recipe_id, bool make_all) override;
         void event_button_click(int32_t button_id) override;
         void event_click(click_data& data) override;
@@ -694,7 +694,7 @@ namespace copper_server::api::screens {
         virtual void closed();
         void set_selected_recipe(int16_t);
 
-        stonecutter(base_objects::SharedClientData& client, util::XYZ<int32_t> pos);
+        stonecutter(base_objects::shared_client_data& client, util::xyz<int32_t> pos);
         virtual ~stonecutter();
     };
 
@@ -706,9 +706,9 @@ namespace copper_server::api::screens {
     using generic_custom_menu_9x6 = detail::_generic_custom_menu<9, 6>;
 
     template <class Screen, class... Args>
-    void open_screen(base_objects::SharedClientData& client, Args... arguments) {
+    void open_screen(base_objects::shared_client_data& client, Args... arguments) {
     }
 
-    void close_screen(base_objects::SharedClientData& client);
+    void close_screen(base_objects::shared_client_data& client);
 }
 #endif /* SRC_API_SCREENS */

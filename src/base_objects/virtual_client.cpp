@@ -28,6 +28,6 @@ namespace copper_server::base_objects {
         client->player_data.world_id = "virtual_client astral space";
         client->is_virtual = true;
         client->packets_state.protocol_version = api::registers::current_protocol_id;
-        client->packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::play;
+        client->packets_state.state = base_objects::shared_client_data::packets_state_t::protocol_state::play;
     }
 }

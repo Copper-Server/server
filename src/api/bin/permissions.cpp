@@ -17,7 +17,7 @@ namespace copper_server::api::permissions {
         perm = &manager;
     }
 
-    bool has_rights(const std::string& action_name, const base_objects::SharedClientData& client) {
+    bool has_rights(const std::string& action_name, const base_objects::shared_client_data& client) {
         if (perm == nullptr)
             return true;
         return perm->has_rights(action_name, client);
@@ -95,12 +95,12 @@ namespace copper_server::api::permissions {
         perm->remove_permission(permission_tag);
     }
 
-    bool is_in_group(const std::string& group_name, const base_objects::SharedClientData& client) {
+    bool is_in_group(const std::string& group_name, const base_objects::shared_client_data& client) {
         if (perm == nullptr)
             return true;
         return perm->is_in_group(group_name, client);
     }
-    
+
     void add_group(const base_objects::permission_group& group) {
         if (perm == nullptr)
             return;

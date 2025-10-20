@@ -15,21 +15,21 @@ namespace copper_server::util {
     extern const double pi;
 
     template <class T>
-    struct XYZW {
+    struct xyzw {
         T x;
         T y;
         T z;
         T w;
 
-        bool operator==(const XYZW& comp) {
+        bool operator==(const xyzw& comp) {
             return x == comp.x && y == comp.y && z == comp.z && w == comp.w;
         }
 
-        bool operator!=(const XYZW& comp) {
+        bool operator!=(const xyzw& comp) {
             return x != comp.x || y != comp.y || z != comp.z || w != comp.w;
         }
 
-        XYZW& operator+=(const XYZW& other) {
+        xyzw& operator+=(const xyzw& other) {
             x += other.x;
             y += other.y;
             z += other.z;
@@ -37,7 +37,7 @@ namespace copper_server::util {
             return *this;
         }
 
-        XYZW& operator-=(const XYZW& other) {
+        xyzw& operator-=(const xyzw& other) {
             x -= other.x;
             y -= other.y;
             z -= other.z;
@@ -45,7 +45,7 @@ namespace copper_server::util {
             return *this;
         }
 
-        XYZW& operator*=(const XYZW& other) {
+        xyzw& operator*=(const xyzw& other) {
             x *= other.x;
             y *= other.y;
             z *= other.z;
@@ -53,7 +53,7 @@ namespace copper_server::util {
             return *this;
         }
 
-        XYZW& operator/=(const XYZW& other) {
+        xyzw& operator/=(const xyzw& other) {
             x /= other.x;
             y /= other.y;
             z /= other.z;
@@ -62,43 +62,42 @@ namespace copper_server::util {
         }
     };
 
-
     template <class T>
-    struct XYZ {
+    struct xyz {
         T x;
         T y;
         T z;
 
-        bool operator==(const XYZ& comp) {
+        bool operator==(const xyz& comp) {
             return x == comp.x && y == comp.y && z == comp.z;
         }
 
-        bool operator!=(const XYZ& comp) {
+        bool operator!=(const xyz& comp) {
             return x != comp.x || y != comp.y || z != comp.z;
         }
 
-        XYZ& operator+=(const XYZ& other) {
+        xyz& operator+=(const xyz& other) {
             x += other.x;
             y += other.y;
             z += other.z;
             return *this;
         }
 
-        XYZ& operator-=(const XYZ& other) {
+        xyz& operator-=(const xyz& other) {
             x -= other.x;
             y -= other.y;
             z -= other.z;
             return *this;
         }
 
-        XYZ& operator*=(const XYZ& other) {
+        xyz& operator*=(const xyz& other) {
             x *= other.x;
             y *= other.y;
             z *= other.z;
             return *this;
         }
 
-        XYZ& operator/=(const XYZ& other) {
+        xyz& operator/=(const xyz& other) {
             x /= other.x;
             y /= other.y;
             z /= other.z;
@@ -106,121 +105,121 @@ namespace copper_server::util {
         }
     };
 
-    typedef XYZ<double> VECTOR;
+    typedef xyz<double> vector;
 
     template <class T>
-    struct XY {
+    struct xy {
         T x;
         T y;
 
-        bool operator==(const XY& comp) const {
+        bool operator==(const xy& comp) const {
             return x == comp.x && y == comp.y;
         }
 
-        bool operator!=(const XY& comp) const {
+        bool operator!=(const xy& comp) const {
             return x != comp.x || y != comp.y;
         }
 
-        XY& operator+=(const XY& other) {
+        xy& operator+=(const xy& other) {
             x += other.x;
             y += other.y;
             return *this;
         }
 
-        XY& operator-=(const XY& other) {
+        xy& operator-=(const xy& other) {
             x -= other.x;
             y -= other.y;
             return *this;
         }
 
-        XY& operator*=(const XY& other) {
+        xy& operator*=(const xy& other) {
             x *= other.x;
             y *= other.y;
             return *this;
         }
 
-        XY& operator/=(const XY& other) {
+        xy& operator/=(const xy& other) {
             x /= other.x;
             y /= other.y;
             return *this;
         }
     };
 
-    struct ANGLE_DEG {
+    struct angle_deg {
         double pitch;
         double yaw;
 
-        bool operator==(const ANGLE_DEG& comp) {
+        bool operator==(const angle_deg& comp) {
             return pitch == comp.pitch && yaw == comp.yaw;
         }
 
-        bool operator!=(const ANGLE_DEG& comp) {
+        bool operator!=(const angle_deg& comp) {
             return pitch != comp.pitch || yaw != comp.yaw;
         }
 
-        ANGLE_DEG& operator+=(const ANGLE_DEG& other) {
+        angle_deg& operator+=(const angle_deg& other) {
             pitch += other.pitch;
             yaw += other.yaw;
             return *this;
         }
 
-        ANGLE_DEG& operator-=(const ANGLE_DEG& other) {
+        angle_deg& operator-=(const angle_deg& other) {
             pitch -= other.pitch;
             yaw -= other.yaw;
             return *this;
         }
 
-        ANGLE_DEG& operator*=(const ANGLE_DEG& other) {
+        angle_deg& operator*=(const angle_deg& other) {
             pitch *= other.pitch;
             yaw *= other.yaw;
             return *this;
         }
 
-        ANGLE_DEG& operator/=(const ANGLE_DEG& other) {
+        angle_deg& operator/=(const angle_deg& other) {
             pitch /= other.pitch;
             yaw /= other.yaw;
             return *this;
         }
     };
 
-    struct ANGLE_RAD {
+    struct angle_rad {
         double pitch;
         double yaw;
 
-        bool operator==(ANGLE_RAD comp) {
+        bool operator==(angle_rad comp) {
             return pitch == comp.pitch && yaw == comp.yaw;
         }
 
-        bool operator!=(ANGLE_RAD comp) {
+        bool operator!=(angle_rad comp) {
             return pitch != comp.pitch || yaw != comp.yaw;
         }
 
-        ANGLE_RAD& operator+=(ANGLE_RAD other) {
+        angle_rad& operator+=(angle_rad other) {
             pitch += other.pitch;
             yaw += other.yaw;
             return *this;
         }
 
-        ANGLE_RAD& operator-=(ANGLE_RAD other) {
+        angle_rad& operator-=(angle_rad other) {
             pitch -= other.pitch;
             yaw -= other.yaw;
             return *this;
         }
 
-        ANGLE_RAD& operator*=(ANGLE_RAD other) {
+        angle_rad& operator*=(angle_rad other) {
             pitch *= other.pitch;
             yaw *= other.yaw;
             return *this;
         }
 
-        ANGLE_RAD& operator/=(ANGLE_RAD other) {
+        angle_rad& operator/=(angle_rad other) {
             pitch /= other.pitch;
             yaw /= other.yaw;
             return *this;
         }
     };
 
-    typedef XY<uint8_t> YAW_PITCH_256;
+    typedef xy<uint8_t> yaw_pitch_256;
 
     constexpr double DEG_TO_RAD = 3.14159265358979323846 / 180.0;
 
@@ -237,9 +236,9 @@ namespace copper_server::util {
     }
 
     template <class T>
-    inline XYZ<T> moved(ANGLE_RAD rot, T distance) {
+    inline xyz<T> moved(angle_rad rot, T distance) {
         T cos_pitch = cos(rot.pitch);
-        XYZ<T> offset;
+        xyz<T> offset;
         offset.x = static_cast<T>(cos(rot.yaw) * cos_pitch * distance);
         offset.y = static_cast<T>(sin(rot.yaw) * cos_pitch * distance);
         offset.z = static_cast<T>(sin(rot.pitch) * distance);
@@ -247,16 +246,16 @@ namespace copper_server::util {
     }
 
     template <class T>
-    inline XYZ<T> moved(const XYZ<T>& startPosition, const ANGLE_RAD& rot, T distance) {
-        XYZ<T> finalPosition = startPosition;
+    inline xyz<T> moved(const xyz<T>& startPosition, const angle_rad& rot, T distance) {
+        xyz<T> finalPosition = startPosition;
         finalPosition += moved(rot, distance);
         return finalPosition;
     }
 
     template <class T>
-    inline XYZ<T> moved(ANGLE_DEG rot, T distance) {
+    inline xyz<T> moved(angle_deg rot, T distance) {
         T cos_pitch = cosd(rot.pitch);
-        XYZ<T> offset;
+        xyz<T> offset;
         offset.x = static_cast<T>(cosd(rot.yaw) * cos_pitch * distance);
         offset.y = static_cast<T>(sind(rot.yaw) * cos_pitch * distance);
         offset.z = static_cast<T>(sind(rot.pitch) * distance);
@@ -264,21 +263,21 @@ namespace copper_server::util {
     }
 
     template <class T>
-    inline XYZ<T> moved(const XYZ<T>& startPosition, const ANGLE_DEG& rot, T distance) {
-        XYZ<T> finalPosition = startPosition;
+    inline xyz<T> moved(const xyz<T>& startPosition, const angle_deg& rot, T distance) {
+        xyz<T> finalPosition = startPosition;
         finalPosition += moved(rot, distance);
         return finalPosition;
     }
 
-    VECTOR convert(ANGLE_DEG rot);
+    vector convert(angle_deg rot);
     //convert to ANGLE as degrees 180*
-    ANGLE_DEG convert(VECTOR val);
-    VECTOR dif(VECTOR p0, VECTOR p1);
-    VECTOR normalize(VECTOR val);
-    VECTOR strength(VECTOR val, double mult);
-    VECTOR weak(VECTOR val, double div);
+    angle_deg convert(vector val);
+    vector dif(vector p0, vector p1);
+    vector normalize(vector val);
+    vector strength(vector val, double mult);
+    vector weak(vector val, double div);
 
-    ANGLE_DEG direction(VECTOR p0, VECTOR p1);
+    angle_deg direction(vector p0, vector p1);
 
 
     double rad_to_deg180(double val);
@@ -287,58 +286,58 @@ namespace copper_server::util {
     double rad_to_deg360(double val);
     double deg_to_rad360(double val);
 
-    inline double distance_sq(const VECTOR& p0, const VECTOR& p1) {
+    inline double distance_sq(const vector& p0, const vector& p1) {
         return (p0.x - p1.x) * (p0.x - p1.x) + (p0.y - p1.y) * (p0.y - p1.y) + (p0.z - p1.z) * (p0.z - p1.z);
     }
 
-    inline double distance(const VECTOR& p0, const VECTOR& p1) { //recommended to use squared distance
+    inline double distance(const vector& p0, const vector& p1) { //recommended to use squared distance
         return std::sqrt(distance_sq(p0, p1));
     }
 
-    YAW_PITCH_256 to_yaw_pitch_256(ANGLE_DEG val);
-    YAW_PITCH_256 to_yaw_pitch_256(ANGLE_RAD val);
-    YAW_PITCH_256 to_yaw_pitch_256(VECTOR val);
+    yaw_pitch_256 to_yaw_pitch_256(angle_deg val);
+    yaw_pitch_256 to_yaw_pitch_256(angle_rad val);
+    yaw_pitch_256 to_yaw_pitch_256(vector val);
 
     namespace minecraft {
-        VECTOR velocity(ANGLE_DEG rot, ANGLE_DEG speed);
-        VECTOR velocity(VECTOR pos, VECTOR target, double speed);
+        vector velocity(angle_deg rot, angle_deg speed);
+        vector velocity(vector pos, vector target, double speed);
 
         namespace packets {
             double velocity_clamp(double value);
             double velocity_round(double value);
             double velocity_deround(int64_t value);
-            XYZ<int16_t> velocity(VECTOR rot);
-            XYZ<int16_t> delta_move(XYZ<float> pos);
-            XY<int16_t> delta_move(XY<float> pos);
+            xyz<int16_t> velocity(vector rot);
+            xyz<int16_t> delta_move(xyz<float> pos);
+            xy<int16_t> delta_move(xy<float> pos);
         }
     }
 }
 
 namespace std {
     template <class T>
-    struct hash<copper_server::util::XYZ<T>> {
-        size_t operator()(const copper_server::util::XYZ<T>& val) const {
+    struct hash<copper_server::util::xyz<T>> {
+        size_t operator()(const copper_server::util::xyz<T>& val) const {
             return hash<T>()(val.x) ^ hash<T>()(val.y) ^ hash<T>()(val.z);
         }
     };
 
     template <class T>
-    struct hash<copper_server::util::XY<T>> {
-        size_t operator()(const copper_server::util::XY<T>& val) const {
+    struct hash<copper_server::util::xy<T>> {
+        size_t operator()(const copper_server::util::xy<T>& val) const {
             return hash<T>()(val.x) ^ hash<T>()(val.y);
         }
     };
 
     template <>
-    struct hash<copper_server::util::ANGLE_DEG> {
-        size_t operator()(const copper_server::util::ANGLE_DEG& val) const {
+    struct hash<copper_server::util::angle_deg> {
+        size_t operator()(const copper_server::util::angle_deg& val) const {
             return hash<double>()(val.pitch) ^ hash<double>()(val.yaw);
         }
     };
 
     template <>
-    struct hash<copper_server::util::ANGLE_RAD> {
-        size_t operator()(const copper_server::util::ANGLE_RAD& val) const {
+    struct hash<copper_server::util::angle_rad> {
+        size_t operator()(const copper_server::util::angle_rad& val) const {
             return hash<double>()(val.pitch) ^ hash<double>()(val.yaw);
         }
     };

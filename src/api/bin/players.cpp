@@ -39,10 +39,10 @@ namespace copper_server::api::players {
         std::atomic_size_t online;
 
     public:
-        void login_complete_to_cfg(base_objects::SharedClientData& player) {
+        void login_complete_to_cfg(base_objects::shared_client_data& player) {
             if (player.getAssignedData() != this)
                 throw std::runtime_error("player not assigned to this storage");
-            player.packets_state.state = base_objects::SharedClientData::packets_state_t::protocol_state::configuration;
+            player.packets_state.state = base_objects::shared_client_data::packets_state_t::protocol_state::configuration;
             ++online;
         }
 
@@ -50,15 +50,15 @@ namespace copper_server::api::players {
             return online;
         }
 
-        base_objects::client_data_holder allocate_special_player(const std::function<void(base_objects::SharedClientData&, base_objects::network::response&&)>& callback) {
+        base_objects::client_data_holder allocate_special_player(const std::function<void(base_objects::shared_client_data&, base_objects::network::response&&)>& callback) {
             std::unique_lock lock(mutex);
-            players.push_back(new base_objects::SharedClientData((api::network::tcp::session*)nullptr, this, callback));
+            players.push_back(new base_objects::shared_client_data((api::network::tcp::session*)nullptr, this, callback));
             return players.back();
         }
 
         base_objects::client_data_holder allocate_player(api::network::tcp::session* session) {
             std::unique_lock lock(mutex);
-            players.push_back(new base_objects::SharedClientData(session, this));
+            players.push_back(new base_objects::shared_client_data(session, this));
             return players.back();
         }
 
@@ -66,7 +66,7 @@ namespace copper_server::api::players {
             return players.size();
         }
 
-        size_t size(base_objects::SharedClientData::packets_state_t::protocol_state select_state) {
+        size_t size(base_objects::shared_client_data::packets_state_t::protocol_state select_state) {
             std::unique_lock lock(mutex);
             size_t result = 0;
             for (auto& player : players)
@@ -83,7 +83,7 @@ namespace copper_server::api::players {
             return false;
         }
 
-        bool has_player_status(const std::string& player, base_objects::SharedClientData::packets_state_t::protocol_state select_state) {
+        bool has_player_status(const std::string& player, base_objects::shared_client_data::packets_state_t::protocol_state select_state) {
             std::unique_lock lock(mutex);
             for (auto& p : players)
                 if (bool(p->packets_state.state & select_state) && p->name == player)
@@ -91,7 +91,7 @@ namespace copper_server::api::players {
             return false;
         }
 
-        bool has_player_not_status(const std::string& player, base_objects::SharedClientData::packets_state_t::protocol_state select_state) {
+        bool has_player_not_status(const std::string& player, base_objects::shared_client_data::packets_state_t::protocol_state select_state) {
             std::unique_lock lock(mutex);
             for (auto& p : players)
                 if (!bool(p->packets_state.state & select_state) && p->name == player)
@@ -111,7 +111,7 @@ namespace copper_server::api::players {
             size_t i = 0;
             for (auto& p : players) {
                 if (p == player) {
-                    if (!bool(p->packets_state.state & base_objects::SharedClientData::packets_state_t::protocol_state::initialization))
+                    if (!bool(p->packets_state.state & base_objects::shared_client_data::packets_state_t::protocol_state::initialization))
                         --online;
                     players.erase(i);
                     return;
@@ -125,7 +125,7 @@ namespace copper_server::api::players {
             size_t i = 0;
             for (auto& p : players) {
                 if (p->name == player) {
-                    if (!bool(p->packets_state.state & base_objects::SharedClientData::packets_state_t::protocol_state::initialization) && p->canBeRemoved())
+                    if (!bool(p->packets_state.state & base_objects::shared_client_data::packets_state_t::protocol_state::initialization) && p->canBeRemoved())
                         --online;
                     players.erase(i);
                     return;
@@ -134,7 +134,7 @@ namespace copper_server::api::players {
             }
         }
 
-        base_objects::client_data_holder get_player(base_objects::SharedClientData& player) {
+        base_objects::client_data_holder get_player(base_objects::shared_client_data& player) {
             std::unique_lock lock(mutex);
             for (auto& p : players)
                 if (&*p == &player)
@@ -150,7 +150,7 @@ namespace copper_server::api::players {
             return nullptr;
         }
 
-        base_objects::client_data_holder get_player(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::string& player) {
+        base_objects::client_data_holder get_player(base_objects::shared_client_data::packets_state_t::protocol_state select_state, const std::string& player) {
             std::unique_lock lock(mutex);
             for (auto& p : players)
                 if (bool(p->packets_state.state & select_state) && p->name == player)
@@ -158,7 +158,7 @@ namespace copper_server::api::players {
             return nullptr;
         }
 
-        base_objects::client_data_holder get_player_not_state(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::string& player) {
+        base_objects::client_data_holder get_player_not_state(base_objects::shared_client_data::packets_state_t::protocol_state select_state, const std::string& player) {
             std::unique_lock lock(mutex);
             for (auto& p : players)
                 if (!bool(p->packets_state.state & select_state) && p->name == player)
@@ -171,7 +171,7 @@ namespace copper_server::api::players {
             return players;
         }
 
-        void apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(base_objects::SharedClientData&)>&& callback) {
+        void apply_selector(base_objects::shared_client_data& caller, const std::string& selector, std::function<void(base_objects::shared_client_data&)>&& callback) {
             api::selector sel;
             sel.build_selector(selector);
             base_objects::command_context context(caller, true);
@@ -183,11 +183,11 @@ namespace copper_server::api::players {
             });
         }
 
-        void iterate_online(const std::function<bool(base_objects::SharedClientData&)>& callback) {
-            iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state::play, callback);
+        void iterate_online(const std::function<bool(base_objects::shared_client_data&)>& callback) {
+            iterate_players(base_objects::shared_client_data::packets_state_t::protocol_state::play, callback);
         }
 
-        void iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::SharedClientData&)>& callback) {
+        void iterate_players(base_objects::shared_client_data::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::shared_client_data&)>& callback) {
             std::unique_lock lock(mutex);
             for (auto& player : players)
                 if (bool(player->packets_state.state & select_state))
@@ -195,7 +195,7 @@ namespace copper_server::api::players {
                         break;
         }
 
-        void iterate_players_not_state(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::SharedClientData&)>& callback) {
+        void iterate_players_not_state(base_objects::shared_client_data::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::shared_client_data&)>& callback) {
             std::unique_lock lock(mutex);
             for (auto& player : players)
                 if (bool(player->packets_state.state & select_state))
@@ -203,7 +203,7 @@ namespace copper_server::api::players {
                         break;
         }
 
-        void iterate_players(const std::function<bool(base_objects::SharedClientData&)>& callback) {
+        void iterate_players(const std::function<bool(base_objects::shared_client_data&)>& callback) {
             std::unique_lock lock(mutex);
             for (auto& player : players)
                 if (callback(*player))
@@ -240,7 +240,7 @@ namespace copper_server::api::players {
         }
 
         template <__internal__::string_... Args>
-        list_array<base_objects::client_data_holder> get_players_state(base_objects::SharedClientData::packets_state_t::protocol_state select_state, Args&&... args) {
+        list_array<base_objects::client_data_holder> get_players_state(base_objects::shared_client_data::packets_state_t::protocol_state select_state, Args&&... args) {
             list_array<base_objects::client_data_holder> cache;
             cache.reserve(sizeof...(Args));
             list_array __players = {std::forward<Args>(args)...};
@@ -278,9 +278,9 @@ namespace copper_server::api::players {
 
     namespace handlers {
         base_objects::events::event<base_objects::client_data_holder> on_disconnect;
-        base_objects::events::sync_event_no_cancel<base_objects::SharedClientData&> on_tab_listing_changed;
-        base_objects::events::sync_event_no_cancel<base_objects::SharedClientData&> on_skin_parts_changed;
-        base_objects::events::sync_event_no_cancel<base_objects::SharedClientData&> on_gamemode_changed;
+        base_objects::events::sync_event_no_cancel<base_objects::shared_client_data&> on_tab_listing_changed;
+        base_objects::events::sync_event_no_cancel<base_objects::shared_client_data&> on_skin_parts_changed;
+        base_objects::events::sync_event_no_cancel<base_objects::shared_client_data&> on_gamemode_changed;
     }
 
     auto& get_storage() {
@@ -288,7 +288,7 @@ namespace copper_server::api::players {
         return ops;
     }
 
-    void login_complete_to_cfg(base_objects::SharedClientData& player) {
+    void login_complete_to_cfg(base_objects::shared_client_data& player) {
         get_storage().login_complete_to_cfg(player);
     }
 
@@ -296,17 +296,17 @@ namespace copper_server::api::players {
         return get_storage().online_players();
     }
 
-    void set_gamemode(uint8_t gamemode, base_objects::SharedClientData& client) {
+    void set_gamemode(uint8_t gamemode, base_objects::shared_client_data& client) {
         client.player_data.gamemode = gamemode;
         handlers::on_gamemode_changed.notify(client);
     }
 
-    void set_tab_listing(bool enable, base_objects::SharedClientData& client) {
+    void set_tab_listing(bool enable, base_objects::shared_client_data& client) {
         client.enable_tab_listings = enable;
         handlers::on_tab_listing_changed.notify(client);
     }
 
-    base_objects::client_data_holder allocate_special_player(const std::function<void(base_objects::SharedClientData&, base_objects::network::response&&)>& callback) {
+    base_objects::client_data_holder allocate_special_player(const std::function<void(base_objects::shared_client_data&, base_objects::network::response&&)>& callback) {
         return get_storage().allocate_special_player(callback);
     }
 
@@ -318,7 +318,7 @@ namespace copper_server::api::players {
         return get_storage().size();
     }
 
-    size_t size(base_objects::SharedClientData::packets_state_t::protocol_state select_state) {
+    size_t size(base_objects::shared_client_data::packets_state_t::protocol_state select_state) {
         return get_storage().size(select_state);
     }
 
@@ -326,11 +326,11 @@ namespace copper_server::api::players {
         return get_storage().has_player(player);
     }
 
-    bool has_player_status(const std::string& player, base_objects::SharedClientData::packets_state_t::protocol_state select_state) {
+    bool has_player_status(const std::string& player, base_objects::shared_client_data::packets_state_t::protocol_state select_state) {
         return get_storage().has_player_status(player, select_state);
     }
 
-    bool has_player_not_status(const std::string& player, base_objects::SharedClientData::packets_state_t::protocol_state select_state) {
+    bool has_player_not_status(const std::string& player, base_objects::shared_client_data::packets_state_t::protocol_state select_state) {
         return get_storage().has_player_not_status(player, select_state);
     }
 
@@ -342,7 +342,7 @@ namespace copper_server::api::players {
         get_storage().remove_player(player);
     }
 
-    base_objects::client_data_holder get_player(base_objects::SharedClientData& player) {
+    base_objects::client_data_holder get_player(base_objects::shared_client_data& player) {
         return get_storage().get_player(player);
     }
 
@@ -350,11 +350,11 @@ namespace copper_server::api::players {
         return get_storage().get_player(player);
     }
 
-    base_objects::client_data_holder get_player(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::string& player) {
+    base_objects::client_data_holder get_player(base_objects::shared_client_data::packets_state_t::protocol_state select_state, const std::string& player) {
         return get_storage().get_player(select_state, player);
     }
 
-    base_objects::client_data_holder get_player_not_state(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::string& player) {
+    base_objects::client_data_holder get_player_not_state(base_objects::shared_client_data::packets_state_t::protocol_state select_state, const std::string& player) {
         return get_storage().get_player_not_state(select_state, player);
     }
 
@@ -362,23 +362,23 @@ namespace copper_server::api::players {
         return get_storage().get_players();
     }
 
-    void apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(base_objects::SharedClientData&)>&& callback) {
+    void apply_selector(base_objects::shared_client_data& caller, const std::string& selector, std::function<void(base_objects::shared_client_data&)>&& callback) {
         get_storage().apply_selector(caller, selector, std::move(callback));
     }
 
-    void iterate_online(const std::function<bool(base_objects::SharedClientData&)>& callback) {
+    void iterate_online(const std::function<bool(base_objects::shared_client_data&)>& callback) {
         get_storage().iterate_online(callback);
     }
 
-    void iterate_players(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::SharedClientData&)>& callback) {
+    void iterate_players(base_objects::shared_client_data::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::shared_client_data&)>& callback) {
         get_storage().iterate_players(select_state, callback);
     }
 
-    void iterate_players_not_state(base_objects::SharedClientData::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::SharedClientData&)>& callback) {
+    void iterate_players_not_state(base_objects::shared_client_data::packets_state_t::protocol_state select_state, const std::function<bool(base_objects::shared_client_data&)>& callback) {
         get_storage().iterate_players_not_state(select_state, callback);
     }
 
-    void iterate_players(const std::function<bool(base_objects::SharedClientData&)>& callback) {
+    void iterate_players(const std::function<bool(base_objects::shared_client_data&)>& callback) {
         get_storage().iterate_players(callback);
     }
 

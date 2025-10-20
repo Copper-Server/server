@@ -22,9 +22,9 @@ namespace copper_server::storage {
     public:
         list_storage(const std::filesystem::path& path);
 
-        void add(const std::string& value);
+        bool add(const std::string& value);
         bool contains(const std::string& value);
-        void remove(const std::string& value);
+        bool remove(const std::string& value);
 
         list_array<std::string> entrys(size_t max_items, bool& max_reached);
 

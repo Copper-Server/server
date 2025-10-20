@@ -16,26 +16,26 @@
 
 namespace copper_server::base_objects {
 
-    SharedClientData::packets_state_t::play_data_t::screen::screen(base_objects::SharedClientData& client) : client(client) {}
+    shared_client_data::packets_state_t::play_data_t::screen::screen(base_objects::shared_client_data& client) : client(client) {}
 
-    void SharedClientData::packets_state_t::play_data_t::screen::close() {
+    void shared_client_data::packets_state_t::play_data_t::screen::close() {
         client << api::packets::client_bound::play::container_close{.windows_id = get_windows_id()};
         client.packets_state.get_play_data([&](auto& play_data) { play_data.current_screen.reset(); });
     }
 
-    void SharedClientData::packets_state_t::play_data_t::screen::set_data(int16_t prop, int16_t data) {
+    void shared_client_data::packets_state_t::play_data_t::screen::set_data(int16_t prop, int16_t data) {
         client << api::packets::client_bound::play::container_set_data{.windows_id = get_windows_id(), .value = api::packets::client_bound::play::container_set_data::other{.property = prop, .value = data}};
     }
 
-    void SharedClientData::packets_state_t::play_data_t::screen::set_slot(int32_t slot, const base_objects::slot& item) {
+    void shared_client_data::packets_state_t::play_data_t::screen::set_slot(int32_t slot, const base_objects::slot& item) {
         client << api::packets::client_bound::play::container_set_slot{.windows_id = get_windows_id(), .slot = (int16_t)slot, .item = item.to_packet()};
     }
 
-    void SharedClientData::packets_state_t::play_data_t::screen::set_slot(int32_t slot, const base_objects::slot_data& item) {
+    void shared_client_data::packets_state_t::play_data_t::screen::set_slot(int32_t slot, const base_objects::slot_data& item) {
         client << api::packets::client_bound::play::container_set_slot{.windows_id = get_windows_id(), .slot = (int16_t)slot, .item = item.to_packet()};
     }
 
-    void SharedClientData::packets_state_t::play_data_t::screen::update_content() {
+    void shared_client_data::packets_state_t::play_data_t::screen::update_content() {
         client << api::packets::client_bound::play::container_set_content{
             .windows_id = get_windows_id(),
             .state_id = state_id++,
@@ -52,7 +52,7 @@ namespace copper_server::base_objects {
         };
     }
 
-    void SharedClientData::packets_state_t::play_data_t::screen::drop_item(const base_objects::slot& item) {
+    void shared_client_data::packets_state_t::play_data_t::screen::drop_item(const base_objects::slot& item) {
         if (!item)
             return;
         if (client.player_data.assigned_entity) {
@@ -68,25 +68,30 @@ namespace copper_server::base_objects {
         }
     }
 
-    void SharedClientData::packets_state_t::play_data_t::screen::set_held_item(const base_objects::slot_data& item) {
+    void shared_client_data::packets_state_t::play_data_t::screen::set_held_item(const base_objects::slot_data& item) {
         client << api::packets::client_bound::play::set_cursor_item{
             .item = item.to_packet()
         };
     }
 
-    SharedClientData::SharedClientData(api::network::tcp::session* ss, void* assigned_data, std::function<void(base_objects::SharedClientData& self, base_objects::network::response&&)> special_callback)
+    shared_client_data::shared_client_data(api::network::tcp::session* ss, void* assigned_data, std::function<void(base_objects::shared_client_data& self, base_objects::network::response&&)> special_callback)
         : player_data(reinterpret_cast<player&>(*new player())), special_callback(special_callback), assigned_data(assigned_data), ss(ss), skin_parts() {}
 
-    void SharedClientData::send_indirect(base_objects::network::response&& resp) {
+    void shared_client_data::send_indirect(base_objects::network::response&& resp) {
         ss->send_indirect(std::move(resp));
     }
 
-    SharedClientData::~SharedClientData() {
+    shared_client_data::~shared_client_data() {
         delete &player_data;
     }
 
-    bool SharedClientData::is_active() const {
+    bool shared_client_data::is_active() const {
         return special_callback ? true : ss ? ss->is_active()
                                             : false;
+    }
+
+    void shared_client_data::deactivate() {
+        special_callback = nullptr;
+        ss = nullptr;
     }
 }

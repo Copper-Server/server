@@ -354,30 +354,30 @@ namespace copper_server {
                 WriteValue<ArrayT>(it, data);
     }
 
-    static util::NBT ReadNBT(ArrayStream& data) {
+    static util::nbt ReadNBT(ArrayStream& data) {
         size_t readed = 0;
-        util::NBT res(util::NBT::readNBT(data.data_read(), data.size_read(), readed));
+        util::nbt res(util::nbt::readNBT(data.data_read(), data.size_read(), readed));
         data.range_read(readed);
         return res;
     }
 
     static enbt::value ReadNBT_enbt(ArrayStream& data) {
         size_t readed = 0;
-        auto res = util::NBT::readNBT_asENBT(data.data_read(), data.size_read(), readed);
+        auto res = util::nbt::readNBT_asENBT(data.data_read(), data.size_read(), readed);
         data.range_read(readed);
         return res;
     }
 
-    static util::NBT ReadNetworkNBT(ArrayStream& data) {
+    static util::nbt ReadNetworkNBT(ArrayStream& data) {
         size_t readed = 0;
-        util::NBT res(util::NBT::readNetworkNBT(data.data_read(), data.size_read(), readed));
+        util::nbt res(util::nbt::readNetworkNBT(data.data_read(), data.size_read(), readed));
         data.range_read(readed);
         return res;
     }
 
     static enbt::value ReadNetworkNBT_enbt(ArrayStream& data) {
         size_t readed = 0;
-        auto res = util::NBT::readNetworkNBT_asENBT(data.data_read(), data.size_read(), readed);
+        auto res = util::nbt::readNetworkNBT_asENBT(data.data_read(), data.size_read(), readed);
         data.range_read(readed);
         return res;
     }

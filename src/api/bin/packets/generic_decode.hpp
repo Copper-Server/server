@@ -22,7 +22,7 @@ namespace copper_server::api::packets {
     };
 
     template <class T, class Prev_T>
-    void decode_entry(base_objects::SharedClientData& context, ArrayStream& stream, T& value, Prev_T* prev) {
+    void decode_entry(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev) {
         static_assert(std::is_copy_constructible_v<T>);
         static_assert(std::is_move_constructible_v<T>);
         static_assert(std::is_copy_assignable_v<T>);
@@ -273,8 +273,8 @@ namespace copper_server::api::packets {
             for (size_t i = 0; i < bit.size(); i++)
                 bit.data()[i] = stream.read_value<uint8_t>();
             static constexpr auto type_table = []<size_t... I>(std::index_sequence<I...>) {
-                return std::array<void (*)(base_objects::SharedClientData& context, ArrayStream& stream, T& value, Prev_T* prev), sizeof...(I)>{
-                    [](base_objects::SharedClientData& context, ArrayStream& stream, T& value, Prev_T* prev) {
+                return std::array<void (*)(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev), sizeof...(I)>{
+                    [](base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev) {
                         using DT = std::tuple_element_t<I, Tupple_T>::value_type;
                         DT v{};
                         decode_entry(context, stream, v, prev);
@@ -306,7 +306,7 @@ namespace copper_server::api::packets {
     }
 
     template <class Ops, class T>
-    bool decoder_make_process(base_objects::SharedClientData& context, T&& value) {
+    bool decoder_make_process(base_objects::shared_client_data& context, T&& value) {
         if (Ops::receive_viewer().notify(value, context))
             return false;
 

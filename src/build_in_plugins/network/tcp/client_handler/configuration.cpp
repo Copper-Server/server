@@ -22,7 +22,7 @@
 #include <src/resources/registers.hpp>
 
 namespace copper_server::build_in_plugins::network::tcp::client_handler {
-    struct tcp_configuration : public PluginAutoRegister<"network/tcp_configuration", tcp_configuration> {
+    struct tcp_configuration : public plugin_auto_register<"network/tcp_configuration", tcp_configuration> {
         struct ResourcePackData {
             bool required : 1 = false;
         };
@@ -30,11 +30,11 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
         struct extra_data_t {
             bool packs_requested = false;
             keep_alive_solution ka_solution;
-            list_array<PluginRegistrationPtr> active_plugins{};
+            list_array<plugin_registration_ptr> active_plugins{};
             std::unordered_map<enbt::raw_uuid, ResourcePackData> pending_resource_packs;
             bool code_of_conduct_is_accepted = false;
 
-            static extra_data_t& get(base_objects::SharedClientData& client) {
+            static extra_data_t& get(base_objects::shared_client_data& client) {
                 return *client.packets_state.internal_data.set([&](auto& data) {
                     if (!data.extra_data) {
                         auto allocated = new extra_data_t{.ka_solution = client.get_session()};
@@ -45,7 +45,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             }
         };
 
-        static void send_tags(base_objects::SharedClientData& client) {
+        static void send_tags(base_objects::shared_client_data& client) {
             api::packets::client_bound::config::update_tags::entry block;
             block.registry_id = "minecraft:block";
             for (auto& [id, values] : api::tags::view_tag(api::tags::builtin_entry::block, "minecraft"))
@@ -122,7 +122,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             return api::packets::encode(std::move(res));
         }
 
-        static void send_registry_data(base_objects::SharedClientData& client) {
+        static void send_registry_data(base_objects::shared_client_data& client) {
             static base_objects::network::response data;
             if (!data.has_data()) {
                 { // minecraft:trim_material
@@ -482,7 +482,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             client.sendPacket(base_objects::network::response(data));
         }
 
-        static void send_code_of_conduct_from_file(base_objects::SharedClientData& client, const std::filesystem::path& path) {
+        static void send_code_of_conduct_from_file(base_objects::shared_client_data& client, const std::filesystem::path& path) {
             fast_task::files::async_iofstream read(path, std::ios::in);
             if (!read.is_open()) {
                 static std::string generic_code_of_conduct = "Be nice!";
@@ -498,7 +498,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             }
         }
 
-        static void send_code_of_conduct(base_objects::SharedClientData& client) {
+        static void send_code_of_conduct(base_objects::shared_client_data& client) {
             auto codeofconduct_path = api::configuration::get().server.get_storage_path() / "codeofconduct";
             auto player_code_of_conduct = codeofconduct_path / (client.locale + ".txt");
             auto default_code_of_conduct = codeofconduct_path / ("en_us.txt");
@@ -526,7 +526,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             client << api::packets::client_bound::config::code_of_conduct{.text = generic_code_of_conduct};
         }
 
-        static void make_finish(base_objects::SharedClientData& client) {
+        static void make_finish(base_objects::shared_client_data& client) {
             if (api::configuration::get().game_play.enable_code_of_conduct) {
                 if (!extra_data_t::get(client).code_of_conduct_is_accepted) {
                     send_code_of_conduct(client);
@@ -543,7 +543,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             }
         }
 
-        void OnRegister(const PluginRegistrationPtr&) override {
+        void on_register(const plugin_registration_ptr&) override {
             using client_information = api::packets::server_bound::config::client_information;
             using cookie_response = api::packets::server_bound::config::cookie_response;
             using custom_payload = api::packets::server_bound::config::custom_payload;
@@ -555,24 +555,24 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             using custom_click_action = api::packets::server_bound::config::custom_click_action;
             using accept_code_of_conduct = api::packets::server_bound::config::accept_code_of_conduct;
 
-            api::packets::send_viewer(*this, [](const client_bound_resource_pack& packet, base_objects::SharedClientData& client) {
+            api::packets::send_viewer(*this, [](const client_bound_resource_pack& packet, base_objects::shared_client_data& client) {
                 extra_data_t::get(client).pending_resource_packs[packet.uuid] = {.required = packet.forced};
                 return false;
             });
-            api::packets::processor(*this, [](client_information&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](client_information&& packet, base_objects::shared_client_data& client) {
                 client.locale = packet.locale.value;
                 client.view_distance = (uint8_t)std::min<uint32_t>(packet.view_distance, api::configuration::get().game_play.view_distance);
-                client.chat_mode = (base_objects::SharedClientData::ChatMode)packet.chat_mode.value;
+                client.chat_mode = (base_objects::shared_client_data::ChatMode)packet.chat_mode.value;
                 client.enable_chat_colors = packet.enable_chat_colors;
                 client.skin_parts.mask = packet.displayed_skin_parts.get();
-                client.main_hand = (base_objects::SharedClientData::MainHand)packet.main_hand.value;
+                client.main_hand = (base_objects::shared_client_data::MainHand)packet.main_hand.value;
                 client.enable_filtering = packet.enable_text_filtering;
                 client.allow_server_listings = packet.allow_server_listings;
-                client.particle_status = (base_objects::SharedClientData::ParticleStatus)packet.particle_status.value;
+                client.particle_status = (base_objects::shared_client_data::ParticleStatus)packet.particle_status.value;
                 if (client.get_session())
                     client.get_session()->request_buffer(api::configuration::get().protocol.buffer);
                 auto& data = extra_data_t::get(client);
-                data.ka_solution.set_callback([](int64_t res, base_objects::SharedClientData& client) {
+                data.ka_solution.set_callback([](int64_t res, base_objects::shared_client_data& client) {
                     client << api::packets::client_bound::config::keep_alive{.keep_alive_id = (uint64_t)res};
                 });
                 client << api::packets::client_bound::config::select_known_packs{
@@ -588,15 +588,15 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 data.packs_requested = true;
                 data.ka_solution.start();
             });
-            api::packets::processor(*this, [](cookie_response&& packet, base_objects::SharedClientData& client) {
-                if (auto plugin = pluginManagement.get_bind_cookies(PluginManagement::registration_on::configuration, packet.key); plugin)
-                    if (plugin->OnConfigurationCookie(plugin, packet.key, packet.payload ? *packet.payload : list_array<uint8_t>{}, client)) {
+            api::packets::processor(*this, [](cookie_response&& packet, base_objects::shared_client_data& client) {
+                if (auto plugin = plugin_management.get_bind_cookies(plugin_management_system::registration_on::configuration, packet.key); plugin)
+                    if (plugin->on_configuration_cookie(plugin, packet.key, packet.payload ? *packet.payload : list_array<uint8_t>{}, client)) {
                         extra_data_t::get(client).active_plugins.remove(plugin);
                         make_finish(client);
                     }
             });
-            api::packets::processor(*this, [](custom_payload&& packet, base_objects::SharedClientData& client) {
-                auto it = pluginManagement.get_bind_plugin(PluginManagement::registration_on::configuration, packet.channel);
+            api::packets::processor(*this, [](custom_payload&& packet, base_objects::shared_client_data& client) {
+                auto it = plugin_management.get_bind_plugin(plugin_management_system::registration_on::configuration, packet.channel);
                 if (it == nullptr) {
                     extra_data_t::get(client).active_plugins.remove(it);
                     make_finish(client);
@@ -604,12 +604,12 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                 }
                 if (it != nullptr)
                     packet.payload.commit();
-                if (it->OnConfigurationHandle(it, packet.channel, packet.payload, client)) {
+                if (it->on_configuration_handle(it, packet.channel, packet.payload, client)) {
                     extra_data_t::get(client).active_plugins.remove(it);
                     make_finish(client);
                 }
             });
-            api::packets::receive_viewer(*this, [](const api::packets::server_bound::config::finish_configuration&, base_objects::SharedClientData& client) {
+            api::packets::receive_viewer(*this, [](const api::packets::server_bound::config::finish_configuration&, base_objects::shared_client_data& client) {
                 if (extra_data_t::get(client).packs_requested) {
                     if (extra_data_t::get(client).active_plugins.empty()) {
                         if (extra_data_t::get(client).pending_resource_packs.empty()) {
@@ -628,19 +628,19 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     client << api::packets::client_bound::play::disconnect{.reason = "Nope, gimme packs!"};
                 return true;
             });
-            api::packets::processor(*this, [](keep_alive&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](keep_alive&& packet, base_objects::shared_client_data& client) {
                 auto delay = extra_data_t::get(client).ka_solution.got_valid_keep_alive((int64_t)packet.keep_alive_id);
                 client.packets_state.keep_alive_ping_ms = (int32_t)std::min<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(delay).count(), INT32_MAX);
             });
-            api::packets::send_viewer(*this, [](api::packets::client_bound::config::ping&, base_objects::SharedClientData& client) {
+            api::packets::send_viewer(*this, [](api::packets::client_bound::config::ping&, base_objects::shared_client_data& client) {
                 client.packets_state.pong_timer = std::chrono::system_clock::now();
                 return true;
             });
-            api::packets::processor(*this, [](pong&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](pong&& packet, base_objects::shared_client_data& client) {
                 if (packet.ping_request_id.is_valid)
                     client.ping = std::chrono::duration_cast<std::chrono::milliseconds>(client.packets_state.pong_timer - std::chrono::system_clock::now());
             });
-            api::packets::processor(*this, [](resource_pack&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](resource_pack&& packet, base_objects::shared_client_data& client) {
                 auto& data = extra_data_t::get(client);
                 auto res = data.pending_resource_packs.find(packet.uuid);
                 if (res != data.pending_resource_packs.end()) {
@@ -661,21 +661,21 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     make_finish(client);
                 }
             });
-            api::packets::processor(*this, [](select_known_packs&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](select_known_packs&& packet, base_objects::shared_client_data& client) {
                 send_registry_data(client);
                 send_tags(client);
-                pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::configuration, [&client, &packet](PluginRegistrationPtr plugin) {
-                    if (!plugin->OnConfiguration(client)) {
-                        if (!plugin->OnConfiguration_gotKnownPacks(client, packet))
+                plugin_management.inspect_plugin_registration(plugin_management_system::registration_on::configuration, [&client, &packet](plugin_registration_ptr plugin) {
+                    if (!plugin->on_configuration(client)) {
+                        if (!plugin->on_configuration_got_known_packs(client, packet))
                             extra_data_t::get(client).active_plugins.push_back(plugin);
                     }
                 });
                 make_finish(client);
             });
-            api::packets::processor(*this, [](custom_click_action&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](custom_click_action&& packet, base_objects::shared_client_data& client) {
                 api::dialogs::pass_dialog(packet.id, client, std::move(packet.payload));
             });
-            api::packets::processor(*this, [](accept_code_of_conduct&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](accept_code_of_conduct&& packet, base_objects::shared_client_data& client) {
                 extra_data_t::get(client).code_of_conduct_is_accepted = true;
             });
         }

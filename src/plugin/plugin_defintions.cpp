@@ -15,12 +15,16 @@ namespace copper_server {
             return list;
         }
 
-        void register_configuration(const PluginRegistrationPtr& self) {
-            pluginManagement.registerPluginOn(self, PluginManagement::registration_on::configuration);
+        void register_configuration(const plugin_registration_ptr& self) {
+            plugin_management.register_plugin_on(self, plugin_management_system::registration_on::configuration);
         }
 
-        void register_play(const PluginRegistrationPtr& self) {
-            pluginManagement.registerPluginOn(self, PluginManagement::registration_on::play);
+        void register_play(const plugin_registration_ptr& self) {
+            plugin_management.register_plugin_on(self, plugin_management_system::registration_on::play);
+        }
+
+        void register_ecs_system_registrator(const plugin_registration_ptr& self) {
+            plugin_management.register_plugin_ecs_system(self);
         }
     }
 }

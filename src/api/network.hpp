@@ -16,8 +16,8 @@ namespace copper_server::base_objects {
     namespace network::tcp {
         class client;
     }
-    struct SharedClientData;
-    using client_data_holder = atomic_holder<SharedClientData>;
+    struct shared_client_data;
+    using client_data_holder = atomic_holder<shared_client_data>;
 }
 
 namespace copper_server::api::network {

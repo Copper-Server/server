@@ -14,13 +14,13 @@
 #include <functional>
 
 namespace copper_server::base_objects {
-    struct SharedClientData;
+    struct shared_client_data;
 }
 
 namespace copper_server::api::dialogs {
     //client could be in two states, configuration and play
-    void register_dialog(const std::string& id, std::function<void(base_objects::SharedClientData& client, enbt::value&& payload)>&& fn);
-    void pass_dialog(const std::string& id, base_objects::SharedClientData& client, enbt::value&& payload);
+    void register_dialog(const std::string& id, std::function<void(base_objects::shared_client_data& client, enbt::value&& payload)>&& fn);
+    void pass_dialog(const std::string& id, base_objects::shared_client_data& client, enbt::value&& payload);
     void unload_dialog(const std::string& id);
 }
 

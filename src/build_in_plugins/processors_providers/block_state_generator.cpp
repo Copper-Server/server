@@ -12,8 +12,8 @@
 
 namespace copper_server::build_in_plugins::processors_providers {
     //provides generator and registers default handles, custom handles can be added via api
-    struct block_state_generator : public PluginAutoRegister<"processors_provider/block_state_generator", block_state_generator> {
-        void OnInitialization(const PluginRegistrationPtr&) override {
+    struct block_state_generator : public plugin_auto_register<"processors_provider/block_state_generator", block_state_generator> {
+        void on_initialization(const plugin_registration_ptr&) override {
             api::block_state_provider::register_handler("simple_state_provider", [](const enbt::compound_const_ref& config, [[maybe_unused]] enbt::compound& local_state) {
                 auto& state = config["state"];
                 auto& full_states = base_objects::block::get_block((std::string)state["Name"]);

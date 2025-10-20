@@ -24,7 +24,6 @@
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/storage/world_data.hpp>
 #include <src/util/mojang/api/hash256.hpp>
-#include <src/util/task_management.hpp>
 
 namespace enbt::io_helper {
     using namespace copper_server;
@@ -335,7 +334,7 @@ namespace copper_server::storage {
 
         sub_chunks.reserve(sub_chunks_ref.size());
         for (auto& sub_chunk : sub_chunks_ref) {
-            std::shared_ptr<storage::sub_chunk_data> sub_chunk_data = std::make_shared<storage::sub_chunk_data>();
+            std::unique_ptr<storage::sub_chunk_data> sub_chunk_data = std::make_unique<storage::sub_chunk_data>();
             if (sub_chunk.contains("blocks")) {
                 auto& blocks = sub_chunk["blocks"];
                 if (!valid_sub_chunk_size(blocks))
@@ -364,7 +363,7 @@ namespace copper_server::storage {
                 load_light_data(sub_chunk["block_light"], sub_chunk_data->block_light, sub_chunk_data->need_to_recalculate_light);
             } else
                 sub_chunk_data->need_to_recalculate_light = true;
-            sub_chunks.push_back(std::move(*sub_chunk_data));
+            sub_chunks.emplace_back(std::move(*sub_chunk_data));
         }
 
         sub_chunks.resize(world.get_chunk_y_count());
@@ -936,7 +935,7 @@ namespace copper_server::storage {
     void world_data::make_save(int64_t chunk_x, int64_t chunk_z, chunk_row::iterator item, bool also_unload) {
         if (auto process = on_save_process.find({chunk_x, chunk_z}); process == on_save_process.end()) {
             auto& chunk = item->second;
-            on_save_process[{chunk_x, chunk_z}] = Future<bool>::start(
+            on_save_process[{chunk_x, chunk_z}] = fast_task::future<bool>::start(
                 [this, chunk, chunk_x, chunk_z, also_unload] {
                     try {
                         if (chunk)
@@ -964,11 +963,11 @@ namespace copper_server::storage {
         }
     }
 
-    FuturePtr<base_objects::atomic_holder<chunk_data>> world_data::create_chunk_generate_future(base_objects::atomic_holder<chunk_data>& chunk) {
+    fast_task::future_ptr<base_objects::atomic_holder<chunk_data>> world_data::create_chunk_generate_future(base_objects::atomic_holder<chunk_data>& chunk) {
         if (profiling.enable_world_profiling)
             ++profiling.chunk_generator_counter;
 
-        return Future<base_objects::atomic_holder<chunk_data>>::start(
+        return fast_task::future<base_objects::atomic_holder<chunk_data>>::start(
             [this, chunk = chunk]() {
                 auto gen = get_generator();
                 fast_task::mutex_unify unify(generator.mutex);
@@ -1174,33 +1173,33 @@ namespace copper_server::storage {
 
     using ew_processor = api::entity_data::world_processor;
 
-    void world_data::entity_teleport(api::ecs::entity self, util::VECTOR new_pos) {
+    void world_data::entity_teleport(api::ecs::entity self, util::vector new_pos) {
         std::unique_lock lock(mutex);
         entity_notify_change<&ew_processor::entity_teleport>(this, entities, self, new_pos);
         if (enable_entity_light_source_updates)
             get_light_processor()->process_entity_light_source(*this, self, new_pos);
     }
 
-    void world_data::entity_move(api::ecs::entity self, util::VECTOR move) {
+    void world_data::entity_move(api::ecs::entity self, util::vector move) {
         std::unique_lock lock(mutex);
         entity_notify_change<&ew_processor::entity_move>(this, entities, self, move);
         if (enable_entity_light_source_updates)
             get_light_processor()->process_entity_light_source(*this, self, move);
     }
 
-    void world_data::entity_look_changes(api::ecs::entity self, util::ANGLE_DEG new_rotation) {
+    void world_data::entity_look_changes(api::ecs::entity self, util::angle_deg new_rotation) {
         std::unique_lock lock(mutex);
         entity_notify_change<&ew_processor::entity_look_changes>(this, entities, self, new_rotation);
         if (enable_entity_light_source_updates_include_rot)
             get_light_processor()->process_entity_light_source_rot(*this, self, new_rotation);
     }
 
-    void world_data::entity_rotation_changes(api::ecs::entity self, util::ANGLE_DEG new_rotation) {
+    void world_data::entity_rotation_changes(api::ecs::entity self, util::angle_deg new_rotation) {
         std::unique_lock lock(mutex);
         entity_notify_change<&ew_processor::entity_rotation_changes>(this, entities, self, new_rotation);
     }
 
-    void world_data::entity_motion_changes(api::ecs::entity self, util::VECTOR new_motion) {
+    void world_data::entity_motion_changes(api::ecs::entity self, util::vector new_motion) {
         std::unique_lock lock(mutex);
         entity_notify_change<&ew_processor::entity_motion_changes>(this, entities, self, new_motion);
     }
@@ -1231,15 +1230,15 @@ namespace copper_server::storage {
         entity_notify_change_w_e<&ew_processor::entity_detach>(this, entities, self, other_entity_id);
     }
 
-    void world_data::entity_damage(api::ecs::entity self, float health, int32_t type_id, std::optional<util::VECTOR> pos) {
+    void world_data::entity_damage(api::ecs::entity self, float health, int32_t type_id, std::optional<util::vector> pos) {
         entity_notify_change_all<&ew_processor::entity_damage>(this, entities, self, health, type_id, pos);
     }
 
-    void world_data::entity_damage(api::ecs::entity self, float health, int32_t type_id, std::optional<api::ecs::entity> source, std::optional<util::VECTOR> pos) {
+    void world_data::entity_damage(api::ecs::entity self, float health, int32_t type_id, std::optional<api::ecs::entity> source, std::optional<util::vector> pos) {
         entity_notify_change_all<&ew_processor::entity_damage_with_source>(this, entities, self, health, type_id, source, pos);
     }
 
-    void world_data::entity_damage(api::ecs::entity self, float health, int32_t type_id, std::optional<api::ecs::entity> source, std::optional<api::ecs::entity> source_direct, std::optional<util::VECTOR> pos) {
+    void world_data::entity_damage(api::ecs::entity self, float health, int32_t type_id, std::optional<api::ecs::entity> source, std::optional<api::ecs::entity> source_direct, std::optional<util::vector> pos) {
         entity_notify_change_all<&ew_processor::entity_damage_with_sources>(this, entities, self, health, type_id, source, source_direct, pos);
     }
 
@@ -1308,10 +1307,6 @@ namespace copper_server::storage {
 
     void world_data::entity_event(api::ecs::entity self, base_objects::entity_event status) {
         entity_notify_change<&ew_processor::entity_event>(this, entities, self, status);
-    }
-
-    void world_data::entity_metadata(api::ecs::entity self) {
-        entity_notify_change_all<&ew_processor::entity_metadata>(this, entities, self);
     }
 
     void world_data::entity_add_effect(api::ecs::entity self, uint32_t effect_id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) {
@@ -1886,18 +1881,18 @@ namespace copper_server::storage {
         return chunk;
     }
 
-    FuturePtr<base_objects::atomic_holder<chunk_data>> world_data::create_chunk_load_future(int64_t chunk_x, int64_t chunk_z) {
+    fast_task::future_ptr<base_objects::atomic_holder<chunk_data>> world_data::create_chunk_load_future(int64_t chunk_x, int64_t chunk_z) {
         if (profiling.enable_world_profiling)
             ++profiling.chunk_load_counter;
-        return Future<base_objects::atomic_holder<chunk_data>>::start(limit_on_load, [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
+        return fast_task::future<base_objects::atomic_holder<chunk_data>>::start(limit_on_load, [this, chunk_x, chunk_z]() -> base_objects::atomic_holder<chunk_data> {
             return processed_load_chunk_sync(chunk_x, chunk_z, true);
         });
     }
 
-    FuturePtr<base_objects::atomic_holder<chunk_data>> world_data::create_chunk_load_future(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback, const std::function<void()>& fault) {
+    fast_task::future_ptr<base_objects::atomic_holder<chunk_data>> world_data::create_chunk_load_future(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback, const std::function<void()>& fault) {
         if (profiling.enable_world_profiling)
             ++profiling.chunk_load_counter;
-        return Future<base_objects::atomic_holder<chunk_data>>::start(limit_on_load, [this, chunk_x, chunk_z, callback, fault]() -> base_objects::atomic_holder<chunk_data> {
+        return fast_task::future<base_objects::atomic_holder<chunk_data>>::start(limit_on_load, [this, chunk_x, chunk_z, callback, fault]() -> base_objects::atomic_holder<chunk_data> {
             auto chunk = processed_load_chunk_sync(chunk_x, chunk_z, true);
             if (chunk)
                 callback(*chunk);
@@ -1926,13 +1921,13 @@ namespace copper_server::storage {
         }
     }
 
-    FuturePtr<base_objects::atomic_holder<chunk_data>> world_data::request_chunk_data(int64_t chunk_x, int64_t chunk_z) {
+    fast_task::future_ptr<base_objects::atomic_holder<chunk_data>> world_data::request_chunk_data(int64_t chunk_x, int64_t chunk_z) {
         std::unique_lock lock(mutex);
         if (auto x_axis = chunks.find(chunk_x); x_axis != chunks.end())
             if (auto y_axis = x_axis->second.find(chunk_z); y_axis != x_axis->second.end())
                 if (y_axis->second)
                     if (y_axis->second->generator_stage == 0xFF)
-                        return make_ready_future(y_axis->second);
+                        return fast_task::make_ready_future(y_axis->second);
 
         if (auto process = on_load_process.find({chunk_x, chunk_z}); process == on_load_process.end())
             return on_load_process[{chunk_x, chunk_z}] = create_chunk_load_future(chunk_x, chunk_z);
@@ -2054,11 +2049,11 @@ namespace copper_server::storage {
 
     void world_data::await_save_chunks() {
         std::unique_lock lock(mutex);
-        list_array<FuturePtr<bool>> to_await;
+        list_array<fast_task::future_ptr<bool>> to_await;
         for (auto& [location, future] : on_save_process)
             to_await.push_back(future);
         lock.unlock();
-        to_await.for_each([](FuturePtr<bool>& i) { i->wait(); });
+        to_await.for_each([](fast_task::future_ptr<bool>& i) { i->wait(); });
     }
 
     void world_data::save_chunks(bool unload, bool ignore_limits) {
@@ -3540,8 +3535,8 @@ namespace copper_server::storage {
         }
         lock.unlock();
         size_t unload_speed = api::configuration::get().world.unload_speed;
-        future::forEachMove(
-            future::process<std::optional<int32_t>>(
+        fast_task::future_tool::for_each_move(
+            fast_task::future_tool::process<std::optional<int32_t>>(
                 worlds_to_tick,
                 [current_time, unload_speed](const auto& it) mutable -> std::optional<int32_t> {
                     auto id = it.first;

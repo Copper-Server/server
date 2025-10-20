@@ -25,7 +25,7 @@ namespace copper_server::build_in_plugins::network::tcp {
 
     base_objects::network::response universal_client_handle::too_large_packet() {
         switch (session->shared_data().packets_state.state) {
-            using enum base_objects::SharedClientData::packets_state_t::protocol_state;
+            using enum base_objects::shared_client_data::packets_state_t::protocol_state;
         case handshake:
         case status:
         default:
@@ -41,7 +41,7 @@ namespace copper_server::build_in_plugins::network::tcp {
 
     base_objects::network::response universal_client_handle::exception(const std::exception& ex) {
         switch (session->shared_data().packets_state.state) {
-            using enum base_objects::SharedClientData::packets_state_t::protocol_state;
+            using enum base_objects::shared_client_data::packets_state_t::protocol_state;
         case handshake:
         case status:
         default:
@@ -57,7 +57,7 @@ namespace copper_server::build_in_plugins::network::tcp {
 
     base_objects::network::response universal_client_handle::unexpected_exception() {
         switch (session->shared_data().packets_state.state) {
-            using enum base_objects::SharedClientData::packets_state_t::protocol_state;
+            using enum base_objects::shared_client_data::packets_state_t::protocol_state;
         case handshake:
         case status:
         default:

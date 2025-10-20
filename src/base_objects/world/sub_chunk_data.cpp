@@ -6,6 +6,7 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/api/registers.hpp>
 #include <src/base_objects/world/sub_chunk_data.hpp>
 
 namespace copper_server::base_objects::world {
@@ -16,6 +17,27 @@ namespace copper_server::base_objects::world {
 
     sub_chunk_data::~sub_chunk_data() {
     }
+
+    sub_chunk_data::sub_chunk_data(sub_chunk_data&& other) {
+        *this = std::move(other);
+    }
+
+    sub_chunk_data& sub_chunk_data::operator=(sub_chunk_data&& other) {
+        memcpy(biomes, other.biomes, sizeof(biomes));
+        memcpy(blocks, other.blocks, sizeof(blocks));
+        memcpy(&sky_light, &other.sky_light, sizeof(sky_light));
+        memcpy(&block_light, &other.block_light, sizeof(block_light));
+        block_entities = std::move(other.block_entities);
+        block_palette = std::move(other.block_palette);
+        biome_palette = std::move(other.biome_palette);
+        active_blocks = other.active_blocks;
+        has_tickable_blocks = other.has_tickable_blocks;
+        need_to_recalculate_light = other.need_to_recalculate_light;
+        sky_lighted = other.sky_lighted;
+        block_lighted = other.block_lighted;
+        return *this;
+    }
+
 
     enbt::value& sub_chunk_data::get_block_entity_data(uint8_t local_x, uint8_t local_y, uint8_t local_z) {
         return block_entities[local_z | (local_y << 4) | (local_x << 8)];
@@ -49,6 +71,7 @@ namespace copper_server::base_objects::world {
             --active_blocks;
         else if (!prev_active && now_active)
             ++active_blocks;
+        block_palette.reset();
     }
 
     void sub_chunk_data::set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::full_block_data&& block) {
@@ -71,6 +94,7 @@ namespace copper_server::base_objects::world {
             --active_blocks;
         else if (!prev_active && now_active)
             ++active_blocks;
+        block_palette.reset();
     }
 
     void sub_chunk_data::set_block_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::full_block_data& block) {
@@ -143,5 +167,27 @@ namespace copper_server::base_objects::world {
             auto local_x = uint8_t((pos >> 8) & 0xF);
             func(local_x, local_y, local_z, blocks[local_x][local_y][local_z], data);
         }
+    }
+
+    const base_objects::palette_container_block& sub_chunk_data::get_block_pallete() const {
+        if (!block_palette) {
+            base_objects::palette_container_block blocks_(base_objects::block::block_states_size());
+            blocks_.reserve(4096);
+            for (int i = 0; i < 4096; ++i) // y = i >> 8; x = (i >> 4) & 15; z = i & 15;
+                blocks_.add(blocks[(i >> 4) & 15][i >> 8][i & 15].id);
+            block_palette = std::make_unique<base_objects::palette_container_block>(std::move(blocks_));
+        }
+        return *block_palette;
+    }
+
+    const base_objects::palette_container_biome& sub_chunk_data::get_biome_pallete() const {
+        if (!biome_palette) {
+            base_objects::palette_container_biome biomes_(api::registers::biomes.size());
+            biomes_.reserve(64);
+            for (int i = 0; i < 64; ++i) // y = i >> 4; z = (i >> 2) & 3; x = i & 3;
+                biomes_.add(biomes[i & 3][(i >> 2) & 3][i >> 4]);
+            biome_palette = std::make_unique<base_objects::palette_container_biome>(std::move(biomes_));
+        }
+        return *biome_palette;
     }
 }

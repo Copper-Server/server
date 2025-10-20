@@ -21,14 +21,14 @@ int main() {
     atexit([]() {
         api::log::info("Initializer thread", "Shutting down...");
         try {
-            pluginManagement.callUnload();
+            plugin_management.call_unload();
         } catch (const std::exception& e) {
             api::log::error("Initializer thread", "An error occurred while unloading plugins\n" + std::string(e.what()));
         } catch (...) {
             api::log::error("Initializer thread", "An error occurred while unloading plugins");
         }
         try {
-            pluginManagement.unregisterAll();
+            plugin_management.unregister_all();
         } catch (...) {
             api::log::error("Initializer thread", "An error occurred while unregistering plugins");
         }
@@ -49,8 +49,8 @@ int main() {
         api::log::commands::init();
         api::log::set_log_folder(api::configuration::get().server.get_storage_path() / "logs");
         api::log::info("Initializer thread", "Initializing server...");
-        pluginManagement.autoRegister();
-        pluginManagement.callInitialization();
+        plugin_management.auto_register();
+        plugin_management.call_initialization();
 
         resources::initialize();
     } catch (const std::exception& e) {
@@ -58,7 +58,7 @@ int main() {
         return 1;
     } catch (...) {
         api::log::fatal("Initializer thread", "An error occurred while initializing the server, shutting down...");
-        pluginManagement.callFaultUnload();
+        plugin_management.call_fault_unload();
         return 1;
     }
     api::log::info("Initializer thread", "Initialization complete.");
@@ -68,14 +68,14 @@ int main() {
 
     api::log::info("Initializer thread", "Loading plugins");
     try {
-        pluginManagement.callLoad();
+        plugin_management.call_load();
     } catch (const std::exception& e) {
         api::log::fatal("Initializer thread", "An error occurred while loading plugins, shutting down...\n" + std::string(e.what()));
-        pluginManagement.callFaultUnload();
+        plugin_management.call_fault_unload();
         return 1;
     } catch (...) {
         api::log::fatal("Initializer thread", "An error occurred while loading plugins, shutting down...");
-        pluginManagement.callFaultUnload();
+        plugin_management.call_fault_unload();
         return 1;
     }
     api::log::info("Initializer thread", "Loading complete.");

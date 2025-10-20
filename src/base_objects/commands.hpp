@@ -38,11 +38,12 @@ namespace copper_server::base_objects {
             : what(what), pos(pos) {}
     };
 
+    //the difference from vanilla commands there allowed any enbt result type, while in vanilla only integers
     struct command_context {
-        SharedClientData& executor;
+        shared_client_data& executor;
         enbt::compound other_data;
         //for player, position, rotation, motion, and world_id automatically copied to other_data
-        //command result must be set in other_data at "result" value
+        //command result is set in other_data variable at "result" value
 
         void apply_executor_data();
 
@@ -52,7 +53,7 @@ namespace copper_server::base_objects {
                 apply_executor_data();
         }
 
-        command_context(SharedClientData& executor, bool apply_data = true)
+        command_context(shared_client_data& executor, bool apply_data = true)
             : executor(executor) {
             if (apply_data)
                 apply_executor_data();
@@ -60,9 +61,9 @@ namespace copper_server::base_objects {
     };
 
     struct command;
-    using command_callback = std::function<void(const list_array<parser>&, command_context&)>;
+    using command_callback = std::function<enbt::value(const list_array<parser>&, command_context&)>;
 
-    using command_redirect = std::function<void(command& target, const list_array<parser>&, const std::string&, command_context&)>;
+    using command_redirect = std::function<enbt::value(command& target, const list_array<parser>&, const std::string&, command_context&)>;
 
 
     using command_suggestion = std::function<list_array<std::string>(const std::string& current, command_context&)>;
@@ -261,7 +262,7 @@ namespace copper_server::base_objects {
 
         bool belongs(command* command);
 
-        //every command refrence after this command become invalid, even when created by plugins in OnCommandsLoad, bc. of the commit command for optimization
+        //every command refrence after this command become invalid, even when created by plugins in on_commands_load, bc. of the commit command for optimization
         void reload_commands();
 
         size_t get_changes_id() const;

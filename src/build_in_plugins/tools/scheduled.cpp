@@ -12,14 +12,14 @@
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins::tools {
-    struct scheduled : public PluginAutoRegister<"tools/scheduled", scheduled> {
-        void OnInitialization(const PluginRegistrationPtr&) override {
+    struct scheduled : public plugin_auto_register<"tools/scheduled", scheduled> {
+        void on_initialization(const plugin_registration_ptr&) override {
             api::configuration::get() ^ "scheduled" ^ "on_start" ^ "command" |= enbt::fixed_array{enbt::value("version")};
             api::configuration::get() ^ "scheduled" ^ "on_stop" ^ "command" |= enbt::fixed_array{};
             //TODO add more flexibility
         }
 
-        void OnPostLoad(const PluginRegistrationPtr&) override {
+        void on_post_load(const plugin_registration_ptr&) override {
             if (api::console::console_enabled()) {
                 const enbt::value& command = api::configuration::get() ^ "scheduled" ^ "on_start" ^ "command";
                 for (auto& commands : command.as_array())
@@ -27,7 +27,7 @@ namespace copper_server::build_in_plugins::tools {
             }
         }
 
-        void OnUnload(const PluginRegistrationPtr&) override {
+        void on_unload(const plugin_registration_ptr&) override {
             if (api::console::console_enabled()) {
                 const enbt::value& command = api::configuration::get() ^ "scheduled" ^ "on_stop" ^ "command";
                 for (auto& commands : command.as_array())

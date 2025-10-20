@@ -22,30 +22,30 @@
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins::base::play_engine {
-    struct inventory : public PluginAutoRegister<"base/play_engine/inventory", inventory> {
+    struct inventory : public plugin_auto_register<"base/play_engine/inventory", inventory> {
         inventory() {}
 
         ~inventory() noexcept {}
 
-        void OnInitialization(const PluginRegistrationPtr& _) override {
-            api::packets::processor(*this, [](api::packets::server_bound::play::set_beacon&& packet, base_objects::SharedClientData& client) {
-                client.packets_state.get_play_data([&packet](base_objects::SharedClientData::packets_state_t::play_data_t& play_data) {
+        void on_initialization(const plugin_registration_ptr& _) override {
+            api::packets::processor(*this, [](api::packets::server_bound::play::set_beacon&& packet, base_objects::shared_client_data& client) {
+                client.packets_state.get_play_data([&packet](base_objects::shared_client_data::packets_state_t::play_data_t& play_data) {
                     if (play_data.current_screen)
                         play_data.current_screen->event_set_beacon(packet.primary_effect.transform([](auto it) { return it.value; }), packet.secondary_effect.transform([](auto it) { return it.value; }));
                 });
             });
-            api::packets::processor(*this, [](api::packets::server_bound::play::rename_item&& packet, base_objects::SharedClientData& client) {
-                client.packets_state.get_play_data([&packet](base_objects::SharedClientData::packets_state_t::play_data_t& play_data) {
+            api::packets::processor(*this, [](api::packets::server_bound::play::rename_item&& packet, base_objects::shared_client_data& client) {
+                client.packets_state.get_play_data([&packet](base_objects::shared_client_data::packets_state_t::play_data_t& play_data) {
                     if (play_data.current_screen)
                         play_data.current_screen->event_anvil_set_name(packet.new_name.value);
                 });
             });
-            api::packets::processor(*this, [](api::packets::server_bound::play::set_carried_item&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](api::packets::server_bound::play::set_carried_item&& packet, base_objects::shared_client_data& client) {
                 if (packet.slot >= 0 && packet.slot <= 7)
                     if (client.player_data.assigned_entity)
                         api::entity(*client.player_data.assigned_entity).set_selected_item((uint8_t)packet.slot);
             });
-            api::packets::processor(*this, [](api::packets::server_bound::play::set_creative_mode_slot&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](api::packets::server_bound::play::set_creative_mode_slot&& packet, base_objects::shared_client_data& client) {
                 if (client.player_data.assigned_entity && client.player_data.gamemode == 1) {
                     base_objects::slot slot = base_objects::slot::from_packet(std::move(packet.item));
                     auto e = api::entity_proxy::player{*client.player_data.assigned_entity};
@@ -55,7 +55,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                         e.inventory().erase(packet.slot);
                 }
             });
-            api::packets::processor(*this, [](api::packets::server_bound::play::pick_item_from_block&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](api::packets::server_bound::play::pick_item_from_block&& packet, base_objects::shared_client_data& client) {
                 if (client.player_data.assigned_entity) {
                     auto e = api::entity{*client.player_data.assigned_entity};
                     auto player = api::entity_proxy::player{*client.player_data.assigned_entity};
@@ -84,7 +84,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                     }
                 }
             });
-            api::packets::processor(*this, [](api::packets::server_bound::play::pick_item_from_entity&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](api::packets::server_bound::play::pick_item_from_entity&& packet, base_objects::shared_client_data& client) {
                 if (client.player_data.assigned_entity) {
                     auto e = api::entity_proxy::player{*client.player_data.assigned_entity};
                     auto oe = packet.id.get_entity();
@@ -100,24 +100,24 @@ namespace copper_server::build_in_plugins::base::play_engine {
                     }
                 }
             });
-            api::packets::processor(*this, [](api::packets::server_bound::play::bundle_item_selected&& packet, base_objects::SharedClientData& client) {
-                client.packets_state.get_play_data([&packet](base_objects::SharedClientData::packets_state_t::play_data_t& play_data) {
+            api::packets::processor(*this, [](api::packets::server_bound::play::bundle_item_selected&& packet, base_objects::shared_client_data& client) {
+                client.packets_state.get_play_data([&packet](base_objects::shared_client_data::packets_state_t::play_data_t& play_data) {
                     if (play_data.current_screen)
                         play_data.current_screen->event_request_bundle_item_take(packet.bundle_slot, packet.item_slot);
                     else if (play_data.main_screen)
                         play_data.main_screen->event_request_bundle_item_take(packet.bundle_slot, packet.item_slot);
                 });
             });
-            api::packets::processor(*this, [](api::packets::server_bound::play::container_button_click&& packet, base_objects::SharedClientData& client) {
-                client.packets_state.get_play_data([&packet](base_objects::SharedClientData::packets_state_t::play_data_t& play_data) {
+            api::packets::processor(*this, [](api::packets::server_bound::play::container_button_click&& packet, base_objects::shared_client_data& client) {
+                client.packets_state.get_play_data([&packet](base_objects::shared_client_data::packets_state_t::play_data_t& play_data) {
                     if (play_data.current_screen)
                         if (play_data.current_screen->get_windows_id() == packet.window_id.value)
                             play_data.current_screen->event_button_click(packet.button_id);
                 });
             });
-            api::packets::processor(*this, [](api::packets::server_bound::play::container_click&& packet, base_objects::SharedClientData& client) {
-                client.packets_state.get_play_data([&packet](base_objects::SharedClientData::packets_state_t::play_data_t& play_data) {
-                    using screen = base_objects::SharedClientData::packets_state_t::play_data_t::screen;
+            api::packets::processor(*this, [](api::packets::server_bound::play::container_click&& packet, base_objects::shared_client_data& client) {
+                client.packets_state.get_play_data([&packet](base_objects::shared_client_data::packets_state_t::play_data_t& play_data) {
+                    using screen = base_objects::shared_client_data::packets_state_t::play_data_t::screen;
                     if (play_data.current_screen)
                         if (play_data.current_screen->get_windows_id() == packet.window_id.value) {
                             static constexpr auto convert_hashed_slot = [](const api::packets::server_bound::play::container_click::hashed_slot_data& data) {
@@ -153,8 +153,8 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 });
             });
 
-            api::packets::processor(*this, [](api::packets::server_bound::play::container_close&& packet, base_objects::SharedClientData& client) {
-                client.packets_state.get_play_data([&packet](base_objects::SharedClientData::packets_state_t::play_data_t& play_data) {
+            api::packets::processor(*this, [](api::packets::server_bound::play::container_close&& packet, base_objects::shared_client_data& client) {
+                client.packets_state.get_play_data([&packet](base_objects::shared_client_data::packets_state_t::play_data_t& play_data) {
                     if (play_data.current_screen)
                     /*if (play_data.current_screen->get_windows_id() == packet.window_id.value)*/ { //vanilla server ignores this
                         play_data.current_screen->event_close();
@@ -163,15 +163,15 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 });
             });
 
-            api::packets::processor(*this, [](api::packets::server_bound::play::container_slot_state_changed&& packet, base_objects::SharedClientData& client) {
-                client.packets_state.get_play_data([&packet](base_objects::SharedClientData::packets_state_t::play_data_t& play_data) {
+            api::packets::processor(*this, [](api::packets::server_bound::play::container_slot_state_changed&& packet, base_objects::shared_client_data& client) {
+                client.packets_state.get_play_data([&packet](base_objects::shared_client_data::packets_state_t::play_data_t& play_data) {
                     if (play_data.current_screen)
                         if (play_data.current_screen->get_windows_id() == packet.window_id.value)
                             play_data.current_screen->event_slot_state_changed(packet.slot_id, packet.state);
                 });
             });
-            api::packets::processor(*this, [](api::packets::server_bound::play::edit_book&& packet, base_objects::SharedClientData& client) {
-                client.packets_state.get_play_data([&packet](base_objects::SharedClientData::packets_state_t::play_data_t& play_data) {
+            api::packets::processor(*this, [](api::packets::server_bound::play::edit_book&& packet, base_objects::shared_client_data& client) {
+                client.packets_state.get_play_data([&packet](base_objects::shared_client_data::packets_state_t::play_data_t& play_data) {
                     if (play_data.main_screen)
                         play_data.main_screen->event_book_edit_request(packet.slot, packet.entries.convert_fn([](auto& str) { return std::string_view(str.value); }), packet.title.transform([](auto& str) { return std::string_view(str.value); }));
                 });
@@ -191,7 +191,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
         // inventory 9-35
         // hotbar 36-44
         // second hand 45
-        struct main_screen : public base_objects::SharedClientData::packets_state_t::play_data_t::main_screen_i {
+        struct main_screen : public base_objects::shared_client_data::packets_state_t::play_data_t::main_screen_i {
             base_objects::slot carry_item;
             enum class DragMode {
                 NONE,
@@ -202,7 +202,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 = DragMode::NONE;
             std::unordered_set<int32_t> drag_slots;
 
-            main_screen(base_objects::SharedClientData& client) : main_screen_i(client) {}
+            main_screen(base_objects::shared_client_data& client) : main_screen_i(client) {}
 
             ~main_screen() {
                 if (carry_item)
@@ -611,9 +611,9 @@ namespace copper_server::build_in_plugins::base::play_engine {
             }
         };
 
-        virtual void OnPlay_pre_initialize(base_objects::SharedClientData& client) {
-            client.packets_state.get_play_data([&client](base_objects::SharedClientData::packets_state_t::play_data_t& play_data) {
-                std::unique_ptr<base_objects::SharedClientData::packets_state_t::play_data_t::main_screen_i> res;
+        virtual void on_play_pre_initialize(base_objects::shared_client_data& client) {
+            client.packets_state.get_play_data([&client](base_objects::shared_client_data::packets_state_t::play_data_t& play_data) {
+                std::unique_ptr<base_objects::shared_client_data::packets_state_t::play_data_t::main_screen_i> res;
                 res.reset(new main_screen(client));
                 play_data.init_main_screen(std::move(res));
             });

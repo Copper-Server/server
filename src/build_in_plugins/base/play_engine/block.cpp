@@ -20,31 +20,31 @@
 namespace copper_server::build_in_plugins::base::play_engine {
     //handles clients with play state, allows players to access world and other things through api
 
-    struct block : public PluginAutoRegister<"base/play_engine/block", block> {
+    struct block : public plugin_auto_register<"base/play_engine/block", block> {
         block() {}
 
         ~block() noexcept {}
 
-        void OnInitialization(const PluginRegistrationPtr& _) override {
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::set_command_block&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+        void on_initialization(const plugin_registration_ptr& _) override {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::set_command_block&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::set_command_minecart&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::set_command_minecart&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::set_jigsaw_block&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::set_jigsaw_block&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::set_structure_block&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::set_structure_block&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::set_test_block&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::set_test_block&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::sign_update&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::sign_update&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::test_instance_block_action&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::test_instance_block_action&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
         }

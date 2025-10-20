@@ -196,7 +196,7 @@ namespace copper_server::api::packets {
 
         struct game_events : public enum_item<15> {
             var_int32::game_event event;
-            util::VECTOR pos;
+            util::vector pos;
         };
 
         using value = enum_switch<

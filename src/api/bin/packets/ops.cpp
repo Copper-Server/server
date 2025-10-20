@@ -12,17 +12,17 @@
 
 namespace copper_server::api::packets {
     namespace __internal {
-        current_state get_state(base_objects::SharedClientData& client) {
+        current_state get_state(base_objects::shared_client_data& client) {
             switch (client.packets_state.state) {
-            case base_objects::SharedClientData::packets_state_t::protocol_state::handshake:
+            case base_objects::shared_client_data::packets_state_t::protocol_state::handshake:
                 return current_state::handshake;
-            case base_objects::SharedClientData::packets_state_t::protocol_state::status:
+            case base_objects::shared_client_data::packets_state_t::protocol_state::status:
                 return current_state::status;
-            case base_objects::SharedClientData::packets_state_t::protocol_state::login:
+            case base_objects::shared_client_data::packets_state_t::protocol_state::login:
                 return current_state::login;
-            case base_objects::SharedClientData::packets_state_t::protocol_state::configuration:
+            case base_objects::shared_client_data::packets_state_t::protocol_state::configuration:
                 return current_state::configuration;
-            case base_objects::SharedClientData::packets_state_t::protocol_state::play:
+            case base_objects::shared_client_data::packets_state_t::protocol_state::play:
                 return current_state::play;
             default:
                 return current_state::handshake;

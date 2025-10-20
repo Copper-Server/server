@@ -21,7 +21,7 @@
 namespace copper_server::build_in_plugins::network::tcp {
 
     struct keep_alive_solution::handle_t {
-        std::function<void(int64_t, base_objects::SharedClientData&)> callback;
+        std::function<void(int64_t, base_objects::shared_client_data&)> callback;
         fast_task::deadline_timer timeout_timer;
         fast_task::deadline_timer next_keep_alive;
         api::network::tcp::session* session;
@@ -80,7 +80,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         handle->timeout_timer.cancel();
     }
 
-    void keep_alive_solution::set_callback(const std::function<void(int64_t, base_objects::SharedClientData&)>& fun) {
+    void keep_alive_solution::set_callback(const std::function<void(int64_t, base_objects::shared_client_data&)>& fun) {
         handle->callback = fun;
     }
 

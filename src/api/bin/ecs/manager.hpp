@@ -239,7 +239,8 @@ namespace copper_server::api::ecs {
             if (chunk->entity_count == 0)
                 return;
 
-            int32_t last_entity_id = chunk->entities()[chunk->entity_count];
+            auto index = chunk->entity_count - 1;
+            int32_t last_entity_id = chunk->entities()[index];
 
             chunk->entities()[old_pos] = last_entity_id;
             for (size_t i = 0; i < component_ids.size(); ++i) {
@@ -248,7 +249,7 @@ namespace copper_server::api::ecs {
                 size_t offset = layout.component_offsets[i];
 
                 void* dest_ptr = chunk->memory_block.get() + offset + (old_pos * type_info.size);
-                void* src_ptr = chunk->memory_block.get() + offset + (chunk->entity_count * type_info.size);
+                void* src_ptr = chunk->memory_block.get() + offset + (index * type_info.size);
 
                 type_info.move(dest_ptr, src_ptr);
             }

@@ -34,8 +34,8 @@ namespace copper_server::build_in_plugins::light_processors {
         void block_changed(storage::world_data&, int64_t, int64_t, int64_t) override {}
     };
 
-    struct default_processor : public PluginAutoRegister<"light_processors/default_processor", default_processor> {
-        void OnRegister(const PluginRegistrationPtr& _) {
+    struct default_processor : public plugin_auto_register<"light_processors/default_processor", default_processor> {
+        void on_register(const plugin_registration_ptr& _) {
             storage::chunk_light_processor::register_it("default", new default_light_processor());
         }
     };

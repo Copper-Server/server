@@ -40,9 +40,9 @@ namespace copper_server::api::packets {
 
     using global_ops = global_packets_ops<server_bound_ops, client_bound_ops>;
 
-    inline bool decode(base_objects::SharedClientData& context, ArrayStream& stream) {
+    inline bool decode(base_objects::shared_client_data& context, ArrayStream& stream) {
         bool res = false;
-        global_ops::client_decode_direct(context, stream, [&res]<class P>(base_objects::SharedClientData& context, P&& packet) {
+        global_ops::client_decode_direct(context, stream, [&res]<class P>(base_objects::shared_client_data& context, P&& packet) {
             res = packet_ops<P>::make_process(context, std::move(packet));
         });
         return res;
@@ -84,39 +84,39 @@ namespace copper_server::api::packets {
         return server_bound_play_ops::decode(stream);
     }
 
-    inline client_bound_status_ops::packet_variants decode_client_status(base_objects::SharedClientData& context, ArrayStream& stream) {
+    inline client_bound_status_ops::packet_variants decode_client_status(base_objects::shared_client_data& context, ArrayStream& stream) {
         return client_bound_status_ops::client_decode(context, stream);
     }
 
-    inline client_bound_login_ops::packet_variants decode_client_login(base_objects::SharedClientData& context, ArrayStream& stream) {
+    inline client_bound_login_ops::packet_variants decode_client_login(base_objects::shared_client_data& context, ArrayStream& stream) {
         return client_bound_login_ops::client_decode(context, stream);
     }
 
-    inline client_bound_config_ops::packet_variants decode_client_configuration(base_objects::SharedClientData& context, ArrayStream& stream) {
+    inline client_bound_config_ops::packet_variants decode_client_configuration(base_objects::shared_client_data& context, ArrayStream& stream) {
         return client_bound_config_ops::client_decode(context, stream);
     }
 
-    inline client_bound_play_ops::packet_variants decode_client_play(base_objects::SharedClientData& context, ArrayStream& stream) {
+    inline client_bound_play_ops::packet_variants decode_client_play(base_objects::shared_client_data& context, ArrayStream& stream) {
         return client_bound_play_ops::client_decode(context, stream);
     }
 
-    inline server_bound_handshake_ops::packet_variants decode_server_handshake(base_objects::SharedClientData& context, ArrayStream& stream) {
+    inline server_bound_handshake_ops::packet_variants decode_server_handshake(base_objects::shared_client_data& context, ArrayStream& stream) {
         return server_bound_handshake_ops::client_decode(context, stream);
     }
 
-    inline server_bound_status_ops::packet_variants decode_server_status(base_objects::SharedClientData& context, ArrayStream& stream) {
+    inline server_bound_status_ops::packet_variants decode_server_status(base_objects::shared_client_data& context, ArrayStream& stream) {
         return server_bound_status_ops::client_decode(context, stream);
     }
 
-    inline server_bound_login_ops::packet_variants decode_server_login(base_objects::SharedClientData& context, ArrayStream& stream) {
+    inline server_bound_login_ops::packet_variants decode_server_login(base_objects::shared_client_data& context, ArrayStream& stream) {
         return server_bound_login_ops::client_decode(context, stream);
     }
 
-    inline server_bound_config_ops::packet_variants decode_server_configuration(base_objects::SharedClientData& context, ArrayStream& stream) {
+    inline server_bound_config_ops::packet_variants decode_server_configuration(base_objects::shared_client_data& context, ArrayStream& stream) {
         return server_bound_config_ops::client_decode(context, stream);
     }
 
-    inline server_bound_play_ops::packet_variants decode_server_play(base_objects::SharedClientData& context, ArrayStream& stream) {
+    inline server_bound_play_ops::packet_variants decode_server_play(base_objects::shared_client_data& context, ArrayStream& stream) {
         return server_bound_play_ops::client_decode(context, stream);
     }
 
@@ -125,22 +125,22 @@ namespace copper_server::api::packets {
 
     namespace events {
         template <class packet>
-        base_objects::events::sync_event<packet&, base_objects::SharedClientData&>& send_viewer() {
+        base_objects::events::sync_event<packet&, base_objects::shared_client_data&>& send_viewer() {
             return packet_ops<packet>::send_viewer();
         }
 
         template <class packet>
-        base_objects::events::sync_event_no_cancel<packet&, base_objects::SharedClientData&>& post_send_viewer() {
+        base_objects::events::sync_event_no_cancel<packet&, base_objects::shared_client_data&>& post_send_viewer() {
             return packet_ops<packet>::post_send_viewer();
         }
 
         template <class packet>
-        base_objects::events::sync_event<packet&, base_objects::SharedClientData&>& receive_viewer() {
+        base_objects::events::sync_event<packet&, base_objects::shared_client_data&>& receive_viewer() {
             return packet_ops<packet>::receive_viewer();
         }
 
         template <class packet>
-        base_objects::events::sync_event_single<packet&&, base_objects::SharedClientData&>& processor() {
+        base_objects::events::sync_event_single<packet&&, base_objects::shared_client_data&>& processor() {
             return packet_ops<packet>::processor();
         }
     }

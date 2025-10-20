@@ -39,8 +39,8 @@ namespace copper_server {
     }
 
     namespace base_objects {
-        struct SharedClientData;
-        using client_data_holder = atomic_holder<SharedClientData>;
+        struct shared_client_data;
+        using client_data_holder = atomic_holder<shared_client_data>;
 
         namespace world {
             struct sub_chunk_data;
@@ -128,17 +128,17 @@ namespace copper_server::api {
         std::function<bool(ecs::entity target_entity, bool force)> pre_death_callback;
         std::function<void(ecs::entity target_entity)> create_callback;
         std::function<void(ecs::entity target_entity)> load_callback;
-        std::function<void(ecs::entity checking_entity, entity_data&, util::VECTOR pos)> check_bounds; //if nullptr then used base_bounds, return true if entity is in bounds
+        std::function<void(ecs::entity checking_entity, entity_data&, util::vector pos)> check_bounds; //if nullptr then used base_bounds, return true if entity is in bounds
         std::function<int32_t(ecs::entity checking_entity)> get_object_field;                          //optional
 
         struct world_processor { //used to handle changes applied for entity and implement AI or send changes to client
             void (*entity_init)(ecs::entity self, ecs::entity) = nullptr;
 
-            void (*entity_teleport)(ecs::entity self, ecs::entity, util::VECTOR new_pos) = nullptr;
-            void (*entity_move)(ecs::entity self, ecs::entity, util::VECTOR move) = nullptr;
-            void (*entity_look_changes)(ecs::entity self, ecs::entity, util::ANGLE_DEG new_rotation) = nullptr;
-            void (*entity_rotation_changes)(ecs::entity self, ecs::entity, util::ANGLE_DEG new_rotation) = nullptr;
-            void (*entity_motion_changes)(ecs::entity self, ecs::entity, util::VECTOR new_motion) = nullptr;
+            void (*entity_teleport)(ecs::entity self, ecs::entity, util::vector new_pos) = nullptr;
+            void (*entity_move)(ecs::entity self, ecs::entity, util::vector move) = nullptr;
+            void (*entity_look_changes)(ecs::entity self, ecs::entity, util::angle_deg new_rotation) = nullptr;
+            void (*entity_rotation_changes)(ecs::entity self, ecs::entity, util::angle_deg new_rotation) = nullptr;
+            void (*entity_motion_changes)(ecs::entity self, ecs::entity, util::vector new_motion) = nullptr;
 
             void (*entity_rides)(ecs::entity self, ecs::entity, ecs::entity other_entity_id) = nullptr;
             void (*entity_leaves_ride)(ecs::entity self, ecs::entity, ecs::entity other_entity_id) = nullptr;
@@ -146,9 +146,9 @@ namespace copper_server::api {
             void (*entity_attach)(ecs::entity self, ecs::entity, ecs::entity other_entity_id) = nullptr;
             void (*entity_detach)(ecs::entity self, ecs::entity, ecs::entity other_entity_id) = nullptr;
 
-            void (*entity_damage)(ecs::entity self, ecs::entity, float health, int32_t type_id, const std::optional<util::VECTOR>& pos) = nullptr;
-            void (*entity_damage_with_source)(ecs::entity self, ecs::entity, float health, int32_t type_id, std::optional<ecs::entity> source, const std::optional<util::VECTOR>& pos) = nullptr;
-            void (*entity_damage_with_sources)(ecs::entity self, ecs::entity, float health, int32_t type_id, std::optional<ecs::entity> source, std::optional<ecs::entity> source_direct, const std::optional<util::VECTOR>& pos) = nullptr;
+            void (*entity_damage)(ecs::entity self, ecs::entity, float health, int32_t type_id, const std::optional<util::vector>& pos) = nullptr;
+            void (*entity_damage_with_source)(ecs::entity self, ecs::entity, float health, int32_t type_id, std::optional<ecs::entity> source, const std::optional<util::vector>& pos) = nullptr;
+            void (*entity_damage_with_sources)(ecs::entity self, ecs::entity, float health, int32_t type_id, std::optional<ecs::entity> source, std::optional<ecs::entity> source_direct, const std::optional<util::vector>& pos) = nullptr;
 
             void (*entity_attack)(ecs::entity self, ecs::entity, ecs::entity other_entity_id) = nullptr;
             void (*entity_iteract)(ecs::entity self, ecs::entity, ecs::entity other_entity_id) = nullptr;
@@ -163,7 +163,6 @@ namespace copper_server::api {
 
             void (*entity_animation)(ecs::entity self, ecs::entity, base_objects::entity_animation animation) = nullptr;
             void (*entity_event)(ecs::entity self, ecs::entity, base_objects::entity_event status) = nullptr;
-            void (*entity_metadata)(ecs::entity self, ecs::entity) = nullptr;
 
             void (*entity_add_effect)(ecs::entity self, ecs::entity, uint32_t id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) = nullptr;
             void (*entity_remove_effect)(ecs::entity self, ecs::entity, uint32_t id) = nullptr;
@@ -241,20 +240,20 @@ namespace copper_server::api {
 
 
         int32_t get_protocol_id() const;
-        util::VECTOR get_position() const;
+        util::vector get_position() const;
 
 
-        void moved(util::VECTOR pos);
-        void moved(util::VECTOR pos, float yaw, float pitch);
-        void moved(util::VECTOR pos, float yaw, float pitch, bool on_ground);
+        void moved(util::vector pos);
+        void moved(util::vector pos, float yaw, float pitch);
+        void moved(util::vector pos, float yaw, float pitch, bool on_ground);
 
         void rotated(float yaw, float pitch);
         void rotated(float yaw, float pitch, bool on_ground);
 
 
-        void teleport(util::VECTOR pos);
-        void teleport(util::VECTOR pos, float yaw, float pitch);
-        void teleport(util::VECTOR pos, float yaw, float pitch, bool on_ground);
+        void teleport(util::vector pos);
+        void teleport(util::vector pos, float yaw, float pitch);
+        void teleport(util::vector pos, float yaw, float pitch, bool on_ground);
 
         void set_ride_entity(ecs::entity entity);
         void remove_ride_entity();
@@ -277,9 +276,9 @@ namespace copper_server::api {
         void set_health(float health);
         void add_health(float health);
         void reduce_health(float health);
-        void damage(float health, int32_t type_id, std::optional<util::VECTOR> pos);
-        void damage(float health, int32_t type_id, std::optional<ecs::entity> source, std::optional<util::VECTOR> pos);
-        void damage(float health, int32_t type_id, std::optional<ecs::entity> source, std::optional<ecs::entity> source_direct, std::optional<util::VECTOR> pos);
+        void damage(float health, int32_t type_id, std::optional<util::vector> pos);
+        void damage(float health, int32_t type_id, std::optional<ecs::entity> source, std::optional<util::vector> pos);
+        void damage(float health, int32_t type_id, std::optional<ecs::entity> source, std::optional<ecs::entity> source_direct, std::optional<util::vector> pos);
 
         int32_t get_food() const;
         void set_food(int32_t food);
@@ -315,22 +314,22 @@ namespace copper_server::api {
         void move(float side, float forward, bool jump = false, bool sneaking = false);
         void look(float yaw, float pitch);
         void look_at(float x, float y, float z);
-        void look_at(util::VECTOR pos);
+        void look_at(util::vector pos);
 
         //looks only if this and another entity registered to same world
         void look_at(ecs::entity entity);
 
-        util::VECTOR get_motion() const;
-        void set_motion(util::VECTOR mot);
-        void add_motion(util::VECTOR mot);
+        util::vector get_motion() const;
+        void set_motion(util::vector mot);
+        void add_motion(util::vector mot);
 
-        util::ANGLE_DEG get_rotation() const;
-        void set_rotation(util::ANGLE_DEG mot);
-        void add_rotation(util::ANGLE_DEG mot);
+        util::angle_deg get_rotation() const;
+        void set_rotation(util::angle_deg mot);
+        void add_rotation(util::angle_deg mot);
 
-        util::ANGLE_DEG get_head_rotation() const;
-        void set_head_rotation(util::ANGLE_DEG rot);
-        void add_head_rotation(util::ANGLE_DEG rot);
+        util::angle_deg get_head_rotation() const;
+        void set_head_rotation(util::angle_deg rot);
+        void add_head_rotation(util::angle_deg rot);
 
         //attack passes only if this and another entity registered to same world
         void attack_from_this(ecs::entity entity);

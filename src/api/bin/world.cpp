@@ -164,7 +164,7 @@ namespace copper_server::api::world {
     }
 
     //gets client world, checks if world exists, returns pair of id and name, if world does not exists then returns default world and sets default position for player in new world
-    std::pair<int32_t, std::string> prepare_world(base_objects::SharedClientData& client_ref) {
+    std::pair<int32_t, std::string> prepare_world(base_objects::shared_client_data& client_ref) {
         auto id = get_worlds().get_id(client_ref.player_data.world_id);
         bool set_new_data = false;
         if (id == (int32_t)-1) {
@@ -209,7 +209,7 @@ namespace copper_server::api::world {
         return {id, client_ref.player_data.world_id};
     }
 
-    void sync_settings(base_objects::SharedClientData& client_ref) {
+    void sync_settings(base_objects::shared_client_data& client_ref) {
         auto id = get_worlds().get_id(client_ref.player_data.world_id);
         if (id == -1)
             throw std::runtime_error("World with id " + client_ref.player_data.world_id + " does not exists.");
@@ -245,9 +245,9 @@ namespace copper_server::api::world {
     void transfer(
         [[maybe_unused]] api::ecs::entity entity,
         [[maybe_unused]] int32_t world_id,
-        [[maybe_unused]] util::VECTOR position,
-        [[maybe_unused]] util::ANGLE_DEG rotation,
-        [[maybe_unused]] util::VECTOR velocity,
+        [[maybe_unused]] util::vector position,
+        [[maybe_unused]] util::angle_deg rotation,
+        [[maybe_unused]] util::vector velocity,
         [[maybe_unused]] std::function<void(storage::world_data& world)> callback
     ) {
         //TODO
@@ -256,8 +256,8 @@ namespace copper_server::api::world {
     void transfer(
         [[maybe_unused]] api::ecs::entity entity,
         [[maybe_unused]] int32_t world_id,
-        [[maybe_unused]] util::VECTOR position,
-        [[maybe_unused]] util::ANGLE_DEG rotation,
+        [[maybe_unused]] util::vector position,
+        [[maybe_unused]] util::angle_deg rotation,
         [[maybe_unused]] std::function<void(storage::world_data& world)> callback
     ) {
         //TODO
@@ -266,7 +266,7 @@ namespace copper_server::api::world {
     void transfer(
         [[maybe_unused]] api::ecs::entity entity,
         [[maybe_unused]] int32_t world_id,
-        [[maybe_unused]] util::VECTOR position,
+        [[maybe_unused]] util::vector position,
         [[maybe_unused]] std::function<void(storage::world_data& world)> callback
     ) {
         //TODO

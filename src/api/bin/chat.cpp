@@ -9,18 +9,18 @@
 #include <src/api/chat.hpp>
 
 namespace copper_server::api::chat {
-    base_objects::events::sync_event_single<const std::string&, bit_list_array<uint64_t>&, base_objects::SharedClientData&>& chat_filter() {
-        static base_objects::events::sync_event_single<const std::string&, bit_list_array<uint64_t>&, base_objects::SharedClientData&> res;
+    base_objects::events::sync_event_single<const std::string&, bit_list_array<uint64_t>&, base_objects::shared_client_data&>& chat_filter() {
+        static base_objects::events::sync_event_single<const std::string&, bit_list_array<uint64_t>&, base_objects::shared_client_data&> res;
         return res;
     }
 
-    base_objects::events::sync_event_single<std::optional<Chat>&, base_objects::SharedClientData&>& custom_name_provider() {
-        static base_objects::events::sync_event_single<std::optional<Chat>&, base_objects::SharedClientData&> res;
+    base_objects::events::sync_event_single<std::optional<Chat>&, base_objects::shared_client_data&>& custom_name_provider() {
+        static base_objects::events::sync_event_single<std::optional<Chat>&, base_objects::shared_client_data&> res;
         return res;
     }
 
-    base_objects::events::sync_event_single<std::optional<Chat>&, const std::string&, base_objects::SharedClientData&>& custom_content_provider() {
-        static base_objects::events::sync_event_single<std::optional<Chat>&, const std::string&, base_objects::SharedClientData&> res;
+    base_objects::events::sync_event_single<std::optional<Chat>&, const std::string&, base_objects::shared_client_data&>& custom_content_provider() {
+        static base_objects::events::sync_event_single<std::optional<Chat>&, const std::string&, base_objects::shared_client_data&> res;
         return res;
     }
 }

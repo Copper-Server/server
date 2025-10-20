@@ -40,7 +40,7 @@ namespace copper_server::storage {
 
     public:
         permissions_manager(const std::filesystem::path& base_path);
-        bool has_rights(const std::string& action_name, const base_objects::SharedClientData& client);
+        bool has_rights(const std::string& action_name, const base_objects::shared_client_data& client);
         bool has_action(const std::string& action_name) const;
         bool has_action_limits(const std::string& action_name) const;
         bool has_permission(const std::string& permission_name) const;
@@ -59,7 +59,7 @@ namespace copper_server::storage {
         void add_permission(base_objects::permissions_object&& permission);
         void remove_permission(const std::string& permission_tag);
 
-        bool is_in_group(const std::string& group_name, const base_objects::SharedClientData& client);
+        bool is_in_group(const std::string& group_name, const base_objects::shared_client_data& client);
         void add_group(const base_objects::permission_group& group);
         void remove_group(const std::string& group_name);
         //permission_tags can also accept direct actions name with prefix 'action:'

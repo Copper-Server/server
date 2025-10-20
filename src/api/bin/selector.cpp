@@ -365,7 +365,7 @@ namespace copper_server::api {
                     return api::entity(entity).hitboxes_touching_z(check_z, dz);
                 });
             if (flags.nearest) {
-                auto res = entities.min_index([pos = util::VECTOR(check_x, check_y, check_z)](auto ent) {
+                auto res = entities.min_index([pos = util::vector(check_x, check_y, check_z)](auto ent) {
                     return util::distance_sq(pos, api::entity(ent).get_position());
                 });
                 if (res != entities.npos)
@@ -555,7 +555,7 @@ namespace copper_server::api {
                     check_z = *z;
 
                 entities
-                    .sort([pos = util::VECTOR(check_x, check_y, check_z)](auto prev, auto next) {
+                    .sort([pos = util::vector(check_x, check_y, check_z)](auto prev, auto next) {
                         return util::distance_sq(pos, api::entity(prev).get_position()) < util::distance_sq(pos, api::entity(next).get_position());
                     });
                 break;
@@ -572,7 +572,7 @@ namespace copper_server::api {
                     check_z = *z;
 
                 entities
-                    .sort([pos = util::VECTOR(check_x, check_y, check_z)](auto prev, auto next) {
+                    .sort([pos = util::vector(check_x, check_y, check_z)](auto prev, auto next) {
                         return util::distance_sq(pos, api::entity(prev).get_position()) > util::distance_sq(pos, api::entity(next).get_position());
                     });
                 break;

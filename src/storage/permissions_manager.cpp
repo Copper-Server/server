@@ -19,7 +19,7 @@ namespace copper_server::storage {
     permissions_manager::permissions_manager(const std::filesystem::path& base_path)
         : base_path(base_path) {}
 
-    bool permissions_manager::has_rights(const std::string& action_name, const base_objects::SharedClientData& client) {
+    bool permissions_manager::has_rights(const std::string& action_name, const base_objects::shared_client_data& client) {
         return protected_values.get([&](const protected_values_t& values) {
             if (client.player_data.instant_granted_actions.find(action_name) != client.player_data.instant_granted_actions.npos)
                 return true;
@@ -121,7 +121,7 @@ namespace copper_server::storage {
         });
     }
 
-    bool permissions_manager::is_in_group(const std::string& group_name, const base_objects::SharedClientData& client) {
+    bool permissions_manager::is_in_group(const std::string& group_name, const base_objects::shared_client_data& client) {
         return client.player_data.permission_groups.contains(group_name);
     }
 

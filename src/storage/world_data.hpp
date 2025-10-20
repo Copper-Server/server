@@ -31,7 +31,6 @@
 #include <src/base_objects/world/loading_point_ticket.hpp>
 #include <src/base_objects/world/sub_chunk_data.hpp>
 #include <src/util/calculations.hpp>
-#include <src/util/task_management.hpp>
 
 namespace copper_server::storage {
     class world_data;
@@ -51,6 +50,7 @@ namespace copper_server::storage {
         base_objects::world::height_maps height_maps;
         std::vector<base_objects::world::sub_chunk_data> sub_chunks;
         boost::unordered_flat_map<uint64_t, api::ecs::entity> stored_entities; //uses id from world
+
 
         //instead of using negative values for priority, schedule ticks in reverse order
         // -1 == 1, -2 == 2, etc... means higher value == lower priority
@@ -198,10 +198,10 @@ namespace copper_server::storage {
         virtual ~chunk_light_processor() {}
 
         //fired after entity_teleport and entity_move
-        virtual void process_entity_light_source(world_data& world, api::ecs::entity entity, util::VECTOR new_pos) {}
+        virtual void process_entity_light_source(world_data& world, api::ecs::entity entity, util::vector new_pos) {}
 
         //fired after entity_look_changes
-        virtual void process_entity_light_source_rot(world_data& world, api::ecs::entity entity, util::ANGLE_DEG new_rot) {}
+        virtual void process_entity_light_source_rot(world_data& world, api::ecs::entity entity, util::angle_deg new_rot) {}
 
         virtual void process_chunk(world_data& world, int64_t chunk_x, int64_t chunk_z) = 0;
         virtual void process_sub_chunk(world_data& world, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z) = 0;
@@ -227,7 +227,7 @@ namespace copper_server::storage {
         chunk_column chunks;
         base_objects::atomic_holder<chunk_light_processor> light_processor;
 
-        boost::unordered_flat_map<util::XY<int64_t>, FuturePtr<base_objects::atomic_holder<chunk_data>>, std::hash<util::XY<int64_t>>> on_generate_process;
+        boost::unordered_flat_map<util::xy<int64_t>, fast_task::future_ptr<base_objects::atomic_holder<chunk_data>>, std::hash<util::xy<int64_t>>> on_generate_process;
 
         struct {
             std::bitset<255> sync_modes;
@@ -269,8 +269,8 @@ namespace copper_server::storage {
         std::filesystem::path path;
 
         fast_task::task_query limit_on_load;
-        boost::unordered_flat_map<util::XY<int64_t>, FuturePtr<base_objects::atomic_holder<chunk_data>>, std::hash<util::XY<int64_t>>> on_load_process;
-        boost::unordered_flat_map<util::XY<int64_t>, FuturePtr<bool>, std::hash<util::XY<int64_t>>> on_save_process;
+        boost::unordered_flat_map<util::xy<int64_t>, fast_task::future_ptr<base_objects::atomic_holder<chunk_data>>, std::hash<util::xy<int64_t>>> on_load_process;
+        boost::unordered_flat_map<util::xy<int64_t>, fast_task::future_ptr<bool>, std::hash<util::xy<int64_t>>> on_save_process;
         boost::unordered_flat_map<size_t, api::ecs::entity> entities;
         boost::unordered_flat_map<size_t, api::ecs::entity> to_load_entities;
         size_t local_entity_id_generator = 0;
@@ -278,9 +278,9 @@ namespace copper_server::storage {
 
         std::chrono::high_resolution_clock::time_point last_usage;
 
-        FuturePtr<base_objects::atomic_holder<chunk_data>> create_chunk_generate_future(base_objects::atomic_holder<chunk_data>& chunk);
-        FuturePtr<base_objects::atomic_holder<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback, const std::function<void()>& fault);
-        FuturePtr<base_objects::atomic_holder<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z);
+        fast_task::future_ptr<base_objects::atomic_holder<chunk_data>> create_chunk_generate_future(base_objects::atomic_holder<chunk_data>& chunk);
+        fast_task::future_ptr<base_objects::atomic_holder<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback, const std::function<void()>& fault);
+        fast_task::future_ptr<base_objects::atomic_holder<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z);
         void make_save(int64_t chunk_x, int64_t chunk_z, bool also_unload);
         void make_save(int64_t chunk_x, int64_t chunk_z, chunk_row::iterator, bool also_unload);
         base_objects::atomic_holder<chunk_data> load_chunk_sync(int64_t chunk_x, int64_t chunk_z);
@@ -433,7 +433,7 @@ namespace copper_server::storage {
 
         bool exists(int64_t chunk_x, int64_t chunk_z);
         base_objects::atomic_holder<chunk_data> request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z);
-        FuturePtr<base_objects::atomic_holder<chunk_data>> request_chunk_data(int64_t chunk_x, int64_t chunk_z);
+        fast_task::future_ptr<base_objects::atomic_holder<chunk_data>> request_chunk_data(int64_t chunk_x, int64_t chunk_z);
         std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak_gen(int64_t chunk_x, int64_t chunk_z);  //if chunk does not exists then it will be generated, if chunk exists or not loaded then std::nullopt
         std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak(int64_t chunk_x, int64_t chunk_z);      //if chunk loaded returns it, else - std::nullopt
         std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak_sync(int64_t chunk_x, int64_t chunk_z); //if chunk exists returns it, else - std::nullopt
@@ -549,11 +549,11 @@ namespace copper_server::storage {
 #pragma region Communication
         void entity_init(api::ecs::entity);
 
-        void entity_teleport(api::ecs::entity, util::VECTOR new_pos); //TODO update chunk with it
-        void entity_move(api::ecs::entity, util::VECTOR move);        //TODO update chunk with it
-        void entity_look_changes(api::ecs::entity, util::ANGLE_DEG new_rotation);
-        void entity_rotation_changes(api::ecs::entity, util::ANGLE_DEG new_rotation);
-        void entity_motion_changes(api::ecs::entity, util::VECTOR new_motion); //TODO update chunk with it
+        void entity_teleport(api::ecs::entity, util::vector new_pos); //TODO update chunk with it
+        void entity_move(api::ecs::entity, util::vector move);        //TODO update chunk with it
+        void entity_look_changes(api::ecs::entity, util::angle_deg new_rotation);
+        void entity_rotation_changes(api::ecs::entity, util::angle_deg new_rotation);
+        void entity_motion_changes(api::ecs::entity, util::vector new_motion); //TODO update chunk with it
 
         void entity_rides(api::ecs::entity, size_t other_entity_id);       //TODO update chunk with it
         void entity_leaves_ride(api::ecs::entity, size_t other_entity_id); //TODO update chunk with it
@@ -561,9 +561,9 @@ namespace copper_server::storage {
         void entity_attach(api::ecs::entity, size_t other_entity_id);
         void entity_detach(api::ecs::entity, size_t other_entity_id);
 
-        void entity_damage(api::ecs::entity, float health, int32_t type_id, std::optional<util::VECTOR> pos);
-        void entity_damage(api::ecs::entity, float health, int32_t type_id, std::optional<api::ecs::entity> source, std::optional<util::VECTOR> pos);
-        void entity_damage(api::ecs::entity, float health, int32_t type_id, std::optional<api::ecs::entity> source, std::optional<api::ecs::entity> source_direct, std::optional<util::VECTOR> pos);
+        void entity_damage(api::ecs::entity, float health, int32_t type_id, std::optional<util::vector> pos);
+        void entity_damage(api::ecs::entity, float health, int32_t type_id, std::optional<api::ecs::entity> source, std::optional<util::vector> pos);
+        void entity_damage(api::ecs::entity, float health, int32_t type_id, std::optional<api::ecs::entity> source, std::optional<api::ecs::entity> source_direct, std::optional<util::vector> pos);
 
         void entity_attack(api::ecs::entity, size_t other_entity_id);
         void entity_iteract(api::ecs::entity, size_t other_entity_id);
@@ -578,7 +578,6 @@ namespace copper_server::storage {
 
         void entity_animation(api::ecs::entity, base_objects::entity_animation animation);
         void entity_event(api::ecs::entity, base_objects::entity_event status);
-        void entity_metadata(api::ecs::entity);
 
 
         void entity_add_effect(api::ecs::entity, uint32_t id, uint32_t duration, uint8_t amplifier = 1, bool ambient = false, bool show_particles = true, bool show_icon = true, bool use_blend = false);

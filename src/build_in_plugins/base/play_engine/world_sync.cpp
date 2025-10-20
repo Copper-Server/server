@@ -21,7 +21,7 @@
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins::base::play_engine {
-    class world_sync : public PluginAutoRegister<"base/play_engine/world_sync", world_sync> {
+    class world_sync : public plugin_auto_register<"base/play_engine/world_sync", world_sync> {
         static fast_task::future_ptr<void> send_async(auto& client, auto&& packet) {
             return fast_task::future<void>::start([client, packet = std::move(packet)]() mutable { *client << std::move(packet); });
         }
@@ -98,7 +98,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 };
         };
 
-        static void entity_damage(api::ecs::entity self, api::ecs::entity target, [[maybe_unused]] float health, int32_t type_id, const std::optional<util::VECTOR>& pos) {
+        static void entity_damage(api::ecs::entity self, api::ecs::entity target, [[maybe_unused]] float health, int32_t type_id, const std::optional<util::vector>& pos) {
             auto assigned_player = self.get<api::ecs::com::assigned_player>().player;
             if (assigned_player)
                 *assigned_player << api::packets::client_bound::play::damage_event{
@@ -108,7 +108,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 };
         };
 
-        static void entity_damage_with_source(api::ecs::entity self, api::ecs::entity target, [[maybe_unused]] float health, int32_t type_id, std::optional<api::ecs::entity> source, const std::optional<util::VECTOR>& pos) {
+        static void entity_damage_with_source(api::ecs::entity self, api::ecs::entity target, [[maybe_unused]] float health, int32_t type_id, std::optional<api::ecs::entity> source, const std::optional<util::vector>& pos) {
             auto assigned_player = self.get<api::ecs::com::assigned_player>().player;
             if (assigned_player)
                 *assigned_player << api::packets::client_bound::play::damage_event{
@@ -120,7 +120,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 };
         };
 
-        static void entity_damage_with_sources(api::ecs::entity self, api::ecs::entity target, [[maybe_unused]] float health, int32_t type_id, std::optional<api::ecs::entity> source, std::optional<api::ecs::entity> source_direct, const std::optional<util::VECTOR>& pos) {
+        static void entity_damage_with_sources(api::ecs::entity self, api::ecs::entity target, [[maybe_unused]] float health, int32_t type_id, std::optional<api::ecs::entity> source, std::optional<api::ecs::entity> source_direct, const std::optional<util::vector>& pos) {
             auto assigned_player = self.get<api::ecs::com::assigned_player>().player;
             if (assigned_player)
                 *assigned_player << api::packets::client_bound::play::damage_event{
@@ -172,12 +172,6 @@ namespace copper_server::build_in_plugins::base::play_engine {
                     .id = target.get<api::ecs::com::protocol_id>().value,
                     .status = (int8_t)status
                 };
-        }
-
-        static void entity_metadata(api::ecs::entity self, api::ecs::entity target) {
-            auto assigned_player = self.get<api::ecs::com::assigned_player>().player;
-            if (assigned_player)
-                *assigned_player << api::packets::client_bound::play::set_entity_data::create(target);
         }
 
         static void entity_finish_break(api::ecs::entity self, api::ecs::entity target, int64_t x, int64_t y, int64_t z) {
@@ -240,7 +234,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 };
         };
 
-        static void entity_look_changes(api::ecs::entity self, api::ecs::entity target, util::ANGLE_DEG rot) {
+        static void entity_look_changes(api::ecs::entity self, api::ecs::entity target, util::angle_deg rot) {
             auto assigned_player = self.get<api::ecs::com::assigned_player>().player;
             if (assigned_player)
                 *assigned_player << api::packets::client_bound::play::rotate_head{
@@ -249,7 +243,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 };
         };
 
-        static void entity_motion_changes(api::ecs::entity self, api::ecs::entity target, [[maybe_unused]] util::VECTOR mot) {
+        static void entity_motion_changes(api::ecs::entity self, api::ecs::entity target, [[maybe_unused]] util::vector mot) {
             auto assigned_player = self.get<api::ecs::com::assigned_player>().player;
             if (assigned_player) {
                 *assigned_player << api::packets::client_bound::play::set_entity_motion{
@@ -259,7 +253,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
             }
         };
 
-        static void entity_move(api::ecs::entity self, api::ecs::entity target, util::VECTOR dif) {
+        static void entity_move(api::ecs::entity self, api::ecs::entity target, util::vector dif) {
             auto assigned_player = self.get<api::ecs::com::assigned_player>().player;
             if (assigned_player) {
                 auto delta = util::minecraft::packets::delta_move({(float)dif.x, (float)dif.y, (float)dif.z});
@@ -309,7 +303,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 };
         };
 
-        static void entity_rotation_changes(api::ecs::entity self, api::ecs::entity target, util::ANGLE_DEG rot) {
+        static void entity_rotation_changes(api::ecs::entity self, api::ecs::entity target, util::angle_deg rot) {
             auto assigned_player = self.get<api::ecs::com::assigned_player>().player;
             if (assigned_player)
                 *assigned_player << api::packets::client_bound::play::move_entity_rot{
@@ -320,7 +314,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 };
         };
 
-        static void entity_teleport(api::ecs::entity self, api::ecs::entity target, util::VECTOR pos) {
+        static void entity_teleport(api::ecs::entity self, api::ecs::entity target, util::vector pos) {
             auto assigned_player = self.get<api::ecs::com::assigned_player>().player;
             if (assigned_player) {
                 auto mot = target.get<api::ecs::com::motion>();
@@ -791,7 +785,6 @@ namespace copper_server::build_in_plugins::base::play_engine {
             proc.entity_deinit = entity_deinit;
             proc.entity_detach = entity_detach;
             proc.entity_event = entity_event;
-            proc.entity_metadata = entity_metadata;
             proc.entity_finish_break = entity_finish_break;
             proc.entity_init = entity_init;
             proc.entity_iteract = entity_iteract;
@@ -828,9 +821,9 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         ~world_sync() noexcept {}
 
-        void OnInitialization(const PluginRegistrationPtr& _) override {
+        void on_initialization(const plugin_registration_ptr& _) override {
             api::entity_data::register_entity_world_processor(make_processor(), "minecraft:player");
-            api::packets::processor(*this, [](api::packets::server_bound::play::chunk_batch_received&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](api::packets::server_bound::play::chunk_batch_received&& packet, base_objects::shared_client_data& client) {
                 client.packets_state.chunk_batch_size = (int32_t)std::ceil(packet.chunks_per_tick);
 
                 uint32_t expected = client.packets_state.await_ack_chunk_batches.load(); // Read the current value
@@ -840,7 +833,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 throw std::invalid_argument("There's no batches to acknowledge");
             });
 
-            api::packets::processor(*this, [](api::packets::server_bound::play::client_tick_end&&, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](api::packets::server_bound::play::client_tick_end&&, base_objects::shared_client_data& client) {
             });
         }
     };

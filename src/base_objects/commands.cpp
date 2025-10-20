@@ -99,7 +99,6 @@ namespace copper_server::base_objects {
             return std::nullopt;
         }
 
-
         std::optional<parsers::color> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::color& cfg, std::string& part, [[maybe_unused]] std::string& path) {
             if (part == "white")
                 return parsers::color::white;
@@ -873,12 +872,16 @@ namespace copper_server::base_objects {
         }
         if (current->redirect) {
             auto routine = current->redirect;
-            return (routine->redirect_routine)(command_nodes[routine->target_command], args, path, data);
+            data.other_data["result"] = 0;
+            data.other_data["result"] = (routine->redirect_routine)(command_nodes[routine->target_command], args, path, data);
+            return;
         } else {
             if (current->executable) {
-                if (api::permissions::has_rights(current->action_name, data.executor))
-                    return (*current->executable)(args, data);
-                else
+                if (api::permissions::has_rights(current->action_name, data.executor)) {
+                    data.other_data["result"] = 0;
+                    data.other_data["result"] = (*current->executable)(args, data);
+                    return;
+                } else
                     throw std::runtime_error("Not enough permissions for this command.");
             } else {
                 if (current->childs.size() == 1) {
@@ -1011,11 +1014,11 @@ namespace copper_server::base_objects {
         changes_id++;
         command_nodes.push_back({});
         command_root_browser browser(*this);
-        for (auto& plugin : pluginManagement.registeredPlugins())
-            plugin->OnCommandsLoad(plugin, browser);
+        for (auto& plugin : plugin_management.registered_plugins())
+            plugin->on_commands_load(plugin, browser);
 
-        for (auto& plugin : pluginManagement.registeredPlugins())
-            plugin->OnCommandsLoadComplete(plugin, browser);
+        for (auto& plugin : plugin_management.registered_plugins())
+            plugin->on_commands_load_complete(plugin, browser);
 
         command_nodes.commit();
     }

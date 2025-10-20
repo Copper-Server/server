@@ -12,8 +12,8 @@
 #include <src/base_objects/events/event.hpp>
 
 namespace copper_server::base_objects {
-    struct SharedClientData;
-    using client_data_holder = atomic_holder<SharedClientData>;
+    struct shared_client_data;
+    using client_data_holder = atomic_holder<shared_client_data>;
 }
 namespace copper_server::api::allowlist {
     enum class allowlist_mode {

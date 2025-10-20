@@ -21,22 +21,22 @@
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins::base::play_engine {
-    struct movement : public PluginAutoRegister<"base/play_engine/movement", movement> {
+    struct movement : public plugin_auto_register<"base/play_engine/movement", movement> {
         movement() {}
 
         ~movement() noexcept {}
 
-        void OnInitialization(const PluginRegistrationPtr& _) override {
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::player_command&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+        void on_initialization(const plugin_registration_ptr& _) override {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::player_command&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::player_input&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::player_input&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::player_abilities&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::player_abilities&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::move_player_pos&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::move_player_pos&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 if (!client.player_data.assigned_entity)
                     return;
 
@@ -70,7 +70,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 }
             });
 
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::move_player_pos_rot&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::move_player_pos_rot&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 if (!client.player_data.assigned_entity)
                     return;
 
@@ -102,20 +102,20 @@ namespace copper_server::build_in_plugins::base::play_engine {
                     entity.moved({packet.x, packet.y, packet.z}, packet.yaw, packet.pitch, packet.flags | api::packets::server_bound::play::move_player_pos_rot::flags_f::on_ground);
             });
 
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::move_player_rot&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::move_player_rot&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 if (client.player_data.assigned_entity)
                     api::entity(*client.player_data.assigned_entity).rotated(packet.yaw, packet.pitch, packet.flags | api::packets::server_bound::play::move_player_rot::flags_f::on_ground);
             });
 
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::move_player_status_only&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::move_player_status_only&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 if (client.player_data.assigned_entity)
                     client.player_data.assigned_entity->modify<api::ecs::com::on_ground>()->value = packet.flags | api::packets::server_bound::play::move_player_status_only::flags_f::on_ground;
             });
 
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::move_vehicle&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::move_vehicle&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-            api::packets::processor(*this, [](api::packets::server_bound::play::paddle_boat&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](api::packets::server_bound::play::paddle_boat&& packet, base_objects::shared_client_data& client) {
                 if (!client.player_data.assigned_entity)
                     return;
 

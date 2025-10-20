@@ -16,6 +16,7 @@
 #include <library/list_array.hpp>
 
 #include <src/base_objects/block.hpp>
+#include <src/base_objects/palette_container.hpp>
 #include <src/base_objects/world/light_data.hpp>
 
 namespace copper_server::base_objects {
@@ -28,6 +29,9 @@ namespace copper_server::base_objects {
 
             base_objects::world::light_data sky_light;
             base_objects::world::light_data block_light;
+            mutable std::unique_ptr<base_objects::palette_container_block> block_palette;
+            mutable std::unique_ptr<base_objects::palette_container_biome> biome_palette;
+
             uint16_t active_blocks = 0; //if zero, the sub chunk is not rendered for clients
             bool has_tickable_blocks = false;
             bool need_to_recalculate_light = false;
@@ -35,7 +39,11 @@ namespace copper_server::base_objects {
             bool block_lighted = false; //set true if at least one block is lighted in this sub_chunk
 
             sub_chunk_data();
+            sub_chunk_data(sub_chunk_data&&);
             ~sub_chunk_data();
+
+            sub_chunk_data& operator=(sub_chunk_data&&);
+
 
             enbt::value& get_block_entity_data(uint8_t local_x, uint8_t local_y, uint8_t local_z);
             void get_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, std::function<void(base_objects::block& block)> on_normal, std::function<void(base_objects::block& block, enbt::value& entity_data)> on_entity);
@@ -50,6 +58,9 @@ namespace copper_server::base_objects {
 
             void for_each_block(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block block)> func) const;
             void for_each_block_entity(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block block, const enbt::value& entity_data)> func) const;
+
+            const base_objects::palette_container_block& get_block_pallete() const;
+            const base_objects::palette_container_biome& get_biome_pallete() const;
         };
     }
 }

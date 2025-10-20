@@ -15,9 +15,8 @@
 #include <library/list_array.hpp>
 #include <mutex>
 #include <src/api/console.hpp>
-#include <src/base_objects/events/event.hpp>
 #include <src/api/log.hpp>
-#include <src/util/task_management.hpp>
+#include <src/base_objects/events/event.hpp>
 
 namespace copper_server::api::log {
 

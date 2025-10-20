@@ -20,14 +20,14 @@
 #include <variant>
 
 namespace copper_server::base_objects {
-    struct SharedClientData;
+    struct shared_client_data;
     class command_manager;
     struct recipe;
 }
 
 namespace copper_server::api::packets {
     namespace events {
-        extern base_objects::events::sync_event_no_cancel<base_objects::SharedClientData&> client_state_changed;
+        extern base_objects::events::sync_event_no_cancel<base_objects::shared_client_data&> client_state_changed;
     }
     //reflect_map skip_begin
     template <class T>
@@ -75,7 +75,7 @@ namespace copper_server::api::packets {
     }
 
 
-    struct SharedClientData;
+    struct shared_client_data;
     template <auto value>
     using ic = std::integral_constant<decltype(value), value>;
 
@@ -844,14 +844,14 @@ namespace copper_server::api::packets {
         get_world_blocks_height,
     };
 
-    size_t get_size_source_value(base_objects::SharedClientData&, size_source);
+    size_t get_size_source_value(base_objects::shared_client_data&, size_source);
 
     //this type provides way to get size of array while decoding, the values would also be checked to be equal to size of the container
     template <auto... DependedValues>
     struct no_size {
         template <class T>
-        static size_t get_depended_size(base_objects::SharedClientData& context, const T& val) {
-            static auto get_value = [](base_objects::SharedClientData& context, const T& val, auto&& it) -> size_t {
+        static size_t get_depended_size(base_objects::shared_client_data& context, const T& val) {
+            static auto get_value = [](base_objects::shared_client_data& context, const T& val, auto&& it) -> size_t {
                 if constexpr (std::is_same_v<std::decay_t<decltype(it)>, size_source>)
                     return get_size_source_value(context, it);
                 else if constexpr (is_template_base_of<depends_next, std::decay_t<decltype(val.*it)>>) {
@@ -1949,8 +1949,8 @@ namespace copper_server::base_objects {
     using ordered_id = api::packets::ordered_id<T, id>;
 }
 
-copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::api::packets::switches_to::status);
-copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::api::packets::switches_to::login);
-copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::api::packets::switches_to::config);
-copper_server::base_objects::SharedClientData& operator<<(copper_server::base_objects::SharedClientData& client, copper_server::api::packets::switches_to::play);
+copper_server::base_objects::shared_client_data& operator<<(copper_server::base_objects::shared_client_data& client, copper_server::api::packets::switches_to::status);
+copper_server::base_objects::shared_client_data& operator<<(copper_server::base_objects::shared_client_data& client, copper_server::api::packets::switches_to::login);
+copper_server::base_objects::shared_client_data& operator<<(copper_server::base_objects::shared_client_data& client, copper_server::api::packets::switches_to::config);
+copper_server::base_objects::shared_client_data& operator<<(copper_server::base_objects::shared_client_data& client, copper_server::api::packets::switches_to::play);
 #endif /* SRC_API_PACKETS_TYPES */

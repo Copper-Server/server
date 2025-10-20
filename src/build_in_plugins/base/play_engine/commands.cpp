@@ -18,13 +18,13 @@
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins::base::play_engine {
-    struct commands : public PluginAutoRegister<"base/play_engine/commands", commands> {
+    struct commands : public plugin_auto_register<"base/play_engine/commands", commands> {
         commands() {}
 
         ~commands() noexcept {}
 
-        void OnInitialization(const PluginRegistrationPtr& _) override {
-            api::packets::processor(*this, [](api::packets::server_bound::play::client_command&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+        void on_initialization(const plugin_registration_ptr& _) override {
+            api::packets::processor(*this, [](api::packets::server_bound::play::client_command&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 if (packet.action_id == api::packets::server_bound::play::client_command::action_id_e::perform_respawn) {
                     //TODO client <<  api::packets::client_bound::play::respawn{};
                 } else if (packet.action_id == api::packets::server_bound::play::client_command::action_id_e::request_stats) {
@@ -35,8 +35,8 @@ namespace copper_server::build_in_plugins::base::play_engine {
             });
         }
 
-        void OnCommandsLoadComplete(const std::shared_ptr<PluginRegistration>&, base_objects::command_root_browser& root) override {
-            api::players::iterate_online([&manager = root.get_manager()](base_objects::SharedClientData& client) {
+        void on_commands_load_complete(const std::shared_ptr<plugin_registration>&, base_objects::command_root_browser& root) override {
+            api::players::iterate_online([&manager = root.get_manager()](base_objects::shared_client_data& client) {
                 if (!client.is_virtual)
                     client << api::packets::client_bound::play::commands::create(manager);
                 return false;

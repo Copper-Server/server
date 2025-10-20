@@ -14,61 +14,61 @@
 #include <src/api/bin/packets/generic_encode.hpp>
 #include <src/api/bin/packets/generic_stringize.hpp>
 
-#define auto_define_packet_ops(packet)                                                                                             \
-    template struct packet_ops<packet>;                                                                                            \
-    template <>                                                                                                                    \
-    base_objects::events::sync_event<packet&, base_objects::SharedClientData&>& packet_ops<packet>::send_viewer() {                \
-        static base_objects::events::sync_event<packet&, base_objects::SharedClientData&> event;                                   \
-        return event;                                                                                                              \
-    }                                                                                                                              \
-    template <>                                                                                                                    \
-    base_objects::events::sync_event_no_cancel<packet&, base_objects::SharedClientData&>& packet_ops<packet>::post_send_viewer() { \
-        static base_objects::events::sync_event_no_cancel<packet&, base_objects::SharedClientData&> event;                         \
-        return event;                                                                                                              \
-    }                                                                                                                              \
-    template <>                                                                                                                    \
-    base_objects::events::sync_event<packet&, base_objects::SharedClientData&>& packet_ops<packet>::receive_viewer() {             \
-        static base_objects::events::sync_event<packet&, base_objects::SharedClientData&> event;                                   \
-        return event;                                                                                                              \
-    }                                                                                                                              \
-    template <>                                                                                                                    \
-    base_objects::events::sync_event_single<packet&&, base_objects::SharedClientData&>& packet_ops<packet>::processor() {          \
-        static base_objects::events::sync_event_single<packet&&, base_objects::SharedClientData&> event;                           \
-        return event;                                                                                                              \
-    }                                                                                                                              \
-    template <>                                                                                                                    \
-    bool packet_ops<packet>::send(base_objects::SharedClientData& client, packet&& p) {                                            \
-        return make_send<packet_ops>(client, std::move(p));                                                                        \
-    }                                                                                                                              \
-    template <>                                                                                                                    \
-    base_objects::network::response packet_ops<packet>::client_encode(base_objects::SharedClientData& context, packet&& p) {       \
-        return make_encode<packet_ops>(context, std::move(p));                                                                     \
-    }                                                                                                                              \
-    template <>                                                                                                                    \
-    base_objects::network::response packet_ops<packet>::encode(packet&& p) {                                                       \
-        base_objects::SharedClientData context;                                                                                    \
-        return make_encode<packet_ops>(context, std::move(p));                                                                     \
-    }                                                                                                                              \
-    template <>                                                                                                                    \
-    bool packet_ops<packet>::make_process(base_objects::SharedClientData& client, packet&& p) {                                    \
-        return decoder_make_process<packet_ops>(client, p);                                                                        \
-    }                                                                                                                              \
-    template <>                                                                                                                    \
-    packet packet_ops<packet>::decode(ArrayStream& stream) {                                                                       \
-        base_objects::SharedClientData context;                                                                                    \
-        return client_decode(context, stream);                                                                                     \
-    }                                                                                                                              \
-    template <>                                                                                                                    \
-    packet packet_ops<packet>::client_decode(base_objects::SharedClientData& context, ArrayStream& stream) {                       \
-        packet res;                                                                                                                \
-        decode_entry(context, stream, res, &res);                                                                                  \
-        return res;                                                                                                                \
-    }                                                                                                                              \
-    template <>                                                                                                                    \
-    std::string packet_ops<packet>::stringize(const packet& p) {                                                                   \
-        std::string res;                                                                                                           \
-        sp::serialize_packet(res, 0, p);                                                                                           \
-        return res;                                                                                                                \
+#define auto_define_packet_ops(packet)                                                                                               \
+    template struct packet_ops<packet>;                                                                                              \
+    template <>                                                                                                                      \
+    base_objects::events::sync_event<packet&, base_objects::shared_client_data&>& packet_ops<packet>::send_viewer() {                \
+        static base_objects::events::sync_event<packet&, base_objects::shared_client_data&> event;                                   \
+        return event;                                                                                                                \
+    }                                                                                                                                \
+    template <>                                                                                                                      \
+    base_objects::events::sync_event_no_cancel<packet&, base_objects::shared_client_data&>& packet_ops<packet>::post_send_viewer() { \
+        static base_objects::events::sync_event_no_cancel<packet&, base_objects::shared_client_data&> event;                         \
+        return event;                                                                                                                \
+    }                                                                                                                                \
+    template <>                                                                                                                      \
+    base_objects::events::sync_event<packet&, base_objects::shared_client_data&>& packet_ops<packet>::receive_viewer() {             \
+        static base_objects::events::sync_event<packet&, base_objects::shared_client_data&> event;                                   \
+        return event;                                                                                                                \
+    }                                                                                                                                \
+    template <>                                                                                                                      \
+    base_objects::events::sync_event_single<packet&&, base_objects::shared_client_data&>& packet_ops<packet>::processor() {          \
+        static base_objects::events::sync_event_single<packet&&, base_objects::shared_client_data&> event;                           \
+        return event;                                                                                                                \
+    }                                                                                                                                \
+    template <>                                                                                                                      \
+    bool packet_ops<packet>::send(base_objects::shared_client_data& client, packet&& p) {                                            \
+        return make_send<packet_ops>(client, std::move(p));                                                                          \
+    }                                                                                                                                \
+    template <>                                                                                                                      \
+    base_objects::network::response packet_ops<packet>::client_encode(base_objects::shared_client_data& context, packet&& p) {       \
+        return make_encode<packet_ops>(context, std::move(p));                                                                       \
+    }                                                                                                                                \
+    template <>                                                                                                                      \
+    base_objects::network::response packet_ops<packet>::encode(packet&& p) {                                                         \
+        base_objects::shared_client_data context;                                                                                    \
+        return make_encode<packet_ops>(context, std::move(p));                                                                       \
+    }                                                                                                                                \
+    template <>                                                                                                                      \
+    bool packet_ops<packet>::make_process(base_objects::shared_client_data& client, packet&& p) {                                    \
+        return decoder_make_process<packet_ops>(client, p);                                                                          \
+    }                                                                                                                                \
+    template <>                                                                                                                      \
+    packet packet_ops<packet>::decode(ArrayStream& stream) {                                                                         \
+        base_objects::shared_client_data context;                                                                                    \
+        return client_decode(context, stream);                                                                                       \
+    }                                                                                                                                \
+    template <>                                                                                                                      \
+    packet packet_ops<packet>::client_decode(base_objects::shared_client_data& context, ArrayStream& stream) {                       \
+        packet res;                                                                                                                  \
+        decode_entry(context, stream, res, &res);                                                                                    \
+        return res;                                                                                                                  \
+    }                                                                                                                                \
+    template <>                                                                                                                      \
+    std::string packet_ops<packet>::stringize(const packet& p) {                                                                     \
+        std::string res;                                                                                                             \
+        sp::serialize_packet(res, 0, p);                                                                                             \
+        return res;                                                                                                                  \
     }
 
 #endif /* SRC_API_BIN_PACKETS_GENERIC_AUTO */

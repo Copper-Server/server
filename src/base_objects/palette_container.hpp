@@ -101,6 +101,7 @@ namespace copper_server::base_objects {
         bool is_biomes_mode;
 
     public:
+        using compile_result = std::variant<palette_container_single, palette_container_indirect, palette_data>;
         static inline constexpr uint8_t max_indirect_biomes = 0x4;
         static inline constexpr uint8_t max_indirect_blocks = 0x8;
         static inline constexpr uint8_t min_indirect_biomes = 0x1;
@@ -130,21 +131,31 @@ namespace copper_server::base_objects {
             return value;
         }
 
-        std::variant<palette_container_single, palette_container_indirect, palette_data> compile() const& {
-            std::vector<int32_t> unique_palette = get_unique_palette();
+        compile_result compile() const& {
+            if (data.empty()) {
+                palette_container_single res;
+                res.id_of_palette = 0;
+                return res;
+            }
+            boost::container::flat_map<int32_t, uint_fast32_t> palette_map;
+            std::vector<int32_t> unique_palette;
+            unique_palette.reserve(is_biomes_mode ? max_indirect_biomes + 1 : max_indirect_blocks + 1);
+
+            for (const auto& id : data)
+                if (palette_map.find(id) == palette_map.end()) {
+                    palette_map.emplace(id, unique_palette.size());
+                    unique_palette.push_back(id);
+                }
+
             if (unique_palette.size() == 1) {
                 palette_container_single res;
                 res.id_of_palette = data.back();
                 return res;
             } else if ((is_biomes_mode && unique_palette.size() <= max_indirect_biomes) || (!is_biomes_mode && unique_palette.size() <= max_indirect_blocks)) {
                 palette_container_indirect res(std::max<uint8_t>(palette_data::bits_for_max(unique_palette.size()), is_biomes_mode ? min_indirect_biomes : min_indirect_blocks));
-                boost::container::flat_map<int32_t, uint_fast32_t> map;
                 res.palette = std::move(unique_palette);
-                for (uint_fast32_t i = 0; i < unique_palette.size(); ++i)
-                    map.emplace(unique_palette[i], i);
-
                 for (auto it : data)
-                    res.data.add(map[it]);
+                    res.data.add(palette_map[it]);
                 return res;
             } else {
                 palette_data res(bits_per_entry);
@@ -154,7 +165,7 @@ namespace copper_server::base_objects {
             }
         }
 
-        void decompile(std::variant<palette_container_single, palette_container_indirect, palette_data>&& vars) {
+        void decompile(compile_result&& vars) {
             data.clear();
             std::visit(
                 [this](auto& it) {
@@ -185,27 +196,6 @@ namespace copper_server::base_objects {
 
         void reserve(size_t size) {
             data.reserve(size);
-        }
-
-    private:
-        std::vector<int32_t> get_unique_palette() const {
-            if (bits_per_entry == 0 && !data.empty()) {
-                return {data[0]};
-            }
-            size_t palette_size = size_t(1) << bits_per_entry;
-            bit_list_array<> seen(palette_size);
-            std::vector<int32_t> unique_items;
-            unique_items.reserve(is_biomes_mode ? max_indirect_biomes : max_indirect_blocks);
-
-            for (const auto& id : data) {
-                if (id >= 0 && id < palette_size) {
-                    if (!seen.get_unchecked(id)) {
-                        seen.set(id, true);
-                        unique_items.push_back(id);
-                    }
-                }
-            }
-            return unique_items;
         }
     };
 

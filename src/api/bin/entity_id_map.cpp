@@ -220,7 +220,7 @@ namespace copper_server::api::entity_id_map {
         throw std::runtime_error("Id not found");
     }
 
-    void apply_selector(base_objects::SharedClientData& caller, const std::string& selector, std::function<void(api::ecs::entity)>&& callback) {
+    void apply_selector(base_objects::shared_client_data& caller, const std::string& selector, std::function<void(api::ecs::entity)>&& callback) {
         api::selector sel;
         sel.build_selector(selector);
         base_objects::command_context context(caller, true);

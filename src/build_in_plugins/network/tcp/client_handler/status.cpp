@@ -16,7 +16,7 @@
 #include <src/util/conversions.hpp>
 
 namespace copper_server::build_in_plugins::network::tcp {
-    struct tcp_status : public PluginAutoRegister<"network/tcp_status", tcp_status> {
+    struct tcp_status : public plugin_auto_register<"network/tcp_status", tcp_status> {
         static inline fast_task::task_mutex cached_mutex;
         static inline std::string cached_icon;
         static inline list_array<std::pair<std::string, enbt::raw_uuid>> sample_cache;
@@ -30,7 +30,7 @@ namespace copper_server::build_in_plugins::network::tcp {
 
             list_array<std::pair<std::string, enbt::raw_uuid>> result;
             size_t i = 0;
-            api::players::iterate_players_not_state(copper_server::base_objects::SharedClientData::packets_state_t::protocol_state::initialization, [&](const copper_server::base_objects::SharedClientData& player) {
+            api::players::iterate_players_not_state(copper_server::base_objects::shared_client_data::packets_state_t::protocol_state::initialization, [&](const copper_server::base_objects::shared_client_data& player) {
                 if (i < api::configuration::get().status.sample_players_count) {
                     if (!player.data)
                         return true;
@@ -65,7 +65,7 @@ namespace copper_server::build_in_plugins::network::tcp {
             }
         }
 
-        static std::string build_response(base_objects::SharedClientData& client) {
+        static std::string build_response(base_objects::shared_client_data& client) {
             int32_t protocol_version = client.packets_state.protocol_version == (int32_t)api::registers::current_protocol_id
                                            ? api::registers::current_protocol_id
                                            : 0;
@@ -112,16 +112,16 @@ namespace copper_server::build_in_plugins::network::tcp {
             return res;
         }
 
-        void OnRegister(const PluginRegistrationPtr&) override {
+        void on_register(const plugin_registration_ptr&) override {
             using status_req = api::packets::server_bound::status::status_request;
             using ping_req = api::packets::server_bound::status::ping_response;
 
-            api::packets::processor(*this, [](status_req&&, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](status_req&&, base_objects::shared_client_data& client) {
                 client << api::packets::client_bound::status::status_response{
                     .json_response = build_response(client)
                 };
             });
-            api::packets::processor(*this, [](ping_req&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](ping_req&& packet, base_objects::shared_client_data& client) {
                 client << api::packets::client_bound::status::pong_response{
                     .timestamp = packet.timestamp
                 };

@@ -29,6 +29,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         if (chandler)
             delete chandler;
         if (_sharedData) {
+            _sharedData->deactivate();
             try {
                 api::players::handlers::on_disconnect.await_notify(shared_data_ref());
             } catch (...) {
@@ -41,7 +42,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         return _sharedData ? _sharedData : _sharedData = api::players::allocate_player(this);
     }
 
-    base_objects::SharedClientData& session::shared_data() {
+    base_objects::shared_client_data& session::shared_data() {
         return *shared_data_ref();
     }
 

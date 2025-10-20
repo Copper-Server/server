@@ -54,8 +54,8 @@ namespace copper_server::base_objects {
             bool value = false;
         };
 
-        struct rotations : public enum_item<9>, util::XYZ<float> {
-            using util::XYZ<float>::XYZ;
+        struct rotations : public enum_item<9>, util::xyz<float> {
+            using util::xyz<float>::xyz;
         };
 
         struct position : public enum_item<10> {
@@ -240,12 +240,12 @@ namespace copper_server::base_objects {
             enum_as<state_e, var_int32> value = state_e::unaffected;
         };
 
-        struct vector3 : public enum_item<34>, util::XYZ<float> {
-            using util::XYZ<float>::XYZ;
+        struct vector3 : public enum_item<34>, util::xyz<float> {
+            using util::xyz<float>::xyz;
         };
 
-        struct vector4 : public enum_item<35>, util::XYZW<float> {
-            using util::XYZW<float>::XYZW;
+        struct vector4 : public enum_item<35>, util::xyzw<float> {
+            using util::xyzw<float>::xyzw;
         };
 
         struct resolvable_profile : public enum_item<36> {
@@ -255,7 +255,7 @@ namespace copper_server::base_objects {
             value_t value;
         };
 
-        enum_switch< //
+        using enum_sw = enum_switch< //
             uint8_t,
             byte,
             var_int,
@@ -293,12 +293,15 @@ namespace copper_server::base_objects {
             weathering_copper_state,
             vector3,
             vector4,
-            resolvable_profile>
-            value;
+            resolvable_profile>;
+
+        enum_sw value;
 
         entity_metadata() = default;
         entity_metadata(const entity_metadata& other) = default;
         entity_metadata(entity_metadata&& other) = default;
+
+        entity_metadata(enum_sw&& other) : value(std::move(other)) {}
         entity_metadata& operator=(const entity_metadata& other) = default;
         entity_metadata& operator=(entity_metadata&& other) = default;
         ~entity_metadata() = default;

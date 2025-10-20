@@ -278,10 +278,10 @@ namespace enbt::io_helper {
                 .collect("died", [&](auto& stream) { if (stream.read()) res.set<api::ecs::com::dead_mark>(); })
                 .collect("entity_id", [&](auto& stream) { stream.read_as(res.get<api::ecs::com::entity_type>().type); })
                 .collect("id", [&](auto& stream) { stream.read_as(res.get<api::ecs::com::uuid>().id); })
-                .collect("motion", [&](auto& stream) { enbt::io_helper::serialization_read<util::VECTOR>(res.get<api::ecs::com::motion>(), stream); })
-                .collect("position", [&](auto& stream) { enbt::io_helper::serialization_read<util::VECTOR>(res.get<api::ecs::com::position>(), stream); })
-                .collect("rotation", [&](auto& stream) { enbt::io_helper::serialization_read<util::ANGLE_DEG>(res.get<api::ecs::com::rotation>(), stream); })
-                .collect("head_rotation", [&](auto& stream) { enbt::io_helper::serialization_read<util::ANGLE_DEG>(res.get<api::ecs::com::head_rotation>(), stream); })
+                .collect("motion", [&](auto& stream) { enbt::io_helper::serialization_read<util::vector>(res.get<api::ecs::com::motion>(), stream); })
+                .collect("position", [&](auto& stream) { enbt::io_helper::serialization_read<util::vector>(res.get<api::ecs::com::position>(), stream); })
+                .collect("rotation", [&](auto& stream) { enbt::io_helper::serialization_read<util::angle_deg>(res.get<api::ecs::com::rotation>(), stream); })
+                .collect("head_rotation", [&](auto& stream) { enbt::io_helper::serialization_read<util::angle_deg>(res.get<api::ecs::com::head_rotation>(), stream); })
                 .collect("inventory", [&](auto& stream) { enbt::io_helper::serialization_read(res.get<api::ecs::com::inventory>().get(), stream); })
                 .collect("custom_inventory", [&](auto& stream) { enbt::io_helper::serialization_read(res.get<api::ecs::com::custom_inventory>().get(), stream); })
                 .collect("nbt", [&](auto& stream) { res.get<api::ecs::com::nbt>().get() = stream.read(); })
@@ -373,13 +373,13 @@ namespace enbt::io_helper {
                 else if (name == "id")
                     res.get<api::ecs::com::uuid>().id = (enbt::raw_uuid)value;
                 else if (name == "motion") {
-                    enbt::io_helper::serialization_read<util::VECTOR>(res.get<api::ecs::com::motion>(), value);
+                    enbt::io_helper::serialization_read<util::vector>(res.get<api::ecs::com::motion>(), value);
                 } else if (name == "position") {
-                    enbt::io_helper::serialization_read<util::VECTOR>(res.get<api::ecs::com::position>(), value);
+                    enbt::io_helper::serialization_read<util::vector>(res.get<api::ecs::com::position>(), value);
                 } else if (name == "rotation") {
-                    enbt::io_helper::serialization_read<util::ANGLE_DEG>(res.get<api::ecs::com::rotation>(), value);
+                    enbt::io_helper::serialization_read<util::angle_deg>(res.get<api::ecs::com::rotation>(), value);
                 } else if (name == "head_rotation") {
-                    enbt::io_helper::serialization_read<util::ANGLE_DEG>(res.get<api::ecs::com::head_rotation>(), value);
+                    enbt::io_helper::serialization_read<util::angle_deg>(res.get<api::ecs::com::head_rotation>(), value);
                 } else if (name == "inventory") {
                     enbt::io_helper::serialization_read(res.get<api::ecs::com::inventory>().get(), value);
                 } else if (name == "custom_inventory") {
@@ -447,8 +447,8 @@ namespace enbt::io_helper {
     };
 
     template <class T>
-    struct serialization<util::XYZ<T>> {
-        static void read(util::XYZ<T>& res, value_read_stream& read_stream) {
+    struct serialization<util::xyz<T>> {
+        static void read(util::xyz<T>& res, value_read_stream& read_stream) {
             read_stream
                 .read_compound()
                 .collect_as("x", res.x)
@@ -457,7 +457,7 @@ namespace enbt::io_helper {
                 .force_all_collect();
         }
 
-        static void write(const util::XYZ<T>& res, value_write_stream& write_stream) {
+        static void write(const util::xyz<T>& res, value_write_stream& write_stream) {
             write_stream
                 .write_compound()
                 .write("x", res.x)
@@ -465,13 +465,13 @@ namespace enbt::io_helper {
                 .write("z", res.z);
         }
 
-        static void read(util::XYZ<T>& res, const enbt::value& from) {
+        static void read(util::xyz<T>& res, const enbt::value& from) {
             res.x = from.at("x");
             res.y = from.at("y");
             res.z = from.at("z");
         }
 
-        static void write(const util::XYZ<T>& res, enbt::value& to) {
+        static void write(const util::xyz<T>& res, enbt::value& to) {
             to = enbt::compound{
                 {"x", res.x},
                 {"y", res.y},
@@ -481,8 +481,8 @@ namespace enbt::io_helper {
     };
 
     template <class T>
-    struct serialization<util::XY<T>> {
-        static void read(util::XY<T>& res, value_read_stream& read_stream) {
+    struct serialization<util::xy<T>> {
+        static void read(util::xy<T>& res, value_read_stream& read_stream) {
             read_stream
                 .read_compound()
                 .collect_as("x", res.x)
@@ -490,19 +490,19 @@ namespace enbt::io_helper {
                 .force_all_collect();
         }
 
-        static void write(const util::XY<T>& res, value_write_stream& write_stream) {
+        static void write(const util::xy<T>& res, value_write_stream& write_stream) {
             write_stream
                 .write_compound()
                 .write("x", res.x)
                 .write("y", res.y);
         }
 
-        static void read(util::XY<T>& res, const enbt::value& from) {
+        static void read(util::xy<T>& res, const enbt::value& from) {
             res.x = from.at("x");
             res.y = from.at("y");
         }
 
-        static void write(const util::XY<T>& res, enbt::value& to) {
+        static void write(const util::xy<T>& res, enbt::value& to) {
             to = enbt::compound{
                 {"x", res.x},
                 {"y", res.y}
@@ -511,8 +511,8 @@ namespace enbt::io_helper {
     };
 
     template <>
-    struct serialization<util::ANGLE_DEG> {
-        static void read(util::ANGLE_DEG& res, value_read_stream& read_stream) {
+    struct serialization<util::angle_deg> {
+        static void read(util::angle_deg& res, value_read_stream& read_stream) {
             read_stream
                 .read_compound()
                 .collect_as("pitch", res.pitch)
@@ -520,19 +520,19 @@ namespace enbt::io_helper {
                 .force_all_collect();
         }
 
-        static void write(const util::ANGLE_DEG& res, value_write_stream& write_stream) {
+        static void write(const util::angle_deg& res, value_write_stream& write_stream) {
             write_stream
                 .write_compound()
                 .write("pitch", res.pitch)
                 .write("yaw", res.yaw);
         }
 
-        static void read(util::ANGLE_DEG& res, const enbt::value& from) {
+        static void read(util::angle_deg& res, const enbt::value& from) {
             res.pitch = from.at("pitch");
             res.yaw = from.at("yaw");
         }
 
-        static void write(const util::ANGLE_DEG& res, enbt::value& to) {
+        static void write(const util::angle_deg& res, enbt::value& to) {
             to = enbt::compound{
                 {"pitch", res.pitch},
                 {"yaw", res.yaw}
@@ -541,8 +541,8 @@ namespace enbt::io_helper {
     };
 
     template <>
-    struct serialization<util::ANGLE_RAD> {
-        static void read(util::ANGLE_RAD& res, value_read_stream& read_stream) {
+    struct serialization<util::angle_rad> {
+        static void read(util::angle_rad& res, value_read_stream& read_stream) {
             read_stream
                 .read_compound()
                 .collect_as("pitch", res.pitch)
@@ -550,19 +550,19 @@ namespace enbt::io_helper {
                 .force_all_collect();
         }
 
-        static void write(const util::ANGLE_RAD& res, value_write_stream& write_stream) {
+        static void write(const util::angle_rad& res, value_write_stream& write_stream) {
             write_stream
                 .write_compound()
                 .write("pitch", res.pitch)
                 .write("yaw", res.yaw);
         }
 
-        static void read(util::ANGLE_RAD& res, const enbt::value& from) {
+        static void read(util::angle_rad& res, const enbt::value& from) {
             res.pitch = from.at("pitch");
             res.yaw = from.at("yaw");
         }
 
-        static void write(const util::ANGLE_RAD& res, enbt::value& to) {
+        static void write(const util::angle_rad& res, enbt::value& to) {
             to = enbt::compound{
                 {"pitch", res.pitch},
                 {"yaw", res.yaw}
@@ -675,7 +675,7 @@ namespace copper_server {
             return handle.get<api::ecs::com::protocol_id>().value;
         }
 
-        util::VECTOR entity::get_position() const {
+        util::vector entity::get_position() const {
             return handle.get<api::ecs::com::position>();
         }
 
@@ -798,13 +798,13 @@ namespace copper_server {
             return (position.z - bounds.xz) >= min && (position.z + bounds.xz) <= max;
         }
 
-        void entity::moved(util::VECTOR pos) {
+        void entity::moved(util::vector pos) {
             if (current_world())
                 current_world()->entity_move(handle, pos);
             *handle.modify<api::ecs::com::position>() = pos;
         }
 
-        void entity::moved(util::VECTOR pos, float yaw, float pitch) {
+        void entity::moved(util::vector pos, float yaw, float pitch) {
             if (current_world()) {
                 current_world()->entity_move(handle, pos);
                 current_world()->entity_rotation_changes(handle, {yaw, pitch});
@@ -813,7 +813,7 @@ namespace copper_server {
             *handle.modify<api::ecs::com::rotation>() = {yaw, pitch};
         }
 
-        void entity::moved(util::VECTOR pos, float yaw, float pitch, bool on_ground) {
+        void entity::moved(util::vector pos, float yaw, float pitch, bool on_ground) {
             if (current_world()) {
                 current_world()->entity_move(handle, pos);
                 current_world()->entity_rotation_changes(handle, {yaw, pitch});
@@ -836,7 +836,7 @@ namespace copper_server {
             set_on_ground(on_ground);
         }
 
-        void entity::teleport(util::VECTOR pos) {
+        void entity::teleport(util::vector pos) {
             if (current_world())
                 current_world()->entity_teleport(handle, pos);
             *handle.modify<api::ecs::com::position>() = pos;
@@ -859,7 +859,7 @@ namespace copper_server {
                 };
         }
 
-        void entity::teleport(util::VECTOR pos, float yaw, float pitch) {
+        void entity::teleport(util::vector pos, float yaw, float pitch) {
             if (current_world()) {
                 current_world()->entity_teleport(handle, pos);
                 current_world()->entity_rotation_changes(handle, {yaw, pitch});
@@ -884,7 +884,7 @@ namespace copper_server {
                 };
         }
 
-        void entity::teleport(util::VECTOR pos, float yaw, float pitch, bool on_ground) {
+        void entity::teleport(util::vector pos, float yaw, float pitch, bool on_ground) {
             if (current_world()) {
                 current_world()->entity_teleport(handle, pos);
                 current_world()->entity_rotation_changes(handle, {yaw, pitch});
@@ -1041,21 +1041,21 @@ namespace copper_server {
             set_health(get_health() + health);
         }
 
-        void entity::damage(float health, int32_t type_id, std::optional<util::VECTOR> pos) {
+        void entity::damage(float health, int32_t type_id, std::optional<util::vector> pos) {
             handle.modify<ecs::com::world_syncing>()->inactivity_counter = 0;
             if (current_world())
                 current_world()->entity_damage(handle, health, type_id, pos);
             reduce_health(health);
         }
 
-        void entity::damage(float health, int32_t type_id, std::optional<ecs::entity> source, std::optional<util::VECTOR> pos) {
+        void entity::damage(float health, int32_t type_id, std::optional<ecs::entity> source, std::optional<util::vector> pos) {
             handle.modify<ecs::com::world_syncing>()->inactivity_counter = 0;
             if (current_world())
                 current_world()->entity_damage(handle, health, type_id, source, pos);
             reduce_health(health);
         }
 
-        void entity::damage(float health, int32_t type_id, std::optional<ecs::entity> source, std::optional<ecs::entity> source_direct, std::optional<util::VECTOR> pos) {
+        void entity::damage(float health, int32_t type_id, std::optional<ecs::entity> source, std::optional<ecs::entity> source_direct, std::optional<util::vector> pos) {
             handle.modify<ecs::com::world_syncing>()->inactivity_counter = 0;
             if (current_world())
                 current_world()->entity_damage(handle, health, type_id, source, source_direct, pos);
@@ -1202,10 +1202,10 @@ namespace copper_server {
         }
 
         void entity::look_at(float x, float y, float z) {
-            set_head_rotation(util::direction(handle.get<api::ecs::com::position>(), util::VECTOR{x, y, z}));
+            set_head_rotation(util::direction(handle.get<api::ecs::com::position>(), util::vector{x, y, z}));
         }
 
-        void entity::look_at(util::VECTOR pos) {
+        void entity::look_at(util::vector pos) {
             set_head_rotation(util::direction(handle.get<api::ecs::com::position>(), pos));
         }
 
@@ -1214,45 +1214,45 @@ namespace copper_server {
                 look_at(entity.get<api::ecs::com::position>());
         }
 
-        util::VECTOR entity::get_motion() const {
+        util::vector entity::get_motion() const {
             return handle.get<api::ecs::com::motion>();
         }
 
-        void entity::set_motion(util::VECTOR mot) {
+        void entity::set_motion(util::vector mot) {
             if (current_world())
                 current_world()->entity_motion_changes(handle, mot);
             *handle.modify<api::ecs::com::motion>() = mot;
         }
 
-        void entity::add_motion(util::VECTOR mot) {
+        void entity::add_motion(util::vector mot) {
             set_motion(get_motion() += mot);
         }
 
-        util::ANGLE_DEG entity::get_rotation() const {
+        util::angle_deg entity::get_rotation() const {
             return handle.get<api::ecs::com::rotation>();
         }
 
-        void entity::set_rotation(util::ANGLE_DEG rot) {
+        void entity::set_rotation(util::angle_deg rot) {
             if (current_world())
                 current_world()->entity_rotation_changes(handle, rot);
             *handle.modify<api::ecs::com::rotation>() = rot;
         }
 
-        void entity::add_rotation(util::ANGLE_DEG rot) {
+        void entity::add_rotation(util::angle_deg rot) {
             set_rotation(get_rotation() += rot);
         }
 
-        util::ANGLE_DEG entity::get_head_rotation() const {
+        util::angle_deg entity::get_head_rotation() const {
             return handle.get<api::ecs::com::head_rotation>();
         }
 
-        void entity::set_head_rotation(util::ANGLE_DEG rot) {
+        void entity::set_head_rotation(util::angle_deg rot) {
             if (current_world())
                 current_world()->entity_look_changes(handle, rot);
             *handle.modify<api::ecs::com::head_rotation>() = rot;
         }
 
-        void entity::add_head_rotation(util::ANGLE_DEG rot) {
+        void entity::add_head_rotation(util::angle_deg rot) {
             set_head_rotation(get_head_rotation() += rot);
         }
 

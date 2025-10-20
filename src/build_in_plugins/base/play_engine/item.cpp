@@ -18,23 +18,23 @@
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins::base::play_engine {
-    struct item : public PluginAutoRegister<"base/play_engine/item", item> {
+    struct item : public plugin_auto_register<"base/play_engine/item", item> {
         item() {}
 
         ~item() noexcept {}
 
-        void OnInitialization(const PluginRegistrationPtr& _) override {
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::interact&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+        void on_initialization(const plugin_registration_ptr& _) override {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::interact&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
 
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::jigsaw_generate&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::jigsaw_generate&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::use_item_on&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::use_item_on&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::use_item&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] api::packets::server_bound::play::use_item&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
         }
