@@ -269,8 +269,8 @@ namespace copper_server::api::packets {
             });
         } else if constexpr (is_template_base_of<enum_set, Type>) {
             using Tupple_T = std::decay_t<decltype(value.values)>;
-            bit_list_array<uint8_t> bit(std::tuple_size_v<Tupple_T>);
-            for (size_t i = 0; i < bit.size(); i++)
+            bit_list_array<uint8_t> bit(std::tuple_size_v<Tupple_T> - 1); //except header
+            for (size_t i = 0; i < bit.data().size(); i++)
                 bit.data()[i] = stream.read_value<uint8_t>();
             static constexpr auto type_table = []<size_t... I>(std::index_sequence<I...>) {
                 return std::array<void (*)(base_objects::shared_client_data& context, ArrayStream& stream, T& value, Prev_T* prev), sizeof...(I)>{
@@ -283,9 +283,10 @@ namespace copper_server::api::packets {
                 };
             }(std::make_index_sequence<std::tuple_size_v<Tupple_T>>());
             size_t siz = stream.read_var<int32_t>();
+            type_table[0](context, stream, value, prev);
             for (size_t i = 0; i < siz; i++)
                 for (size_t j = 0; j < std::tuple_size_v<Tupple_T>; j++)
-                    if (bit.at(i) || j == 0) //j==0 is for header
+                    if (bit.at(i))
                         type_table[i + 1](context, stream, value, prev);
         } else {
             bool process_next = true;
