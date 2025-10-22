@@ -35,5 +35,8 @@ namespace copper_server::base_objects {
         *this = std::move(mov);
     }
 
-    player::~player() = default;
+    player::~player() {
+        if (assigned_entity)
+            assigned_entity->destroy();
+    }
 }

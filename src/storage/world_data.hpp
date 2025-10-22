@@ -98,10 +98,10 @@ namespace copper_server::storage {
         //affects active_blocks, thread unsafe
         void set_block(base_objects::full_block_data&& block, uint8_t local_x, uint64_t local_y, uint8_t local_z);
 
-
         //generator functions
-        void gen_set_block(const base_objects::full_block_data& block, uint8_t local_x, uint64_t local_y, uint8_t local_z);
-        void gen_set_block(base_objects::full_block_data&& block, uint8_t local_x, uint64_t local_y, uint8_t local_z);
+        void gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block);
+        void gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block_entity&&);
+        void gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, const base_objects::block_entity&);
         void gen_remove_block(uint8_t local_x, uint64_t local_y, uint8_t local_z);
         base_objects::full_block_data_ref gen_get_block(uint8_t local_x, uint64_t local_y, uint8_t local_z);
     };

@@ -1282,6 +1282,7 @@ namespace copper_server {
         ecs::entity entity::create(int32_t id, const enbt::compound_const_ref& nbt) {
             auto it = entity_data::get_entity(id);
             ecs::entity res = ecs::global_registry::allocate_entity_and_wait(it.recipe);
+            res.modify<api::ecs::com::entity_type>()->type = it.entity_id;
             res.modify<ecs::com::nbt>()->get() = nbt;
             if (it.create_callback)
                 it.create_callback(res);
@@ -1291,6 +1292,7 @@ namespace copper_server {
         ecs::entity entity::create(const std::string& id) {
             auto it = entity_data::get_entity(id);
             ecs::entity res = ecs::global_registry::allocate_entity_and_wait(it.recipe);
+            res.modify<api::ecs::com::entity_type>()->type = it.entity_id;
             if (it.create_callback)
                 it.create_callback(res);
             return res;

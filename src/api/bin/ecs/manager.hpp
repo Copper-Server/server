@@ -440,6 +440,7 @@ namespace copper_server::api::ecs {
             record.world_owner = w;
             record.chunk = in->get_free_chunk();
             record.chunk_index = record.chunk->entity_count;
+            record.chunk->entities()[record.chunk_index] = id;
             record.chunk->entity_count++;
             if (record.chunk->entity_count == CHUNK_CAPACITY)
                 in->remove_from_free_list(record.chunk);

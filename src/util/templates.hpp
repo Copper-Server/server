@@ -34,24 +34,14 @@ namespace copper_server::util{
     template <class... Args>
     struct for_each_type<std::variant<Args...>> {
         static constexpr void each(auto&& lambda) {
-            (
-                [&]() {
-                    lambda.template operator()<Args>();
-                }(),
-                ...
-            );
+            (lambda.template operator()<Args>(), ...);
         }
     };
 
     template <class... Args>
     struct for_each_type<std::tuple<Args...>> {
         static constexpr void each(auto&& lambda) {
-            (
-                [&]() {
-                    lambda.template operator()<Args>();
-                }(),
-                ...
-            );
+            (lambda.template operator()<Args>(), ...);
         }
     };
 

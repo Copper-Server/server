@@ -304,7 +304,7 @@ namespace copper_server::build_in_plugins::base {
                     break;
                 }
                 bool allow_chat_reports = !api::configuration::get().server.prevent_chat_reports;
-                if (api::configuration::get().mojang.enforce_secure_profile)
+                if (api::configuration::get().mojang.enforce_secure_profile && !api::configuration::get().server.offline_mode)
                     if (!signature_check(packet, client)) {
                         if (!(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature" ^ get_conf).is_none())
                             client << api::packets::client_bound::play::system_chat{.content = _on_chat_invalid_signature()};
@@ -417,11 +417,12 @@ namespace copper_server::build_in_plugins::base {
                 });
             });
             api::packets::processor(*this, [](api::packets::server_bound::play::chat_command_signed&& packet, base_objects::shared_client_data& client) {
-                if (!signature_check(packet, client)) {
-                    if (!(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature" ^ get_conf).is_none())
-                        client << api::packets::client_bound::play::system_chat{.content = _on_chat_invalid_signature()};
-                    return;
-                }
+                if (api::configuration::get().mojang.enforce_secure_profile && !api::configuration::get().server.offline_mode)
+                    if (!signature_check(packet, client)) {
+                        if (!(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature" ^ get_conf).is_none())
+                            client << api::packets::client_bound::play::system_chat{.content = _on_chat_invalid_signature()};
+                        return;
+                    }
 
                 base_objects::command_context context(client, true);
                 try {

@@ -54,7 +54,36 @@ namespace copper_server::build_in_plugins::tools {
                 });
             }
             pd.op_level = op_level;
-
+            if (client_ref.player_data.assigned_entity) {
+                auto event = base_objects::entity_event::set_op_0;
+                switch (client_ref.player_data.op_level) {
+                case 0:
+                    event = base_objects::entity_event::set_op_0;
+                    break;
+                case 1:
+                    event = base_objects::entity_event::set_op_1;
+                    break;
+                case 2:
+                    event = base_objects::entity_event::set_op_2;
+                    break;
+                case 3:
+                    event = base_objects::entity_event::set_op_3;
+                    break;
+                case 4:
+                    event = base_objects::entity_event::set_op_4;
+                    break;
+                default:
+                    if (client_ref.player_data.op_level < 0)
+                        event = base_objects::entity_event::set_op_0;
+                    else
+                        event = base_objects::entity_event::set_op_4;
+                    break;
+                }
+                client_ref << api::packets::client_bound::play::entity_event{
+                    .id = api::entity(*client_ref.player_data.assigned_entity).get_protocol_id(),
+                    .status = (int8_t)event
+                };
+            }
 
             pd.permissions.commit();
             pd.instant_granted_actions.commit();
@@ -237,34 +266,6 @@ namespace copper_server::build_in_plugins::tools {
 
         void player_joined(base_objects::shared_client_data& client_ref) override {
             update_perm(client_ref);
-            base_objects::entity_event event;
-            switch (client_ref.player_data.op_level) {
-            case 0:
-                event = base_objects::entity_event::set_op_0;
-                break;
-            case 1:
-                event = base_objects::entity_event::set_op_1;
-                break;
-            case 2:
-                event = base_objects::entity_event::set_op_2;
-                break;
-            case 3:
-                event = base_objects::entity_event::set_op_3;
-                break;
-            case 4:
-                event = base_objects::entity_event::set_op_4;
-                break;
-            default:
-                if (client_ref.player_data.op_level < 0)
-                    event = base_objects::entity_event::set_op_0;
-                else
-                    event = base_objects::entity_event::set_op_4;
-                break;
-            }
-            client_ref << api::packets::client_bound::play::entity_event{
-                .id = api::entity(*client_ref.player_data.assigned_entity).get_protocol_id(),
-                .status = (int8_t)event
-            };
         }
     };
 }

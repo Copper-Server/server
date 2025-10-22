@@ -18,13 +18,12 @@ namespace copper_server::build_in_plugins::world_generators {
 
         void process_chunk([[maybe_unused]] storage::world_data& world, storage::chunk_data& chunk, uint8_t preset_stage) override {
             auto& bottom = chunk.sub_chunks.front();
-            auto& blocks = bottom.blocks;
 
             for (uint8_t x = 0; x < 16; x++) 
                 for (uint8_t y = 0; y < 16; y++)
                     for (uint8_t z = 0; z < 16; z++)
                         if (y == 0)
-                            blocks[x][y][z] = api::collection::block::stone;
+                            bottom.set_block_gen(x, y, z, api::collection::block::stone);
 
             process_complete(world, chunk);
         }

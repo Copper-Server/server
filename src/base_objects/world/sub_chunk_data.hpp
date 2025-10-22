@@ -49,8 +49,9 @@ namespace copper_server::base_objects {
             void get_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, std::function<void(base_objects::block& block)> on_normal, std::function<void(base_objects::block& block, enbt::value& entity_data)> on_entity);
             void set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::full_block_data& block);
             void set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::full_block_data&& block);
-            void set_block_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::full_block_data& block);
-            void set_block_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::full_block_data&& block);
+            void set_block_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::block_entity& block);
+            void set_block_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block_entity&& block);
+            void set_block_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block block);
             int32_t get_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z);
             void set_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z, int32_t id);
             void for_each_block(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block& block)> func);

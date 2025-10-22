@@ -861,13 +861,16 @@ namespace copper_server::storage {
         sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, std::move(block));
     }
 
-    //generator functions
-    void chunk_data::gen_set_block(const base_objects::full_block_data& block, uint8_t local_x, uint64_t local_y, uint8_t local_z) {
+    void chunk_data::gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block block) {
         sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, block);
     }
 
-    void chunk_data::gen_set_block(base_objects::full_block_data&& block, uint8_t local_x, uint64_t local_y, uint8_t local_z) {
+    void chunk_data::gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block_entity&& block) {
         sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, std::move(block));
+    }
+
+    void chunk_data::gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, const base_objects::block_entity& block) {
+        sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, block);
     }
 
     void chunk_data::gen_remove_block(uint8_t local_x, uint64_t local_y, uint8_t local_z) {

@@ -253,7 +253,8 @@ namespace copper_server::base_objects::events {
         }
 
         void notify(Args... args) {
-            fun(std::forward<Args>(args)...);
+            if (fun)
+                fun(std::forward<Args>(args)...);
         }
 
         void clear() {

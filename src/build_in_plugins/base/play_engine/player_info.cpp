@@ -124,6 +124,12 @@ namespace copper_server::build_in_plugins::base::play_engine {
                 client << piu{data};
                 return false;
             });
+
+            client << api::packets::client_bound::play::game_event{
+                .event = api::packets::client_bound::play::game_event::gamemode_change{
+                    .gamemode = (float)gamemode
+                }
+            };
             return true;
         }
 

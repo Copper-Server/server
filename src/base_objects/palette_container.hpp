@@ -114,6 +114,11 @@ namespace copper_server::base_objects {
 
         palette_container(size_t max_items, bool is_biomes) : bits_per_entry(palette_data::bits_for_max(max_items)), is_biomes_mode(is_biomes) {}
 
+        void add_range(int32_t* values, size_t size) {
+            data.resize(data.size() + size);
+            memcpy(data.data() + data.size() - size, values, size * sizeof(int32_t));
+        }
+
         void add(int32_t value) {
             data.push_back(value);
         }
