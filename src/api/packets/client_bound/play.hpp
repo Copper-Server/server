@@ -121,7 +121,7 @@ namespace copper_server::api::packets::client_bound::play {
         enbt::raw_uuid uuid;
 
         struct add : public enum_item<0> {
-            Chat title;
+            base_objects::chat title;
             float health;
             var_int32 color;
             var_int32 division;
@@ -135,7 +135,7 @@ namespace copper_server::api::packets::client_bound::play {
         };
 
         struct update_title : public enum_item<3> {
-            Chat title;
+            base_objects::chat title;
         };
 
         struct update_style : public enum_item<4> {
@@ -184,7 +184,7 @@ namespace copper_server::api::packets::client_bound::play {
     struct command_suggestions : public packet<0x0F> {
         struct match {
             string_sized<32767> set;
-            std::optional<Chat> tooltip = std::nullopt;
+            std::optional<base_objects::chat> tooltip = std::nullopt;
         };
 
         var_int32 suggestion_transaction_id;
@@ -440,14 +440,14 @@ namespace copper_server::api::packets::client_bound::play {
     };
 
     struct disconnect : public packet<0x20>, disconnect_after {
-        Chat reason;
+        base_objects::chat reason;
     };
 
     struct disguised_chat : public packet<0x21> {
-        Chat message;
+        base_objects::chat message;
         or_<var_int32::chat_type, chat_type> type;
-        Chat sender;
-        std::optional<Chat> target_name = std::nullopt;
+        base_objects::chat sender;
+        std::optional<base_objects::chat> target_name = std::nullopt;
     };
 
     struct entity_event : public packet<0x22> {
@@ -858,7 +858,7 @@ namespace copper_server::api::packets::client_bound::play {
             limited_num<int8_t, -128, 127> x;
             limited_num<int8_t, -128, 127> z;
             limited_num<int8_t, 0, 15> dir;
-            std::optional<Chat> name = std::nullopt;
+            std::optional<base_objects::chat> name = std::nullopt;
         };
 
         struct color_patch {
@@ -965,7 +965,7 @@ namespace copper_server::api::packets::client_bound::play {
     struct open_screen : public packet<0x39> {
         var_int32 window_id;
         var_int32::menu window_type;
-        Chat window_title;
+        base_objects::chat window_title;
     };
 
     struct open_sign_editor : public packet<0x3A> {
@@ -1000,7 +1000,7 @@ namespace copper_server::api::packets::client_bound::play {
         float fov_modifier;
     };
 
-    struct player_chat : public packet<0x3F> {
+    struct player_chat : public packet<0x3F> { //TODO fix the encoding
         struct previous_message {
             value_optional<var_int32, std::array<uint8_t, 256>> message_id_or_signature;
         };
@@ -1021,11 +1021,11 @@ namespace copper_server::api::packets::client_bound::play {
         uint64_t timestamp;
         uint64_t salt;
         list_array_sized<previous_message, 20> previous_messages;
-        std::optional<Chat> unsigned_content = std::nullopt;
+        std::optional<base_objects::chat> unsigned_content = std::nullopt;
         enum_switch<var_int32, no_filter, fully_filtered, partially_filtered> filter;
         or_<var_int32::chat_type, chat_type> type;
-        Chat sender_name;
-        std::optional<Chat> target_name = std::nullopt;
+        base_objects::chat sender_name;
+        std::optional<base_objects::chat> target_name = std::nullopt;
     };
 
     struct player_combat_end : public packet<0x40> {
@@ -1036,7 +1036,7 @@ namespace copper_server::api::packets::client_bound::play {
 
     struct player_combat_kill : public packet<0x42> {
         var_int32 player_id;
-        Chat message;
+        base_objects::chat message;
     };
 
     struct player_info_remove : public packet<0x43> {
@@ -1076,7 +1076,7 @@ namespace copper_server::api::packets::client_bound::play {
         };
 
         struct set_display_name {
-            std::optional<Chat> name = std::nullopt;
+            std::optional<base_objects::chat> name = std::nullopt;
         };
 
         struct set_hat_visible {
@@ -1201,7 +1201,7 @@ namespace copper_server::api::packets::client_bound::play {
         string_sized<32767> url;
         string_sized<40> hash; //0 or 40, other values waste bandwidth
         bool forced = false;
-        std::optional<Chat> prompt_message = std::nullopt;
+        std::optional<base_objects::chat> prompt_message = std::nullopt;
     };
 
     struct respawn : public packet<0x50> {
@@ -1265,12 +1265,12 @@ namespace copper_server::api::packets::client_bound::play {
     };
 
     struct server_data : public packet<0x54> {
-        Chat motd;
+        base_objects::chat motd;
         std::optional<list_array<uint8_t>> icon_png = std::nullopt;
     };
 
     struct set_action_bar_text : public packet<0x55> {
-        Chat text;
+        base_objects::chat text;
     };
 
     struct set_border_center : public packet<0x56> {
@@ -1415,11 +1415,11 @@ namespace copper_server::api::packets::client_bound::play {
         };
 
         struct fixed : public enum_item<2> {
-            Chat content;
+            base_objects::chat content;
         };
 
         struct create : public enum_item<0> {
-            Chat name;
+            base_objects::chat name;
             var_int32 type; //0 numbers, 1 - hearts
             std::optional<enum_switch<var_int32, blank, styled, fixed>> default_format;
         };
@@ -1427,7 +1427,7 @@ namespace copper_server::api::packets::client_bound::play {
         struct remove : public enum_item<1> {};
 
         struct update : public enum_item<2> {
-            Chat name;
+            base_objects::chat name;
             var_int32 type; //0 numbers, 1 - hearts
             std::optional<enum_switch<var_int32, blank, styled, fixed>> default_format;
         };
@@ -1467,26 +1467,26 @@ namespace copper_server::api::packets::client_bound::play {
         };
 
         struct create : public enum_item<0> {
-            Chat display_name;
+            base_objects::chat display_name;
             enum_as_flag<friendly_f, int8_t> friendly;
             enum_as<name_tag_visibility_e, var_int32> name_tag_visibility;
             enum_as<collision_rule_e, var_int32> collision_rule;
             var_int32 team_color;
-            Chat prefix;
-            Chat suffix;
+            base_objects::chat prefix;
+            base_objects::chat suffix;
             list_array<string_sized<32767>> entries;
         };
 
         struct remove : public enum_item<1> {};
 
         struct update : public enum_item<2> {
-            Chat display_name;
+            base_objects::chat display_name;
             enum_as_flag<friendly_f, int8_t> friendly;
             enum_as<name_tag_visibility_e, var_int32> name_tag_visibility;
             enum_as<collision_rule_e, var_int32> collision_rule;
             var_int32 team_color;
-            Chat prefix;
-            Chat suffix;
+            base_objects::chat prefix;
+            base_objects::chat suffix;
         };
 
         struct add_entries : public enum_item<3> {
@@ -1509,13 +1509,13 @@ namespace copper_server::api::packets::client_bound::play {
         };
 
         struct fixed : public enum_item<2> {
-            Chat content;
+            base_objects::chat content;
         };
 
         string_sized<32767> entry_name;
         string_sized<32767> objective_name;
         var_int32 value;
-        std::optional<Chat> name = std::nullopt;
+        std::optional<base_objects::chat> name = std::nullopt;
         std::optional<enum_switch<var_int32, blank, styled, fixed>> default_format = std::nullopt;
     };
 
@@ -1524,7 +1524,7 @@ namespace copper_server::api::packets::client_bound::play {
     };
 
     struct set_subtitle_text : public packet<0x6E> {
-        Chat text;
+        base_objects::chat text;
     };
 
     struct set_time : public packet<0x6F> {
@@ -1534,7 +1534,7 @@ namespace copper_server::api::packets::client_bound::play {
     };
 
     struct set_title_text : public packet<0x70> {
-        Chat text;
+        base_objects::chat text;
     };
 
     struct set_titles_animation : public packet<0x71> {
@@ -1583,13 +1583,13 @@ namespace copper_server::api::packets::client_bound::play {
     };
 
     struct system_chat : public packet<0x77> {
-        Chat content;
+        base_objects::chat content;
         bool is_overlay = false;
     };
 
     struct tab_list : public packet<0x78> {
-        Chat header;
-        Chat footer;
+        base_objects::chat header;
+        base_objects::chat footer;
     };
 
     struct tag_query : public packet<0x79> {
@@ -1624,7 +1624,7 @@ namespace copper_server::api::packets::client_bound::play {
             double z;
         };
 
-        Chat status;
+        base_objects::chat status;
         std::optional<volume_t> volume = std::nullopt;
     };
 
@@ -1652,8 +1652,8 @@ namespace copper_server::api::packets::client_bound::play {
 
             struct hidden : public flag_item<0x3, 0x3, 3> {};
 
-            Chat title;
-            Chat description;
+            base_objects::chat title;
+            base_objects::chat description;
             slot icon;
             var_int32 frame_type;
             flags_list<int32_t, background_texture, show_toast, hidden> flags;
@@ -1788,7 +1788,7 @@ namespace copper_server::api::packets::client_bound::play {
         using enum link_type;
 
         struct link {
-            bool_or<enum_as<link_type, var_int32>, Chat> label;
+            bool_or<enum_as<link_type, var_int32>, base_objects::chat> label;
             std::string url;
         };
 

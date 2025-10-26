@@ -23,7 +23,7 @@ namespace copper_server::api::packets {
             using enum param_e;
             std::string translation_key;
             list_array<enum_as<param_e, var_int32>> parameters;
-            std::optional<Chat> style = std::nullopt;
+            std::optional<base_objects::chat> style = std::nullopt;
         };
         decoration chat;
         decoration narration;

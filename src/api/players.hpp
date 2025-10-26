@@ -38,8 +38,8 @@ namespace copper_server::api::players {
     };
 
     namespace calls {
-        extern base_objects::events::event<personal<Chat>> on_player_kick;
-        extern base_objects::events::event<personal<Chat>> on_player_ban;
+        extern base_objects::events::event<personal<base_objects::chat>> on_player_kick;
+        extern base_objects::events::event<personal<base_objects::chat>> on_player_ban;
     }
 
     namespace handlers {

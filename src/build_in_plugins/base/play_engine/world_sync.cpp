@@ -6,6 +6,7 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <library/fast_task/include/coroutine.hpp>
 #include <src/api/command.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/ecs/base_components.hpp>
@@ -22,8 +23,10 @@
 
 namespace copper_server::build_in_plugins::base::play_engine {
     class world_sync : public plugin_auto_register<"base/play_engine/world_sync", world_sync> {
-        static fast_task::future_ptr<void> send_async(auto& client, auto&& packet) {
-            return fast_task::future<void>::start([client, packet = std::move(packet)]() mutable { *client << std::move(packet); });
+        static void send_async(auto& client, auto&& packet) {
+            fast_task::task::run([client, packet = std::move(packet)] mutable {
+                *client << std::move(packet);
+            });
         }
 
         static void entity_add_effect(api::ecs::entity self, api::ecs::entity target, uint32_t id, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) {
@@ -548,7 +551,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                         if (ws.chunk_in_bounds(x, z)) {
                             if (assigned_player->packets_state.chunk_batch_size > assigned_player->packets_state.chunks_sent) {
                                 ++assigned_player->packets_state.chunks_sent;
-                                send_async(assigned_player, api::packets::client_bound::play::level_chunk_with_light::create(chunk, *ws.world));
+                                (void)send_async(assigned_player, api::packets::client_bound::play::level_chunk_with_light::create(chunk, *ws.world));
                                 self.modify<api::ecs::com::world_syncing>()->mark_chunk(x, z, true);
                             }
                         }
@@ -567,7 +570,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                             if (assigned_player->is_active()) {
                                 if (assigned_player->packets_state.chunk_batch_size > assigned_player->packets_state.chunks_sent) {
                                     ++assigned_player->packets_state.chunks_sent;
-                                    send_async(assigned_player, api::packets::client_bound::play::level_chunk_with_light::create(chunk, *ws.world));
+                                    (void)send_async(assigned_player, api::packets::client_bound::play::level_chunk_with_light::create(chunk, *ws.world));
                                     self.modify<api::ecs::com::world_syncing>()->mark_chunk(x, z, true);
                                 }
                             }
@@ -601,7 +604,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                                 ++assigned_player->packets_state.chunks_sent;
                                 ws.world->get_chunk_at(x, z, [&](auto& chunk) {
                                     if (assigned_player->is_active()) {
-                                        send_async(assigned_player, api::packets::client_bound::play::level_chunk_with_light::create(chunk, *ws.world));
+                                        (void)send_async(assigned_player, api::packets::client_bound::play::level_chunk_with_light::create(chunk, *ws.world));
                                         self.modify<api::ecs::com::world_syncing>()->mark_chunk(x, z, true);
                                     }
                                 });
@@ -624,7 +627,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                                 ws.world
                                     ->get_chunk_at(x, z, [&](auto& chunk) {
                                         if (assigned_player->is_active()) {
-                                            send_async(assigned_player, api::packets::client_bound::play::level_chunk_with_light::create(chunk, *ws.world));
+                                            (void)send_async(assigned_player, api::packets::client_bound::play::level_chunk_with_light::create(chunk, *ws.world));
                                             self.modify<api::ecs::com::world_syncing>()->mark_chunk(x, z, true);
                                         }
                                     });
@@ -657,7 +660,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                     if (ws.world) {
                         auto& player_data = assigned_player->player_data;
                         *assigned_player << api::packets::client_bound::play::respawn{
-                            .dimension_type = api::registers::dimensionTypes.at(new_world.get_world_type()).id,
+                            .dimension_type = api::registers::dimension_types.at(new_world.get_world_type()).id,
                             .dimension_name = new_world.world_name,
                             .seed_hashed = new_world.get_hashed_seed(),
                             .gamemode = player_data.gamemode,
@@ -696,7 +699,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
                             };
                         }
                         fast_task::spin_lock packet_futs_lock;
-                        std::vector<fast_task::future_ptr<void>> packet_futs;
+                        api::packets::client_bound::play::bundle_delimiter bundle;
                         bool make_tick = false;
                         bool make_batch = false;
                         auto max_unbc = api::configuration::get().protocol.max_unacknowledged_chunk_batches;
@@ -709,19 +712,18 @@ namespace copper_server::build_in_plugins::base::play_engine {
                                             ++player.packets_state.chunks_sent;
                                             auto chunk = ws.world->request_chunk_data_weak(chunk_x, chunk_z);
                                             if (chunk) {
-                                                if (!make_batch) {
-                                                    *assigned_player << api::packets::client_bound::play::chunk_batch_start{};
-                                                    make_batch = true;
-                                                }
                                                 if ((*chunk)->generator_stage == 0xFF) {
-                                                    serialization_futs.push_back(
-                                                        fast_task::future<void>::start(
-                                                            [&, chunk]() {
-                                                                auto packet = send_async(assigned_player, api::packets::client_bound::play::level_chunk_with_light::create(**chunk, *ws.world));
-                                                                fast_task::lock_guard guard(packet_futs_lock);
-                                                                packet_futs.push_back(std::move(packet));
-                                                            }
-                                                        )
+                                                    if (!make_batch) {
+                                                        fast_task::lock_guard guard(packet_futs_lock);
+                                                        bundle.packets.emplace_back(api::packets::client_bound::play::chunk_batch_start{});
+                                                        make_batch = true;
+                                                    }
+                                                    serialization_futs.emplace_back(
+                                                        fast_task::future<void>::start([&, chunk = chunk]() {
+                                                            auto packet = api::packets::client_bound::play::level_chunk_with_light::create(**chunk, *ws.world);
+                                                            fast_task::lock_guard guard(packet_futs_lock);
+                                                            bundle.packets.emplace_back(std::move(packet));
+                                                        })
                                                     );
                                                     self.modify<api::ecs::com::world_syncing>()->mark_chunk(chunk_x, chunk_z, true);
                                                 }
@@ -737,12 +739,9 @@ namespace copper_server::build_in_plugins::base::play_engine {
                             make_tick = true;
                         if (make_batch) {
                             ++player.packets_state.await_ack_chunk_batches;
-                            fast_task::future_tool::combine_all(packet_futs)->when_ready([batch_size = player.packets_state.chunks_sent, player = assigned_player]() {
-                                *player << api::packets::client_bound::play::chunk_batch_finished{
-                                    .batch_size = batch_size
-                                };
-                            });
+                            bundle.packets.emplace_back(api::packets::client_bound::play::chunk_batch_finished{.batch_size = player.packets_state.chunks_sent});
                             player.packets_state.chunks_sent = 0;
+                            (void)send_async(assigned_player, std::move(bundle));
                         }
                         if (make_tick) {
                             if (!player.packets_state.is_play_fully_initialized) {

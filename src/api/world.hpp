@@ -10,13 +10,12 @@
 #define SRC_API_WORLD
 
 #include <functional>
+#include <memory>
 #include <src/storage/world_data.hpp>
 
 namespace copper_server::base_objects {
     struct shared_client_data;
-    template <typename T>
-    class atomic_holder;
-    using client_data_holder = atomic_holder<shared_client_data>;
+    using client_data_holder = std::shared_ptr<shared_client_data>;
 }
 
 namespace copper_server::api::world {

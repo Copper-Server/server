@@ -31,7 +31,7 @@ namespace copper_server::build_in_plugins::world_generators {
 
     struct default_gen : public plugin_auto_register<"world_generators/default", default_gen> {
         void on_register(const plugin_registration_ptr&) override {
-            storage::chunk_generator::register_it("default", new default_generator());
+            storage::chunk_generator::register_it("default", std::make_shared<default_generator>());
         }
     };
 }

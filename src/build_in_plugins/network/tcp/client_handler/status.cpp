@@ -45,7 +45,7 @@ namespace copper_server::build_in_plugins::network::tcp {
             return sample_cache = result;
         }
 
-        static Chat description() {
+        static base_objects::chat description() {
             return api::configuration::get().status.description;
         }
 
@@ -100,7 +100,7 @@ namespace copper_server::build_in_plugins::network::tcp {
             }
 
 
-            res += "\"description\":" + description().ToStr();
+            res += "\"description\":" + description().to_str();
 
 
             std::string base64_fav = server_icon();

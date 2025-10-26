@@ -11,15 +11,12 @@
 #include <cstdint>
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
+#include <memory>
 #include <src/api/ecs.hpp>
-#include <src/base_objects/atomic_holder.hpp>
 #include <string>
 #include <unordered_set>
 
 namespace copper_server::base_objects {
-    struct entity;
-    using entity_ref = atomic_holder<entity>;
-
     class player {
     public:
         struct Abilities {

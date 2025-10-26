@@ -36,7 +36,7 @@ namespace copper_server::build_in_plugins::light_processors {
 
     struct default_processor : public plugin_auto_register<"light_processors/default_processor", default_processor> {
         void on_register(const plugin_registration_ptr& _) {
-            storage::chunk_light_processor::register_it("default", new default_light_processor());
+            storage::chunk_light_processor::register_it("default", std::make_shared<default_light_processor>());
         }
     };
 }

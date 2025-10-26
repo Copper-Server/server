@@ -28,18 +28,16 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
         };
 
         struct extra_data_t {
-            bool packs_requested = false;
             keep_alive_solution ka_solution;
             list_array<plugin_registration_ptr> active_plugins{};
             std::unordered_map<enbt::raw_uuid, ResourcePackData> pending_resource_packs;
             bool code_of_conduct_is_accepted = false;
+            bool packs_requested = false;
 
             static extra_data_t& get(base_objects::shared_client_data& client) {
                 return *client.packets_state.internal_data.set([&](auto& data) {
-                    if (!data.extra_data) {
-                        auto allocated = new extra_data_t{.ka_solution = client.get_session()};
-                        data.extra_data = std::shared_ptr<void>((void*)allocated, [](void* d) { delete reinterpret_cast<extra_data_t*>(d); });
-                    }
+                    if (!data.extra_data)
+                        data.extra_data = std::make_shared<extra_data_t>(client.get_session());
                     return reinterpret_cast<extra_data_t*>(data.extra_data.get());
                 });
             }
@@ -126,7 +124,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
             static base_objects::network::response data;
             if (!data.has_data()) {
                 { // minecraft:trim_material
-                    data += registry_data_serialize_entry<api::registers::armor_trim_material>("minecraft:trim_material", api::registers::armorTrimMaterials_cache, [](api::registers::armor_trim_material& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::armor_trim_material>("minecraft:trim_material", api::registers::armor_trim_materials_cache, [](api::registers::armor_trim_material& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -134,12 +132,12 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         if (std::holds_alternative<std::string>(it.description))
                             element["description"] = std::get<std::string>(it.description);
                         else
-                            element["description"] = std::get<Chat>(it.description).ToENBT();
+                            element["description"] = std::get<base_objects::chat>(it.description).to_enbt();
                         return element;
                     });
                 }
                 { // minecraft:trim_pattern
-                    data += registry_data_serialize_entry<api::registers::armor_trim_pattern>("minecraft:trim_pattern", api::registers::armorTrimPatterns_cache, [](api::registers::armor_trim_pattern& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::armor_trim_pattern>("minecraft:trim_pattern", api::registers::armor_trim_patterns_cache, [](api::registers::armor_trim_pattern& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -147,7 +145,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         if (std::holds_alternative<std::string>(it.description))
                             element["description"] = std::get<std::string>(it.description);
                         else
-                            element["description"] = std::get<Chat>(it.description).ToENBT();
+                            element["description"] = std::get<base_objects::chat>(it.description).to_enbt();
                         element["decal"] = it.decal;
                         return element;
                     });
@@ -222,7 +220,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:chat_type
-                    data += registry_data_serialize_entry<api::registers::chat_type>("minecraft:chat_type", api::registers::chatTypes_cache, [](api::registers::chat_type& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::chat_type>("minecraft:chat_type", api::registers::chat_types_cache, [](api::registers::chat_type& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -230,9 +228,9 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                             enbt::compound chat;
                             chat["translation_key"] = it.chat->translation_key;
                             if (it.chat->style) {
-                                it.chat->style->GetExtra().clear();
-                                it.chat->style->SetText("");
-                                enbt::value style = it.chat->style->ToENBT();
+                                it.chat->style->get_extra().clear();
+                                it.chat->style->set_text("");
+                                enbt::value style = it.chat->style->to_enbt();
                                 style.remove("text");
                                 chat["style"] = std::move(style);
                             }
@@ -255,7 +253,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:damage_type
-                    data += registry_data_serialize_entry<api::registers::damage_type>("minecraft:damage_type", api::registers::damageTypes_cache, [](api::registers::damage_type& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::damage_type>("minecraft:damage_type", api::registers::damage_types_cache, [](api::registers::damage_type& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -326,14 +324,14 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:dimension_type
-                    data += registry_data_serialize_entry<api::registers::dimension_type>("minecraft:dimension_type", api::registers::dimensionTypes_cache, [](api::registers::dimension_type& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::dimension_type>("minecraft:dimension_type", api::registers::dimension_types_cache, [](api::registers::dimension_type& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
                         if (std::holds_alternative<int32_t>(it.monster_spawn_light_level))
                             element["monster_spawn_light_level"] = std::get<int32_t>(it.monster_spawn_light_level);
                         else
-                            element["monster_spawn_light_level"] = std::get<base_objects::number_provider>(it.monster_spawn_light_level).get_enbt();
+                            element["monster_spawn_light_level"] = std::get<std::shared_ptr<base_objects::number_provider>>(it.monster_spawn_light_level)->get_enbt();
                         if (it.fixed_time)
                             element["fixed_time"] = *it.fixed_time;
                         element["infiniburn"] = it.infiniburn;
@@ -356,7 +354,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:wolf_variant
-                    data += registry_data_serialize_entry<api::registers::wolf_variant>("minecraft:wolf_variant", api::registers::wolfVariants_cache, [](api::registers::wolf_variant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::wolf_variant>("minecraft:wolf_variant", api::registers::wolf_variants_cache, [](api::registers::wolf_variant& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -366,15 +364,15 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:painting_variant
-                    data += registry_data_serialize_entry<api::registers::painting_variant>("minecraft:painting_variant", api::registers::paintingVariants_cache, [](api::registers::painting_variant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::painting_variant>("minecraft:painting_variant", api::registers::painting_variants_cache, [](api::registers::painting_variant& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
                         element["asset_id"] = it.asset_id;
                         element["height"] = it.height;
                         element["width"] = it.width;
-                        element["title"] = it.title.ToENBT();
-                        element["author"] = it.author.ToENBT();
+                        element["title"] = it.title.to_enbt();
+                        element["author"] = it.author.to_enbt();
                         return element;
                     });
                 }
@@ -385,7 +383,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                         enbt::compound element;
                         element["range"] = it.range;
                         element["use_duration"] = it.use_duration;
-                        element["description"] = it.description.ToENBT();
+                        element["description"] = it.description.to_enbt();
                         std::visit(
                             [&](auto& it) {
                                 using T = std::decay_t<decltype(it)>;
@@ -405,7 +403,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:cat_variant
-                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:cat_variant", api::registers::catVariants_cache, [](api::registers::entity_variant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:cat_variant", api::registers::cat_variants_cache, [](api::registers::entity_variant& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -417,7 +415,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:chicken_variant
-                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:chicken_variant", api::registers::chickenVariants_cache, [](api::registers::entity_variant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:chicken_variant", api::registers::chicken_variants_cache, [](api::registers::entity_variant& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -429,7 +427,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:cow_variant
-                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:cow_variant", api::registers::cowVariants_cache, [](api::registers::entity_variant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:cow_variant", api::registers::cow_variants_cache, [](api::registers::entity_variant& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -441,7 +439,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:frog_variant
-                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:frog_variant", api::registers::frogVariants_cache, [](api::registers::entity_variant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:frog_variant", api::registers::frog_variants_cache, [](api::registers::entity_variant& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -453,7 +451,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:pig_variant
-                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:pig_variant", api::registers::pigVariants_cache, [](api::registers::entity_variant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::entity_variant>("minecraft:pig_variant", api::registers::pig_variants_cache, [](api::registers::entity_variant& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;
@@ -465,7 +463,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     });
                 }
                 { // minecraft:wolf_sound_variant
-                    data += registry_data_serialize_entry<api::registers::wolf_sound_variant>("minecraft:wolf_sound_variant", api::registers::wolfSoundVariants_cache, [](api::registers::wolf_sound_variant& it) -> enbt::value {
+                    data += registry_data_serialize_entry<api::registers::wolf_sound_variant>("minecraft:wolf_sound_variant", api::registers::wolf_sound_variants_cache, [](api::registers::wolf_sound_variant& it) -> enbt::value {
                         if (!it.send_via_network_body)
                             return enbt::value{};
                         enbt::compound element;

@@ -335,14 +335,13 @@ namespace copper_server::storage {
     }
 
     void permissions_manager::sync() {
-        using namespace util;
 
-        auto config_holder = try_read_json_file(base_path);
+        auto config_holder = util::try_read_json_file(base_path);
         if (!config_holder.has_value()) {
             api::log::error("server", "Failed to load permissions file");
             return;
         }
-        auto root = js_object::get_object(*config_holder);
+        auto root = util::js_object::get_object(*config_holder);
         protected_values.set([&](protected_values_t& values) {
             {
                 auto check_mode_obj = root["check_mode"];
@@ -353,7 +352,7 @@ namespace copper_server::storage {
                 values.check_mode_changed = false;
             }
             {
-                auto actions_obj = js_object::get_object(root["actions"]);
+                auto actions_obj = util::js_object::get_object(root["actions"]);
                 if (actions_obj.empty() && values.permissions.empty()) {
                     values.permissions["operator_1"] = base_objects::permissions_object{
                         .permission_tag = "operator_1",
@@ -392,7 +391,7 @@ namespace copper_server::storage {
                 for (auto&& [key, value] : actions_obj) {
                     std::string shared_tag(key.data(), key.size());
                     auto& read = values.actions[shared_tag];
-                    for (auto item : js_array::get_array(value))
+                    for (auto item : util::js_array::get_array(value))
                         read.push_back((std::string)item);
                     read.commit();
                     declared_actions.push_back(std::move(shared_tag));
@@ -409,9 +408,9 @@ namespace copper_server::storage {
             }
             {
                 list_array<std::string> declared_permissions;
-                auto permissions_obj = js_object::get_object(root["permissions"]);
+                auto permissions_obj = util::js_object::get_object(root["permissions"]);
                 for (auto&& [permission_tag, value] : permissions_obj) {
-                    auto perm = js_object::get_object(value);
+                    auto perm = util::js_object::get_object(value);
                     std::string description = perm["description"].or_apply("");
                     int8_t permission_level = perm["permission_level"].or_apply(0);
                     bool instant_grant = perm["instant_grant"].or_apply(false);
@@ -451,7 +450,7 @@ namespace copper_server::storage {
                 }
             }
             {
-                auto group_obj = js_object::get_object(root["permission_group"]);
+                auto group_obj = util::js_object::get_object(root["permission_group"]);
                 if (group_obj.empty() && values.permissions_group.empty()) {
                     values.permissions_group["operator"] = base_objects::permission_group{
                         .group_name = "operator",
@@ -478,7 +477,7 @@ namespace copper_server::storage {
                 list_array<std::string> declared_groups;
                 declared_groups.reserve(group_obj.size());
                 for (auto&& [group_tag, value] : group_obj) {
-                    auto group_list = js_array::get_array(value);
+                    auto group_list = util::js_array::get_array(value);
                     list_array<std::string> perm_tags;
                     perm_tags.reserve(group_list.size());
                     for (auto item : group_list) {

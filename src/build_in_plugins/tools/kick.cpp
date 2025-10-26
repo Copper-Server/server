@@ -56,7 +56,7 @@ namespace copper_server::build_in_plugins::tools {
                         context.executor << api::packets::client_bound::play::system_chat{.content = "You can't kick this player"};
                         return false;
                     }
-                    api::players::calls::on_player_kick({target, Chat::parseToChat(std::get<pred_string>(args[1]).value)});
+                    api::players::calls::on_player_kick({target, base_objects::chat::parse_to_chat(std::get<pred_string>(args[1]).value)});
                     return true;
                 });
         }

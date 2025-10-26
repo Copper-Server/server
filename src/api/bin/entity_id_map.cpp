@@ -8,9 +8,9 @@
  */
 #include <library/enbt/enbt.hpp>
 #include <library/fast_task.hpp>
+#include <memory>
 #include <src/api/ecs.hpp>
 #include <src/api/selector.hpp>
-#include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/commands.hpp>
 
 namespace copper_server::api::entity_id_map {

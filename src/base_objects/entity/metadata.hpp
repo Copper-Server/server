@@ -10,7 +10,7 @@
 #define SRC_BASE_OBJECTS_ENTITY_METADATA
 #include <src/api/id.hpp>
 #include <src/api/packets/types.hpp>
-#include <src/base_objects/Chat.hpp>
+#include <src/base_objects/chat.hpp>
 #include <src/base_objects/particle_data.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/slot.hpp>
@@ -39,11 +39,11 @@ namespace copper_server::base_objects {
         };
 
         struct text_component : public enum_item<5> {
-            Chat value;
+            base_objects::chat value;
         };
 
         struct optional_text_component : public enum_item<6> {
-            std::optional<Chat> value;
+            std::optional<base_objects::chat> value;
         };
 
         struct slot : public enum_item<7> {
@@ -179,8 +179,8 @@ namespace copper_server::base_objects {
                 int32_t height;
                 int32_t width;
                 identifier asset_id;
-                std::optional<Chat> title;
-                std::optional<Chat> author;
+                std::optional<base_objects::chat> title;
+                std::optional<base_objects::chat> author;
 
                 bool operator==(const inline_def& other) const = default;
             };

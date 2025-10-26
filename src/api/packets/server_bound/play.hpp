@@ -607,7 +607,7 @@ namespace copper_server::api::packets::server_bound::play {
         enum_as<rotation_e, var_int32> rotation;
         bool ignore_entities = false;
         enum_as<status_e, var_int32> status;
-        std::optional<Chat> error_message = std::nullopt;
+        std::optional<base_objects::chat> error_message = std::nullopt;
     };
 
     struct use_item_on : public packet<0x3F> {

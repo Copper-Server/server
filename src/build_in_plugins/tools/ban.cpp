@@ -45,14 +45,14 @@ namespace copper_server::build_in_plugins::tools {
             register_event(api::ban::on_ban, base_objects::events::priority::low, [](const api::ban::ban_data& client) {
                 api::players::calls::on_player_kick(
                     {api::players::get_player(base_objects::shared_client_data::packets_state_t::protocol_state::play, client.who),
-                     Chat::from_enbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_message", {client.reason})}
+                     base_objects::chat::from_enbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_message", {client.reason})}
                 );
                 return false;
             });
             register_event(api::ban::on_ban, base_objects::events::priority::low, [](const api::ban::ban_data& client) {
                 api::players::calls::on_player_kick(
                     {api::players::get_player(base_objects::shared_client_data::packets_state_t::protocol_state::play, client.who),
-                     Chat::from_enbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_ip_message", {client.reason})}
+                     base_objects::chat::from_enbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_ip_message", {client.reason})}
                 );
                 return false;
             });
@@ -286,9 +286,9 @@ namespace copper_server::build_in_plugins::tools {
 
         void on_play_initialize(base_objects::shared_client_data& client) override {
             if (auto banned = banned_players.get(client.name); banned)
-                api::players::calls::on_player_kick({api::players::get_player(client), Chat::from_enbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_message", {banned->convert_to_str()})});
+                api::players::calls::on_player_kick({api::players::get_player(client), base_objects::chat::from_enbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_message", {banned->convert_to_str()})});
             if (auto banned = banned_ips.get(client.ip); banned)
-                api::players::calls::on_player_kick({api::players::get_player(client), Chat::from_enbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_ip_message", {banned->convert_to_str()})});
+                api::players::calls::on_player_kick({api::players::get_player(client), base_objects::chat::from_enbt_with_format(api::configuration::get() ^ "ban" ^ "on_ban_ip_message", {banned->convert_to_str()})});
         }
     };
 }

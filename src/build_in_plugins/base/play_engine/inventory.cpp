@@ -613,9 +613,7 @@ namespace copper_server::build_in_plugins::base::play_engine {
 
         virtual void on_play_pre_initialize(base_objects::shared_client_data& client) {
             client.packets_state.get_play_data([&client](base_objects::shared_client_data::packets_state_t::play_data_t& play_data) {
-                std::unique_ptr<base_objects::shared_client_data::packets_state_t::play_data_t::main_screen_i> res;
-                res.reset(new main_screen(client));
-                play_data.init_main_screen(std::move(res));
+                play_data.init_main_screen(std::make_unique<main_screen>(client));
             });
         }
     };

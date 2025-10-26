@@ -21,8 +21,150 @@
 #include <src/util/calculations.hpp>
 
 namespace enbt::io_helper {
-    using namespace copper_server;
-    using namespace copper_server::base_objects;
+    using slot_data = copper_server::base_objects::slot_data;
+    using ecs_entity = copper_server::api::ecs::entity;
+    using ecs_entity_construction = copper_server::api::ecs::entity_construction;
+    using entity = copper_server::api::entity;
+    using com_uuid = copper_server::api::ecs::com::uuid;
+    using com_nbt = copper_server::api::ecs::com::nbt;
+    using com_server_nbt = copper_server::api::ecs::com::server_nbt;
+    using com_inventory = copper_server::api::ecs::com::inventory;
+    using com_custom_inventory = copper_server::api::ecs::com::custom_inventory;
+    using com_effects = copper_server::api::ecs::com::effects;
+    using com_dead_mark = copper_server::api::ecs::com::dead_mark;
+    using com_entity_type = copper_server::api::ecs::com::entity_type;
+    using com_motion = copper_server::api::ecs::com::motion;
+    using com_position = copper_server::api::ecs::com::position;
+    using com_rotation = copper_server::api::ecs::com::rotation;
+    using com_head_rotation = copper_server::api::ecs::com::head_rotation;
+    using com_world_syncing = copper_server::api::ecs::com::world_syncing;
+    using com_dead_mark = copper_server::api::ecs::com::dead_mark;
+    using com_dead_mark = copper_server::api::ecs::com::dead_mark;
+    using com_dead_mark = copper_server::api::ecs::com::dead_mark;
+
+    template <class T>
+    struct serialization<copper_server::util::xyz<T>> {
+        static void read(copper_server::util::xyz<T>& res, value_read_stream& read_stream) {
+            read_stream
+                .read_compound()
+                .collect_as("x", res.x)
+                .collect_as("y", res.y)
+                .collect_as("z", res.z)
+                .force_all_collect();
+        }
+
+        static void write(const copper_server::util::xyz<T>& res, value_write_stream& write_stream) {
+            write_stream
+                .write_compound()
+                .write("x", res.x)
+                .write("y", res.y)
+                .write("z", res.z);
+        }
+
+        static void read(copper_server::util::xyz<T>& res, const enbt::value& from) {
+            res.x = from.at("x");
+            res.y = from.at("y");
+            res.z = from.at("z");
+        }
+
+        static void write(const copper_server::util::xyz<T>& res, enbt::value& to) {
+            to = enbt::compound{
+                {"x", res.x},
+                {"y", res.y},
+                {"z", res.z}
+            };
+        }
+    };
+
+    template <class T>
+    struct serialization<copper_server::util::xy<T>> {
+        static void read(copper_server::util::xy<T>& res, value_read_stream& read_stream) {
+            read_stream
+                .read_compound()
+                .collect_as("x", res.x)
+                .collect_as("y", res.y)
+                .force_all_collect();
+        }
+
+        static void write(const copper_server::util::xy<T>& res, value_write_stream& write_stream) {
+            write_stream
+                .write_compound()
+                .write("x", res.x)
+                .write("y", res.y);
+        }
+
+        static void read(copper_server::util::xy<T>& res, const enbt::value& from) {
+            res.x = from.at("x");
+            res.y = from.at("y");
+        }
+
+        static void write(const copper_server::util::xy<T>& res, enbt::value& to) {
+            to = enbt::compound{
+                {"x", res.x},
+                {"y", res.y}
+            };
+        }
+    };
+
+    template <>
+    struct serialization<copper_server::util::angle_deg> {
+        static void read(copper_server::util::angle_deg& res, value_read_stream& read_stream) {
+            read_stream
+                .read_compound()
+                .collect_as("pitch", res.pitch)
+                .collect_as("yaw", res.yaw)
+                .force_all_collect();
+        }
+
+        static void write(const copper_server::util::angle_deg& res, value_write_stream& write_stream) {
+            write_stream
+                .write_compound()
+                .write("pitch", res.pitch)
+                .write("yaw", res.yaw);
+        }
+
+        static void read(copper_server::util::angle_deg& res, const enbt::value& from) {
+            res.pitch = from.at("pitch");
+            res.yaw = from.at("yaw");
+        }
+
+        static void write(const copper_server::util::angle_deg& res, enbt::value& to) {
+            to = enbt::compound{
+                {"pitch", res.pitch},
+                {"yaw", res.yaw}
+            };
+        }
+    };
+
+    template <>
+    struct serialization<copper_server::util::angle_rad> {
+        static void read(copper_server::util::angle_rad& res, value_read_stream& read_stream) {
+            read_stream
+                .read_compound()
+                .collect_as("pitch", res.pitch)
+                .collect_as("yaw", res.yaw)
+                .force_all_collect();
+        }
+
+        static void write(const copper_server::util::angle_rad& res, value_write_stream& write_stream) {
+            write_stream
+                .write_compound()
+                .write("pitch", res.pitch)
+                .write("yaw", res.yaw);
+        }
+
+        static void read(copper_server::util::angle_rad& res, const enbt::value& from) {
+            res.pitch = from.at("pitch");
+            res.yaw = from.at("yaw");
+        }
+
+        static void write(const copper_server::util::angle_rad& res, enbt::value& to) {
+            to = enbt::compound{
+                {"pitch", res.pitch},
+                {"yaw", res.yaw}
+            };
+        }
+    };
 
     template <>
     struct serialization<std::unordered_map<uint32_t, slot_data>> {
@@ -64,20 +206,20 @@ namespace enbt::io_helper {
     };
 
     template <>
-    struct serialization<api::ecs::entity> {
-        static void write(api::ecs::entity value, value_write_stream& write_stream) {
-            api::entity ee(value);
+    struct serialization<ecs_entity> {
+        static void write(ecs_entity value, value_write_stream& write_stream) {
+            entity ee(value);
             auto compound = write_stream.write_compound(13 /* + 1 + bool(value->attached_to)*/ + bool(ee.current_world()));
             compound.write("died", ee.is_died())
                 .write("entity_id", ee.const_data().entity_id)
                 .write("id", [&value](value_write_stream& stream) {
-                    stream.write(value.get<api::ecs::com::uuid>().id);
+                    stream.write(value.get<com_uuid>().id);
                 })
                 .write("nbt", [&value](value_write_stream& stream) {
-                    stream.write(value.get<api::ecs::com::nbt>().get());
+                    stream.write(value.get<com_nbt>().get());
                 })
                 .write("server_data", [&value](value_write_stream& stream) {
-                    stream.write(value.get<api::ecs::com::server_nbt>().get());
+                    stream.write(value.get<com_server_nbt>().get());
                 })
                 .write("motion", [&ee](value_write_stream& stream) {
                     enbt::io_helper::serialization_write(ee.get_motion(), stream);
@@ -92,20 +234,20 @@ namespace enbt::io_helper {
                     enbt::io_helper::serialization_write(ee.get_head_rotation(), stream);
                 })
                 .write("inventory", [&value](value_write_stream& stream) {
-                    if (value.has<api::ecs::com::inventory>())
-                        enbt::io_helper::serialization_write(value.get<api::ecs::com::inventory>().get(), stream);
+                    if (value.has<com_inventory>())
+                        enbt::io_helper::serialization_write(value.get<com_inventory>().get(), stream);
                     else
                         stream.write_compound(0);
                 })
                 .write("custom_inventory", [&value](value_write_stream& stream) {
-                    if (value.has<api::ecs::com::custom_inventory>())
-                        enbt::io_helper::serialization_write(value.get<api::ecs::com::custom_inventory>().get(), stream);
+                    if (value.has<com_custom_inventory>())
+                        enbt::io_helper::serialization_write(value.get<com_custom_inventory>().get(), stream);
                     else
                         stream.write_compound(0);
                 })
                 .write("active_effects", [&value](value_write_stream& stream) {
-                    if (value.has<api::ecs::com::effects>()) {
-                        auto& active_effects = value.get<api::ecs::com::effects>().active_effects();
+                    if (value.has<com_effects>()) {
+                        auto& active_effects = value.get<com_effects>().active_effects();
                         stream.write_array(active_effects.size()).iterable(active_effects, [](auto& item, value_write_stream& item_stream) {
                             auto& [id, effect] = item;
                             item_stream
@@ -121,8 +263,8 @@ namespace enbt::io_helper {
                         stream.write_array(0);
                 })
                 .write("hidden_effects", [&value](value_write_stream& stream) {
-                    if (value.has<api::ecs::com::effects>()) {
-                        auto& hidden_effects = value.get<api::ecs::com::effects>().hidden_effects();
+                    if (value.has<com_effects>()) {
+                        auto& hidden_effects = value.get<com_effects>().hidden_effects();
                         auto comp = stream.write_compound(hidden_effects.size());
                         for (auto& [id, effects] : hidden_effects) {
                             comp.write(std::to_string(id), [&effects](value_write_stream& effects_stream) {
@@ -176,26 +318,26 @@ namespace enbt::io_helper {
                 compound.write("bound_world", ee.current_world()->world_name);
         }
 
-        static void write(api::ecs::entity value, enbt::value& to) {
-            api::entity ee(value);
+        static void write(ecs_entity value, enbt::value& to) {
+            entity ee(value);
             enbt::compound compound{
                 {"died", ee.is_died()},
                 {"entity_ud", ee.const_data().entity_id},
-                {"id", value.get<api::ecs::com::uuid>().id},
-                {"nbt", value.get<api::ecs::com::nbt>().get()},
-                {"server_data", value.get<api::ecs::com::server_nbt>().get()},
+                {"id", value.get<com_uuid>().id},
+                {"nbt", value.get<com_nbt>().get()},
+                {"server_data", value.get<com_server_nbt>().get()},
             };
             enbt::io_helper::serialization_write(ee.get_motion(), compound["motion"]);
             enbt::io_helper::serialization_write(ee.get_position(), compound["position"]);
             enbt::io_helper::serialization_write(ee.get_rotation(), compound["rotation"]);
             enbt::io_helper::serialization_write(ee.get_head_rotation(), compound["head_rotation"]);
-            if (value.has<api::ecs::com::inventory>())
-                enbt::io_helper::serialization_write(value.get<api::ecs::com::inventory>().get(), compound["inventory"]);
-            if (value.has<api::ecs::com::custom_inventory>())
-                enbt::io_helper::serialization_write(value.get<api::ecs::com::custom_inventory>().get(), compound["custom_inventory"]);
+            if (value.has<com_inventory>())
+                enbt::io_helper::serialization_write(value.get<com_inventory>().get(), compound["inventory"]);
+            if (value.has<com_custom_inventory>())
+                enbt::io_helper::serialization_write(value.get<com_custom_inventory>().get(), compound["custom_inventory"]);
 
-            if (value.has<api::ecs::com::effects>()) {
-                auto& active_effects = value.get<api::ecs::com::effects>().active_effects();
+            if (value.has<com_effects>()) {
+                auto& active_effects = value.get<com_effects>().active_effects();
                 enbt::fixed_array arr;
                 arr.reserve(active_effects.size());
                 for (auto& [id, effect] : active_effects) {
@@ -210,9 +352,9 @@ namespace enbt::io_helper {
                 }
                 compound.emplace("active_effects", std::move(arr));
             };
-            if (value.has<api::ecs::com::effects>()) {
+            if (value.has<com_effects>()) {
 
-                auto& hidden_effects_ = value.get<api::ecs::com::effects>().hidden_effects();
+                auto& hidden_effects_ = value.get<com_effects>().hidden_effects();
                 enbt::compound hidden_effects;
                 hidden_effects.reserve(hidden_effects_.size());
                 for (auto& [id, effects] : hidden_effects_) {
@@ -271,38 +413,38 @@ namespace enbt::io_helper {
     };
 
     template <>
-    struct serialization<api::ecs::entity_construction> {
-        static void read(api::ecs::entity_construction& res, value_read_stream& read_stream) {
+    struct serialization<ecs_entity_construction> {
+        static void read(ecs_entity_construction& res, value_read_stream& read_stream) {
             read_stream //TODO replace this with standard format
                 .read_compound()
-                .collect("died", [&](auto& stream) { if (stream.read()) res.set<api::ecs::com::dead_mark>(); })
-                .collect("entity_id", [&](auto& stream) { stream.read_as(res.get<api::ecs::com::entity_type>().type); })
-                .collect("id", [&](auto& stream) { stream.read_as(res.get<api::ecs::com::uuid>().id); })
-                .collect("motion", [&](auto& stream) { enbt::io_helper::serialization_read<util::vector>(res.get<api::ecs::com::motion>(), stream); })
-                .collect("position", [&](auto& stream) { enbt::io_helper::serialization_read<util::vector>(res.get<api::ecs::com::position>(), stream); })
-                .collect("rotation", [&](auto& stream) { enbt::io_helper::serialization_read<util::angle_deg>(res.get<api::ecs::com::rotation>(), stream); })
-                .collect("head_rotation", [&](auto& stream) { enbt::io_helper::serialization_read<util::angle_deg>(res.get<api::ecs::com::head_rotation>(), stream); })
-                .collect("inventory", [&](auto& stream) { enbt::io_helper::serialization_read(res.get<api::ecs::com::inventory>().get(), stream); })
-                .collect("custom_inventory", [&](auto& stream) { enbt::io_helper::serialization_read(res.get<api::ecs::com::custom_inventory>().get(), stream); })
-                .collect("nbt", [&](auto& stream) { res.get<api::ecs::com::nbt>().get() = stream.read(); })
-                .collect("server_data", [&](auto& stream) { res.get<api::ecs::com::server_nbt>().get() = stream.read(); })
+                .collect("died", [&](auto& stream) { if (stream.read()) res.set<com_dead_mark>(); })
+                .collect("entity_id", [&](auto& stream) { stream.read_as(res.get<com_entity_type>().type); })
+                .collect("id", [&](auto& stream) { stream.read_as(res.get<com_uuid>().id); })
+                .collect("motion", [&](auto& stream) { enbt::io_helper::serialization_read<copper_server::util::vector>(res.get<com_motion>(), stream); })
+                .collect("position", [&](auto& stream) { enbt::io_helper::serialization_read<copper_server::util::vector>(res.get<com_position>(), stream); })
+                .collect("rotation", [&](auto& stream) { enbt::io_helper::serialization_read<copper_server::util::angle_deg>(res.get<com_rotation>(), stream); })
+                .collect("head_rotation", [&](auto& stream) { enbt::io_helper::serialization_read<copper_server::util::angle_deg>(res.get<com_head_rotation>(), stream); })
+                .collect("inventory", [&](auto& stream) { enbt::io_helper::serialization_read(res.get<com_inventory>().get(), stream); })
+                .collect("custom_inventory", [&](auto& stream) { enbt::io_helper::serialization_read(res.get<com_custom_inventory>().get(), stream); })
+                .collect("nbt", [&](auto& stream) { res.get<com_nbt>().get() = stream.read(); })
+                .collect("server_data", [&](auto& stream) { res.get<com_server_nbt>().get() = stream.read(); })
                 .collect("bound_world", [&](auto& stream) {
-                    res.get<api::ecs::com::world_syncing>().weak_reference = (std::string)stream.read();
+                    res.get<com_world_syncing>().weak_reference = (std::string)stream.read();
                 })
                 .collect("hidden_effects", [&](auto& stream) {
-                    auto res_effects = res.get<api::ecs::com::effects>();
+                    auto res_effects = res.get<com_effects>();
                     stream.iterate(
                         [&res_effects](auto size) { res_effects.hidden_effects().reserve(size); },
                         [&res_effects](std::string_view id, value_read_stream& effects) {
                             uint32_t id_ = 0;
                             auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
                             if (parsing_res.ec == std::errc{}) {
-                                list_array<api::ecs::com::effects::effect> set_effects;
+                                list_array<com_effects::effect> set_effects;
                                 effects.iterate(
                                     [&res_effects, id_](auto size) { res_effects.hidden_effects()[id_].reserve(size); },
                                     [&res_effects, id_](value_read_stream& effect_) {
                                         auto effect = effect_.read();
-                                        res_effects.hidden_effects()[id_].push_back(api::ecs::com::effects::effect{
+                                        res_effects.hidden_effects()[id_].push_back(com_effects::effect{
                                             .duration = effect.at("duration"),
                                             .id = effect.at("id"),
                                             .amplifier = effect.at("amplifier"),
@@ -317,14 +459,14 @@ namespace enbt::io_helper {
                     );
                 })
                 .collect("active_effects", [&](auto& stream) {
-                    auto res_effects = res.get<api::ecs::com::effects>();
+                    auto res_effects = res.get<com_effects>();
                     stream.iterate(
                         [&res_effects](auto size) { res_effects.active_effects().reserve(size); },
                         [&res_effects](value_read_stream& effect_) {
                             auto effect = effect_.read();
                             res_effects.active_effects().emplace(
                                 effect.at("id"),
-                                api::ecs::com::effects::effect{
+                                com_effects::effect{
                                     .duration = effect.at("duration"),
                                     .id = effect.at("id"),
                                     .amplifier = effect.at("amplifier"),
@@ -363,35 +505,35 @@ namespace enbt::io_helper {
                 .make_collect();
         }
 
-        static void read(api::ecs::entity_construction& res, const enbt::value& from) {
+        static void read(ecs_entity_construction& res, const enbt::value& from) {
             for (auto& [name, value] : from.as_compound()) {
                 if (name == "died") {
                     if (value)
-                        res.set<api::ecs::com::dead_mark>();
+                        res.set<com_dead_mark>();
                 } else if (name == "entity_id")
-                    res.get<api::ecs::com::entity_type>().type = (int32_t)value;
+                    res.get<com_entity_type>().type = (int32_t)value;
                 else if (name == "id")
-                    res.get<api::ecs::com::uuid>().id = (enbt::raw_uuid)value;
+                    res.get<com_uuid>().id = (enbt::raw_uuid)value;
                 else if (name == "motion") {
-                    enbt::io_helper::serialization_read<util::vector>(res.get<api::ecs::com::motion>(), value);
+                    enbt::io_helper::serialization_read<copper_server::util::vector>(res.get<com_motion>(), value);
                 } else if (name == "position") {
-                    enbt::io_helper::serialization_read<util::vector>(res.get<api::ecs::com::position>(), value);
+                    enbt::io_helper::serialization_read<copper_server::util::vector>(res.get<com_position>(), value);
                 } else if (name == "rotation") {
-                    enbt::io_helper::serialization_read<util::angle_deg>(res.get<api::ecs::com::rotation>(), value);
+                    enbt::io_helper::serialization_read<copper_server::util::angle_deg>(res.get<com_rotation>(), value);
                 } else if (name == "head_rotation") {
-                    enbt::io_helper::serialization_read<util::angle_deg>(res.get<api::ecs::com::head_rotation>(), value);
+                    enbt::io_helper::serialization_read<copper_server::util::angle_deg>(res.get<com_head_rotation>(), value);
                 } else if (name == "inventory") {
-                    enbt::io_helper::serialization_read(res.get<api::ecs::com::inventory>().get(), value);
+                    enbt::io_helper::serialization_read(res.get<com_inventory>().get(), value);
                 } else if (name == "custom_inventory") {
-                    enbt::io_helper::serialization_read(res.get<api::ecs::com::custom_inventory>().get(), value);
+                    enbt::io_helper::serialization_read(res.get<com_custom_inventory>().get(), value);
                 } else if (name == "nbt") {
-                    res.get<api::ecs::com::nbt>().get() = value;
+                    res.get<com_nbt>().get() = value;
                 } else if (name == "server_data")
-                    res.get<api::ecs::com::server_nbt>().get() = value;
+                    res.get<com_server_nbt>().get() = value;
                 else if (name == "bound_world") {
-                    res.get<api::ecs::com::world_syncing>().weak_reference = (std::string)value;
+                    res.get<com_world_syncing>().weak_reference = (std::string)value;
                 } else if (name == "hidden_effects") {
-                    auto& hidden_effects = res.get<api::ecs::com::effects>().hidden_effects();
+                    auto& hidden_effects = res.get<com_effects>().hidden_effects();
                     hidden_effects.reserve(value.size());
                     for (auto& [id, effects] : value.as_compound()) {
                         uint32_t id_ = 0;
@@ -399,7 +541,7 @@ namespace enbt::io_helper {
                         auto& cur_effects = hidden_effects[id_];
                         cur_effects.reserve(effects.size());
                         for (auto& effect : effects.as_array()) {
-                            cur_effects.push_back(api::ecs::com::effects::effect{
+                            cur_effects.push_back(com_effects::effect{
                                 .duration = effect.at("duration"),
                                 .id = effect.at("id"),
                                 .amplifier = effect.at("amplifier"),
@@ -410,14 +552,14 @@ namespace enbt::io_helper {
                         }
                     }
                 } else if (name == "active_effects") {
-                    auto& active_effects = res.get<api::ecs::com::effects>().active_effects();
+                    auto& active_effects = res.get<com_effects>().active_effects();
                     active_effects.reserve(value.size());
                     for (auto& [id, effect] : value.as_compound()) {
                         uint32_t id_ = 0;
                         auto parsing_res = std::from_chars(id.data(), id.data() + id.size(), id_);
                         active_effects.emplace(
                             id_,
-                            api::ecs::com::effects::effect{
+                            com_effects::effect{
                                 .duration = effect.at("duration"),
                                 .id = effect.at("id"),
                                 .amplifier = effect.at("amplifier"),
@@ -443,130 +585,6 @@ namespace enbt::io_helper {
                 //        res->attached.push_back((enbt::raw_uuid)entity);
                 //}
             }
-        }
-    };
-
-    template <class T>
-    struct serialization<util::xyz<T>> {
-        static void read(util::xyz<T>& res, value_read_stream& read_stream) {
-            read_stream
-                .read_compound()
-                .collect_as("x", res.x)
-                .collect_as("y", res.y)
-                .collect_as("z", res.z)
-                .force_all_collect();
-        }
-
-        static void write(const util::xyz<T>& res, value_write_stream& write_stream) {
-            write_stream
-                .write_compound()
-                .write("x", res.x)
-                .write("y", res.y)
-                .write("z", res.z);
-        }
-
-        static void read(util::xyz<T>& res, const enbt::value& from) {
-            res.x = from.at("x");
-            res.y = from.at("y");
-            res.z = from.at("z");
-        }
-
-        static void write(const util::xyz<T>& res, enbt::value& to) {
-            to = enbt::compound{
-                {"x", res.x},
-                {"y", res.y},
-                {"z", res.z}
-            };
-        }
-    };
-
-    template <class T>
-    struct serialization<util::xy<T>> {
-        static void read(util::xy<T>& res, value_read_stream& read_stream) {
-            read_stream
-                .read_compound()
-                .collect_as("x", res.x)
-                .collect_as("y", res.y)
-                .force_all_collect();
-        }
-
-        static void write(const util::xy<T>& res, value_write_stream& write_stream) {
-            write_stream
-                .write_compound()
-                .write("x", res.x)
-                .write("y", res.y);
-        }
-
-        static void read(util::xy<T>& res, const enbt::value& from) {
-            res.x = from.at("x");
-            res.y = from.at("y");
-        }
-
-        static void write(const util::xy<T>& res, enbt::value& to) {
-            to = enbt::compound{
-                {"x", res.x},
-                {"y", res.y}
-            };
-        }
-    };
-
-    template <>
-    struct serialization<util::angle_deg> {
-        static void read(util::angle_deg& res, value_read_stream& read_stream) {
-            read_stream
-                .read_compound()
-                .collect_as("pitch", res.pitch)
-                .collect_as("yaw", res.yaw)
-                .force_all_collect();
-        }
-
-        static void write(const util::angle_deg& res, value_write_stream& write_stream) {
-            write_stream
-                .write_compound()
-                .write("pitch", res.pitch)
-                .write("yaw", res.yaw);
-        }
-
-        static void read(util::angle_deg& res, const enbt::value& from) {
-            res.pitch = from.at("pitch");
-            res.yaw = from.at("yaw");
-        }
-
-        static void write(const util::angle_deg& res, enbt::value& to) {
-            to = enbt::compound{
-                {"pitch", res.pitch},
-                {"yaw", res.yaw}
-            };
-        }
-    };
-
-    template <>
-    struct serialization<util::angle_rad> {
-        static void read(util::angle_rad& res, value_read_stream& read_stream) {
-            read_stream
-                .read_compound()
-                .collect_as("pitch", res.pitch)
-                .collect_as("yaw", res.yaw)
-                .force_all_collect();
-        }
-
-        static void write(const util::angle_rad& res, value_write_stream& write_stream) {
-            write_stream
-                .write_compound()
-                .write("pitch", res.pitch)
-                .write("yaw", res.yaw);
-        }
-
-        static void read(util::angle_rad& res, const enbt::value& from) {
-            res.pitch = from.at("pitch");
-            res.yaw = from.at("yaw");
-        }
-
-        static void write(const util::angle_rad& res, enbt::value& to) {
-            to = enbt::compound{
-                {"pitch", res.pitch},
-                {"yaw", res.yaw}
-            };
         }
     };
 }

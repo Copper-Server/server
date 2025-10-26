@@ -9,14 +9,14 @@
 #ifndef SRC_API_NETWORK_TCP
 #define SRC_API_NETWORK_TCP
 #include <library/list_array.hpp>
-#include <src/base_objects/atomic_holder.hpp>
+#include <memory>
 #include <src/base_objects/events/sync_event.hpp>
 
 #include <span>
 
 namespace copper_server::base_objects {
     struct shared_client_data;
-    using client_data_holder = atomic_holder<shared_client_data>;
+    using client_data_holder = std::shared_ptr<shared_client_data>;
 
     namespace network {
         struct response;

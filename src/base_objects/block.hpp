@@ -51,7 +51,7 @@ namespace copper_server {
             };
 
         public:
-            Chat display_name;
+            base_objects::chat display_name;
             std::shared_ptr<enbt::compound> loot_table;
             std::vector<shape_data*> collision_shapes;
             std::vector<shape_data*> outline_shapes;
@@ -106,7 +106,7 @@ namespace copper_server {
             std::optional<flammable_t> flammable;
 
             struct ore_data_t {
-                number_provider experience;
+                std::shared_ptr<number_provider> experience;
             };
 
             std::optional<ore_data_t> ore_data;
@@ -303,7 +303,7 @@ namespace copper_server {
                 return getStaticData().collision_shapes;
             }
 
-            inline const Chat& display_name() const {
+            inline const base_objects::chat& display_name() const {
                 return getStaticData().display_name;
             }
 
@@ -520,7 +520,7 @@ namespace copper_server {
             inline bool is_tickable() const { return block.is_tickable(); }
             inline bool is_solid() const { return block.is_solid(); }
             const std::vector<shape_data*>& collision_shapes() const { return block.collision_shapes(); }
-            const Chat& display_name() const { return block.display_name(); }
+            const base_objects::chat& display_name() const { return block.display_name(); }
             const std::string& instrument() const { return block.instrument(); }
             const std::string& piston_behavior() const { return block.piston_behavior(); }
             const std::string& name() const { return block.name(); }
@@ -559,7 +559,7 @@ namespace copper_server {
             inline bool is_tickable() const { return block.is_tickable(); }
             inline bool is_solid() const { return block.is_solid(); }
             const std::vector<shape_data*>& collision_shapes() const { return block.collision_shapes(); }
-            const Chat& display_name() const { return block.display_name(); }
+            const base_objects::chat& display_name() const { return block.display_name(); }
             const std::string& instrument() const { return block.instrument(); }
             const std::string& piston_behavior() const { return block.piston_behavior(); }
             const std::string& name() const { return block.name(); }

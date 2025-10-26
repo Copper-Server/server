@@ -62,7 +62,7 @@ namespace copper_server::api::packets {
         } else if constexpr (std::is_arithmetic_v<T>) {
         } else if constexpr (std::is_same_v<std::string, T>) {
         } else if constexpr (std::is_same_v<enbt::raw_uuid, T>) {
-        } else if constexpr (std::is_same_v<Chat, T>) {
+        } else if constexpr (std::is_same_v<base_objects::chat, T>) {
         } else if constexpr (
             std::is_same_v<enbt::value, T>
             || std::is_same_v<enbt::compound, T>
@@ -156,8 +156,8 @@ namespace copper_server::api::packets {
             res.write_string(value);
         else if constexpr (std::is_same_v<enbt::raw_uuid, Type>)
             res.write_value(value);
-        else if constexpr (std::is_same_v<Chat, Type>)
-            res.write_direct(util::nbt::build(value.ToENBT()).get_as_network());
+        else if constexpr (std::is_same_v<base_objects::chat, Type>)
+            res.write_direct(util::nbt::build(value.to_enbt()).get_as_network());
         else if constexpr (
             std::is_same_v<enbt::value, Type>
             || std::is_same_v<enbt::compound, Type>
@@ -176,7 +176,7 @@ namespace copper_server::api::packets {
             res.write_direct(util::nbt::build((const enbt::value&)value).get_as_network());
         else if constexpr (std::is_base_of_v<base_objects::palette_container, Type>) {
             std::visit(
-                [&]<class IT>(IT&& it) {
+                [&]<class IT>(const IT& it) {
                     if constexpr (std::is_same_v<base_objects::palette_container_indirect, IT>) {
                         res.write_value(it.bits_per_entry);
                         res.write_var32_check(it.palette.size());
@@ -458,7 +458,7 @@ namespace copper_server::api::packets {
         } else if constexpr (std::is_arithmetic_v<T>) {
         } else if constexpr (std::is_same_v<std::string, T>) {
         } else if constexpr (std::is_same_v<enbt::raw_uuid, T>) {
-        } else if constexpr (std::is_same_v<Chat, T>) {
+        } else if constexpr (std::is_same_v<base_objects::chat, T>) {
         } else if constexpr (
             std::is_same_v<enbt::value, T>
             || std::is_same_v<enbt::compound, T>
@@ -532,11 +532,13 @@ namespace copper_server::api::packets {
             });
             if constexpr (std::is_base_of_v<disconnect_after, Type>)
                 res.do_disconnect_after_send = true;
+        } else if constexpr (std::is_same_v<Type, client_bound::play::play_packet>) {
+            std::visit([&](auto& it) { serialize_packet(res, context, it); }, value);
         } else if constexpr (is_packet<Type>) {
             base_objects::network::response::item it;
             it.write_id(Type::packet_id::value);
             serialize_entry(it, context, value);
-            res += it;
+            res += std::move(it);
             if constexpr (std::is_base_of_v<disconnect_after, Type>)
                 res.do_disconnect_after_send = true;
         }
@@ -581,6 +583,8 @@ namespace copper_server::api::packets {
     template <class Ops, class Type>
     base_objects::network::response make_encode(base_objects::shared_client_data& context, Type&& value) {
         make_preprocess(context, value);
+        if (Ops::send_viewer().notify(value, context))
+            return {};
         base_objects::network::response res;
         serialize_packet(res, context, value);
         if constexpr (std::is_base_of_v<disconnect_after, Type>)

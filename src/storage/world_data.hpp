@@ -12,6 +12,7 @@
 #include <bitset>
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <filesystem>
+#include <memory>
 #include <random>
 #include <string>
 #include <vector>
@@ -19,7 +20,6 @@
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <src/api/ecs.hpp>
-#include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/bounds.hpp>
 #include <src/base_objects/entity/animation.hpp>
@@ -69,8 +69,8 @@ namespace copper_server::storage {
         void calculate_active();
         void update_metadata(); //update_height_map + calculate_active (called automatically)
 
-        void for_each_block_entity(const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
-        void for_each_block_entity(uint64_t local_y, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(uint64_t local_y, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
 
         void for_each_sub_chunk(const std::function<void(base_objects::world::sub_chunk_data& sub_chunk)>& func);
         void get_sub_chunk(uint64_t local_y, const std::function<void(base_objects::world::sub_chunk_data& sub_chunk)>& func);
@@ -182,9 +182,9 @@ namespace copper_server::storage {
             process_complete(world, chunk);
         }
 
-        static void register_it(const std::string& id, base_objects::atomic_holder<chunk_generator> gen);
+        static void register_it(const std::string& id, std::shared_ptr<chunk_generator> gen);
         static void unregister_it(const std::string& id);
-        static base_objects::atomic_holder<chunk_generator> get_it(const std::string& id);
+        static std::shared_ptr<chunk_generator> get_it(const std::string& id);
         static void process_complete(world_data& world, chunk_data& chunk);
     };
 
@@ -207,9 +207,9 @@ namespace copper_server::storage {
         virtual void process_sub_chunk(world_data& world, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z) = 0;
         virtual void block_changed(world_data& world, int64_t global_x, int64_t global_y, int64_t global_z) = 0;
 
-        static void register_it(const std::string& id, base_objects::atomic_holder<chunk_light_processor> processor);
+        static void register_it(const std::string& id, std::shared_ptr<chunk_light_processor> processor);
         static void unregister_it(const std::string& id);
-        static base_objects::atomic_holder<chunk_light_processor> get_it(const std::string& id);
+        static std::shared_ptr<chunk_light_processor> get_it(const std::string& id);
     };
 
     enum class block_set_mode {
@@ -219,22 +219,22 @@ namespace copper_server::storage {
     };
 
     class world_data {
-        using chunk_row = boost::unordered_flat_map<uint64_t, base_objects::atomic_holder<chunk_data>>;
+        using chunk_row = boost::unordered_flat_map<uint64_t, std::shared_ptr<chunk_data>>;
         using chunk_column = boost::unordered_flat_map<uint64_t, chunk_row>;
         uint64_t hashed_seed_value = 0;
 
         fast_task::task_recursive_mutex mutex;
         chunk_column chunks;
-        base_objects::atomic_holder<chunk_light_processor> light_processor;
+        std::shared_ptr<chunk_light_processor> light_processor;
 
-        boost::unordered_flat_map<util::xy<int64_t>, fast_task::future_ptr<base_objects::atomic_holder<chunk_data>>, std::hash<util::xy<int64_t>>> on_generate_process;
+        boost::unordered_flat_map<util::xy<int64_t>, fast_task::future_ptr<std::shared_ptr<chunk_data>>, std::hash<util::xy<int64_t>>> on_generate_process;
 
         struct {
             std::bitset<255> sync_modes;
             fast_task::task_mutex mutex;
             fast_task::task_condition_variable notifier;
             fast_task::task_limiter limiter;
-            base_objects::atomic_holder<chunk_generator> process;
+            std::shared_ptr<chunk_generator> process;
             uint32_t count = 0;
             uint32_t lock_count = 0;
             uint32_t stage_complete_count = 0;
@@ -269,7 +269,7 @@ namespace copper_server::storage {
         std::filesystem::path path;
 
         fast_task::task_query limit_on_load;
-        boost::unordered_flat_map<util::xy<int64_t>, fast_task::future_ptr<base_objects::atomic_holder<chunk_data>>, std::hash<util::xy<int64_t>>> on_load_process;
+        boost::unordered_flat_map<util::xy<int64_t>, fast_task::future_ptr<std::shared_ptr<chunk_data>>, std::hash<util::xy<int64_t>>> on_load_process;
         boost::unordered_flat_map<util::xy<int64_t>, fast_task::future_ptr<bool>, std::hash<util::xy<int64_t>>> on_save_process;
         boost::unordered_flat_map<size_t, api::ecs::entity> entities;
         boost::unordered_flat_map<size_t, api::ecs::entity> to_load_entities;
@@ -278,16 +278,16 @@ namespace copper_server::storage {
 
         std::chrono::high_resolution_clock::time_point last_usage;
 
-        fast_task::future_ptr<base_objects::atomic_holder<chunk_data>> create_chunk_generate_future(base_objects::atomic_holder<chunk_data>& chunk);
-        fast_task::future_ptr<base_objects::atomic_holder<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback, const std::function<void()>& fault);
-        fast_task::future_ptr<base_objects::atomic_holder<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z);
+        fast_task::future_ptr<std::shared_ptr<chunk_data>> create_chunk_generate_future(std::shared_ptr<chunk_data>& chunk);
+        fast_task::future_ptr<std::shared_ptr<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback, const std::function<void()>& fault);
+        fast_task::future_ptr<std::shared_ptr<chunk_data>> create_chunk_load_future(int64_t chunk_x, int64_t chunk_z);
         void make_save(int64_t chunk_x, int64_t chunk_z, bool also_unload);
         void make_save(int64_t chunk_x, int64_t chunk_z, chunk_row::iterator, bool also_unload);
-        base_objects::atomic_holder<chunk_data> load_chunk_sync(int64_t chunk_x, int64_t chunk_z);
-        base_objects::atomic_holder<chunk_data> processed_load_chunk_sync(int64_t chunk_x, int64_t chunk_z, bool is_async_context = false);
+        std::shared_ptr<chunk_data> load_chunk_sync(int64_t chunk_x, int64_t chunk_z);
+        std::shared_ptr<chunk_data> processed_load_chunk_sync(int64_t chunk_x, int64_t chunk_z, bool is_async_context = false);
 
-        base_objects::atomic_holder<chunk_generator>& get_generator();
-        base_objects::atomic_holder<chunk_light_processor>& get_light_processor();
+        std::shared_ptr<chunk_generator>& get_generator();
+        std::shared_ptr<chunk_light_processor>& get_light_processor();
 
         std::string world_type;
         int32_t internal_version = 0;
@@ -432,11 +432,11 @@ namespace copper_server::storage {
         size_t loaded_chunks_count();
 
         bool exists(int64_t chunk_x, int64_t chunk_z);
-        base_objects::atomic_holder<chunk_data> request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z);
-        fast_task::future_ptr<base_objects::atomic_holder<chunk_data>> request_chunk_data(int64_t chunk_x, int64_t chunk_z);
-        std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak_gen(int64_t chunk_x, int64_t chunk_z);  //if chunk does not exists then it will be generated, if chunk exists or not loaded then std::nullopt
-        std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak(int64_t chunk_x, int64_t chunk_z);      //if chunk loaded returns it, else - std::nullopt
-        std::optional<base_objects::atomic_holder<chunk_data>> request_chunk_data_weak_sync(int64_t chunk_x, int64_t chunk_z); //if chunk exists returns it, else - std::nullopt
+        std::shared_ptr<chunk_data> request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z);
+        fast_task::future_ptr<std::shared_ptr<chunk_data>> request_chunk_data(int64_t chunk_x, int64_t chunk_z);
+        std::optional<std::shared_ptr<chunk_data>> request_chunk_data_weak_gen(int64_t chunk_x, int64_t chunk_z);              //if chunk does not exists then it will be generated, if chunk exists or not loaded then std::nullopt
+        std::optional<std::shared_ptr<chunk_data>> request_chunk_data_weak(int64_t chunk_x, int64_t chunk_z);                  //if chunk loaded returns it, else - std::nullopt
+        std::optional<std::shared_ptr<chunk_data>> request_chunk_data_weak_sync(int64_t chunk_x, int64_t chunk_z);             //if chunk exists returns it, else - std::nullopt
         void request_chunk_gen(int64_t chunk_x, int64_t chunk_z);                                                              //generates chunk if it does not exists
         bool request_chunk_data_sync(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback);
         void request_chunk_data(int64_t chunk_x, int64_t chunk_z, const std::function<void(chunk_data& chunk)>& callback, const std::function<void()>& fault);
@@ -480,13 +480,13 @@ namespace copper_server::storage {
         void for_each_entity(base_objects::spherical_bounds_chunk bounds, const std::function<void(api::ecs::entity entity)>& func);
         void for_each_entity(base_objects::spherical_bounds_chunk_out bounds, const std::function<void(api::ecs::entity entity)>& func);
         void for_each_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(api::ecs::entity entity)>& func);
-        void for_each_block_entity(base_objects::cubic_bounds_chunk bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
-        void for_each_block_entity(base_objects::cubic_bounds_chunk_radius bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
-        void for_each_block_entity(base_objects::cubic_bounds_chunk_radius_out bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
-        void for_each_block_entity(base_objects::spherical_bounds_chunk bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
-        void for_each_block_entity(base_objects::spherical_bounds_chunk_out bounds, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
-        void for_each_block_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
-        void for_each_block_entity(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(base_objects::cubic_bounds_chunk bounds, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(base_objects::cubic_bounds_chunk_radius bounds, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(base_objects::cubic_bounds_chunk_radius_out bounds, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(base_objects::spherical_bounds_chunk bounds, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(base_objects::spherical_bounds_chunk_out bounds, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
 
 
         void for_each_entity(base_objects::cubic_bounds_block bounds, const std::function<void(api::ecs::entity entity)>& func);
@@ -495,8 +495,8 @@ namespace copper_server::storage {
         void for_each_entity(base_objects::spherical_bounds_block bounds, const std::function<void(api::ecs::entity entity)>& func);
         void for_each_entity(base_objects::spherical_bounds_block_out bounds, const std::function<void(api::ecs::entity entity)>& func);
         void for_each_entity_at(int64_t global_x, int64_t global_z, const std::function<void(api::ecs::entity entity)>& func);
-        void for_each_block_entity_at(int64_t global_x, int64_t global_z, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
-        void for_each_block_entity_at(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& func);
+        void for_each_block_entity_at(int64_t global_x, int64_t global_z, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
+        void for_each_block_entity_at(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
 
 
         //priority accepts only negative values, doesn't work for unloaded chunks
@@ -507,8 +507,8 @@ namespace copper_server::storage {
         void set_block(base_objects::full_block_data&& block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
         void remove_block(int64_t global_x, int64_t global_y, int64_t global_z);
         base_objects::block get_block(int64_t global_x, int64_t global_y, int64_t global_z);
-        void get_block(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block& block)>& func, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& block_entity);
-        void query_block(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block& block)>& func, const std::function<void(base_objects::block& block, enbt::value& extended_data)>& block_entity, const std::function<void()>& fault);
+        void get_block(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block block)>& func, const std::function<void(base_objects::block block, enbt::value& extended_data)>& block_entity);
+        void query_block(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block block)>& func, const std::function<void(base_objects::block block, enbt::value& extended_data)>& block_entity, const std::function<void()>& fault);
 
         void block_updated(int64_t global_x, int64_t global_y, int64_t global_z);
         void chunk_updated(int64_t chunk_x, int64_t chunk_z);
@@ -653,11 +653,11 @@ namespace copper_server::storage {
     class worlds_data {
         fast_task::task_recursive_mutex mutex;
         std::filesystem::path base_path;
-        boost::unordered_flat_map<int32_t, base_objects::atomic_holder<world_data>> cached_worlds;
+        boost::unordered_flat_map<int32_t, std::shared_ptr<world_data>> cached_worlds;
         std::chrono::high_resolution_clock::time_point last_tps_calculated = std::chrono::high_resolution_clock::now();
         uint64_t got_ticks = 0;
 
-        base_objects::atomic_holder<world_data> load(int32_t world_id);
+        std::shared_ptr<world_data> load(int32_t world_id);
 
         list_array<int32_t> cached_ids;
         const list_array<int32_t>& get_ids();
@@ -686,7 +686,7 @@ namespace copper_server::storage {
         int32_t get_id(const std::string& name);
         list_array<int32_t> get_all_ids();
 
-        base_objects::atomic_holder<world_data> get(int32_t world_id);
+        std::shared_ptr<world_data> get(int32_t world_id);
         void save(int32_t world_id);
         void save_all();
 

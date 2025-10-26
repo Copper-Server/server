@@ -25,7 +25,7 @@ namespace copper_server::api::packets::client_bound::config {
     };
 
     struct disconnect : public packet<0x02>, disconnect_after {
-        Chat reason;
+        base_objects::chat reason;
     };
 
     struct finish_configuration : public packet<0x03> {};
@@ -59,7 +59,7 @@ namespace copper_server::api::packets::client_bound::config {
         string_sized<32767> url;
         string_sized<40> hash;
         bool forced;
-        std::optional<Chat> prompt_message = std::nullopt;
+        std::optional<base_objects::chat> prompt_message = std::nullopt;
     };
 
     struct store_cookie : public packet<0x0A> {
@@ -125,7 +125,7 @@ namespace copper_server::api::packets::client_bound::config {
         using enum link_type;
 
         struct link {
-            or_<enum_as<link_type, var_int32>, Chat> label;
+            or_<enum_as<link_type, var_int32>, base_objects::chat> label;
             std::string url;
         };
 

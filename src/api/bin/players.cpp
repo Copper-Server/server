@@ -52,13 +52,13 @@ namespace copper_server::api::players {
 
         base_objects::client_data_holder allocate_special_player(const std::function<void(base_objects::shared_client_data&, base_objects::network::response&&)>& callback) {
             std::unique_lock lock(mutex);
-            players.push_back(new base_objects::shared_client_data((api::network::tcp::session*)nullptr, this, callback));
+            players.push_back(std::make_shared<base_objects::shared_client_data>((api::network::tcp::session*)nullptr, this, callback));
             return players.back();
         }
 
         base_objects::client_data_holder allocate_player(api::network::tcp::session* session) {
             std::unique_lock lock(mutex);
-            players.push_back(new base_objects::shared_client_data(session, this));
+            players.push_back(std::make_shared<base_objects::shared_client_data>(session, this));
             return players.back();
         }
 
@@ -272,8 +272,8 @@ namespace copper_server::api::players {
     };
 
     namespace calls {
-        base_objects::events::event<personal<Chat>> on_player_kick;
-        base_objects::events::event<personal<Chat>> on_player_ban;
+        base_objects::events::event<personal<base_objects::chat>> on_player_kick;
+        base_objects::events::event<personal<base_objects::chat>> on_player_ban;
     }
 
     namespace handlers {

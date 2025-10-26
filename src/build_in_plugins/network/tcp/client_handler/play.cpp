@@ -87,10 +87,8 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
 
             static extra_data_t& get(base_objects::shared_client_data& client) {
                 return *client.packets_state.internal_data.set([&](auto& data) {
-                    if (!data.extra_data) {
-                        auto allocated = new extra_data_t{.ka_solution = client.get_session()};
-                        data.extra_data = std::shared_ptr<void>((void*)allocated, [](void* d) { delete reinterpret_cast<extra_data_t*>(d); });
-                    }
+                    if (!data.extra_data)
+                        data.extra_data = std::make_shared<extra_data_t>(client.get_session());
                     return reinterpret_cast<extra_data_t*>(data.extra_data.get());
                 });
             }
@@ -172,7 +170,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     do_limited_crafting = data.world_game_rules.contains("doLimitedCrafting") ? (bool)data.world_game_rules["doLimitedCrafting"] : false;
                     difficulty = data.difficulty;
                     difficulty_locked = data.difficulty_locked;
-                    world_type = api::registers::dimensionTypes.at(data.get_world_type()).id;
+                    world_type = api::registers::dimension_types.at(data.get_world_type()).id;
                 });
                 auto player_entity_id = api::entity_id_map::allocate_id(client.data->uuid);
                 api::entity_id_map::assign_entity(player_entity_id, *client.player_data.assigned_entity);
@@ -263,8 +261,8 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                             packet.location.x,
                             packet.location.y,
                             packet.location.z,
-                            [](auto&) {},
-                            [&](auto&, auto& enbt) {
+                            [](auto) {},
+                            [&](auto, auto& enbt) {
                                 client << api::packets::client_bound::play::tag_query{
                                     .tag_query_id = packet.tag_query_id,
                                     .nbt = enbt

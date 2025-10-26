@@ -73,40 +73,6 @@ namespace copper_server::base_objects::network {
         _write_value_tem(id, data, std::endian::little);
     }
 
-    //private static final int field_62269 = 15;
-    //private static final int MAX_15_BIT_INT = 32767;
-    //private static final double field_62270 = 32766.0;
-    //private static final int field_62271 = 2;
-    //private static final int SLOW_BIT_MASK = 3;
-    //private static final int field_62272 = 4;
-    //private static final int field_62273 = 3;
-    //private static final int field_62274 = 18;
-    //private static final int field_62275 = 33;
-    //public static final double field_62267 = 1.7179869183E10;
-    //public static final double field_62268 = 3.051944088384301E-5;
-    //
-    //public static boolean hasFastMarkerBit(int maxDirectionalVelocity) {
-    //	return (maxDirectionalVelocity & 4) == 4;
-    //}
-    //
-    //public static Vec3d readVelocity(ByteBuf buf) {
-    //	int i = buf.readUnsignedByte();
-    //	if (i == 0) {
-    //		return Vec3d.ZERO;
-    //	} else {
-    //		int j = buf.readUnsignedByte();
-    //		long l = buf.readUnsignedInt();
-    //		long m = l << 16 | (long)(j << 8) | (long)i;
-    //		long n = (long)(i & 3);
-    //		if (hasFastMarkerBit(i)) {
-    //			n |= ((long)VarInts.read(buf) & 4294967295L) << 2;
-    //		}
-    //
-    //		return new Vec3d(fromLong(m >> 3) * (double)n, fromLong(m >> 18) * (double)n, fromLong(m >> 33) * (double)n);
-    //	}
-    //}
-
-
     void response::item::write_value(velocity val) {
         static constexpr double threshold = double(1.0) / 32766;
         double x = copper_server::util::minecraft::packets::velocity_clamp(val.x);

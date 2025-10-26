@@ -13,63 +13,16 @@
 #include <variant>
 
 namespace copper_server::base_objects {
-    struct number_provider_constant;
-    struct number_provider_uniform;
-    struct number_provider_clamped_normal;
-    struct number_provider_trapezoid;
-    struct number_provider_clamped;
-    struct number_provider_weighted_list;
-    struct number_provider_biased_to_bottom;
-    struct number_provider_binomial;
-    struct number_provider_score;
-    struct number_provider_storage;
-    struct number_provider_enchantment_level;
 
     struct number_provider {
-        std::variant<
-            number_provider_constant*,
-            number_provider_uniform*,
-            number_provider_clamped_normal*,
-            number_provider_trapezoid*,
-            number_provider_clamped*,
-            number_provider_weighted_list*,
-            number_provider_biased_to_bottom*,
-            number_provider_binomial*,
-            number_provider_score*,
-            number_provider_storage*,
-            number_provider_enchantment_level*>
-            provider;
+        virtual float get_float() const noexcept = 0;
+        virtual int32_t get_int() const noexcept = 0;
+        virtual enbt::value get_enbt() const = 0;
 
-    public:
-        number_provider();
-        number_provider(number_provider&&) noexcept;
-        number_provider(const number_provider&);
-        number_provider(const number_provider_constant& value);
-        number_provider(const number_provider_uniform& value);
-        number_provider(const number_provider_clamped_normal& value);
-        number_provider(const number_provider_trapezoid& value);
-        number_provider(const number_provider_clamped& value);
-        number_provider(const number_provider_weighted_list& value);
-        number_provider(const number_provider_biased_to_bottom& value);
-        number_provider(const number_provider_binomial& value);
-        number_provider(const number_provider_score& value);
-        number_provider(const number_provider_storage& value);
-        number_provider(const number_provider_enchantment_level& value);
-        ~number_provider();
-
-
-        number_provider& operator=(number_provider&&) noexcept;
-        number_provider& operator=(const number_provider&);
-
-        float get_float() const;
-        int32_t get_int() const;
-
-
-        static number_provider parse_provider(const enbt::value& value);
-        enbt::value get_enbt() const;
+        static std::shared_ptr<number_provider> parse_provider(const enbt::value& value);
     };
 
-    struct number_provider_constant {
+    struct number_provider_constant final : public number_provider {
         std::variant<int32_t, float> value;
 
         number_provider_constant(int32_t value)
@@ -78,26 +31,12 @@ namespace copper_server::base_objects {
         number_provider_constant(float value)
             : value(value) {}
 
-        float get_float() const noexcept {
-            return std::visit(
-                [](auto&& arg) -> float {
-                    return static_cast<float>(arg);
-                },
-                value
-            );
-        }
-
-        int32_t get_int() const noexcept {
-            return std::visit(
-                [](auto&& arg) -> int32_t {
-                    return static_cast<int32_t>(arg);
-                },
-                value
-            );
-        }
+        float get_float() const noexcept override;
+        int32_t get_int() const noexcept override;
+        enbt::value get_enbt() const override;
     };
 
-    struct number_provider_uniform {
+    struct number_provider_uniform final : public number_provider {
         std::variant<int32_t, float> min_inclusive;
         std::variant<int32_t, float> max_exclusive;
 
@@ -139,27 +78,45 @@ namespace copper_server::base_objects {
                 max_exclusive
             );
         }
+
+        float get_float() const noexcept override;
+        int32_t get_int() const noexcept override;
+        enbt::value get_enbt() const override;
     };
 
-    struct number_provider_clamped_normal {
+    struct number_provider_clamped_normal final : public number_provider {
         float mean;
         float deviation;
         int32_t min;
         int32_t max;
+
+        number_provider_clamped_normal(float mean_, float deviation_, int32_t min_, int32_t max_)
+            : mean(mean_), deviation(deviation_), min(min_), max(max_) {}
+
+        float get_float() const noexcept override;
+        int32_t get_int() const noexcept override;
+        enbt::value get_enbt() const override;
     };
 
-    struct number_provider_trapezoid {
+    struct number_provider_trapezoid final : public number_provider {
         int32_t min;
         int32_t max;
         int32_t plateau;
+
+        number_provider_trapezoid(int32_t min_, int32_t max_, int32_t plateau_)
+            : min(min_), max(max_), plateau(plateau_) {}
+
+        float get_float() const noexcept override;
+        int32_t get_int() const noexcept override;
+        enbt::value get_enbt() const override;
     };
 
-    struct number_provider_clamped {
+    struct number_provider_clamped final : public number_provider {
         std::variant<int32_t, float> min_inclusive;
         std::variant<int32_t, float> max_inclusive;
-        number_provider source;
+        std::shared_ptr<number_provider> source;
 
-        number_provider_clamped(std::variant<int32_t, float> min_inclusive, std::variant<int32_t, float> max_inclusive, const number_provider& source)
+        number_provider_clamped(std::variant<int32_t, float> min_inclusive, std::variant<int32_t, float> max_inclusive, const std::shared_ptr<number_provider>& source)
             : min_inclusive(min_inclusive), max_inclusive(max_inclusive), source(source) {}
 
         float get_min_inclusive_float() const noexcept {
@@ -197,13 +154,27 @@ namespace copper_server::base_objects {
                 max_inclusive
             );
         }
+
+        float get_float() const noexcept override;
+        int32_t get_int() const noexcept override;
+        enbt::value get_enbt() const override;
     };
 
-    struct number_provider_weighted_list {
-        std::vector<std::pair<number_provider, double>> values;
+    struct number_provider_weighted_list final : public number_provider {
+        std::vector<std::pair<std::shared_ptr<number_provider>, double>> values;
+
+        number_provider_weighted_list(std::vector<std::pair<std::shared_ptr<number_provider>, double>>&& values)
+            : values(std::move(values)) {}
+
+        number_provider_weighted_list(const std::vector<std::pair<std::shared_ptr<number_provider>, double>>& values)
+            : values(values) {}
+
+        float get_float() const noexcept override;
+        int32_t get_int() const noexcept override;
+        enbt::value get_enbt() const override;
     };
 
-    struct number_provider_biased_to_bottom {
+    struct number_provider_biased_to_bottom final : public number_provider {
         std::variant<int32_t, float> min_inclusive;
         std::variant<int32_t, float> max_exclusive;
 
@@ -245,14 +216,25 @@ namespace copper_server::base_objects {
                 max_exclusive
             );
         }
+
+        float get_float() const noexcept override;
+        int32_t get_int() const noexcept override;
+        enbt::value get_enbt() const override;
     };
 
-    struct number_provider_binomial {
-        number_provider n;
-        number_provider p;
+    struct number_provider_binomial final : public number_provider {
+        std::shared_ptr<number_provider> n;
+        std::shared_ptr<number_provider> p;
+
+        number_provider_binomial(const std::shared_ptr<number_provider>& n_, const std::shared_ptr<number_provider>& p_)
+            : n(n_), p(p_) {}
+
+        float get_float() const noexcept override;
+        int32_t get_int() const noexcept override;
+        enbt::value get_enbt() const override;
     };
 
-    struct number_provider_score {
+    struct number_provider_score final : public number_provider {
         struct {
             std::string type;
             std::string value; //`name` for "fixed" or `target` for "context"
@@ -260,15 +242,31 @@ namespace copper_server::base_objects {
 
         std::string score;
         std::optional<float> scale;
+
+        float get_float() const noexcept override;
+        int32_t get_int() const noexcept override;
+        enbt::value get_enbt() const override;
     };
 
-    struct number_provider_storage {
+    struct number_provider_storage final : public number_provider {
         std::string storage;
         std::string path;
+
+        number_provider_storage(std::string storage, std::string path) : storage(std::move(storage)), path(std::move(path)) {}
+
+        float get_float() const noexcept override;
+        int32_t get_int() const noexcept override;
+        enbt::value get_enbt() const override;
     };
 
-    struct number_provider_enchantment_level {
+    struct number_provider_enchantment_level final : public number_provider {
         std::string amount;
+
+        number_provider_enchantment_level(std::string amount_) : amount(std::move(amount_)) {}
+
+        float get_float() const noexcept override;
+        int32_t get_int() const noexcept override;
+        enbt::value get_enbt() const override;
     };
 }
 #endif /* SRC_BASE_OBJECTS_NUMBER_PROVIDER */

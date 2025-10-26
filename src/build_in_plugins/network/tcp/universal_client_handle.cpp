@@ -11,12 +11,11 @@
 #include <src/build_in_plugins/network/tcp/universal_client_handle.hpp>
 
 namespace copper_server::build_in_plugins::network::tcp {
-    std::string packet_is_to_large_str = Chat("Packet too large").ToStr();
-    auto packet_is_to_large = Chat("Packet too large");
-    std::string internal_error_str = Chat("Internal server error\nPlease report this to the server owner!").ToStr();
-    auto internal_error = Chat("Internal server error\nPlease report this to the server owner!");
+    std::string packet_is_to_large_str = base_objects::chat("Packet too large").to_str();
+    auto packet_is_to_large = base_objects::chat("Packet too large");
+    std::string internal_error_str = base_objects::chat("Internal server error\nPlease report this to the server owner!").to_str();
+    auto internal_error = base_objects::chat("Internal server error\nPlease report this to the server owner!");
 
-    
 
     base_objects::network::response universal_client_handle::work_packet(ArrayStream& data) {
         api::packets::decode(session->shared_data(), data);
@@ -47,7 +46,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         default:
             return base_objects::network::response::disconnect();
         case login:
-            return api::packets::encode(api::packets::client_bound::login::login_disconnect{.reason = {Chat("Internal server error: " + std::string(ex.what()) + "\nPlease report this to the server owner!").ToStr()}});
+            return api::packets::encode(api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Internal server error: " + std::string(ex.what()) + "\nPlease report this to the server owner!").to_str()}});
         case configuration:
             return api::packets::encode(api::packets::client_bound::config::disconnect{.reason = "Internal server error: " + std::string(ex.what()) + "\nPlease report this to the server owner!"});
         case play:

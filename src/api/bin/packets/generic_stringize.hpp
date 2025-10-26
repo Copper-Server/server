@@ -96,10 +96,10 @@ namespace copper_server::api::packets {
                 res += "\"" + value + "\"";
             else if constexpr (std::is_same_v<enbt::raw_uuid, Type>)
                 res += "\"" + value.to_string() + "\"";
-            else if constexpr (std::is_same_v<Chat, Type>) {
+            else if constexpr (std::is_same_v<base_objects::chat, Type>) {
                 std::string alignment(spacing + 1, ' ');
                 alignment[0] = '\n';
-                res += list_array<char>(senbt::serialize(value.ToENBT(), false, true))
+                res += list_array<char>(senbt::serialize(value.to_enbt(), false, true))
                            .replace('\n', alignment.data(), alignment.size())
                            .to_container<std::string>();
             } else if constexpr (

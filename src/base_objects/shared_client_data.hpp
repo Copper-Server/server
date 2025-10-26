@@ -11,6 +11,7 @@
 #include <array>
 #include <chrono>
 #include <list>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -20,9 +21,7 @@
 #include <library/fast_task.hpp>
 #include <library/list_array.hpp>
 #include <src/api/mojang/session_server.hpp>
-#include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/events/sync_event.hpp>
-#include <src/base_objects/ptr_optional.hpp>
 #include <src/plugin/registration.hpp>
 
 namespace copper_server {
@@ -352,7 +351,7 @@ namespace copper_server {
             return shared_client_data::packets_state_t::protocol_state(static_cast<uint8_t>(a) ^ static_cast<uint8_t>(b));
         }
 
-        using client_data_holder = atomic_holder<shared_client_data>;
+        using client_data_holder = std::shared_ptr<shared_client_data>;
     }
 }
 #endif /* SRC_BASE_OBJECTS_SHARED_CLIENT_DATA */

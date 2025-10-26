@@ -1,9 +1,9 @@
 #ifndef SRC_API_ECS_BASE_COMPONENTS
 #define SRC_API_ECS_BASE_COMPONENTS
 #include <library/list_array.hpp>
+#include <memory>
 #include <src/api/ecs.hpp>
 #include <src/api/entity.hpp>
-#include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/entity/animation.hpp>
 #include <src/base_objects/entity/event.hpp>
 #include <src/base_objects/entity/metadata.hpp>
@@ -21,9 +21,7 @@ namespace copper_server {
 
     namespace base_objects {
         struct shared_client_data;
-        using client_data_holder = atomic_holder<shared_client_data>;
-        struct entity;
-        using entity_ref = atomic_holder<entity>;
+        using client_data_holder = std::shared_ptr<shared_client_data>;
 
         namespace world {
             struct sub_chunk_data;

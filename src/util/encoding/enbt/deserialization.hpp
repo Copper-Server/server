@@ -68,8 +68,8 @@ namespace copper_server::util::encoding::enbt {
             res.value = (typename Type::underlying_type)value;
         else if constexpr (std::is_same_v<base_objects::velocity, Type>)
             res = {value["x"], value["y"], value["z"]};
-        else if constexpr (std::is_same_v<Chat, Type>)
-            res = Chat::fromEnbt(value);
+        else if constexpr (std::is_same_v<base_objects::chat, Type>)
+            res = base_objects::chat::from_enbt(value);
         else if constexpr (std::is_same_v<api::packets::optional_var_int32, Type> || std::is_same_v<api::packets::optional_var_int64, Type>) {
             if (value.contains() && value.type_equal(::enbt::type::optional))
                 res = *value.get_optional();
@@ -390,8 +390,8 @@ namespace copper_server::util::encoding::enbt {
                 else if (name == "z")
                     res.z = value.read();
             });
-        } else if constexpr (std::is_same_v<Chat, Type>)
-            res = Chat::fromEnbt(stream.read());
+        } else if constexpr (std::is_same_v<base_objects::chat, Type>)
+            res = base_objects::chat::from_enbt(stream.read());
         else if constexpr (std::is_same_v<api::packets::optional_var_int32, Type> || std::is_same_v<api::packets::optional_var_int64, Type>) {
             stream.read_optional([&res](auto& has_stream) {
                 deserialize_entry(res, has_stream, res);

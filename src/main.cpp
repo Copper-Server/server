@@ -82,19 +82,3 @@ int main() {
     fast_task::scheduler::await_end_tasks(false);
     return 0;
 }
-
-void* operator new(std::size_t n) noexcept(false) {
-    return fast_task::allocate(n);
-}
-
-void operator delete(void* p) noexcept {
-    return fast_task::free(p);
-}
-
-void* operator new[](std::size_t s) noexcept(false) {
-    return fast_task::allocate(s);
-}
-
-void operator delete[](void* p) noexcept {
-    return fast_task::free(p);
-}

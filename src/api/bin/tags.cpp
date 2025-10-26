@@ -78,7 +78,7 @@ namespace copper_server::api::tags {
         case builtin_entry::block_state:
             safety(return base_objects::block::get_block(value).default_state;);
         case builtin_entry::damage_type:
-            safety(return (int32_t)api::registers::damageTypes.at(value).id;);
+            safety(return (int32_t)api::registers::damage_types.at(value).id;);
         case builtin_entry::enchantment:
             safety(return (int32_t)api::registers::enchantments.at(value).id;);
         case builtin_entry::entity_type:
@@ -92,7 +92,7 @@ namespace copper_server::api::tags {
         case builtin_entry::item:
             safety(return base_objects::slot_data::get_slot_data(value).internal_id;);
         case builtin_entry::painting_variant:
-            safety(return (int32_t)api::registers::paintingVariants.at(value).id;);
+            safety(return (int32_t)api::registers::painting_variants.at(value).id;);
         //case builtin_entry::point_of_interest:
         //  safety(return api::registers::.at(value).poi;);
         default:
@@ -191,7 +191,7 @@ namespace copper_server::api::tags {
                 });
                 break;
             case builtin_entry::damage_type:
-                ids_cache = items.convert_fn([entry](auto& it) { safety(return api::registers::damageTypes.at(it).id;) });
+                ids_cache = items.convert_fn([entry](auto& it) { safety(return api::registers::damage_types.at(it).id;) });
                 break;
             case builtin_entry::enchantment:
                 ids_cache = items.convert_fn([entry](auto& it) { safety(return api::registers::enchantments.at(it).id;) });
@@ -213,7 +213,7 @@ namespace copper_server::api::tags {
                 ids_cache = items.convert_fn([entry](auto& it) { safety(return base_objects::slot_data::get_slot_data(it).internal_id;) });
                 break;
             case builtin_entry::painting_variant:
-                ids_cache = items.convert_fn([entry](auto& it) { safety(return api::registers::paintingVariants.at(it).id;) });
+                ids_cache = items.convert_fn([entry](auto& it) { safety(return api::registers::painting_variants.at(it).id;) });
                 break;
             //case builtin_entry::point_of_interest:
             //    ids_cache = items.convert_fn([entry](auto& it) { safety(return api::registers::.at(it).poi;) });
@@ -266,7 +266,7 @@ namespace copper_server::api::tags {
         }
     };
 
-    using tags_map = std::unordered_map<std::string, tags_entry, string_hash, string_eq>;
+    using tags_map = std::unordered_map<std::string, std::shared_ptr<tags_entry>, string_hash, string_eq>;
     using namespace_map = std::unordered_map<std::string, tags_map, string_hash, string_eq>;
     using entry_map = std::unordered_map<std::string, namespace_map, string_hash, string_eq>;
 
@@ -319,7 +319,9 @@ namespace copper_server::api::tags {
         auto y = t->second.find(tag);
         if (y == t->second.end())
             return empty;
-        return y->second.items;
+        if (!y->second)
+            return empty;
+        return y->second->items;
     }
 
     static const list_array<std::string>& unfold_tags_tag(const entry_map& tags, std::string_view type, std::string_view tag) {
@@ -341,7 +343,9 @@ namespace copper_server::api::tags {
             auto y = t->second.find(tag);
             if (y == t->second.end())
                 return empty;
-            return y->second.as_ids(entry);
+            if (!y->second)
+                return empty;
+            return y->second->as_ids(entry);
         });
     }
 
@@ -376,7 +380,9 @@ namespace copper_server::api::tags {
             auto y = t->second.find(_tag);
             if (y == t->second.end())
                 return false;
-            return entry != builtin_entry::block_state ? y->second.check_cache.contains(id) : y->second.state_check_cache.contains(id);
+            if (!y->second)
+                return false;
+            return entry != builtin_entry::block_state ? y->second->check_cache.contains(id) : y->second->state_check_cache.contains(id);
         });
     }
 
@@ -460,16 +466,18 @@ namespace copper_server::api::tags {
                 y = res.first;
             }
             auto& res = y->second;
-            if (res.allow_override) {
+            if (!res)
+                res = std::make_shared<tags_entry>(items);
+            if (res->allow_override) {
                 if (allow_override)
-                    res.items += items;
+                    res->items += items;
                 else
-                    res.items = items;
-                res.ids_cache.clear();
-                res.state_ids_cache.clear();
-                res.check_cache.clear();
-                res.state_check_cache.clear();
-                res.need_update = true;
+                    res->items = items;
+                res->ids_cache.clear();
+                res->state_ids_cache.clear();
+                res->check_cache.clear();
+                res->state_check_cache.clear();
+                res->need_update = true;
             } else
                 throw std::runtime_error("Tag " + std::string(_namespace) + ":" + std::string(_tag) + " in entry " + std::string(actual_entry) + " does not allow to override.");
         });
@@ -486,7 +494,8 @@ namespace copper_server::api::tags {
             std::unordered_map<std::string, list_array<int32_t>> res;
             res.reserve(t->second.size());
             for (auto&& [tag, decl] : t->second)
-                res[tag] = decl.as_ids(entry);
+                if (decl)
+                    res[tag] = decl->as_ids(entry);
             return res;
         });
     }
@@ -502,13 +511,13 @@ namespace copper_server::api::tags {
             std::unordered_map<std::string, list_array<std::string>> res;
             res.reserve(t->second.size());
             for (auto&& [tag, decl] : t->second)
-                res[tag] = decl.items;
+                if (decl)
+                    res[tag] = decl->items;
             return res;
         });
     }
 
     std::unordered_map<std::string, std::unordered_map<std::string, list_array<int32_t>>> view_entry(builtin_entry entry) {
-
         return data.get([&](auto& tags) -> std::unordered_map<std::string, std::unordered_map<std::string, list_array<int32_t>>> {
             auto ns = tags.find(builtin_entry_to_string[(uint8_t)entry]);
             if (ns == tags.end())
@@ -517,7 +526,8 @@ namespace copper_server::api::tags {
             res.reserve(ns->second.size());
             for (auto&& [namespace_, decl] : ns->second)
                 for (auto&& [tag, dec] : decl)
-                    res[namespace_][tag] = dec.as_ids(entry);
+                    if (dec)
+                        res[namespace_][tag] = dec->as_ids(entry);
             return res;
         });
     }
@@ -531,7 +541,8 @@ namespace copper_server::api::tags {
             res.reserve(ns->second.size());
             for (auto&& [namespace_, decl] : ns->second)
                 for (auto&& [tag, dec] : decl)
-                    res[namespace_][tag] = dec.items;
+                    if (dec)
+                        res[namespace_][tag] = dec->items;
             return res;
         });
     }
@@ -543,7 +554,9 @@ namespace copper_server::api::tags {
                 for (auto&& [namespace_, dec] : decl) {
                     for (auto&& [tag, de] : dec) {
                         list_array<std::string> resolved_items;
-                        for (auto& item : de.items) {
+                        if (!de)
+                            de = std::make_shared<tags_entry>();
+                        for (auto& item : de->items) {
                             if (item.starts_with("#")) {
                                 if (secold_preset)
                                     resolved_items.push_back(unfold_tags_tag(tags, entry, item).where([](const std::string& tag) {
@@ -554,7 +567,7 @@ namespace copper_server::api::tags {
                             } else
                                 resolved_items.push_back(item);
                         }
-                        de = tags_entry{std::move(resolved_items)};
+                        de->items = std::move(resolved_items);
                     }
                 }
             }
@@ -570,21 +583,21 @@ namespace copper_server::api::tags {
             for (auto& _entry : tags)
                 for (auto& _namespace : _entry.second)
                     for (auto& _tag : _namespace.second) {
-                        _tag.second.items.unify();
-                        _tag.second.items.commit();
+                        _tag.second->items.unify();
+                        _tag.second->items.commit();
                     }
         });
     }
 
     namespace detail {
         struct _tag_entry_handle {
-            const tags_entry* entry_ptr = nullptr;
             const std::string entry, namespace_, tag;
+            std::shared_ptr<tags_entry> entry_ptr = nullptr;
             size_t version = 0;
             bool use_state_entry = false;
 
             void resolve() {
-                entry_ptr = data.get([this](auto& tags) -> const tags_entry* {
+                entry_ptr = data.get([this](auto& tags) -> std::shared_ptr<tags_entry> {
                     static std::string_view block_entry = "minecraft:block";
                     auto actual_entry(entry != "minecraft:block_state" ? std::string_view(entry) : block_entry);
                     auto ns = fixed_entry_map(actual_entry, tags);
@@ -597,14 +610,14 @@ namespace copper_server::api::tags {
                     if (y == t->second.end())
                         return nullptr;
                     version = tags_version;
-                    return &y->second;
+                    return y->second;
                 });
                 if (entry_ptr)
                     if (builtin_entry_from_string.contains(entry))
                         entry_ptr->ids_update(builtin_entry_from_string.at(entry));
             }
 
-            const tags_entry* get() {
+            const std::shared_ptr<tags_entry> get() {
                 if (!entry_ptr)
                     resolve();
                 else if (tags_version != version)
@@ -613,14 +626,13 @@ namespace copper_server::api::tags {
             }
         };
 
-        _tag_entry_handle* copy(_tag_entry_handle* copy) {
-            return new _tag_entry_handle(*copy);
-        }
-
-        void destruct_tag_entry_handle::operator()(_tag_entry_handle* ptr) {
-            delete ptr;
+        std::shared_ptr<_tag_entry_handle> copy(std::shared_ptr<_tag_entry_handle> copy) {
+            return std::make_shared<_tag_entry_handle>(*copy);
         }
     }
+
+    tag_handle::~tag_handle() = default;
+
 
     tag_handle get_tag_handle(std::string_view custom_entry, std::string_view tag) {
         std::string actual_entry;
@@ -633,18 +645,14 @@ namespace copper_server::api::tags {
         std::string_view _namespace;
         std::string_view _tag;
         get_namespace_and_tag(_namespace, _tag, tag);
-        tag_handle res;
-        res.reset(new detail::_tag_entry_handle{.entry = std::move(actual_entry), .namespace_ = std::string(_namespace), .tag = std::string(_tag)});
-        return res;
+        return std::make_shared<detail::_tag_entry_handle>(std::move(actual_entry), std::string(_namespace), std::string(_tag));
     }
 
     tag_handle get_tag_handle(builtin_entry entry, std::string_view tag) {
         std::string_view _namespace;
         std::string_view _tag;
         get_namespace_and_tag(_namespace, _tag, tag);
-        tag_handle res;
-        res.reset(new detail::_tag_entry_handle{.entry = builtin_entry_to_string_virtual[(uint8_t)entry], .namespace_ = std::string(_namespace), .tag = std::string(_tag)});
-        return res;
+        return std::make_shared<detail::_tag_entry_handle>(builtin_entry_to_string_virtual[(uint8_t)entry], std::string(_namespace), std::string(_tag));
     }
 
     bool contains(const tag_handle& handle) {

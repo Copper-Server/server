@@ -10,7 +10,6 @@
 #define SRC_PLUGIN_REGISTRATION
 #include <library/list_array.hpp>
 #include <src/api/ecs.hpp>
-#include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/data_packs/known_pack.hpp>
 #include <src/base_objects/events/event.hpp>
 #include <src/base_objects/events/sync_event.hpp>
@@ -25,9 +24,7 @@ namespace copper_server {
     namespace base_objects {
         class command_root_browser;
         struct shared_client_data;
-        template <typename T>
-        class atomic_holder;
-        using client_data_holder = atomic_holder<shared_client_data>;
+        using client_data_holder = std::shared_ptr<shared_client_data>;
     }
 
     namespace api::packets::server_bound::config {

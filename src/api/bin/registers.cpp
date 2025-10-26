@@ -10,39 +10,39 @@
 #include <src/base_objects/slot.hpp>
 
 namespace copper_server::api::registers {
-    std::unordered_map<std::string, armor_trim_material> armorTrimMaterials;
-    std::unordered_map<std::string, armor_trim_pattern> armorTrimPatterns;
+    std::unordered_map<std::string, armor_trim_material> armor_trim_materials;
+    std::unordered_map<std::string, armor_trim_pattern> armor_trim_patterns;
     std::unordered_map<std::string, biome> biomes;
-    std::unordered_map<std::string, chat_type> chatTypes;
-    std::unordered_map<std::string, damage_type> damageTypes;
-    std::unordered_map<std::string, dimension_type> dimensionTypes;
-    std::unordered_map<std::string, wolf_sound_variant> wolfSoundVariants;
-    std::unordered_map<std::string, wolf_variant> wolfVariants;
-    std::unordered_map<std::string, entity_variant> catVariants;
-    std::unordered_map<std::string, entity_variant> chickenVariants;
-    std::unordered_map<std::string, entity_variant> cowVariants;
-    std::unordered_map<std::string, entity_variant> pigVariants;
-    std::unordered_map<std::string, entity_variant> frogVariants;
+    std::unordered_map<std::string, chat_type> chat_types;
+    std::unordered_map<std::string, damage_type> damage_types;
+    std::unordered_map<std::string, dimension_type> dimension_types;
+    std::unordered_map<std::string, wolf_sound_variant> wolf_sound_variants;
+    std::unordered_map<std::string, wolf_variant> wolf_variants;
+    std::unordered_map<std::string, entity_variant> cat_variants;
+    std::unordered_map<std::string, entity_variant> chicken_variants;
+    std::unordered_map<std::string, entity_variant> cow_variants;
+    std::unordered_map<std::string, entity_variant> pig_variants;
+    std::unordered_map<std::string, entity_variant> frog_variants;
     std::unordered_map<std::string, banner_pattern> bannerPatterns;
-    std::unordered_map<std::string, painting_variant> paintingVariants;
+    std::unordered_map<std::string, painting_variant> painting_variants;
     std::unordered_map<std::string, instrument> instruments;
     std::unordered_map<std::string, int32_t> entity_pose;
 
-    list_array<std::unordered_map<std::string, armor_trim_material>::iterator> armorTrimMaterials_cache;
-    list_array<std::unordered_map<std::string, armor_trim_pattern>::iterator> armorTrimPatterns_cache;
+    list_array<std::unordered_map<std::string, armor_trim_material>::iterator> armor_trim_materials_cache;
+    list_array<std::unordered_map<std::string, armor_trim_pattern>::iterator> armor_trim_patterns_cache;
     list_array<std::unordered_map<std::string, biome>::iterator> biomes_cache;
-    list_array<std::unordered_map<std::string, chat_type>::iterator> chatTypes_cache;
-    list_array<std::unordered_map<std::string, damage_type>::iterator> damageTypes_cache;
-    list_array<std::unordered_map<std::string, dimension_type>::iterator> dimensionTypes_cache;
-    list_array<std::unordered_map<std::string, wolf_sound_variant>::iterator> wolfSoundVariants_cache;
-    list_array<std::unordered_map<std::string, wolf_variant>::iterator> wolfVariants_cache;
-    list_array<std::unordered_map<std::string, entity_variant>::iterator> catVariants_cache;
-    list_array<std::unordered_map<std::string, entity_variant>::iterator> chickenVariants_cache;
-    list_array<std::unordered_map<std::string, entity_variant>::iterator> cowVariants_cache;
-    list_array<std::unordered_map<std::string, entity_variant>::iterator> pigVariants_cache;
-    list_array<std::unordered_map<std::string, entity_variant>::iterator> frogVariants_cache;
+    list_array<std::unordered_map<std::string, chat_type>::iterator> chat_types_cache;
+    list_array<std::unordered_map<std::string, damage_type>::iterator> damage_types_cache;
+    list_array<std::unordered_map<std::string, dimension_type>::iterator> dimension_types_cache;
+    list_array<std::unordered_map<std::string, wolf_sound_variant>::iterator> wolf_sound_variants_cache;
+    list_array<std::unordered_map<std::string, wolf_variant>::iterator> wolf_variants_cache;
+    list_array<std::unordered_map<std::string, entity_variant>::iterator> cat_variants_cache;
+    list_array<std::unordered_map<std::string, entity_variant>::iterator> chicken_variants_cache;
+    list_array<std::unordered_map<std::string, entity_variant>::iterator> cow_variants_cache;
+    list_array<std::unordered_map<std::string, entity_variant>::iterator> pig_variants_cache;
+    list_array<std::unordered_map<std::string, entity_variant>::iterator> frog_variants_cache;
     list_array<std::unordered_map<std::string, banner_pattern>::iterator> bannerPatterns_cache;
-    list_array<std::unordered_map<std::string, painting_variant>::iterator> paintingVariants_cache;
+    list_array<std::unordered_map<std::string, painting_variant>::iterator> painting_variants_cache;
     list_array<std::unordered_map<std::string, instrument>::iterator> instruments_cache;
     list_array<std::unordered_map<std::string, int32_t>::iterator> entity_pose_cache;
 

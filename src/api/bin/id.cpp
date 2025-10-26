@@ -24,25 +24,25 @@ namespace copper_server::api::id::detail {
         case registry_source::banner_pattern:
             return api::registers::bannerPatterns_cache.at(value)->first;
         case registry_source::cat_variant:
-            return api::registers::catVariants_cache.at(value)->first;
+            return api::registers::cat_variants_cache.at(value)->first;
         case registry_source::chat_type:
-            return api::registers::chatTypes_cache.at(value)->first;
+            return api::registers::chat_types_cache.at(value)->first;
         case registry_source::chicken_variant:
-            return api::registers::chickenVariants_cache.at(value)->first;
+            return api::registers::chicken_variants_cache.at(value)->first;
         case registry_source::cow_variant:
-            return api::registers::cowVariants_cache.at(value)->first;
+            return api::registers::cow_variants_cache.at(value)->first;
         case registry_source::damage_type:
-            return api::registers::damageTypes_cache.at(value)->first;
+            return api::registers::damage_types_cache.at(value)->first;
         case registry_source::dialog:
-            return api::registers::chickenVariants_cache.at(value)->first; //TODO
+            return api::registers::chicken_variants_cache.at(value)->first; //TODO
         case registry_source::dimension_type:
-            return api::registers::dimensionTypes_cache.at(value)->first;
+            return api::registers::dimension_types_cache.at(value)->first;
         case registry_source::enchantment:
             return api::registers::enchantments_cache.at(value)->first;
         case registry_source::enchantment_provider:
             return api::registers::enchantment_providers_cache.at(value)->first;
         case registry_source::frog_variant:
-            return api::registers::frogVariants_cache.at(value)->first;
+            return api::registers::frog_variants_cache.at(value)->first;
         case registry_source::instrument:
             return api::registers::instruments_cache.at(value)->first;
         case registry_source::jukebox_song:
@@ -50,19 +50,19 @@ namespace copper_server::api::id::detail {
         case registry_source::loot_table:
             return api::registers::loot_table_cache.at(value)->first;
         case registry_source::painting_variant:
-            return api::registers::paintingVariants_cache.at(value)->first;
+            return api::registers::painting_variants_cache.at(value)->first;
         case registry_source::pig_variant:
-            return api::registers::pigVariants_cache.at(value)->first;
+            return api::registers::pig_variants_cache.at(value)->first;
         case registry_source::recipe:
             return api::registers::recipe_table_cache.at(value)->first;
         case registry_source::trim_material:
-            return api::registers::armorTrimMaterials_cache.at(value)->first;
+            return api::registers::armor_trim_materials_cache.at(value)->first;
         case registry_source::trim_pattern:
-            return api::registers::armorTrimPatterns_cache.at(value)->first;
+            return api::registers::armor_trim_patterns_cache.at(value)->first;
         case registry_source::wolf_sound_variant:
-            return api::registers::wolfSoundVariants_cache.at(value)->first;
+            return api::registers::wolf_sound_variants_cache.at(value)->first;
         case registry_source::wolf_variant:
-            return api::registers::wolfVariants_cache.at(value)->first;
+            return api::registers::wolf_variants_cache.at(value)->first;
         case registry_source::worldgen__biome:
             return api::registers::biomes_cache.at(value)->first;
         case registry_source::entity_pose:
@@ -284,25 +284,25 @@ namespace copper_server::api::id::detail {
         case registry_source::banner_pattern:
             return api::registers::bannerPatterns.at(value).id;
         case registry_source::cat_variant:
-            return api::registers::catVariants.at(value).id;
+            return api::registers::cat_variants.at(value).id;
         case registry_source::chat_type:
-            return api::registers::chatTypes.at(value).id;
+            return api::registers::chat_types.at(value).id;
         case registry_source::chicken_variant:
-            return api::registers::chickenVariants.at(value).id;
+            return api::registers::chicken_variants.at(value).id;
         case registry_source::cow_variant:
-            return api::registers::cowVariants.at(value).id;
+            return api::registers::cow_variants.at(value).id;
         case registry_source::damage_type:
-            return api::registers::damageTypes.at(value).id;
+            return api::registers::damage_types.at(value).id;
         case registry_source::dialog:
-            return api::registers::chickenVariants.at(value).id; //TODO
+            return api::registers::chicken_variants.at(value).id; //TODO
         case registry_source::dimension_type:
-            return api::registers::dimensionTypes.at(value).id;
+            return api::registers::dimension_types.at(value).id;
         case registry_source::enchantment:
             return api::registers::enchantments.at(value).id;
         case registry_source::enchantment_provider:
             return api::registers::enchantment_providers.at(value).id;
         case registry_source::frog_variant:
-            return api::registers::frogVariants.at(value).id;
+            return api::registers::frog_variants.at(value).id;
         case registry_source::instrument:
             return api::registers::instruments.at(value).id;
         case registry_source::jukebox_song:
@@ -310,19 +310,19 @@ namespace copper_server::api::id::detail {
         case registry_source::loot_table:
             return api::registers::loot_table.at(value).id;
         case registry_source::painting_variant:
-            return api::registers::paintingVariants.at(value).id;
+            return api::registers::painting_variants.at(value).id;
         case registry_source::pig_variant:
-            return api::registers::pigVariants.at(value).id;
+            return api::registers::pig_variants.at(value).id;
         case registry_source::recipe:
             return api::registers::recipe_table.at(value).id;
         case registry_source::trim_material:
-            return api::registers::armorTrimMaterials.at(value).id;
+            return api::registers::armor_trim_materials.at(value).id;
         case registry_source::trim_pattern:
-            return api::registers::armorTrimPatterns.at(value).id;
+            return api::registers::armor_trim_patterns.at(value).id;
         case registry_source::wolf_sound_variant:
-            return api::registers::wolfSoundVariants.at(value).id;
+            return api::registers::wolf_sound_variants.at(value).id;
         case registry_source::wolf_variant:
-            return api::registers::wolfVariants.at(value).id;
+            return api::registers::wolf_variants.at(value).id;
         case registry_source::worldgen__biome:
             return api::registers::biomes.at(value).id;
         case registry_source::entity_pose:
@@ -568,25 +568,25 @@ namespace copper_server::api::id::detail {
         case registry_source::banner_pattern:
             return api::registers::bannerPatterns_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::cat_variant:
-            return api::registers::catVariants_cache.convert_fn([](auto& it) { return it->second.id; });
+            return api::registers::cat_variants_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::chat_type:
-            return api::registers::chatTypes_cache.convert_fn([](auto& it) { return it->second.id; });
+            return api::registers::chat_types_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::chicken_variant:
-            return api::registers::chickenVariants_cache.convert_fn([](auto& it) { return it->second.id; });
+            return api::registers::chicken_variants_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::cow_variant:
-            return api::registers::cowVariants_cache.convert_fn([](auto& it) { return it->second.id; });
+            return api::registers::cow_variants_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::damage_type:
-            return api::registers::damageTypes_cache.convert_fn([](auto& it) { return it->second.id; });
+            return api::registers::damage_types_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::dialog:
-            return api::registers::chickenVariants_cache.convert_fn([](auto& it) { return it->second.id; }); //TODO
+            return api::registers::chicken_variants_cache.convert_fn([](auto& it) { return it->second.id; }); //TODO
         case registry_source::dimension_type:
-            return api::registers::dimensionTypes_cache.convert_fn([](auto& it) { return it->second.id; });
+            return api::registers::dimension_types_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::enchantment:
             return api::registers::enchantments_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::enchantment_provider:
             return api::registers::enchantment_providers_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::frog_variant:
-            return api::registers::frogVariants_cache.convert_fn([](auto& it) { return it->second.id; });
+            return api::registers::frog_variants_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::instrument:
             return api::registers::instruments_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::jukebox_song:
@@ -594,19 +594,19 @@ namespace copper_server::api::id::detail {
         case registry_source::loot_table:
             return api::registers::loot_table_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::painting_variant:
-            return api::registers::paintingVariants_cache.convert_fn([](auto& it) { return it->second.id; });
+            return api::registers::painting_variants_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::pig_variant:
-            return api::registers::pigVariants_cache.convert_fn([](auto& it) { return it->second.id; });
+            return api::registers::pig_variants_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::recipe:
             return api::registers::recipe_table_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::trim_material:
-            return api::registers::armorTrimMaterials_cache.convert_fn([](auto& it) { return it->second.id; });
+            return api::registers::armor_trim_materials_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::trim_pattern:
-            return api::registers::armorTrimPatterns_cache.convert_fn([](auto& it) { return it->second.id; });
+            return api::registers::armor_trim_patterns_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::wolf_sound_variant:
-            return api::registers::wolfSoundVariants_cache.convert_fn([](auto& it) { return it->second.id; });
+            return api::registers::wolf_sound_variants_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::wolf_variant:
-            return api::registers::wolfVariants_cache.convert_fn([](auto& it) { return it->second.id; });
+            return api::registers::wolf_variants_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::worldgen__biome:
             return api::registers::biomes_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::entity_pose:

@@ -9,8 +9,8 @@
 #ifndef SRC_API_BIN_PACKETS_GENERIC
 #define SRC_API_BIN_PACKETS_GENERIC
 
-namespace copper_server {
-    struct Chat;
+namespace copper_server::base_objects {
+    struct chat;
 }
 
 namespace copper_server::base_objects {

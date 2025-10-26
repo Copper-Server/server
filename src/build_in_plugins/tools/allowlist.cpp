@@ -42,7 +42,7 @@ namespace copper_server::build_in_plugins::tools {
                 return false;
             });
             register_event(api::allowlist::on_kick, base_objects::events::priority::low, [](const base_objects::client_data_holder& client) {
-                api::players::calls::on_player_kick({client, Chat::fromEnbt(api::configuration::get() ^ "allow_list" ^ "on_kick_message")});
+                api::players::calls::on_player_kick({client, base_objects::chat::from_enbt(api::configuration::get() ^ "allow_list" ^ "on_kick_message")});
                 return false;
             });
             register_event(api::allowlist::on_add, base_objects::events::priority::low, [this](const std::string name) {
@@ -151,7 +151,7 @@ namespace copper_server::build_in_plugins::tools {
                             api::allowlist::on_mode_change(api::allowlist::allowlist_mode::off);
                             context.executor << api::packets::client_bound::play::system_chat{.content = {"Allowlist mode set to off"}};
                         } else
-                            context.executor << api::packets::client_bound::play::system_chat{.content = Chat("Allowlist mode is already off").SetColor("red")};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = base_objects::chat("Allowlist mode is already off").set_color("red")};
                         return changed;
                     });
                 allowlist.add_child("on")
@@ -161,7 +161,7 @@ namespace copper_server::build_in_plugins::tools {
                             api::allowlist::on_mode_change(api::allowlist::allowlist_mode::off);
                             context.executor << api::packets::client_bound::play::system_chat{.content = {"Allowlist mode set to block"}};
                         } else
-                            context.executor << api::packets::client_bound::play::system_chat{.content = Chat("Allowlist mode is already block").SetColor("red")};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = base_objects::chat("Allowlist mode is already block").set_color("red")};
                         return changed;
                     });
 

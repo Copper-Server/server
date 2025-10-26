@@ -68,8 +68,8 @@ namespace copper_server::api::packets {
             value = stream.read_string();
         else if constexpr (std::is_same_v<enbt::raw_uuid, Type>)
             value = stream.read_uuid();
-        else if constexpr (std::is_same_v<Chat, Type>)
-            value = Chat::fromEnbt(ReadNetworkNBT_enbt(stream));
+        else if constexpr (std::is_same_v<base_objects::chat, Type>)
+            value = base_objects::chat::from_enbt(ReadNetworkNBT_enbt(stream));
         else if constexpr (
             std::is_same_v<enbt::value, Type>
             || std::is_same_v<enbt::compound, Type>
@@ -102,7 +102,7 @@ namespace copper_server::api::packets {
                 res.id_of_palette = stream.read_var<int32_t>();
                 value.decompile(std::move(res));
             } else if (bits_per_entry <= max_indirect) {
-                base_objects::palette_container_indirect res(bits_per_entry);
+                base_objects::palette_container_indirect res(bits_per_entry, entries_count);
                 uint32_t palette = stream.read_var<uint32_t>();
                 res.palette.reserve(palette);
                 for (uint32_t i = 0; i < palette; i++)
@@ -114,7 +114,7 @@ namespace copper_server::api::packets {
                 res.data.data.data() = list_array<uint8_t>(range.data_read(), range.size_read());
                 value.decompile(std::move(res));
             } else {
-                base_objects::palette_data res(bits_per_entry);
+                base_objects::palette_data res(bits_per_entry, entries_count);
                 auto size = bits_per_entry * entries_count;
                 size += size % 8;
                 auto range = stream.range_read(size);

@@ -11,9 +11,13 @@
 #include <functional>
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
+#include <memory>
 #include <src/api/ecs.hpp>
-#include <src/base_objects/atomic_holder.hpp>
 
+namespace copper_server::base_objects {
+    struct shared_client_data;
+    using client_data_holder = std::shared_ptr<shared_client_data>;
+}
 namespace copper_server::api::entity_id_map {
     //used for ender_dragon and other entities, when the client uses entity_id + offset to specify part of entity it has interacted
     [[nodiscard]] int32_t allocate_special_sequence(const enbt::raw_uuid& uuid, uint8_t required_ids);

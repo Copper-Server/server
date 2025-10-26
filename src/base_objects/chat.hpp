@@ -11,120 +11,130 @@
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <optional>
+#include <src/base_objects/dye_color.hpp>
 #include <string>
 #include <vector>
 
-namespace copper_server {
-    struct Chat {
-        struct clickEventS {
-            char* open_url = nullptr;
-            char* run_command = nullptr;
-            char* suggest_command = nullptr;
-            uint32_t* change_page = nullptr;
-            char* copy_to_clipboard = nullptr;
+namespace copper_server::base_objects {
+    struct chat {
+        struct click_event_s {
+            std::string open_url;
+            std::string run_command;
+            std::string suggest_command;
+            std::optional<uint32_t> change_page;
+            std::string copy_to_clipboard;
 
-            ~clickEventS();
+            ~click_event_s();
         };
 
-        struct hoverEventS {
-            struct show_itemS {
+        struct hover_event_s {
+            struct show_item_s {
                 std::optional<std::string> tag;
                 std::string id;
                 int32_t count = 0;
-            }* show_item = nullptr;
+            };
 
-            struct show_entityS {
+            struct show_entity_s {
                 std::optional<std::string> name;
                 std::string type;
                 std::string id;
-            }* show_entity = nullptr;
+            };
 
-            char* show_text = nullptr;
+            std::unique_ptr<show_item_s> show_item;
+            std::unique_ptr<show_entity_s> show_entity;
+            std::string show_text;
 
-            ~hoverEventS();
+            ~hover_event_s();
         };
 
-        Chat();
-        Chat(std::initializer_list<Chat> args);
-        Chat(const char* set_text, bool is_translation = false);
-        Chat(const std::string& set_text, bool is_translation = false);
-        Chat(const Chat& copy);
-        Chat(Chat&& copy) noexcept;
-        Chat& operator=(const Chat& copy);
-        Chat& operator=(Chat&& copy) noexcept;
-        ~Chat();
+        chat();
+        chat(const char* text, bool is_translation = false);
+        chat(std::initializer_list<chat> args);
+        chat(const std::string& set_text, bool is_translation = false);
+        chat(std::string&& set_text, bool is_translation = false);
+        chat(const chat& copy);
+        chat(chat&& copy) noexcept;
+        chat& operator=(const chat& copy);
+        chat& operator=(chat&& copy) noexcept;
+        ~chat();
 
-        Chat& SetText(const std::string& set_text = "");
-        Chat& SetTranslation(const std::string& set_text = "");
-        Chat& SetColor(const std::string& set_text = "");
-        Chat& SetInsertion(const std::string& set_text = "");
-        Chat& SetFont(const std::string& set_text = "");
-        Chat& SetBold();
-        Chat& SetItalic();
-        Chat& SetUnderlined();
-        Chat& SetStrikethrough();
-        Chat& SetObfuscated();
-        Chat& SetBold(bool is);
-        Chat& SetItalic(bool is);
-        Chat& SetUnderlined(bool is);
-        Chat& SetStrikethrough(bool is);
-        Chat& SetObfuscated(bool is);
-        Chat& SetHoverEventShowText(const std::string& _show_text);
-        Chat& SetHoverEventShowItem(const std::string& _id, int32_t _count, const std::optional<std::string>& _tag = std::nullopt);
-        Chat& SetHoverEventShowEntity(const std::string& _id, const std::string& _type, const std::optional<std::string>& _name = std::nullopt);
-        Chat& SetHoverEvent();
-        Chat& SetClickEventOpenUrl(const std::string& _open_url);
-        Chat& SetClickEventRunCommand(const std::string& _run_command);
-        Chat& SetClickEventSuggestCommand(const std::string& _suggest_command);
-        Chat& SetClickEventChangePage(uint32_t _change_page);
-        Chat& SetClickEventCopyToClipboard(const std::string& _copy_to_clipboard);
-        Chat& SetClickEvent();
+        chat& set_text(const std::string& set_text);
+        chat& set_translation(const std::string& set_text);
+        chat& set_color(const std::string& set_text);
+        chat& set_color(dye_color color);
+        chat& set_insertion(const std::string& set_text);
+        chat& set_font(const std::string& set_text);
+        chat& set_text(std::string&& set_text = "");
+        chat& set_translation(std::string&& set_text = "");
+        chat& set_color(std::string&& set_text = "");
+        chat& set_insertion(std::string&& set_text = "");
+        chat& set_font(std::string&& set_text = "");
+        chat& set_bold();
+        chat& set_italic();
+        chat& set_underlined();
+        chat& set_strikethrough();
+        chat& set_obfuscated();
+        chat& set_bold(bool is);
+        chat& set_italic(bool is);
+        chat& set_underlined(bool is);
+        chat& set_strikethrough(bool is);
+        chat& set_obfuscated(bool is);
+        chat& set_hover_event_show_text(const std::string& _show_text);
+        chat& set_hover_event_show_item(const std::string& _id, int32_t _count, const std::optional<std::string>& _tag = std::nullopt);
+        chat& set_hover_event_show_entity(const std::string& _id, const std::string& _type, const std::optional<std::string>& _name = std::nullopt);
+        chat& set_hover_event();
+        chat& set_click_event_open_url(const std::string& _open_url);
+        chat& set_click_event_run_command(const std::string& _run_command);
+        chat& set_click_event_suggest_command(const std::string& _suggest_command);
+        chat& set_click_event_change_page(uint32_t _change_page);
+        chat& set_click_event_copy_to_clipboard(const std::string& _copy_to_clipboard);
+        chat& set_click_event();
 
-        list_array<Chat>& GetExtra();
-        std::optional<const char*> GetText() const;
-        std::optional<const char*> GetTranslation() const;
-        std::optional<const char*> GetColor() const;
-        std::optional<const char*> GetInsertion() const;
-        std::optional<const char*> GetFont() const;
-        std::optional<const hoverEventS*> GetHoverEvent() const;
-        std::optional<const clickEventS*> GetClickEvent() const;
-        std::optional<bool> GetBold();
-        std::optional<bool> GetItalic();
-        std::optional<bool> GetUnderlined();
-        std::optional<bool> GetStrikethrough();
-        std::optional<bool> GetObfuscated();
+        list_array<chat>& get_extra();
+        const std::string& get_text() const;
+        const std::string& get_translation() const;
+        const std::string& get_color() const;
+        const std::string& get_insertion() const;
+        const std::string& get_font() const;
+        const std::unique_ptr<hover_event_s>& get_hover_event() const;
+        const std::unique_ptr<click_event_s>& get_click_event() const;
+        std::optional<bool> get_bold();
+        std::optional<bool> get_italic();
+        std::optional<bool> get_underlined();
+        std::optional<bool> get_strikethrough();
+        std::optional<bool> get_obfuscated();
 
-        std::string ToStr() const;
-        static Chat fromStr(std::string_view str);
-        enbt::value ToENBT() const;
+        std::string to_str() const;
+        static chat from_str(std::string_view str);
+        enbt::value to_enbt() const;
 
-        void removeColor();
-        void removeColorRecursive();
+        void remove_color();
+        void remove_color_recursive();
         bool empty() const;
 
-        static Chat parseToChat(std::string_view string);
-        static Chat fromEnbt(const enbt::value& enbt);
-        static Chat from_enbt_with_format(const enbt::value& enbt, list_array<enbt::value>&&);
+        static chat parse_to_chat(std::string_view string);
+        static chat from_enbt(const enbt::value& enbt);
+        static chat from_enbt_with_format(const enbt::value& enbt, list_array<enbt::value>&&);
         std::string to_ansi_console() const;
 
 
-        bool operator==(const Chat&) const;
-        bool operator!=(const Chat& other) const;
+        bool operator==(const chat&) const;
+        bool operator!=(const chat& other) const;
 
-        std::strong_ordering operator<=>(const Chat& other) const {
+        std::strong_ordering operator<=>(const chat& other) const {
             return operator==(other) ? std::strong_ordering::equal : std::strong_ordering::less;
         }
 
     private:
-        list_array<Chat> extra;
-        char* text = nullptr;
-        char* color = nullptr;
-        char* insertion = nullptr;
-        char* font = nullptr;
+        list_array<chat> extra;
+        std::string text;
+        std::string color;
+        std::string insertion;
+        std::string font;
 
-        clickEventS* clickEvent = nullptr;
+        std::unique_ptr<click_event_s> click_event;
 
-        hoverEventS* hoverEvent = nullptr;
+        std::unique_ptr<hover_event_s> hover_event;
 
         bool bold : 1 = false;
         bool italic : 1 = false;
@@ -139,11 +149,6 @@ namespace copper_server {
         bool defined_obfuscated : 1 = false;
 
         bool text_is_translation : 1 = false;
-
-        static void setString(char*& char_ptr, const std::string& string);
-        void setHoverEvent(hoverEventS::show_itemS* setHoverEvent);
-        void setHoverEvent(hoverEventS::show_entityS* setHoverEvent);
-        void setHoverEvent(const std::string& setHoverEvent);
     };
 }
 

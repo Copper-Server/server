@@ -147,24 +147,24 @@ namespace copper_server::build_in_plugins::base {
             api::configuration::get() ^ "communication_core" ^ "on_unload_message" |= enbt::compound{{"text", "The server closing."}};
             api::configuration::get() ^ "communication_core" ^ "allow_send_on" ^ "commands_only" |= true;
             api::configuration::get() ^ "communication_core" ^ "allow_send_on" ^ "hidden" |= false;
-            _chat_disabled_notification() = Chat::fromEnbt(api::configuration::get() ^ "communication_core" ^ "on_chat_disabled_message");
-            _on_invalid_new_signature() = Chat::fromEnbt(api::configuration::get() ^ "communication_core" ^ "on_invalid_new_signature");
+            _chat_disabled_notification() = base_objects::chat::from_enbt(api::configuration::get() ^ "communication_core" ^ "on_chat_disabled_message");
+            _on_invalid_new_signature() = base_objects::chat::from_enbt(api::configuration::get() ^ "communication_core" ^ "on_invalid_new_signature");
             if (!(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature" ^ get_conf).is_none())
-                _on_chat_invalid_signature() = Chat::fromEnbt(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature");
+                _on_chat_invalid_signature() = base_objects::chat::from_enbt(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature");
         }
 
-        static Chat& _chat_disabled_notification() {
-            static Chat ch;
+        static base_objects::chat& _chat_disabled_notification() {
+            static base_objects::chat ch;
             return ch;
         }
 
-        static Chat& _on_invalid_new_signature() {
-            static Chat ch;
+        static base_objects::chat& _on_invalid_new_signature() {
+            static base_objects::chat ch;
             return ch;
         }
 
-        static Chat& _on_chat_invalid_signature() {
-            static Chat ch;
+        static base_objects::chat& _on_chat_invalid_signature() {
+            static base_objects::chat ch;
             return ch;
         }
 
@@ -174,7 +174,7 @@ namespace copper_server::build_in_plugins::base {
 
         void on_load(const plugin_registration_ptr& _) override {
             latest_messages.clear();
-            register_event(api::players::calls::on_player_kick, base_objects::events::priority::low, [](const api::players::personal<Chat>& message) {
+            register_event(api::players::calls::on_player_kick, base_objects::events::priority::low, [](const api::players::personal<base_objects::chat>& message) {
                 switch (message.player->packets_state.state) {
                 case base_objects::shared_client_data::packets_state_t::protocol_state::handshake:
                 case base_objects::shared_client_data::packets_state_t::protocol_state::initialization:
@@ -182,7 +182,7 @@ namespace copper_server::build_in_plugins::base {
                     message.player->sendPacket(base_objects::network::response::disconnect());
                     break;
                 case base_objects::shared_client_data::packets_state_t::protocol_state::login:
-                    *message.player << api::packets::client_bound::login::login_disconnect{.reason = {message.data.ToStr()}};
+                    *message.player << api::packets::client_bound::login::login_disconnect{.reason = {message.data.to_str()}};
                     break;
                 case base_objects::shared_client_data::packets_state_t::protocol_state::configuration:
                     *message.player << api::packets::client_bound::config::disconnect{.reason = message.data};
@@ -194,7 +194,7 @@ namespace copper_server::build_in_plugins::base {
                 return false;
             });
 
-            register_event(api::players::calls::on_player_ban, base_objects::events::priority::low, [](const api::players::personal<Chat>& message) {
+            register_event(api::players::calls::on_player_ban, base_objects::events::priority::low, [](const api::players::personal<base_objects::chat>& message) {
                 switch (message.player->packets_state.state) {
                 case base_objects::shared_client_data::packets_state_t::protocol_state::handshake:
                 case base_objects::shared_client_data::packets_state_t::protocol_state::initialization:
@@ -202,7 +202,7 @@ namespace copper_server::build_in_plugins::base {
                     message.player->sendPacket(base_objects::network::response::disconnect());
                     break;
                 case base_objects::shared_client_data::packets_state_t::protocol_state::login:
-                    *message.player << api::packets::client_bound::login::login_disconnect{.reason = {message.data.ToStr()}};
+                    *message.player << api::packets::client_bound::login::login_disconnect{.reason = {message.data.to_str()}};
                     break;
                 case base_objects::shared_client_data::packets_state_t::protocol_state::configuration:
                     *message.player << api::packets::client_bound::config::disconnect{.reason = message.data};
@@ -242,16 +242,16 @@ namespace copper_server::build_in_plugins::base {
                     error_place[error_place.size() - 1] = '\t';
                     if (ex.pos != -1)
                         error_place[ex.pos] = '^';
-                    Chat res = error_message + error_place + ex.what;
-                    res.SetColor("red");
+                    base_objects::chat res = error_message + error_place + ex.what;
+                    res.set_color("red");
                     client << api::packets::client_bound::play::system_chat{
                         .content = std::move(res),
                         .is_overlay = false
                     };
                 } catch (const std::exception& ex) {
                     std::string error_message = (std::string)packet.command;
-                    Chat res = error_message + "\n Failed to execute command, reason:\n\t" + ex.what();
-                    res.SetColor("red");
+                    base_objects::chat res = error_message + "\n Failed to execute command, reason:\n\t" + ex.what();
+                    res.set_color("red");
                     client << api::packets::client_bound::play::system_chat{
                         .content = std::move(res),
                         .is_overlay = false
@@ -337,7 +337,7 @@ namespace copper_server::build_in_plugins::base {
                     }
                 }
                 {
-                    std::optional<Chat> tmp;
+                    std::optional<base_objects::chat> tmp;
                     api::chat::custom_content_provider().notify(tmp, msg.message, client);
                     if (tmp)
                         msg.unsigned_content = std::move(tmp.value());
@@ -390,8 +390,8 @@ namespace copper_server::build_in_plugins::base {
                             personal.filter = api::packets::client_bound::play::player_chat::no_filter{};
                         if (!oclient.enable_chat_colors) {
                             if (personal.unsigned_content)
-                                personal.unsigned_content->removeColorRecursive();
-                            personal.sender_name.removeColorRecursive();
+                                personal.unsigned_content->remove_color_recursive();
+                            personal.sender_name.remove_color_recursive();
                         }
 
                         personal.index = oclient.packets_state.local_chat_counter++;
@@ -435,16 +435,16 @@ namespace copper_server::build_in_plugins::base {
                     error_place[error_place.size() - 1] = '\t';
                     if (ex.pos != -1)
                         error_place[ex.pos] = '^';
-                    Chat res = error_message + error_place + ex.what;
-                    res.SetColor("red");
+                    base_objects::chat res = error_message + error_place + ex.what;
+                    res.set_color("red");
                     client << api::packets::client_bound::play::system_chat{
                         .content = std::move(res),
                         .is_overlay = false
                     };
                 } catch (const std::exception& ex) {
                     std::string error_message = (std::string)packet.command;
-                    Chat res = error_message + "\n Failed to execute command, reason:\n\t" + ex.what();
-                    res.SetColor("red");
+                    base_objects::chat res = error_message + "\n Failed to execute command, reason:\n\t" + ex.what();
+                    res.set_color("red");
                     client << api::packets::client_bound::play::system_chat{
                         .content = std::move(res),
                         .is_overlay = false
@@ -455,7 +455,7 @@ namespace copper_server::build_in_plugins::base {
         }
 
         void on_unload(const plugin_registration_ptr& _) override {
-            auto msg = Chat::fromEnbt(api::configuration::get() ^ "communication_core" ^ "on_unload_message");
+            auto msg = base_objects::chat::from_enbt(api::configuration::get() ^ "communication_core" ^ "on_unload_message");
             api::players::iterate_players([&msg](auto& it) {
                 switch (it.packets_state.state) {
                 case base_objects::shared_client_data::packets_state_t::protocol_state::handshake:
@@ -464,7 +464,7 @@ namespace copper_server::build_in_plugins::base {
                     it.sendPacket(base_objects::network::response::disconnect());
                     break;
                 case base_objects::shared_client_data::packets_state_t::protocol_state::login:
-                    it << api::packets::client_bound::login::login_disconnect{.reason = {msg.ToStr()}};
+                    it << api::packets::client_bound::login::login_disconnect{.reason = {msg.to_str()}};
                     break;
                 case base_objects::shared_client_data::packets_state_t::protocol_state::configuration:
                     it << api::packets::client_bound::config::disconnect{.reason = msg};
@@ -485,7 +485,7 @@ namespace copper_server::build_in_plugins::base {
             browser.add_child("broadcast")
                 .add_child({"message", "broadcast message", "Broadcast a message to all players"}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                 .set_callback("command.broadcast", [](const list_array<predicate>& args, base_objects::command_context& _) {
-                    auto msg = Chat::parseToChat(std::get<pred_string>(args[0]).value);
+                    auto msg = base_objects::chat::parse_to_chat(std::get<pred_string>(args[0]).value);
                     api::players::iterate_online([&msg](base_objects::shared_client_data& context) {
                         context << api::packets::client_bound::play::system_chat{.content = msg};
                         return false;
@@ -501,7 +501,7 @@ namespace copper_server::build_in_plugins::base {
                         context.executor << api::packets::client_bound::play::system_chat{.content = "Player not found"};
                         return false;
                     }
-                    Chat message = Chat::parseToChat(std::get<pred_string>(args[1]).value);
+                    base_objects::chat message = base_objects::chat::parse_to_chat(std::get<pred_string>(args[1]).value);
                     context.executor << api::packets::client_bound::play::system_chat{.content = {"To " + target->name + ": ", message}};
                     *target << api::packets::client_bound::play::system_chat{.content = {"From " + context.executor.name + ": ", message}};
                     return true;
@@ -509,7 +509,7 @@ namespace copper_server::build_in_plugins::base {
             browser.add_child("chat")
                 .add_child({"message", "chat message", "Send message to chat"}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                 .set_callback("command.chat", [](const list_array<predicate>& args, base_objects::command_context& context) {
-                    auto msg = Chat{"[" + context.executor.name + "] ", Chat::parseToChat(std::get<pred_string>(args[0]).value)};
+                    auto msg = base_objects::chat{"[" + context.executor.name + "] ", base_objects::chat::parse_to_chat(std::get<pred_string>(args[0]).value)};
                     api::players::iterate_online([&msg](base_objects::shared_client_data& context) {
                         context << api::packets::client_bound::play::system_chat{.content = msg};
                         return false;
@@ -524,7 +524,7 @@ namespace copper_server::build_in_plugins::base {
             browser.add_child("tellraw")
                 .add_child({"message", "tellraw message", "Broadcast raw message for everyone."}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                 .set_callback("command.tellraw", [](const list_array<predicate>& args, base_objects::command_context& _) {
-                    auto msg = Chat::fromStr(std::get<pred_string>(args[0]).value);
+                    auto msg = base_objects::chat::from_str(std::get<pred_string>(args[0]).value);
                     api::players::iterate_online([&msg](base_objects::shared_client_data& context) {
                         context << api::packets::client_bound::play::system_chat{.content = msg};
                         return false;
@@ -547,10 +547,10 @@ namespace copper_server::build_in_plugins::base {
         }
 
         void on_config_reload(const plugin_registration_ptr& _) override {
-            _chat_disabled_notification() = Chat::fromEnbt(api::configuration::get() ^ "communication_core" ^ "on_chat_disabled_message");
-            _on_invalid_new_signature() = Chat::fromEnbt(api::configuration::get() ^ "communication_core" ^ "on_invalid_new_signature");
+            _chat_disabled_notification() = base_objects::chat::from_enbt(api::configuration::get() ^ "communication_core" ^ "on_chat_disabled_message");
+            _on_invalid_new_signature() = base_objects::chat::from_enbt(api::configuration::get() ^ "communication_core" ^ "on_invalid_new_signature");
             if (!(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature" ^ get_conf).is_none())
-                _on_chat_invalid_signature() = Chat::fromEnbt(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature");
+                _on_chat_invalid_signature() = base_objects::chat::from_enbt(api::configuration::get() ^ "communication_core" ^ "on_chat_invalid_signature");
         }
     };
 }

@@ -140,14 +140,14 @@ namespace copper_server::base_objects {
 
         std::string suffix;
         list_array<override_t> overrides;
-        Chat description;
+        base_objects::chat description;
         bool operator==(const trim_material& other) const = default;
     };
 
     struct trim_pattern {
         std::string asset_name;
         var_int32::item template_item;
-        Chat description;
+        base_objects::chat description;
         bool decal;
         bool operator==(const trim_pattern& other) const = default;
     };
@@ -156,13 +156,13 @@ namespace copper_server::base_objects {
         or_<var_int32::sound_event, sound_event> sound;
         float sound_range;
         float instrument_range;
-        Chat description;
+        base_objects::chat description;
         bool operator==(const instrument& other) const = default;
     };
 
     struct jukebox_song {
         or_<var_int32::sound_event, sound_event> sound;
-        Chat description;
+        base_objects::chat description;
         float duration;
         var_int32 output; //redstone
         bool operator==(const jukebox_song& other) const = default;
@@ -208,12 +208,12 @@ namespace copper_server::base_objects {
         };
 
         struct custom_name : public enum_item<5> {
-            Chat name;
+            base_objects::chat name;
             bool operator==(const custom_name& other) const = default;
         };
 
         struct item_name : public enum_item<6> {
-            Chat name;
+            base_objects::chat name;
             bool operator==(const item_name& other) const = default;
         };
 
@@ -223,7 +223,7 @@ namespace copper_server::base_objects {
         };
 
         struct lore : public enum_item<8> {
-            list_array<Chat> lines;
+            list_array<base_objects::chat> lines;
             bool operator==(const lore& other) const = default;
         };
 

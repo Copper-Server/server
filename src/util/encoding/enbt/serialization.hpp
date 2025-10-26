@@ -58,8 +58,8 @@ namespace copper_server::util::encoding::enbt {
                 {"y", value.y},
                 {"z", value.z}
             };
-        else if constexpr (std::is_same_v<Chat, Type>)
-            res = value.ToENBT();
+        else if constexpr (std::is_same_v<base_objects::chat, Type>)
+            res = value.to_enbt();
         else if constexpr (std::is_same_v<api::packets::optional_var_int32, Type>) {
             if (value)
                 res = ::enbt::optional(value);
@@ -197,8 +197,8 @@ namespace copper_server::util::encoding::enbt {
             res.write(value.value);
         else if constexpr (std::is_same_v<base_objects::velocity, Type>)
             res.write_compound(3).write("x", value.x).write("y", value.y).write("z", value.z);
-        else if constexpr (std::is_same_v<Chat, Type>)
-            res.write(value.ToENBT());
+        else if constexpr (std::is_same_v<base_objects::chat, Type>)
+            res.write(value.to_enbt());
         else if constexpr (std::is_same_v<api::packets::optional_var_int32, Type> || std::is_same_v<api::packets::optional_var_int64, Type>) {
             auto opt = res.write_optional();
             if (value)
