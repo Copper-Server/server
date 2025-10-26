@@ -205,8 +205,12 @@ namespace copper_server::api::packets {
         } else if constexpr (is_template_base_of<_list_array_impl::list_array, Type>) {
             if constexpr (!is_no_size<Type> && !std::is_base_of_v<size_from_packet, Type>)
                 res.write_var32_check(value.size());
-            for (auto&& it : value)
-                serialize_entry(res, context, it);
+            if constexpr (std::is_same_v<uint8_t, typename Type::value_type> || std::is_same_v<int8_t, typename Type::value_type>)
+                res.write_direct(value);
+            else {
+                for (auto&& it : value)
+                    serialize_entry(res, context, it);
+            }
         } else if constexpr (is_template_base_of<ignored, Type>) {
         } else if constexpr (is_template_base_of<std::optional, Type>) {
             res.write_value(bool(value));

@@ -180,12 +180,15 @@ namespace copper_server::build_in_plugins::network::tcp {
         list_array<uint8_t>& packet = packet_item.data;
         list_array<uint8_t> build_packet;
         if (session->compression_threshold == -1) {
+            build_packet.reserve(packet.size() + 5);
             WriteVar<int32_t>(packet.size(), build_packet);
-            build_packet.push_back(std::move(packet));
+            build_packet.push_back(packet);
         } else {
+            build_packet.reserve_front(5);
+            build_packet.reserve_back(packet.size() + 5);
             if (packet.size() < (size_t)session->compression_threshold) {
                 build_packet.push_back(0);
-                build_packet.push_back(std::move(packet));
+                build_packet.push_back(packet);
             } else {
                 list_array<uint8_t> compressed_packet = std::move(packet);
                 z_stream stream;
@@ -207,6 +210,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                 ret = deflate(&stream, Z_FINISH);
                 if (ret != Z_STREAM_END)
                     throw std::runtime_error("deflate failed");
+                build_packet.reserve(stream.total_out + 5);
                 WriteVar<int32_t>(compressed_packet.size(), build_packet);
                 build_packet.push_back(stream.next_out, stream.total_out);
                 free(stream.next_out);

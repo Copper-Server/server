@@ -15,7 +15,7 @@
 namespace copper_server::build_in_plugins::network::tcp {
     using base_objects::network::tcp::client;
 
-    constexpr bool CONSTEXPR_DEBUG_DATA_TRANSPORT = true;
+    constexpr bool CONSTEXPR_DEBUG_DATA_TRANSPORT = false;
     std::atomic_uint64_t id_gen(0);
     bool session::do_log_connection_errors = true;
 
@@ -92,17 +92,15 @@ namespace copper_server::build_in_plugins::network::tcp {
             disconnect();
         else if (resp.data.size()) {
             list_array<uint8_t> response_data;
+            response_data.reserve(resp.data.sum([](const auto& arr) { return arr.data.size(); }));
             for (auto& it : resp.data)
-                response_data.push_back(std::move(it.data));
-
+                response_data.push_back(it.data);
 
             std::lock_guard guard(tc);
-            if (encryption_enabled) {
-                response_data.commit();
+            if (encryption_enabled)
                 encryption.encrypt(response_data, response_data);
-            }
+
             if (stream) {
-                std::shared_ptr<std::vector<uint8_t>> send_data = std::make_shared<std::vector<uint8_t>>(response_data.begin(), response_data.end());
                 stream->write((char*)response_data.data(), response_data.size());
                 if (resp.do_disconnect_after_send) {
                     stream->force_write();

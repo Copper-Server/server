@@ -210,8 +210,11 @@ namespace copper_server::base_objects::network {
     }
 
     void response::item::write_direct(const list_array<int8_t>& value) {
-        for (auto& it : value)
-            write_value(it);
+        if (value.need_commit()) {
+            for (auto& it : value)
+                write_value(it);
+        } else
+            data.push_back((uint8_t*)value.data(), value.size());
     }
 
     void response::item::write_direct(const list_array<int16_t>& value, std::endian endian) {
@@ -244,10 +247,16 @@ namespace copper_server::base_objects::network {
     response::response() = default;
 
     response::response(const item& copy)
-        : data({copy}), do_disconnect(false), do_disconnect_after_send(false), valid_till(0) {}
+        : do_disconnect(false), do_disconnect_after_send(false), valid_till(0) {
+        data.reserve(1);
+        data.emplace_back(copy);
+    }
 
     response::response(item&& move)
-        : data({std::move(move)}), do_disconnect(false), do_disconnect_after_send(false), valid_till(0) {}
+        : do_disconnect(false), do_disconnect_after_send(false), valid_till(0) {
+        data.reserve(1);
+        data.emplace_back(std::move(move));
+    }
 
     response::response(response&& move)
         : data(std::move(move.data)), do_disconnect(move.do_disconnect), do_disconnect_after_send(move.do_disconnect_after_send), valid_till(move.valid_till) {}
