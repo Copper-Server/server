@@ -6,6 +6,7 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/api/configuration.hpp>
 #include <src/api/entity.hpp>
 #include <src/api/packets/types.hpp>
 #include <src/api/players.hpp>

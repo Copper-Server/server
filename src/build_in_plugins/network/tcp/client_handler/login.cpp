@@ -191,7 +191,7 @@ namespace copper_server::build_in_plugins::network::tcp {
             });
             api::packets::processor(*this, [](key&& packet, base_objects::shared_client_data& client) {
                 if (extra_data_t::get(client).stage == 1) {
-                    auto vft = to_list_array(packet.verify_token);
+                    auto vft = packet.verify_token;
                     if (!api::network::tcp::decrypt_data(vft)) {
                         client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Encryption error, invalid verify token").to_str()}};
                         return;
@@ -200,7 +200,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                         client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Encryption error, invalid verify token").to_str()}};
                         return;
                     }
-                    auto shs = to_list_array(packet.shared_secret);
+                    auto shs = packet.shared_secret;
                     if (!api::network::tcp::decrypt_data(shs)) {
                         client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Encryption error").to_str()}};
                         return;

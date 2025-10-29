@@ -44,8 +44,8 @@ namespace copper_server::base_objects {
         if (json.contains("font"))
             result.set_font(json["font"]);
 
-        if (json.contains("click_event")) {
-            auto click_event = util::js_object::get_object(json["click_event"]);
+        if (json.contains("clickEvent")) {
+            auto click_event = util::js_object::get_object(json["clickEvent"]);
             std::string action = click_event["action"];
             auto value = click_event["value"];
             if (action == "open_url")
@@ -62,8 +62,8 @@ namespace copper_server::base_objects {
             else if (action == "copy_to_clipboard")
                 result.set_click_event_copy_to_clipboard(value);
         }
-        if (json.contains("hover_event")) {
-            auto hover_event = util::js_object::get_object(json["hover_event"]);
+        if (json.contains("hoverEvent")) {
+            auto hover_event = util::js_object::get_object(json["hoverEvent"]);
             std::string action = hover_event["action"];
             auto content = hover_event["content"];
             if (action == "show_item") {
@@ -122,8 +122,8 @@ namespace copper_server::base_objects {
 
     chat::chat() = default;
 
-    chat::chat(const char* text, bool is_translation) {
-        text = text;
+    chat::chat(const char* set_text, bool is_translation) {
+        text = set_text;
         text_is_translation = is_translation;
     }
 
@@ -610,7 +610,7 @@ namespace copper_server::base_objects {
         }
         if (click_event) {
             str += ',';
-            str += "\"click_event\":{";
+            str += "\"clickEvent\":{";
             if (!click_event->open_url.empty()) {
                 str += "\"action\":\"open_url\",";
                 str += "\"value\":\"";
@@ -644,7 +644,7 @@ namespace copper_server::base_objects {
         }
         if (hover_event) {
             str += ',';
-            str += "\"hover_event\":{";
+            str += "\"hoverEvent\":{";
             if (hover_event->show_item) {
                 str += "\"action\":\"show_item\",";
                 str += "\"contents\":{";
@@ -748,7 +748,7 @@ namespace copper_server::base_objects {
                 click_event_enbt["action"] = "copy_to_clipboard";
                 click_event_enbt["value"] = click_event->copy_to_clipboard;
             }
-            enbt["click_event"] = std::move(click_event_enbt);
+            enbt["clickEvent"] = std::move(click_event_enbt);
         }
         if (hover_event) {
             enbt::compound hover_event_enbt;
@@ -774,7 +774,7 @@ namespace copper_server::base_objects {
                 hover_event_enbt["action"] = "show_text";
                 hover_event_enbt["contents"] = hover_event->show_text;
             }
-            enbt["hover_event"] = std::move(hover_event_enbt);
+            enbt["hoverEvent"] = std::move(hover_event_enbt);
         }
 
         if (extra.size()) {
@@ -1047,8 +1047,8 @@ namespace copper_server::base_objects {
         if (entry.contains("font"))
             result.set_font(entry["font"]);
 
-        if (entry.contains("click_event")) {
-            auto click_event = entry["click_event"].as_compound();
+        if (entry.contains("clickEvent")) {
+            auto click_event = entry["clickEvent"].as_compound();
             const std::string& action = (const std::string&)click_event["action"];
             auto& value = click_event["value"];
             if (action == "open_url")
@@ -1065,8 +1065,8 @@ namespace copper_server::base_objects {
             else if (action == "copy_to_clipboard")
                 result.set_click_event_copy_to_clipboard(value);
         }
-        if (entry.contains("hover_event")) {
-            auto hover_event = entry["hover_event"].as_compound();
+        if (entry.contains("hoverEvent")) {
+            auto hover_event = entry["hoverEvent"].as_compound();
             const std::string& action = (const std::string&)hover_event["action"];
             auto& content = hover_event["content"];
             if (action == "show_item") {
@@ -1101,7 +1101,7 @@ namespace copper_server::base_objects {
 
     std::string chat::to_ansi_console() const {
         std::string result;
-        if (color.empty()) {
+        if (!color.empty()) {
             if (color == "black")
                 result += "\033[30m";
             else if (color == "dark_blue")
@@ -1145,7 +1145,7 @@ namespace copper_server::base_objects {
             result += "\033[9m";
         if (obfuscated)
             result += "\033[8m";
-        if (text.empty())
+        if (!text.empty())
             result += text;
         if (bold || italic || underlined || strikethrough || obfuscated)
             result += "\033[0m";
