@@ -196,6 +196,10 @@ namespace copper_server::build_in_plugins::network::tcp {
                         client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Encryption error, invalid verify token").to_str()}};
                         return;
                     }
+                    if (vft.size() != 4) {
+                        client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Encryption error, invalid verify token").to_str()}};
+                        return;
+                    }
                     if (memcmp(vft.data(), extra_data_t::get(client).verify_token, 4)) {
                         client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Encryption error, invalid verify token").to_str()}};
                         return;
