@@ -729,8 +729,42 @@ namespace copper_server::storage {
     }
 
     void chunk_data::update_metadata() {
-        update_height_map();
-        calculate_active();
+        height_maps.make_zero();
+        uint64_t local_y_block = (sub_chunks.size() - 1) * 16;
+        auto& leaves = api::tags::unfold_tag(api::tags::builtin_entry::block, "minecraft:block/leaves");
+        auto end = sub_chunks.rend();
+        for (auto beg = sub_chunks.rbegin(); beg != end; ++beg) {
+            auto& schunk = *beg;
+            schunk.active_blocks = 0;
+            for (uint8_t x = 0; x < 16; x++) {
+                for (int8_t y = 15; y >= 0; y--) {
+                    for (uint8_t z = 0; z < 16; z++) {
+                        auto block = schunk.get_block(x, y, z);
+                        if (!block.is_air()) {
+                            schunk.active_blocks += 1;
+                            auto y_pos = y + local_y_block;
+
+                            if (!height_maps.ocean_floor[x][z])
+                                height_maps.ocean_floor[x][z] = y_pos;
+
+                            if (block.is_liquid())
+                                if (!height_maps.surface[x][z])
+                                    height_maps.surface[x][z] = y_pos;
+
+                            if (block.is_solid()) {
+                                if (!height_maps.motion_blocking[x][z])
+                                    height_maps.motion_blocking[x][z] = y_pos;
+
+                                if (!leaves.contains(block.general_block_id()))
+                                    if (!height_maps.motion_blocking_no_leaves[x][z])
+                                        height_maps.motion_blocking_no_leaves[x][z] = y_pos;
+                            }
+                        }
+                    }
+                }
+            }
+            local_y_block -= 16;
+        }
     }
 
     void chunk_data::for_each_block_entity(const std::function<void(base_objects::block block, enbt::value& extended_data)>& func) {
