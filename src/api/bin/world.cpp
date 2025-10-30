@@ -8,13 +8,15 @@
  */
 #include <functional>
 #include <src/api/configuration.hpp>
+#include <src/api/ecs/base_components.hpp>
 #include <src/api/packets.hpp>
-#include <src/base_objects/entity.hpp>
+#include <src/api/world.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/storage/world_data.hpp>
 
 namespace copper_server::api::world {
+    fast_task::protected_value<std::unordered_map<uint64_t, base_objects::events::event<uint64_t>>> _ticking_clock;
     storage::worlds_data* worlds_data = nullptr;
 
     void register_worlds_data(storage::worlds_data& worlds) {
@@ -25,9 +27,13 @@ namespace copper_server::api::world {
     }
 
     void unregister_worlds_data() {
-        if (worlds_data)
+        if (worlds_data) {
+            on_tick().clear();
+            _ticking_clock.set([](auto& map) {
+                map.clear();
+            });
             worlds_data = nullptr;
-        else
+        } else
             throw std::runtime_error("Worlds already unregistered");
     }
 
@@ -158,7 +164,7 @@ namespace copper_server::api::world {
     }
 
     //gets client world, checks if world exists, returns pair of id and name, if world does not exists then returns default world and sets default position for player in new world
-    std::pair<int32_t, std::string> prepare_world(base_objects::SharedClientData& client_ref) {
+    std::pair<int32_t, std::string> prepare_world(base_objects::shared_client_data& client_ref) {
         auto id = get_worlds().get_id(client_ref.player_data.world_id);
         bool set_new_data = false;
         if (id == (int32_t)-1) {
@@ -194,15 +200,16 @@ namespace copper_server::api::world {
                 = get_worlds().get(id)->world_name;
 
             auto& ass_ent = client_ref.player_data.assigned_entity;
-            ass_ent->position.x = 0.5 + (double)x;
-            ass_ent->position.y = (double)pos_y;
-            ass_ent->position.z = 0.5 + (double)z;
+            auto pos = ass_ent->modify<api::ecs::com::position>();
+            pos->x = 0.5 + (double)x;
+            pos->y = (double)pos_y;
+            pos->z = 0.5 + (double)z;
         }
 
         return {id, client_ref.player_data.world_id};
     }
 
-    void sync_settings(base_objects::SharedClientData& client_ref) {
+    void sync_settings(base_objects::shared_client_data& client_ref) {
         auto id = get_worlds().get_id(client_ref.player_data.world_id);
         if (id == -1)
             throw std::runtime_error("World with id " + client_ref.player_data.world_id + " does not exists.");
@@ -227,46 +234,49 @@ namespace copper_server::api::world {
             .time_of_day = (uint64_t)world->day_time,
             .time_of_day_increment = world->increase_time,
         } << api::packets::client_bound::play::set_default_spawn_position{
+            //TODO move respawn data to to api::configuration for globals and get respawn data for player if it has custom one
+            .id = world->world_id,
             .location = {(int32_t)world->spawn_data.x, (int32_t)world->spawn_data.y, (int32_t)world->spawn_data.z},
-            .angle = world->spawn_data.angle,
+            .yaw = world->spawn_data.yaw,
+            .pitch = world->spawn_data.pitch,
         };
     }
 
     void transfer(
-        [[maybe_unused]] base_objects::client_data_holder& client_ref,
+        [[maybe_unused]] api::ecs::entity entity,
         [[maybe_unused]] int32_t world_id,
-        [[maybe_unused]] util::VECTOR position,
-        [[maybe_unused]] util::ANGLE_DEG rotation,
-        [[maybe_unused]] util::VECTOR velocity,
-        [[maybe_unused]] std::function<void(storage::world_data& world)> callback = nullptr
+        [[maybe_unused]] util::vector position,
+        [[maybe_unused]] util::angle_deg rotation,
+        [[maybe_unused]] util::vector velocity,
+        [[maybe_unused]] std::function<void(storage::world_data& world)> callback
     ) {
         //TODO
     }
 
     void transfer(
-        [[maybe_unused]] base_objects::client_data_holder& client_ref,
+        [[maybe_unused]] api::ecs::entity entity,
         [[maybe_unused]] int32_t world_id,
-        [[maybe_unused]] util::VECTOR position,
-        [[maybe_unused]] util::ANGLE_DEG rotation,
-        [[maybe_unused]] std::function<void(storage::world_data& world)> callback = nullptr
+        [[maybe_unused]] util::vector position,
+        [[maybe_unused]] util::angle_deg rotation,
+        [[maybe_unused]] std::function<void(storage::world_data& world)> callback
     ) {
         //TODO
     }
 
     void transfer(
-        [[maybe_unused]] base_objects::client_data_holder& client_ref,
+        [[maybe_unused]] api::ecs::entity entity,
         [[maybe_unused]] int32_t world_id,
-        [[maybe_unused]] util::VECTOR position,
-        [[maybe_unused]] std::function<void(storage::world_data& world)> callback = nullptr
+        [[maybe_unused]] util::vector position,
+        [[maybe_unused]] std::function<void(storage::world_data& world)> callback
     ) {
         //TODO
     }
 
-    void register_entity(int32_t world_id, base_objects::entity_ref& entity_ref) {
+    void register_entity(int32_t world_id, api::ecs::entity entity_ref) {
         get_worlds().get(world_id)->register_entity(entity_ref);
     }
 
-    void unregister_entity(int32_t world_id, base_objects::entity_ref& entity_ref) {
+    void unregister_entity(int32_t world_id, api::ecs::entity entity_ref) {
         get_worlds().get(world_id)->unregister_entity(entity_ref);
     }
 
@@ -287,5 +297,28 @@ namespace copper_server::api::world {
 
     base_objects::events::event<double>& on_tps_changed() {
         return get_worlds().on_tps_changed;
+    }
+
+    base_objects::events::event<uint64_t>& on_tick() {
+        return get_worlds().on_tick;
+    }
+
+    base_objects::events::event<uint64_t>& ticking_clock(uint64_t notify_each) {
+        if (notify_each <= 1)
+            return on_tick();
+        else
+            return _ticking_clock.set([notify_each](auto& map) -> auto& {
+                if (auto it = map.find(notify_each); it != map.end())
+                    return it->second;
+                else {
+                    auto& res = map[notify_each];
+                    on_tick().join([notify_each](auto tick) {
+                        if (tick % notify_each == 0)
+                            ticking_clock(notify_each).notify(tick);
+                        return false;
+                    });
+                    return res;
+                }
+            });
     }
 }

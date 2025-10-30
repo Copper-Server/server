@@ -10,8 +10,8 @@
 #define SRC_BASE_OBJECTS_SCOREBOARD
 #include <library/fast_task.hpp>
 #include <library/list_array.hpp>
+#include <memory>
 #include <optional>
-#include <src/base_objects/atomic_holder.hpp>
 #include <src/base_objects/events/event.hpp>
 #include <string>
 #include <unordered_map>
@@ -422,8 +422,8 @@ namespace copper_server::base_objects {
 
     class scoreboard {
         struct protected_vals_t {
-            std::unordered_map<std::string, atomic_holder<objective>> objectives;
-            std::unordered_map<std::string, atomic_holder<team>> teams;
+            std::unordered_map<std::string, std::shared_ptr<objective>> objectives;
+            std::unordered_map<std::string, std::shared_ptr<team>> teams;
         };
 
         fast_task::protected_value<protected_vals_t> protected_vals;
@@ -481,13 +481,13 @@ namespace copper_server::base_objects {
             });
         }
 
-        atomic_holder<objective> get_objective(std::string name) const {
+        std::shared_ptr<objective> get_objective(std::string name) const {
             return protected_vals.get([name](const protected_vals_t& vals) {
                 return vals.objectives.at(name);
             });
         }
 
-        atomic_holder<team> get_team(std::string name) const {
+        std::shared_ptr<team> get_team(std::string name) const {
             return protected_vals.get([name](const protected_vals_t& vals) {
                 return vals.teams.at(name);
             });

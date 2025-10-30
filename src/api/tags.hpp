@@ -15,12 +15,7 @@
 namespace copper_server::api::tags {
     namespace detail {
         struct _tag_entry_handle;
-
-        struct destruct_tag_entry_handle {
-            static void operator()(_tag_entry_handle* ptr);
-        };
-
-        _tag_entry_handle* copy(_tag_entry_handle*);
+        std::shared_ptr<_tag_entry_handle> copy(std::shared_ptr<_tag_entry_handle> copy);
     }
     enum class builtin_entry : uint8_t { //to access string result from block entry use minecraft:block as custom entry
         banner_pattern,
@@ -54,25 +49,26 @@ namespace copper_server::api::tags {
     int32_t resolve_entry_item(builtin_entry entry, const std::string& value);
 
     struct tag_handle {
-        std::unique_ptr<detail::_tag_entry_handle, detail::destruct_tag_entry_handle> value;
+        std::shared_ptr<detail::_tag_entry_handle> value;
 
         tag_handle() {}
 
-        tag_handle(std::unique_ptr<detail::_tag_entry_handle, detail::destruct_tag_entry_handle>&& value) : value(std::move(value)) {}
-
-        tag_handle(detail::_tag_entry_handle* value) : value(value) {}
+        tag_handle(std::shared_ptr<detail::_tag_entry_handle>&& value) : value(std::move(value)) {}
 
         tag_handle(tag_handle&& value) : value(std::move(value.value)) {}
 
-        tag_handle(const tag_handle& value) : value(detail::copy(value.value.get())) {}
+        tag_handle(const tag_handle& value) : value(detail::copy(value.value)) {}
+
+        ~tag_handle();
+
 
         tag_handle& operator=(const tag_handle& copy) {
-            value.reset(detail::copy(copy.value.get()));
+            value = detail::copy(copy.value);
             return *this;
         }
 
         tag_handle& operator=(tag_handle&& move) {
-            value.reset(move.value.release());
+            value = std::move(move.value);
             return *this;
         }
 
@@ -82,10 +78,6 @@ namespace copper_server::api::tags {
 
         detail::_tag_entry_handle* operator->() const {
             return value.get();
-        }
-
-        void reset(detail::_tag_entry_handle* take) {
-            value.reset(take);
         }
 
         operator bool() const {

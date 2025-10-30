@@ -11,12 +11,12 @@
 #define SRC_API_SELECTOR
 #include <library/list_array.hpp>
 #include <optional>
+#include <src/api/ecs.hpp>
 #include <string>
 #include <unordered_map>
 
 namespace copper_server::base_objects {
     struct command_context;
-    struct entity;
 }
 namespace copper_server::api {
     //extended entity selector, supports more selection arguments
@@ -132,7 +132,7 @@ namespace copper_server::api {
         void build_selector_parse(std::string_view& selector_string);
         void build_selector(std::string_view selector_string);
 
-        bool select(base_objects::command_context&, std::function<void(base_objects::entity&)>&& fn) const;
+        bool select(base_objects::command_context&, std::function<void(api::ecs::entity)>&& fn) const;
     };
 }
 

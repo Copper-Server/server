@@ -6,7 +6,6 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 
 namespace copper_server::base_objects {
@@ -36,5 +35,8 @@ namespace copper_server::base_objects {
         *this = std::move(mov);
     }
 
-    player::~player() = default;
+    player::~player() {
+        if (assigned_entity)
+            assigned_entity->destroy();
+    }
 }

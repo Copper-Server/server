@@ -12,44 +12,44 @@
 namespace copper_server::util {
     const double pi = 3.14159265358979323846;
 
-    VECTOR convert(ANGLE_DEG rot) {
-        VECTOR res;
-        double x_cos = cos(rot.x);
-        res.x = cos(rot.y) * x_cos;
-        res.y = sin(rot.y) * x_cos;
-        res.z = sin(rot.x);
+    vector convert(angle_deg rot) {
+        vector res;
+        double x_cos = cos(rot.pitch);
+        res.x = cos(rot.yaw) * x_cos;
+        res.y = sin(rot.yaw) * x_cos;
+        res.z = sin(rot.pitch);
         return res;
     }
 
-    ANGLE_DEG convert(VECTOR val) {
+    angle_deg convert(vector val) {
         double yaw = atan2(val.z, val.x);
         double pitch = atan2(sqrt(val.z * val.z + val.x * val.x), val.y);
         return {yaw, pitch}; //xy
     }
 
-    VECTOR dif(VECTOR p0, VECTOR p1) {
-        return VECTOR{p0.x - p1.x, p0.y - p1.y, p0.z - p1.z};
+    vector dif(vector p0, vector p1) {
+        return vector{p0.x - p1.x, p0.y - p1.y, p0.z - p1.z};
     }
 
-    VECTOR normalize(VECTOR val) {
+    vector normalize(vector val) {
         return convert(convert(val));
     }
 
-    VECTOR strength(VECTOR val, double mult) {
+    vector strength(vector val, double mult) {
         val.x *= mult;
         val.y *= mult;
         val.z *= mult;
         return val;
     }
 
-    VECTOR weak(VECTOR val, double div) {
+    vector weak(vector val, double div) {
         val.x /= div;
         val.y /= div;
         val.z /= div;
         return val;
     }
 
-    ANGLE_DEG direction(VECTOR pos, VECTOR target) {
+    angle_deg direction(vector pos, vector target) {
         return convert(normalize(dif(target, pos)));
     }
 
@@ -69,45 +69,47 @@ namespace copper_server::util {
         return (val * 360) / pi * 2;
     }
 
-    YAW_PITCH to_yaw_pitch(ANGLE_DEG val) {
-        return {rad_to_deg180(val.x), rad_to_deg180(val.y)}; //TODO check
+    yaw_pitch_256 to_yaw_pitch_256(angle_deg val) {
+        return {(uint8_t)val.pitch, (uint8_t)val.yaw};
     }
 
-    YAW_PITCH to_yaw_pitch(ANGLE_RAD val) {
-        return {rad_to_deg180(val.x), rad_to_deg180(val.y)};
+    yaw_pitch_256 to_yaw_pitch_256(angle_rad val) {
+        return {(uint8_t)rad_to_deg180(val.pitch), (uint8_t)rad_to_deg180(val.yaw)};
     }
 
-    YAW_PITCH to_yaw_pitch(VECTOR val) {
-        return to_yaw_pitch(convert(val));
-    }
-
-    YAW_PITCH_256 to_yaw_pitch_256(ANGLE_DEG val) {
-        return {(uint8_t)rad_to_deg360(val.x), (uint8_t)rad_to_deg360(val.y)}; //TODO check
-    }
-
-    YAW_PITCH_256 to_yaw_pitch_256(ANGLE_RAD val) {
-        return {(uint8_t)rad_to_deg360(val.x), (uint8_t)rad_to_deg360(val.y)};
-    }
-
-    YAW_PITCH_256 to_yaw_pitch_256(VECTOR val) {
+    yaw_pitch_256 to_yaw_pitch_256(vector val) {
         return to_yaw_pitch_256(convert(val));
     }
 
     namespace minecraft {
-        VECTOR velocity(ANGLE_DEG rot, ANGLE_DEG speed) {
-            return strength(convert(rot), speed.y);
+        vector velocity(angle_deg rot, angle_deg speed) {
+            return strength(convert(rot), speed.yaw);
         }
 
-        VECTOR velocity(VECTOR pos, VECTOR target, double speed) {
+        vector velocity(vector pos, vector target, double speed) {
             return strength(normalize(dif(target, pos)), speed);
         }
 
         namespace packets {
-            XYZ<int16_t> velocity(VECTOR rot) {
+            double velocity_round(double value) {
+                return std::round((value * 0.5 + 0.5) * 32766.0);
+            }
+
+            double velocity_deround(int64_t value) {
+                return std::min((double)(value & 32767L), 32766.0) * 2.0 / 32766.0 - 1.0;
+            }
+
+            double velocity_clamp(double value) {
+                static constexpr double max = double(1ui64 << 34) - 1;
+                static constexpr double min = -(max);
+                return isnan(value) ? 0.0 : std::clamp(value, min, max);
+            }
+
+            xyz<int16_t> velocity(vector rot) {
                 return {(int16_t)(rot.x * 8000), (int16_t)(rot.y * 8000), (int16_t)(rot.z * 8000)};
             }
 
-            XYZ<int16_t> delta_move(XYZ<float> pos) {
+            xyz<int16_t> delta_move(xyz<float> pos) {
                 int64_t x = (int64_t)pos.x * (4096);
                 int64_t y = (int64_t)pos.y * (4096);
                 int64_t z = (int64_t)pos.z * (4096);
@@ -118,7 +120,7 @@ namespace copper_server::util {
                 };
             }
 
-            XY<int16_t> delta_move(XY<float> pos) {
+            xy<int16_t> delta_move(xy<float> pos) {
                 int64_t x = (int64_t)pos.x * (4096);
                 int64_t y = (int64_t)pos.y * (4096);
                 return {
@@ -127,6 +129,5 @@ namespace copper_server::util {
                 };
             }
         }
-
     }
 }

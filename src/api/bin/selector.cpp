@@ -6,13 +6,13 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/api/entity.hpp>
 #include <src/api/entity_id_map.hpp>
 #include <src/api/permissions.hpp>
+#include <src/api/selector.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
-#include <src/api/selector.hpp>
 
 namespace copper_server::api {
 
@@ -301,13 +301,13 @@ namespace copper_server::api {
         build_selector_parse(selector_string);
     }
 
-    bool selector::select(base_objects::command_context& context, std::function<void(base_objects::entity&)>&& fn) const {
-        list_array<base_objects::entity_ref> entities;
-        base_objects::entity_ref self_entity;
+    bool selector::select(base_objects::command_context& context, std::function<void(api::ecs::entity)>&& fn) const {
+        list_array<api::ecs::entity> entities;
+        api::ecs::entity self_entity;
         if (context.other_data.contains("entity_id"))
-            self_entity = api::entity_id_map::get_entity((int32_t)context.other_data.at("entity_id"));
+            self_entity = *api::entity_id_map::get_entity((int32_t)context.other_data.at("entity_id"));
         else
-            self_entity = context.executor.player_data.assigned_entity;
+            self_entity = *context.executor.player_data.assigned_entity;
 
         if (flags.nearest || distance || x || y || z) {
             double check_x = context.other_data.at("x");
@@ -325,51 +325,48 @@ namespace copper_server::api {
                     if (distance) {
                         if (distance->min <= 0) {
                             base_objects::spherical_bounds_block bounds{.x = (int64_t)check_x, .y = (int64_t)check_y, .z = (int64_t)check_z, .radius = (double)distance->max};
-                            world.for_each_entity(bounds, [&entities](auto& entity) {
+                            world.for_each_entity(bounds, [&entities](auto entity) {
                                 entities.push_back(entity);
                             });
                             if (distance->is_inverted) {
-                                world.for_each_entity([&entities, filter_entities = entities.take()](auto& entity) {
+                                world.for_each_entity([&entities, filter_entities = entities.take()](auto entity) {
                                     if (!filter_entities.contains(entity))
                                         entities.push_back(entity);
                                 });
                             }
                         } else {
                             base_objects::spherical_bounds_block_out bounds{.x = (int64_t)check_x, .y = (int64_t)check_y, .z = (int64_t)check_z, .radius_begin = (double)distance->min, .radius_end = (double)distance->max};
-                            world.for_each_entity(bounds, [&entities](auto& entity) { entities.push_back(entity); });
+                            world.for_each_entity(bounds, [&entities](auto entity) { entities.push_back(entity); });
                             if (distance->is_inverted) {
-                                world.for_each_entity([&entities, filter_entities = entities.take()](auto& entity) {
+                                world.for_each_entity([&entities, filter_entities = entities.take()](auto entity) {
                                     if (!filter_entities.contains(entity))
                                         entities.push_back(entity);
                                 });
                             }
                         }
                     } else
-                        world.for_each_entity([&entities](auto& entity) {
+                        world.for_each_entity([&entities](auto entity) {
                             entities.push_back(entity);
                         });
                 });
-            else if (self_entity) {
+            else
                 entities.push_back(self_entity);
-            } else
-                return false;
-
 
             if (dx)
-                entities = entities.take().where([check_x, dx = *dx](auto& entity) {
-                    return entity->hitboxes_touching_x(check_x, dx);
+                entities = entities.take().where([check_x, dx = *dx](auto entity) {
+                    return api::entity(entity).hitboxes_touching_x(check_x, dx);
                 });
             if (dy)
-                entities = entities.take().where([check_y, dy = *dy](auto& entity) {
-                    return entity->hitboxes_touching_y(check_y, dy);
+                entities = entities.take().where([check_y, dy = *dy](auto entity) {
+                    return api::entity(entity).hitboxes_touching_y(check_y, dy);
                 });
             if (dz)
-                entities = entities.take().where([check_z, dz = *dz](auto& entity) {
-                    return entity->hitboxes_touching_z(check_z, dz);
+                entities = entities.take().where([check_z, dz = *dz](auto entity) {
+                    return api::entity(entity).hitboxes_touching_z(check_z, dz);
                 });
             if (flags.nearest) {
-                auto res = entities.min_index([pos = util::VECTOR(check_x, check_y, check_z)](auto& ent) {
-                    return util::distance_sq(pos, ent->position);
+                auto res = entities.min_index([pos = util::vector(check_x, check_y, check_z)](auto ent) {
+                    return util::distance_sq(pos, api::entity(ent).get_position());
                 });
                 if (res != entities.npos)
                     entities.push_back(
@@ -380,168 +377,169 @@ namespace copper_server::api {
             }
         } else if (!flags.self) {
             api::world::iterate([&](auto _, storage::world_data& world) {
-                world.for_each_entity([&entities](auto& entity) {
+                world.for_each_entity([&entities](auto entity) {
                     entities.push_back(entity);
                 });
             });
-        } else if (self_entity)
+        } else
             entities.push_back(self_entity);
 
-
-        if (flags.only_players) {
-            if (flags.only_entities)
-                return false;
-            else if (flags.select_virtual)
-                entities = entities.take().where([](auto& entity) { return entity->assigned_player; });
-            else {
-                entities = entities.take().where([](auto& entity) {
-                    if (entity->assigned_player)
-                        return !entity->assigned_player->is_virtual;
-                    else
-                        return true;
-                });
-            }
-        } else if (!flags.select_virtual && !flags.only_entities)
-            entities = entities.take().where([](auto& entity) {
-                if (entity->assigned_player)
-                    return !entity->assigned_player->is_virtual;
-                else
-                    return true;
-            });
-
-        if (flags.only_entities)
-            entities = entities.take().where([](auto& entity) {
-                return !entity->assigned_player;
-            });
+        //TODO
+        //if (flags.only_players) {
+        //    if (flags.only_entities)
+        //        return false;
+        //    else if (flags.select_virtual)
+        //        entities = entities.take().where([](auto entity) { return entity->assigned_player; });
+        //    else {
+        //        entities = entities.take().where([](auto entity) {
+        //            if (entity->assigned_player)
+        //                return !entity->assigned_player->is_virtual;
+        //            else
+        //                return true;
+        //        });
+        //    }
+        //} else if (!flags.select_virtual && !flags.only_entities)
+        //    entities = entities.take().where([](auto entity) {
+        //        if (entity->assigned_player)
+        //            return !entity->assigned_player->is_virtual;
+        //        else
+        //            return true;
+        //    });
+        //
+        //if (flags.only_entities)
+        //    entities = entities.take().where([](auto entity) {
+        //        return !entity->assigned_player;
+        //    });
 
         if (flags.except_self)
-            entities.remove_one([&self_entity](auto& entity) { return entity == self_entity; });
+            entities.remove_one([&self_entity](auto entity) { return entity == self_entity; });
 
         if (level) {
             if (level->is_inverted) {
                 if (level->min && level->max)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->get_level() < level->min && entity->get_level() < level->max;
+                    entities = entities.take().where([&](auto entity) {
+                        return api::entity(entity).get_level() < level->min && api::entity(entity).get_level() < level->max;
                     });
                 else if (level->min)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->get_level() < level->min;
+                    entities = entities.take().where([&](auto entity) {
+                        return api::entity(entity).get_level() < level->min;
                     });
                 else if (level->max)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->get_level() > level->max;
+                    entities = entities.take().where([&](auto entity) {
+                        return api::entity(entity).get_level() > level->max;
                     });
             } else {
                 if (level->min && level->max)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->get_level() >= level->min && entity->get_level() >= level->max;
+                    entities = entities.take().where([&](auto entity) {
+                        return api::entity(entity).get_level() >= level->min && api::entity(entity).get_level() >= level->max;
                     });
                 else if (level->min)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->get_level() >= level->min;
+                    entities = entities.take().where([&](auto entity) {
+                        return api::entity(entity).get_level() >= level->min;
                     });
                 else if (level->max)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->get_level() <= level->max;
+                    entities = entities.take().where([&](auto entity) {
+                        return api::entity(entity).get_level() <= level->max;
                     });
             }
         }
-        if (x_rotation) {
-            if (x_rotation->is_inverted) {
-                if (x_rotation->min && x_rotation->max)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.x < x_rotation->min && entity->rotation.x < x_rotation->max;
-                    });
-                else if (x_rotation->min)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.x < x_rotation->min;
-                    });
-                else if (x_rotation->max)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.x > x_rotation->max;
-                    });
-            } else {
-                if (x_rotation->min && x_rotation->max)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.x >= x_rotation->min && entity->rotation.x >= x_rotation->max;
-                    });
-                else if (x_rotation->min)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.x >= x_rotation->min;
-                    });
-                else if (x_rotation->max)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.x <= x_rotation->max;
-                    });
-            }
-        }
-        if (y_rotation) {
-            if (y_rotation->is_inverted) {
-                if (y_rotation->min && y_rotation->max)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.y < y_rotation->min && entity->rotation.y > y_rotation->max;
-                    });
-                else if (y_rotation->min)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.y < y_rotation->min;
-                    });
-                else if (y_rotation->max)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.y > y_rotation->max;
-                    });
-            } else {
-                if (y_rotation->min && y_rotation->max)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.y >= y_rotation->min && entity->rotation.y >= y_rotation->max;
-                    });
-                else if (y_rotation->min)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.y >= y_rotation->min;
-                    });
-                else if (y_rotation->max)
-                    entities = entities.take().where([&](auto& entity) {
-                        return entity->rotation.y <= y_rotation->max;
-                    });
-            }
-        }
-
-        if (in_group.size()) {
-            if (!flags.only_entities) {
-                entities = entities.take().where([this](auto& entity) {
-                    if (entity->assigned_player)
-                        for (auto&& [group, is_inv] : in_group) {
-                            if (api::permissions::is_in_group(group, *entity->assigned_player)) {
-                                if (is_inv)
-                                    return false;
-                            } else if (!is_inv)
-                                return false;
-                        }
-                    else
-                        return false;
-                    return true;
-                });
-            } else
-                return false;
-        }
-
-        if (has_permission.size()) {
-            if (!flags.only_entities) {
-                entities = entities.take().where([this](auto& entity) {
-                    if (entity->assigned_player)
-                        for (auto& [perm, is_inv] : has_permission) {
-                            if (api::permissions::has_rights(perm, *entity->assigned_player)) {
-                                if (is_inv)
-                                    return false;
-                            } else if (!is_inv)
-                                return false;
-                        }
-                    else
-                        return false;
-                    return true;
-                });
-            } else
-                return false;
-        }
+        //TODO
+        //if (x_rotation) {
+        //    if (x_rotation->is_inverted) {
+        //        if (x_rotation->min && x_rotation->max)
+        //            entities = entities.take().where([&](auto entity) {
+        //                return entity->rotation.pitch < x_rotation->min && entity->rotation.pitch < x_rotation->max;
+        //            });
+        //        else if (x_rotation->min)
+        //            entities = entities.take().where([&](auto entity) {
+        //                return entity->rotation.pitch < x_rotation->min;
+        //            });
+        //        else if (x_rotation->max)
+        //            entities = entities.take().where([&](auto entity) {
+        //                return entity->rotation.pitch > x_rotation->max;
+        //            });
+        //    } else {
+        //        if (x_rotation->min && x_rotation->max)
+        //            entities = entities.take().where([&](auto entity) {
+        //                return entity->rotation.pitch >= x_rotation->min && entity->rotation.pitch >= x_rotation->max;
+        //            });
+        //        else if (x_rotation->min)
+        //            entities = entities.take().where([&](auto entity) {
+        //                return entity->rotation.pitch >= x_rotation->min;
+        //            });
+        //        else if (x_rotation->max)
+        //            entities = entities.take().where([&](auto entity) {
+        //                return entity->rotation.pitch <= x_rotation->max;
+        //            });
+        //    }
+        //}
+        //if (y_rotation) {
+        //    if (y_rotation->is_inverted) {
+        //        if (y_rotation->min && y_rotation->max)
+        //            entities = entities.take().where([&](auto entity) {
+        //                return entity->rotation.yaw < y_rotation->min && entity->rotation.yaw > y_rotation->max;
+        //            });
+        //        else if (y_rotation->min)
+        //            entities = entities.take().where([&](auto entity) {
+        //                return entity->rotation.yaw < y_rotation->min;
+        //            });
+        //        else if (y_rotation->max)
+        //            entities = entities.take().where([&](auto entity) {
+        //                return entity->rotation.yaw > y_rotation->max;
+        //            });
+        //    } else {
+        //        if (y_rotation->min && y_rotation->max)
+        //            entities = entities.take().where([&](auto entity) {
+        //                return entity->rotation.yaw >= y_rotation->min && entity->rotation.yaw >= y_rotation->max;
+        //            });
+        //        else if (y_rotation->min)
+        //            entities = entities.take().where([&](auto entity) {
+        //                return entity->rotation.yaw >= y_rotation->min;
+        //            });
+        //        else if (y_rotation->max)
+        //            entities = entities.take().where([&](auto entity) {
+        //                return entity->rotation.yaw <= y_rotation->max;
+        //            });
+        //    }
+        //}
+        //
+        //if (in_group.size()) {
+        //    if (!flags.only_entities) {
+        //        entities = entities.take().where([this](auto entity) {
+        //            if (entity->assigned_player)
+        //                for (auto&& [group, is_inv] : in_group) {
+        //                    if (api::permissions::is_in_group(group, *entity->assigned_player)) {
+        //                        if (is_inv)
+        //                            return false;
+        //                    } else if (!is_inv)
+        //                        return false;
+        //                }
+        //            else
+        //                return false;
+        //            return true;
+        //        });
+        //    } else
+        //        return false;
+        //}
+        //
+        //if (has_permission.size()) {
+        //    if (!flags.only_entities) {
+        //        entities = entities.take().where([this](auto entity) {
+        //            if (entity->assigned_player)
+        //                for (auto& [perm, is_inv] : has_permission) {
+        //                    if (api::permissions::has_rights(perm, *entity->assigned_player)) {
+        //                        if (is_inv)
+        //                            return false;
+        //                    } else if (!is_inv)
+        //                        return false;
+        //                }
+        //            else
+        //                return false;
+        //            return true;
+        //        });
+        //    } else
+        //        return false;
+        //}
 
         if (sort) {
             switch (*sort) {
@@ -557,8 +555,8 @@ namespace copper_server::api {
                     check_z = *z;
 
                 entities
-                    .sort([pos = util::VECTOR(check_x, check_y, check_z)](auto& prev, auto& next) {
-                        return util::distance_sq(pos, prev->position) < util::distance_sq(pos, next->position);
+                    .sort([pos = util::vector(check_x, check_y, check_z)](auto prev, auto next) {
+                        return util::distance_sq(pos, api::entity(prev).get_position()) < util::distance_sq(pos, api::entity(next).get_position());
                     });
                 break;
             }
@@ -574,8 +572,8 @@ namespace copper_server::api {
                     check_z = *z;
 
                 entities
-                    .sort([pos = util::VECTOR(check_x, check_y, check_z)](auto& prev, auto& next) {
-                        return util::distance_sq(pos, prev->position) > util::distance_sq(pos, next->position);
+                    .sort([pos = util::vector(check_x, check_y, check_z)](auto prev, auto next) {
+                        return util::distance_sq(pos, api::entity(prev).get_position()) > util::distance_sq(pos, api::entity(next).get_position());
                     });
                 break;
             }
@@ -601,8 +599,8 @@ namespace copper_server::api {
         }
 
 
-        for (auto& entity : entities)
-            fn(*entity);
+        for (auto entity : entities)
+            fn(entity);
 
         return true;
     }

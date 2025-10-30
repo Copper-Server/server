@@ -32,7 +32,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         bool is_active() override;
         void disconnect() override;
         base_objects::client_data_holder& shared_data_ref() override;
-        base_objects::SharedClientData& shared_data() override;
+        base_objects::shared_client_data& shared_data() override;
         bool start_symmetric_encryption(const list_array<uint8_t>& encryption_key, const list_array<uint8_t>& encryption_iv) override;
 
         base_objects::network::tcp::client& handler();

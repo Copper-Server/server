@@ -17,7 +17,7 @@
 namespace copper_server::base_objects {
     template <class ReturnType, class... Args>
     struct callback : public base_event {
-        using function = std::function<ReturnType(Args...)>;
+        using function = std::move_only_function<ReturnType(Args...)>;
 
         event_register_id operator+=(function func) {
             return join(func);

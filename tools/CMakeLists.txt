@@ -1,75 +1,45 @@
-if(${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/main.cpp IS_NEWER_THAN ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed.exe)
-    message(STATUS "Configuring binary_embed tool...")
-    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out)
-    if(WIN32)
-        set(binary_embed_triplet x64-windows-static)
-        set(binary_embed_build_type RelWithDebInfo)
-    elseif(UNIX)
-        set(binary_embed_triplet x64-linux)
-        set(binary_embed_build_type Release)
+function(initialize_tool tool_name)
+    if(${CMAKE_CURRENT_SOURCE_DIR}/${tool_name}/main.cpp IS_NEWER_THAN ${CMAKE_CURRENT_SOURCE_DIR}/${tool_name}.exe)
+        message(STATUS "Configuring ${tool_name} tool...")
+        file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${tool_name}/out)
+        if(WIN32)
+            set(${tool_name}_triplet x64-windows-static)
+            set(${tool_name}_build_type RelWithDebInfo)
+        elseif(UNIX)
+            set(${tool_name}_triplet x64-linux)
+            set(${tool_name}_build_type Release)
+        endif()
+        execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/${tool_name} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=${${tool_name}_build_type} -DVCPKG_TARGET_TRIPLET=${${tool_name}_triplet}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${tool_name}/out
+            RESULT_VARIABLE result
+            OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/${tool_name}/out/${tool_name}.log
+            ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/${tool_name}/out/${tool_name}_error.log
+        )
+
+        if(result)
+            message(FATAL_ERROR "Failed to build ${tool_name}, see ${CMAKE_CURRENT_SOURCE_DIR}/${tool_name}/out/${tool_name}_error.log for details")
+        endif()
+
+        message(STATUS "Building ${tool_name} tool...")
+        execute_process(COMMAND ${CMAKE_COMMAND} --build . --config Release --target ${tool_name}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${tool_name}/out
+            RESULT_VARIABLE result
+            OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/${tool_name}/out/${tool_name}.log
+            ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/${tool_name}/out/${tool_name}.log
+        )
+
+        if(result)
+            message(FATAL_ERROR "Failed to build ${tool_name}, see ${CMAKE_CURRENT_SOURCE_DIR}/${tool_name}/out/${tool_name}_error.log for details")
+        endif()
+
+        message(STATUS "${tool_name} tool built successfully")
     endif()
-    execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed -DCMAKE_TOOLCHAIN_FILE=${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=${binary_embed_build_type} -DVCPKG_TARGET_TRIPLET=${binary_embed_triplet}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out
-        RESULT_VARIABLE result
-        OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out/binary_embed.log
-        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out/binary_embed_error.log
-    )
+endfunction(initialize_tool)
 
-    if(result)
-        message(FATAL_ERROR "Failed to build binary_embed, see binary_embed_error.log for details in ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed/out")
-    endif()
-
-    message(STATUS "Building binary_embed tool...")
-    execute_process(COMMAND ${CMAKE_COMMAND} --build . --config Release --target binary_embed
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out
-        RESULT_VARIABLE result
-        OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out/binary_embed_build.log
-        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/binary_embed/out/binary_embed_build_error.log
-    )
-
-    if(result)
-        message(FATAL_ERROR "Failed to build binary_embed, see binary_embed_build_error.log for details in ${CMAKE_CURRENT_SOURCE_DIR}/tools/binary_embed/out")
-    endif()
-
-    message(STATUS "binary_embed tool built successfully")
-endif()
-if(${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/main.cpp IS_NEWER_THAN ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map.exe)
-    message(STATUS "Configuring reflect_map tool...")
-    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out)
-    if(WIN32)
-        set(reflect_map_triplet x64-windows-static)
-        set(reflect_map_build_type RelWithDebInfo)
-    elseif(UNIX)
-        set(reflect_map_triplet x64-linux)
-        set(reflect_map_build_type Release)
-    endif()
-
-    execute_process(COMMAND ${CMAKE_COMMAND} ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map -DCMAKE_TOOLCHAIN_FILE=${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=${reflect_map_build_type} -DVCPKG_TARGET_TRIPLET=${reflect_map_triplet}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out
-        RESULT_VARIABLE result
-        OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out/reflect_map.log
-        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out/reflect_map_error.log
-    )
-
-    if(result)
-        message(FATAL_ERROR "Failed to build reflect_map, see reflect_map_error.log for details in ${CMAKE_CURRENT_SOURCE_DIR}/tools/reflect_map/out")
-    endif()
-
-    message(STATUS "Building reflect_map tool...")
-    execute_process(COMMAND ${CMAKE_COMMAND} --build . --config Release --target reflect_map
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out
-        RESULT_VARIABLE result
-        OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out/reflect_map_build.log
-        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/reflect_map/out/reflect_map_build_error.log
-    )
-
-    if(result)
-        message(FATAL_ERROR "Failed to build reflect_map, see reflect_map_build_error.log for details in ${CMAKE_CURRENT_SOURCE_DIR}/tools/reflect_map/out")
-    endif()
-
-    message(STATUS "reflect_map tool built successfully")
-endif()
-
+initialize_tool(binary_embed)
+initialize_tool(reflect_map)
+initialize_tool(entity_proxy_gen)
+initialize_tool(id_proxy_gen)
 
 
 function(build_resource project_name input_file output_folder mode)
@@ -285,9 +255,54 @@ function(create_reflect_map output_file FILES)
     if(result)
         message(FATAL_ERROR "Failed to build reflection map ${output_file}")
     endif()
-    #file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
+    file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
 endfunction(create_reflect_map)
 
+function(id_proxy_gen input_json output_header output_implementation res_type type_header api_namespace)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
+    execute_process(
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/id_proxy_gen.exe ${input_json} ${output_header} ${output_implementation} ${res_type} ${type_header} ${api_namespace}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE result
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/id_proxy_gen_error.log
+    )
+    if(result)
+        message(FATAL_ERROR "Failed to create mapping for ${input_json}")
+    endif()
+endfunction(id_proxy_gen)
+
+
+function(create_mappings)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
+    execute_process(
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/entity_proxy_gen.exe "${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/entities.json" "${CMAKE_CURRENT_SOURCE_DIR}/src/generated/entity/components.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/generated/entity/components_to_packets.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/generated/entity/wrappers.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/generated/entity/factory.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/generated/entity/factory.cpp"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE result
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/entities_error.log
+    )
+    if(result)
+        message(FATAL_ERROR "Failed to create mapping for /resources/registry/entities.json")
+    endif()
+    id_proxy_gen(
+        "${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/blocks.senbt" 
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/api/collection/block.hpp" 
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/api/bin/collection/block.cpp" 
+        "base_objects::block" 
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/base_objects/block.hpp"
+        "collection::block"
+    )
+    id_proxy_gen(
+        "${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/items.json" 
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/api/collection/item.hpp" 
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/api/bin/collection/item.cpp" 
+        "base_objects::item_id_t" 
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/base_objects/slot.hpp"
+        "collection::item"
+    )
+
+
+    file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
+endfunction(create_mappings)
 
 function(execute_gradle project_dir args)
     if(WIN32)
@@ -306,6 +321,7 @@ function(execute_gradle project_dir args)
     if(result)
         message(FATAL_ERROR "Failed to execute gradle command in ${project_dir}, see error.log for details in ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/gradle")
     endif()
+    file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
 endfunction(execute_gradle)
 
 function(run_extractor)
@@ -325,17 +341,16 @@ endfunction(run_mojang_extractor)
 function(perform_extraction)
     message(STATUS "Extracting data from vanilla server")
     run_mojang_extractor()
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/generated/data/minecraft DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources)
-    file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/resources/minecraft ${CMAKE_CURRENT_SOURCE_DIR}/resources/data)
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/generated/reports/registries.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
-    file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/registries.json ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/protocol.json)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
+    file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/resources/data)
+    file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/generated/data/minecraft ${CMAKE_CURRENT_SOURCE_DIR}/resources/data)
+    file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/generated/reports/registries.json ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/protocol.json)
 
     run_extractor()
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/block_entity_types.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/block_properties.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/block_shapes.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/blocks.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
-    file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/blocks.json ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/blocks.senbt)
+    file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/blocks.json ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry/blocks.senbt)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/composter_increase_chance.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/entities.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/entity_pose.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
@@ -349,6 +364,8 @@ function(perform_extraction)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/spawn_egg.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/status_effects.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/synced_registries.json DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/resources/registry)
+
+    create_mappings()
 endfunction(perform_extraction)
 
 function(prepare_resources)

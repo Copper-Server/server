@@ -11,9 +11,31 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <vector>
 #include <stacktrace>
 #include <unordered_set>
+#include <vector>
+
+std::filesystem::path find_common_base(const std::filesystem::path& p1, const std::filesystem::path& p2) {
+    auto it1 = p1.begin();
+    auto it2 = p2.begin();
+
+    auto end1 = p1.end();
+    auto end2 = p2.end();
+
+    std::filesystem::path common_path;
+
+    while (it1 != end1 && it2 != end2 && *it1 == *it2) {
+        common_path /= *it1;
+        ++it1;
+        ++it2;
+    }
+
+    return common_path;
+}
+
+std::filesystem::path get_output_file(const std::filesystem::path& input_file, const std::filesystem::path& output_path) {
+    return output_path / std::filesystem::relative(input_file, find_common_base(input_file, output_path));
+}
 
 struct EnumInfo {
     std::string qualified_name;
@@ -978,10 +1000,7 @@ int main(int argc, char* argv[]) {
             auto next = headers_.find(' ');
             if (next != headers_.npos) {
                 headers.emplace_back(headers_.substr(0, next));
-                {
-                    std::filesystem::path output = output_path / headers.back().filename();
-                    outputs.emplace_back(std::move(output));
-                }
+                outputs.emplace_back(get_output_file(headers.back(), output_path));
                 headers_ = headers_.substr(next + 1);
             } else {
                 headers.emplace_back(headers_);
@@ -998,7 +1017,8 @@ int main(int argc, char* argv[]) {
                 if (!need_update) {
                     auto output_last_w = std::filesystem::last_write_time(outputs[i]);
                     need_update = std::filesystem::last_write_time(headers[i]) > output_last_w || output_last_w < tool_last_write;
-                }
+                } else
+                    std::filesystem::create_directories(outputs[i].parent_path());
 
                 if (need_update) {
                     need_to_update update;

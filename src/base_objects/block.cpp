@@ -35,6 +35,7 @@ namespace copper_server::base_objects {
     bit_list_array<> block::cached_is_default_state;
     bit_list_array<> block::cached_has_random_ticks;
     bit_list_array<> block::cached_has_comparator_output;
+    bit_list_array<> block::cached_is_tickable;
     list_array<static_block_data::transparent_sides_t> block::cached_transparent_sides;
     list_array<float> block::cached_slipperiness;
     list_array<float> block::cached_velocity_multiplier;
@@ -43,7 +44,7 @@ namespace copper_server::base_objects {
     list_array<float> block::cached_blast_resistance;
     list_array<int32_t> block::cached_map_color_rgb;
     list_array<int32_t> block::cached_block_entity_id;
-    list_array<int32_t> block::cached_default_drop_item_id;
+    list_array<int32_t> block::cached_item_id;
     list_array<int32_t> block::cached_experience;
     list_array<block_id_t> block::cached_general_block_id;
     list_array<block_id_t> block::cached_default_state;
@@ -51,53 +52,11 @@ namespace copper_server::base_objects {
     list_array<uint8_t> block::cached_opacity;
 
     void block::tick(storage::world_data& world, base_objects::world::sub_chunk_data& sub_chunk, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked) {
-    retry:
         auto& static_data = getStaticData();
-        switch (tickable) {
-        case tick_opt::block_tickable:
-            static_data.on_tick(world, sub_chunk, *this, chunk_x, sub_chunk_y, chunk_z, local_x, local_y, local_z, random_ticked);
-            return;
-        case tick_opt::entity_tickable:
+        if (static_data.as_entity_on_tick)
             static_data.as_entity_on_tick(world, sub_chunk, *this, sub_chunk.get_block_entity_data(local_x, local_y, local_z), chunk_x, sub_chunk_y, chunk_z, local_x, local_y, local_z, random_ticked);
-            return;
-        case tick_opt::undefined:
-            tickable = static_data.resolve_tickable();
-            goto retry;
-            break;
-        default:
-        case tick_opt::no_tick:
-            break;
-        }
-    }
-
-    block::tick_opt block::resolve_tickable(base_objects::block_id_t block_id) {
-        return base_objects::block(block_id).getStaticData().resolve_tickable();
-    }
-
-    bool block::is_tickable() {
-        switch (tickable) {
-        case tick_opt::block_tickable:
-        case tick_opt::entity_tickable:
-            return true;
-        case tick_opt::undefined:
-            tickable = getStaticData().resolve_tickable();
-            return tickable != tick_opt::no_tick;
-        default:
-        case tick_opt::no_tick:
-            return false;
-        }
-    }
-
-    bool block::is_tickable() const {
-        switch (tickable) {
-        case tick_opt::block_tickable:
-        case tick_opt::entity_tickable:
-        case tick_opt::undefined:
-            return true;
-        default:
-        case tick_opt::no_tick:
-            return false;
-        }
+        else if (static_data.on_tick)
+            static_data.on_tick(world, sub_chunk, *this, chunk_x, sub_chunk_y, chunk_z, local_x, local_y, local_z, random_ticked);
     }
 
     void block::initialize() {
@@ -199,6 +158,12 @@ namespace copper_server::base_objects {
                 cached_has_comparator_output.set(i++, it->has_comparator_output);
         }
         {
+            cached_is_tickable.resize(full_block_data_.size()).commit();
+            size_t i = 0;
+            for (auto& it : full_block_data_)
+                cached_is_tickable.set(i++, it->is_tickable);
+        }
+        {
             cached_transparent_sides.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
@@ -247,10 +212,10 @@ namespace copper_server::base_objects {
                 cached_block_entity_id[i++] = it->block_entity_id;
         }
         {
-            cached_default_drop_item_id.resize(full_block_data_.size()).commit();
+            cached_item_id.resize(full_block_data_.size()).commit();
             size_t i = 0;
             for (auto& it : full_block_data_)
-                cached_default_drop_item_id[i++] = it->default_drop_item_id;
+                cached_item_id[i++] = it->item_id;
         }
         {
             cached_experience.resize(full_block_data_.size()).commit();

@@ -8,10 +8,10 @@
  */
 #include <library/enbt/senbt.hpp>
 #include <library/list_array.hpp>
+#include <src/api/ecs/base_components.hpp>
 #include <src/api/permissions.hpp>
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/commands.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/plugin/main.hpp>
 #include <src/storage/world_data.hpp>
@@ -22,13 +22,13 @@ namespace copper_server::base_objects {
     void command_context::apply_executor_data() {
         if (!executor.player_data.assigned_entity)
             return;
-        auto pos = executor.player_data.assigned_entity->position;
-        auto rot = util::to_yaw_pitch_256(executor.player_data.assigned_entity->rotation);
-        auto mot = executor.player_data.assigned_entity->motion;
+        auto pos = executor.player_data.assigned_entity->get<api::ecs::com::position>();
+        auto rot = util::to_yaw_pitch_256(executor.player_data.assigned_entity->get<api::ecs::com::rotation>());
+        auto mot = executor.player_data.assigned_entity->get<api::ecs::com::motion>();
 
-        if (executor.player_data.assigned_entity->current_world()) {
-            other_data["world_id"] = executor.player_data.assigned_entity->current_world()->world_id;
-            other_data["world_name"] = executor.player_data.assigned_entity->current_world()->world_name;
+        if (api::entity(*executor.player_data.assigned_entity).current_world()) {
+            other_data["world_id"] = api::entity(*executor.player_data.assigned_entity).current_world()->world_id;
+            other_data["world_name"] = api::entity(*executor.player_data.assigned_entity).current_world()->world_name;
         }
 
         other_data["x"] = pos.x;
@@ -98,7 +98,6 @@ namespace copper_server::base_objects {
         std::optional<parsers::style> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::style& cfg, std::string& part, std::string& path) {
             return std::nullopt;
         }
-
 
         std::optional<parsers::color> parse([[maybe_unused]] command_manager& manager, [[maybe_unused]] parsers::command::color& cfg, std::string& part, [[maybe_unused]] std::string& path) {
             if (part == "white")
@@ -873,12 +872,16 @@ namespace copper_server::base_objects {
         }
         if (current->redirect) {
             auto routine = current->redirect;
-            return (routine->redirect_routine)(command_nodes[routine->target_command], args, path, data);
+            data.other_data["result"] = 0;
+            data.other_data["result"] = (routine->redirect_routine)(command_nodes[routine->target_command], args, path, data);
+            return;
         } else {
             if (current->executable) {
-                if (api::permissions::has_rights(current->action_name, data.executor))
-                    return (*current->executable)(args, data);
-                else
+                if (api::permissions::has_rights(current->action_name, data.executor)) {
+                    data.other_data["result"] = 0;
+                    data.other_data["result"] = (*current->executable)(args, data);
+                    return;
+                } else
                     throw std::runtime_error("Not enough permissions for this command.");
             } else {
                 if (current->childs.size() == 1) {
@@ -1011,11 +1014,11 @@ namespace copper_server::base_objects {
         changes_id++;
         command_nodes.push_back({});
         command_root_browser browser(*this);
-        for (auto& plugin : pluginManagement.registeredPlugins())
-            plugin->OnCommandsLoad(plugin, browser);
+        for (auto& plugin : plugin_management.registered_plugins())
+            plugin->on_commands_load(plugin, browser);
 
-        for (auto& plugin : pluginManagement.registeredPlugins())
-            plugin->OnCommandsLoadComplete(plugin, browser);
+        for (auto& plugin : plugin_management.registered_plugins())
+            plugin->on_commands_load_complete(plugin, browser);
 
         command_nodes.commit();
     }

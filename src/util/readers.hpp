@@ -13,6 +13,8 @@
 #include <exception>
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
+#include <src/base_objects/velocity.hpp>
+#include <src/util/calculations.hpp>
 #include <src/util/nbt.hpp>
 #include <string>
 
@@ -231,6 +233,29 @@ namespace copper_server {
             return res;
         }
 
+        base_objects::velocity read_velocity() {
+            int32_t first_byte = read_value<int8_t>();
+            if (first_byte == 0) {
+                return {0, 0, 0};
+            } else {
+                int32_t second_byte = read_value<int8_t>();
+                int64_t compressed = read_value<int32_t>();
+                int64_t packed_value = compressed << 16 | int64_t(second_byte << 8) | int64_t(first_byte);
+                int64_t scaling_factor = (first_byte & 3);
+
+                if ((first_byte & 4) == 4) {
+                    int32_t extended_part = read_var<int32_t>();
+                    scaling_factor |= ((int64_t)extended_part & 0xFFFFFFFF) << 2;
+                }
+
+                return base_objects::velocity{
+                    util::minecraft::packets::velocity_deround(packed_value >> 3) * (double)scaling_factor,
+                    util::minecraft::packets::velocity_deround(packed_value >> 18) * (double)scaling_factor,
+                    util::minecraft::packets::velocity_deround(packed_value >> 33) * (double)scaling_factor
+                };
+            }
+        }
+
     private:
         bool read_only;
     };
@@ -329,43 +354,30 @@ namespace copper_server {
                 WriteValue<ArrayT>(it, data);
     }
 
-    static std::string UUID2String(const enbt::raw_uuid& uuid) {
-        char buf[36];
-        size_t index = 0;
-        for (size_t i = 0; i < 16; i++) {
-            if (i == 4 || i == 6 || i == 8 || i == 10)
-                buf[index++] = '-';
-            uint8_t tmp = uuid.data[i];
-            buf[index++] = "0123456789abcdef"[tmp >> 4];
-            buf[index++] = "0123456789abcdef"[tmp & 0x0F];
-        }
-        return std::string(buf, 36);
-    }
-
-    static util::NBT ReadNBT(ArrayStream& data) {
+    static util::nbt ReadNBT(ArrayStream& data) {
         size_t readed = 0;
-        util::NBT res(util::NBT::readNBT(data.data_read(), data.size_read(), readed));
+        util::nbt res(util::nbt::readNBT(data.data_read(), data.size_read(), readed));
         data.range_read(readed);
         return res;
     }
 
     static enbt::value ReadNBT_enbt(ArrayStream& data) {
         size_t readed = 0;
-        auto res = util::NBT::readNBT_asENBT(data.data_read(), data.size_read(), readed);
+        auto res = util::nbt::readNBT_asENBT(data.data_read(), data.size_read(), readed);
         data.range_read(readed);
         return res;
     }
 
-    static util::NBT ReadNetworkNBT(ArrayStream& data) {
+    static util::nbt ReadNetworkNBT(ArrayStream& data) {
         size_t readed = 0;
-        util::NBT res(util::NBT::readNetworkNBT(data.data_read(), data.size_read(), readed));
+        util::nbt res(util::nbt::readNetworkNBT(data.data_read(), data.size_read(), readed));
         data.range_read(readed);
         return res;
     }
 
     static enbt::value ReadNetworkNBT_enbt(ArrayStream& data) {
         size_t readed = 0;
-        auto res = util::NBT::readNetworkNBT_asENBT(data.data_read(), data.size_read(), readed);
+        auto res = util::nbt::readNetworkNBT_asENBT(data.data_read(), data.size_read(), readed);
         data.range_read(readed);
         return res;
     }

@@ -9,15 +9,15 @@
 #ifndef SRC_API_NETWORK
 #define SRC_API_NETWORK
 #include <library/fast_task/include/networking.hpp>
-#include <src/base_objects/atomic_holder.hpp>
+#include <memory>
 #include <src/base_objects/events/sync_event.hpp>
 
 namespace copper_server::base_objects {
     namespace network::tcp {
         class client;
     }
-    struct SharedClientData;
-    using client_data_holder = atomic_holder<SharedClientData>;
+    struct shared_client_data;
+    using client_data_holder = std::shared_ptr<shared_client_data>;
 }
 
 namespace copper_server::api::network {

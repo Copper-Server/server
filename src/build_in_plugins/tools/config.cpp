@@ -6,15 +6,16 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/client.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/log.hpp>
+#include <src/api/packets/client_bound/play.hpp>
+#include <src/api/packets/server_bound/play.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/plugin/main.hpp>
 
-namespace copper_server::build_in_plugins {
-    struct config : public PluginAutoRegister<"tools/config", config> {
-        void OnCommandsLoad(const PluginRegistrationPtr&, base_objects::command_root_browser& browser) override {
+namespace copper_server::build_in_plugins::tools {
+    struct config : public plugin_auto_register<"tools/config", config> {
+        void on_commands_load(const plugin_registration_ptr&, base_objects::command_root_browser& browser) override {
             using predicate = base_objects::parser;
             using pred_string = base_objects::parsers::string;
             using cmd_pred_string = base_objects::parsers::command::string;
@@ -24,20 +25,22 @@ namespace copper_server::build_in_plugins {
                     .add_child({"reload", "reloads config from file", "/config reload"})
                     .set_callback({"command.config.reload", {"console"}}, [&](const list_array<predicate>&, base_objects::command_context& context) {
                         api::configuration::load(true);
-                        pluginManagement.registeredPlugins().for_each([&](const PluginRegistrationPtr& plugin) {
-                            plugin->OnConfigReload(plugin);
+                        plugin_management.registered_plugins().for_each([&](const plugin_registration_ptr& plugin) {
+                            plugin->on_config_reload(plugin);
                         });
-                        context.executor << api::client::play::system_chat{.content = "Config reloaded"};
+                        context.executor << api::packets::client_bound::play::system_chat{.content = "Config reloaded"};
+                        return true;
                     });
                 _config.add_child("set")
                     .add_child("config_item", cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                     .add_child({"value", "updates config in file and applies for program", "/config set config_item value"}, cmd_pred_string{.type = cmd_pred_string::greedy_phrase})
                     .set_callback({"command.config.set", {"console"}}, [&](const list_array<predicate>& args, base_objects::command_context& context) {
                         api::configuration::set_item(std::get<pred_string>(args[0]).value, std::get<pred_string>(args[1]).value);
-                        context.executor << api::client::play::system_chat{.content = "Config updated"};
-                        pluginManagement.registeredPlugins().for_each([&](const PluginRegistrationPtr& plugin) {
-                            plugin->OnConfigReload(plugin);
+                        context.executor << api::packets::client_bound::play::system_chat{.content = "Config updated"};
+                        plugin_management.registered_plugins().for_each([&](const plugin_registration_ptr& plugin) {
+                            plugin->on_config_reload(plugin);
                         });
+                        return true;
                     });
                 _config
                     .add_child("get")
@@ -47,15 +50,17 @@ namespace copper_server::build_in_plugins {
                         while (value.ends_with('\n') || value.ends_with('\r'))
                             value.pop_back();
                         if (value.contains("\n"))
-                            context.executor << api::client::play::system_chat{.content = "Config value: \n" + value};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = "Config value: \n" + value};
                         else
-                            context.executor << api::client::play::system_chat{.content = "Config value: " + value};
+                            context.executor << api::packets::client_bound::play::system_chat{.content = "Config value: " + value};
+                        return true;
                     });
                 _config
                     .add_child("use_preset")
                     .add_child({"name", "applies preset for confing", "/config use_preset name"}, cmd_pred_string{.type = cmd_pred_string::quotable_phrase})
                     .set_callback({"command.config.use_preset", {"console"}}, [&](const list_array<predicate>& args, base_objects::command_context& context) {
                         api::configuration::apply_preset(std::get<pred_string>(args[0]).value);
+                        return true;
                     });
             }
         }

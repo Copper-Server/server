@@ -69,9 +69,9 @@ namespace copper_server::build_in_plugins::world_generators {
         }
     };
 
-    struct standard_gen : public PluginAutoRegister<"world_generators/standard", standard_gen> {
-        void OnRegister(const PluginRegistrationPtr&) override {
-            storage::chunk_generator::register_it("standard", new standard_generator());
+    struct standard_gen : public plugin_auto_register<"world_generators/standard", standard_gen> {
+        void on_register(const plugin_registration_ptr&) override {
+            storage::chunk_generator::register_it("standard", std::make_shared<standard_generator>());
         }
     };
 }

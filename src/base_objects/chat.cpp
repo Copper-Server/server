@@ -11,145 +11,123 @@
 #include <src/util/json_helpers.hpp>
 #include <utf8.h>
 
-namespace copper_server {
+namespace copper_server::base_objects {
 
-    Chat fromJson(util::js_object&& json) {
-        using namespace util;
-        Chat result;
+    chat from_json(util::js_object&& json) {
+        chat result;
         if (json.contains("text"))
-            result.SetText(util::conversions::string::to_direct(json["text"]));
+            result.set_text(util::conversions::string::to_direct(json["text"]));
         else if (json.contains("translate"))
-            result.SetTranslation(json["translate"]);
+            result.set_translation(json["translate"]);
 
         if (json.contains("color"))
-            result.SetColor(json["color"]);
+            result.set_color(json["color"]);
 
         if (json.contains("insertion"))
-            result.SetInsertion(json["insertion"]);
+            result.set_insertion(json["insertion"]);
 
         if (json.contains("bold"))
-            result.SetBold(json["bold"]);
+            result.set_bold(json["bold"]);
 
         if (json.contains("italic"))
-            result.SetItalic(json["italic"]);
+            result.set_italic(json["italic"]);
 
         if (json.contains("underlined"))
-            result.SetUnderlined(json["underlined"]);
+            result.set_underlined(json["underlined"]);
 
         if (json.contains("strikethrough"))
-            result.SetStrikethrough(json["strikethrough"]);
+            result.set_strikethrough(json["strikethrough"]);
 
         if (json.contains("obfuscated"))
-            result.SetObfuscated(json["obfuscated"]);
+            result.set_obfuscated(json["obfuscated"]);
 
         if (json.contains("font"))
-            result.SetFont(json["font"]);
+            result.set_font(json["font"]);
 
         if (json.contains("clickEvent")) {
-            auto click_event = js_object::get_object(json["clickEvent"]);
+            auto click_event = util::js_object::get_object(json["clickEvent"]);
             std::string action = click_event["action"];
             auto value = click_event["value"];
             if (action == "open_url")
-                result.SetClickEventOpenUrl(value);
+                result.set_click_event_open_url(value);
             else if (action == "run_command")
 
-                result.SetClickEventRunCommand(value);
+                result.set_click_event_run_command(value);
 
             else if (action == "suggest_command")
-                result.SetClickEventSuggestCommand(value);
+                result.set_click_event_suggest_command(value);
 
             else if (action == "change_page")
-                result.SetClickEventChangePage(value);
+                result.set_click_event_change_page(value);
             else if (action == "copy_to_clipboard")
-                result.SetClickEventCopyToClipboard(value);
+                result.set_click_event_copy_to_clipboard(value);
         }
         if (json.contains("hoverEvent")) {
-            auto hover_event = js_object::get_object(json["hoverEvent"]);
+            auto hover_event = util::js_object::get_object(json["hoverEvent"]);
             std::string action = hover_event["action"];
             auto content = hover_event["content"];
             if (action == "show_item") {
-                auto content_obj = js_object::get_object(content);
+                auto content_obj = util::js_object::get_object(content);
                 if (content_obj.contains("tag"))
-                    result.SetHoverEventShowItem(content_obj["id"], content_obj["count"], (std::string)content_obj["tag"]);
+                    result.set_hover_event_show_item(content_obj["id"], content_obj["count"], (std::string)content_obj["tag"]);
                 else
-                    result.SetHoverEventShowItem(content_obj["id"], content_obj["count"], std::nullopt);
+                    result.set_hover_event_show_item(content_obj["id"], content_obj["count"], std::nullopt);
             } else if (action == "show_entity") {
-                auto content_obj = js_object::get_object(content);
+                auto content_obj = util::js_object::get_object(content);
                 if (content_obj.contains("name"))
-                    result.SetHoverEventShowEntity(content_obj["id"], content_obj["type"], (std::string)content_obj["name"]);
+                    result.set_hover_event_show_entity(content_obj["id"], content_obj["type"], (std::string)content_obj["name"]);
                 else
-                    result.SetHoverEventShowItem(content_obj["id"], content_obj["type"], std::nullopt);
+                    result.set_hover_event_show_item(content_obj["id"], content_obj["type"], std::nullopt);
             } else if (action == "show_text")
-                result.SetHoverEventShowText(util::conversions::string::to_direct(content));
+                result.set_hover_event_show_text(util::conversions::string::to_direct(content));
         }
 
         if (json.contains("extra")) {
-            auto& extra_arr = result.GetExtra();
-            auto extra = js_array::get_array(json["extra"]);
+            auto& extra_arr = result.get_extra();
+            auto extra = util::js_array::get_array(json["extra"]);
             extra_arr.reserve(extra.size());
             for (auto it : extra)
-                extra_arr.push_back(fromJson(js_object::get_object(it)));
+                extra_arr.push_back(from_json(util::js_object::get_object(it)));
         }
         return result;
     }
 
-    void formater(list_array<enbt::value>& items, Chat& it) {
-        if (it.GetText() && items.size()) {
-            std::string_view str(*it.GetText());
+    void formater(list_array<enbt::value>& items, chat& it) {
+        if (it.get_text().empty() && items.size()) {
+            std::string_view str(it.get_text());
             if (auto res = str.find("%"); res != str.npos) {
-                Chat insert[3]{it, {}, it};
-                insert[1] = Chat::fromEnbt(items.take_back());
-                insert[0].SetText(std::string(str.substr(0, res)));
-                for (auto& i : insert[1].GetExtra())
+                chat insert[3]{it, {}, it};
+                insert[1] = chat::from_enbt(items.take_back());
+                insert[0].set_text(std::string(str.substr(0, res)));
+                for (auto& i : insert[1].get_extra())
                     formater(items, i);
 
                 if (res + 1 < str.size()) {
-                    insert[2].SetText(std::string(str.substr(res + 1)));
-                    it.GetExtra().push_back(insert[0]);
-                    it.GetExtra().push_back(insert[1]);
-                    it.GetExtra().push_back(insert[2]);
+                    insert[2].set_text(std::string(str.substr(res + 1)));
+                    it.get_extra().push_back(insert[0]);
+                    it.get_extra().push_back(insert[1]);
+                    it.get_extra().push_back(insert[2]);
                 } else {
-                    it.GetExtra().push_back(insert[0]);
-                    it.GetExtra().push_back(insert[1]);
+                    it.get_extra().push_back(insert[0]);
+                    it.get_extra().push_back(insert[1]);
                 }
             }
         }
-        for (auto& i : it.GetExtra())
+        for (auto& i : it.get_extra())
             formater(items, i);
     };
 
-    Chat::clickEventS::~clickEventS() {
-        if (open_url)
-            delete[] open_url;
-        if (run_command)
-            delete[] run_command;
-        if (suggest_command)
-            delete[] suggest_command;
-        if (change_page)
-            delete change_page;
-        if (copy_to_clipboard)
-            delete[] copy_to_clipboard;
+    chat::click_event_s::~click_event_s() = default;
+    chat::hover_event_s::~hover_event_s() = default;
 
+    chat::chat() = default;
 
-        open_url = nullptr;
-        run_command = nullptr;
-        suggest_command = nullptr;
-        change_page = nullptr;
-        copy_to_clipboard = nullptr;
+    chat::chat(const char* set_text, bool is_translation) {
+        text = set_text;
+        text_is_translation = is_translation;
     }
 
-    Chat::hoverEventS::~hoverEventS() {
-        if (show_text)
-            delete[] show_text;
-        if (show_item)
-            delete show_item;
-        if (show_entity)
-            delete show_entity;
-    }
-
-    Chat::Chat() = default;
-
-    Chat::Chat(std::initializer_list<Chat> args) {
+    chat::chat(std::initializer_list<chat> args) {
         bool first = true;
         for (auto& it : args) {
             if (first) {
@@ -160,31 +138,29 @@ namespace copper_server {
         }
     }
 
-    Chat::Chat(const char* set_text, bool is_translation) {
-        setString(text, set_text);
+    chat::chat(const std::string& set_text, bool is_translation) {
+        text = set_text;
         text_is_translation = is_translation;
     }
 
-    Chat::Chat(const std::string& set_text, bool is_translation) {
-        setString(text, set_text);
+    chat::chat(std::string&& set_text, bool is_translation) {
+        text = std::move(set_text);
         text_is_translation = is_translation;
     }
 
-    Chat::Chat(const Chat& copy) {
+    chat::chat(const chat& copy) {
         operator=(copy);
     }
 
-    Chat::Chat(Chat&& copy) noexcept {
+    chat::chat(chat&& copy) noexcept {
         operator=(std::move(copy));
     }
 
-    Chat& Chat::operator=(const Chat& copy) {
-        if (copy.text)
-            setString(text, copy.text);
-        if (copy.color)
-            setString(color, copy.color);
-        if (copy.insertion)
-            setString(insertion, copy.insertion);
+    chat& chat::operator=(const chat& copy) {
+        text = copy.text;
+        ;
+        color = copy.color;
+        insertion = copy.insertion;
         defined_bold = copy.defined_bold;
         defined_italic = copy.defined_italic;
         defined_underlined = copy.defined_underlined;
@@ -200,17 +176,12 @@ namespace copper_server {
         return *this;
     }
 
-    Chat& Chat::operator=(Chat&& copy) noexcept {
-        text = copy.text;
-        copy.text = nullptr;
-        color = copy.color;
-        copy.color = nullptr;
-        insertion = copy.insertion;
-        copy.insertion = nullptr;
-        clickEvent = copy.clickEvent;
-        copy.clickEvent = nullptr;
-        hoverEvent = copy.hoverEvent;
-        copy.hoverEvent = nullptr;
+    chat& chat::operator=(chat&& copy) noexcept {
+        text = std::move(copy.text);
+        color = std::move(copy.color);
+        insertion = std::move(copy.insertion);
+        click_event = std::move(copy.click_event);
+        hover_event = std::move(copy.hover_event);
         defined_bold = copy.defined_bold;
         defined_italic = copy.defined_italic;
         defined_underlined = copy.defined_underlined;
@@ -226,307 +197,366 @@ namespace copper_server {
         return *this;
     }
 
-    Chat::~Chat() {
-        if (text)
-            delete[] text;
-        if (color)
-            delete[] color;
-        if (insertion)
-            delete[] insertion;
-        if (clickEvent)
-            delete clickEvent;
-        if (hoverEvent)
-            delete hoverEvent;
-        text = nullptr;
-        color = nullptr;
-        insertion = nullptr;
-        clickEvent = nullptr;
-        hoverEvent = nullptr;
-    }
+    chat::~chat() = default;
 
-    Chat& Chat::SetText(const std::string& set_text) {
-        setString(text, set_text);
+    chat& chat::set_text(const std::string& set_text) {
+        text = set_text;
+        ;
         text_is_translation = false;
         return *this;
     }
 
-    Chat& Chat::SetTranslation(const std::string& set_text) {
-        setString(text, set_text);
+    chat& chat::set_translation(const std::string& set_text) {
+        text = set_text;
         text_is_translation = true;
         return *this;
     }
 
-    Chat& Chat::SetColor(const std::string& set_text) {
-        setString(color, set_text);
+    chat& chat::set_color(const std::string& set_text) {
+        color = set_text;
         return *this;
     }
 
-    Chat& Chat::SetInsertion(const std::string& set_text) {
-        setString(insertion, set_text);
+    chat& chat::set_color(dye_color _color) {
+        switch (_color) {
+        case dye_color::white:
+            set_color("white");
+            break;
+        case dye_color::orange:
+            set_color("orange");
+            break;
+        case dye_color::magenta:
+            set_color("magenta");
+            break;
+        case dye_color::light_blue:
+            set_color("light_blue");
+            break;
+        case dye_color::yellow:
+            set_color("yellow");
+            break;
+        case dye_color::lime:
+            set_color("lime");
+            break;
+        case dye_color::pink:
+            set_color("pink");
+            break;
+        case dye_color::gray:
+            set_color("gray");
+            break;
+        case dye_color::light_gray:
+            set_color("light_gray");
+            break;
+        case dye_color::cyan:
+            set_color("cyan");
+            break;
+        case dye_color::purple:
+            set_color("purple");
+            break;
+        case dye_color::blue:
+            set_color("blue");
+            break;
+        case dye_color::brown:
+            set_color("brown");
+            break;
+        case dye_color::green:
+            set_color("green");
+            break;
+        case dye_color::red:
+            set_color("red");
+            break;
+        case dye_color::black:
+            set_color("black");
+            break;
+        default:
+            set_color();
+            break;
+        }
         return *this;
     }
 
-    Chat& Chat::SetFont(const std::string& set_text) {
-        setString(font, set_text);
+    chat& chat::set_insertion(const std::string& set_text) {
+        insertion = set_text;
         return *this;
     }
 
-    Chat& Chat::SetBold() {
+    chat& chat::set_font(const std::string& set_text) {
+        font = set_text;
+        return *this;
+    }
+
+    chat& chat::set_text(std::string&& set_text) {
+        text = std::move(set_text);
+        text_is_translation = false;
+        return *this;
+    }
+
+    chat& chat::set_translation(std::string&& set_text) {
+        text = std::move(set_text);
+        text_is_translation = true;
+        return *this;
+    }
+
+    chat& chat::set_color(std::string&& set_text) {
+        color = std::move(set_text);
+        return *this;
+    }
+
+    chat& chat::set_insertion(std::string&& set_text) {
+        insertion = std::move(set_text);
+        return *this;
+    }
+
+    chat& chat::set_font(std::string&& set_text) {
+        font = std::move(set_text);
+        return *this;
+    }
+
+    chat& chat::set_bold() {
         defined_bold = false;
         return *this;
     }
 
-    Chat& Chat::SetItalic() {
+    chat& chat::set_italic() {
         defined_italic = false;
         return *this;
     }
 
-    Chat& Chat::SetUnderlined() {
+    chat& chat::set_underlined() {
         defined_underlined = false;
         return *this;
     }
 
-    Chat& Chat::SetStrikethrough() {
+    chat& chat::set_strikethrough() {
         defined_strikethrough = false;
         return *this;
     }
 
-    Chat& Chat::SetObfuscated() {
+    chat& chat::set_obfuscated() {
         defined_obfuscated = false;
         return *this;
     }
 
-    Chat& Chat::SetBold(bool is) {
+    chat& chat::set_bold(bool is) {
         bold = is;
         defined_bold = true;
         return *this;
     }
 
-    Chat& Chat::SetItalic(bool is) {
+    chat& chat::set_italic(bool is) {
         italic = is;
         defined_italic = true;
         return *this;
     }
 
-    Chat& Chat::SetUnderlined(bool is) {
+    chat& chat::set_underlined(bool is) {
         underlined = is;
         defined_underlined = true;
         return *this;
     }
 
-    Chat& Chat::SetStrikethrough(bool is) {
+    chat& chat::set_strikethrough(bool is) {
         strikethrough = is;
         defined_strikethrough = true;
         return *this;
     }
 
-    Chat& Chat::SetObfuscated(bool is) {
+    chat& chat::set_obfuscated(bool is) {
         obfuscated = is;
         defined_obfuscated = true;
         return *this;
     }
 
-    Chat& Chat::SetHoverEventShowText(const std::string& _show_text) {
-        setHoverEvent(_show_text);
+    chat& chat::set_hover_event_show_text(const std::string& _show_text) {
+        if (!hover_event)
+            hover_event = std::make_unique<hover_event_s>();
+        hover_event->show_entity.reset();
+        hover_event->show_item.reset();
+        hover_event->show_text = _show_text;
         return *this;
     }
 
-    Chat& Chat::SetHoverEventShowItem(const std::string& _id, int32_t _count, const std::optional<std::string>& _tag) {
-        hoverEventS::show_itemS* show_item = new hoverEventS::show_itemS;
-        show_item->id = _id;
-        show_item->count = _count;
-        show_item->tag = _tag;
-        setHoverEvent(show_item);
+    chat& chat::set_hover_event_show_item(const std::string& _id, int32_t _count, const std::optional<std::string>& _tag) {
+        if (!hover_event)
+            hover_event = std::make_unique<hover_event_s>();
+        hover_event->show_entity.reset();
+        hover_event->show_item = std::make_unique<hover_event_s::show_item_s>();
+        hover_event->show_text.clear();
+
+        hover_event->show_item->id = _id;
+        hover_event->show_item->count = _count;
+        hover_event->show_item->tag = _tag;
         return *this;
     }
 
-    Chat& Chat::SetHoverEventShowEntity(const std::string& _id, const std::string& _type, const std::optional<std::string>& _name) {
-        hoverEventS::show_entityS* show_entity = new hoverEventS::show_entityS;
-        show_entity->id = _id;
-        show_entity->type = _type;
-        show_entity->name = _name;
-        setHoverEvent(show_entity);
+    chat& chat::set_hover_event_show_entity(const std::string& _id, const std::string& _type, const std::optional<std::string>& _name) {
+        if (!hover_event)
+            hover_event = std::make_unique<hover_event_s>();
+        hover_event->show_entity = std::make_unique<hover_event_s::show_entity_s>();
+        hover_event->show_item.reset();
+        hover_event->show_text.clear();
+
+        hover_event->show_entity->id = _id;
+        hover_event->show_entity->type = _type;
+        hover_event->show_entity->name = _name;
         return *this;
     }
 
-    Chat& Chat::SetHoverEvent() {
-        if (hoverEvent)
-            delete hoverEvent;
-        hoverEvent = nullptr;
+    chat& chat::set_hover_event() {
+        hover_event.reset();
         return *this;
     }
 
-    Chat& Chat::SetClickEventOpenUrl(const std::string& _open_url) {
-        if (!clickEvent)
-            clickEvent = new clickEventS;
+    chat& chat::set_click_event_open_url(const std::string& _open_url) {
+        if (!click_event)
+            click_event = std::make_unique<click_event_s>();
 
-        if (clickEvent->run_command)
-            delete[] clickEvent->run_command;
-        clickEvent->run_command = nullptr;
-
-        if (clickEvent->suggest_command)
-            delete[] clickEvent->suggest_command;
-        clickEvent->suggest_command = nullptr;
-
-        if (clickEvent->change_page)
-            delete clickEvent->change_page;
-        clickEvent->change_page = nullptr;
-        setString(clickEvent->open_url, _open_url);
+        click_event->run_command.clear();
+        click_event->suggest_command.clear();
+        click_event->copy_to_clipboard.clear();
+        click_event->change_page = std::nullopt;
+        click_event->open_url = _open_url;
         return *this;
     }
 
-    Chat& Chat::SetClickEventRunCommand(const std::string& _run_command) {
-        if (!clickEvent)
-            clickEvent = new clickEventS;
+    chat& chat::set_click_event_run_command(const std::string& _run_command) {
+        if (!click_event)
+            click_event = std::make_unique<click_event_s>();
 
-        if (clickEvent->open_url)
-            delete[] clickEvent->open_url;
-        clickEvent->open_url = nullptr;
+        click_event->run_command.clear();
+        click_event->suggest_command.clear();
+        click_event->copy_to_clipboard.clear();
+        click_event->change_page = std::nullopt;
+        click_event->open_url.clear();
 
-        if (clickEvent->suggest_command)
-            delete[] clickEvent->suggest_command;
-        clickEvent->suggest_command = nullptr;
-
-        if (clickEvent->change_page)
-            delete clickEvent->change_page;
-        clickEvent->change_page = nullptr;
-
-        setString(clickEvent->run_command, _run_command);
+        click_event->run_command = _run_command;
         return *this;
     }
 
-    Chat& Chat::SetClickEventSuggestCommand(const std::string& _suggest_command) {
-        if (!clickEvent)
-            clickEvent = new clickEventS;
+    chat& chat::set_click_event_suggest_command(const std::string& _suggest_command) {
+        if (!click_event)
+            click_event = std::make_unique<click_event_s>();
 
-        if (clickEvent->open_url)
-            delete[] clickEvent->open_url;
-        clickEvent->open_url = nullptr;
-
-        if (clickEvent->run_command)
-            delete[] clickEvent->run_command;
-        clickEvent->run_command = nullptr;
-
-        if (clickEvent->change_page)
-            delete clickEvent->change_page;
-        clickEvent->change_page = nullptr;
-
-        setString(clickEvent->suggest_command, _suggest_command);
+        click_event->run_command.clear();
+        click_event->copy_to_clipboard.clear();
+        click_event->change_page = std::nullopt;
+        click_event->open_url.clear();
+        click_event->suggest_command = _suggest_command;
         return *this;
     }
 
-    Chat& Chat::SetClickEventChangePage(uint32_t _change_page) {
-        if (!clickEvent)
-            clickEvent = new clickEventS;
-        if (!clickEvent->change_page)
-            clickEvent->change_page = new uint32_t;
-        *clickEvent->change_page = _change_page;
+    chat& chat::set_click_event_change_page(uint32_t _change_page) {
+        if (!click_event)
+            click_event = std::make_unique<click_event_s>();
+        click_event->run_command.clear();
+        click_event->suggest_command.clear();
+        click_event->copy_to_clipboard.clear();
+        click_event->open_url.clear();
+        click_event->change_page = _change_page;
         return *this;
     }
 
-    Chat& Chat::SetClickEventCopyToClipboard(const std::string& _copy_to_clipboard) {
-        if (!clickEvent)
-            clickEvent = new clickEventS;
-        if (clickEvent->copy_to_clipboard)
-            delete[] clickEvent->copy_to_clipboard;
-        clickEvent->copy_to_clipboard = nullptr;
-        setString(clickEvent->copy_to_clipboard, _copy_to_clipboard);
+    chat& chat::set_click_event_copy_to_clipboard(const std::string& _copy_to_clipboard) {
+        if (!click_event)
+            click_event = std::make_unique<click_event_s>();
+        click_event->run_command.clear();
+        click_event->suggest_command.clear();
+        click_event->copy_to_clipboard.clear();
+        click_event->change_page = std::nullopt;
+        click_event->open_url.clear();
+        click_event->copy_to_clipboard = _copy_to_clipboard;
         return *this;
     }
 
-    Chat& Chat::SetClickEvent() {
-        if (clickEvent)
-            delete clickEvent;
-        clickEvent = nullptr;
+    chat& chat::set_click_event() {
+        click_event.reset();
         return *this;
     }
 
-    list_array<Chat>& Chat::GetExtra() {
+    list_array<chat>& chat::get_extra() {
         return extra;
     }
 
-    std::optional<const char*> Chat::GetText() const {
-        if (text_is_translation || !text)
-            return std::nullopt;
+    const std::string& chat::get_text() const {
+        static const std::string empty;
+        if (text_is_translation || text.empty())
+            return empty;
         return text;
     }
 
-    std::optional<const char*> Chat::GetTranslation() const {
-        if (!text_is_translation || !text)
-            return std::nullopt;
+    const std::string& chat::get_translation() const {
+        static const std::string empty;
+        if (!text_is_translation || text.empty())
+            return empty;
         return text;
     }
 
-    std::optional<const char*> Chat::GetColor() const {
-        if (!color)
-            return std::nullopt;
+    const std::string& chat::get_color() const {
+        static const std::string empty;
+        if (color.empty())
+            return empty;
         return color;
     }
 
-    std::optional<const char*> Chat::GetInsertion() const {
-        if (!insertion)
-            return std::nullopt;
+    const std::string& chat::get_insertion() const {
+        static const std::string empty;
+        if (insertion.empty())
+            return empty;
         return insertion;
     }
 
-    std::optional<const char*> Chat::GetFont() const {
-        if (!font)
-            return std::nullopt;
+    const std::string& chat::get_font() const {
+        static const std::string empty;
+        if (font.empty())
+            return empty;
         return font;
     }
 
-    std::optional<const Chat::hoverEventS*> Chat::GetHoverEvent() const {
-        if (hoverEvent)
-            return std::make_optional(hoverEvent);
-        else
-            return std::nullopt;
+    const std::unique_ptr<chat::hover_event_s>& chat::get_hover_event() const {
+        return hover_event;
     }
 
-    std::optional<const Chat::clickEventS*> Chat::GetClickEvent() const {
-        if (clickEvent)
-            return std::make_optional(clickEvent);
-        else
-            return std::nullopt;
+    const std::unique_ptr<chat::click_event_s>& chat::get_click_event() const {
+        return click_event;
     }
 
-    std::optional<bool> Chat::GetBold() {
+    std::optional<bool> chat::get_bold() {
         if (defined_bold)
             return std::make_optional<bool>((bool)bold);
         else
             return std::nullopt;
     }
 
-    std::optional<bool> Chat::GetItalic() {
+    std::optional<bool> chat::get_italic() {
         if (defined_italic)
             return std::make_optional<bool>((bool)italic);
         else
             return std::nullopt;
     }
 
-    std::optional<bool> Chat::GetUnderlined() {
+    std::optional<bool> chat::get_underlined() {
         if (defined_underlined)
             return std::make_optional<bool>((bool)underlined);
         else
             return std::nullopt;
     }
 
-    std::optional<bool> Chat::GetStrikethrough() {
+    std::optional<bool> chat::get_strikethrough() {
         if (defined_strikethrough)
             return std::make_optional<bool>((bool)strikethrough);
         else
             return std::nullopt;
     }
 
-    std::optional<bool> Chat::GetObfuscated() {
+    std::optional<bool> chat::get_obfuscated() {
         if (defined_obfuscated)
             return std::make_optional<bool>((bool)obfuscated);
         else
             return std::nullopt;
     }
 
-    std::string Chat::ToStr() const {
+    std::string chat::to_str() const {
         std::string str = "{";
-        if (text) {
+        if (!text.empty()) {
             if (text_is_translation)
                 str += "\"translation\":\"";
             else
@@ -536,13 +566,13 @@ namespace copper_server {
         } else {
             str += "\"text\":\"\"";
         }
-        if (color) {
+        if (!color.empty()) {
             str += ',';
             str += "\"color\":\"";
             str += color;
             str += "\"";
         }
-        if (insertion) {
+        if (!insertion.empty()) {
             str += ',';
             str += "\"insertion\":\"";
             str += insertion;
@@ -578,76 +608,76 @@ namespace copper_server {
             str += obfuscated ? "true" : "false";
             str += "\"";
         }
-        if (clickEvent) {
+        if (click_event) {
             str += ',';
             str += "\"clickEvent\":{";
-            if (clickEvent->open_url) {
+            if (!click_event->open_url.empty()) {
                 str += "\"action\":\"open_url\",";
                 str += "\"value\":\"";
-                str += clickEvent->open_url;
+                str += click_event->open_url;
                 str += "\"";
             }
-            if (clickEvent->run_command) {
+            if (!click_event->run_command.empty()) {
                 str += "\"action\":\"run_command\",";
                 str += "\"value\":\"";
-                str += clickEvent->run_command;
+                str += click_event->run_command;
                 str += "\"";
             }
-            if (clickEvent->suggest_command) {
+            if (!click_event->suggest_command.empty()) {
                 str += "\"action\":\"suggest_command\",";
                 str += "\"value\":\"";
-                str += clickEvent->suggest_command;
+                str += click_event->suggest_command;
                 str += "\"";
             }
-            if (clickEvent->change_page) {
+            if (!click_event->change_page) {
                 str += "\"action\":\"change_page\",";
                 str += "\"value\":";
-                str += std::to_string(*clickEvent->change_page);
+                str += std::to_string(*click_event->change_page);
             }
-            if (clickEvent->copy_to_clipboard) {
+            if (!click_event->copy_to_clipboard.empty()) {
                 str += "\"action\":\"copy_to_clipboard\",";
                 str += "\"value\":\"";
-                str += clickEvent->copy_to_clipboard;
+                str += click_event->copy_to_clipboard;
                 str += "\"";
             }
             str += '}';
         }
-        if (hoverEvent) {
+        if (hover_event) {
             str += ',';
             str += "\"hoverEvent\":{";
-            if (hoverEvent->show_item) {
+            if (hover_event->show_item) {
                 str += "\"action\":\"show_item\",";
                 str += "\"contents\":{";
                 str += "\"id\":\"";
-                str += hoverEvent->show_item->id;
+                str += hover_event->show_item->id;
                 str += "\",";
                 str += "\"count\":";
-                str += std::to_string(hoverEvent->show_item->count);
-                if (hoverEvent->show_item->tag) {
+                str += std::to_string(hover_event->show_item->count);
+                if (hover_event->show_item->tag) {
                     str += ",\"tag\":\"";
-                    str += *hoverEvent->show_item->tag;
+                    str += *hover_event->show_item->tag;
                     str += "\"";
                 }
                 str += '}';
             }
-            if (hoverEvent->show_entity) {
+            if (hover_event->show_entity) {
                 str += "\"action\":\"show_entity\",";
                 str += "\"contents\":{";
                 str += "\"type\":\"";
-                str += hoverEvent->show_entity->type;
+                str += hover_event->show_entity->type;
                 str += "\",";
                 str += "\"id\":\"";
-                str += hoverEvent->show_entity->id;
-                if (hoverEvent->show_entity->name) {
+                str += hover_event->show_entity->id;
+                if (hover_event->show_entity->name) {
                     str += "\",\"name\":\"";
-                    str += *hoverEvent->show_entity->name;
+                    str += *hover_event->show_entity->name;
                 }
                 str += "\"}";
             }
-            if (hoverEvent->show_text) {
+            if (!hover_event->show_text.empty()) {
                 str += "\"action\":\"show_text\",";
                 str += "\"contents\":\"";
-                str += hoverEvent->show_text;
+                str += hover_event->show_text;
                 str += "\"";
             }
             str += '}';
@@ -660,7 +690,7 @@ namespace copper_server {
             for (auto& it : extra) {
                 if (need_comma)
                     str += ',';
-                str += it.ToStr();
+                str += it.to_str();
                 need_comma = true;
             }
         }
@@ -668,17 +698,17 @@ namespace copper_server {
         return str;
     }
 
-    Chat Chat::fromStr(const std::string& str) {
+    chat chat::from_str(std::string_view str) {
         auto json_hold = boost::json::parse(str);
         if (json_hold.is_string())
-            return Chat::parseToChat(json_hold.as_string().c_str());
+            return chat::parse_to_chat(json_hold.as_string().c_str());
         else
-            return fromJson(util::js_object::get_object(json_hold));
+            return from_json(util::js_object::get_object(json_hold));
     }
 
-    enbt::value Chat::ToENBT() const {
+    enbt::value chat::to_enbt() const {
         enbt::compound enbt;
-        if (text) {
+        if (!text.empty()) {
             if (text_is_translation)
                 enbt["translate"] = text;
             else
@@ -686,9 +716,9 @@ namespace copper_server {
         } else {
             enbt["text"] = "";
         }
-        if (color)
+        if (!color.empty())
             enbt["color"] = color;
-        if (insertion)
+        if (!insertion.empty())
             enbt["insertion"] = insertion;
         if (defined_bold)
             enbt["bold"] = bold;
@@ -700,58 +730,58 @@ namespace copper_server {
             enbt["strikethrough"] = strikethrough;
         if (defined_obfuscated)
             enbt["obfuscated"] = obfuscated;
-        if (clickEvent) {
-            enbt::compound clickEvent_enbt;
-            if (clickEvent->open_url) {
-                clickEvent_enbt["action"] = "open_url";
-                clickEvent_enbt["value"] = clickEvent->open_url;
-            } else if (clickEvent->run_command) {
-                clickEvent_enbt["action"] = "run_command";
-                clickEvent_enbt["value"] = clickEvent->run_command;
-            } else if (clickEvent->suggest_command) {
-                clickEvent_enbt["action"] = "suggest_command";
-                clickEvent_enbt["value"] = clickEvent->suggest_command;
-            } else if (clickEvent->change_page) {
-                clickEvent_enbt["action"] = "change_page";
-                clickEvent_enbt["value"] = *clickEvent->change_page;
-            } else if (clickEvent->copy_to_clipboard) {
-                clickEvent_enbt["action"] = "copy_to_clipboard";
-                clickEvent_enbt["value"] = clickEvent->copy_to_clipboard;
+        if (click_event) {
+            enbt::compound click_event_enbt;
+            if (!click_event->open_url.empty()) {
+                click_event_enbt["action"] = "open_url";
+                click_event_enbt["value"] = click_event->open_url;
+            } else if (!click_event->run_command.empty()) {
+                click_event_enbt["action"] = "run_command";
+                click_event_enbt["value"] = click_event->run_command;
+            } else if (!click_event->suggest_command.empty()) {
+                click_event_enbt["action"] = "suggest_command";
+                click_event_enbt["value"] = click_event->suggest_command;
+            } else if (click_event->change_page) {
+                click_event_enbt["action"] = "change_page";
+                click_event_enbt["value"] = *click_event->change_page;
+            } else if (!click_event->copy_to_clipboard.empty()) {
+                click_event_enbt["action"] = "copy_to_clipboard";
+                click_event_enbt["value"] = click_event->copy_to_clipboard;
             }
-            enbt["clickEvent"] = std::move(clickEvent_enbt);
+            enbt["clickEvent"] = std::move(click_event_enbt);
         }
-        if (hoverEvent) {
-            enbt::compound hoverEvent_enbt;
-            if (hoverEvent->show_item) {
+        if (hover_event) {
+            enbt::compound hover_event_enbt;
+            if (hover_event->show_item) {
                 enbt::compound show_item_enbt;
-                show_item_enbt["id"] = hoverEvent->show_item->id;
-                show_item_enbt["count"] = hoverEvent->show_item->count;
-                if (hoverEvent->show_item->tag) {
-                    show_item_enbt["tag"] = *hoverEvent->show_item->tag;
+                show_item_enbt["id"] = hover_event->show_item->id;
+                show_item_enbt["count"] = hover_event->show_item->count;
+                if (hover_event->show_item->tag) {
+                    show_item_enbt["tag"] = *hover_event->show_item->tag;
                 }
-                hoverEvent_enbt["action"] = "show_item";
-                hoverEvent_enbt["contents"] = std::move(show_item_enbt);
-            } else if (hoverEvent->show_entity) {
+                hover_event_enbt["action"] = "show_item";
+                hover_event_enbt["contents"] = std::move(show_item_enbt);
+            } else if (hover_event->show_entity) {
                 enbt::compound show_entity_enbt;
-                show_entity_enbt["type"] = hoverEvent->show_entity->type;
-                show_entity_enbt["id"] = hoverEvent->show_entity->id;
-                if (hoverEvent->show_entity->name) {
-                    show_entity_enbt["name"] = *hoverEvent->show_entity->name;
+                show_entity_enbt["type"] = hover_event->show_entity->type;
+                show_entity_enbt["id"] = hover_event->show_entity->id;
+                if (hover_event->show_entity->name) {
+                    show_entity_enbt["name"] = *hover_event->show_entity->name;
                 }
-                hoverEvent_enbt["action"] = "show_entity";
-                hoverEvent_enbt["contents"] = std::move(show_entity_enbt);
-            } else if (hoverEvent->show_text) {
-                hoverEvent_enbt["action"] = "show_text";
-                hoverEvent_enbt["contents"] = hoverEvent->show_text;
+                hover_event_enbt["action"] = "show_entity";
+                hover_event_enbt["contents"] = std::move(show_entity_enbt);
+            } else if (!hover_event->show_text.empty()) {
+                hover_event_enbt["action"] = "show_text";
+                hover_event_enbt["contents"] = hover_event->show_text;
             }
-            enbt["hoverEvent"] = std::move(hoverEvent_enbt);
+            enbt["hoverEvent"] = std::move(hover_event_enbt);
         }
 
         if (extra.size()) {
             enbt::fixed_array extra_enbt(extra.size());
             size_t i = 0;
             for (auto& it : extra)
-                extra_enbt.set(i++, it.ToENBT());
+                extra_enbt.set(i++, it.to_enbt());
             enbt["extra"] = std::move(extra_enbt);
         }
         if (enbt.size() == 1) {
@@ -761,27 +791,25 @@ namespace copper_server {
         return enbt;
     }
 
-    void Chat::removeColor() {
-        if (color)
-            delete color;
+    void chat::remove_color() {
+        color.clear();
     }
 
-    void Chat::removeColorRecursive() {
-        if (color)
-            delete color;
+    void chat::remove_color_recursive() {
+        color.clear();
         for (auto& it : extra)
-            it.removeColorRecursive();
+            it.remove_color_recursive();
     }
 
-    bool Chat::empty() const {
-        return !text && extra.empty();
+    bool chat::empty() const {
+        return text.empty() && extra.empty();
     }
 
-    Chat Chat::parseToChat(const std::string& string) {
-        list_array<Chat> result;
+    chat chat::parse_to_chat(std::string_view string) {
+        list_array<chat> result;
 
-        constexpr const char format_symbol_parts[2] = {(char)(unsigned char)194, (char)(unsigned char)167}; //{(char)0xC2, (char)0xA7};
-        Chat current_chat;
+        constexpr const char format_symbol_parts[2] = {(char)(unsigned char)194, (char)(unsigned char)167}; //{(char)0x_c2, (char)0x_a7};
+        chat current_chat;
 
         bool format_command = false;
         bool got_first_part_format_symbol = false;
@@ -797,75 +825,75 @@ namespace copper_server {
             if (format_command) {
                 switch (c) {
                 case '0':
-                    current_chat.SetColor("black");
+                    current_chat.set_color("black");
                     break;
                 case '1':
-                    current_chat.SetColor("dark_blue");
+                    current_chat.set_color("dark_blue");
                     break;
                 case '2':
-                    current_chat.SetColor("dark_green");
+                    current_chat.set_color("dark_green");
                     break;
                 case '3':
-                    current_chat.SetColor("dark_aqua");
+                    current_chat.set_color("dark_aqua");
                     break;
                 case '4':
-                    current_chat.SetColor("dark_red");
+                    current_chat.set_color("dark_red");
                     break;
                 case '5':
-                    current_chat.SetColor("dark_purple");
+                    current_chat.set_color("dark_purple");
                     break;
                 case '6':
-                    current_chat.SetColor("gold");
+                    current_chat.set_color("gold");
                     break;
                 case '7':
-                    current_chat.SetColor("gray");
+                    current_chat.set_color("gray");
                     break;
                 case '8':
-                    current_chat.SetColor("dark_gray");
+                    current_chat.set_color("dark_gray");
                     break;
                 case '9':
-                    current_chat.SetColor("blue");
+                    current_chat.set_color("blue");
                     break;
                 case 'a':
-                    current_chat.SetColor("green");
+                    current_chat.set_color("green");
                     break;
                 case 'b':
-                    current_chat.SetColor("aqua");
+                    current_chat.set_color("aqua");
                     break;
                 case 'c':
-                    current_chat.SetColor("red");
+                    current_chat.set_color("red");
                     break;
                 case 'd':
-                    current_chat.SetColor("light_purple");
+                    current_chat.set_color("light_purple");
                     break;
                 case 'e':
-                    current_chat.SetColor("yellow");
+                    current_chat.set_color("yellow");
                     break;
                 case 'f':
-                    current_chat.SetColor("white");
+                    current_chat.set_color("white");
                     break;
                 case 'k':
-                    current_chat.SetObfuscated(true);
+                    current_chat.set_obfuscated(true);
                     break;
                 case 'l':
-                    current_chat.SetBold(true);
+                    current_chat.set_bold(true);
                     break;
                 case 'm':
-                    current_chat.SetStrikethrough(true);
+                    current_chat.set_strikethrough(true);
                     break;
                 case 'n':
-                    current_chat.SetUnderlined(true);
+                    current_chat.set_underlined(true);
                     break;
                 case 'o':
-                    current_chat.SetItalic(true);
+                    current_chat.set_italic(true);
                     break;
                 case 'r':
-                    current_chat.removeColor();
-                    current_chat.SetBold(false);
-                    current_chat.SetItalic(false);
-                    current_chat.SetUnderlined(false);
-                    current_chat.SetStrikethrough(false);
-                    current_chat.SetObfuscated(false);
+                    current_chat.remove_color();
+                    current_chat.set_bold(false);
+                    current_chat.set_italic(false);
+                    current_chat.set_underlined(false);
+                    current_chat.set_strikethrough(false);
+                    current_chat.set_obfuscated(false);
                     break;
                 default:
                     break;
@@ -955,9 +983,9 @@ namespace copper_server {
                 got_first_part_format_symbol = true;
             } else if (c == format_symbol_parts[1]) {
                 if (current_string.size()) {
-                    current_chat.SetText(current_string);
+                    current_chat.set_text(current_string);
                     result.push_back(current_chat);
-                    current_chat.SetText();
+                    current_chat.set_text();
                     current_string.clear();
                 }
                 got_first_part_format_symbol = false;
@@ -976,66 +1004,66 @@ namespace copper_server {
             got_slash = false;
         }
         if (current_string.size()) {
-            current_chat.SetText(current_string);
+            current_chat.set_text(current_string);
             result.push_back(current_chat);
         }
-        Chat final_chat;
-        final_chat.GetExtra() = result;
+        chat final_chat;
+        final_chat.get_extra() = result;
         return final_chat;
     }
 
-    Chat Chat::fromEnbt(const enbt::value& enbt) {
+    chat chat::from_enbt(const enbt::value& enbt) {
         if (enbt.is_string())
-            return Chat((std::string)enbt);
-        Chat result;
+            return chat((std::string)enbt);
+        chat result;
         auto entry = enbt.as_compound();
 
         if (entry.contains("text"))
-            result.SetText(entry["text"]);
+            result.set_text(entry["text"]);
         else if (entry.contains("translate"))
-            result.SetTranslation(entry["translate"]);
+            result.set_translation(entry["translate"]);
 
         if (entry.contains("color"))
-            result.SetColor(entry["color"]);
+            result.set_color(entry["color"]);
 
         if (entry.contains("insertion"))
-            result.SetInsertion(entry["insertion"]);
+            result.set_insertion(entry["insertion"]);
 
         if (entry.contains("bold"))
-            result.SetBold(entry["bold"]);
+            result.set_bold(entry["bold"]);
 
         if (entry.contains("italic"))
-            result.SetItalic(entry["italic"]);
+            result.set_italic(entry["italic"]);
 
         if (entry.contains("underlined"))
-            result.SetUnderlined(entry["underlined"]);
+            result.set_underlined(entry["underlined"]);
 
         if (entry.contains("strikethrough"))
-            result.SetStrikethrough(entry["strikethrough"]);
+            result.set_strikethrough(entry["strikethrough"]);
 
         if (entry.contains("obfuscated"))
-            result.SetObfuscated(entry["obfuscated"]);
+            result.set_obfuscated(entry["obfuscated"]);
 
         if (entry.contains("font"))
-            result.SetFont(entry["font"]);
+            result.set_font(entry["font"]);
 
         if (entry.contains("clickEvent")) {
             auto click_event = entry["clickEvent"].as_compound();
             const std::string& action = (const std::string&)click_event["action"];
             auto& value = click_event["value"];
             if (action == "open_url")
-                result.SetClickEventOpenUrl(value);
+                result.set_click_event_open_url(value);
             else if (action == "run_command")
 
-                result.SetClickEventRunCommand(value);
+                result.set_click_event_run_command(value);
 
             else if (action == "suggest_command")
-                result.SetClickEventSuggestCommand(value);
+                result.set_click_event_suggest_command(value);
 
             else if (action == "change_page")
-                result.SetClickEventChangePage(value);
+                result.set_click_event_change_page(value);
             else if (action == "copy_to_clipboard")
-                result.SetClickEventCopyToClipboard(value);
+                result.set_click_event_copy_to_clipboard(value);
         }
         if (entry.contains("hoverEvent")) {
             auto hover_event = entry["hoverEvent"].as_compound();
@@ -1043,68 +1071,68 @@ namespace copper_server {
             auto& content = hover_event["content"];
             if (action == "show_item") {
                 if (content.contains("tag"))
-                    result.SetHoverEventShowItem(content["id"], content["count"], (std::string)content["tag"]);
+                    result.set_hover_event_show_item(content["id"], content["count"], (std::string)content["tag"]);
                 else
-                    result.SetHoverEventShowItem(content["id"], content["count"], std::nullopt);
+                    result.set_hover_event_show_item(content["id"], content["count"], std::nullopt);
             } else if (action == "show_entity") {
                 if (content.contains("name"))
-                    result.SetHoverEventShowEntity(content["id"], content["type"], (std::string)content["name"]);
+                    result.set_hover_event_show_entity(content["id"], content["type"], (std::string)content["name"]);
                 else
-                    result.SetHoverEventShowItem(content["id"], content["type"], std::nullopt);
+                    result.set_hover_event_show_item(content["id"], content["type"], std::nullopt);
             } else if (action == "show_text")
-                result.SetHoverEventShowText(content);
+                result.set_hover_event_show_text(content);
         }
 
         if (entry.contains("extra")) {
-            auto& extra_arr = result.GetExtra();
+            auto& extra_arr = result.get_extra();
             auto extra = entry["extra"].as_fixed_array();
             extra_arr.reserve(extra.size());
             for (auto& it : extra)
-                extra_arr.push_back(Chat::fromEnbt(it));
+                extra_arr.push_back(chat::from_enbt(it));
         }
         return result;
     }
 
-    Chat Chat::from_enbt_with_format(const enbt::value& enbt, list_array<enbt::value>&& items) {
-        auto res = fromEnbt(enbt);
+    chat chat::from_enbt_with_format(const enbt::value& enbt, list_array<enbt::value>&& items) {
+        auto res = from_enbt(enbt);
         formater(items, res);
         return res;
     }
 
-    std::string Chat::to_ansi_console() const {
+    std::string chat::to_ansi_console() const {
         std::string result;
-        if (color) {
-            if (strcmp(color, "black") == 0)
+        if (!color.empty()) {
+            if (color == "black")
                 result += "\033[30m";
-            else if (strcmp(color, "dark_blue") == 0)
+            else if (color == "dark_blue")
                 result += "\033[34m";
-            else if (strcmp(color, "dark_green") == 0)
+            else if (color == "dark_green")
                 result += "\033[32m";
-            else if (strcmp(color, "dark_aqua") == 0)
+            else if (color == "dark_aqua")
                 result += "\033[36m";
-            else if (strcmp(color, "dark_red") == 0)
+            else if (color == "dark_red")
                 result += "\033[31m";
-            else if (strcmp(color, "dark_purple") == 0)
+            else if (color == "dark_purple")
                 result += "\033[35m";
-            else if (strcmp(color, "gold") == 0)
+            else if (color == "gold")
                 result += "\033[33m";
-            else if (strcmp(color, "gray") == 0)
+            else if (color == "gray")
                 result += "\033[37m";
-            else if (strcmp(color, "dark_gray") == 0)
+            else if (color == "dark_gray")
                 result += "\033[90m";
-            else if (strcmp(color, "blue") == 0)
+            else if (color == "blue")
                 result += "\033[94m";
-            else if (strcmp(color, "green") == 0)
+            else if (color == "green")
                 result += "\033[92m";
-            else if (strcmp(color, "aqua") == 0)
+            else if (color == "aqua")
                 result += "\033[96m";
-            else if (strcmp(color, "red") == 0)
+            else if (color == "red")
                 result += "\033[91m";
-            else if (strcmp(color, "light_purple") == 0)
+            else if (color == "light_purple")
                 result += "\033[95m";
-            else if (strcmp(color, "yellow") == 0)
+            else if (color == "yellow")
                 result += "\033[93m";
-            else if (strcmp(color, "white") == 0)
+            else if (color == "white")
                 result += "\033[97m";
         }
         if (bold)
@@ -1117,7 +1145,7 @@ namespace copper_server {
             result += "\033[9m";
         if (obfuscated)
             result += "\033[8m";
-        if (text)
+        if (!text.empty())
             result += text;
         if (bold || italic || underlined || strikethrough || obfuscated)
             result += "\033[0m";
@@ -1127,7 +1155,7 @@ namespace copper_server {
         return result;
     }
 
-    bool Chat::operator==(const Chat& other) const {
+    bool chat::operator==(const chat& other) const {
         if (
             defined_bold != other.defined_bold
             || defined_italic != other.defined_italic
@@ -1137,85 +1165,65 @@ namespace copper_server {
         )
             return false;
 
-        if (
-            (!text != !other.text)
-            || (!color != !other.color)
-            || (!insertion != !other.insertion)
-            || (!font != !other.font)
-            || (!clickEvent != !other.clickEvent)
-            || (!hoverEvent != !other.hoverEvent)
-        )
+        if (bool(click_event) != bool(other.click_event))
+            return false;
+        if (bool(hover_event) != bool(other.hover_event))
             return false;
 
-        if (text) {
+
+        if (!text.empty()) {
             if (text_is_translation != other.text_is_translation)
                 return false;
-            if (!strcmp(text, other.text))
+            if (text != other.text)
                 return false;
         }
-        if (color)
-            if (!strcmp(color, other.color))
+        if (!color.empty())
+            if (color != other.color)
                 return false;
-        if (insertion)
-            if (!strcmp(insertion, other.insertion))
+        if (!insertion.empty())
+            if (insertion != other.insertion)
                 return false;
-        if (font)
-            if (!strcmp(font, other.font))
-                return false;
-
-        if (clickEvent) {
-            if (
-                (!clickEvent->change_page != !other.clickEvent->change_page)
-                | (!clickEvent->copy_to_clipboard != !other.clickEvent->copy_to_clipboard)
-                | (!clickEvent->open_url != !other.clickEvent->open_url)
-                | (!clickEvent->run_command != !other.clickEvent->run_command)
-                | (!clickEvent->suggest_command != !other.clickEvent->suggest_command)
-            )
+        if (!font.empty())
+            if (font != other.font)
                 return false;
 
-            if (clickEvent->change_page)
-                if (*clickEvent->change_page != *other.clickEvent->change_page)
+        if (click_event) {
+            if (click_event->change_page)
+                if (*click_event->change_page != *other.click_event->change_page)
                     return false;
-
-            if (clickEvent->copy_to_clipboard)
-                if (!strcmp(clickEvent->copy_to_clipboard, other.clickEvent->copy_to_clipboard))
-                    return false;
-            if (clickEvent->open_url)
-                if (!strcmp(clickEvent->open_url, other.clickEvent->open_url))
-                    return false;
-            if (clickEvent->run_command)
-                if (!strcmp(clickEvent->run_command, other.clickEvent->run_command))
-                    return false;
-            if (clickEvent->suggest_command)
-                if (!strcmp(clickEvent->suggest_command, other.clickEvent->suggest_command))
-                    return false;
+            if (click_event->copy_to_clipboard != other.click_event->copy_to_clipboard)
+                return false;
+            if (click_event->open_url != other.click_event->open_url)
+                return false;
+            if (click_event->run_command != other.click_event->run_command)
+                return false;
+            if (click_event->suggest_command != other.click_event->suggest_command)
+                return false;
         }
-        if (hoverEvent) {
+        if (hover_event) {
             if (
-                (!hoverEvent->show_entity != !other.hoverEvent->show_entity)
-                | (!hoverEvent->show_item != !other.hoverEvent->show_item)
-                | (!hoverEvent->show_text != !other.hoverEvent->show_text)
+                (!hover_event->show_entity != !other.hover_event->show_entity)
+                | (!hover_event->show_item != !other.hover_event->show_item)
             )
                 return false;
-            if (hoverEvent->show_text)
-                if (!strcmp(hoverEvent->show_text, other.hoverEvent->show_text))
-                    return false;
+            if (hover_event->show_text != other.hover_event->show_text)
+                return false;
 
-            if (hoverEvent->show_entity) {
-                if (hoverEvent->show_entity->id != other.hoverEvent->show_entity->id)
+            if (hover_event->show_entity) {
+                if (hover_event->show_entity->id != other.hover_event->show_entity->id)
                     return false;
-                if (hoverEvent->show_entity->name != other.hoverEvent->show_entity->name)
+                if (hover_event->show_entity->name != other.hover_event->show_entity->name)
                     return false;
-                if (hoverEvent->show_entity->type != other.hoverEvent->show_entity->type)
+                if (hover_event->show_entity->type != other.hover_event->show_entity->type)
                     return false;
             }
 
-            if (hoverEvent->show_item) {
-                if (hoverEvent->show_item->id != other.hoverEvent->show_item->id)
+            if (hover_event->show_item) {
+                if (hover_event->show_item->id != other.hover_event->show_item->id)
                     return false;
-                if (hoverEvent->show_item->count != other.hoverEvent->show_item->count)
+                if (hover_event->show_item->count != other.hover_event->show_item->count)
                     return false;
-                if (hoverEvent->show_item->tag != other.hoverEvent->show_item->tag)
+                if (hover_event->show_item->tag != other.hover_event->show_item->tag)
                     return false;
             }
         }
@@ -1241,80 +1249,7 @@ namespace copper_server {
         return true;
     }
 
-    bool Chat::operator!=(const Chat& other) const {
+    bool chat::operator!=(const chat& other) const {
         return !operator==(other);
-    }
-
-    void Chat::setString(char*& char_ptr, const std::string& string) {
-        if (string.contains("\"{}")) {
-            std::string new_string;
-            for (auto& it : string) {
-                if (it == '\"' || it == '{' || it == '}')
-                    new_string += '\\';
-                new_string += it;
-            }
-            setString(char_ptr, new_string);
-            return;
-        }
-        if (char_ptr){
-            delete[] char_ptr;
-            char_ptr = nullptr;
-        }
-        if (size_t str_len = string.size(); str_len) {
-            char_ptr = new char[str_len + 1];
-            memcpy(char_ptr, string.data(), str_len);
-            char_ptr[str_len] = 0;
-        }
-    }
-
-    void Chat::setHoverEvent(hoverEventS::show_itemS* setHoverEvent) {
-        if (!hoverEvent)
-            hoverEvent = new hoverEventS;
-        if (hoverEvent->show_item)
-            delete hoverEvent->show_item;
-        hoverEvent->show_item = setHoverEvent;
-
-        if (hoverEvent->show_entity)
-            delete hoverEvent->show_entity;
-        hoverEvent->show_entity = nullptr;
-
-        if (hoverEvent->show_text)
-            delete[] hoverEvent->show_text;
-
-        hoverEvent->show_text = nullptr;
-    }
-
-    void Chat::setHoverEvent(hoverEventS::show_entityS* setHoverEvent) {
-        if (!hoverEvent)
-            hoverEvent = new hoverEventS;
-        if (hoverEvent->show_entity)
-            delete hoverEvent->show_entity;
-        hoverEvent->show_entity = setHoverEvent;
-
-        if (hoverEvent->show_item)
-            delete hoverEvent->show_item;
-        hoverEvent->show_item = nullptr;
-
-        if (hoverEvent->show_text)
-            delete[] hoverEvent->show_text;
-
-        hoverEvent->show_text = nullptr;
-    }
-
-    void Chat::setHoverEvent(const std::string& setHoverEvent) {
-        if (!hoverEvent)
-            hoverEvent = new hoverEventS;
-        if (hoverEvent->show_text)
-            delete[] hoverEvent->show_text;
-        hoverEvent->show_text = nullptr;
-        setString(hoverEvent->show_text, setHoverEvent);
-
-        if (hoverEvent->show_item)
-            delete hoverEvent->show_item;
-        hoverEvent->show_item = nullptr;
-
-        if (hoverEvent->show_entity)
-            delete hoverEvent->show_entity;
-        hoverEvent->show_entity = nullptr;
     }
 }

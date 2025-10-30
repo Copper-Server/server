@@ -17,10 +17,13 @@ set(FAST_TASK_ENABLE_DEBUG_API OFF)
 add_compile_definitions(tasks_enable_preemptive_scheduler_preview=false)
 
 FILE(GLOB REFLECTION_FILES CONFIGURE_DEPENDS
-  src/api/packets.hpp
+  src/api/packets/*.hpp
+  src/api/packets/*/*.hpp
+  src/base_objects/entity/metadata.hpp
   src/base_objects/component.hpp
   src/base_objects/dye_color.hpp
   src/base_objects/packets_help.hpp
+  src/base_objects/particle_data.hpp
   src/base_objects/parsers.hpp
   src/util/calculations.hpp
 )
@@ -41,7 +44,6 @@ build_resources("copper_server" "out/built_resources" "${RESOURCE_FILES}" RESOUR
 create_resources_header("resources" "${RESOURCE_FILES_include}")
 create_reflect_map("${CMAKE_CURRENT_SOURCE_DIR}/src/util/reflect" "${REFLECTION_FILES}")
 
-
 IF(MSVC)
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>") #I hate using this for library/commandline. Its just breaks, COMMANDLINE_LIBTYPE and COMMANDLINE_SHARED_LIBS are just not working as excepted
   #string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
@@ -59,6 +61,7 @@ find_package(Boost REQUIRED COMPONENTS context json bimap iostreams)
 find_package(ZLIB REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(utf8cpp CONFIG REQUIRED)
+find_package(concurrentqueue CONFIG REQUIRED)
 
 add_subdirectory("library/fast_task")
 add_subdirectory("library/commandline")
@@ -72,7 +75,7 @@ FILE(GLOB_RECURSE SRCFILES CONFIGURE_DEPENDS
 )
 add_executable(CopperServer src/main.cpp)
 target_sources(CopperServer PRIVATE ${SRCFILES} ${RESOURCE_FILES_build})
-include_directories(${Boost_INCLUDE_DIRS} ${CC_INCLUDE_DIR} ${ZLIB_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${utf8cpp_INCLUDE_DIRS})
+include_directories(${Boost_INCLUDE_DIRS} ${CC_INCLUDE_DIR} ${ZLIB_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${utf8cpp_INCLUDE_DIRS} ${concurrentqueue_INCLUDE_DIRS})
 
 IF(MSVC)
   target_compile_options(CopperServer PRIVATE /utf-8)

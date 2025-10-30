@@ -10,118 +10,116 @@
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins::processors_providers {
-    using namespace base_objects;
-
     //TODO
-    slot handle_furnace([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_furnace([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_shaped([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_shaped([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_shapeless([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_shapeless([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_transmute([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_transmute([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_special_armordye([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_special_armordye([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_special_bannerduplicate([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_special_bannerduplicate([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_special_bookcloning([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_special_bookcloning([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_special_firework_rocket([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_special_firework_rocket([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_special_firework_star([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_special_firework_star([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_special_firework_star_fade([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_special_firework_star_fade([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_special_mapcloning([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_special_mapcloning([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_special_mapextending([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_special_mapextending([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_special_repairitem([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_special_repairitem([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_special_shielddecoration([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_special_shielddecoration([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_special_shulkerboxcoloring([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_special_shulkerboxcoloring([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_special_tippedarrow([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_special_tippedarrow([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_special_suspiciousstew([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_special_suspiciousstew([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_crafting_decorated_pot([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_crafting_decorated_pot([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_smithing_transform([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_smithing_transform([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_smithing_trim([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_smithing_trim([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
-    slot handle_stonecutting([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
+    base_objects::slot handle_stonecutting([[maybe_unused]] const enbt::compound_const_ref& recipe, [[maybe_unused]] list_array<base_objects::slot*>& slots, [[maybe_unused]] uint32_t dim_x, [[maybe_unused]] uint32_t dim_z, [[maybe_unused]] const base_objects::command_context& context) {
         return std::nullopt;
     }
 
     //provides processor and registers default handles, custom handles can be added via api
-    struct recipe : public PluginAutoRegister<"processors_provider/recipe", recipe> {
-        void OnInitialization(const PluginRegistrationPtr&) override {
-            api::recipe::register_handler("minecraft:blasting", handle_furnace);
-            api::recipe::register_handler("minecraft:smelting", handle_furnace);
-            api::recipe::register_handler("minecraft:smoking", handle_furnace);
-            api::recipe::register_handler("minecraft:campfire_cooking", handle_furnace);
-            api::recipe::register_handler("minecraft:crafting_shaped", handle_crafting_shaped);
-            api::recipe::register_handler("minecraft:crafting_transmute", handle_crafting_transmute);
-            api::recipe::register_handler("minecraft:crafting_special_armordye", handle_crafting_special_armordye);
-            api::recipe::register_handler("minecraft:crafting_special_bannerduplicate", handle_crafting_special_bannerduplicate);
-            api::recipe::register_handler("minecraft:crafting_special_bookcloning", handle_crafting_special_bookcloning);
-            api::recipe::register_handler("minecraft:crafting_special_firework_rocket", handle_crafting_special_firework_rocket);
-            api::recipe::register_handler("minecraft:crafting_special_firework_star", handle_crafting_special_firework_star);
-            api::recipe::register_handler("minecraft:crafting_special_firework_star_fade", handle_crafting_special_firework_star_fade);
-            api::recipe::register_handler("minecraft:crafting_special_mapcloning", handle_crafting_special_mapcloning);
-            api::recipe::register_handler("minecraft:crafting_special_mapextending", handle_crafting_special_mapextending);
-            api::recipe::register_handler("minecraft:crafting_special_repairitem", handle_crafting_special_repairitem);
-            api::recipe::register_handler("minecraft:crafting_special_shielddecoration", handle_crafting_special_shielddecoration);
-            api::recipe::register_handler("minecraft:crafting_special_shulkerboxcoloring‌", handle_crafting_special_shulkerboxcoloring);
-            api::recipe::register_handler("minecraft:crafting_special_tippedarrow", handle_crafting_special_tippedarrow);
-            api::recipe::register_handler("minecraft:crafting_special_suspiciousstew", handle_crafting_special_suspiciousstew);
-            api::recipe::register_handler("minecraft:smithing_transform", handle_smithing_transform);
-            api::recipe::register_handler("minecraft:smithing_trim", handle_smithing_trim);
-            api::recipe::register_handler("minecraft:stonecutting", handle_stonecutting);
+    struct recipe : public plugin_auto_register<"processors_provider/recipe", recipe> {
+        void on_initialization(const plugin_registration_ptr&) override {
+            //api::recipe::register_handler("minecraft:blasting", handle_furnace);
+            //api::recipe::register_handler("minecraft:smelting", handle_furnace);
+            //api::recipe::register_handler("minecraft:smoking", handle_furnace);
+            //api::recipe::register_handler("minecraft:campfire_cooking", handle_furnace);
+            //api::recipe::register_handler("minecraft:crafting_shaped", handle_crafting_shaped);
+            //api::recipe::register_handler("minecraft:crafting_transmute", handle_crafting_transmute);
+            //api::recipe::register_handler("minecraft:crafting_special_armordye", handle_crafting_special_armordye);
+            //api::recipe::register_handler("minecraft:crafting_special_bannerduplicate", handle_crafting_special_bannerduplicate);
+            //api::recipe::register_handler("minecraft:crafting_special_bookcloning", handle_crafting_special_bookcloning);
+            //api::recipe::register_handler("minecraft:crafting_special_firework_rocket", handle_crafting_special_firework_rocket);
+            //api::recipe::register_handler("minecraft:crafting_special_firework_star", handle_crafting_special_firework_star);
+            //api::recipe::register_handler("minecraft:crafting_special_firework_star_fade", handle_crafting_special_firework_star_fade);
+            //api::recipe::register_handler("minecraft:crafting_special_mapcloning", handle_crafting_special_mapcloning);
+            //api::recipe::register_handler("minecraft:crafting_special_mapextending", handle_crafting_special_mapextending);
+            //api::recipe::register_handler("minecraft:crafting_special_repairitem", handle_crafting_special_repairitem);
+            //api::recipe::register_handler("minecraft:crafting_special_shielddecoration", handle_crafting_special_shielddecoration);
+            //api::recipe::register_handler("minecraft:crafting_special_shulkerboxcoloring‌", handle_crafting_special_shulkerboxcoloring);
+            //api::recipe::register_handler("minecraft:crafting_special_tippedarrow", handle_crafting_special_tippedarrow);
+            //api::recipe::register_handler("minecraft:crafting_special_suspiciousstew", handle_crafting_special_suspiciousstew);
+            //api::recipe::register_handler("minecraft:smithing_transform", handle_smithing_transform);
+            //api::recipe::register_handler("minecraft:smithing_trim", handle_smithing_trim);
+            //api::recipe::register_handler("minecraft:stonecutting", handle_stonecutting);
         }
     };
 }

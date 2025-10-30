@@ -11,8 +11,8 @@
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins::processors_providers {
-    struct loot_table_pool_entry : public PluginAutoRegister<"processors_provider/loot_table_pool_entry", loot_table_pool_entry> {
-        void OnInitialization(const PluginRegistrationPtr&) override {
+    struct loot_table_pool_entry : public plugin_auto_register<"processors_provider/loot_table_pool_entry", loot_table_pool_entry> {
+        void on_initialization(const plugin_registration_ptr&) override {
         }
     };
 }

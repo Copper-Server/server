@@ -12,11 +12,11 @@
 #include <library/list_array.hpp>
 #include <optional>
 #include <src/base_objects/chat.hpp>
+#include <src/base_objects/component.hpp>
 #include <src/base_objects/dye_color.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/util/readers.hpp>
 #include <string>
-#include <src/base_objects/component.hpp>
 
 namespace enbt::io_helper {
     class value_write_stream;
@@ -51,11 +51,20 @@ namespace copper_server::base_objects {
         uint32_t id;
 
         item_id_t(const std::string& id);
-        item_id_t(uint32_t id);
-        item_id_t(const item_id_t& id);
-        item_id_t();
 
-        item_id_t& operator=(const item_id_t& id);
+        constexpr item_id_t(uint32_t id)
+            : id(id) {}
+
+        constexpr item_id_t(const item_id_t& id)
+            : id(id.id) {}
+
+        constexpr item_id_t()
+            : id(0) {}
+
+        constexpr item_id_t& operator=(const item_id_t& copy) {
+            id = copy.id;
+            return *this;
+        }
 
         const std::string& to_name() const;
         static_slot_data& get_data() const;
@@ -63,8 +72,18 @@ namespace copper_server::base_objects {
 
     struct slot_data {
         std::unordered_map<int32_t, component> components;
-        int32_t count = 0;
         int32_t id = 0;
+        int32_t count = 0;
+
+        slot_data();
+        slot_data(slot_data&& move) noexcept;
+        slot_data(const slot_data& copy);
+
+        slot_data(std::unordered_map<int32_t, component>&& components, int32_t id = 0, int32_t count = 0) noexcept;
+        slot_data(const std::unordered_map<int32_t, component>& components, int32_t id = 0, int32_t count = 0);
+        slot_data& operator=(const slot_data&);
+        slot_data& operator=(slot_data&&) noexcept;
+
 
         template <class T>
         T& get_component() {
@@ -86,7 +105,7 @@ namespace copper_server::base_objects {
 
         template <class T>
         void remove_component() {
-            return components.erase(T::item_id::value);
+            components.erase(T::item_id::value);
         }
 
         void add_component(component&& copy) {
@@ -140,6 +159,7 @@ namespace copper_server::base_objects {
         static_slot_data& get_slot_data() const;
 
         static void enumerate_slot_data(const std::function<void(static_slot_data&)>& fn);
+        static list_array<int32_t> get_slot_data_ids();
 
 
         enbt::compound to_enbt() const;

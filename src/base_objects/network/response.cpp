@@ -6,8 +6,10 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <cmath>
 #include <library/enbt/enbt.hpp>
 #include <src/base_objects/network/response.hpp>
+#include <src/util/calculations.hpp>
 
 namespace copper_server::base_objects::network {
     namespace util {
@@ -69,6 +71,33 @@ namespace copper_server::base_objects::network {
 
     void response::item::write_id(uint8_t id) {
         _write_value_tem(id, data, std::endian::little);
+    }
+
+    void response::item::write_value(velocity val) {
+        static constexpr double threshold = double(1.0) / 32766;
+        double x = copper_server::util::minecraft::packets::velocity_clamp(val.x);
+        double y = copper_server::util::minecraft::packets::velocity_clamp(val.y);
+        double z = copper_server::util::minecraft::packets::velocity_clamp(val.z);
+
+        double max_value = std::max({std::abs(x), std::abs(y), std::abs(z)});
+        if (max_value < threshold) {
+            write_value((uint8_t)0);
+        } else {
+            int64_t rounded = (int64_t)std::ceil(max_value);
+            if (rounded == 0)
+                rounded = 1;
+            bool extended_mark = (rounded & 3L) != rounded;
+            int64_t scaling_factor = extended_mark ? rounded & 3 | 4 : rounded;
+            int64_t x_quantized = int64_t(copper_server::util::minecraft::packets::velocity_round(x / rounded)) << 3;
+            int64_t y_quantized = int64_t(copper_server::util::minecraft::packets::velocity_round(y / rounded)) << 18;
+            int64_t z_quantized = int64_t(copper_server::util::minecraft::packets::velocity_round(z / rounded)) << 33;
+            int64_t compacted = scaling_factor | x_quantized | y_quantized | z_quantized;
+            write_value(uint8_t(compacted & 0xFF));
+            write_value(uint8_t((compacted >> 8) & 0xFF));
+            write_value(int32_t(compacted >> 16));
+            if (extended_mark)
+                write_var32((int32_t)(rounded >> 2));
+        }
     }
 
     void response::item::write_value(const enbt::raw_uuid& val) {
@@ -181,8 +210,11 @@ namespace copper_server::base_objects::network {
     }
 
     void response::item::write_direct(const list_array<int8_t>& value) {
-        for (auto& it : value)
-            write_value(it);
+        if (value.need_commit()) {
+            for (auto& it : value)
+                write_value(it);
+        } else
+            data.push_back((uint8_t*)value.data(), value.size());
     }
 
     void response::item::write_direct(const list_array<int16_t>& value, std::endian endian) {
@@ -215,10 +247,16 @@ namespace copper_server::base_objects::network {
     response::response() = default;
 
     response::response(const item& copy)
-        : data({copy}), do_disconnect(false), do_disconnect_after_send(false), valid_till(0) {}
+        : do_disconnect(false), do_disconnect_after_send(false), valid_till(0) {
+        data.reserve(1);
+        data.emplace_back(copy);
+    }
 
     response::response(item&& move)
-        : data({std::move(move)}), do_disconnect(false), do_disconnect_after_send(false), valid_till(0) {}
+        : do_disconnect(false), do_disconnect_after_send(false), valid_till(0) {
+        data.reserve(1);
+        data.emplace_back(std::move(move));
+    }
 
     response::response(response&& move)
         : data(std::move(move.data)), do_disconnect(move.do_disconnect), do_disconnect_after_send(move.do_disconnect_after_send), valid_till(move.valid_till) {}

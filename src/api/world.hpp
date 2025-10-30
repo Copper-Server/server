@@ -10,13 +10,12 @@
 #define SRC_API_WORLD
 
 #include <functional>
+#include <memory>
 #include <src/storage/world_data.hpp>
 
 namespace copper_server::base_objects {
-    struct SharedClientData;
-    template <typename T>
-    class atomic_holder;
-    using client_data_holder = atomic_holder<SharedClientData>;
+    struct shared_client_data;
+    using client_data_holder = std::shared_ptr<shared_client_data>;
 }
 
 namespace copper_server::api::world {
@@ -69,39 +68,42 @@ namespace copper_server::api::world {
 
 
     //gets client world, checks if world exists, returns pair of id and name, if world does not exists then returns default world and sets default position for player in new world
-    std::pair<int32_t, std::string> prepare_world(base_objects::SharedClientData& client_ref);
-    void sync_settings(base_objects::SharedClientData& client_ref); //sends world settings to client
+    std::pair<int32_t, std::string> prepare_world(base_objects::shared_client_data& client_ref);
+    void sync_settings(base_objects::shared_client_data& client_ref); //sends world settings to client
 
     void transfer(
-        base_objects::entity_ref& entity,
+        api::ecs::entity entity,
         int32_t world_id,
-        util::VECTOR position,
-        util::ANGLE_DEG rotation,
-        util::VECTOR velocity,
+        util::vector position,
+        util::angle_deg rotation,
+        util::vector velocity,
         std::function<void(storage::world_data& world)> callback = nullptr
     );
 
     void transfer(
-        base_objects::entity_ref& entity,
+        api::ecs::entity entity,
         int32_t world_id,
-        util::VECTOR position,
-        util::ANGLE_DEG rotation,
+        util::vector position,
+        util::angle_deg rotation,
         std::function<void(storage::world_data& world)> callback = nullptr
     );
 
     void transfer(
-        base_objects::entity_ref& entity,
+        api::ecs::entity entity,
         int32_t world_id,
-        util::VECTOR position,
+        util::vector position,
         std::function<void(storage::world_data& world)> callback = nullptr
     );
 
-    void register_entity(int32_t world_id, base_objects::entity_ref& entity_ref);
-    void unregister_entity(int32_t world_id, base_objects::entity_ref& entity_ref);
+    void register_entity(int32_t world_id, api::ecs::entity entity_ref);
+    void unregister_entity(int32_t world_id, api::ecs::entity entity_ref);
 
     base_objects::events::event<int32_t>& on_world_loaded();
     base_objects::events::event<int32_t>& on_world_unloaded();
     base_objects::events::event<double>& on_tps_changed();
+    base_objects::events::event<uint64_t>& on_tick();
+
+    base_objects::events::event<uint64_t>& ticking_clock(uint64_t notify_each = 1); //0 and 1 is same ticking speed, used global ticking speed
 
     bool registered();
 }

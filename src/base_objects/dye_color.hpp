@@ -8,7 +8,7 @@
  */
 #ifndef SRC_BASE_OBJECTS_DYE_COLOR
 #define SRC_BASE_OBJECTS_DYE_COLOR
-#include <string>
+#include <cstdint>
 
 namespace copper_server::base_objects{
     enum class dye_color : uint8_t {

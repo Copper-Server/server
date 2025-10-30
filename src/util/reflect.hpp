@@ -8,6 +8,7 @@
  */
 #ifndef SRC_UTIL_REFLECT
 #define SRC_UTIL_REFLECT
+#include <array>
 #include <charconv>
 #include <string>
 
@@ -88,7 +89,7 @@ namespace copper_server::reflect {
     consteval std::string_view get_pretty_type_name() {
         constexpr std::string_view name = type_name<T>();
         if (name == "enbt::value")
-            return "NBT";
+            return "nbt";
         if (name == "enbt::raw_uuid")
             return "UUID";
         if (auto it = name.rfind("::"); it != name.npos) {

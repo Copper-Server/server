@@ -15,7 +15,6 @@
 #include <src/api/network/tcp.hpp>
 #include <src/base_objects/network/response.hpp>
 #include <src/base_objects/network/tcp/client.hpp>
-#include <src/base_objects/ptr_optional.hpp>
 #include <src/util/readers.hpp>
 #include <string>
 
@@ -32,7 +31,7 @@ namespace copper_server::build_in_plugins::network::tcp {
 
         //this function should be called before using keep_alive_solution, this callback will be called
         //when keep alive packet is would be sent
-        void set_callback(const std::function<void(int64_t, base_objects::SharedClientData&)>& fun);
+        void set_callback(const std::function<void(int64_t, base_objects::shared_client_data&)>& fun);
         std::chrono::system_clock::duration got_valid_keep_alive(int64_t check);
         void make_keep_alive_packet(); //could return empty packet if keep alive already requested
 

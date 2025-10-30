@@ -12,7 +12,7 @@ namespace copper_server::util {
 #pragma region ENBT_TO_NBT
 
     template <class T>
-    void NBT::insertValue(T val, size_t max) {
+    void nbt::insertValue(T val, size_t max) {
         val = enbt::endian_helpers::convert_endian(std::endian::big, val);
         uint8_t* proxy = (uint8_t*)&val;
         for (size_t i = 0; i < max; i++)
@@ -20,7 +20,7 @@ namespace copper_server::util {
     }
 
     template <class Target, class T>
-    void NBT::insertValue(T val, size_t max) {
+    void nbt::insertValue(T val, size_t max) {
         Target tmp = (Target)val;
         if constexpr (!std::is_same<Target, T>::value) {
             if constexpr (std::is_unsigned_v<Target> == std::is_unsigned_v<T>) {
@@ -42,7 +42,7 @@ namespace copper_server::util {
     }
 
     template <class T>
-    T NBT::uncheckedExtractValue(const uint8_t* data, size_t& i) {
+    T nbt::uncheckedExtractValue(const uint8_t* data, size_t& i) {
         uint8_t tmp[sizeof(T)];
         for (size_t j = 0; j < sizeof(T); j++)
             tmp[j] = data[i++];
@@ -50,14 +50,14 @@ namespace copper_server::util {
     }
 
     template <class T>
-    T NBT::extractValue(const uint8_t* data, size_t& i, size_t max_size) {
+    T nbt::extractValue(const uint8_t* data, size_t& i, size_t max_size) {
         if (i + sizeof(T) >= max_size)
             throw std::out_of_range("Out of bounds");
         return uncheckedExtractValue<T>(data, i);
     }
 
     template <class T>
-    enbt::value NBT::extractArray(const uint8_t* data, size_t& i, size_t max_size) {
+    enbt::value nbt::extractArray(const uint8_t* data, size_t& i, size_t max_size) {
         int32_t len = extractValue<int32_t>(data, i, max_size);
         if (i + sizeof(T) * len >= max_size)
             throw std::out_of_range("Out of bounds");
@@ -68,12 +68,12 @@ namespace copper_server::util {
         return enbt::value(ret, enbt::type_id(enbt::type::array, enbt::type_len::Default));
     }
 
-    void NBT::insertString(const char* val, size_t max) {
+    void nbt::insertString(const char* val, size_t max) {
         for (size_t i = 0; i < max; i++)
             nbt_data.push_back((uint8_t)val[i]);
     }
 
-    void NBT::IntegerInsert(const enbt::value& val, bool typ_ins) {
+    void nbt::IntegerInsert(const enbt::value& val, bool typ_ins) {
         switch (val.get_type_len()) {
         case enbt::type_len::Tiny:
             if (typ_ins)
@@ -111,7 +111,7 @@ namespace copper_server::util {
         }
     }
 
-    void NBT::FloatingInsert(const enbt::value& val, bool typ_ins) {
+    void nbt::FloatingInsert(const enbt::value& val, bool typ_ins) {
         switch (val.get_type_len()) {
         case enbt::type_len::Default:
             if (typ_ins)
@@ -128,16 +128,16 @@ namespace copper_server::util {
         }
     }
 
-    void NBT::BuildCompoundItem(const std::string& c_name, const enbt::value& comp, bool compress) {
+    void nbt::BuildCompoundItem(const std::string& c_name, const enbt::value& comp, bool compress) {
         if (c_name.size() > UINT16_MAX)
-            throw std::out_of_range("enbt::value string too big to fit in NBT");
+            throw std::out_of_range("enbt::value string too big to fit in nbt");
         InsertType(comp.type_id());
         insertValue((uint16_t)c_name.size());
         insertString(c_name.data(), c_name.size());
         RecursiveBuilder(comp, false, "", compress, false);
     }
 
-    void NBT::BuildCompound(const std::string& c_name, const enbt::value& comp, bool compress, bool insert_name) {
+    void nbt::BuildCompound(const std::string& c_name, const enbt::value& comp, bool compress, bool insert_name) {
         if (insert_name) {
             insertValue((uint16_t)c_name.size());
             insertString(c_name.data(), c_name.size());
@@ -156,7 +156,7 @@ namespace copper_server::util {
         InsertType(enbt::type::none);
     }
 
-    void NBT::InsertType(enbt::type_id t) {
+    void nbt::InsertType(enbt::type_id t) {
         switch (t.type) {
         case enbt::type::none:
             nbt_data.push_back(0);
@@ -210,7 +210,7 @@ namespace copper_server::util {
         }
     }
 
-    void NBT::BuildBaseIntArray(int32_t len, const enbt::value& arr, enbt::type_id base_id) {
+    void nbt::BuildBaseIntArray(int32_t len, const enbt::value& arr, enbt::type_id base_id) {
         insertValue(len);
         for (int32_t i = 0; i < len; i++) {
             if (arr[i].type_id() != base_id)
@@ -219,7 +219,7 @@ namespace copper_server::util {
         }
     }
 
-    void NBT::BuildSimpleIntArray(int32_t len, const enbt::value& arr, enbt::type_id base_id) {
+    void nbt::BuildSimpleIntArray(int32_t len, const enbt::value& arr, enbt::type_id base_id) {
         insertValue(len);
         for (int32_t i = 0; i < len; i++) {
             auto val = arr.get_index(i);
@@ -229,7 +229,7 @@ namespace copper_server::util {
         }
     }
 
-    void NBT::BuildArray(int32_t len, const enbt::value& arr, enbt::type_id base_id, bool compress) {
+    void nbt::BuildArray(int32_t len, const enbt::value& arr, enbt::type_id base_id, bool compress) {
         insertValue(len);
         if (arr.is_sarray()) {
             for (int32_t i = 0; i < len; i++) {
@@ -257,7 +257,7 @@ namespace copper_server::util {
         }
     }
 
-    void NBT::BuildArray(const enbt::value& enbt, bool insert_type, bool compress) {
+    void nbt::BuildArray(const enbt::value& enbt, bool insert_type, bool compress) {
         if (!enbt.size()) {
             if (insert_type)
                 nbt_data.push_back(9);
@@ -309,7 +309,7 @@ namespace copper_server::util {
         BuildArray((int32_t)enbt.size(), enbt, base_type, compress);
     }
 
-    void NBT::RecursiveBuilder(const enbt::value& enbt, bool insert_type, const std::string& name, bool compress, bool insert_name) {
+    void nbt::RecursiveBuilder(const enbt::value& enbt, bool insert_type, const std::string& name, bool compress, bool insert_name) {
         switch (enbt.get_type()) {
         case enbt::type::none:
             if (insert_type)
@@ -361,7 +361,7 @@ namespace copper_server::util {
 #pragma endregion
 #pragma region NBT_TO_ENBT
 
-    enbt::value NBT::RecursiveExtractor_1(uint8_t type, const uint8_t* data, size_t& i, size_t max_size) {
+    enbt::value nbt::RecursiveExtractor_1(uint8_t type, const uint8_t* data, size_t& i, size_t max_size) {
         switch (type) {
         case 0: //end
             return enbt::value();
@@ -443,7 +443,7 @@ namespace copper_server::util {
         }
     }
 
-    enbt::value NBT::RecursiveExtractor(const uint8_t* data, size_t& i, size_t max_size) {
+    enbt::value nbt::RecursiveExtractor(const uint8_t* data, size_t& i, size_t max_size) {
         if (max_size == 0)
             return enbt::value();
         if (data[0] == 10) {
@@ -455,7 +455,7 @@ namespace copper_server::util {
         return RecursiveExtractor_1(data[i++], data, i, max_size);
     }
 
-    enbt::value NBT::RecursiveExtractorNetwork(const uint8_t* data, size_t& i, size_t max_size) {
+    enbt::value nbt::RecursiveExtractorNetwork(const uint8_t* data, size_t& i, size_t max_size) {
         if (max_size == 0)
             return enbt::value();
         return RecursiveExtractor_1(data[i++], data, i, max_size);
@@ -463,45 +463,45 @@ namespace copper_server::util {
 
 #pragma endregion
 
-    NBT::NBT() {}
+    nbt::nbt() {}
 
-    enbt::value NBT::readNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size) {
+    enbt::value nbt::readNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size) {
         nbt_size = 0;
         return RecursiveExtractor(data, nbt_size, max_size);
     }
 
-    NBT NBT::readNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress, const std::string& entry_name) {
+    nbt nbt::readNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress, const std::string& entry_name) {
         return build(readNBT_asENBT(data, max_size, nbt_size), compress, entry_name);
     }
 
-    enbt::value NBT::readNetworkNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size) {
+    enbt::value nbt::readNetworkNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size) {
         nbt_size = 0;
         return RecursiveExtractorNetwork(data, nbt_size, max_size);
     }
 
-    NBT NBT::readNetworkNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress, const std::string& entry_name) {
+    nbt nbt::readNetworkNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress, const std::string& entry_name) {
         return build(readNetworkNBT_asENBT(data, max_size, nbt_size), compress, entry_name);
     }
 
-    NBT::NBT(NBT&& move)
+    nbt::nbt(nbt&& move)
         : nbt_data(std::move(move)) {}
 
-    NBT::~NBT() = default;
+    nbt::~nbt() = default;
 
-    NBT NBT::build(const enbt::value& enbt, bool compress, const std::string& entry_name) {
-        NBT ret;
+    nbt nbt::build(const enbt::value& enbt, bool compress, const std::string& entry_name) {
+        nbt ret;
         ret.RecursiveBuilder(enbt, true, entry_name, compress, true);
         return ret;
     }
 
-    NBT NBT::build(const list_array<uint8_t>& data) {
-        NBT ret;
+    nbt nbt::build(const list_array<uint8_t>& data) {
+        nbt ret;
         ret.nbt_data = data;
         return ret;
     }
 
-    NBT NBT::build_network(const list_array<uint8_t>& data) {
-        NBT ret;
+    nbt nbt::build_network(const list_array<uint8_t>& data) {
+        nbt ret;
         ret.nbt_data = data;
         uint8_t tmp[] = {0, 0};
         if (ret.nbt_data[0] == 10)
@@ -510,15 +510,15 @@ namespace copper_server::util {
         return ret;
     }
 
-    NBT::operator list_array<uint8_t>() const {
+    nbt::operator list_array<uint8_t>() const {
         return nbt_data;
     }
 
-    list_array<uint8_t> NBT::get_as_normal() const {
+    list_array<uint8_t> nbt::get_as_normal() const {
         return nbt_data;
     }
 
-    list_array<uint8_t> NBT::get_as_network() const {
+    list_array<uint8_t> nbt::get_as_network() const {
         if (nbt_data.size())
             if (nbt_data[0] == 10) {
                 list_array<uint8_t> ret = nbt_data;
@@ -528,12 +528,12 @@ namespace copper_server::util {
         return nbt_data;
     }
 
-    enbt::value NBT::get_as_enbt() const {
+    enbt::value nbt::get_as_enbt() const {
         size_t i = 0;
         return RecursiveExtractor(nbt_data.data(), i, nbt_data.size());
     }
 
-    std::string NBT::get_entry_name() const {
+    std::string nbt::get_entry_name() const {
         size_t i = 0;
         const uint8_t* data = nbt_data.data();
         if (data[0] == 10) {
@@ -545,7 +545,7 @@ namespace copper_server::util {
             return "";
     }
 
-    enbt::value NBT::extract_from_array(const uint8_t* arr, size_t& result, size_t max_size) {
+    enbt::value nbt::extract_from_array(const uint8_t* arr, size_t& result, size_t max_size) {
         result = 0;
         return RecursiveExtractor(arr, result, max_size);
     }

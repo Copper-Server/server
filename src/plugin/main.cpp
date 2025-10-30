@@ -35,10 +35,9 @@ namespace copper_server {
         api::log::fatal(source, message);
     }
 
-
-    void unregisterEvery(PluginRegistrationPtr& plugin, std::unordered_map<std::string, PluginRegistrationPtr>& container) {
+    void unregisterEvery(plugin_registration_ptr& plugin, std::unordered_map<std::string, plugin_registration_ptr>& container) {
         for (
-            std::unordered_map<std::string, PluginRegistrationPtr>::iterator it = container.begin();
+            std::unordered_map<std::string, plugin_registration_ptr>::iterator it = container.begin();
             it != container.end();
             it = std::find_if(container.begin(), container.end(), [&plugin](auto& item) {
                 return item.second == plugin;
@@ -47,7 +46,7 @@ namespace copper_server {
             container.erase(it);
     }
 
-    void PluginManagement::protected_values_t::___::unregister(PluginRegistrationPtr& plugin) {
+    void plugin_management_system::protected_values_t::___::unregister(plugin_registration_ptr& plugin) {
         //login
         unregisterEvery(plugin, login.plugins);
         unregisterEvery(plugin, login.cookies);
@@ -59,9 +58,11 @@ namespace copper_server {
         play.on_init.remove(plugin);
         unregisterEvery(plugin, play.plugins);
         unregisterEvery(plugin, play.cookies);
+
+        ecs_system_providers.erase(plugin->get_name());
     }
 
-    void PluginManagement::registerPluginOn(PluginRegistrationPtr plugin, registration_on on) {
+    void plugin_management_system::register_plugin_on(plugin_registration_ptr plugin, registration_on on) {
         protected_values.set([&](protected_values_t& vals) {
             switch (on) {
             case registration_on::login:
@@ -78,7 +79,13 @@ namespace copper_server {
         });
     }
 
-    void PluginManagement::bindPluginOn(const std::string& channel, PluginRegistrationPtr plugin, registration_on on) {
+    void plugin_management_system::register_plugin_ecs_system(plugin_registration_ptr plugin) {
+        protected_values.set([&](protected_values_t& vals) {
+            vals.registration.ecs_system_providers[plugin->get_name()] = plugin;
+        });
+    }
+
+    void plugin_management_system::bind_plugin_on(const std::string& channel, plugin_registration_ptr plugin, registration_on on) {
         protected_values.set([&](protected_values_t& vals) {
             switch (on) {
             case registration_on::login:
@@ -96,7 +103,7 @@ namespace copper_server {
         });
     }
 
-    void PluginManagement::bindPluginCookiesOn(const std::string& cookie_id, PluginRegistrationPtr plugin, registration_on on) {
+    void plugin_management_system::bind_plugin_cookies_on(const std::string& cookie_id, plugin_registration_ptr plugin, registration_on on) {
         protected_values.set([&](protected_values_t& vals) {
             switch (on) {
             case registration_on::login:
@@ -114,8 +121,8 @@ namespace copper_server {
         });
     }
 
-    PluginRegistrationPtr PluginManagement::get_bind_plugin(registration_on on, const std::string& channel) const {
-        return protected_values.get([&](const protected_values_t& vals) -> PluginRegistrationPtr {
+    plugin_registration_ptr plugin_management_system::get_bind_plugin(registration_on on, const std::string& channel) const {
+        return protected_values.get([&](const protected_values_t& vals) -> plugin_registration_ptr {
             switch (on) {
             case registration_on::login: {
                 auto it = vals.registration.login.plugins.find(channel);
@@ -144,8 +151,8 @@ namespace copper_server {
         });
     }
 
-    PluginRegistrationPtr PluginManagement::get_bind_cookies(registration_on on, const std::string& cookie_id) const {
-        return protected_values.get([&](const protected_values_t& vals) -> PluginRegistrationPtr {
+    plugin_registration_ptr plugin_management_system::get_bind_cookies(registration_on on, const std::string& cookie_id) const {
+        return protected_values.get([&](const protected_values_t& vals) -> plugin_registration_ptr {
             switch (on) {
             case registration_on::login: {
                 auto it = vals.registration.login.plugins.find(cookie_id);
@@ -174,18 +181,20 @@ namespace copper_server {
         });
     }
 
-    void PluginManagement::registerPlugin(const std::string& name, PluginRegistrationPtr plugin) {
+    void plugin_management_system::register_plugin(plugin_registration_ptr plugin) {
+        if (!plugin)
+            return;
         protected_values.set(
             [&](protected_values_t& vals) {
-                vals.plugins[name] = plugin;
+                vals.plugins[plugin->get_name()] = plugin;
             }
         );
-        plugin->OnRegister(plugin);
+        plugin->on_register(plugin);
     }
 
-    PluginRegistrationPtr PluginManagement::getPlugin(const std::string& name) const {
+    plugin_registration_ptr plugin_management_system::get_plugin(const std::string& name) const {
         return protected_values.get(
-            [&](const protected_values_t& vals) -> PluginRegistrationPtr {
+            [&](const protected_values_t& vals) -> plugin_registration_ptr {
                 auto it = vals.plugins.find(name);
                 if (it == vals.plugins.end())
                     return nullptr;
@@ -194,8 +203,8 @@ namespace copper_server {
         );
     }
 
-    void PluginManagement::unloadPlugin(const std::string& name) {
-        PluginRegistrationPtr plugin;
+    void plugin_management_system::unload_plugin(const std::string& name) {
+        plugin_registration_ptr plugin;
         protected_values.set(
             [&](protected_values_t& vals) {
                 auto it = vals.plugins.find(name);
@@ -208,16 +217,16 @@ namespace copper_server {
         );
         if (!plugin->is_loaded)
             return;
-        plugin->OnUnload(plugin);
-        plugin->OnPostUnload(plugin);
-        plugin->OnUnloadComplete(plugin);
+        plugin->on_unload(plugin);
+        plugin->on_post_unload(plugin);
+        plugin->on_unload_complete(plugin);
         plugin->is_loaded = false;
         plugin->clean_up_registered_events();
-        plugin->OnUnregister(plugin);
+        plugin->on_unregister(plugin);
     }
 
-    list_array<PluginRegistrationPtr> PluginManagement::registeredPlugins() const {
-        list_array<PluginRegistrationPtr> result;
+    list_array<plugin_registration_ptr> plugin_management_system::registered_plugins() const {
+        list_array<plugin_registration_ptr> result;
         return protected_values.get(
             [&](const protected_values_t& vals) {
                 result.reserve(vals.plugins.size());
@@ -228,52 +237,70 @@ namespace copper_server {
         );
     }
 
-    void PluginManagement::autoRegister() {
+    //pass empty to register all
+    void plugin_management_system::ecs_registrators(const list_array<std::string>& names, api::ecs::scheduler& sched) const {
+        protected_values.get(
+            [&](const protected_values_t& vals) {
+                if (names.empty()) {
+                    for (auto& [name, plugin] : vals.registration.ecs_system_providers)
+                        plugin->register_systems(sched);
+                } else {
+                    for (auto& name : names) {
+                        auto it = vals.registration.ecs_system_providers.find(name);
+                        if (it != vals.registration.ecs_system_providers.end())
+                            it->second->register_systems(sched);
+                    }
+                }
+            }
+        );
+    }
+
+    void plugin_management_system::auto_register() {
         for (auto& [name, plugin] : __internal__::registration_list()) {
             if (!api::configuration::get().disabled_plugins.contains(name))
-                registerPlugin(name, plugin->construct());
+                register_plugin(plugin->construct());
         }
         __internal__::registration_list().clear();
     }
 
-    void PluginManagement::callInitialization() {
-        std::unordered_map<std::string, PluginRegistrationPtr> plugins;
+    void plugin_management_system::call_initialization() {
+        std::unordered_map<std::string, plugin_registration_ptr> plugins;
         protected_values.get(
             [&](const protected_values_t& vals) {
                 plugins = vals.plugins;
             }
         );
         for (auto& [name, plugin] : plugins)
-            plugin->OnInitialization(plugin);
+            plugin->on_initialization(plugin);
     }
 
-    void PluginManagement::callLoad() {
-        std::unordered_map<std::string, PluginRegistrationPtr> plugins;
+    void plugin_management_system::call_load() {
+        std::unordered_map<std::string, plugin_registration_ptr> plugins;
         protected_values.get(
             [&](const protected_values_t& vals) {
                 plugins = vals.plugins;
             }
         );
 
-        future::forEach(plugins, [](auto& plugin) {
+        fast_task::future_tool::for_each(plugins, [](auto& plugin) {
             if (!plugin.second->is_loaded)
-                plugin.second->OnLoad(plugin.second);
+                plugin.second->on_load(plugin.second);
         })->wait();
 
-        future::forEach(plugins, [](auto& plugin) {
+        fast_task::future_tool::for_each(plugins, [](auto& plugin) {
             if (!plugin.second->is_loaded)
-                plugin.second->OnPostLoad(plugin.second);
+                plugin.second->on_post_load(plugin.second);
         })->wait();
 
-        future::forEach(plugins, [](auto& plugin) {
+        fast_task::future_tool::for_each(plugins, [](auto& plugin) {
             if (!plugin.second->is_loaded)
-                plugin.second->OnLoadComplete(plugin.second);
+                plugin.second->on_load_complete(plugin.second);
             plugin.second->is_loaded = true;
         })->wait();
     }
 
-    void PluginManagement::callUnload() {
-        std::unordered_map<std::string, PluginRegistrationPtr> plugins;
+    void plugin_management_system::call_unload() {
+        std::unordered_map<std::string, plugin_registration_ptr> plugins;
         protected_values.get(
             [&](const protected_values_t& vals) {
                 plugins = vals.plugins;
@@ -281,23 +308,23 @@ namespace copper_server {
         );
         for (auto& [name, plugin] : plugins)
             if (plugin->is_loaded)
-                plugin->OnUnload(plugin);
+                plugin->on_unload(plugin);
 
         for (auto& [name, plugin] : plugins)
             if (plugin->is_loaded)
-                plugin->OnPostUnload(plugin);
+                plugin->on_post_unload(plugin);
 
         for (auto& [name, plugin] : plugins) {
             if (plugin->is_loaded) {
-                plugin->OnUnloadComplete(plugin);
+                plugin->on_unload_complete(plugin);
                 plugin->clean_up_registered_events();
                 plugin->is_loaded = false;
             }
         }
     }
 
-    void PluginManagement::callFaultUnload() {
-        std::unordered_map<std::string, PluginRegistrationPtr> plugins;
+    void plugin_management_system::call_fault_unload() {
+        std::unordered_map<std::string, plugin_registration_ptr> plugins;
         protected_values.get(
             [&](const protected_values_t& vals) {
                 plugins = vals.plugins;
@@ -306,13 +333,13 @@ namespace copper_server {
         for (auto& [name, plugin] : plugins) {
             if (plugin->is_loaded) {
                 plugin->is_loaded = false;
-                plugin->OnFaultUnload(plugin);
+                plugin->on_fault_unload(plugin);
                 plugin->clean_up_registered_events();
             }
         }
     }
 
-    void PluginManagement::unregisterAll() {
+    void plugin_management_system::unregister_all() {
         protected_values.set(
             [&](protected_values_t& vals) {
                 vals.plugins.clear();
@@ -320,5 +347,5 @@ namespace copper_server {
         );
     }
 
-    PluginManagement pluginManagement;
+    plugin_management_system plugin_management;
 }

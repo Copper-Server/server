@@ -36,7 +36,7 @@ namespace copper_server::storage {
         _is_loaded = true;
     }
 
-    void list_storage::add(const std::string& set_value) {
+    bool list_storage::add(const std::string& set_value) {
         bool save = false;
         data.set([&](auto& value) {
             if (!value.contains(set_value)) {
@@ -54,6 +54,7 @@ namespace copper_server::storage {
             file << set_value << std::endl;
             file.flush();
         }
+        return save;
     }
 
     bool list_storage::contains(const std::string& check_value) {
@@ -62,7 +63,7 @@ namespace copper_server::storage {
         });
     }
 
-    void list_storage::remove(const std::string& rem_value) {
+    bool list_storage::remove(const std::string& rem_value) {
         bool save = false;
         data.set([&](auto& value) {
             save = value.remove(rem_value);
@@ -75,6 +76,7 @@ namespace copper_server::storage {
                     file << line << '\n';
             });
         }
+        return save;
     }
 
     list_array<std::string> list_storage::entrys(size_t max_items, bool& max_reached) {

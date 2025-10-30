@@ -13,10 +13,10 @@
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <optional>
+#include <src/api/packets/types.hpp>
 #include <src/base_objects/box.hpp>
 #include <src/base_objects/chat.hpp>
 #include <src/base_objects/dye_color.hpp>
-#include <src/base_objects/packets_help.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/util/cts.hpp>
 #include <src/util/readers.hpp>
@@ -140,14 +140,14 @@ namespace copper_server::base_objects {
 
         std::string suffix;
         list_array<override_t> overrides;
-        Chat description;
+        base_objects::chat description;
         bool operator==(const trim_material& other) const = default;
     };
 
     struct trim_pattern {
         std::string asset_name;
         var_int32::item template_item;
-        Chat description;
+        base_objects::chat description;
         bool decal;
         bool operator==(const trim_pattern& other) const = default;
     };
@@ -156,13 +156,13 @@ namespace copper_server::base_objects {
         or_<var_int32::sound_event, sound_event> sound;
         float sound_range;
         float instrument_range;
-        Chat description;
+        base_objects::chat description;
         bool operator==(const instrument& other) const = default;
     };
 
     struct jukebox_song {
         or_<var_int32::sound_event, sound_event> sound;
-        Chat description;
+        base_objects::chat description;
         float duration;
         var_int32 output; //redstone
         bool operator==(const jukebox_song& other) const = default;
@@ -208,12 +208,12 @@ namespace copper_server::base_objects {
         };
 
         struct custom_name : public enum_item<5> {
-            Chat name;
+            base_objects::chat name;
             bool operator==(const custom_name& other) const = default;
         };
 
         struct item_name : public enum_item<6> {
-            Chat name;
+            base_objects::chat name;
             bool operator==(const item_name& other) const = default;
         };
 
@@ -223,7 +223,7 @@ namespace copper_server::base_objects {
         };
 
         struct lore : public enum_item<8> {
-            list_array<Chat> lines;
+            list_array<base_objects::chat> lines;
             bool operator==(const lore& other) const = default;
         };
 
@@ -241,7 +241,6 @@ namespace copper_server::base_objects {
         };
 
         struct enchantments : public enum_item<10> {
-
             struct enchantment {
                 var_int32::enchantment id;
                 var_int32 level;
@@ -253,7 +252,6 @@ namespace copper_server::base_objects {
         };
 
         struct can_place_on : public enum_item<11> {
-
             struct property {
                 std::string name;
 
@@ -281,7 +279,6 @@ namespace copper_server::base_objects {
         };
 
         struct can_break : public enum_item<12> {
-
             struct property {
                 std::string name;
 
@@ -309,7 +306,6 @@ namespace copper_server::base_objects {
         };
 
         struct attribute_modifiers : public enum_item<13> {
-
             struct attribute {
                 enum class operation_e {
                     add = 0,
@@ -508,7 +504,6 @@ namespace copper_server::base_objects {
         };
 
         struct blocks_attacks : public enum_item<33> {
-
             struct damage_reductions {
                 float horizontal_block_angle = 0.0f;
                 std::optional<id_set<var_int32::damage_type>> damage_kind = std::nullopt;
@@ -530,7 +525,6 @@ namespace copper_server::base_objects {
         };
 
         struct stored_enchantments : public enum_item<34> {
-
             struct enchantment {
                 var_int32::enchantment id;
                 var_int32 level;
@@ -595,7 +589,6 @@ namespace copper_server::base_objects {
         };
 
         struct suspicious_stew_effects : public enum_item<44> {
-
             struct effect {
                 var_int32::potion potion_id;
                 var_int32 duration;
@@ -607,7 +600,6 @@ namespace copper_server::base_objects {
         };
 
         struct writable_book_content : public enum_item<45> {
-
             struct page {
                 string_sized<1024> raw;
                 std::optional<string_sized<1024>> filtered = std::nullopt;
@@ -619,7 +611,6 @@ namespace copper_server::base_objects {
         };
 
         struct written_book_content : public enum_item<46> {
-
             struct page {
                 string_sized<1024> raw;
                 std::optional<string_sized<1024>> filtered = std::nullopt;
@@ -667,7 +658,6 @@ namespace copper_server::base_objects {
         };
 
         struct provides_trim_material : public enum_item<53> {
-
             struct reference : public default_enum_item<0> {
                 identifier name;
                 bool operator==(const reference& other) const = default;
@@ -689,7 +679,6 @@ namespace copper_server::base_objects {
         };
 
         struct jukebox_playable : public enum_item<55> {
-
             //would fail to parse in client, use direct one
             struct reference : public default_enum_item<0> {
                 identifier name;
@@ -716,7 +705,6 @@ namespace copper_server::base_objects {
         };
 
         struct lodestone_tracker : public enum_item<58> {
-
             struct position {
                 identifier has_global_position;
                 base_objects::position pos;
@@ -740,7 +728,6 @@ namespace copper_server::base_objects {
         };
 
         struct profile : public enum_item<61> {
-
             struct property {
                 string_sized<64> name;
                 std::string value;
@@ -761,7 +748,6 @@ namespace copper_server::base_objects {
         };
 
         struct banner_patterns : public enum_item<63> {
-
             struct layer {
                 struct decl {
                     identifier asset_id;
@@ -817,7 +803,6 @@ namespace copper_server::base_objects {
         };
 
         struct block_state : public enum_item<67> {
-
             struct property {
                 std::string name;
                 std::string value;
@@ -830,7 +815,6 @@ namespace copper_server::base_objects {
         };
 
         struct bees : public enum_item<68> {
-
             struct bee {
                 enbt::compound nbt;
                 var_int32 ticks_in_hive;
@@ -1128,7 +1112,7 @@ namespace copper_server::base_objects {
 
 
         component();
-        component(component&& mov);
+        component(component&& mov) noexcept;
         component(const component& copy);
 
         template <class T>
@@ -1148,7 +1132,7 @@ namespace copper_server::base_objects {
         template <class T>
         component& operator=(const T& copy)
             requires std::is_constructible_v<base, T>;
-        ~component();
+        ~component() noexcept;
 
         bool operator==(const component& other) const;
         bool operator!=(const component& other) const;

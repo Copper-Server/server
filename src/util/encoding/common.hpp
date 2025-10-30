@@ -8,10 +8,11 @@
  */
 #ifndef SRC_UTIL_ENCODING_COMMON
 #define SRC_UTIL_ENCODING_COMMON
-#include <src/base_objects/packets_help.hpp>
+#include <src/api/packets/types.hpp>
+#include <src/base_objects/box.hpp>
 #include <src/base_objects/chat.hpp>
 #include <src/base_objects/position.hpp>
-#include <src/base_objects/box.hpp>
+#include <src/util/cts.hpp>
 #include <src/util/reflect.hpp>
 
 
@@ -65,7 +66,10 @@ namespace copper_server::util::encoding {
 
     template <class T, size_t size>
     struct type_selector<std::array<T, size>> : std::integral_constant<size_t, 13> {};
-    
+
+    template <auto V>
+    struct type_selector<base_objects::constant_value<V>> : std::integral_constant<size_t, 14> {};
+
     template <class type>
     concept is_limited_num = type_selector<type>::value == 1;
 
@@ -89,6 +93,9 @@ namespace copper_server::util::encoding {
 
     template <class type>
     concept is_std_array = type_selector<type>::value == 13;
+
+    template <class type>
+    concept is_constant_value = type_selector<type>::value == 14;
 
     template <class type>
     concept is_no_size = is_value_template_base_of<base_objects::no_size, type>;

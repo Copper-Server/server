@@ -29,8 +29,6 @@ namespace copper_server::api::statistics {
         extern base_objects::events::event<statistic_event> killed;
         extern base_objects::events::event<statistic_event> killed_by;
     }
-
-    using namespace minecraft;
 }
 
 

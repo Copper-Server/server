@@ -21,7 +21,7 @@
 namespace copper_server::build_in_plugins::network::tcp {
 
     struct keep_alive_solution::handle_t {
-        std::function<void(int64_t, base_objects::SharedClientData&)> callback;
+        std::function<void(int64_t, base_objects::shared_client_data&)> callback;
         fast_task::deadline_timer timeout_timer;
         fast_task::deadline_timer next_keep_alive;
         api::network::tcp::session* session;
@@ -80,7 +80,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         handle->timeout_timer.cancel();
     }
 
-    void keep_alive_solution::set_callback(const std::function<void(int64_t, base_objects::SharedClientData&)>& fun) {
+    void keep_alive_solution::set_callback(const std::function<void(int64_t, base_objects::shared_client_data&)>& fun) {
         handle->callback = fun;
     }
 
@@ -148,31 +148,52 @@ namespace copper_server::build_in_plugins::network::tcp {
         } else {
             int32_t uncompressed_packet_len = packet.read_var<int32_t>();
 
-            list_array<uint8_t> compressed_packet;
-            z_stream stream;
-            stream.zalloc = Z_NULL;
-            stream.zfree = Z_NULL;
-            stream.opaque = Z_NULL;
-            if ((decltype(stream.avail_in)(-1)) < packet.size_read())
-                throw std::overflow_error("packet size is too large for zlib");
-            stream.avail_in = (decltype(stream.avail_in))packet.size_read();
-            stream.next_in = packet.data_read();
-            int ret = inflateInit(&stream);
-            if (ret != Z_OK)
-                throw std::runtime_error("inflateInit failed");
-            stream.avail_out = uncompressed_packet_len;
-            stream.next_out = (uint8_t*)malloc(stream.avail_out);
-            ret = inflate(&stream, Z_FINISH);
-            if (ret != Z_STREAM_END)
-                throw std::runtime_error("inflate failed");
-            WriteVar<int32_t>(stream.total_out, compressed_packet);
-            compressed_packet.push_back(stream.next_out, stream.total_out);
-            free(stream.next_out);
-            stream.next_out = nullptr;
-            ret = inflateEnd(&stream);
-            if (ret != Z_OK)
-                throw std::runtime_error("inflateEnd failed");
-            return compressed_packet;
+            if (uncompressed_packet_len == 0) {
+                return packet.to_vector();
+            } else {
+                list_array<uint8_t> uncompressed_packet;
+
+                z_stream stream;
+                stream.zalloc = Z_NULL;
+                stream.zfree = Z_NULL;
+                stream.opaque = Z_NULL;
+
+                if ((decltype(stream.avail_in)(-1)) < packet.size_read())
+                    throw std::overflow_error("packet size is too large for zlib");
+
+                stream.avail_in = (decltype(stream.avail_in))packet.size_read();
+                stream.next_in = packet.data_read();
+
+                int ret = inflateInit(&stream);
+                if (ret != Z_OK)
+                    throw std::runtime_error("inflateInit failed");
+
+                std::unique_ptr<uint8_t[]> output_buffer;
+
+                try {
+                    stream.avail_out = uncompressed_packet_len;
+                    output_buffer.reset(new uint8_t[stream.avail_out]);
+                    stream.next_out = output_buffer.get();
+
+                    ret = inflate(&stream, Z_FINISH);
+                    if (ret != Z_STREAM_END)
+                        throw std::runtime_error("inflate failed with error code: " + std::to_string(ret));
+
+                    if (stream.total_out > INT32_MAX || stream.total_out != (uint32_t)uncompressed_packet_len)
+                        throw std::runtime_error("Decompression error: Size mismatch. Expected " + std::to_string(uncompressed_packet_len) + " but got " + std::to_string(stream.total_out));
+
+                    uncompressed_packet.push_back(output_buffer.get(), stream.total_out);
+                } catch (...) {
+                    inflateEnd(&stream);
+                    throw;
+                }
+
+                ret = inflateEnd(&stream);
+                if (ret != Z_OK)
+                    throw std::runtime_error("inflateEnd failed");
+
+                return uncompressed_packet;
+            }
         }
     }
 
@@ -180,37 +201,61 @@ namespace copper_server::build_in_plugins::network::tcp {
         list_array<uint8_t>& packet = packet_item.data;
         list_array<uint8_t> build_packet;
         if (session->compression_threshold == -1) {
+            build_packet.reserve(packet.size() + 5);
             WriteVar<int32_t>(packet.size(), build_packet);
-            build_packet.push_back(std::move(packet));
+            build_packet.push_back(packet);
         } else {
+            build_packet.reserve_front(5);
+            build_packet.reserve_back(packet.size() + 5);
             if (packet.size() < (size_t)session->compression_threshold) {
                 build_packet.push_back(0);
-                build_packet.push_back(std::move(packet));
+                build_packet.push_back(packet);
             } else {
                 list_array<uint8_t> compressed_packet = std::move(packet);
                 z_stream stream;
                 stream.zalloc = Z_NULL;
                 stream.zfree = Z_NULL;
                 stream.opaque = Z_NULL;
+
                 if ((decltype(stream.avail_in)(-1)) < compressed_packet.size())
                     throw std::overflow_error("compressed packet size is too large for zlib");
+
                 stream.avail_in = (decltype(stream.avail_in))compressed_packet.size();
                 stream.next_in = compressed_packet.data();
                 int ret = deflateInit(&stream, Z_DEFAULT_COMPRESSION);
                 if (ret != Z_OK)
                     throw std::runtime_error("deflateInit failed");
-                auto to_decompress = compressed_packet.size() + compressed_packet.size() / 1000 + 12 + 1;
-                if ((decltype(stream.avail_in)(-1)) < to_decompress)
-                    throw std::overflow_error("packet size is too large for zlib");
-                stream.avail_in = (decltype(stream.avail_in))to_decompress;
-                stream.next_out = (uint8_t*)malloc(stream.avail_out);
-                ret = deflate(&stream, Z_FINISH);
-                if (ret != Z_STREAM_END)
-                    throw std::runtime_error("deflate failed");
-                WriteVar<int32_t>(compressed_packet.size(), build_packet);
-                build_packet.push_back(stream.next_out, stream.total_out);
-                free(stream.next_out);
-                stream.next_out = nullptr;
+                std::unique_ptr<uint8_t[]> output_buffer;
+
+                try {
+                    auto output_buf_size = compressed_packet.size() + compressed_packet.size() / 1000 + 12 + 1;
+
+                    if ((decltype(stream.avail_out)(-1)) < output_buf_size)
+                        throw std::overflow_error("output buffer size is too large for zlib");
+
+                    stream.avail_out = (decltype(stream.avail_out))output_buf_size;
+
+                    output_buffer.reset(new uint8_t[stream.avail_out]);
+                    stream.next_out = output_buffer.get();
+
+                    ret = deflate(&stream, Z_FINISH);
+                    if (ret != Z_STREAM_END) {
+                        if (ret == Z_OK && stream.avail_out == 0) {
+                            throw std::runtime_error("deflate failed: output buffer was not large enough.");
+                        }
+                        throw std::runtime_error("deflate failed with error code: " + std::to_string(ret));
+                    }
+
+                    build_packet.reserve(stream.total_out + 5);
+                    WriteVar<int32_t>(compressed_packet.size(), build_packet);
+
+                    build_packet.push_back(output_buffer.get(), stream.total_out);
+
+                } catch (...) {
+                    deflateEnd(&stream);
+                    throw;
+                }
+
                 ret = deflateEnd(&stream);
                 if (ret != Z_OK)
                     throw std::runtime_error("deflateEnd failed");

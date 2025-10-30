@@ -13,8 +13,8 @@
 #include <library/list_array.hpp>
 
 namespace copper_server::util {
-    //bridge class between ENBT and NBT formats
-    class NBT {
+    //bridge class between ENBT and nbt formats
+    class nbt {
         list_array<uint8_t> nbt_data;
 
 #pragma region ENBT_TO_NBT
@@ -51,21 +51,21 @@ namespace copper_server::util {
 
 #pragma endregion
 
-        NBT();
+        nbt();
 
     public:
         static enbt::value readNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size);
-        static NBT readNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress = true, const std::string& entry_name = "");
+        static nbt readNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress = true, const std::string& entry_name = "");
 
         static enbt::value readNetworkNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size);
-        static NBT readNetworkNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress = true, const std::string& entry_name = "");
+        static nbt readNetworkNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress = true, const std::string& entry_name = "");
 
-        NBT(NBT&& move);
-        ~NBT();
+        nbt(nbt&& move);
+        ~nbt();
 
-        static NBT build(const enbt::value& enbt, bool compress = true, const std::string& entry_name = "");
-        static NBT build(const list_array<uint8_t>& data);
-        static NBT build_network(const list_array<uint8_t>& data);
+        static nbt build(const enbt::value& enbt, bool compress = true, const std::string& entry_name = "");
+        static nbt build(const list_array<uint8_t>& data);
+        static nbt build_network(const list_array<uint8_t>& data);
         operator list_array<uint8_t>() const;
         list_array<uint8_t> get_as_normal() const;
         list_array<uint8_t> get_as_network() const;

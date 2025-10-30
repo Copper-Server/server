@@ -11,13 +11,14 @@
 #include <library/enbt/io_tools.hpp>
 #include <resources/include.hpp>
 #include <src/api/configuration.hpp>
+#include <src/api/entity.hpp>
 #include <src/api/log.hpp>
 #include <src/api/recipe.hpp>
 #include <src/api/registers.hpp>
 #include <src/api/tags.hpp>
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/data_packs/known_pack.hpp>
-#include <src/base_objects/entity.hpp>
+#include <src/base_objects/palette_container.hpp>
 #include <src/util/conversions.hpp>
 #include <src/util/json_helpers.hpp>
 
@@ -111,73 +112,70 @@ namespace copper_server::resources {
             throw std::runtime_error("This " + type_name + " is already defined and cannot be overriden. [" + id + "]");
     }
 
-    using namespace util;
-    using namespace api::registers;
-
     void registers_reset() {
-        biomes.clear();
-        chatTypes.clear();
-        armorTrimPatterns.clear();
-        armorTrimMaterials.clear();
-        wolfSoundVariants.clear();
-        wolfVariants.clear();
-        catVariants.clear();
-        chickenVariants.clear();
-        cowVariants.clear();
-        pigVariants.clear();
-        frogVariants.clear();
-        dimensionTypes.clear();
-        damageTypes.clear();
-        bannerPatterns.clear();
-        paintingVariants.clear();
-        enchantments.clear();
-        enchantment_providers.clear();
-        instruments.clear();
-        biomes_cache.clear();
-        chatTypes_cache.clear();
-        armorTrimPatterns_cache.clear();
-        armorTrimMaterials_cache.clear();
-        wolfSoundVariants_cache.clear();
-        wolfVariants_cache.clear();
-        catVariants_cache.clear();
-        chickenVariants_cache.clear();
-        cowVariants_cache.clear();
-        pigVariants_cache.clear();
-        frogVariants_cache.clear();
-        dimensionTypes_cache.clear();
-        damageTypes_cache.clear();
-        bannerPatterns_cache.clear();
-        paintingVariants_cache.clear();
-        enchantments_cache.clear();
-        enchantment_providers_cache.clear();
-        instruments_cache.clear();
+        api::registers::biomes.clear();
+        api::registers::chat_types.clear();
+        api::registers::armor_trim_patterns.clear();
+        api::registers::armor_trim_materials.clear();
+        api::registers::wolf_sound_variants.clear();
+        api::registers::wolf_variants.clear();
+        api::registers::cat_variants.clear();
+        api::registers::chicken_variants.clear();
+        api::registers::cow_variants.clear();
+        api::registers::pig_variants.clear();
+        api::registers::frog_variants.clear();
+        api::registers::dimension_types.clear();
+        api::registers::damage_types.clear();
+        api::registers::bannerPatterns.clear();
+        api::registers::painting_variants.clear();
+        api::registers::enchantments.clear();
+        api::registers::enchantment_providers.clear();
+        api::registers::instruments.clear();
+        api::registers::biomes_cache.clear();
+        api::registers::chat_types_cache.clear();
+        api::registers::armor_trim_patterns_cache.clear();
+        api::registers::armor_trim_materials_cache.clear();
+        api::registers::wolf_sound_variants_cache.clear();
+        api::registers::wolf_variants_cache.clear();
+        api::registers::cat_variants_cache.clear();
+        api::registers::chicken_variants_cache.clear();
+        api::registers::cow_variants_cache.clear();
+        api::registers::pig_variants_cache.clear();
+        api::registers::frog_variants_cache.clear();
+        api::registers::dimension_types_cache.clear();
+        api::registers::damage_types_cache.clear();
+        api::registers::bannerPatterns_cache.clear();
+        api::registers::painting_variants_cache.clear();
+        api::registers::enchantments_cache.clear();
+        api::registers::enchantment_providers_cache.clear();
+        api::registers::instruments_cache.clear();
         api::tags::loading_stage_begin();
     }
 
     void load_registers_complete() {
-        id_assigner(biomes, biomes_cache);
-        id_assigner(chatTypes, chatTypes_cache);
-        id_assigner(armorTrimPatterns, armorTrimPatterns_cache);
-        id_assigner(armorTrimMaterials, armorTrimMaterials_cache);
-        id_assigner(wolfSoundVariants, wolfSoundVariants_cache);
-        id_assigner(wolfVariants, wolfVariants_cache);
-        id_assigner(catVariants, catVariants_cache);
-        id_assigner(chickenVariants, chickenVariants_cache);
-        id_assigner(cowVariants, cowVariants_cache);
-        id_assigner(pigVariants, pigVariants_cache);
-        id_assigner(frogVariants, frogVariants_cache);
-        id_assigner(dimensionTypes, dimensionTypes_cache);
-        id_assigner(damageTypes, damageTypes_cache);
-        id_assigner(bannerPatterns, bannerPatterns_cache);
-        id_assigner(paintingVariants, paintingVariants_cache);
-        id_assigner(enchantments, enchantments_cache);
-        id_assigner(enchantment_providers, enchantment_providers_cache);
-        id_assigner(instruments, instruments_cache);
-        id_assigner(jukebox_songs, jukebox_songs_cache);
+        id_assigner(api::registers::biomes, api::registers::biomes_cache);
+        id_assigner(api::registers::chat_types, api::registers::chat_types_cache);
+        id_assigner(api::registers::armor_trim_patterns, api::registers::armor_trim_patterns_cache);
+        id_assigner(api::registers::armor_trim_materials, api::registers::armor_trim_materials_cache);
+        id_assigner(api::registers::wolf_sound_variants, api::registers::wolf_sound_variants_cache);
+        id_assigner(api::registers::wolf_variants, api::registers::wolf_variants_cache);
+        id_assigner(api::registers::cat_variants, api::registers::cat_variants_cache);
+        id_assigner(api::registers::chicken_variants, api::registers::chicken_variants_cache);
+        id_assigner(api::registers::cow_variants, api::registers::cow_variants_cache);
+        id_assigner(api::registers::pig_variants, api::registers::pig_variants_cache);
+        id_assigner(api::registers::frog_variants, api::registers::frog_variants_cache);
+        id_assigner(api::registers::dimension_types, api::registers::dimension_types_cache);
+        id_assigner(api::registers::damage_types, api::registers::damage_types_cache);
+        id_assigner(api::registers::bannerPatterns, api::registers::bannerPatterns_cache);
+        id_assigner(api::registers::painting_variants, api::registers::painting_variants_cache);
+        id_assigner(api::registers::enchantments, api::registers::enchantments_cache);
+        id_assigner(api::registers::enchantment_providers, api::registers::enchantment_providers_cache);
+        id_assigner(api::registers::instruments, api::registers::instruments_cache);
+        id_assigner(api::registers::jukebox_songs, api::registers::jukebox_songs_cache);
         api::tags::loading_stage_end();
     }
 
-    void hardcoded_values_for_entity(base_objects::entity_data& entity_data) {
+    void hardcoded_values_for_entity(api::entity_data& entity_data) {
         if (entity_data.living_entity_data || entity_data.name == "player") {
             entity_data.acceleration = 0.08f;
             entity_data.drag_vertical = 0.02f;
@@ -273,10 +271,10 @@ namespace copper_server::resources {
         auto parsed = boost::json::parse(resources::registry::entities);
         for (auto& [id, obj_] : parsed.as_object()) {
             auto& obj = obj_.as_object();
-            base_objects::entity_data entity_data;
+            api::entity_data entity_data;
             entity_data.id = std::string(id);
             if (obj.contains("max_health")) {
-                base_objects::entity_data::living_entity_data_t living_data;
+                api::entity_data::living_entity_data_t living_data;
                 living_data.base_health = obj.at("max_health").to_number<float>();
                 living_data.step_height = obj.at("step_height").to_number<float>();
                 living_data.can_freeze = obj.at("can_freeze").as_bool();
@@ -326,63 +324,10 @@ namespace copper_server::resources {
                 entity_data.data["loot_table"] = util::conversions::json::from_json(obj.at("loot_table"));
 
             {
-                using type = base_objects::entity_data::metadata_sync::type_t;
-                //global_pos,
-                static std::unordered_map<std::string, type> types = {
-                    {"Byte", type::byte},
-                    {"Integer", type::varint},
-                    {"Long", type::varlong},
-                    {"Boolean", type::boolean},
-                    {"Float", type::_float},
-                    {"OptionalInt", type::opt_varint},
-                    {"NBT", type::nbt},
-                    {"NbtCompound", type::nbt},
-                    {"String", type::_string},
-
-                    {"Text", type::text},
-                    {"Optional<Text>", type::opt_text},
-
-                    {"ItemStack", type::slot},
-
-                    {"EulerAngle", type::euler_angle},
-                    {"Vector3f", type::vector3},
-                    {"Quaternionf", type::quaternion},
-
-                    {"BlockPos", type::postion},
-                    {"Optional<BlockPos>", type::opt_position},
-
-                    {"Direction", type::direction},
-                    {"EntityPose", type::pose},
-                    {"BlockState", type::block_state},
-                    {"Optional<BlockState>", type::opt_block_state},
-
-                    {"VillagerData", type::villager_data},
-
-                    {"ParticleEffect", type::particle},
-                    {"List<ParticleEffect>", type::particles},
-
-                    {"SnifferEntity$State", type::sniffer_state},
-                    {"ArmadilloEntity$State", type::armadillo_state},
-                    {"RegistryEntry<CatVariant>", type::cat_variant},
-                    {"RegistryEntry<ChickenVariant>", type::chicken_variant},
-                    {"RegistryEntry<CowVariant>", type::cow_variant},
-                    {"RegistryEntry<FrogVariant>", type::frog_variant},
-                    {"RegistryEntry<PaintingVariant>", type::painting_variant},
-                    {"RegistryEntry<PigVariant>", type::pig_variant},
-                    {"RegistryEntry<WolfVariant>", type::wolf_variant},
-                    {"RegistryEntry<WolfSoundVariant>", type::wolf_sound_variant},
-
-                    {"Optional<LazyEntityReference<LivingEntity>>", type::entity_refrence},
-                };
-                auto metadata = obj.at("metadata").as_array();
-                entity_data.metadata.reserve(metadata.size());
-                for (auto& meta : obj.at("metadata").as_array()) {
-                    base_objects::entity_data::metadata_sync metadata_sync;
-                    metadata_sync.index = meta.at("network_id").to_number<uint8_t>();
-                    std::string name = (std::string)meta.at("field_name").as_string();
-                    metadata_sync.type = types.at((std::string)meta.at("type_name").as_string());
-                    entity_data.metadata[name] = std::move(metadata_sync);
-                }
+                auto eye_height_in_each_pose = obj.at("eye_height_in_each_pose").as_array();
+                entity_data.eye_height_in_each_pose.reserve(eye_height_in_each_pose.size());
+                for (auto& height : obj.at("eye_height_in_each_pose").as_array())
+                    eye_height_in_each_pose.push_back(height.to_number<double>());
             }
 
             if (obj.contains("spawn_restriction")) {
@@ -390,8 +335,8 @@ namespace copper_server::resources {
 
                 auto& location = spawn_restriction_js.at("location").as_string();
                 auto& heightmap = spawn_restriction_js.at("heightmap").as_string();
-                using enum base_objects::entity_data::spawn_restriction_t::location_e;
-                using enum base_objects::entity_data::spawn_restriction_t::heightmap_e;
+                using enum api::entity_data::spawn_restriction_t::location_e;
+                using enum api::entity_data::spawn_restriction_t::heightmap_e;
                 if (heightmap == "SURFACE")
                     entity_data.spawn_restriction.heightmap = surface;
                 else if (heightmap == "OCEAN_FLOOR")
@@ -415,13 +360,13 @@ namespace copper_server::resources {
             entity_data.eye_height = obj.at("eye_height").to_number<float>();
 
             hardcoded_values_for_entity(entity_data);
-            base_objects::entity_data::register_entity(std::move(entity_data));
+            api::entity_data::register_entity(std::move(entity_data));
         }
     }
 
-    void load_file_biomes(js_object&& bio_js, const std::string& id, bool send_via_network_body = true) {
-        check_override(biomes, id, "biome");
-        biome bio;
+    void load_file_biomes(util::js_object&& bio_js, const std::string& id, bool send_via_network_body = true) {
+        check_override(api::registers::biomes, id, "biome");
+        api::registers::biome bio;
         bio.send_via_network_body = send_via_network_body;
         bio.downfall = bio_js["downfall"];
         bio.temperature = bio_js["temperature"];
@@ -431,8 +376,8 @@ namespace copper_server::resources {
             bio.temperature_modifier = (std::string)bio_js["temperature_modifier"];
 
         {
-            biome::effects_t biom_effects;
-            js_object effects_js = js_object::get_object(bio_js["effects"]);
+            api::registers::biome::effects_t biom_effects;
+            util::js_object effects_js = util::js_object::get_object(bio_js["effects"]);
             biom_effects.sky_color = effects_js["sky_color"];
             biom_effects.water_fog_color = effects_js["water_fog_color"];
             biom_effects.fog_color = effects_js["fog_color"];
@@ -444,12 +389,12 @@ namespace copper_server::resources {
             if (effects_js.contains("grass_color_modifier"))
                 biom_effects.grass_color_modifier = (std::string)effects_js["grass_color_modifier"];
             if (effects_js.contains("particle")) {
-                js_object particle_js = js_object::get_object(effects_js["particle"]);
-                biome::particle particle;
+                util::js_object particle_js = util::js_object::get_object(effects_js["particle"]);
+                api::registers::biome::particle particle;
                 particle.probability = particle_js["probability"];
-                auto options = js_object::get_object(particle_js["options"]);
+                auto options = util::js_object::get_object(particle_js["options"]);
                 particle.options.type = (std::string)options["type"];
-                particle.options.options = conversions::json::from_json(options.get());
+                particle.options.options = util::conversions::json::from_json(options.get());
                 biom_effects.particle = std::move(particle);
             }
             if (effects_js.contains("ambient_sound")) {
@@ -457,16 +402,16 @@ namespace copper_server::resources {
                 if (eff.is_string())
                     biom_effects.ambient_sound = (std::string)eff;
                 else {
-                    js_object ambient_sound_js = js_object::get_object(effects_js["ambient_sound"]);
-                    biome::ambient_sound ambient_sound;
+                    util::js_object ambient_sound_js = util::js_object::get_object(effects_js["ambient_sound"]);
+                    api::registers::biome::ambient_sound ambient_sound;
                     ambient_sound.sound = (std::string)ambient_sound_js["sound"];
                     ambient_sound.range = ambient_sound_js["range"];
                     biom_effects.ambient_sound = std::move(ambient_sound);
                 }
             }
             if (effects_js.contains("mood_sound")) {
-                js_object mood_sound_js = js_object::get_object(effects_js["mood_sound"]);
-                biome::mood_sound mood_sound;
+                util::js_object mood_sound_js = util::js_object::get_object(effects_js["mood_sound"]);
+                api::registers::biome::mood_sound mood_sound;
                 mood_sound.sound = (std::string)mood_sound_js["sound"];
                 mood_sound.offset = mood_sound_js["offset"].or_apply(2.0);
                 mood_sound.block_search_extent = mood_sound_js["block_search_extent"].or_apply(8);
@@ -474,21 +419,21 @@ namespace copper_server::resources {
                 biom_effects.mood_sound = std::move(mood_sound);
             }
             if (effects_js.contains("additions_sound")) {
-                js_object additions_sound_js = js_object::get_object(effects_js["additions_sound"]);
-                biome::additions_sound additions_sound;
+                util::js_object additions_sound_js = util::js_object::get_object(effects_js["additions_sound"]);
+                api::registers::biome::additions_sound additions_sound;
                 additions_sound.sound = (std::string)additions_sound_js["sound"];
                 additions_sound.tick_chance = additions_sound_js["tick_chance"];
                 biom_effects.additions_sound = std::move(additions_sound);
             }
             if (effects_js.contains("music")) {
-                std::vector<biome::music> music_arr;
-                auto music_arr_js = js_array::get_array(effects_js["music"]);
+                std::vector<api::registers::biome::music> music_arr;
+                auto music_arr_js = util::js_array::get_array(effects_js["music"]);
                 music_arr.reserve(music_arr_js.size());
                 for (auto&& it : music_arr_js) {
-                    js_object music_js = js_object::get_object(it);
-                    biome::music music;
+                    util::js_object music_js = util::js_object::get_object(it);
+                    api::registers::biome::music music;
                     if (music_js.contains("data")) {
-                        auto music_data = js_object::get_object(music_js["data"]);
+                        auto music_data = util::js_object::get_object(music_js["data"]);
                         music.sound = (std::string)music_data["sound"];
                         music.min_delay = music_data["min_delay"].or_apply(12000);
                         music.max_delay = music_data["max_delay"].or_apply(24000);
@@ -507,13 +452,13 @@ namespace copper_server::resources {
             bio.effects = std::move(biom_effects);
         }
         {
-            js_object cavers_js = js_object::get_object(bio_js["cavers"]);
+            util::js_object cavers_js = util::js_object::get_object(bio_js["cavers"]);
             for (auto&& [name, values] : cavers_js) {
                 if (values.is_string()) {
                     bio.carvers[name] = {values};
                 } else {
                     auto& res = bio.carvers[name];
-                    js_array arr = js_array::get_array(values);
+                    util::js_array arr = util::js_array::get_array(values);
                     res.reserve(arr.size());
                     for (auto&& it : arr)
                         res.emplace_back(it);
@@ -521,10 +466,10 @@ namespace copper_server::resources {
             }
         }
         {
-            auto features_js = js_array::get_array(bio_js["features"]);
+            auto features_js = util::js_array::get_array(bio_js["features"]);
             bio.features.reserve(features_js.size());
             for (auto&& items : features_js) {
-                auto feature_js = js_array::get_array(items);
+                auto feature_js = util::js_array::get_array(items);
                 std::vector<std::string> feature;
                 feature.reserve(feature_js.size());
                 for (auto&& it : feature_js)
@@ -533,14 +478,14 @@ namespace copper_server::resources {
             }
         }
         {
-            js_object spawners_js = js_object::get_object(bio_js["spawners"]);
+            util::js_object spawners_js = util::js_object::get_object(bio_js["spawners"]);
             for (auto&& [name, values] : spawners_js) {
                 auto& category = bio.spawners[name];
-                auto category_values = js_array::get_array(values);
+                auto category_values = util::js_array::get_array(values);
                 category.reserve(category_values.size());
                 for (auto&& it : category_values) {
-                    auto category_value = js_object::get_object(it);
-                    biome::spawners_value value;
+                    auto category_value = util::js_object::get_object(it);
+                    api::registers::biome::spawners_value value;
                     value.type = (std::string)category_value["type"];
                     value.weight = category_value["weight"];
                     value.weight = category_value["minCount"];
@@ -550,37 +495,37 @@ namespace copper_server::resources {
             }
         }
         {
-            js_object spawn_costs_js = js_object::get_object(bio_js["spawn_costs"]);
+            util::js_object spawn_costs_js = util::js_object::get_object(bio_js["spawn_costs"]);
             for (auto&& [eid, value] : spawn_costs_js) {
                 auto& category = bio.spawn_costs[eid];
-                auto category_value = js_object::get_object(value);
+                auto category_value = util::js_object::get_object(value);
                 category.energy_budget = category_value["energy_budget"];
                 category.charge = category_value["charge"];
             }
         }
 
-        biomes[id] = std::move(bio);
+        api::registers::biomes[id] = std::move(bio);
     }
 
     void load_file_biomes(const std::filesystem::path& file_path, const std::string& id) {
-        check_override(biomes, id, "biome");
+        check_override(api::registers::biomes, id, "biome");
 
-        auto res = try_read_json_file(file_path);
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_biomes(js_object::get_object(*res), id);
+        load_file_biomes(util::js_object::get_object(*res), id);
     }
 
-    chat_type::decoration to_decoration(js_value&& json) {
-        chat_type::decoration decoration;
-        js_object chat_js = js_object::get_object(json);
+    api::registers::chat_type::decoration to_decoration(util::js_value&& json) {
+        api::registers::chat_type::decoration decoration;
+        util::js_object chat_js = util::js_object::get_object(json);
         if (chat_js.contains("style"))
-            decoration.style = Chat::fromEnbt(conversions::json::from_json(chat_js["style"].get()));
+            decoration.style = base_objects::chat::from_enbt(util::conversions::json::from_json(chat_js["style"].get()));
         decoration.translation_key = (std::string)chat_js["translation_key"];
         {
             auto params = chat_js["parameters"];
             if (params.is_array()) {
-                auto params_ = js_array::get_array(params);
+                auto params_ = util::js_array::get_array(params);
                 std::vector<std::string> parameters;
                 parameters.reserve(params_.size());
                 for (auto&& chat_ : params_)
@@ -592,17 +537,17 @@ namespace copper_server::resources {
         return decoration;
     }
 
-    base_objects::number_provider read_number_provider(js_value&& value) {
+    std::shared_ptr<base_objects::number_provider> read_number_provider(util::js_value&& value) {
         if (value.is_number())
-            return value.is_integral() ? base_objects::number_provider_constant((int32_t)value) : base_objects::number_provider_constant((float)value);
+            return value.is_integral() ? std::make_shared<base_objects::number_provider_constant>((int32_t)value) : std::make_shared<base_objects::number_provider_constant>((float)value);
         else {
-            auto obj = js_object::get_object(value);
+            auto obj = util::js_object::get_object(value);
             if (obj.contains("type")) {
                 std::string type = obj["type"];
 
                 if (type == "constant") {
                     auto val = obj.at("value");
-                    return val.is_integral() ? base_objects::number_provider_constant((int32_t)val) : base_objects::number_provider_constant((float)val);
+                    return val.is_integral() ? std::make_shared<base_objects::number_provider_constant>((int32_t)val) : std::make_shared<base_objects::number_provider_constant>((float)val);
                 } else if (type == "uniform") {
                     std::variant<int32_t, float> min;
                     std::variant<int32_t, float> max;
@@ -625,15 +570,15 @@ namespace copper_server::resources {
                     } else
                         max = std::numeric_limits<int32_t>::max();
 
-                    return base_objects::number_provider_uniform(min, max);
+                    return std::make_shared<base_objects::number_provider_uniform>(min, max);
                 } else if (type == "binomial")
-                    return base_objects::number_provider_binomial(read_number_provider(obj.at("n")), read_number_provider(obj.at("p")));
+                    return std::make_shared<base_objects::number_provider_binomial>(read_number_provider(obj.at("n")), read_number_provider(obj.at("p")));
                 else if (type == "clamped_normal") {
                     float mean = obj.at("mean");
                     float deviation = obj.at("deviation");
                     int32_t min_inclusive = obj.at("min_inclusive");
                     int32_t max_inclusive = obj.at("max_inclusive");
-                    return base_objects::number_provider_clamped_normal(mean, deviation, min_inclusive, max_inclusive);
+                    return std::make_shared<base_objects::number_provider_clamped_normal>(mean, deviation, min_inclusive, max_inclusive);
                 } else if (type == "clamped") {
                     std::variant<int32_t, float> min;
                     std::variant<int32_t, float> max;
@@ -655,22 +600,22 @@ namespace copper_server::resources {
                         max = max_.is_integral() ? (int32_t)max_ : (float)max_;
                     } else
                         max = std::numeric_limits<int32_t>::max();
-                    return base_objects::number_provider_clamped(min, max, read_number_provider(obj.at("source")));
+                    return std::make_shared<base_objects::number_provider_clamped>(min, max, read_number_provider(obj.at("source")));
                 } else if (type == "trapezoid") {
                     int32_t min = obj.at("min");
                     int32_t max = obj.at("max");
                     int32_t plateau = obj.at("plateau");
-                    return base_objects::number_provider_trapezoid(min, max, plateau);
+                    return std::make_shared<base_objects::number_provider_trapezoid>(min, max, plateau);
                 } else if (type == "weighted_list") {
-                    std::vector<std::pair<base_objects::number_provider, double>> values;
-                    auto values_js = js_array::get_array(obj.at("values"));
+                    std::vector<std::pair<std::shared_ptr<base_objects::number_provider>, double>> values;
+                    auto values_js = util::js_array::get_array(obj.at("values"));
                     values.reserve(values_js.size());
                     for (auto&& val : values_js) {
-                        auto value_js = js_object::get_object(val);
+                        auto value_js = util::js_object::get_object(val);
                         auto weight = value_js.contains("weight") ? value_js["weight"] : 1.0;
                         values.emplace_back(read_number_provider(value_js.at("data")), weight);
                     }
-                    return base_objects::number_provider_weighted_list(values);
+                    return std::make_shared<base_objects::number_provider_weighted_list>(std::move(values));
                 } else if (type == "biased_to_bottom") {
                     std::variant<int32_t, float> min;
                     std::variant<int32_t, float> max;
@@ -693,12 +638,12 @@ namespace copper_server::resources {
                     } else
                         max = std::numeric_limits<int32_t>::max();
 
-                    return base_objects::number_provider_biased_to_bottom(min, max);
+                    return std::make_shared<base_objects::number_provider_biased_to_bottom>(min, max);
                 } else if (type == "score") {
                     base_objects::number_provider_score res;
                     res.score = (std::string)obj.at("score");
                     res.scale = obj.contains("scale") ? std::optional<float>((float)obj["scale"]) : std::nullopt;
-                    auto target = js_object::get_object(obj.at("target"));
+                    auto target = util::js_object::get_object(obj.at("target"));
                     std::string score_type = target.at("type");
                     if (score_type == "fixed")
                         res.target.value = (std::string)target.at("name");
@@ -706,61 +651,58 @@ namespace copper_server::resources {
                         res.target.value = (std::string)target.at("target");
                     else
                         target.parsing_error("Invalid target type: " + score_type);
-                    return res;
+                    return std::make_shared<base_objects::number_provider_score>(res);
                 } else if (type == "storage") {
-                    base_objects::number_provider_storage res;
-                    res.storage = (std::string)obj.at("storage");
-                    res.path = (std::string)obj.at("path");
-                    return res;
+                    return std::make_shared<base_objects::number_provider_storage>((std::string)obj.at("storage"), (std::string)obj.at("path"));
                 } else if (type == "enchantment_level")
-                    return base_objects::number_provider_enchantment_level((std::string)obj.at("amount"));
+                    return std::make_shared<base_objects::number_provider_enchantment_level>((std::string)obj.at("amount"));
                 else
                     obj.parsing_error("Invalid number provider type: " + type);
             } else {
                 int32_t min = obj.contains("min") ? obj["min"] : std::numeric_limits<int32_t>::min();
                 int32_t max = obj.contains("max") ? obj["max"] : std::numeric_limits<int32_t>::max();
-                return base_objects::number_provider_uniform(min, max);
+                return std::make_shared<base_objects::number_provider_uniform>(min, max);
             }
         }
     }
 
-    void load_file_chatType(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
-        check_override(chatTypes, id, "chat type");
-        chat_type type;
+    void load_file_chatType(util::js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
+        check_override(api::registers::chat_types, id, "chat type");
+        api::registers::chat_type type;
         type.send_via_network_body = send_via_network_body;
         if (type_js.contains("chat"))
             type.chat = to_decoration(type_js["chat"]);
         if (type_js.contains("narration"))
             type.narration = to_decoration(type_js["narration"]);
 
-        chatTypes[id] = std::move(type);
+        api::registers::chat_types[id] = std::move(type);
     }
 
     void load_file_chatType(const std::filesystem::path& file_path, const std::string& id) {
-        check_override(chatTypes, id, "chat type");
+        check_override(api::registers::chat_types, id, "chat type");
 
-        auto res = try_read_json_file(file_path);
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        js_object type_js = js_object::get_object(*res);
-        chat_type type;
+        util::js_object type_js = util::js_object::get_object(*res);
+        api::registers::chat_type type;
         if (type_js.contains("chat"))
             type.chat = to_decoration(type_js["chat"]);
         if (type_js.contains("narration"))
             type.narration = to_decoration(type_js["narration"]);
 
-        chatTypes[id] = std::move(type);
+        api::registers::chat_types[id] = std::move(type);
     }
 
-    void load_file_advancements(js_object&& advancement_js, const std::string& id, bool send_via_network_body = true) {
-        check_conflicts(advancements, id, "advancements");
-        advancement res;
+    void load_file_advancements(util::js_object&& advancement_js, const std::string& id, bool send_via_network_body = true) {
+        check_conflicts(api::registers::advancements, id, "advancements");
+        api::registers::advancement res;
         res.send_via_network_body = send_via_network_body;
         if (advancement_js.contains("display")) {
-            auto display_js = js_object::get_object(advancement_js["display"]);
-            advancement::display_t display;
+            auto display_js = util::js_object::get_object(advancement_js["display"]);
+            api::registers::advancement::display_t display;
             {
-                auto icon_js = js_object::get_object(display_js["icon"]);
+                auto icon_js = util::js_object::get_object(display_js["icon"]);
                 display.icon.item = (std::string)icon_js["item"];
                 if (icon_js.contains("nbt"))
                     display.icon.nbt = icon_js["nbt"].to_text();
@@ -784,10 +726,10 @@ namespace copper_server::resources {
             res.parent = (std::string)advancement_js["parent"];
         res.criteria = util::conversions::json::from_json(advancement_js["criteria"].get());
         if (advancement_js.contains("requirements")) {
-            auto list_of_requirements_js = js_array::get_array(advancement_js["requirements"]);
+            auto list_of_requirements_js = util::js_array::get_array(advancement_js["requirements"]);
             res.requirements.reserve(list_of_requirements_js.size());
             for (auto&& value : list_of_requirements_js) {
-                auto requirements_js = js_array::get_array(value);
+                auto requirements_js = util::js_array::get_array(value);
                 std::vector<std::string> requirements;
                 requirements.reserve(requirements_js.size());
                 for (auto&& req : requirements_js)
@@ -796,15 +738,15 @@ namespace copper_server::resources {
             }
         }
         if (advancement_js.contains("rewards")) {
-            auto rewards_js = js_object::get_object(advancement_js["rewards"]);
+            auto rewards_js = util::js_object::get_object(advancement_js["rewards"]);
             if (rewards_js.contains("recipes")) {
-                auto recipes_js = js_array::get_array(rewards_js["recipes"]);
+                auto recipes_js = util::js_array::get_array(rewards_js["recipes"]);
                 res.rewards.recipes.reserve(rewards_js.size());
                 for (auto&& req : recipes_js)
                     res.rewards.recipes.emplace_back((std::string)req);
             }
             if (rewards_js.contains("loot")) {
-                auto loot_js = js_array::get_array(rewards_js["loot"]);
+                auto loot_js = util::js_array::get_array(rewards_js["loot"]);
                 res.rewards.loot.reserve(rewards_js.size());
                 for (auto&& req : loot_js)
                     res.rewards.loot.emplace_back((std::string)req);
@@ -817,50 +759,50 @@ namespace copper_server::resources {
 
         if (advancement_js.contains("sends_telemetry_event"))
             res.sends_telemetry_event = advancement_js["sends_telemetry_event"];
-        advancements[id] = std::move(res);
+        api::registers::advancements[id] = std::move(res);
     }
 
     void load_file_advancements(const std::filesystem::path& file_path, const std::string& id) {
-        check_conflicts(advancements, id, "advancement");
-        auto res = try_read_json_file(file_path);
+        check_conflicts(api::registers::advancements, id, "advancement");
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_advancements(js_object::get_object(*res), id);
+        load_file_advancements(util::js_object::get_object(*res), id);
     }
 
-    void load_file_jukebox_song(js_object&& song_js, const std::string& id, bool send_via_network_body = true) {
-        check_conflicts(jukebox_songs, id, "jukebox song");
-        jukebox_song song;
+    void load_file_jukebox_song(util::js_object&& song_js, const std::string& id, bool send_via_network_body = true) {
+        check_conflicts(api::registers::jukebox_songs, id, "jukebox song");
+        api::registers::jukebox_song song;
         song.send_via_network_body = send_via_network_body;
         song.comparator_output = song_js["comparator_output"];
         song.length_in_seconds = song_js["length_in_seconds"];
-        song.description = Chat::fromEnbt(util::conversions::json::from_json(song_js["description"].get()));
+        song.description = base_objects::chat::from_enbt(util::conversions::json::from_json(song_js["description"].get()));
         auto sound_event_js = song_js["sound_event"];
         if (sound_event_js.is_string())
             song.sound_event = (std::string)sound_event_js;
         else {
-            auto sound_event_obj = js_object::get_object(sound_event_js);
-            jukebox_song::custom ex;
+            auto sound_event_obj = util::js_object::get_object(sound_event_js);
+            api::registers::jukebox_song::custom ex;
             ex.sound_id = (std::string)sound_event_obj["sound_id"];
             if (sound_event_obj.contains("fixed_range"))
                 ex.fixed_range = sound_event_obj["fixed_range"];
             song.sound_event = std::move(ex);
         }
-        jukebox_songs[id] = std::move(song);
+        api::registers::jukebox_songs[id] = std::move(song);
     }
 
     void load_file_jukebox_song(const std::filesystem::path& file_path, const std::string& id) {
-        check_conflicts(jukebox_songs, id, "jukebox songs");
-        auto res = try_read_json_file(file_path);
+        check_conflicts(api::registers::jukebox_songs, id, "jukebox songs");
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_jukebox_song(js_object::get_object(*res), id);
+        load_file_jukebox_song(util::js_object::get_object(*res), id);
     }
 
-    void load_file_loot_table(js_object&& loot_table_js, const std::string& id, bool send_via_network_body = true) {
-        check_conflicts(loot_table, id, "loot table");
+    void load_file_loot_table(util::js_object&& loot_table_js, const std::string& id, bool send_via_network_body = true) {
+        check_conflicts(api::registers::loot_table, id, "loot table");
 
-        loot_table_item item;
+        api::registers::loot_table_item item;
         item.send_via_network_body = send_via_network_body;
         if (loot_table_js.contains("type"))
             item.type = (std::string)loot_table_js["type"];
@@ -868,7 +810,7 @@ namespace copper_server::resources {
             item.type = "generic";
 
         if (loot_table_js.contains("functions")) {
-            auto functions = js_array::get_array(loot_table_js["functions"]);
+            auto functions = util::js_array::get_array(loot_table_js["functions"]);
             item.functions.reserve(functions.size());
             for (auto&& function : functions) {
                 enbt::compound comp;
@@ -878,11 +820,11 @@ namespace copper_server::resources {
         }
 
         if (loot_table_js.contains("pools")) {
-            auto pools = js_array::get_array(loot_table_js["pools"]);
+            auto pools = util::js_array::get_array(loot_table_js["pools"]);
             item.pools.reserve(pools.size());
             for (auto&& pool_item : pools) {
-                auto pool = js_object::get_object(pool_item);
-                loot_table_item::pool pool_;
+                auto pool = util::js_object::get_object(pool_item);
+                api::registers::loot_table_item::pool pool_;
                 if (pool.contains("conditions")) {
                     auto res = util::conversions::json::from_json(pool["conditions"].get());
                     auto ref = res.as_array();
@@ -894,7 +836,7 @@ namespace copper_server::resources {
                     pool_.bonus_rolls = read_number_provider(pool["bonus_rolls"]);
 
                 if (pool.contains("functions")) {
-                    auto functions = js_array::get_array(pool["functions"]);
+                    auto functions = util::js_array::get_array(pool["functions"]);
                     pool_.functions.reserve(functions.size());
                     for (auto&& function : functions) {
                         enbt::compound comp;
@@ -903,7 +845,7 @@ namespace copper_server::resources {
                     }
                 }
                 pool_.rolls = read_number_provider(pool.at("rolls"));
-                auto entries = js_array::get_array(pool.at("entries"));
+                auto entries = util::js_array::get_array(pool.at("entries"));
                 pool_.entries.reserve(entries.size());
                 for (auto&& entry : entries) {
                     enbt::compound comp;
@@ -917,20 +859,20 @@ namespace copper_server::resources {
 
         if (loot_table_js.contains("random_sequence"))
             item.random_sequence = loot_table_js["random_sequence"];
-        loot_table[id] = std::move(item);
+        api::registers::loot_table[id] = std::move(item);
     }
 
     void load_file_loot_table(const std::filesystem::path& file_path, const std::string& id) {
-        check_override(armorTrimPatterns, id, "armor trim pattern");
-        auto res = try_read_json_file(file_path);
+        check_override(api::registers::armor_trim_patterns, id, "armor trim pattern");
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_loot_table(js_object::get_object(*res), id);
+        load_file_loot_table(util::js_object::get_object(*res), id);
     }
 
-    void load_file_armorTrimPattern(js_object&& pattern_js, const std::string& id, bool send_via_network_body = true) {
-        check_override(armorTrimPatterns, id, "armor trim pattern");
-        armor_trim_pattern pattern;
+    void load_file_armorTrimPattern(util::js_object&& pattern_js, const std::string& id, bool send_via_network_body = true) {
+        check_override(api::registers::armor_trim_patterns, id, "armor trim pattern");
+        api::registers::armor_trim_pattern pattern;
         pattern.send_via_network_body = send_via_network_body;
         pattern.asset_id = (std::string)pattern_js["asset_id"];
         pattern.decal = pattern_js["decal"];
@@ -939,22 +881,22 @@ namespace copper_server::resources {
             if (desc.is_string())
                 pattern.description = (std::string)desc;
             else
-                pattern.description = Chat::fromEnbt(conversions::json::from_json(desc.get()));
+                pattern.description = base_objects::chat::from_enbt(util::conversions::json::from_json(desc.get()));
         }
-        armorTrimPatterns[id] = std::move(pattern);
+        api::registers::armor_trim_patterns[id] = std::move(pattern);
     }
 
     void load_file_armorTrimPattern(const std::filesystem::path& file_path, const std::string& id) {
-        check_override(armorTrimPatterns, id, "armor trim pattern");
-        auto res = try_read_json_file(file_path);
+        check_override(api::registers::armor_trim_patterns, id, "armor trim pattern");
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_armorTrimPattern(js_object::get_object(*res), id);
+        load_file_armorTrimPattern(util::js_object::get_object(*res), id);
     }
 
-    void load_file_armorTrimMaterial(js_object&& material_js, const std::string& id, bool send_via_network_body = true) {
-        check_override(armorTrimMaterials, id, "armor trim material");
-        armor_trim_material material;
+    void load_file_armorTrimMaterial(util::js_object&& material_js, const std::string& id, bool send_via_network_body = true) {
+        check_override(api::registers::armor_trim_materials, id, "armor trim material");
+        api::registers::armor_trim_material material;
         material.send_via_network_body = send_via_network_body;
         material.asset_name = (std::string)material_js["asset_name"];
         {
@@ -962,61 +904,61 @@ namespace copper_server::resources {
             if (desc.is_string())
                 material.description = (std::string)desc;
             else
-                material.description = Chat::fromEnbt(conversions::json::from_json(desc.get()));
+                material.description = base_objects::chat::from_enbt(util::conversions::json::from_json(desc.get()));
         }
-        armorTrimMaterials[id] = std::move(material);
+        api::registers::armor_trim_materials[id] = std::move(material);
     }
 
     void load_file_armorTrimMaterial(const std::filesystem::path& file_path, const std::string& id) {
-        check_override(armorTrimMaterials, id, "armor trim material");
-        auto res = try_read_json_file(file_path);
+        check_override(api::registers::armor_trim_materials, id, "armor trim material");
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_armorTrimMaterial(js_object::get_object(*res), id);
+        load_file_armorTrimMaterial(util::js_object::get_object(*res), id);
     }
 
-    void load_file_wolfVariant(js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
-        check_override(wolfVariants, id, "wolf variant");
-        wolf_variant variant;
+    void load_file_wolfVariant(util::js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
+        check_override(api::registers::wolf_variants, id, "wolf variant");
+        api::registers::wolf_variant variant;
         variant.send_via_network_body = send_via_network_body;
-        variant.assets = conversions::json::from_json(variant_js.at("assets").get());
-        variant.spawn_conditions = conversions::json::from_json(variant_js.at("spawn_conditions").get());
-        wolfVariants[id] = std::move(variant);
+        variant.assets = util::conversions::json::from_json(variant_js.at("assets").get());
+        variant.spawn_conditions = util::conversions::json::from_json(variant_js.at("spawn_conditions").get());
+        api::registers::wolf_variants[id] = std::move(variant);
     }
 
     void load_file_wolfVariant(const std::filesystem::path& file_path, const std::string& id) {
-        check_override(wolfVariants, id, "wolf variant");
-        auto res = try_read_json_file(file_path);
+        check_override(api::registers::wolf_variants, id, "wolf variant");
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_wolfVariant(js_object::get_object(*res), id);
+        load_file_wolfVariant(util::js_object::get_object(*res), id);
     }
 
-    void load_file_entityVariant(std::unordered_map<std::string, entity_variant>& map, const std::string& key, js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
+    void load_file_entityVariant(std::unordered_map<std::string, api::registers::entity_variant>& map, const std::string& key, util::js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
         check_override(map, id, key);
-        entity_variant variant;
+        api::registers::entity_variant variant;
         variant.send_via_network_body = send_via_network_body;
         variant.asset_id = (std::string)variant_js.at("asset_id");
-        variant.spawn_conditions = conversions::json::from_json(variant_js.at("spawn_conditions").get());
+        variant.spawn_conditions = util::conversions::json::from_json(variant_js.at("spawn_conditions").get());
         if (variant_js.contains("model"))
             variant.model = (std::string)variant_js.at("model");
         map[id] = std::move(variant);
     }
 
-    void load_file_entityVariant(std::unordered_map<std::string, entity_variant>& map, const std::string& key, const std::filesystem::path& file_path, const std::string& id) {
+    void load_file_entityVariant(std::unordered_map<std::string, api::registers::entity_variant>& map, const std::string& key, const std::filesystem::path& file_path, const std::string& id) {
         check_override(map, id, key);
-        auto res = try_read_json_file(file_path);
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_entityVariant(map, key, js_object::get_object(*res), id);
+        load_file_entityVariant(map, key, util::js_object::get_object(*res), id);
     }
 
 #define LOAD_FILE_ENTITY_VARIANT(name)                                                                                 \
-    void load_file_##name##Variant(js_object&& variant_js, const std::string& id, bool send_via_network_body = true) { \
-        load_file_entityVariant(name##Variants, #name " variant", std::move(variant_js), id, send_via_network_body);   \
+    void load_file_##name##Variant(util::js_object&& variant_js, const std::string& id, bool send_via_network_body = true) { \
+        load_file_entityVariant(api::registers:: name##_variants, #name " variant", std::move(variant_js), id, send_via_network_body);   \
     }                                                                                                                  \
     void load_file_##name##Variant(const std::filesystem::path& file_path, const std::string& id) {                    \
-        load_file_entityVariant(name##Variants, #name " variant", file_path, id);                                      \
+        load_file_entityVariant(api::registers:: name##_variants, #name " variant", file_path, id);                                      \
     }
     LOAD_FILE_ENTITY_VARIANT(cat)
     LOAD_FILE_ENTITY_VARIANT(chicken)
@@ -1025,9 +967,9 @@ namespace copper_server::resources {
     LOAD_FILE_ENTITY_VARIANT(frog)
 #undef LOAD_FILE_ENTITY_VARIANT
 
-    void load_file_wolfSoundVariant(js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
-        check_override(wolfSoundVariants, id, "wolf sound variant");
-        wolf_sound_variant variant;
+    void load_file_wolfSoundVariant(util::js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
+        check_override(api::registers::wolf_sound_variants, id, "wolf sound variant");
+        api::registers::wolf_sound_variant variant;
         variant.send_via_network_body = send_via_network_body;
         variant.ambient_sound = (std::string)variant_js.at("ambient_sound");
         variant.death_sound = (std::string)variant_js.at("death_sound");
@@ -1035,20 +977,20 @@ namespace copper_server::resources {
         variant.hurt_sound = (std::string)variant_js.at("hurt_sound");
         variant.pant_sound = (std::string)variant_js.at("pant_sound");
         variant.whine_sound = (std::string)variant_js.at("whine_sound");
-        wolfSoundVariants[id] = std::move(variant);
+        api::registers::wolf_sound_variants[id] = std::move(variant);
     }
 
     void load_file_wolfSoundVariant(const std::filesystem::path& file_path, const std::string& id) {
-        check_override(wolfSoundVariants, id, "wolf sound variant");
-        auto res = try_read_json_file(file_path);
+        check_override(api::registers::wolf_sound_variants, id, "wolf sound variant");
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_wolfSoundVariant(js_object::get_object(*res), id);
+        load_file_wolfSoundVariant(util::js_object::get_object(*res), id);
     }
 
-    void load_file_dimensionType(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
-        check_override(dimensionTypes, id, "dimension type");
-        dimension_type type;
+    void load_file_dimensionType(util::js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
+        check_override(api::registers::dimension_types, id, "dimension type");
+        api::registers::dimension_type type;
         type.send_via_network_body = send_via_network_body;
         if (type_js.contains("monster_spawn_light_level")) {
             auto monster_spawn_light_level = type_js["monster_spawn_light_level"];
@@ -1076,26 +1018,26 @@ namespace copper_server::resources {
         type.has_raids = type_js["has_raids"];
         type.respawn_anchor_works = type_js["respawn_anchor_works"];
         type.bed_works = type_js["bed_works"];
-        dimensionTypes[id] = std::move(type);
+        api::registers::dimension_types[id] = std::move(type);
     }
 
     void load_file_dimensionType(const std::filesystem::path& file_path, const std::string& id) {
-        check_override(dimensionTypes, id, "dimension type");
-        auto res = try_read_json_file(file_path);
+        check_override(api::registers::dimension_types, id, "dimension type");
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_dimensionType(js_object::get_object(*res), id);
+        load_file_dimensionType(util::js_object::get_object(*res), id);
     }
 
-    void load_file_enchantment(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
-        check_conflicts(enchantments, id, "enchantments");
-        enchantment type;
+    void load_file_enchantment(util::js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
+        check_conflicts(api::registers::enchantments, id, "enchantments");
+        api::registers::enchantment type;
         type.send_via_network_body = send_via_network_body;
-        type.description = Chat::fromEnbt(util::conversions::json::from_json(type_js.at("description").get()));
+        type.description = base_objects::chat::from_enbt(util::conversions::json::from_json(type_js.at("description").get()));
         type.max_level = type_js.at("max_level");
         type.weight = type_js.at("weight");
         type.anvil_cost = type_js.at("anvil_cost");
-        auto slots = js_array::get_array(type_js.at("slots"));
+        auto slots = util::js_array::get_array(type_js.at("slots"));
         type.slots.reserve(slots.size());
         for (auto&& slot : slots)
             type.slots.emplace_back(slot);
@@ -1103,7 +1045,7 @@ namespace copper_server::resources {
             if (type_js.at("exclusive_set").is_string())
                 type.exclusive_set = type_js.at("exclusive_set");
             else {
-                auto exclusive_set_js = js_array::get_array(type_js.at("exclusive_set"));
+                auto exclusive_set_js = util::js_array::get_array(type_js.at("exclusive_set"));
                 std::vector<std::string> exclusive_set;
                 exclusive_set.reserve(exclusive_set_js.size());
                 for (auto&& set : exclusive_set_js)
@@ -1114,7 +1056,7 @@ namespace copper_server::resources {
         if (type_js.at("supported_items").is_string())
             type.supported_items = (std::string)type_js.at("supported_items");
         else {
-            auto supported_items_js = js_array::get_array(type_js.at("supported_items"));
+            auto supported_items_js = util::js_array::get_array(type_js.at("supported_items"));
             std::vector<api::id::item> supported_items;
             supported_items.reserve(supported_items_js.size());
             for (auto&& set : supported_items_js)
@@ -1125,7 +1067,7 @@ namespace copper_server::resources {
             if (type_js.at("primary_items").is_string())
                 type.primary_items = (std::string)type_js.at("primary_items");
             else {
-                auto primary_items_js = js_array::get_array(type_js.at("primary_items"));
+                auto primary_items_js = util::js_array::get_array(type_js.at("primary_items"));
                 std::vector<api::id::item> primary_items;
                 primary_items.reserve(primary_items_js.size());
                 for (auto&& set : primary_items_js)
@@ -1133,97 +1075,97 @@ namespace copper_server::resources {
                 type.primary_items = std::move(primary_items);
             }
         }
-        auto min_cost = js_object::get_object(type_js.at("min_cost"));
+        auto min_cost = util::js_object::get_object(type_js.at("min_cost"));
         type.min_cost.base = min_cost.at("base");
         type.min_cost.per_level_above_first = min_cost.at("per_level_above_first");
 
-        auto max_cost = js_object::get_object(type_js.at("max_cost"));
+        auto max_cost = util::js_object::get_object(type_js.at("max_cost"));
         type.max_cost.base = max_cost.at("base");
         type.max_cost.per_level_above_first = max_cost.at("per_level_above_first");
 
         if (type_js.contains("effects")) {
-            auto ench_effects = js_object::get_object(type_js.at("effects"));
+            auto ench_effects = util::js_object::get_object(type_js.at("effects"));
             type.effects.reserve(ench_effects.size());
             for (auto&& [component_id, effect] : ench_effects)
                 type.effects[component_id] = util::conversions::json::from_json(effect.get());
         }
-        enchantments[id] = std::move(type);
+        api::registers::enchantments[id] = std::move(type);
     }
 
     void load_file_enchantment(const std::filesystem::path& file_path, const std::string& id) {
-        check_conflicts(enchantments, id, "enchantments");
-        auto res = try_read_json_file(file_path);
+        check_conflicts(api::registers::enchantments, id, "enchantments");
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_enchantment(js_object::get_object(*res), id);
+        load_file_enchantment(util::js_object::get_object(*res), id);
     }
 
     void load_file_enchantment_provider(boost::json::object& type_js, const std::string& id, bool send_via_network_body = true) {
-        check_conflicts(enchantment_providers, id, "enchantment providers");
-        enchantment_providers[id] = {.data = util::conversions::json::from_json(type_js), .id = 0, .send_via_network_body = send_via_network_body};
+        check_conflicts(api::registers::enchantment_providers, id, "enchantment providers");
+        api::registers::enchantment_providers[id] = {.data = util::conversions::json::from_json(type_js), .id = 0, .send_via_network_body = send_via_network_body};
     }
 
-    void load_file_instrument(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
-        check_conflicts(instruments, id, "instruments");
-        instrument type;
-        type.description = Chat::fromEnbt(util::conversions::json::from_json(type_js.at("description").get()));
+    void load_file_instrument(util::js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
+        check_conflicts(api::registers::instruments, id, "instruments");
+        api::registers::instrument type;
+        type.description = base_objects::chat::from_enbt(util::conversions::json::from_json(type_js.at("description").get()));
         type.use_duration = type_js.at("use_duration");
         type.range = type_js.at("range");
         type.send_via_network_body = send_via_network_body;
         if (type_js.at("sound_event").is_string()) {
             type.sound_event = (std::string)type_js.at("sound_event");
         } else {
-            auto sound_event = js_object::get_object(type_js.at("sound_event"));
-            type.sound_event = instrument::custom{.sound_name = (std::string)sound_event.at("sound_name"), .fixed_range = sound_event.contains("fixed_range") ? std::optional<float>(sound_event.at("fixed_range")) : std::nullopt};
+            auto sound_event = util::js_object::get_object(type_js.at("sound_event"));
+            type.sound_event = api::registers::instrument::custom{.sound_name = (std::string)sound_event.at("sound_name"), .fixed_range = sound_event.contains("fixed_range") ? std::optional<float>(sound_event.at("fixed_range")) : std::nullopt};
         }
-        instruments[id] = std::move(type);
+        api::registers::instruments[id] = std::move(type);
     }
 
     void load_file_instrument(const std::filesystem::path& file_path, const std::string& id) {
-        check_conflicts(enchantments, id, "enchantments");
-        auto res = try_read_json_file(file_path);
+        check_conflicts(api::registers::enchantments, id, "enchantments");
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_instrument(js_object::get_object(*res), id);
+        load_file_instrument(util::js_object::get_object(*res), id);
     }
 
     void load_file_enchantment_provider(const std::filesystem::path& file_path, const std::string& id) {
-        check_conflicts(enchantment_providers, id, "enchantment providers");
-        auto res = try_read_json_file(file_path);
+        check_conflicts(api::registers::enchantment_providers, id, "enchantment providers");
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
         load_file_enchantment_provider(*res, id);
     }
 
-    void load_file_damageType(js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
-        check_override(damageTypes, id, "damage type");
-        damage_type type;
+    void load_file_damageType(util::js_object&& type_js, const std::string& id, bool send_via_network_body = true) {
+        check_override(api::registers::damage_types, id, "damage type");
+        api::registers::damage_type type;
         type.message_id = (std::string)type_js["message_id"];
         type.send_via_network_body = send_via_network_body;
         std::string scaling = type_js["scaling"];
         if (scaling == "never")
-            type.scaling = damage_type::scaling_type::never;
+            type.scaling = api::registers::damage_type::scaling_type::never;
         else if (scaling == "when_caused_by_living_non_player")
-            type.scaling = damage_type::scaling_type::when_caused_by_living_non_player;
+            type.scaling = api::registers::damage_type::scaling_type::when_caused_by_living_non_player;
         else if (scaling == "always")
-            type.scaling = damage_type::scaling_type::always;
+            type.scaling = api::registers::damage_type::scaling_type::always;
         else
             type_js["scaling"].parsing_error("Unknown scaling type: " + scaling);
 
         if (type_js.contains("effects")) {
             std::string damage_effects = type_js["effects"];
             if (damage_effects == "hurt")
-                type.effects = damage_type::effects_type::hurt;
+                type.effects = api::registers::damage_type::effects_type::hurt;
             else if (damage_effects == "thorns")
-                type.effects = damage_type::effects_type::thorns;
+                type.effects = api::registers::damage_type::effects_type::thorns;
             else if (damage_effects == "drowning")
-                type.effects = damage_type::effects_type::drowning;
+                type.effects = api::registers::damage_type::effects_type::drowning;
             else if (damage_effects == "burning")
-                type.effects = damage_type::effects_type::burning;
+                type.effects = api::registers::damage_type::effects_type::burning;
             else if (damage_effects == "poking")
-                type.effects = damage_type::effects_type::poking;
+                type.effects = api::registers::damage_type::effects_type::poking;
             else if (damage_effects == "freezing")
-                type.effects = damage_type::effects_type::freezing;
+                type.effects = api::registers::damage_type::effects_type::freezing;
             else
                 type_js["effects"].parsing_error("Unknown damage effects type: " + damage_effects);
         }
@@ -1231,83 +1173,88 @@ namespace copper_server::resources {
         if (type_js.contains("death_message_type")) {
             std::string death_message_type = type_js["death_message_type"];
             if (death_message_type == "default")
-                type.death_message_type = damage_type::death_message_type::_default;
+                type.death_message_type = api::registers::damage_type::death_message_type::_default;
             else if (death_message_type == "fall_variants")
-                type.death_message_type = damage_type::death_message_type::fall_variants;
+                type.death_message_type = api::registers::damage_type::death_message_type::fall_variants;
             else if (death_message_type == "intentional_game_design")
-                type.death_message_type = damage_type::death_message_type::intentional_game_design;
+                type.death_message_type = api::registers::damage_type::death_message_type::intentional_game_design;
             else
                 type_js["death_message_type"].parsing_error("Unknown death message type: " + death_message_type);
         }
 
         type.exhaustion = type_js["exhaustion"];
-        damageTypes[id] = std::move(type);
+        api::registers::damage_types[id] = std::move(type);
     }
 
     void load_file_damageType(const std::filesystem::path& file_path, const std::string& id) {
-        check_override(damageTypes, id, "damage type");
-        auto res = try_read_json_file(file_path);
+        check_override(api::registers::damage_types, id, "damage type");
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_damageType(js_object::get_object(*res), id);
+        load_file_damageType(util::js_object::get_object(*res), id);
     }
 
-    void load_file_bannerPattern(js_object&& pattern_js, const std::string& id, bool send_via_network_body = true) {
-        check_override(bannerPatterns, id, "banner pattern");
-        banner_pattern pattern;
+    void load_file_bannerPattern(util::js_object&& pattern_js, const std::string& id, bool send_via_network_body = true) {
+        check_override(api::registers::bannerPatterns, id, "banner pattern");
+        api::registers::banner_pattern pattern;
         pattern.asset_id = (std::string)pattern_js["asset_id"];
         pattern.translation_key = (std::string)pattern_js["translation_key"];
         pattern.send_via_network_body = send_via_network_body;
-        bannerPatterns[id] = std::move(pattern);
+        api::registers::bannerPatterns[id] = std::move(pattern);
     }
 
     void load_file_bannerPattern(const std::filesystem::path& file_path, const std::string& id) {
-        check_override(bannerPatterns, id, "banner pattern");
-        auto res = try_read_json_file(file_path);
+        check_override(api::registers::bannerPatterns, id, "banner pattern");
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_bannerPattern(js_object::get_object(*res), id);
+        load_file_bannerPattern(util::js_object::get_object(*res), id);
     }
 
-    void load_file_paintingVariant(js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
-        check_override(paintingVariants, id, "painting variant");
-        painting_variant variant;
+    void load_file_paintingVariant(util::js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
+        check_override(api::registers::painting_variants, id, "painting variant");
+        api::registers::painting_variant variant;
         variant.asset_id = (std::string)variant_js["asset_id"];
         variant.height = variant_js["height"];
         variant.width = variant_js["width"];
         variant.send_via_network_body = send_via_network_body;
-        paintingVariants[id] = std::move(variant);
+        api::registers::painting_variants[id] = std::move(variant);
     }
 
     void load_file_paintingVariant(const std::filesystem::path& file_path, const std::string& id) {
-        check_override(paintingVariants, id, "painting variant");
-        auto res = try_read_json_file(file_path);
+        check_override(api::registers::painting_variants, id, "painting variant");
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_paintingVariant(js_object::get_object(*res), id);
+        load_file_paintingVariant(util::js_object::get_object(*res), id);
     }
 
-    void load_file_recipe(js_object&& variant_js, const std::string& id, [[maybe_unused]] bool send_via_network_body = true) {
-        enbt::compound res;
-        res = util::conversions::json::from_json(variant_js.get());
-        api::recipe::set_recipe(id, std::move(res));
+    void load_file_recipe(util::js_object&& variant_js, const std::string& id, [[maybe_unused]] bool send_via_network_body = true) {
+        check_override(api::registers::recipe_table, id, "recipe");
+
+        base_objects::recipe res;
+        res.category = (std::string)variant_js["category"];
+        res.group = (std::string)variant_js["group"];
+        //TODO complete
+
+        api::registers::recipe_table[id] = std::move(res);
     }
 
     void load_file_recipe(const std::filesystem::path& file_path, const std::string& id) {
-        auto res = try_read_json_file(file_path);
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_recipe(js_object::get_object(*res), id);
+        load_file_recipe(util::js_object::get_object(*res), id);
     }
 
-    void apply_tags(js_value val, const std::string& type, const std::string& namespace_, const std::string& path_, bool replace) {
+    void apply_tags(util::js_value val, const std::string& type, const std::string& namespace_, const std::string& path_, bool replace) {
         list_array<std::string> result;
-        for (auto&& tag : js_array::get_array(val)) {
+        for (auto&& tag : util::js_array::get_array(val)) {
             std::string the_tag;
             if (tag.is_string())
                 the_tag = (std::string)tag;
             else {
-                auto tag_ = js_object::get_object(tag);
+                auto tag_ = util::js_object::get_object(tag);
                 the_tag = (std::string)tag_.at("id");
             }
             result.emplace_back(std::move(the_tag));
@@ -1315,7 +1262,7 @@ namespace copper_server::resources {
         api::tags::add_tag(type, namespace_ + ":" + path_, result, !replace);
     }
 
-    void load_file_tags(js_object&& tags_, const std::string& type, const std::string& namespace_, const std::string& path_) {
+    void load_file_tags(util::js_object&& tags_, const std::string& type, const std::string& namespace_, const std::string& path_) {
         if (tags_.contains("replace")) {
             bool replace = tags_["replace"];
             apply_tags(tags_["values"], type, namespace_, path_, replace);
@@ -1328,10 +1275,10 @@ namespace copper_server::resources {
     }
 
     void load_file_tags(const std::filesystem::path& file_path, const std::string& type, const std::string& namespace_, const std::string& path_) {
-        auto res = try_read_json_file(file_path);
+        auto res = util::try_read_json_file(file_path);
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
-        load_file_tags(js_object::get_object(*res), type, namespace_, path_);
+        load_file_tags(util::js_object::get_object(*res), type, namespace_, path_);
     }
 
     void load_register_file(std::string_view memory, const std::string& namespace_, const std::string& path_, const std::string& type) {
@@ -1633,7 +1580,7 @@ namespace copper_server::resources {
                     block_data->is_liquid = states & 0b0000100000;
                     block_data->is_solid = states & 0b0001000000;
                     block_data->is_full_cube = states & 0b0010000000;
-                    block_data->tickable = states & 0b0100000000 ? block_data->tickable : base_objects::static_block_data::tick_opt::no_tick;
+                    block_data->is_tickable = states & 0b0100000000;
                     block_data->has_random_ticks = states & 0b0100000000;
                     block_data->has_comparator_output = states & 0b1000000000;
                 })
@@ -1715,7 +1662,7 @@ namespace copper_server::resources {
 #pragma region block
             enbt::io_helper::collection::compound_relaxed block_collector;
             block_collector
-                .collect("name", [&](auto& item) { default_state_data->display_name = Chat::fromEnbt(item.read()); })
+                .collect("name", [&](auto& item) { default_state_data->display_name = base_objects::chat::from_enbt(item.read()); })
                 .collect("named_id", [&](auto& item) {
                     item.read_as(default_state_data->name);
                     if (named_full_block_data.contains(default_state_data->name))
@@ -1743,7 +1690,7 @@ namespace copper_server::resources {
                     item.read_as(default_state_data->blast_resistance);
                 })
                 .collect("item_id", [&default_state_data](auto& item) {
-                    item.read_as(default_state_data->default_drop_item_id);
+                    item.read_as(default_state_data->item_id);
                 })
                 .collect("map_color_rgb", [&default_state_data](auto& item) {
                     item.read_as(default_state_data->map_color_rgb);
@@ -1824,7 +1771,7 @@ namespace copper_server::resources {
                     block_data->jump_velocity_multiplier = default_state_data->jump_velocity_multiplier;
                     block_data->hardness = default_state_data->hardness;
                     block_data->blast_resistance = default_state_data->blast_resistance;
-                    block_data->default_drop_item_id = default_state_data->default_drop_item_id;
+                    block_data->item_id = default_state_data->item_id;
                     block_data->map_color_rgb = default_state_data->map_color_rgb;
                     block_data->loot_table = default_state_data->loot_table;
                     block_data->allowed_properties = default_state_data->allowed_properties;
@@ -1839,6 +1786,7 @@ namespace copper_server::resources {
                     throw std::runtime_error("Gap between block definitions");
             }
             full_block_data_.commit();
+            base_objects::palette_container::GLOBAL_BITS_PER_ENTRY_BLOCKS = base_objects::palette_data::bits_for_max(full_block_data_.size());
         }));
 
         base_objects::block::initialize();
@@ -1852,7 +1800,7 @@ namespace copper_server::resources {
             slot.id = name;
             std::unordered_map<int32_t, base_objects::component> components;
             for (auto& [component_name, value] : decl.as_object().at("components").as_object()) {
-                auto component = base_objects::component::parse_component(component_name, conversions::json::from_json(value));
+                auto component = base_objects::component::parse_component(component_name, util::conversions::json::from_json(value));
                 auto id = component.get_id();
                 components[id] = std::move(component);
             }
@@ -1872,7 +1820,7 @@ namespace copper_server::resources {
 
             it.second["proto_invert"] = std::move(invert);
         }
-        api::registers::current_protocol_id = 772;
+        api::registers::current_protocol_id = 773;
         api::registers::current_protocol_registers = std::move(res);
     }
 
@@ -1905,11 +1853,11 @@ namespace copper_server::resources {
             __prepare_tags(decl.get_object(), type, namespace_, "");
     }
 
-    void process_item_(boost::json::object& decl, const std::string& namespace_, void (*fn)(js_object&&, const std::string&, bool send_via_network_body), bool send_via_network_body) {
+    void process_item_(boost::json::object& decl, const std::string& namespace_, void (*fn)(util::js_object&&, const std::string&, bool send_via_network_body), bool send_via_network_body) {
         for (auto& [id, value] : decl) {
             if (id.ends_with(".json")) {
                 std::string _id = namespace_ + (std::string)std::string_view(id).substr(0, id.size() - 5);
-                fn(js_object::get_object(value), _id, send_via_network_body);
+                fn(util::js_object::get_object(value), _id, send_via_network_body);
             } else
                 process_item_(value.as_object(), namespace_ + std::string(id), fn, send_via_network_body);
         }
@@ -1925,16 +1873,16 @@ namespace copper_server::resources {
         }
     }
 
-    void process_item(js_value& decl, const std::string& namespace_, void (*fn)(js_object&&, const std::string&, bool send_via_network_body), bool send_via_network_body) {
+    void process_item(util::js_value& decl, const std::string& namespace_, void (*fn)(util::js_object&&, const std::string&, bool send_via_network_body), bool send_via_network_body) {
         process_item_(decl.get().as_object(), namespace_ + ":", fn, send_via_network_body);
     }
 
-    void process_item(js_value& decl, const std::string& namespace_, void (*fn)(boost::json::object&, const std::string&, bool send_via_network_body), bool send_via_network_body) {
+    void process_item(util::js_value& decl, const std::string& namespace_, void (*fn)(boost::json::object&, const std::string&, bool send_via_network_body), bool send_via_network_body) {
         process_item_(decl.get().as_object(), namespace_ + ":", fn, send_via_network_body);
     }
 
     void process_pack(boost::json::object& parsed, const std::string& namespace_, const std::string& id, bool allowed_pack_nest, bool send_via_network_body) {
-        auto pack_data = js_object::get_object(parsed);
+        auto pack_data = util::js_object::get_object(parsed);
         if (pack_data.contains("tags"))
             prepare_tags(pack_data["tags"].get().as_object(), namespace_);
         for (auto&& [name, decl] : pack_data) {
@@ -1983,22 +1931,22 @@ namespace copper_server::resources {
             else if (name == "wolf_sound_variant")
                 process_item(decl, namespace_, load_file_wolfSoundVariant, send_via_network_body);
             else if (name == "worldgen") {
-                for (auto&& [wg_name, wg_decl] : js_object::get_object(decl)) {
+                for (auto&& [wg_name, wg_decl] : util::js_object::get_object(decl)) {
                     if (wg_name == "biome")
                         process_item(wg_decl, namespace_, load_file_biomes, send_via_network_body);
                 }
             } else if (allowed_pack_nest) {
                 if (name == "datapacks") {
                     auto& enabled_features = api::configuration::get().game_play.enabled_features;
-                    for (auto&& [dp_name, dp_decl] : js_object::get_object(decl)) {
+                    for (auto&& [dp_name, dp_decl] : util::js_object::get_object(decl)) {
                         auto pack_id = std::string(dp_name);
-                        auto decl_obj = js_object::get_object(dp_decl);
+                        auto decl_obj = util::js_object::get_object(dp_decl);
                         if (decl_obj.contains("pack.mcmeta")) {
-                            auto pack_meta = js_object::get_object(decl_obj["pack.mcmeta"]);
+                            auto pack_meta = util::js_object::get_object(decl_obj["pack.mcmeta"]);
                             if (pack_meta.contains("features")) {
-                                auto features = js_object::get_object(pack_meta["features"]);
+                                auto features = util::js_object::get_object(pack_meta["features"]);
                                 if (features.contains("enabled")) {
-                                    auto enabled = js_array::get_array(features["enabled"]);
+                                    auto enabled = util::js_array::get_array(features["enabled"]);
                                     bool not_enabled = false;
                                     for (auto&& feature : enabled) {
                                         if (!enabled_features.contains(feature)) {
@@ -2012,7 +1960,7 @@ namespace copper_server::resources {
                             }
 
                             if (pack_meta.contains("pack")) {
-                                auto pack = js_object::get_object(pack_meta["pack"]);
+                                auto pack = util::js_object::get_object(pack_meta["pack"]);
                                 if (pack.contains("pack_format")) {
                                     auto pack_format = (int64_t)pack["pack_format"];
                                     if (pack_format != 61) {
@@ -2023,17 +1971,17 @@ namespace copper_server::resources {
                             }
 
                             if (pack_meta.contains("data")) {
-                                auto in_pack_data = js_object::get_object(pack_meta["data"]);
+                                auto in_pack_data = util::js_object::get_object(pack_meta["data"]);
                                 for (auto&& [in_pack_name, in_pack_decl] : in_pack_data)
                                     process_pack(in_pack_decl, in_pack_name, pack_id, false, send_via_network_body);
                             } else
-                                loaded_packs().push_back({.namespace_ = "minecraft", .id = pack_id, .version = "1.21.8"});
+                                loaded_packs().push_back({.namespace_ = "minecraft", .id = pack_id, .version = "1.21.10"});
                         }
                     }
                 }
             }
         }
-        loaded_packs().push_back({.namespace_ = namespace_, .id = id, .version = "1.21.8"});
+        loaded_packs().push_back({.namespace_ = namespace_, .id = id, .version = "1.21.10"});
     }
 
     void process_pack(boost::json::object& parsed, const std::string& namespace_, const std::string& id) {
@@ -2043,7 +1991,7 @@ namespace copper_server::resources {
     void ___recursive_merge_json(boost::json::object& out, const std::filesystem::directory_entry& file);
 
     void ___recursive_merge_json__file(boost::json::object& out, const std::filesystem::directory_entry& file) {
-        auto it = try_read_json_file(file.path());
+        auto it = util::try_read_json_file(file.path());
         if (!it)
             throw std::runtime_error("Failed to read file: " + file.path().string());
         out[file.path().filename().string()] = std::move(*it);
@@ -2079,14 +2027,14 @@ namespace copper_server::resources {
             auto& path = entry.path();
             std::string id = path.stem().string();
             if (entry.is_directory()) {
-                auto pack_meta_result = try_read_json_file(path / "pack.mcmeta");
+                auto pack_meta_result = util::try_read_json_file(path / "pack.mcmeta");
                 if (!pack_meta_result)
                     throw std::runtime_error("Failed to read datapack: " + path.string());
-                auto pack_meta = js_object::get_object(*pack_meta_result);
+                auto pack_meta = util::js_object::get_object(*pack_meta_result);
                 if (pack_meta.contains("features")) {
-                    auto features = js_object::get_object(pack_meta["features"]);
+                    auto features = util::js_object::get_object(pack_meta["features"]);
                     if (features.contains("enabled")) {
-                        auto enabled = js_array::get_array(features["enabled"]);
+                        auto enabled = util::js_array::get_array(features["enabled"]);
                         bool not_enabled = false;
                         for (auto&& feature : enabled) {
                             if (!enabled_features.contains(feature)) {
@@ -2100,7 +2048,7 @@ namespace copper_server::resources {
                 }
 
                 if (pack_meta.contains("pack")) {
-                    auto pack = js_object::get_object(pack_meta["pack"]);
+                    auto pack = util::js_object::get_object(pack_meta["pack"]);
                     if (pack.contains("pack_format")) {
                         auto pack_format = (int64_t)pack["pack_format"];
                         if (pack_format != 61) {
@@ -2150,7 +2098,7 @@ namespace copper_server::resources {
             auto reg_attributes = boost::json::parse(resources::registry::entity_attributes);
             auto current_attribute = api::registers::current_protocol_registers.at("minecraft:attribute").at("entries").as_compound();
             for (auto& [name, decl] : current_attribute)
-                api::registers::attributes[name] = attribute{name, (uint32_t)decl.at("protocol_id"), reg_attributes.at(name).to_number<double>()};
+                api::registers::attributes[name] = api::registers::attribute{name, (uint32_t)decl.at("protocol_id"), reg_attributes.at(name).to_number<double>()};
             {
                 api::registers::attributes_cache.resize(api::registers::attributes.size());
                 auto it = api::registers::attributes.begin();
@@ -2166,7 +2114,7 @@ namespace copper_server::resources {
             auto parsed = boost::json::parse(resources::registry::status_effects);
             for (auto& [named_id, decl] : parsed.as_object()) {
                 std::unordered_set<std::string> required_features;
-                list_array<effect::attribute_modifier> attribute_modifiers;
+                list_array<api::registers::effect::attribute_modifier> attribute_modifiers;
                 std::string name = (std::string)decl.at("name").as_string();
                 std::string translation_key = (std::string)decl.at("translation_key").as_string();
                 std::string category = (std::string)decl.at("category").as_string();
@@ -2174,21 +2122,21 @@ namespace copper_server::resources {
                     required_features.insert((std::string)nam.as_string());
                 for (auto& mod : decl.at("attribute_modifiers").as_array()) {
                     auto& mod_obj = mod.as_object();
-                    effect::attribute_modifier add{
+                    api::registers::effect::attribute_modifier add{
                         .attribute = mod_obj.at("id").to_number<int32_t>(),
                         .value = mod_obj.at("id").to_number<double>()
                     };
                     auto& op = mod_obj.at("operation").as_string();
                     if (op == "ADD_VALUE")
-                        add.operation = effect::attribute_modifier::operation_e::add;
+                        add.operation = api::registers::effect::attribute_modifier::operation_e::add;
                     else if (op == "ADD_MULTIPLIED_BASE")
-                        add.operation = effect::attribute_modifier::operation_e::add_multiplied_base;
+                        add.operation = api::registers::effect::attribute_modifier::operation_e::add_multiplied_base;
                     else
-                        add.operation = effect::attribute_modifier::operation_e::add_multiplied_total;
+                        add.operation = api::registers::effect::attribute_modifier::operation_e::add_multiplied_total;
                     attribute_modifiers.emplace_back(std::move(add));
                 }
 
-                api::registers::effects[named_id] = effect{
+                api::registers::effects[named_id] = api::registers::effect{
                     .required_features = std::move(required_features),
                     .attribute_modifiers = std::move(attribute_modifiers),
                     .name = (std::string)decl.at("name").as_string(),
@@ -2219,10 +2167,10 @@ namespace copper_server::resources {
                 auto parsed = boost::json::parse(resources::registry::potion);
                 for (auto&& [name, decl] : parsed.as_object()) {
                     auto checked_decl = decl.as_object();
-                    std::vector<potion::effect_data> potion_effects;
+                    std::vector<api::registers::potion::effect_data> potion_effects;
                     for (auto&& item : checked_decl.at("effects").as_array()) {
                         potion_effects.push_back(
-                            potion::effect_data{
+                            api::registers::potion::effect_data{
                                 .id = item.at("id").to_number<int32_t>(),
                                 .duration = item.at("duration").to_number<int32_t>(),
                                 .amplifier = item.at("amplifier").to_number<int32_t>()
@@ -2230,7 +2178,7 @@ namespace copper_server::resources {
                         );
                     }
 
-                    api::registers::potions[name] = potion{
+                    api::registers::potions[name] = api::registers::potion{
                         .name = name,
                         .id = checked_decl.at("id").to_number<uint32_t>(),
                         .effects = std::move(potion_effects),
@@ -2277,13 +2225,13 @@ namespace copper_server::resources {
         load_blocks();
         initialize_entities();
         prepare_built_in_pack();
-        base_objects::entity_data::initialize_entities();
+        api::entity_data::initialize_entities();
         {
             //complete initialization
             for (auto&& [name, decl] : parsed_items.as_object()) {
                 std::unordered_map<int32_t, base_objects::component> components;
                 for (auto& [component_name, value] : decl.as_object().at("components").as_object()) {
-                    auto component = base_objects::component::parse_component(component_name, conversions::json::from_json(value));
+                    auto component = base_objects::component::parse_component(component_name, util::conversions::json::from_json(value));
                     auto id = component.get_id();
                     components[id] = std::move(component);
                 }
@@ -2291,8 +2239,12 @@ namespace copper_server::resources {
             }
             {
                 auto parsed_spawn_egg = boost::json::parse(resources::registry::spawn_egg);
-                for (auto&& [item, entity] : parsed_spawn_egg.as_object())
-                    base_objects::slot_data::get_slot_data(std::stoi(item)).spawn_entity = entity.to_number<int32_t>();
+                for (auto&& [item, entity] : parsed_spawn_egg.as_object()) {
+                    auto item_id = std::stoi(item);
+                    auto entity_id = entity.to_number<int32_t>();
+                    base_objects::slot_data::get_slot_data(item_id).spawn_entity = entity_id;
+                    api::entity_data::initialization_get(entity_id).spawn_egg = std::make_optional(item_id);
+                }
             }
             {
                 auto parsed_fuels = boost::json::parse(resources::registry::fuels);
@@ -2307,5 +2259,6 @@ namespace copper_server::resources {
         }
         __initialization__versions_post();
         load_registers_complete();
+        base_objects::palette_container::GLOBAL_BITS_PER_ENTRY_BIOMES = base_objects::palette_data::bits_for_max(api::registers::biomes.size());
     }
 }

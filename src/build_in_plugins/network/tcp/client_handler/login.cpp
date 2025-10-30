@@ -9,14 +9,15 @@
 #include <src/api/configuration.hpp>
 #include <src/api/mojang/session_server.hpp>
 #include <src/api/network/tcp.hpp>
-#include <src/api/packets.hpp>
+#include <src/api/packets/client_bound/login.hpp>
+#include <src/api/packets/server_bound/login.hpp>
 #include <src/api/players.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/plugin/main.hpp>
 #include <src/util/mojang/api/hash.hpp>
 
 namespace copper_server::build_in_plugins::network::tcp {
-    struct tcp_login : public PluginAutoRegister<"network/tcp_login", tcp_login> {
+    struct tcp_login : public plugin_auto_register<"network/tcp_login", tcp_login> {
         enum processin_plugin_stage {
             complete,
             requested_cookie,
@@ -26,16 +27,15 @@ namespace copper_server::build_in_plugins::network::tcp {
         struct extra_data_t {
             uint8_t stage = 0;
             uint8_t verify_token[4];
-            list_array<std::pair<std::string, PluginRegistrationPtr>> plugins_query;
+            list_array<std::pair<std::string, plugin_registration_ptr>> plugins_query;
             int32_t plugin_query_id = 0;
 
-            static extra_data_t& get(base_objects::SharedClientData& client) {
+            static extra_data_t& get(base_objects::shared_client_data& client) {
                 return *client.packets_state.internal_data.set([&](auto& data) {
                     if (!data.extra_data) {
-                        auto allocated = new extra_data_t{};
-                        data.extra_data = std::shared_ptr<void>((void*)allocated, [](void* d) { delete reinterpret_cast<extra_data_t*>(d); });
-                        pluginManagement.inspect_plugin_bind(PluginManagement::registration_on::login, [&allocated](const std::pair<std::string, PluginRegistrationPtr>& it) {
-                            allocated->plugins_query.push_back(it);
+                        data.extra_data = std::make_shared<extra_data_t>();
+                        plugin_management.inspect_plugin_bind(plugin_management_system::registration_on::login, [&data](const std::pair<std::string, plugin_registration_ptr>& it) {
+                            reinterpret_cast<extra_data_t*>(data.extra_data.get())->plugins_query.push_back(it);
                         });
                     }
                     return reinterpret_cast<extra_data_t*>(data.extra_data.get());
@@ -43,12 +43,12 @@ namespace copper_server::build_in_plugins::network::tcp {
             }
         };
 
-        static void log_success(base_objects::SharedClientData& client) {
+        static void log_success(base_objects::shared_client_data& client) {
             extra_data_t::get(client).stage = 3;
             if (api::configuration::get().server.offline_mode)
                 client.data = api::mojang::get_session_server().hasJoined(client.name, "", false, std::nullopt);
             if (!client.data)
-                client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 0").ToStr()}};
+                client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Invalid protocol state, 0").to_str()}};
             else {
                 std::vector<api::packets::client_bound::login::login_finished::property> properties;
                 properties.reserve(client.data->properties.size());
@@ -63,13 +63,13 @@ namespace copper_server::build_in_plugins::network::tcp {
             }
         }
 
-        static processin_plugin_stage process_plugin_resp(PluginRegistration::login_response&& resp, base_objects::SharedClientData& client) {
+        static processin_plugin_stage process_plugin_resp(plugin_registration::login_response&& resp, base_objects::shared_client_data& client) {
             return std::visit(
                 [&](auto&& it) -> processin_plugin_stage {
                     using T = std::decay_t<decltype(it)>;
-                    if constexpr (std::is_same_v<T, PluginRegistration::login_response::none>)
+                    if constexpr (std::is_same_v<T, plugin_registration::login_response::none>)
                         return complete;
-                    else if constexpr (std::is_same_v<T, PluginRegistration::login_response::request_cookie>) {
+                    else if constexpr (std::is_same_v<T, plugin_registration::login_response::request_cookie>) {
                         client << api::packets::client_bound::login::cookie_request{.key = it.identifier};
                         return requested_cookie;
                     } else {
@@ -85,7 +85,7 @@ namespace copper_server::build_in_plugins::network::tcp {
             );
         }
 
-        static void switch_to_plugin_processing_stage(base_objects::SharedClientData& client) {
+        static void switch_to_plugin_processing_stage(base_objects::shared_client_data& client) {
             if (extra_data_t::get(client).plugins_query.empty()) {
                 log_success(client);
             } else {
@@ -93,7 +93,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                 processin_plugin_stage sent;
                 do {
                     auto& cur = extra_data_t::get(client).plugins_query.back();
-                    sent = process_plugin_resp(cur.second->OnLoginStart(cur.second, cur.first, client), client);
+                    sent = process_plugin_resp(cur.second->on_login_start(cur.second, cur.first, client), client);
                     if (sent == processin_plugin_stage::complete) {
                         extra_data_t::get(client).plugins_query.pop_back();
                         if (extra_data_t::get(client).plugins_query.empty()) {
@@ -106,16 +106,16 @@ namespace copper_server::build_in_plugins::network::tcp {
             }
         }
 
-        void OnRegister(const PluginRegistrationPtr&) override {
+        void on_register(const plugin_registration_ptr&) override {
             using hello = api::packets::server_bound::login::hello;
             using cookie_response = api::packets::server_bound::login::cookie_response;
             using custom_query_answer = api::packets::server_bound::login::custom_query_answer;
             using key = api::packets::server_bound::login::key;
             using login_acknowledged = api::packets::server_bound::login::login_acknowledged;
 
-            register_packet_processor([](hello&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](hello&& packet, base_objects::shared_client_data& client) {
                 if (extra_data_t::get(client).stage != 0) {
-                    client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 0").ToStr()}};
+                    client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Invalid protocol state, 0").to_str()}};
                     return;
                 }
                 client.data = std::make_shared<api::mojang::session_server::player_data>();
@@ -123,7 +123,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                 auto player = api::players::get_player(packet.name);
                 if (player) {
                     if (api::configuration::get().protocol.connection_conflict == api::configuration::server_configuration::Protocol::connection_conflict_t::prevent_join) {
-                        client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Someone already connected with this nickname").ToStr()}};
+                        client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Someone already connected with this nickname").to_str()}};
                         return;
                     } else
                         api::players::calls::on_player_kick({player, "Someone already connected with this nickname"});
@@ -157,27 +157,27 @@ namespace copper_server::build_in_plugins::network::tcp {
                 } else
                     switch_to_plugin_processing_stage(client);
             });
-            register_packet_processor([](cookie_response&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](cookie_response&& packet, base_objects::shared_client_data& client) {
                 if (extra_data_t::get(client).stage == 2) {
-                    if (auto plugin = pluginManagement.get_bind_cookies(PluginManagement::registration_on::login, packet.key); plugin) {
-                        auto response = plugin->OnLoginCookie(plugin, packet.key, packet.payload ? *packet.payload : list_array<uint8_t>{}, !!packet.payload, client);
+                    if (auto plugin = plugin_management.get_bind_cookies(plugin_management_system::registration_on::login, packet.key); plugin) {
+                        auto response = plugin->on_login_cookie(plugin, packet.key, packet.payload ? *packet.payload : list_array<uint8_t>{}, !!packet.payload, client);
                         process_plugin_resp(std::move(response), client);
                     }
                 } else
-                    client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 2").ToStr()}};
+                    client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Invalid protocol state, 2").to_str()}};
             });
-            register_packet_processor([](custom_query_answer&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](custom_query_answer&& packet, base_objects::shared_client_data& client) {
                 if (extra_data_t::get(client).stage == 2) {
                     if ((int32_t)packet.query_message_id == extra_data_t::get(client).plugin_query_id)
                         ++extra_data_t::get(client).plugin_query_id;
                     else {
-                        client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 2_0").ToStr()}};
+                        client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Invalid protocol state, 2_0").to_str()}};
                         return;
                     }
                     processin_plugin_stage sent;
                     do {
                         auto& cur = extra_data_t::get(client).plugins_query.back();
-                        sent = process_plugin_resp(cur.second->OnLoginHandle(cur.second, cur.first, to_list_array(packet.payload), packet.payload.size(), client), client);
+                        sent = process_plugin_resp(cur.second->on_login_handle(cur.second, cur.first, to_list_array(packet.payload), packet.payload.size(), client), client);
                         if (sent == processin_plugin_stage::complete) {
                             extra_data_t::get(client).plugins_query.pop_back();
                             if (extra_data_t::get(client).plugins_query.empty()) {
@@ -187,22 +187,26 @@ namespace copper_server::build_in_plugins::network::tcp {
                         }
                     } while (sent == requested_cookie);
                 } else
-                    client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 2").ToStr()}};
+                    client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Invalid protocol state, 2").to_str()}};
             });
-            register_packet_processor([](key&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](key&& packet, base_objects::shared_client_data& client) {
                 if (extra_data_t::get(client).stage == 1) {
-                    auto vft = to_list_array(packet.verify_token);
+                    auto vft = packet.verify_token;
                     if (!api::network::tcp::decrypt_data(vft)) {
-                        client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Encryption error, invalid verify token").ToStr()}};
+                        client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Encryption error, invalid verify token").to_str()}};
+                        return;
+                    }
+                    if (vft.size() != 4) {
+                        client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Encryption error, invalid verify token").to_str()}};
                         return;
                     }
                     if (memcmp(vft.data(), extra_data_t::get(client).verify_token, 4)) {
-                        client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Encryption error, invalid verify token").ToStr()}};
+                        client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Encryption error, invalid verify token").to_str()}};
                         return;
                     }
-                    auto shs = to_list_array(packet.shared_secret);
+                    auto shs = packet.shared_secret;
                     if (!api::network::tcp::decrypt_data(shs)) {
-                        client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Encryption error").ToStr()}};
+                        client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Encryption error").to_str()}};
                         return;
                     }
 
@@ -219,9 +223,9 @@ namespace copper_server::build_in_plugins::network::tcp {
                     client.get_session()->start_symmetric_encryption(shs, shs);
                     switch_to_plugin_processing_stage(client);
                 } else
-                    client << api::packets::client_bound::login::login_disconnect{.reason = {Chat("Invalid protocol state, 1").ToStr()}};
+                    client << api::packets::client_bound::login::login_disconnect{.reason = {base_objects::chat("Invalid protocol state, 1").to_str()}};
             });
-            register_packet_processor([](login_acknowledged&&, base_objects::SharedClientData&) {});
+            api::packets::processor(*this, [](login_acknowledged&&, base_objects::shared_client_data&) {}); //TODO add checks
         }
     };
 }

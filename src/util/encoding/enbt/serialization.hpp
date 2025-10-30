@@ -45,21 +45,27 @@ namespace copper_server::util::encoding::enbt {
             }
             res = std::move(arr);
         } else if constexpr (
-            std::is_same_v<base_objects::identifier, Type>
+            std::is_same_v<api::packets::identifier, Type>
             || is_string_sized<Type>
-            || std::is_same_v<base_objects::json_text_component, Type>
-            || std::is_same_v<base_objects::var_int32, Type>
-            || std::is_same_v<base_objects::var_int64, Type>
+            || std::is_same_v<api::packets::json_text_component, Type>
+            || std::is_same_v<api::packets::var_int32, Type>
+            || std::is_same_v<api::packets::var_int64, Type>
         )
             res = value.value;
-        else if constexpr (std::is_same_v<Chat, Type>)
-            res = value.ToENBT();
-        else if constexpr (std::is_same_v<base_objects::optional_var_int32, Type>) {
+        else if constexpr (std::is_same_v<base_objects::velocity, Type>)
+            res = ::enbt::compound{
+                {"x", value.x},
+                {"y", value.y},
+                {"z", value.z}
+            };
+        else if constexpr (std::is_same_v<base_objects::chat, Type>)
+            res = value.to_enbt();
+        else if constexpr (std::is_same_v<api::packets::optional_var_int32, Type>) {
             if (value)
                 res = ::enbt::optional(value);
             else
                 res = ::enbt::optional();
-        } else if constexpr (std::is_same_v<base_objects::optional_var_int64, Type>) {
+        } else if constexpr (std::is_same_v<api::packets::optional_var_int64, Type>) {
             if (value)
                 res = ::enbt::optional(value);
             else
@@ -70,7 +76,7 @@ namespace copper_server::util::encoding::enbt {
                 {"y", value.y},
                 {"z", value.z}
             };
-        else if constexpr (is_template_base_of<base_objects::ignored, Type>) {
+        else if constexpr (is_template_base_of<api::packets::ignored, Type>) {
         } else if constexpr (is_template_base_of<std::optional, Type>) {
             if (value) {
                 ::enbt::value in;
@@ -78,11 +84,11 @@ namespace copper_server::util::encoding::enbt {
                 res = ::enbt::optional(std::move(in));
             } else
                 res = ::enbt::optional();
-        } else if constexpr (is_template_base_of<base_objects::enum_as, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::enum_as, Type>) {
             res = reflect::get_enum_value(value.value);
-        } else if constexpr (is_template_base_of<base_objects::enum_as_flag, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::enum_as_flag, Type>) {
             res = reflect::get_enum_flag_value(value.value);
-        } else if constexpr (is_template_base_of<base_objects::or_, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::or_, Type>) {
             std::visit(
                 [&](auto& it) {
                     ::enbt::value tmp;
@@ -94,7 +100,7 @@ namespace copper_server::util::encoding::enbt {
                 },
                 value
             );
-        } else if constexpr (is_template_base_of<base_objects::enum_switch, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::enum_switch, Type>) {
             std::visit(
                 [&](auto& it) {
                     using it_T = std::decay_t<decltype(it)>;
@@ -107,9 +113,9 @@ namespace copper_server::util::encoding::enbt {
             );
         } else if constexpr (is_template_base_of<base_objects::box, Type>) {
             serialize_entry(res, *value);
-        } else if constexpr (is_template_base_of<base_objects::any_of, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::any_of, Type>) {
             serialize_entry(res, value.value);
-        } else if constexpr (is_template_base_of<base_objects::flags_list, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::flags_list, Type>) {
             res = ::enbt::compound{{"flag", {}}, {"items", ::enbt::dynamic_array{}}};
             serialize_entry(res["flag"], value.flag);
             auto& items = res["items"];
@@ -125,7 +131,7 @@ namespace copper_server::util::encoding::enbt {
             });
         } else if constexpr (is_ordered_id<Type>) {
             serialize_entry(res, value.value);
-        } else if constexpr (is_template_base_of<base_objects::value_optional, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::value_optional, Type>) {
             if (value.rest && value.v){
                 res = ::enbt::optional{
                     ::enbt::dynamic_array{::enbt::value{}, ::enbt::value{}}
@@ -134,12 +140,12 @@ namespace copper_server::util::encoding::enbt {
                 serialize_entry(res.get_optional()->at(1), *value.rest);
             }
             else res = ::enbt::optional{};
-        } else if constexpr (is_template_base_of<base_objects::sized_entry, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::sized_entry, Type>) {
             serialize_entry(res, value.value);
             res = ::enbt::to_log_item(std::move(res));
         } else if constexpr (is_limited_num<Type>) {
             serialize_entry(res, value.value);
-        } else if constexpr (base_objects::is_convertible_to_packet_form<Type>) {
+        } else if constexpr (api::packets::is_convertible_to_packet_form<Type>) {
             serialize_entry(res, value.to_packet());
         } else if constexpr (api::id::is_source<Type>) {
             serialize_entry(res, value.to_string());
@@ -149,7 +155,7 @@ namespace copper_server::util::encoding::enbt {
             reflect::for_each_field_with_name(value, [&res, &process_next](auto& item, auto& name) {
                 if (process_next)
                     serialize_entry(res[name], item);
-                if constexpr (is_template_base_of<base_objects::depends_next, std::decay_t<decltype(item)>>)
+                if constexpr (is_template_base_of<api::packets::depends_next, std::decay_t<decltype(item)>>)
                     process_next = (bool)item.value;
             });
         }
@@ -182,16 +188,18 @@ namespace copper_server::util::encoding::enbt {
                 serialize_entry(stream, item);
             });
         } else if constexpr (
-            std::is_same_v<base_objects::identifier, Type>
+            std::is_same_v<api::packets::identifier, Type>
             || is_string_sized<Type>
-            || std::is_same_v<base_objects::json_text_component, Type>
-            || std::is_same_v<base_objects::var_int32, Type>
-            || std::is_same_v<base_objects::var_int64, Type>
+            || std::is_same_v<api::packets::json_text_component, Type>
+            || std::is_same_v<api::packets::var_int32, Type>
+            || std::is_same_v<api::packets::var_int64, Type>
         )
             res.write(value.value);
-        else if constexpr (std::is_same_v<Chat, Type>)
-            res.write(value.ToENBT());
-        else if constexpr (std::is_same_v<base_objects::optional_var_int32, Type> || std::is_same_v<base_objects::optional_var_int64, Type>) {
+        else if constexpr (std::is_same_v<base_objects::velocity, Type>)
+            res.write_compound(3).write("x", value.x).write("y", value.y).write("z", value.z);
+        else if constexpr (std::is_same_v<base_objects::chat, Type>)
+            res.write(value.to_enbt());
+        else if constexpr (std::is_same_v<api::packets::optional_var_int32, Type> || std::is_same_v<api::packets::optional_var_int64, Type>) {
             auto opt = res.write_optional();
             if (value)
                 opt.write([&value](auto& stream) {
@@ -199,7 +207,7 @@ namespace copper_server::util::encoding::enbt {
                 });
         } else if constexpr (std::is_same_v<base_objects::position, Type>)
             res.write_compound(3).write("x", value.x).write("y", value.y).write("z", value.z);
-        else if constexpr (is_template_base_of<base_objects::ignored, Type>) {
+        else if constexpr (is_template_base_of<api::packets::ignored, Type>) {
             res.write(::enbt::value());
         } else if constexpr (is_template_base_of<std::optional, Type>) {
             auto opt = res.write_optional();
@@ -207,11 +215,11 @@ namespace copper_server::util::encoding::enbt {
                 opt.write([&value](auto& stream) {
                     serialize_entry(stream, *value);
                 });
-        } else if constexpr (is_template_base_of<base_objects::enum_as, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::enum_as, Type>) {
             res.write(reflect::get_enum_value(value.value));
-        } else if constexpr (is_template_base_of<base_objects::enum_as_flag, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::enum_as_flag, Type>) {
             res.write(reflect::get_enum_flag_value(value.value));
-        } else if constexpr (is_template_base_of<base_objects::or_, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::or_, Type>) {
             std::visit(
                 [&res](auto& it) {
                     if constexpr (std::is_same_v<typename Type::var_0, std::decay_t<decltype(it)>>)
@@ -225,7 +233,7 @@ namespace copper_server::util::encoding::enbt {
                 },
                 value
             );
-        } else if constexpr (is_template_base_of<base_objects::enum_switch, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::enum_switch, Type>) {
             std::visit(
                 [&](auto& it) {
                     using it_T = std::decay_t<decltype(it)>;
@@ -242,9 +250,9 @@ namespace copper_server::util::encoding::enbt {
             );
         } else if constexpr (is_template_base_of<base_objects::box, Type>) {
             serialize_entry(res, *value);
-        } else if constexpr (is_template_base_of<base_objects::any_of, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::any_of, Type>) {
             serialize_entry(res, value.value);
-        } else if constexpr (is_template_base_of<base_objects::flags_list, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::flags_list, Type>) {
             res
                 .write_compound(2)
                 .write("flag", [&value](auto& stream) {
@@ -267,7 +275,7 @@ namespace copper_server::util::encoding::enbt {
             });
         } else if constexpr (is_ordered_id<Type>) {
             serialize_entry(res, value.value);
-        } else if constexpr (is_template_base_of<base_objects::value_optional, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::value_optional, Type>) {
             auto opt = res.write_optional();
             if (value.rest && value.v) {
                 opt.write([&value](auto& stream) {
@@ -281,11 +289,11 @@ namespace copper_server::util::encoding::enbt {
                         });
                 });
             }
-        } else if constexpr (is_template_base_of<base_objects::sized_entry, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::sized_entry, Type>) {
             res.write_log_item(value.value);
         } else if constexpr (is_limited_num<Type>) {
             serialize_entry(res, value.value);
-        } else if constexpr (base_objects::is_convertible_to_packet_form<Type>) {
+        } else if constexpr (api::packets::is_convertible_to_packet_form<Type>) {
             serialize_entry(res, value.to_packet());
         } else if constexpr (api::id::is_source<Type>) {
             serialize_entry(res, value.to_string());
@@ -297,7 +305,7 @@ namespace copper_server::util::encoding::enbt {
                     comp.write(name, [&item](auto& stream) {
                         serialize_entry(stream, item);
                     });
-                if constexpr (is_template_base_of<base_objects::depends_next, std::decay_t<decltype(item)>>)
+                if constexpr (is_template_base_of<api::packets::depends_next, std::decay_t<decltype(item)>>)
                     process_next = (bool)item.value;
             });
         }

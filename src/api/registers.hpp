@@ -26,10 +26,11 @@ namespace copper_server::api::registers {
                 api::id::item item;
                 std::string nbt;
             } icon;
-            Chat title;
+
+            base_objects::chat title;
             std::string frame;
             std::string background;
-            Chat description;
+            base_objects::chat description;
             bool show_toast;
             bool announce_to_chat;
             bool hidden;
@@ -60,14 +61,14 @@ namespace copper_server::api::registers {
         std::variant<api::id::sound_event, custom> sound_event;
         int32_t comparator_output = 0;
         int32_t length_in_seconds = 0;
-        Chat description;
+        base_objects::chat description;
 
         uint32_t id = 0;
         bool send_via_network_body = true;
     };
 
     struct armor_trim_material {
-        std::variant<std::string, Chat> description;
+        std::variant<std::string, base_objects::chat> description;
         std::string asset_name;
         uint32_t id;
         bool allow_override = false;
@@ -77,7 +78,7 @@ namespace copper_server::api::registers {
     struct armor_trim_pattern {
         std::string asset_id;
         api::id::item template_item;
-        std::variant<std::string, Chat> description;
+        std::variant<std::string, base_objects::chat> description;
         uint32_t id;
         bool decal;
         bool allow_override = false;
@@ -180,7 +181,7 @@ namespace copper_server::api::registers {
     struct chat_type {
         struct decoration {
             std::string translation_key;
-            std::optional<Chat> style;                                      //main text and extra chat will be ignored
+            std::optional<base_objects::chat> style;                                      //main text and extra chat will be ignored
             std::variant<std::string, std::vector<std::string>> parameters; // sender, target, content
         };
 
@@ -227,7 +228,7 @@ namespace copper_server::api::registers {
     };
 
     struct dimension_type {
-        std::variant<int32_t, base_objects::number_provider> monster_spawn_light_level;
+        std::variant<int32_t, std::shared_ptr<base_objects::number_provider>> monster_spawn_light_level;
         std::optional<uint64_t> fixed_time;
         std::string infiniburn;
         std::string effects;
@@ -294,8 +295,8 @@ namespace copper_server::api::registers {
     };
 
     struct painting_variant {
-        Chat title;
-        Chat author;
+        base_objects::chat title;
+        base_objects::chat author;
         std::string asset_id;
         uint32_t height = 0;
         uint32_t width = 0;
@@ -314,14 +315,14 @@ namespace copper_server::api::registers {
         std::variant<api::id::sound_event, custom> sound_event;
         float use_duration = 0.0f;
         float range = 0.0f;
-        Chat description;
+        base_objects::chat description;
 
         uint32_t id = 0;
         bool send_via_network_body = true;
     };
 
     struct enchantment {
-        Chat description;
+        base_objects::chat description;
         std::variant<std::string, std::vector<std::string>, std::nullptr_t> exclusive_set;
         std::variant<api::id::set::item, std::vector<api::id::item>> supported_items;
         std::variant<api::id::set::item, std::vector<api::id::item>> primary_items;
@@ -392,8 +393,8 @@ namespace copper_server::api::registers {
 
     struct loot_table_item {
         struct pool {
-            base_objects::number_provider rolls;
-            base_objects::number_provider bonus_rolls;
+            std::shared_ptr<base_objects::number_provider> rolls;
+            std::shared_ptr<base_objects::number_provider> bonus_rolls;
             std::vector<enbt::compound> entries;
             std::vector<enbt::compound> functions;
             std::vector<enbt::compound> conditions; //predicates, can be empty
@@ -426,7 +427,7 @@ namespace copper_server::api::registers {
 
                 std::variant<std::string, std::vector<std::string>> replaceable;
 
-                struct Debug_settings {
+                struct debug_settings_t {
                     bool debug = false;
 
                     struct state {
@@ -440,7 +441,7 @@ namespace copper_server::api::registers {
                     state barrier_state;
                 };
 
-                std::optional<Debug_settings> debug_settings;
+                std::optional<debug_settings_t> debug_settings;
 
                 enbt::compound custom_data; //virtual field, used in handlers
             } config;
@@ -608,39 +609,39 @@ namespace copper_server::api::registers {
     };
 
     //CLIENT/SERVER
-    extern std::unordered_map<std::string, armor_trim_material> armorTrimMaterials;
-    extern std::unordered_map<std::string, armor_trim_pattern> armorTrimPatterns;
+    extern std::unordered_map<std::string, armor_trim_material> armor_trim_materials;
+    extern std::unordered_map<std::string, armor_trim_pattern> armor_trim_patterns;
     extern std::unordered_map<std::string, biome> biomes;
-    extern std::unordered_map<std::string, chat_type> chatTypes;
-    extern std::unordered_map<std::string, damage_type> damageTypes;
-    extern std::unordered_map<std::string, dimension_type> dimensionTypes;
-    extern std::unordered_map<std::string, wolf_sound_variant> wolfSoundVariants;
-    extern std::unordered_map<std::string, wolf_variant> wolfVariants;
-    extern std::unordered_map<std::string, entity_variant> catVariants;
-    extern std::unordered_map<std::string, entity_variant> chickenVariants;
-    extern std::unordered_map<std::string, entity_variant> cowVariants;
-    extern std::unordered_map<std::string, entity_variant> pigVariants;
-    extern std::unordered_map<std::string, entity_variant> frogVariants;
+    extern std::unordered_map<std::string, chat_type> chat_types;
+    extern std::unordered_map<std::string, damage_type> damage_types;
+    extern std::unordered_map<std::string, dimension_type> dimension_types;
+    extern std::unordered_map<std::string, wolf_sound_variant> wolf_sound_variants;
+    extern std::unordered_map<std::string, wolf_variant> wolf_variants;
+    extern std::unordered_map<std::string, entity_variant> cat_variants;
+    extern std::unordered_map<std::string, entity_variant> chicken_variants;
+    extern std::unordered_map<std::string, entity_variant> cow_variants;
+    extern std::unordered_map<std::string, entity_variant> pig_variants;
+    extern std::unordered_map<std::string, entity_variant> frog_variants;
     extern std::unordered_map<std::string, banner_pattern> bannerPatterns;
-    extern std::unordered_map<std::string, painting_variant> paintingVariants;
+    extern std::unordered_map<std::string, painting_variant> painting_variants;
     extern std::unordered_map<std::string, instrument> instruments;
     extern std::unordered_map<std::string, int32_t> entity_pose;
 
-    extern list_array<std::unordered_map<std::string, armor_trim_material>::iterator> armorTrimMaterials_cache;
-    extern list_array<std::unordered_map<std::string, armor_trim_pattern>::iterator> armorTrimPatterns_cache;
+    extern list_array<std::unordered_map<std::string, armor_trim_material>::iterator> armor_trim_materials_cache;
+    extern list_array<std::unordered_map<std::string, armor_trim_pattern>::iterator> armor_trim_patterns_cache;
     extern list_array<std::unordered_map<std::string, biome>::iterator> biomes_cache;
-    extern list_array<std::unordered_map<std::string, chat_type>::iterator> chatTypes_cache;
-    extern list_array<std::unordered_map<std::string, damage_type>::iterator> damageTypes_cache;
-    extern list_array<std::unordered_map<std::string, dimension_type>::iterator> dimensionTypes_cache;
-    extern list_array<std::unordered_map<std::string, wolf_sound_variant>::iterator> wolfSoundVariants_cache;
-    extern list_array<std::unordered_map<std::string, wolf_variant>::iterator> wolfVariants_cache;
-    extern list_array<std::unordered_map<std::string, entity_variant>::iterator> catVariants_cache;
-    extern list_array<std::unordered_map<std::string, entity_variant>::iterator> chickenVariants_cache;
-    extern list_array<std::unordered_map<std::string, entity_variant>::iterator> cowVariants_cache;
-    extern list_array<std::unordered_map<std::string, entity_variant>::iterator> pigVariants_cache;
-    extern list_array<std::unordered_map<std::string, entity_variant>::iterator> frogVariants_cache;
+    extern list_array<std::unordered_map<std::string, chat_type>::iterator> chat_types_cache;
+    extern list_array<std::unordered_map<std::string, damage_type>::iterator> damage_types_cache;
+    extern list_array<std::unordered_map<std::string, dimension_type>::iterator> dimension_types_cache;
+    extern list_array<std::unordered_map<std::string, wolf_sound_variant>::iterator> wolf_sound_variants_cache;
+    extern list_array<std::unordered_map<std::string, wolf_variant>::iterator> wolf_variants_cache;
+    extern list_array<std::unordered_map<std::string, entity_variant>::iterator> cat_variants_cache;
+    extern list_array<std::unordered_map<std::string, entity_variant>::iterator> chicken_variants_cache;
+    extern list_array<std::unordered_map<std::string, entity_variant>::iterator> cow_variants_cache;
+    extern list_array<std::unordered_map<std::string, entity_variant>::iterator> pig_variants_cache;
+    extern list_array<std::unordered_map<std::string, entity_variant>::iterator> frog_variants_cache;
     extern list_array<std::unordered_map<std::string, banner_pattern>::iterator> bannerPatterns_cache;
-    extern list_array<std::unordered_map<std::string, painting_variant>::iterator> paintingVariants_cache;
+    extern list_array<std::unordered_map<std::string, painting_variant>::iterator> painting_variants_cache;
     extern list_array<std::unordered_map<std::string, instrument>::iterator> instruments_cache;
     extern list_array<std::unordered_map<std::string, int32_t>::iterator> entity_pose_cache;
 

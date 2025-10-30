@@ -51,7 +51,7 @@ namespace copper_server {
             };
 
         public:
-            Chat display_name;
+            base_objects::chat display_name;
             std::shared_ptr<enbt::compound> loot_table;
             std::vector<shape_data*> collision_shapes;
             std::vector<shape_data*> outline_shapes;
@@ -66,7 +66,7 @@ namespace copper_server {
             float blast_resistance = 0;
             int32_t map_color_rgb = 0;
             int32_t block_entity_id = 0; //used only when is_block_entity == true, like interact and storage
-            int32_t default_drop_item_id = 0;
+            int32_t item_id = 0;
             int32_t experience = 0;
             block_id_t general_block_id = 0; //does not represent state
             block_id_t default_state = 0;
@@ -85,6 +85,7 @@ namespace copper_server {
             bool is_default_state : 1 = false;
             bool has_random_ticks : 1 = false;
             bool has_comparator_output : 1 = false;
+            bool is_tickable : 1 = false;
 
             struct transparent_sides_t {
                 bool down_side_solid : 1 = false;
@@ -105,7 +106,7 @@ namespace copper_server {
             std::optional<flammable_t> flammable;
 
             struct ore_data_t {
-                number_provider experience;
+                std::shared_ptr<number_provider> experience;
             };
 
             std::optional<ore_data_t> ore_data;
@@ -135,61 +136,6 @@ namespace copper_server {
 
             list_array<std::string> block_aliases; //string block ids(checks from first to last, if none found in `initialize_blocks()` throws) implicitly uses id first
 
-
-            enum class tick_opt : uint32_t {
-                undefined,
-                block_tickable,
-                entity_tickable,
-                no_tick
-            } tickable
-                = tick_opt::undefined;
-
-            bool is_tickable() const {
-                switch (tickable) {
-                case tick_opt::block_tickable:
-                case tick_opt::entity_tickable:
-                    return true;
-                case tick_opt::undefined:
-                    if (on_tick)
-                        return true;
-                    else if (as_entity_on_tick)
-                        return true;
-                    else
-                        return false;
-                default:
-                case tick_opt::no_tick:
-                    return false;
-                }
-            }
-
-            bool is_tickable() {
-                switch (tickable) {
-                case tick_opt::block_tickable:
-                case tick_opt::entity_tickable:
-                    return true;
-                case tick_opt::undefined:
-                    tickable = resolve_tickable();
-                    return tickable != tick_opt::no_tick;
-                default:
-                case tick_opt::no_tick:
-                    return false;
-                }
-            }
-
-            tick_opt resolve_tickable() const {
-                if (as_entity_on_tick)
-                    return tick_opt::entity_tickable;
-                if (on_tick)
-                    return tick_opt::block_tickable;
-                return tick_opt::no_tick;
-            }
-
-            tick_opt get_tickable() {
-                if (tickable == tick_opt::undefined)
-                    tickable = resolve_tickable();
-                return tickable;
-            }
-
             static_block_data() {}
 
             static_block_data(const static_block_data& copy)
@@ -206,7 +152,7 @@ namespace copper_server {
                   blast_resistance(copy.blast_resistance),
                   map_color_rgb(copy.map_color_rgb),
                   block_entity_id(copy.block_entity_id),
-                  default_drop_item_id(copy.default_drop_item_id),
+                  item_id(copy.item_id),
                   experience(copy.experience),
                   general_block_id(copy.general_block_id),
                   default_state(copy.default_state),
@@ -247,7 +193,7 @@ namespace copper_server {
                   blast_resistance(std::move(copy.blast_resistance)),
                   map_color_rgb(std::move(copy.map_color_rgb)),
                   block_entity_id(std::move(copy.block_entity_id)),
-                  default_drop_item_id(std::move(copy.default_drop_item_id)),
+                  item_id(std::move(copy.item_id)),
                   experience(std::move(copy.experience)),
                   general_block_id(std::move(copy.general_block_id)),
                   default_state(std::move(copy.default_state)),
@@ -307,7 +253,8 @@ namespace copper_server {
         };
 
         struct block final {
-            using tick_opt = static_block_data::tick_opt;
+            base_objects::block_id_t id = 0;
+
 
             static void initialize();
 
@@ -315,18 +262,15 @@ namespace copper_server {
                 if (named_full_block_data.contains(new_block.name))
                     throw std::runtime_error("Block with " + new_block.name + " name already defined.");
 
-                struct {
-                    block_id_t id : 30;
-                } bound_check;
 
-                bound_check.id = full_block_data_.size();
-                if (size_t(bound_check.id) != full_block_data_.size())
+                auto new_id = full_block_data_.size();
+                if (full_block_data_.size() >= INT32_MAX)
                     throw std::out_of_range("Blocks count out of range, block can't added");
                 auto block_ = std::make_unique<static_block_data>(std::move(new_block));
                 auto& new_loc = full_block_data_.emplace_back(std::move(block_));
 
                 named_full_block_data[block_->name] = new_loc.get();
-                return bound_check.id;
+                return (int32_t)new_id;
             }
 
             static void access_full_block_data(std::function<void(list_array<std::unique_ptr<static_block_data>>&, std::unordered_map<std::string, static_block_data*>&)> access) {
@@ -335,17 +279,6 @@ namespace copper_server {
 
             static block_id_t addNewStatelessBlock(const static_block_data& new_block) {
                 return addNewStatelessBlock(static_block_data(new_block));
-            }
-
-            base_objects::block_id_t id : 30 = 0;
-            tick_opt tickable : 2 = tick_opt::undefined;
-
-            inline void set_raw(uint32_t raw) {
-                *this = std::bit_cast<block, uint32_t>(raw);
-            }
-
-            inline uint32_t get_raw() const {
-                return std::bit_cast<uint32_t, block>(*this);
             }
 
             const static_block_data& getStaticData() const {
@@ -366,13 +299,11 @@ namespace copper_server {
 
             void tick(storage::world_data&, base_objects::world::sub_chunk_data& sub_chunk, int64_t chunk_x, uint64_t sub_chunk_y, int64_t chunk_z, uint8_t local_x, uint8_t local_y, uint8_t local_z, bool random_ticked);
 
-            static tick_opt resolve_tickable(base_objects::block_id_t block_id);
-
             inline const std::vector<shape_data*>& collision_shapes() const {
                 return getStaticData().collision_shapes;
             }
 
-            inline const Chat& display_name() const {
+            inline const base_objects::chat& display_name() const {
                 return getStaticData().display_name;
             }
 
@@ -424,8 +355,8 @@ namespace copper_server {
                 return cached_block_entity_id[id];
             }
 
-            inline int32_t default_drop_item_id() const {
-                return cached_default_drop_item_id[id];
+            inline int32_t item_id() const {
+                return cached_item_id[id];
             }
 
             inline int32_t experience() const {
@@ -488,8 +419,9 @@ namespace copper_server {
                 return cached_is_block_entity.get_unchecked(id);
             }
 
-            bool is_tickable();
-            bool is_tickable() const;
+            inline bool is_tickable() const {
+                return cached_is_tickable.get_unchecked(id);
+            }
 
             inline bool is_solid() const {
                 return cached_is_solid.get_unchecked(id);
@@ -564,6 +496,7 @@ namespace copper_server {
             static bit_list_array<> cached_is_default_state;
             static bit_list_array<> cached_has_random_ticks;
             static bit_list_array<> cached_has_comparator_output;
+            static bit_list_array<> cached_is_tickable;
             static list_array<static_block_data::transparent_sides_t> cached_transparent_sides;
             static list_array<float> cached_slipperiness;
             static list_array<float> cached_velocity_multiplier;
@@ -572,7 +505,7 @@ namespace copper_server {
             static list_array<float> cached_blast_resistance;
             static list_array<int32_t> cached_map_color_rgb;
             static list_array<int32_t> cached_block_entity_id;
-            static list_array<int32_t> cached_default_drop_item_id;
+            static list_array<int32_t> cached_item_id;
             static list_array<int32_t> cached_experience;
             static list_array<block_id_t> cached_general_block_id;
             static list_array<block_id_t> cached_default_state;
@@ -587,7 +520,7 @@ namespace copper_server {
             inline bool is_tickable() const { return block.is_tickable(); }
             inline bool is_solid() const { return block.is_solid(); }
             const std::vector<shape_data*>& collision_shapes() const { return block.collision_shapes(); }
-            const Chat& display_name() const { return block.display_name(); }
+            const base_objects::chat& display_name() const { return block.display_name(); }
             const std::string& instrument() const { return block.instrument(); }
             const std::string& piston_behavior() const { return block.piston_behavior(); }
             const std::string& name() const { return block.name(); }
@@ -600,7 +533,7 @@ namespace copper_server {
             inline float blast_resistance() const { return block.blast_resistance(); }
             inline int32_t map_color_rgb() const { return block.map_color_rgb(); }
             inline int32_t block_entity_id() const { return block.block_entity_id(); }
-            inline int32_t default_drop_item_id() const { return block.default_drop_item_id(); }
+            inline int32_t item_id() const { return block.item_id(); }
             inline int32_t experience() const { return block.experience(); }
             inline block_id_t default_state() const { return block.default_state(); }
             inline uint8_t luminance() const { return block.luminance(); }
@@ -626,7 +559,7 @@ namespace copper_server {
             inline bool is_tickable() const { return block.is_tickable(); }
             inline bool is_solid() const { return block.is_solid(); }
             const std::vector<shape_data*>& collision_shapes() const { return block.collision_shapes(); }
-            const Chat& display_name() const { return block.display_name(); }
+            const base_objects::chat& display_name() const { return block.display_name(); }
             const std::string& instrument() const { return block.instrument(); }
             const std::string& piston_behavior() const { return block.piston_behavior(); }
             const std::string& name() const { return block.name(); }
@@ -639,7 +572,7 @@ namespace copper_server {
             inline float blast_resistance() const { return block.blast_resistance(); }
             inline int32_t map_color_rgb() const { return block.map_color_rgb(); }
             inline int32_t block_entity_id() const { return block.block_entity_id(); }
-            inline int32_t default_drop_item_id() const { return block.default_drop_item_id(); }
+            inline int32_t item_id() const { return block.item_id(); }
             inline int32_t experience() const { return block.experience(); }
             inline block_id_t default_state() const { return block.default_state(); }
             inline uint8_t luminance() const { return block.luminance(); }
@@ -680,7 +613,7 @@ namespace copper_server {
             inline float blast_resistance() const { return block.blast_resistance(); }
             inline int32_t map_color_rgb() const { return block.map_color_rgb(); }
             inline int32_t block_entity_id() const { return block.block_entity_id(); }
-            inline int32_t default_drop_item_id() const { return block.default_drop_item_id(); }
+            inline int32_t item_id() const { return block.item_id(); }
             inline int32_t experience() const { return block.experience(); }
             inline block_id_t default_state() const { return block.default_state(); }
             inline uint8_t luminance() const { return block.luminance(); }

@@ -6,7 +6,6 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/base_objects/entity.hpp>
 #include <src/plugin/main.hpp>
 #include <src/storage/world_data.hpp>
 
@@ -35,9 +34,9 @@ namespace copper_server::build_in_plugins::light_processors {
         void block_changed(storage::world_data&, int64_t, int64_t, int64_t) override {}
     };
 
-    struct default_processor : public PluginAutoRegister<"light_processors/default_processor", default_processor> {
-        void OnRegister(const PluginRegistrationPtr& _) {
-            storage::chunk_light_processor::register_it("default", new default_light_processor());
+    struct default_processor : public plugin_auto_register<"light_processors/default_processor", default_processor> {
+        void on_register(const plugin_registration_ptr& _) {
+            storage::chunk_light_processor::register_it("default", std::make_shared<default_light_processor>());
         }
     };
 }

@@ -6,16 +6,18 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
-#include <src/api/client.hpp>
 #include <src/api/command.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/dialogs.hpp>
+#include <src/api/ecs/base_components.hpp>
 #include <src/api/entity_id_map.hpp>
-#include <src/api/packets.hpp>
+#include <src/api/entity_proxy.hpp>
+#include <src/api/packets/client_bound/play.hpp>
+#include <src/api/packets/server_bound/config.hpp>
+#include <src/api/packets/server_bound/play.hpp>
 #include <src/api/players.hpp>
 #include <src/api/registers.hpp>
 #include <src/api/world.hpp>
-#include <src/base_objects/entity.hpp>
 #include <src/base_objects/player.hpp>
 #include <src/base_objects/shared_client_data.hpp>
 #include <src/build_in_plugins/network/tcp/util.hpp>
@@ -38,17 +40,13 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
     using container_slot_state_changed = api::packets::server_bound::play::container_slot_state_changed;
     using cookie_response = api::packets::server_bound::play::cookie_response;
     using custom_payload = api::packets::server_bound::play::custom_payload;
-    using debug_sample_subscription = api::packets::server_bound::play::debug_sample_subscription;
+    using debug_subscription_request = api::packets::server_bound::play::debug_subscription_request;
     using edit_book = api::packets::server_bound::play::edit_book;
     using entity_tag_query = api::packets::server_bound::play::entity_tag_query;
     using interact = api::packets::server_bound::play::interact;
     using jigsaw_generate = api::packets::server_bound::play::jigsaw_generate;
     using keep_alive = api::packets::server_bound::play::keep_alive;
     using lock_difficulty = api::packets::server_bound::play::lock_difficulty;
-    using move_player_pos = api::packets::server_bound::play::move_player_pos;
-    using move_player_pos_rot = api::packets::server_bound::play::move_player_pos_rot;
-    using move_player_rot = api::packets::server_bound::play::move_player_rot;
-    using move_player_status_only = api::packets::server_bound::play::move_player_status_only;
     using move_vehicle = api::packets::server_bound::play::move_vehicle;
     using paddle_boat = api::packets::server_bound::play::paddle_boat;
     using pick_item_from_block = api::packets::server_bound::play::pick_item_from_block;
@@ -83,63 +81,61 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
     using use_item = api::packets::server_bound::play::use_item;
     using custom_click_action = api::packets::server_bound::play::custom_click_action;
 
-    struct tcp_play : public PluginAutoRegister<"network/tcp_play", tcp_play> {
+    struct tcp_play : public plugin_auto_register<"network/tcp_play", tcp_play> {
         struct extra_data_t {
             keep_alive_solution ka_solution;
 
-            static extra_data_t& get(base_objects::SharedClientData& client) {
+            static extra_data_t& get(base_objects::shared_client_data& client) {
                 return *client.packets_state.internal_data.set([&](auto& data) {
-                    if (!data.extra_data) {
-                        auto allocated = new extra_data_t{.ka_solution = client.get_session()};
-                        data.extra_data = std::shared_ptr<void>((void*)allocated, [](void* d) { delete reinterpret_cast<extra_data_t*>(d); });
-                    }
+                    if (!data.extra_data)
+                        data.extra_data = std::make_shared<extra_data_t>(client.get_session());
                     return reinterpret_cast<extra_data_t*>(data.extra_data.get());
                 });
             }
         };
 
-        void OnRegister(const PluginRegistrationPtr&) override {
+        void on_register(const plugin_registration_ptr&) override {
             register_event(api::players::handlers::on_disconnect, base_objects::events::priority::high, [this](const base_objects::client_data_holder& hold) {
-                if (hold->packets_state.state == base_objects::SharedClientData::packets_state_t::protocol_state::play) {
+                if (hold->packets_state.state == base_objects::shared_client_data::packets_state_t::protocol_state::play) {
                     if (hold->packets_state.is_play_fully_initialized) {
-                        pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::play, [&](auto&& plugin) {
-                            plugin->PlayerLeave(*hold);
+                        plugin_management.inspect_plugin_registration(plugin_management_system::registration_on::play, [&](auto&& plugin) {
+                            plugin->player_leave(*hold);
                         });
                     }
                     auto& p_data = hold->player_data;
-                    if (p_data.assigned_entity->current_world()) {
-                        api::world::unregister_entity(p_data.assigned_entity->current_world()->world_id, p_data.assigned_entity);
+                    if (p_data.assigned_entity) {
+                        if (p_data.assigned_entity->get_assigned_world_id())
+                            api::world::unregister_entity(*p_data.assigned_entity->get_assigned_world_id(), *p_data.assigned_entity);
+
+                        api::players::save_player(std::move(hold->player_data), hold->data->uuid);
+                        hold->player_data.assigned_entity->remove<api::ecs::com::assigned_player>();
+                        hold->packets_state.internal_data.set([](auto& it) { it.extra_data = nullptr; });
                     }
-
-                    api::players::save_player(std::move(hold->player_data), hold->data->uuid);
-                    hold->player_data.assigned_entity->assigned_player = nullptr;
-                    hold->packets_state.internal_data.set([](auto& it) { it.extra_data = nullptr; });
-                    hold->player_data.assigned_entity = nullptr;
                     for (auto& plugin : hold->compatible_plugins)
-                        plugin->OnPlay_uninitialized_compatible(*hold);
+                        plugin->on_play_uninitialized_compatible(*hold);
 
-                    pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::play, [&](auto&& plugin) {
-                        plugin->OnPlay_uninitialized(*hold);
+                    plugin_management.inspect_plugin_registration(plugin_management_system::registration_on::play, [&](auto&& plugin) {
+                        plugin->on_play_uninitialized(*hold);
                     });
                     if (hold->packets_state.is_play_fully_initialized) {
-                        pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::play, [&](auto&& plugin) {
-                            plugin->PlayerLeft(*hold);
+                        plugin_management.inspect_plugin_registration(plugin_management_system::registration_on::play, [&](auto&& plugin) {
+                            plugin->player_left(*hold);
                         });
                     }
                     [[maybe_unused]] auto _ = api::entity_id_map::remove_id(hold->data->uuid);
                 }
                 return false;
             });
-            register_packet_processor([this](api::packets::server_bound::configuration::finish_configuration&&, base_objects::SharedClientData& client) {
-                extra_data_t::get(client).ka_solution.set_callback([](int64_t res, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [this](api::packets::server_bound::config::finish_configuration&&, base_objects::shared_client_data& client) {
+                extra_data_t::get(client).ka_solution.set_callback([](int64_t res, base_objects::shared_client_data& client) {
                     client << api::packets::client_bound::play::keep_alive{.keep_alive_id = (uint64_t)res};
                 });
                 extra_data_t::get(client).ka_solution.start();
 
                 auto client_ref = api::players::get_player(client);
                 client.player_data = api::players::load_player(client.data->uuid);
-                client.player_data.assigned_entity->id = client.data->uuid;
-                client.player_data.assigned_entity->assigned_player = client_ref;
+                client.player_data.assigned_entity->modify<api::ecs::com::uuid>()->id = client.data->uuid;
+                client.player_data.assigned_entity->modify<api::ecs::com::assigned_player>()->player = client_ref;
 
                 bool world_debug = false;
                 bool world_flat = false;
@@ -153,7 +149,7 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
 
                 auto last_death_location = client.player_data.last_death_location
                                                ? std::optional(
-                                                     api::client::play::login::death_location_t(
+                                                     api::packets::client_bound::play::login::death_location_t(
                                                          client.player_data.last_death_location->world_id,
                                                          {(int32_t)client.player_data.last_death_location->x, (int32_t)client.player_data.last_death_location->y, (int32_t)client.player_data.last_death_location->z}
                                                      )
@@ -174,13 +170,13 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     do_limited_crafting = data.world_game_rules.contains("doLimitedCrafting") ? (bool)data.world_game_rules["doLimitedCrafting"] : false;
                     difficulty = data.difficulty;
                     difficulty_locked = data.difficulty_locked;
-                    world_type = api::registers::dimensionTypes.at(data.get_world_type()).id;
+                    world_type = api::registers::dimension_types.at(data.get_world_type()).id;
                 });
                 auto player_entity_id = api::entity_id_map::allocate_id(client.data->uuid);
-                api::entity_id_map::assign_entity(player_entity_id, client.player_data.assigned_entity);
-                client.player_data.assigned_entity->protocol_id = player_entity_id;
+                api::entity_id_map::assign_entity(player_entity_id, *client.player_data.assigned_entity);
+                client.player_data.assigned_entity->modify<api::ecs::com::protocol_id>()->value = player_entity_id;
 
-                client << api::client::play::login{
+                client << api::packets::client_bound::play::login{
                     .id = player_entity_id,
                     .is_hardcore = client.player_data.hardcore_hearts,
                     .dimension_names = api::world::request_names().convert<base_objects::identifier>(),
@@ -202,292 +198,164 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                     .sea_level = 0,       //TODO add
                     .enforce_secure_chat = api::configuration::get().mojang.enforce_secure_profile
                 };
-                client << api::client::play::change_difficulty{
+                client << api::packets::client_bound::play::change_difficulty{
                     .difficulty = (api::packets::difficulty_e)difficulty,
                     .is_locked = difficulty_locked
                 };
-                api::client::play::player_abilities::flags_f abilities_f{};
+                api::packets::client_bound::play::player_abilities::flags_f abilities_f{};
                 if (client.player_data.abilities.flags.allow_flying)
-                    abilities_f = abilities_f | api::client::play::player_abilities::allow_flying;
+                    abilities_f = abilities_f | api::packets::client_bound::play::player_abilities::allow_flying;
                 if (client.player_data.abilities.flags.creative_mode)
-                    abilities_f = abilities_f | api::client::play::player_abilities::creative_mode;
+                    abilities_f = abilities_f | api::packets::client_bound::play::player_abilities::creative_mode;
                 if (client.player_data.abilities.flags.flying)
-                    abilities_f = abilities_f | api::client::play::player_abilities::flying;
+                    abilities_f = abilities_f | api::packets::client_bound::play::player_abilities::flying;
                 if (client.player_data.abilities.flags.invulnerable)
-                    abilities_f = abilities_f | api::client::play::player_abilities::invulnerable;
-                client << api::client::play::player_abilities{
+                    abilities_f = abilities_f | api::packets::client_bound::play::player_abilities::invulnerable;
+                client << api::packets::client_bound::play::player_abilities{
                     .flags = abilities_f,
                     .flying_speed = client.player_data.abilities.flying_speed,
                     .fov_modifier = client.player_data.abilities.field_of_view_modifier
                 };
-                client << api::client::play::set_held_slot{.slot = client.player_data.assigned_entity->get_selected_item()};
-                client.player_data.assigned_entity->set_experience(client.player_data.assigned_entity->get_experience());
-                pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::play, [&](auto&& plugin) {
-                    plugin->OnPlay_pre_initialize(client);
+                client << api::packets::client_bound::play::set_held_slot{.slot = client.player_data.assigned_entity->get<api::ecs::com::held_slot>().hotbar_slot};
+                auto experience = client.player_data.assigned_entity->get<api::ecs::com::experience>();
+
+                client << api::packets::client_bound::play::set_experience{
+                    .bar = experience.get_progress(),
+                    .level = experience.level,
+                    .total_experience = experience.get_total_experience()
+                };
+                plugin_management.inspect_plugin_registration(plugin_management_system::registration_on::play, [&](auto&& plugin) {
+                    plugin->on_play_pre_initialize(client);
                 });
 
-                api::world::register_entity(world_id, client.player_data.assigned_entity);
-                client.player_data.assigned_entity->world_syncing_data.update_render_distance(client.view_distance);
+                api::world::register_entity(world_id, *client.player_data.assigned_entity);
+                client.player_data.assigned_entity->modify<api::ecs::com::world_syncing>()->update_render_distance(client.view_distance);
 
 
                 for (auto& plugin : client.compatible_plugins)
-                    plugin->OnPlay_initialize_compatible(client);
+                    plugin->on_play_initialize_compatible(client);
 
-                pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::play, [&](auto&& plugin) {
-                    plugin->OnPlay_initialize(client);
+                plugin_management.inspect_plugin_registration(plugin_management_system::registration_on::play, [&](auto&& plugin) {
+                    plugin->on_play_initialize(client);
                 });
             });
 
-            register_packet_processor([]([[maybe_unused]] accept_teleportation&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] accept_teleportation&& packet, base_objects::shared_client_data& client) {
                 if (!client.packets_state.is_fully_initialized) {
                     client.packets_state.is_fully_initialized = true;
                     api::world::sync_settings(client);
 
                     for (auto& plugin : client.compatible_plugins)
-                        plugin->OnPlay_post_initialize_compatible(client);
+                        plugin->on_play_post_initialize_compatible(client);
 
-                    pluginManagement.inspect_plugin_registration(PluginManagement::registration_on::play, [&](auto&& plugin) {
-                        plugin->OnPlay_post_initialize(client);
+                    plugin_management.inspect_plugin_registration(plugin_management_system::registration_on::play, [&](auto&& plugin) {
+                        plugin->on_play_post_initialize(client);
                     });
                 }
             });
 
-            register_packet_processor([](block_entity_tag_query&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](block_entity_tag_query&& packet, base_objects::shared_client_data& client) {
                 if (client.player_data.assigned_entity)
-                    if (client.player_data.assigned_entity->current_world())
-                        client.player_data.assigned_entity->current_world()->get_block(
+                    if (client.player_data.assigned_entity->get_assigned_world_id()) {
+                        client.player_data.assigned_entity->get<api::ecs::com::world_syncing>().world->get_block(
                             packet.location.x,
                             packet.location.y,
                             packet.location.z,
-                            [](auto&) {},
-                            [&](auto&, auto& enbt) {
-                                client << api::client::play::tag_query{
+                            [](auto) {},
+                            [&](auto, auto& enbt) {
+                                client << api::packets::client_bound::play::tag_query{
                                     .tag_query_id = packet.tag_query_id,
                                     .nbt = enbt
                                 };
                             }
                         );
+                    }
             });
 
-            register_packet_processor([]([[maybe_unused]] bundle_item_selected&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-
-            register_packet_processor([]([[maybe_unused]] change_difficulty&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-
-            register_packet_processor([]([[maybe_unused]] change_gamemode&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-
-            register_packet_processor([](client_command&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                if (packet.action_id == client_command::action_id_e::perform_respawn) {
-                    //TODO client << api::client::play::respawn{};
-                } else if (packet.action_id == client_command::action_id_e::request_stats) {
-                    //TODO client << api::client::play::award_stats{
-                    //    .
-                    //};
-                }
-            });
-
-            register_packet_processor([](client_information&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](client_information&& packet, base_objects::shared_client_data& client) {
                 client.locale = packet.locale.value;
                 client.view_distance = (uint8_t)std::min<uint32_t>(packet.view_distance, api::configuration::get().game_play.view_distance);
-                client.chat_mode = (base_objects::SharedClientData::ChatMode)packet.chat_mode.get();
+                client.chat_mode = (base_objects::shared_client_data::ChatMode)packet.chat_mode.get();
                 client.enable_chat_colors = packet.enable_chat_colors;
                 client.skin_parts.mask = packet.displayer_skin_parts.get();
-                client.main_hand = (base_objects::SharedClientData::MainHand)packet.main_hand.get();
+                client.main_hand = (base_objects::shared_client_data::MainHand)packet.main_hand.get();
                 client.enable_filtering = packet.enable_text_filtering;
                 client.allow_server_listings = packet.allow_server_listings;
-                client.particle_status = (base_objects::SharedClientData::ParticleStatus)packet.particle_status.get();
+                client.particle_status = (base_objects::shared_client_data::ParticleStatus)packet.particle_status.get();
 
                 if (client.player_data.assigned_entity)
-                    client.player_data.assigned_entity->world_syncing_data.update_render_distance(client.view_distance);
+                    client.player_data.assigned_entity->modify<api::ecs::com::world_syncing>()->update_render_distance(client.view_distance);
+
+                api::players::handlers::on_skin_parts_changed(client);
             });
 
-            register_packet_processor([](command_suggestion&& packet, base_objects::SharedClientData& client) {
-                base_objects::command_context context(client, true);
-                auto suggestions = api::command::get_manager().request_suggestions(packet.command_text.value, context);
-                auto pos = packet.command_text.value.find_last_of(" /");
-                if (pos == std::string::npos)
-                    pos = 0;
-                client << api::client::play::command_suggestions{
-                    .suggestion_transaction_id = packet.suggestion_transaction_id,
-                    .start = (int32_t)pos,
-                    .length = int32_t(packet.command_text.value.size() - pos),
-                    .matches = suggestions
-                                   .convert_fn([](auto& it) {
-                                       return api::client::play::command_suggestions::match{.set = it};
-                                   })
-                };
-            });
-
-            register_packet_processor([this]([[maybe_unused]] configuration_acknowledged&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [this]([[maybe_unused]] configuration_acknowledged&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 api::players::save_player(std::move(client.player_data), client.data->uuid);
             });
 
-            register_packet_processor([]([[maybe_unused]] container_button_click&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](cookie_response&& packet, base_objects::shared_client_data& client) {
+                if (auto plugin = plugin_management.get_bind_cookies(plugin_management_system::registration_on::play, packet.key); plugin)
+                    plugin->on_play_cookie(plugin, packet.key, packet.payload ? *packet.payload : list_array<uint8_t>{}, client);
+            });
+
+            api::packets::processor(*this, [](custom_payload&& packet, base_objects::shared_client_data& client) {
+                if (auto plugin = plugin_management.get_bind_plugin(plugin_management_system::registration_on::configuration, packet.channel); plugin)
+                    plugin->on_play_handle(plugin, packet.channel, packet.payload, client);
+            });
+
+            api::packets::processor(*this, []([[maybe_unused]] debug_subscription_request&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
 
-            register_packet_processor([]([[maybe_unused]] container_click&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-
-            register_packet_processor([]([[maybe_unused]] container_close&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-
-            register_packet_processor([]([[maybe_unused]] container_slot_state_changed&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-
-            register_packet_processor([](cookie_response&& packet, base_objects::SharedClientData& client) {
-                if (auto plugin = pluginManagement.get_bind_cookies(PluginManagement::registration_on::play, packet.key); plugin)
-                    plugin->OnPlayCookie(plugin, packet.key, packet.payload ? *packet.payload : list_array<uint8_t>{}, client);
-            });
-
-            register_packet_processor([](custom_payload&& packet, base_objects::SharedClientData& client) {
-                if (auto plugin = pluginManagement.get_bind_plugin(PluginManagement::registration_on::configuration, packet.channel); plugin)
-                    plugin->OnPlayHandle(plugin, packet.channel, packet.payload, client);
-            });
-
-            register_packet_processor([]([[maybe_unused]] debug_sample_subscription&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-
-            register_packet_processor([]([[maybe_unused]] edit_book&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-
-            register_packet_processor([]([[maybe_unused]] entity_tag_query&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](entity_tag_query&& packet, base_objects::shared_client_data& client) {
                 auto entity = api::entity_id_map::get_entity(packet.id);
                 if (entity)
-                    client << api::client::play::tag_query{
+                    client << api::packets::client_bound::play::tag_query{
                         .tag_query_id = packet.tag_query_id,
-                        .nbt = entity->nbt //TODO check if required adding more info to nbt
+                        .nbt = entity->get<api::ecs::com::nbt>().get() //TODO check if required adding more info to nbt
                     };
             });
 
-            register_packet_processor([]([[maybe_unused]] interact&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
 
-            register_packet_processor([]([[maybe_unused]] jigsaw_generate&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-
-            register_packet_processor([](keep_alive&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](keep_alive&& packet, base_objects::shared_client_data& client) {
                 auto delay = extra_data_t::get(client).ka_solution.got_valid_keep_alive((int64_t)packet.id);
                 client.packets_state.keep_alive_ping_ms = (int32_t)std::min<int64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(delay).count(), INT32_MAX);
             });
 
-            register_packet_processor([]([[maybe_unused]] lock_difficulty&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](ping_request&& packet, base_objects::shared_client_data& client) {
+                client << api::packets::client_bound::play::pong_response{.id = packet.payload};
+            });
+            api::packets::processor(*this, []([[maybe_unused]] place_recipe&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-
-            register_packet_processor([]([[maybe_unused]] move_player_pos&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] player_action&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-
-            register_packet_processor([]([[maybe_unused]] move_player_pos_rot&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] player_loaded&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-
-            register_packet_processor([]([[maybe_unused]] move_player_rot&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] pong&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-
-            register_packet_processor([]([[maybe_unused]] move_player_status_only&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] recipe_book_change_settings&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-
-            register_packet_processor([]([[maybe_unused]] move_vehicle&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] recipe_book_seen_recipe&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-            register_packet_processor([]([[maybe_unused]] paddle_boat&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] resource_pack&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-            register_packet_processor([]([[maybe_unused]] pick_item_from_block&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] seen_advancements&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-            register_packet_processor([]([[maybe_unused]] pick_item_from_entity&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
+            api::packets::processor(*this, []([[maybe_unused]] select_trade&& packet, [[maybe_unused]] base_objects::shared_client_data& client) {
                 //TODO
             });
-            register_packet_processor([](ping_request&& packet, base_objects::SharedClientData& client) {
-                client << api::client::play::pong_response{.id = packet.payload};
-            });
-            register_packet_processor([]([[maybe_unused]] place_recipe&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] player_abilities&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] player_action&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] player_command&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] player_input&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] player_loaded&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] pong&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] recipe_book_change_settings&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] recipe_book_seen_recipe&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] rename_item&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] resource_pack&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] seen_advancements&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] select_trade&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] set_beacon&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] set_carried_item&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] set_command_block&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] set_command_minecart&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] set_creative_mode_slot&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] set_jigsaw_block&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] set_structure_block&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] set_test_block&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] sign_update&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([](swing&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](swing&& packet, base_objects::shared_client_data& client) {
                 if (client.player_data.assigned_entity)
-                    if (client.player_data.assigned_entity->current_world())
-                        client.player_data.assigned_entity->current_world()->locked([&](auto& world) {
+                    if (client.player_data.assigned_entity->get_assigned_world_id()) {
+                        client.player_data.assigned_entity->get<api::ecs::com::world_syncing>().world->locked([&](auto& world) {
                             world.entity_animation(
                                 *client.player_data.assigned_entity,
                                 packet.hand == swing::hand_e::main
@@ -495,20 +363,9 @@ namespace copper_server::build_in_plugins::network::tcp::client_handler {
                                     : base_objects::entity_animation::swing_offhand
                             );
                         });
+                    }
             });
-            register_packet_processor([]([[maybe_unused]] teleport_to_entity&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] test_instance_block_action&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] use_item_on&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([]([[maybe_unused]] use_item&& packet, [[maybe_unused]] base_objects::SharedClientData& client) {
-                //TODO
-            });
-            register_packet_processor([](custom_click_action&& packet, base_objects::SharedClientData& client) {
+            api::packets::processor(*this, [](custom_click_action&& packet, base_objects::shared_client_data& client) {
                 api::dialogs::pass_dialog(packet.id, client, std::move(packet.payload));
             });
         }
