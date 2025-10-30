@@ -16,4 +16,4 @@ resources/include.hpp
 /src/generated
 /resources/data
 /resources/registry
-
+/src/api/collection/
