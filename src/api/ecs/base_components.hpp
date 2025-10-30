@@ -1,3 +1,11 @@
+/*
+ * Copyright 2025-Present Danyil Melnytskyi. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License"). You may not use
+ * this file except in compliance with the License. You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
 #ifndef SRC_API_ECS_BASE_COMPONENTS
 #define SRC_API_ECS_BASE_COMPONENTS
 #include <library/list_array.hpp>
@@ -16,18 +24,11 @@
 namespace copper_server {
     namespace storage {
         class world_data;
-        class chunk_data;
     }
 
     namespace base_objects {
         struct shared_client_data;
         using client_data_holder = std::shared_ptr<shared_client_data>;
-
-        namespace world {
-            struct sub_chunk_data;
-            class storage;
-        }
-
 
         struct block;
         struct block_entity;

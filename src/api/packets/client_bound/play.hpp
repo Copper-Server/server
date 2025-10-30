@@ -28,8 +28,17 @@
 #include <src/util/calculations.hpp>
 
 namespace copper_server::storage {
-    class chunk_data;
     class world_data;
+}
+
+namespace copper_server {
+    namespace storage {
+        class world_data;
+    }
+
+    namespace base_objects::world {
+        struct chunk_data;
+    }
 }
 
 namespace copper_server::api::packets::client_bound::play {
@@ -174,7 +183,7 @@ namespace copper_server::api::packets::client_bound::play {
         int32_t x;
         sized_entry<list_array_no_size<base_objects::palette_container_biome, size_source::get_world_chunks_height>, var_int32> sections_of_biomes;
 
-        static chunks_biomes create(const storage::chunk_data&);
+        static chunks_biomes create(const base_objects::world::chunk_data&);
     };
 
     struct clear_titles : public packet<0x0E> {
@@ -665,7 +674,7 @@ namespace copper_server::api::packets::client_bound::play {
         list_array<list_array_fixed<uint8_t, 2048>> sky_light;
         list_array<list_array_fixed<uint8_t, 2048>> block_light;
 
-        static level_chunk_with_light create(const storage::chunk_data&, const storage::world_data&);
+        static level_chunk_with_light create(const base_objects::world::chunk_data&, const storage::world_data&);
     };
 
     struct level_event : public packet<0x2D> {
@@ -784,7 +793,7 @@ namespace copper_server::api::packets::client_bound::play {
         list_array<list_array_fixed<uint8_t, 2048>> block_light;
 
 
-        static light_update create(const storage::chunk_data&);
+        static light_update create(const base_objects::world::chunk_data&);
     };
 
     struct login : public packet<0x30> {

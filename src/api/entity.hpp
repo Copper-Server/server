@@ -35,7 +35,6 @@ namespace enbt::io_helper {
 namespace copper_server {
     namespace storage {
         class world_data;
-        class chunk_data;
     }
 
     namespace base_objects {
@@ -44,7 +43,7 @@ namespace copper_server {
 
         namespace world {
             struct sub_chunk_data;
-            class storage;
+            struct chunk_data;
         }
 
         struct block;
@@ -179,13 +178,13 @@ namespace copper_server::api {
             void (*notify_biome_change)(ecs::entity self, int64_t x, int64_t y, int64_t z, uint32_t) = nullptr;
 
             void (*notify_sub_chunk)(ecs::entity self, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const base_objects::world::sub_chunk_data&) = nullptr; //used after multiply changes
-            void (*notify_chunk)(ecs::entity self, int64_t chunk_x, int64_t chunk_z, const storage::chunk_data&) = nullptr;                        //used after multiply changes
+            void (*notify_chunk)(ecs::entity self, int64_t chunk_x, int64_t chunk_z, const base_objects::world::chunk_data&) = nullptr;                          //used after multiply changes
 
             void (*notify_sub_chunk_light)(ecs::entity self, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const base_objects::world::sub_chunk_data&) = nullptr; //used after multiply changes
-            void (*notify_chunk_light)(ecs::entity self, int64_t chunk_x, int64_t chunk_z, const storage::chunk_data&) = nullptr;                        //used after multiply changes
+            void (*notify_chunk_light)(ecs::entity self, int64_t chunk_x, int64_t chunk_z, const base_objects::world::chunk_data&) = nullptr;                          //used after multiply changes
 
             void (*notify_sub_chunk_blocks)(ecs::entity self, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const base_objects::world::sub_chunk_data&) = nullptr; //used after multiply changes
-            void (*notify_chunk_blocks)(ecs::entity self, int64_t chunk_x, int64_t chunk_z, const storage::chunk_data&) = nullptr;                        //used after multiply changes
+            void (*notify_chunk_blocks)(ecs::entity self, int64_t chunk_x, int64_t chunk_z, const base_objects::world::chunk_data&) = nullptr;                          //used after multiply changes
 
             void (*on_change_world)(ecs::entity self, storage::world_data& new_world) = nullptr;
 
