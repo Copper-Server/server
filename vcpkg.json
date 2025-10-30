@@ -15,6 +15,7 @@
         "utfcpp",
         "gtest",
         "zlib",
+        "lz4",
         "cpptrace",
         "lionkor-commandline",
         "concurrentqueue",

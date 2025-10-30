@@ -62,6 +62,7 @@ find_package(ZLIB REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(utf8cpp CONFIG REQUIRED)
 find_package(concurrentqueue CONFIG REQUIRED)
+find_package(lz4 CONFIG REQUIRED)
 
 add_subdirectory("library/fast_task")
 add_subdirectory("library/commandline")
@@ -121,4 +122,5 @@ target_link_libraries(CopperServer PRIVATE
   utf8::cpp
   commandline
   fast_task
+  lz4::lz4
 )
