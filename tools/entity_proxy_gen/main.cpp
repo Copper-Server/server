@@ -51,8 +51,8 @@ std::map<std::string, std::pair<std::string, std::string>> type_map = {
     {"OptionalInt", {"base_objects::optional_var_int32", "base_objects::entity_metadata::optional_var_int"}},
     {"Long", {"int64_t", "base_objects::entity_metadata::var_long"}},
     {"String", {"std::string", "base_objects::entity_metadata::string"}},
-    {"Text", {"Chat", "base_objects::entity_metadata::text_component"}},
-    {"Optional<Text>", {"std::optional<Chat>", "base_objects::entity_metadata::optional_text_component"}},
+    {"Text", {"base_objects::chat", "base_objects::entity_metadata::text_component"}},
+    {"Optional<Text>", {"std::optional<base_objects::chat>", "base_objects::entity_metadata::optional_text_component"}},
     {"BlockPos", {"base_objects::position", "base_objects::entity_metadata::position"}},
     {"Optional<BlockPos>", {"std::optional<base_objects::position>", "base_objects::entity_metadata::optional_position"}},
     {"EntityPose", {"base_objects::entity_metadata::entity_pose", "base_objects::entity_metadata::entity_pose"}},
@@ -121,23 +121,30 @@ void generate_components_file(const std::string& path, const std::map<std::strin
         out << "        " << pair.first << (++count == unique_components.size() ? "" : ",") << "\n";
     out << "    >;\n\n";
 
-    out << "    using all_mark_metadata_components = std::tuple<\n";
+    out << "    using all_mark_metadata_components = std::tuple<";
     count = 0;
+    bool is_first = true;
     for (const auto& pair : unique_components) {
-        if (count++)
-            out << (count == unique_components.size() ? "\n" : ",\n");
-        if (pair.second.mark_component)
+        count++;
+        if (pair.second.mark_component) {
+            out << (count == unique_components.size() || is_first ? "\n" : ",\n");
             out << "        " << pair.first;
+            is_first = false;
+        }
+        count++;
     }
     out << "\n    >;\n\n";
 
-    out << "    using all_simple_metadata_components = std::tuple<\n";
+    out << "    using all_simple_metadata_components = std::tuple<";
     count = 0;
+    is_first = true;
     for (const auto& pair : unique_components) {
-        if (count++)
-            out << (count == unique_components.size() ? "\n" : ",\n");
-        if (!pair.second.mark_component)
+        count++;
+        if (!pair.second.mark_component) {
+            out << (count == unique_components.size() || is_first ? "\n" : ",\n");
             out << "        " << pair.first;
+            is_first = false;
+        }
     }
     out << "\n    >;\n";
 

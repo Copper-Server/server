@@ -290,5 +290,6 @@ namespace copper_server::base_objects {
             },
             data
         );
+        try_shrink();
     }
 }

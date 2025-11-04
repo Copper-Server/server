@@ -59,7 +59,6 @@ namespace enbt::io_helper {
             static constexpr auto entries_count = 4096;
             if (bits_per_entry == 0) {
                 copper_server::base_objects::palette_container_single res;
-                stream.read_value<uint8_t>(); //always zero
                 res.id_of_palette = stream.read_var<int32_t>();
                 value.decompile(std::move(res));
             } else if (bits_per_entry <= max_indirect) {
@@ -70,16 +69,18 @@ namespace enbt::io_helper {
                     res.palette.push_back(stream.read_var<uint32_t>());
                 auto size = bits_per_entry * entries_count;
                 size += size % 8;
+                size /= 8;
                 auto range = stream.range_read(size);
                 res.data.bits_per_entry = bits_per_entry;
-                res.data.data.data() = list_array<uint8_t>(range.data_read(), range.size_read());
+                res.data.data.data() = list_array<uint64_t>((uint64_t*)range.data_read(), range.size_read() / 8);
                 value.decompile(std::move(res));
             } else {
                 copper_server::base_objects::palette_data res(bits_per_entry, entries_count);
                 auto size = bits_per_entry * entries_count;
                 size += size % 8;
+                size /= 8;
                 auto range = stream.range_read(size);
-                res.data.data() = list_array<uint8_t>(range.data_read(), range.size_read());
+                res.data.data() = list_array<uint64_t>((uint64_t*)range.data_read(), range.size_read() / 8);
                 value.decompile(std::move(res));
             }
         }
@@ -87,7 +88,7 @@ namespace enbt::io_helper {
         static void write(const palette_container_block& palette, enbt::io_helper::value_write_stream& write_stream) {
             copper_server::base_objects::network::response::item res;
             std::visit(
-                [&]<class IT>(IT&& it) {
+                [&]<class IT>(const IT& it) {
                     if constexpr (std::is_same_v<copper_server::base_objects::palette_container_indirect, IT>) {
                         res.write_value(it.bits_per_entry);
                         res.write_var32_check(it.palette.size());
@@ -124,7 +125,6 @@ namespace enbt::io_helper {
             static constexpr auto entries_count = 64;
             if (bits_per_entry == 0) {
                 copper_server::base_objects::palette_container_single res;
-                stream.read_value<uint8_t>(); //always zero
                 res.id_of_palette = stream.read_var<int32_t>();
                 value.decompile(std::move(res));
             } else if (bits_per_entry <= max_indirect) {
@@ -135,16 +135,18 @@ namespace enbt::io_helper {
                     res.palette.push_back(stream.read_var<uint32_t>());
                 auto size = bits_per_entry * entries_count;
                 size += size % 8;
+                size /= 8;
                 auto range = stream.range_read(size);
                 res.data.bits_per_entry = bits_per_entry;
-                res.data.data.data() = list_array<uint8_t>(range.data_read(), range.size_read());
+                res.data.data.data() = list_array<uint64_t>((uint64_t*)range.data_read(), range.size_read() / 8);
                 value.decompile(std::move(res));
             } else {
                 copper_server::base_objects::palette_data res(bits_per_entry, entries_count);
                 auto size = bits_per_entry * entries_count;
                 size += size % 8;
+                size /= 8;
                 auto range = stream.range_read(size);
-                res.data.data() = list_array<uint8_t>(range.data_read(), range.size_read());
+                res.data.data() = list_array<uint64_t>((uint64_t*)range.data_read(), range.size_read() / 8);
                 value.decompile(std::move(res));
             }
         }
@@ -152,7 +154,7 @@ namespace enbt::io_helper {
         static void write(const palette_container_biome& palette, enbt::io_helper::value_write_stream& write_stream) {
             copper_server::base_objects::network::response::item res;
             std::visit(
-                [&]<class IT>(IT&& it) {
+                [&]<class IT>(const IT& it) {
                     if constexpr (std::is_same_v<copper_server::base_objects::palette_container_indirect, IT>) {
                         res.write_value(it.bits_per_entry);
                         res.write_var32_check(it.palette.size());
@@ -340,8 +342,14 @@ namespace copper_server::base_objects::world {
                             }
                         )
                         .make_collect([](auto& name, auto& stream) { stream.read(); });
-
                     sub_chunk_data.need_to_recalculate_light = need_recalculate_light_block_light || need_recalculate_light_sky_light;
+                    if (!sub_chunk_data.need_to_recalculate_light) {
+                        if (!need_recalculate_light_block_light) 
+                            sub_chunk_data.block_lighted = sub_chunk_data.block_light.is_lighted();
+                        
+                        if (!need_recalculate_light_sky_light) 
+                            sub_chunk_data.sky_lighted = sub_chunk_data.sky_light.is_lighted();
+                    }
                 })
                 .collect_iterate( //format-fix
                     "entities",
@@ -380,133 +388,8 @@ namespace copper_server::base_objects::world {
         return true;
     }
 
-    bool valid_sub_chunk_size(const enbt::value& chunk) {
-        try {
-            auto dim_0 = chunk.as_array();
-            if (dim_0.size() != 16)
-                return false;
-            for (auto& x : dim_0) {
-                auto dim_1 = x.as_array();
-                if (dim_1.size() != 16)
-                    return false;
-                for (auto& y : dim_1) {
-                    if (y.size() != 16)
-                        return false;
-                }
-            }
-        } catch (...) {
-            return false;
-        }
-
-        return true;
-    }
-
-    void load_light_data(const enbt::value& chunk, base_objects::world::light_data& data, bool& need_to_recalculate_light) {
-        if (!valid_sub_chunk_size(chunk)) {
-            need_to_recalculate_light = true;
-            return;
-        }
-
-        size_t x_ = 0;
-        for (auto& x : chunk.as_array()) {
-            size_t y_ = 0;
-            for (auto& y : x.as_array()) {
-                size_t z_ = 0;
-                for (auto& z : y.as_ui8_array())
-                    data.set(x_, y_, z_++, z);
-                ++y_;
-            }
-            ++x_;
-        }
-    }
-
-    void load_block_data(const enbt::value& chunk, base_objects::palette_container_block& pallete, bool& has_tickable_blocks) {
-        size_t x_ = 0;
-        for (auto& x : chunk.as_array()) {
-            size_t y_ = 0;
-            for (auto& y : x.as_array()) {
-                size_t z_ = 0;
-                for (auto z : y.as_i32_array()) {
-                    pallete.set((uint8_t)x_, (uint8_t)y_, (uint8_t)z_, z);
-                    has_tickable_blocks = base_objects::block(z).is_tickable();
-                    ++z_;
-                }
-                ++y_;
-            }
-            ++x_;
-        }
-    }
-
     bool chunk_data::load(const enbt::compound_const_ref& chunk_data, uint64_t tick_counter, storage::world_data& world) {
-        if (!chunk_data.contains("sub_chunks"))
-            return false;
-        auto sub_chunks_ref = chunk_data["sub_chunks"].as_array();
-
-        sub_chunks.reserve(sub_chunks_ref.size());
-        for (auto& sub_chunk : sub_chunks_ref) {
-            std::unique_ptr<world::sub_chunk_data> sub_chunk_data = std::make_unique<world::sub_chunk_data>();
-            if (sub_chunk.contains("blocks")) {
-                auto& blocks = sub_chunk["blocks"];
-                if (!valid_sub_chunk_size(blocks))
-                    return false;
-                load_block_data(blocks, sub_chunk_data->blocks, sub_chunk_data->has_tickable_blocks);
-            }
-            if (sub_chunk.contains("has_tickable_blocks"))
-                sub_chunk_data->has_tickable_blocks = sub_chunk["has_tickable_blocks"];
-            if (sub_chunk.contains("entities")) {
-                for (auto& entity : sub_chunk["entities"].as_array()) {
-                    auto entity_ref = api::entity::load_from_enbt(entity.as_compound());
-                    world.register_entity(entity_ref);
-                }
-            }
-            if (sub_chunk.contains("block_entities")) {
-                for (auto& block_entity : sub_chunk["block_entities"].as_array()) {
-                    base_objects::local_block_pos local_pos;
-                    local_pos.x = block_entity["x"];
-                    local_pos.y = block_entity["y"];
-                    local_pos.z = block_entity["z"];
-                    sub_chunk_data->blocks.set(local_pos.x, local_pos.y, local_pos.z, block_entity["id"]);
-                    sub_chunk_data->block_entities[local_pos.z | (local_pos.y << 4) | (local_pos.x << 8)] = block_entity["data"];
-                }
-            }
-            if (sub_chunk.contains("block_light")) {
-                load_light_data(sub_chunk["block_light"], sub_chunk_data->block_light, sub_chunk_data->need_to_recalculate_light);
-            } else
-                sub_chunk_data->need_to_recalculate_light = true;
-            sub_chunks.emplace_back(std::move(*sub_chunk_data));
-        }
-
-        sub_chunks.resize(world.get_chunk_y_count());
-        if (chunk_data.contains("queried_for_tick")) {
-            auto queried_for_tick_ref = chunk_data["queried_for_tick"].as_array();
-            queried_for_tick.reserve(queried_for_tick_ref.size());
-            for (auto& inner : queried_for_tick_ref) {
-                list_array<std::pair<uint64_t, base_objects::chunk_block_pos>> queried_for_tick_tmp;
-                queried_for_tick_tmp.reserve(inner.size());
-                for (auto& item : inner.as_array()) {
-                    base_objects::chunk_block_pos block_pos{item.at("x"), item.at("y"), item.at("z")};
-                    uint32_t duration = item.at("duration");
-                    queried_for_tick_tmp.push_back({duration + tick_counter, block_pos});
-                }
-                queried_for_tick.push_back(queried_for_tick_tmp.take());
-            }
-        }
-        if (chunk_data.contains("queried_for_liquid_tick")) {
-            auto queried_for_liquid_tick_ref = chunk_data["queried_for_liquid_tick"].as_array();
-            queried_for_liquid_tick.reserve(queried_for_liquid_tick_ref.size());
-            for (auto& inner : queried_for_liquid_tick_ref) {
-                base_objects::chunk_block_pos block_pos{inner.at("x"), inner.at("y"), inner.at("z")};
-                uint32_t duration = inner.at("duration");
-                queried_for_liquid_tick.push_back({duration + tick_counter, block_pos});
-            }
-        }
-
-        if (chunk_data.contains("generator_stage"))
-            generator_stage = chunk_data["generator_stage"];
-
-        if (chunk_data.contains("resume_gen_level"))
-            resume_gen_level = chunk_data["resume_gen_level"];
-        return true;
+        return false;
     }
 
     bool chunk_data::save(const std::filesystem::path& path, uint64_t tick_counter, storage::world_data& world) {

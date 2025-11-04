@@ -17,6 +17,11 @@
 
 using namespace copper_server;
 
+void switch_price() {
+    for (size_t i = 0; i < 10000; i++)
+        fast_task::this_task::yield();
+}
+
 int main() {
     atexit([]() {
         api::log::info("Initializer thread", "Shutting down...");

@@ -15,6 +15,7 @@ namespace copper_server::storage {
     private:
         std::filesystem::path region_dir_path;
         fast_task::task_mutex cache_mutex;
+        std::string region_format;
 
         struct region_coords {
             int32_t x, z;
@@ -31,7 +32,7 @@ namespace copper_server::storage {
         std::shared_ptr<region_storage> get_region_file(int32_t region_x, int32_t region_z);
 
     public:
-        explicit region_manager(const std::filesystem::path& region_path);
+        explicit region_manager(const std::filesystem::path& region_path, std::string region_format = "mca");
 
         fast_task::future_ptr<std::vector<uint8_t>> get_chunk(int32_t chunk_x, int32_t chunk_z);
 

@@ -9,7 +9,7 @@
 #include <library/fast_task/include/task.hpp>
 #include <library/list_array.hpp>
 #include <mutex>
-#include <src / api / file / compression.hpp>
+#include <src/api/file/compression.hpp>
 
 #include <zlib.h>
 #include <lz4.h>

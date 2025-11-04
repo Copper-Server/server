@@ -157,7 +157,7 @@ namespace copper_server::api::packets {
         else if constexpr (std::is_same_v<enbt::raw_uuid, Type>)
             res.write_value(value);
         else if constexpr (std::is_same_v<base_objects::chat, Type>)
-            res.write_direct(util::nbt::build(value.to_enbt()).get_as_network());
+            res.write_direct(util::nbt_enbt_convert::build(value.to_enbt()).get_as_network());
         else if constexpr (
             std::is_same_v<enbt::value, Type>
             || std::is_same_v<enbt::compound, Type>
@@ -173,7 +173,7 @@ namespace copper_server::api::packets {
             || std::is_same_v<enbt::simple_array_ui32, Type>
             || std::is_same_v<enbt::simple_array_ui64, Type>
         )
-            res.write_direct(util::nbt::build((const enbt::value&)value).get_as_network());
+            res.write_direct(util::nbt_enbt_convert::build((const enbt::value&)value).get_as_network());
         else if constexpr (std::is_base_of_v<base_objects::palette_container, Type>) {
             std::visit(
                 [&]<class IT>(const IT& it) {

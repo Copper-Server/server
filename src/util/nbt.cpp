@@ -9,10 +9,515 @@
 #include <src/util/nbt.hpp>
 
 namespace copper_server::util {
+#pragma region NBT
+
+    void nbt::clear() {
+        if (data) {
+            switch (type) {
+            case nbt_type::tag_byte_array:
+                delete (list_array<uint8_t>*)data;
+                break;
+            case nbt_type::tag_string:
+                delete (std::string*)data;
+                break;
+            case nbt_type::tag_list:
+                delete (list_array<nbt>*)data;
+                break;
+            case nbt_type::tag_compound:
+                delete (std::unordered_map<std::string, nbt>*)data;
+                break;
+            case nbt_type::tag_int_array:
+                delete (list_array<int32_t>*)data;
+                break;
+            case nbt_type::tag_long_array:
+                delete (list_array<int64_t>*)data;
+                break;
+            default:
+                break;
+            }
+            data = nullptr;
+        }
+    }
+
+    nbt::nbt() : data(nullptr), type(nbt_type::tag_end) {}
+
+    nbt::nbt(int8_t value) : data((void*)static_cast<ptrdiff_t>(value)), type(nbt_type::tag_byte) {}
+
+    nbt::nbt(int16_t value) : data((void*)static_cast<ptrdiff_t>(value)), type(nbt_type::tag_short) {}
+
+    nbt::nbt(int32_t value) : data((void*)static_cast<ptrdiff_t>(value)), type(nbt_type::tag_int) {}
+
+    nbt::nbt(int64_t value) : data((void*)static_cast<ptrdiff_t>(value)), type(nbt_type::tag_long) {}
+
+    nbt::nbt(float value) : data((void*)static_cast<ptrdiff_t>(value)), type(nbt_type::tag_float) {}
+
+    nbt::nbt(double value) : data((void*)static_cast<ptrdiff_t>(value)), type(nbt_type::tag_double) {}
+
+    nbt::nbt(const list_array<uint8_t>& value) : data(new list_array<uint8_t>(value)), type(nbt_type::tag_byte_array) {}
+
+    nbt::nbt(list_array<uint8_t>&& value) : data(new list_array<uint8_t>(std::move(value))), type(nbt_type::tag_byte_array) {}
+
+    nbt::nbt(const std::string& value) : data(new std::string(value)), type(nbt_type::tag_byte_array) {}
+
+    nbt::nbt(std::string&& value) : data(new std::string(std::move(value))), type(nbt_type::tag_string) {}
+
+    nbt::nbt(const char* value) : data(new std::string(value)), type(nbt_type::tag_string) {}
+
+    nbt::nbt(const char* value, size_t size) : data(new std::string(value, size)), type(nbt_type::tag_string) {}
+
+    nbt::nbt(std::string_view value) : data(new std::string(value)), type(nbt_type::tag_string) {}
+
+    nbt::nbt(const list_array<nbt>& value) : data(new list_array<nbt>(value)), type(nbt_type::tag_list) {}
+
+    nbt::nbt(list_array<nbt>&& value) : data(new list_array<nbt>(std::move(value))), type(nbt_type::tag_list) {}
+
+    nbt::nbt(const std::unordered_map<std::string, nbt>& value) : data(new std::unordered_map<std::string, nbt>(value)), type(nbt_type::tag_compound) {}
+
+    nbt::nbt(std::unordered_map<std::string, nbt>&& value) : data(new std::unordered_map<std::string, nbt>(std::move(value))), type(nbt_type::tag_compound) {}
+
+    nbt::nbt(const list_array<int32_t>& value) : data(new list_array<int32_t>(value)), type(nbt_type::tag_int_array) {}
+
+    nbt::nbt(list_array<int32_t>&& value) : data(new list_array<int32_t>(std::move(value))), type(nbt_type::tag_int_array) {}
+
+    nbt::nbt(const list_array<int64_t>& value) : data(new list_array<int64_t>(value)), type(nbt_type::tag_long_array) {}
+
+    nbt::nbt(list_array<int64_t>&& value) : data(new list_array<int64_t>(std::move(value))), type(nbt_type::tag_long_array) {}
+
+    nbt::nbt(const nbt& copy) {
+        data = nullptr;
+        operator=(copy);
+    }
+
+    nbt::nbt(nbt&& move) {
+        type = move.type;
+        data = move.data;
+        move.type = nbt_type::tag_end;
+        move.data = nullptr;
+    }
+
+    nbt::~nbt() {
+        clear();
+    }
+
+    nbt& nbt::operator=(const nbt& copy) {
+        if (this == &copy)
+            return *this;
+        clear();
+        type = copy.type;
+        switch (type) {
+        case nbt_type::tag_end:
+        case nbt_type::tag_byte:
+        case nbt_type::tag_short:
+        case nbt_type::tag_int:
+        case nbt_type::tag_long:
+        case nbt_type::tag_float:
+        case nbt_type::tag_double:
+            data = copy.data;
+            break;
+        case nbt_type::tag_byte_array:
+            data = new list_array<uint8_t>(*(list_array<uint8_t>*)copy.data);
+            break;
+        case nbt_type::tag_string:
+            data = new std::string(*(std::string*)copy.data);
+            break;
+        case nbt_type::tag_list:
+            data = new list_array<nbt>(*(list_array<nbt>*)copy.data);
+            break;
+        case nbt_type::tag_compound:
+            data = new std::unordered_map<std::string, nbt>(*(std::unordered_map<std::string, nbt>*)copy.data);
+            break;
+        case nbt_type::tag_int_array:
+            data = new list_array<int32_t>(*(list_array<int32_t>*)copy.data);
+            break;
+        case nbt_type::tag_long_array:
+            data = new list_array<int64_t>(*(list_array<int64_t>*)copy.data);
+            break;
+        }
+        return *this;
+    }
+
+    nbt& nbt::operator=(nbt&& move) {
+        if (this == &move)
+            return *this;
+        clear();
+        type = move.type;
+        data = move.data;
+        move.type = nbt_type::tag_end;
+        move.data = nullptr;
+        return *this;
+    }
+
+    bool nbt::operator==(const nbt& other) const {
+        if (type != other.type)
+            return false;
+        switch (type) {
+        case nbt_type::tag_end:
+        case nbt_type::tag_byte:
+        case nbt_type::tag_short:
+        case nbt_type::tag_int:
+        case nbt_type::tag_long:
+        case nbt_type::tag_float:
+        case nbt_type::tag_double:
+            return data == other.data;
+        case nbt_type::tag_byte_array:
+            return *(list_array<uint8_t>*)data == *(list_array<uint8_t>*)other.data;
+        case nbt_type::tag_string:
+            return *(std::string*)data == *(std::string*)other.data;
+        case nbt_type::tag_list:
+            return *(list_array<nbt>*)data == *(list_array<nbt>*)other.data;
+        case nbt_type::tag_compound:
+            return *(std::unordered_map<std::string, nbt>*)data == *(std::unordered_map<std::string, nbt>*)other.data;
+        case nbt_type::tag_int_array:
+            return *(list_array<int32_t>*)data == *(list_array<int32_t>*)other.data;
+        case nbt_type::tag_long_array:
+            return *(list_array<int64_t>*)data == *(list_array<int64_t>*)other.data;
+        default:
+            return false;
+        }
+    }
+
+    bool nbt::operator!=(const nbt& move) const {
+        return !(*this == move);
+    }
+
+    nbt_type nbt::get_type() const noexcept {
+        return type;
+    }
+
+    int8_t nbt::get_byte() const {
+        if (type != nbt_type::tag_byte)
+            throw std::runtime_error("Invalid type");
+        return *reinterpret_cast<const int8_t*>(&data);
+    }
+
+    int16_t nbt::get_short() const {
+        if (type != nbt_type::tag_short)
+            throw std::runtime_error("Invalid type");
+        return *reinterpret_cast<const int16_t*>(&data);
+    }
+
+    int32_t nbt::get_int() const {
+        if (type != nbt_type::tag_int)
+            throw std::runtime_error("Invalid type");
+        return *reinterpret_cast<const int32_t*>(&data);
+    }
+
+    int64_t nbt::get_long() const {
+        if (type != nbt_type::tag_long)
+            throw std::runtime_error("Invalid type");
+        return *reinterpret_cast<const int64_t*>(&data);
+    }
+
+    float nbt::get_float() const {
+        if (type != nbt_type::tag_float)
+            throw std::runtime_error("Invalid type");
+        return *reinterpret_cast<const float*>(&data);
+    }
+
+    double nbt::get_double() const {
+        if (type != nbt_type::tag_double)
+            throw std::runtime_error("Invalid type");
+        return *reinterpret_cast<const double*>(&data);
+    }
+
+    const list_array<uint8_t>& nbt::get_byte_array() const {
+        if (type != nbt_type::tag_byte_array)
+            throw std::runtime_error("Invalid type");
+        return *(list_array<uint8_t>*)data;
+    }
+
+    const std::string& nbt::get_string() const {
+        if (type != nbt_type::tag_string)
+            throw std::runtime_error("Invalid type");
+        return *(std::string*)data;
+    }
+
+    const list_array<nbt>& nbt::get_list() const {
+        if (type != nbt_type::tag_list)
+            throw std::runtime_error("Invalid type");
+        return *(list_array<nbt>*)data;
+    }
+
+    const std::unordered_map<std::string, nbt>& nbt::get_compound() const {
+        if (type != nbt_type::tag_compound)
+            throw std::runtime_error("Invalid type");
+        return *(std::unordered_map<std::string, nbt>*)data;
+    }
+
+    const list_array<int32_t>& nbt::get_int_array() const {
+        if (type != nbt_type::tag_int_array)
+            throw std::runtime_error("Invalid type");
+        return *(list_array<int32_t>*)data;
+    }
+
+    const list_array<int64_t>& nbt::get_long_array() const {
+        if (type != nbt_type::tag_long_array)
+            throw std::runtime_error("Invalid type");
+        return *(list_array<int64_t>*)data;
+    }
+
+    int8_t& nbt::get_byte() {
+        if (type != nbt_type::tag_byte)
+            throw std::runtime_error("Invalid type");
+        return *reinterpret_cast<int8_t*>(&data);
+    }
+
+    int16_t& nbt::get_short() {
+        if (type != nbt_type::tag_short)
+            throw std::runtime_error("Invalid type");
+        return *reinterpret_cast<int16_t*>(&data);
+    }
+
+    int32_t& nbt::get_int() {
+        if (type != nbt_type::tag_int)
+            throw std::runtime_error("Invalid type");
+        return *reinterpret_cast<int32_t*>(&data);
+    }
+
+    int64_t& nbt::get_long() {
+        if (type != nbt_type::tag_long)
+            throw std::runtime_error("Invalid type");
+        return *reinterpret_cast<int64_t*>(&data);
+    }
+
+    float& nbt::get_float() {
+        if (type != nbt_type::tag_float)
+            throw std::runtime_error("Invalid type");
+        return *reinterpret_cast<float*>(&data);
+    }
+
+    double& nbt::get_double() {
+        if (type != nbt_type::tag_double)
+            throw std::runtime_error("Invalid type");
+        return *reinterpret_cast<double*>(&data);
+    }
+
+    list_array<uint8_t>& nbt::get_byte_array() {
+        if (type != nbt_type::tag_byte_array)
+            throw std::runtime_error("Invalid type");
+        return *(list_array<uint8_t>*)data;
+    }
+
+    std::string& nbt::get_string() {
+        if (type != nbt_type::tag_string)
+            throw std::runtime_error("Invalid type");
+        return *(std::string*)data;
+    }
+
+    list_array<nbt>& nbt::get_list() {
+        if (type != nbt_type::tag_list)
+            throw std::runtime_error("Invalid type");
+        return *(list_array<nbt>*)data;
+    }
+
+    std::unordered_map<std::string, nbt>& nbt::get_compound() {
+        if (type != nbt_type::tag_compound)
+            throw std::runtime_error("Invalid type");
+        return *(std::unordered_map<std::string, nbt>*)data;
+    }
+
+    list_array<int32_t>& nbt::get_int_array() {
+        if (type != nbt_type::tag_int_array)
+            throw std::runtime_error("Invalid type");
+        return *(list_array<int32_t>*)data;
+    }
+
+    list_array<int64_t>& nbt::get_long_array() {
+        if (type != nbt_type::tag_long_array)
+            throw std::runtime_error("Invalid type");
+        return *(list_array<int64_t>*)data;
+    }
+
+    bool nbt::is_byte() const {
+        return type == nbt_type::tag_byte;
+    }
+
+    bool nbt::is_short() const {
+        return type == nbt_type::tag_short;
+    }
+
+    bool nbt::is_int() const {
+        return type == nbt_type::tag_int;
+    }
+
+    bool nbt::is_long() const {
+        return type == nbt_type::tag_long;
+    }
+
+    bool nbt::is_float() const {
+        return type == nbt_type::tag_float;
+    }
+
+    bool nbt::is_double() const {
+        return type == nbt_type::tag_double;
+    }
+
+    bool nbt::is_byte_array() const {
+        return type == nbt_type::tag_byte_array;
+    }
+
+    bool nbt::is_string() const {
+        return type == nbt_type::tag_string;
+    }
+
+    bool nbt::is_list() const {
+        return type == nbt_type::tag_list;
+    }
+
+    bool nbt::is_compound() const {
+        return type == nbt_type::tag_compound;
+    }
+
+    bool nbt::is_int_array() const {
+        return type == nbt_type::tag_int_array;
+    }
+
+    bool nbt::is_long_array() const {
+        return type == nbt_type::tag_long_array;
+    }
+
+    int8_t nbt::as_byte() const {
+        switch (type) {
+        case nbt_type::tag_byte:
+            return get_byte();
+        case nbt_type::tag_short:
+            return (int8_t)get_short();
+        case nbt_type::tag_int:
+            return (int8_t)get_int();
+        case nbt_type::tag_long:
+            return (int8_t)get_long();
+        case nbt_type::tag_float:
+            return (int8_t)get_float();
+        case nbt_type::tag_double:
+            return (int8_t)get_double();
+        default:
+            throw std::runtime_error("Invalid type");
+        }
+    }
+
+    int16_t nbt::as_short() const {
+        switch (type) {
+        case nbt_type::tag_byte:
+            return (int16_t)get_byte();
+        case nbt_type::tag_short:
+            return get_short();
+        case nbt_type::tag_int:
+            return (int16_t)get_int();
+        case nbt_type::tag_long:
+            return (int16_t)get_long();
+        case nbt_type::tag_float:
+            return (int16_t)get_float();
+        case nbt_type::tag_double:
+            return (int16_t)get_double();
+        default:
+            throw std::runtime_error("Invalid type");
+        }
+    }
+
+    int32_t nbt::as_int() const {
+        switch (type) {
+        case nbt_type::tag_byte:
+            return (int32_t)get_byte();
+        case nbt_type::tag_short:
+            return (int32_t)get_short();
+        case nbt_type::tag_int:
+            return get_int();
+        case nbt_type::tag_long:
+            return (int32_t)get_long();
+        case nbt_type::tag_float:
+            return (int32_t)get_float();
+        case nbt_type::tag_double:
+            return (int32_t)get_double();
+        default:
+            throw std::runtime_error("Invalid type");
+        }
+    }
+
+    int64_t nbt::as_long() const {
+        switch (type) {
+        case nbt_type::tag_byte:
+            return (int64_t)get_byte();
+        case nbt_type::tag_short:
+            return (int64_t)get_short();
+        case nbt_type::tag_int:
+            return (int64_t)get_int();
+        case nbt_type::tag_long:
+            return get_long();
+        case nbt_type::tag_float:
+            return (int64_t)get_float();
+        case nbt_type::tag_double:
+            return (int64_t)get_double();
+        default:
+            throw std::runtime_error("Invalid type");
+        }
+    }
+
+    float nbt::as_float() const {
+        switch (type) {
+        case nbt_type::tag_byte:
+            return (float)get_byte();
+        case nbt_type::tag_short:
+            return (float)get_short();
+        case nbt_type::tag_int:
+            return (float)get_int();
+        case nbt_type::tag_long:
+            return (float)get_long();
+        case nbt_type::tag_float:
+            return get_float();
+        case nbt_type::tag_double:
+            return (float)get_double();
+        default:
+            throw std::runtime_error("Invalid type");
+        }
+    }
+
+    double nbt::as_double() const {
+        switch (type) {
+        case nbt_type::tag_byte:
+            return (double)get_byte();
+        case nbt_type::tag_short:
+            return (double)get_short();
+        case nbt_type::tag_int:
+            return (double)get_int();
+        case nbt_type::tag_long:
+            return (double)get_long();
+        case nbt_type::tag_float:
+            return (double)get_float();
+        case nbt_type::tag_double:
+            return get_double();
+        default:
+            throw std::runtime_error("Invalid type");
+        }
+    }
+
+    std::string nbt::as_string() const {
+        switch (type) {
+        case nbt_type::tag_byte:
+            return std::to_string(get_byte());
+        case nbt_type::tag_short:
+            return std::to_string(get_short());
+        case nbt_type::tag_int:
+            return std::to_string(get_int());
+        case nbt_type::tag_long:
+            return std::to_string(get_long());
+        case nbt_type::tag_float:
+            return std::to_string(get_float());
+        case nbt_type::tag_double:
+            return std::to_string(get_double());
+        case nbt_type::tag_string:
+            return get_string();
+        default:
+            throw std::runtime_error("Invalid type");
+        }
+    }
+
+#pragma endregion
+
+
 #pragma region ENBT_TO_NBT
 
     template <class T>
-    void nbt::insertValue(T val, size_t max) {
+    void nbt_enbt_convert::insertValue(T val, size_t max) {
         val = enbt::endian_helpers::convert_endian(std::endian::big, val);
         uint8_t* proxy = (uint8_t*)&val;
         for (size_t i = 0; i < max; i++)
@@ -20,7 +525,7 @@ namespace copper_server::util {
     }
 
     template <class Target, class T>
-    void nbt::insertValue(T val, size_t max) {
+    void nbt_enbt_convert::insertValue(T val, size_t max) {
         Target tmp = (Target)val;
         if constexpr (!std::is_same<Target, T>::value) {
             if constexpr (std::is_unsigned_v<Target> == std::is_unsigned_v<T>) {
@@ -42,7 +547,7 @@ namespace copper_server::util {
     }
 
     template <class T>
-    T nbt::uncheckedExtractValue(const uint8_t* data, size_t& i) {
+    T nbt_enbt_convert::uncheckedExtractValue(const uint8_t* data, size_t& i) {
         uint8_t tmp[sizeof(T)];
         for (size_t j = 0; j < sizeof(T); j++)
             tmp[j] = data[i++];
@@ -50,14 +555,14 @@ namespace copper_server::util {
     }
 
     template <class T>
-    T nbt::extractValue(const uint8_t* data, size_t& i, size_t max_size) {
+    T nbt_enbt_convert::extractValue(const uint8_t* data, size_t& i, size_t max_size) {
         if (i + sizeof(T) >= max_size)
             throw std::out_of_range("Out of bounds");
         return uncheckedExtractValue<T>(data, i);
     }
 
     template <class T>
-    enbt::value nbt::extractArray(const uint8_t* data, size_t& i, size_t max_size) {
+    enbt::value nbt_enbt_convert::extractArray(const uint8_t* data, size_t& i, size_t max_size) {
         int32_t len = extractValue<int32_t>(data, i, max_size);
         if (i + sizeof(T) * len >= max_size)
             throw std::out_of_range("Out of bounds");
@@ -68,12 +573,12 @@ namespace copper_server::util {
         return enbt::value(ret, enbt::type_id(enbt::type::array, enbt::type_len::Default));
     }
 
-    void nbt::insertString(const char* val, size_t max) {
+    void nbt_enbt_convert::insertString(const char* val, size_t max) {
         for (size_t i = 0; i < max; i++)
             nbt_data.push_back((uint8_t)val[i]);
     }
 
-    void nbt::IntegerInsert(const enbt::value& val, bool typ_ins) {
+    void nbt_enbt_convert::IntegerInsert(const enbt::value& val, bool typ_ins) {
         switch (val.get_type_len()) {
         case enbt::type_len::Tiny:
             if (typ_ins)
@@ -111,7 +616,7 @@ namespace copper_server::util {
         }
     }
 
-    void nbt::FloatingInsert(const enbt::value& val, bool typ_ins) {
+    void nbt_enbt_convert::FloatingInsert(const enbt::value& val, bool typ_ins) {
         switch (val.get_type_len()) {
         case enbt::type_len::Default:
             if (typ_ins)
@@ -128,16 +633,16 @@ namespace copper_server::util {
         }
     }
 
-    void nbt::BuildCompoundItem(const std::string& c_name, const enbt::value& comp, bool compress) {
+    void nbt_enbt_convert::BuildCompoundItem(const std::string& c_name, const enbt::value& comp, bool compress) {
         if (c_name.size() > UINT16_MAX)
-            throw std::out_of_range("enbt::value string too big to fit in nbt");
+            throw std::out_of_range("enbt::value string too big to fit in nbt_enbt_convert");
         InsertType(comp.type_id());
         insertValue((uint16_t)c_name.size());
         insertString(c_name.data(), c_name.size());
         RecursiveBuilder(comp, false, "", compress, false);
     }
 
-    void nbt::BuildCompound(const std::string& c_name, const enbt::value& comp, bool compress, bool insert_name) {
+    void nbt_enbt_convert::BuildCompound(const std::string& c_name, const enbt::value& comp, bool compress, bool insert_name) {
         if (insert_name) {
             insertValue((uint16_t)c_name.size());
             insertString(c_name.data(), c_name.size());
@@ -156,7 +661,7 @@ namespace copper_server::util {
         InsertType(enbt::type::none);
     }
 
-    void nbt::InsertType(enbt::type_id t) {
+    void nbt_enbt_convert::InsertType(enbt::type_id t) {
         switch (t.type) {
         case enbt::type::none:
             nbt_data.push_back(0);
@@ -210,7 +715,7 @@ namespace copper_server::util {
         }
     }
 
-    void nbt::BuildBaseIntArray(int32_t len, const enbt::value& arr, enbt::type_id base_id) {
+    void nbt_enbt_convert::BuildBaseIntArray(int32_t len, const enbt::value& arr, enbt::type_id base_id) {
         insertValue(len);
         for (int32_t i = 0; i < len; i++) {
             if (arr[i].type_id() != base_id)
@@ -219,7 +724,7 @@ namespace copper_server::util {
         }
     }
 
-    void nbt::BuildSimpleIntArray(int32_t len, const enbt::value& arr, enbt::type_id base_id) {
+    void nbt_enbt_convert::BuildSimpleIntArray(int32_t len, const enbt::value& arr, enbt::type_id base_id) {
         insertValue(len);
         for (int32_t i = 0; i < len; i++) {
             auto val = arr.get_index(i);
@@ -229,7 +734,7 @@ namespace copper_server::util {
         }
     }
 
-    void nbt::BuildArray(int32_t len, const enbt::value& arr, enbt::type_id base_id, bool compress) {
+    void nbt_enbt_convert::BuildArray(int32_t len, const enbt::value& arr, enbt::type_id base_id, bool compress) {
         insertValue(len);
         if (arr.is_sarray()) {
             for (int32_t i = 0; i < len; i++) {
@@ -257,7 +762,7 @@ namespace copper_server::util {
         }
     }
 
-    void nbt::BuildArray(const enbt::value& enbt, bool insert_type, bool compress) {
+    void nbt_enbt_convert::BuildArray(const enbt::value& enbt, bool insert_type, bool compress) {
         if (!enbt.size()) {
             if (insert_type)
                 nbt_data.push_back(9);
@@ -309,7 +814,7 @@ namespace copper_server::util {
         BuildArray((int32_t)enbt.size(), enbt, base_type, compress);
     }
 
-    void nbt::RecursiveBuilder(const enbt::value& enbt, bool insert_type, const std::string& name, bool compress, bool insert_name) {
+    void nbt_enbt_convert::RecursiveBuilder(const enbt::value& enbt, bool insert_type, const std::string& name, bool compress, bool insert_name) {
         switch (enbt.get_type()) {
         case enbt::type::none:
             if (insert_type)
@@ -361,7 +866,7 @@ namespace copper_server::util {
 #pragma endregion
 #pragma region NBT_TO_ENBT
 
-    enbt::value nbt::RecursiveExtractor_1(uint8_t type, const uint8_t* data, size_t& i, size_t max_size) {
+    enbt::value nbt_enbt_convert::RecursiveExtractor_1(uint8_t type, const uint8_t* data, size_t& i, size_t max_size) {
         switch (type) {
         case 0: //end
             return enbt::value();
@@ -443,7 +948,7 @@ namespace copper_server::util {
         }
     }
 
-    enbt::value nbt::RecursiveExtractor(const uint8_t* data, size_t& i, size_t max_size) {
+    enbt::value nbt_enbt_convert::RecursiveExtractor(const uint8_t* data, size_t& i, size_t max_size) {
         if (max_size == 0)
             return enbt::value();
         if (data[0] == 10) {
@@ -455,7 +960,7 @@ namespace copper_server::util {
         return RecursiveExtractor_1(data[i++], data, i, max_size);
     }
 
-    enbt::value nbt::RecursiveExtractorNetwork(const uint8_t* data, size_t& i, size_t max_size) {
+    enbt::value nbt_enbt_convert::RecursiveExtractorNetwork(const uint8_t* data, size_t& i, size_t max_size) {
         if (max_size == 0)
             return enbt::value();
         return RecursiveExtractor_1(data[i++], data, i, max_size);
@@ -463,45 +968,45 @@ namespace copper_server::util {
 
 #pragma endregion
 
-    nbt::nbt() {}
+    nbt_enbt_convert::nbt_enbt_convert() {}
 
-    enbt::value nbt::readNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size) {
+    enbt::value nbt_enbt_convert::readNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size) {
         nbt_size = 0;
         return RecursiveExtractor(data, nbt_size, max_size);
     }
 
-    nbt nbt::readNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress, const std::string& entry_name) {
+    nbt_enbt_convert nbt_enbt_convert::readNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress, const std::string& entry_name) {
         return build(readNBT_asENBT(data, max_size, nbt_size), compress, entry_name);
     }
 
-    enbt::value nbt::readNetworkNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size) {
+    enbt::value nbt_enbt_convert::readNetworkNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size) {
         nbt_size = 0;
         return RecursiveExtractorNetwork(data, nbt_size, max_size);
     }
 
-    nbt nbt::readNetworkNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress, const std::string& entry_name) {
+    nbt_enbt_convert nbt_enbt_convert::readNetworkNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress, const std::string& entry_name) {
         return build(readNetworkNBT_asENBT(data, max_size, nbt_size), compress, entry_name);
     }
 
-    nbt::nbt(nbt&& move)
+    nbt_enbt_convert::nbt_enbt_convert(nbt_enbt_convert&& move)
         : nbt_data(std::move(move)) {}
 
-    nbt::~nbt() = default;
+    nbt_enbt_convert::~nbt_enbt_convert() = default;
 
-    nbt nbt::build(const enbt::value& enbt, bool compress, const std::string& entry_name) {
-        nbt ret;
+    nbt_enbt_convert nbt_enbt_convert::build(const enbt::value& enbt, bool compress, const std::string& entry_name) {
+        nbt_enbt_convert ret;
         ret.RecursiveBuilder(enbt, true, entry_name, compress, true);
         return ret;
     }
 
-    nbt nbt::build(const list_array<uint8_t>& data) {
-        nbt ret;
+    nbt_enbt_convert nbt_enbt_convert::build(const list_array<uint8_t>& data) {
+        nbt_enbt_convert ret;
         ret.nbt_data = data;
         return ret;
     }
 
-    nbt nbt::build_network(const list_array<uint8_t>& data) {
-        nbt ret;
+    nbt_enbt_convert nbt_enbt_convert::build_network(const list_array<uint8_t>& data) {
+        nbt_enbt_convert ret;
         ret.nbt_data = data;
         uint8_t tmp[] = {0, 0};
         if (ret.nbt_data[0] == 10)
@@ -510,15 +1015,15 @@ namespace copper_server::util {
         return ret;
     }
 
-    nbt::operator list_array<uint8_t>() const {
+    nbt_enbt_convert::operator list_array<uint8_t>() const {
         return nbt_data;
     }
 
-    list_array<uint8_t> nbt::get_as_normal() const {
+    list_array<uint8_t> nbt_enbt_convert::get_as_normal() const {
         return nbt_data;
     }
 
-    list_array<uint8_t> nbt::get_as_network() const {
+    list_array<uint8_t> nbt_enbt_convert::get_as_network() const {
         if (nbt_data.size())
             if (nbt_data[0] == 10) {
                 list_array<uint8_t> ret = nbt_data;
@@ -528,12 +1033,12 @@ namespace copper_server::util {
         return nbt_data;
     }
 
-    enbt::value nbt::get_as_enbt() const {
+    enbt::value nbt_enbt_convert::get_as_enbt() const {
         size_t i = 0;
         return RecursiveExtractor(nbt_data.data(), i, nbt_data.size());
     }
 
-    std::string nbt::get_entry_name() const {
+    std::string nbt_enbt_convert::get_entry_name() const {
         size_t i = 0;
         const uint8_t* data = nbt_data.data();
         if (data[0] == 10) {
@@ -545,7 +1050,7 @@ namespace copper_server::util {
             return "";
     }
 
-    enbt::value nbt::extract_from_array(const uint8_t* arr, size_t& result, size_t max_size) {
+    enbt::value nbt_enbt_convert::extract_from_array(const uint8_t* arr, size_t& result, size_t max_size) {
         result = 0;
         return RecursiveExtractor(arr, result, max_size);
     }

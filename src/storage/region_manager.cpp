@@ -24,13 +24,13 @@ namespace copper_server::storage {
         if (auto it = this->region_cache.find(coords); it != this->region_cache.end())
             return it->second;
 
-        auto file_path = region_dir_path / ("r." + std::to_string(region_x) + "." + std::to_string(region_z) + ".mca");
+        auto file_path = region_dir_path / ("r." + std::to_string(region_x) + "." + std::to_string(region_z) + "." + region_format);
         auto region_file = region_storage::open(file_path);
         this->region_cache[coords] = region_file;
         return region_file;
     }
 
-    region_manager::region_manager(const std::filesystem::path& region_path) {
+    region_manager::region_manager(const std::filesystem::path& region_path, std::string region_format) : region_format(region_format) {
         region_dir_path = region_path;
         if (!std::filesystem::exists(region_dir_path))
             std::filesystem::create_directories(region_dir_path);

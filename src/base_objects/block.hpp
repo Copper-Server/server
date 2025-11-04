@@ -8,7 +8,6 @@
  */
 #pragma once
 #include <cstdint>
-#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <map>
 #include <mutex>
@@ -269,7 +268,7 @@ namespace copper_server {
                 auto block_ = std::make_unique<static_block_data>(std::move(new_block));
                 auto& new_loc = full_block_data_.emplace_back(std::move(block_));
 
-                named_full_block_data[block_->name] = new_loc.get();
+                named_full_block_data[new_loc->name] = new_loc.get();
                 return (int32_t)new_id;
             }
 

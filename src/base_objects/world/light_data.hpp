@@ -20,12 +20,23 @@ namespace copper_server::base_objects::world {
 
         light_item light_map[16][16][8];
 
-        inline uint8_t get(size_t x, size_t y, size_t z) {
+        inline uint8_t get(size_t x, size_t y, size_t z) const {
             return z & 1 ? light_map[x][y][z >> 1].i1 : light_map[x][y][z >> 1].i0;
         }
 
         inline void set(size_t x, size_t y, size_t z, uint8_t value) {
             (z & 1 ? light_map[x][y][z >> 1].i1 : light_map[x][y][z >> 1].i0) = value;
+        }
+
+        bool is_lighted() const {
+            uint64_t* begin = (uint64_t*)light_map;
+            uint64_t* end = (uint64_t*)light_map + 16 * 16;
+            while (begin != end) {
+                if (*begin)
+                    return true;
+                ++begin;
+            }
+            return false;
         }
 
         light_data()

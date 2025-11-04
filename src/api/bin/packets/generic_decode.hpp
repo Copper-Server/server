@@ -98,7 +98,6 @@ namespace copper_server::api::packets {
                       : 4096;
             if (bits_per_entry == 0) {
                 base_objects::palette_container_single res;
-                stream.read_value<uint8_t>(); //always zero
                 res.id_of_palette = stream.read_var<int32_t>();
                 value.decompile(std::move(res));
             } else if (bits_per_entry <= max_indirect) {
@@ -109,16 +108,17 @@ namespace copper_server::api::packets {
                     res.palette.push_back(stream.read_var<uint32_t>());
                 auto size = bits_per_entry * entries_count;
                 size += size % 8;
+                size /= 8;
                 auto range = stream.range_read(size);
                 res.data.bits_per_entry = bits_per_entry;
-                res.data.data.data() = list_array<uint8_t>(range.data_read(), range.size_read());
+                res.data.data.data() = list_array<uint64_t>((uint64_t*)range.data_read(), range.size_read() / 8);
                 value.decompile(std::move(res));
             } else {
                 base_objects::palette_data res(bits_per_entry, entries_count);
                 auto size = bits_per_entry * entries_count;
                 size += size % 8;
                 auto range = stream.range_read(size);
-                res.data.data() = list_array<uint8_t>(range.data_read(), range.size_read());
+                res.data.data() = list_array<uint64_t>((uint64_t*)range.data_read(), range.size_read() / 8);
                 value.decompile(std::move(res));
             }
         } else if constexpr (std::is_same_v<base_objects::palette_data_height_map, Type>) {
