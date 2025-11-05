@@ -12,9 +12,17 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(Boost_NO_WARN_NEW_VERSIONS ON)
+set(ENABLE_BOOST_PREPROCESSOR ON)
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(FAST_TASK_ENABLE_DEBUG_API OFF)
-add_compile_definitions(tasks_enable_preemptive_scheduler_preview=false)
+set(FAST_TASK_ENABLE_ABORT_IF_ALREADY_STARTED ON)
+set(FAST_TASK_ENABLE_ABORT_IF_NEVER_STARTED ON)
+set(FAST_TASK_ENABLE_PREEMPTIVE_SCHEDULER OFF)
+
+
+set(COMMANDLINE_SHARED_LIBS OFF)
 
 FILE(GLOB REFLECTION_FILES CONFIGURE_DEPENDS
   src/api/packets/*.hpp
@@ -45,17 +53,15 @@ create_resources_header("resources" "${RESOURCE_FILES_include}")
 create_reflect_map("${CMAKE_CURRENT_SOURCE_DIR}/src/util/reflect" "${REFLECTION_FILES}")
 
 IF(MSVC)
-  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>") #I hate using this for library/commandline. Its just breaks, COMMANDLINE_LIBTYPE and COMMANDLINE_SHARED_LIBS are just not working as excepted
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
   #string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
   #string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
   #string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
 ENDIF(MSVC)
 
-set(ENABLE_BOOST_PREPROCESSOR ON)
 
 
 set(COMMANDLINE_LIBTYPE STATIC)
-set(COMMANDLINE_SHARED_LIBS OFF)
 
 find_package(Boost REQUIRED COMPONENTS context json bimap iostreams)
 find_package(ZLIB REQUIRED)

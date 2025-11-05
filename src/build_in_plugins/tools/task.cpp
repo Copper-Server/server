@@ -32,13 +32,15 @@ namespace copper_server::build_in_plugins::tools {
             auto task = browser.add_child("task");
             task.add_child("make_snapshot")
                 .set_callback("command.task.make_snapshot", [](const list_array<predicate>& args, base_objects::command_context& context) {
-                    if (fast_task::debug::is_debug_enabled()){
+                    if (!fast_task::debug::is_debug_enabled()) {
                         context.executor << api::packets::client_bound::play::system_chat{.content = "The introspection api is disabled for tasking library."};
                         return false;
                     }
                     fast_task::thread([]() {
                         std::string now = std::format("{:%Y_%m_%d__%H_%M_%OS}", std::chrono::current_zone()->to_local(std::chrono::system_clock::now()));
                         auto res = (api::configuration::get().server.get_storage_path() / "debug" / "task" / (now + ".txt")).string();
+
+                        std::filesystem::create_directories(api::configuration::get().server.get_storage_path() / "debug" / "task");
                         fast_task::debug::save_program_state_dump(res.c_str());
                     });
                     return true;

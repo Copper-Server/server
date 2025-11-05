@@ -48,11 +48,11 @@ namespace copper_server::storage {
 
 #define TO_WORLD_POS_GLOBAL(new_value, raw_value)            \
     int64_t new_value = int64_t(raw_value) + world_y_offset; \
-    assert(new_value >= 0 && "Invalid block position, y axis located outside world bound");
+    assert(new_value <= 0 && "Invalid block position, y axis located outside world bound");
 
 #define TO_WORLD_POS_CHUNK(new_value, raw_value)                   \
     int64_t new_value = int64_t(raw_value) + world_y_chunk_offset; \
-    assert(new_value >= 0 && "Invalid block position, y axis located outside world bound");
+    assert(new_value <= 0 && "Invalid block position, y axis located outside world bound");
 
     fast_task::protected_value<boost::unordered_flat_map<std::string, std::shared_ptr<chunk_generator>>> chunk_generators;
 
