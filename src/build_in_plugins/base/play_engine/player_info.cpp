@@ -18,6 +18,7 @@
 #include <src/api/world.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/player.hpp>
+#include <src/base_objects/uuid.hpp>
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins::base::play_engine {
@@ -172,8 +173,8 @@ namespace copper_server::build_in_plugins::base::play_engine {
                             return count;
                         }
                         case pred_entity::type_t::uuid: {
-                            enbt::raw_uuid uuid;
-                            enbt::raw_uuid::from_uuid_string(uuid, selector.value);
+                            base_objects::uuid uuid;
+                            base_objects::uuid::from_uuid_string(uuid, selector.value);
                             auto entity = api::entity_id_map::get_entity(uuid);
                             if (entity) {
                                 if (entity->has<api::ecs::com::assigned_player>()) {

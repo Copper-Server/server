@@ -17,7 +17,7 @@
 namespace copper_server::api::packets::server_bound::login {
     struct hello : public packet<0x00> {
         string_sized<16> name;
-        enbt::raw_uuid uuid;
+        base_objects::uuid uuid;
     };
 
     struct key : public packet<0x01> {

@@ -11,6 +11,8 @@
 #include <cassert>
 #include <library/list_array.hpp>
 #include <src/api/ecs/detail.hpp>
+#include <src/base_objects/uuid.hpp>
+#include <variant>
 
 //entity component system
 namespace copper_server::api::ecs {
@@ -149,6 +151,12 @@ namespace copper_server::api::ecs {
         bool operator!=(const entity& other) const {
             return id != other.id || generation != other.generation;
         }
+    };
+
+    struct entity_ref {
+        std::variant<base_objects::uuid, entity> value;
+        entity get_entity();
+        std::array<base_objects::uuid, 2> get_uuid();
     };
 
     template <class... params>

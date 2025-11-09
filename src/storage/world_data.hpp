@@ -25,6 +25,7 @@
 #include <src/base_objects/entity/animation.hpp>
 #include <src/base_objects/entity/event.hpp>
 #include <src/base_objects/events/event.hpp>
+#include <src/base_objects/uuid.hpp>
 #include <src/base_objects/weather.hpp>
 #include <src/base_objects/world/block_action.hpp>
 #include <src/base_objects/world/chunk.hpp>
@@ -304,7 +305,7 @@ namespace copper_server::storage {
         enbt::compound world_light_processor_data; //not saved
         enbt::compound world_records;
 
-        enbt::raw_uuid wandering_trader_id = enbt::raw_uuid::as_null();
+        base_objects::uuid wandering_trader_id = base_objects::uuid::as_null();
         float wandering_trader_spawn_chance = 0;
         int32_t wandering_trader_spawn_delay = 0;
         int32_t world_seed = 0;

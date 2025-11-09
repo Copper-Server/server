@@ -40,6 +40,7 @@ initialize_tool(binary_embed)
 initialize_tool(reflect_map)
 initialize_tool(entity_proxy_gen)
 initialize_tool(id_proxy_gen)
+initialize_tool(block_entity_gen)
 
 
 function(build_resource project_name input_file output_folder mode)
@@ -272,6 +273,20 @@ function(id_proxy_gen input_json output_header output_implementation res_type ty
 endfunction(id_proxy_gen)
 
 
+function(block_entity_gen input_json output_header output_implementation)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
+    execute_process(
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/block_entity_gen.exe ${input_json} ${output_header} ${output_implementation}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE result
+        ERROR_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs/block_entity_gen_error.log
+    )
+    if(result)
+        message(FATAL_ERROR "Failed to create mapping for ${input_json}")
+    endif()
+endfunction(block_entity_gen)
+
+
 function(create_mappings)
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
     execute_process(
@@ -300,6 +315,11 @@ function(create_mappings)
         "collection::item"
     )
 
+    block_entity_gen(
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/extractor/run/output/block_entity_map.json"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/generated/block_entity.hpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/generated/block_entity.cpp"
+    )
 
     file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/tools/logs)
 endfunction(create_mappings)

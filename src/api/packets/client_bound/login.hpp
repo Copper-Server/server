@@ -33,7 +33,7 @@ namespace copper_server::api::packets::client_bound::login {
             std::optional<string_sized<1024>> signature = std::nullopt;
         };
 
-        enbt::raw_uuid uuid;
+        base_objects::uuid uuid;
         string_sized<16> user_name;
         list_array_sized<property, 16> properties;
     };

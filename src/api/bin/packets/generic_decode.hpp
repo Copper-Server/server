@@ -66,7 +66,7 @@ namespace copper_server::api::packets {
             value = stream.read_value<Type>();
         else if constexpr (std::is_same_v<std::string, Type>)
             value = stream.read_string();
-        else if constexpr (std::is_same_v<enbt::raw_uuid, Type>)
+        else if constexpr (std::is_same_v<base_objects::uuid, Type>)
             value = stream.read_uuid();
         else if constexpr (std::is_same_v<base_objects::chat, Type>)
             value = base_objects::chat::from_enbt(ReadNetworkNBT_enbt(stream));

@@ -100,7 +100,7 @@ namespace copper_server::base_objects::network {
         }
     }
 
-    void response::item::write_value(const enbt::raw_uuid& val) {
+    void response::item::write_value(const base_objects::uuid& val) {
         _write_value_tem(val, data, std::endian::little);
     }
 

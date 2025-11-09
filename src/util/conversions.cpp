@@ -280,7 +280,7 @@ namespace copper_server::util::conversions {
             }
         }
 
-        std::string to(enbt::raw_uuid id) {
+        std::string to(base_objects::uuid id) {
             std::string res;
             __internal__::addHex(res, id.data[0]);
             __internal__::addHex(res, id.data[1]);
@@ -305,8 +305,8 @@ namespace copper_server::util::conversions {
             return res;
         }
 
-        enbt::raw_uuid from(std::string_view id) {
-            enbt::raw_uuid res;
+        base_objects::uuid from(std::string_view id) {
+            base_objects::uuid res;
             uint8_t index = 0;
             char cache = 0;
             bool cached = false;
@@ -559,7 +559,7 @@ namespace copper_server::util::conversions {
                     throw std::runtime_error("Unknown type");
                 }
             case uuid:
-                return boost::json::value(uuid::to((enbt::raw_uuid)enbt));
+                return boost::json::value(uuid::to((base_objects::uuid)enbt));
             case sarray: {
                 boost::json::array result;
                 switch (type_id.length) {

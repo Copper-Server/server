@@ -13,6 +13,7 @@
 #include <exception>
 #include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
+#include <src/base_objects/uuid.hpp>
 #include <src/base_objects/velocity.hpp>
 #include <src/util/calculations.hpp>
 #include <src/util/nbt.hpp>
@@ -166,8 +167,8 @@ namespace copper_server {
             return res;
         }
 
-        enbt::raw_uuid read_uuid() {
-            enbt::raw_uuid temp;
+        base_objects::uuid read_uuid() {
+            base_objects::uuid temp;
             uint8_t* tmp = (uint8_t*)&temp;
             for (size_t i = 0; i < 16; i++)
                 tmp[i] = read();
@@ -314,8 +315,8 @@ namespace copper_server {
             data.write(buf[i]);
     }
 
-    static void WriteUUID(const enbt::raw_uuid& val, list_array<uint8_t>& data) {
-        enbt::raw_uuid temp = enbt::endian_helpers::convert_endian(std::endian::big, val);
+    static void WriteUUID(const base_objects::uuid& val, list_array<uint8_t>& data) {
+        base_objects::uuid temp = enbt::endian_helpers::convert_endian(std::endian::big, val);
         uint8_t* tmp = (uint8_t*)&temp;
         for (size_t i = 0; i < 16; i++)
             data.push_back(tmp[i]);

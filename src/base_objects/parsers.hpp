@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <library/enbt/enbt.hpp>
 #include <src/api/packets/types.hpp>
+#include <src/base_objects/uuid.hpp>
 #include <string>
 #include <unordered_map>
 
@@ -577,7 +578,7 @@ namespace copper_server::base_objects {
         struct dialog {}; //TODO
 
         struct uuid {
-            enbt::raw_uuid value;
+            base_objects::uuid value;
         };
     }
 

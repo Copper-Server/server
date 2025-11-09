@@ -12,12 +12,9 @@
 #include <library/list_array.hpp>
 #include <src/api/ecs.hpp>
 #include <src/api/tags.hpp>
+#include <src/base_objects/uuid.hpp>
 #include <string>
 #include <variant>
-
-namespace enbt {
-    struct raw_uuid;
-}
 
 namespace copper_server::api::id {
     enum class registry_source {
@@ -159,7 +156,7 @@ namespace copper_server::api::id {
 
         std::optional<api::ecs::entity> from_registry_source_entity(int32_t value);
         int32_t to_registry_source_entity(api::ecs::entity value);
-        int32_t to_registry_source_entity(const enbt::raw_uuid& value);
+        int32_t to_registry_source_entity(const base_objects::uuid& value);
         uint8_t to_registry_source_entity_index(int32_t value);
 
         list_array<int32_t> all_registry_source_value(registry_source source);
@@ -358,7 +355,7 @@ namespace copper_server::api::id {
 
         source(api::ecs::entity value) : value((Value)detail::to_registry_source_entity(value)) {}
 
-        source(const enbt::raw_uuid& value) : value((Value)detail::to_registry_source_entity(value)) {}
+        source(const base_objects::uuid& value) : value((Value)detail::to_registry_source_entity(value)) {}
 
         source& operator=(const source& other) {
             value = other.value;
@@ -562,7 +559,7 @@ namespace copper_server::api::id {
 namespace std {
     template <class T, copper_server::api::id::registry_source sourc>
     struct hash<copper_server::api::id::source<T, sourc>> {
-        size_t operator()(const copper_server::api::id::source<T, sourc>& value) const {
+        size_t operator()(const copper_server::api::id::source<T, sourc>& value) const noexcept {
             return hash<T>()((T)value);
         }
     };

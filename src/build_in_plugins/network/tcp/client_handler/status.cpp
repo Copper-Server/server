@@ -12,6 +12,7 @@
 #include <src/api/players.hpp>
 #include <src/api/registers.hpp>
 #include <src/base_objects/shared_client_data.hpp>
+#include <src/base_objects/uuid.hpp>
 #include <src/plugin/main.hpp>
 #include <src/util/conversions.hpp>
 
@@ -19,16 +20,16 @@ namespace copper_server::build_in_plugins::network::tcp {
     struct tcp_status : public plugin_auto_register<"network/tcp_status", tcp_status> {
         static inline fast_task::task_mutex cached_mutex;
         static inline std::string cached_icon;
-        static inline list_array<std::pair<std::string, enbt::raw_uuid>> sample_cache;
+        static inline list_array<std::pair<std::string, base_objects::uuid>> sample_cache;
         static inline size_t sample_cache_check_size = size_t(-1);
         static inline const uint8_t* icon_data = nullptr;
 
-        static list_array<std::pair<std::string, enbt::raw_uuid>> online_players_sample() {
+        static list_array<std::pair<std::string, base_objects::uuid>> online_players_sample() {
             std::lock_guard lock(cached_mutex);
             if (sample_cache_check_size == api::players::size())
                 return sample_cache;
 
-            list_array<std::pair<std::string, enbt::raw_uuid>> result;
+            list_array<std::pair<std::string, base_objects::uuid>> result;
             size_t i = 0;
             api::players::iterate_players_not_state(copper_server::base_objects::shared_client_data::packets_state_t::protocol_state::initialization, [&](const copper_server::base_objects::shared_client_data& player) {
                 if (i < api::configuration::get().status.sample_players_count) {
@@ -37,7 +38,7 @@ namespace copper_server::build_in_plugins::network::tcp {
                     if (player.allow_server_listings)
                         result.push_back({player.name, player.data->uuid});
                     else
-                        result.push_back({"Anonymous Player", enbt::raw_uuid::as_null()});
+                        result.push_back({"Anonymous Player", base_objects::uuid::as_null()});
                     return true;
                 } else
                     return false;

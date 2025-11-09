@@ -518,7 +518,7 @@ namespace copper_server::api::id::detail {
 
 
         case registry_source::entity_id:
-            return api::entity_id_map::get_id(enbt::raw_uuid::from_string(value));
+            return api::entity_id_map::get_id(base_objects::uuid::from_string(value));
 
         case registry_source::villager_variant:
         case registry_source::fox_variant:
@@ -830,7 +830,7 @@ namespace copper_server::api::id::detail {
         return value.get<api::ecs::com::protocol_id>().value;
     }
 
-    int32_t to_registry_source_entity(const enbt::raw_uuid& value) {
+    int32_t to_registry_source_entity(const base_objects::uuid& value) {
         return api::entity_id_map::get_id(value);
     }
 }

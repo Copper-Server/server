@@ -61,7 +61,7 @@ namespace copper_server::api::packets {
         } else if constexpr (std::is_same_v<base_objects::position, T>) {
         } else if constexpr (std::is_arithmetic_v<T>) {
         } else if constexpr (std::is_same_v<std::string, T>) {
-        } else if constexpr (std::is_same_v<enbt::raw_uuid, T>) {
+        } else if constexpr (std::is_same_v<base_objects::uuid, T>) {
         } else if constexpr (std::is_same_v<base_objects::chat, T>) {
         } else if constexpr (
             std::is_same_v<enbt::value, T>
@@ -154,7 +154,7 @@ namespace copper_server::api::packets {
             res.write_value(value);
         else if constexpr (std::is_same_v<std::string, Type>)
             res.write_string(value);
-        else if constexpr (std::is_same_v<enbt::raw_uuid, Type>)
+        else if constexpr (std::is_same_v<base_objects::uuid, Type>)
             res.write_value(value);
         else if constexpr (std::is_same_v<base_objects::chat, Type>)
             res.write_direct(util::nbt_enbt_convert::build(value.to_enbt()).get_as_network());
@@ -461,7 +461,7 @@ namespace copper_server::api::packets {
         } else if constexpr (std::is_same_v<base_objects::position, T>) {
         } else if constexpr (std::is_arithmetic_v<T>) {
         } else if constexpr (std::is_same_v<std::string, T>) {
-        } else if constexpr (std::is_same_v<enbt::raw_uuid, T>) {
+        } else if constexpr (std::is_same_v<base_objects::uuid, T>) {
         } else if constexpr (std::is_same_v<base_objects::chat, T>) {
         } else if constexpr (
             std::is_same_v<enbt::value, T>

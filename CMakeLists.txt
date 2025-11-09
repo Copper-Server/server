@@ -51,6 +51,7 @@ build_resource_merge_json("copper_server" "${CMAKE_CURRENT_SOURCE_DIR}/resources
 build_resources("copper_server" "out/built_resources" "${RESOURCE_FILES}" RESOURCE_FILES_include RESOURCE_FILES_build compressed)
 create_resources_header("resources" "${RESOURCE_FILES_include}")
 create_reflect_map("${CMAKE_CURRENT_SOURCE_DIR}/src/util/reflect" "${REFLECTION_FILES}")
+create_mappings()
 
 IF(MSVC)
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")

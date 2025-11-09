@@ -51,11 +51,11 @@ namespace copper_server::api::packets::client_bound::config {
     };
 
     struct resource_pack_pop : public packet<0x08> {
-        std::optional<enbt::raw_uuid> uuid = std::nullopt;
+        std::optional<base_objects::uuid> uuid = std::nullopt;
     };
 
     struct resource_pack_push : public packet<0x09> {
-        enbt::raw_uuid uuid;
+        base_objects::uuid uuid;
         string_sized<32767> url;
         string_sized<40> hash;
         bool forced;

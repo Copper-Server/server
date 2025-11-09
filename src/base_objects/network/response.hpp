@@ -11,11 +11,8 @@
 #include <bit>
 #include <library/list_array.hpp>
 #include <optional>
+#include <src/base_objects/uuid.hpp>
 #include <src/base_objects/velocity.hpp>
-
-namespace enbt {
-    struct raw_uuid;
-}
 
 namespace copper_server::base_objects::network {
 
@@ -34,7 +31,7 @@ namespace copper_server::base_objects::network {
             void write_id(uint8_t id);
 
             void write_value(velocity val);
-            void write_value(const enbt::raw_uuid& val);
+            void write_value(const base_objects::uuid& val);
             void write_value(int8_t flo);
             void write_value(int16_t flo, std::endian = std::endian::big);
             void write_value(int32_t flo, std::endian = std::endian::big);

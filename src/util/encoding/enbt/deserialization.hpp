@@ -22,6 +22,8 @@ namespace copper_server::util::encoding::enbt {
             || std::is_same_v<::enbt::value, Type>
         )
             res = (Type)value;
+        else if constexpr (std::is_same_v<base_objects::uuid, Type>)
+            res = base_objects::uuid::to_uuid((::enbt::raw_uuid)value);
         else if constexpr (std::is_same_v<::enbt::compound, Type>)
             res = value.as_compound();
         else if constexpr (std::is_same_v<::enbt::dynamic_array, Type>)
@@ -332,6 +334,8 @@ namespace copper_server::util::encoding::enbt {
             || std::is_same_v<::enbt::value, Type>
         )
             res = (Type)stream.read();
+        else if constexpr (std::is_same_v<base_objects::uuid, Type>)
+            res = base_objects::uuid::to_uuid((::enbt::raw_uuid)stream.read());
         else if constexpr (std::is_same_v<::enbt::compound, Type>)
             res = stream.read().as_compound();
         else if constexpr (std::is_same_v<::enbt::dynamic_array, Type>)

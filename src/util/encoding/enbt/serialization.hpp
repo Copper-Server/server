@@ -35,6 +35,8 @@ namespace copper_server::util::encoding::enbt {
             || std::is_same_v<::enbt::simple_array_ui64, Type>
         ) {
             res = value;
+        } else if constexpr (std::is_same_v<base_objects::uuid, Type>) {
+            res = (::enbt::raw_uuid)value;
         } else if constexpr (is_std_array<Type> || is_template_base_of<_list_array_impl::list_array, Type>) {
             ::enbt::fixed_array arr;
             arr.reserve(value.size());
@@ -183,6 +185,8 @@ namespace copper_server::util::encoding::enbt {
             || std::is_same_v<::enbt::simple_array_ui64, Type>
         ) {
             res.write(value);
+        } else if constexpr (std::is_same_v<base_objects::uuid, Type>) {
+            res.write((::enbt::raw_uuid)value);
         } else if constexpr (is_std_array<Type> || is_template_base_of<_list_array_impl::list_array, Type>) {
             res.write_array(value.size()).iterable(value, [](auto& item, auto& stream) {
                 serialize_entry(stream, item);

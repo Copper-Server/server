@@ -61,7 +61,7 @@ namespace copper_server::api::packets::client_bound::play {
 
     struct add_entity : public packet<0x01> {
         var_int32::entity_id id;
-        enbt::raw_uuid uuid;
+        base_objects::uuid uuid;
         var_int32::entity_type type;
         double x;
         double y;
@@ -127,7 +127,7 @@ namespace copper_server::api::packets::client_bound::play {
     };
 
     struct boss_event : public packet<0x09> {
-        enbt::raw_uuid uuid;
+        base_objects::uuid uuid;
 
         struct add : public enum_item<0> {
             base_objects::chat title;
@@ -1023,7 +1023,7 @@ namespace copper_server::api::packets::client_bound::play {
         };
 
         var_int32 global_index;
-        enbt::raw_uuid sender;
+        base_objects::uuid sender;
         var_int32 index;
         std::optional<std::array<uint8_t, 256>> signature = std::nullopt;
         string_sized<256> message;
@@ -1049,7 +1049,7 @@ namespace copper_server::api::packets::client_bound::play {
     };
 
     struct player_info_remove : public packet<0x43> {
-        list_array<enbt::raw_uuid> uuids;
+        list_array<base_objects::uuid> uuids;
     };
 
     struct player_info_update : public packet<0x44> {
@@ -1066,7 +1066,7 @@ namespace copper_server::api::packets::client_bound::play {
         };
 
         struct initialize_chat {
-            enbt::raw_uuid chat_session_id;
+            base_objects::uuid chat_session_id;
             uint64_t pub_key_expiries_timestamp;
             list_array_fixed<uint8_t, 512> public_key;
             list_array_fixed<uint8_t, 4096> public_signature;
@@ -1097,7 +1097,7 @@ namespace copper_server::api::packets::client_bound::play {
         };
 
         struct header {
-            enbt::raw_uuid uuid;
+            base_objects::uuid uuid;
         };
 
         enum_set<
@@ -1202,11 +1202,11 @@ namespace copper_server::api::packets::client_bound::play {
     };
 
     struct resource_pack_pop : public packet<0x4E> {
-        std::optional<enbt::raw_uuid> uuid = std::nullopt;
+        std::optional<base_objects::uuid> uuid = std::nullopt;
     };
 
     struct resource_pack_push : public packet<0x4F> {
-        enbt::raw_uuid uuid;
+        base_objects::uuid uuid;
         string_sized<32767> url;
         string_sized<40> hash; //0 or 40, other values waste bandwidth
         bool forced = false;
@@ -1834,7 +1834,7 @@ namespace copper_server::api::packets::client_bound::play {
             float azimuth;
         };
 
-        bool_or<enbt::raw_uuid, std::string> id;
+        bool_or<base_objects::uuid, std::string> id;
         identifier icon_style; //assets path
         std::optional<color_t> color = std::nullopt;
         enum_switch<var_int32, here, near, far, far_away> type;

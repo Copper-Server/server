@@ -60,7 +60,7 @@ std::map<std::string, std::pair<std::string, std::string>> type_map = {
     {"List<ParticleEffect>", {"list_array<base_objects::entity_metadata::particle>", "base_objects::entity_metadata::particles"}},
     {"ItemStack", {"base_objects::slot", "base_objects::entity_metadata::slot"}},
     {"Direction", {"base_objects::entity_metadata::direction", "base_objects::entity_metadata::direction"}},
-    {"Optional<LazyEntityReference<LivingEntity>>", {"std::optional<enbt::raw_uuid>", "base_objects::entity_metadata::optional_living_entity_reference"}},
+    {"Optional<LazyEntityReference<LivingEntity>>", {"std::optional<base_objects::uuid>", "base_objects::entity_metadata::optional_living_entity_reference"}},
     {"Optional<BlockState>", {"base_objects::optional_var_int32::block_state", "base_objects::entity_metadata::optional_block_state"}},
     {"BlockState", {"base_objects::var_int32::block_state", "base_objects::entity_metadata::block_state"}},
     {"EulerAngle", {"base_objects::entity_metadata::rotations", "base_objects::entity_metadata::rotations"}},
@@ -299,7 +299,7 @@ public:
 
     int32_t protocol_id() const { return get<api::ecs::com::protocol_id>().value; }
 
-    enbt::raw_uuid uuid() const { return get<api::ecs::com::uuid>().value; }
+    base_objects::uuid uuid() const { return get<api::ecs::com::uuid>().value; }
 
     int32_t entity_type() const { return get<api::ecs::com::entity_type>().value; }
 
@@ -335,11 +335,11 @@ public:
     list_array<api::ecs::entity>& ride_by_entity() { return modify<api::ecs::com::ride_by_entity>()->value; }
     const list_array<api::ecs::entity>& ride_by_entity() const { return get<api::ecs::com::ride_by_entity>().value; }
 
-    std::optional<std::variant<api::ecs::entity, enbt::raw_uuid>>& attached_to() { return modify<api::ecs::com::attached_to>()->value; }
-    const std::optional<std::variant<api::ecs::entity, enbt::raw_uuid>>& attached_to() const { return get<api::ecs::com::attached_to>().value; }
+    std::optional<std::variant<api::ecs::entity, base_objects::uuid>>& attached_to() { return modify<api::ecs::com::attached_to>()->value; }
+    const std::optional<std::variant<api::ecs::entity, base_objects::uuid>>& attached_to() const { return get<api::ecs::com::attached_to>().value; }
 
-    list_array<std::variant<api::ecs::entity, enbt::raw_uuid>>& attached() { return modify<api::ecs::com::attached>()->value; }
-    const list_array<std::variant<api::ecs::entity, enbt::raw_uuid>>& attached() const { return get<api::ecs::com::attached>().value; }
+    list_array<std::variant<api::ecs::entity, base_objects::uuid>>& attached() { return modify<api::ecs::com::attached>()->value; }
+    const list_array<std::variant<api::ecs::entity, base_objects::uuid>>& attached() const { return get<api::ecs::com::attached>().value; }
 
     api::ecs::com::effects& effects() { return *modify<api::ecs::com::effects>(); }
     const api::ecs::com::effects& effects() const { return get<api::ecs::com::effects>(); }

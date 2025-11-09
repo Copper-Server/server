@@ -11,6 +11,7 @@
 #include <bit>
 #include <functional>
 #include <istream>
+#include <src/base_objects/uuid.hpp>
 #include <src/util/nbt.hpp>
 #include <sstream>
 #include <type_traits>
@@ -594,9 +595,7 @@ namespace copper_server::util {
 
             //fn(item, inner)
             template <class Iterable, class FN>
-            list& iterable(const Iterable& iter, FN&& fn)
-                requires(std::is_invocable_v<FN, nbt_write_stream&>)
-            {
+            list& iterable(const Iterable& iter, FN&& fn) {
                 for (const auto& item : iter)
                     write([&](nbt_write_stream& inner) {
                         fn(item, inner);
@@ -604,7 +603,7 @@ namespace copper_server::util {
                 return *this;
             }
 
-            template <class Iterable, class FN>
+            template <class Iterable>
             list& iterable(const Iterable& iter) {
                 for (const auto& item : iter)
                     write([&](nbt_write_stream& inner) {
@@ -746,7 +745,7 @@ namespace copper_server::util {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_relaxed& collect_into(const std::string& name, enbt::raw_uuid& res) {
+            compound_relaxed& collect_into(const std::string& name, base_objects::uuid& res) {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
@@ -798,7 +797,7 @@ namespace copper_server::util {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_relaxed& collect_as(const std::string& name, enbt::raw_uuid& res) {
+            compound_relaxed& collect_as(const std::string& name, base_objects::uuid& res) {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
@@ -916,7 +915,7 @@ namespace copper_server::util {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_strict& collect_into(const std::string& name, enbt::raw_uuid& res) {
+            compound_strict& collect_into(const std::string& name, base_objects::uuid& res) {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
@@ -968,7 +967,7 @@ namespace copper_server::util {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_strict& collect_as(const std::string& name, enbt::raw_uuid& res) {
+            compound_strict& collect_as(const std::string& name, base_objects::uuid& res) {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
@@ -1109,7 +1108,7 @@ namespace copper_server::util {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_flex& collect_into(const std::string& name, enbt::raw_uuid& res) {
+            compound_flex& collect_into(const std::string& name, base_objects::uuid& res) {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
@@ -1161,7 +1160,7 @@ namespace copper_server::util {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_flex& collect_as(const std::string& name, enbt::raw_uuid& res) {
+            compound_flex& collect_as(const std::string& name, base_objects::uuid& res) {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
@@ -1227,7 +1226,7 @@ namespace copper_server::util {
                 return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_flex& collect_into_required(const std::string& name, enbt::raw_uuid& res) {
+            compound_flex& collect_into_required(const std::string& name, base_objects::uuid& res) {
                 return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
@@ -1279,7 +1278,7 @@ namespace copper_server::util {
                 return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_flex& collect_as_required(const std::string& name, enbt::raw_uuid& res) {
+            compound_flex& collect_as_required(const std::string& name, base_objects::uuid& res) {
                 return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
             }
 

@@ -77,7 +77,7 @@ namespace copper_server::api::packets::server_bound::play {
     };
 
     struct chat_session_update : public packet<0x09> {
-        enbt::raw_uuid uuid;
+        base_objects::uuid uuid;
         uint64_t expiries_at;
         list_array_sized<uint8_t, 512> public_key;
         list_array_sized<uint8_t, 4096> key_signature;
@@ -433,7 +433,7 @@ namespace copper_server::api::packets::server_bound::play {
             discarded = 7
         };
         using enum result_e;
-        enbt::raw_uuid uuid;
+        base_objects::uuid uuid;
         enum_as<result_e, var_int32> result;
     };
 
@@ -574,7 +574,7 @@ namespace copper_server::api::packets::server_bound::play {
     };
 
     struct teleport_to_entity : public packet<0x3D> {
-        enbt::raw_uuid uuid;
+        base_objects::uuid uuid;
     };
 
     struct test_instance_block_action : public packet<0x3E> {

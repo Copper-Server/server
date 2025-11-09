@@ -252,11 +252,11 @@ namespace copper_server::api::ecs::com {
     };
 
     struct attached_to {
-        std::optional<std::variant<entity, enbt::raw_uuid>> other;
+        std::optional<api::ecs::entity_ref> other;
     };
 
     struct attached {
-        list_array<std::variant<entity, enbt::raw_uuid>> ride_by_entity;
+        list_array<api::ecs::entity_ref> ride_by_entity;
     };
 
     struct effects {
@@ -324,7 +324,7 @@ namespace copper_server::api::ecs::com {
     };
 
     struct uuid {
-        enbt::raw_uuid id;
+        base_objects::uuid id;
     };
 
     struct nbt {

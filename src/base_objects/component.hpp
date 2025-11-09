@@ -736,7 +736,7 @@ namespace copper_server::base_objects {
             };
 
             std::optional<string_sized<16>> name = std::nullopt;
-            std::optional<enbt::raw_uuid> uuid = std::nullopt;
+            std::optional<base_objects::uuid> uuid = std::nullopt;
             list_array<property> properties;
 
             bool operator==(const profile& other) const = default;

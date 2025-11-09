@@ -125,6 +125,10 @@ namespace copper_server::base_objects {
             return operator==(other) ? std::strong_ordering::equal : std::strong_ordering::less;
         }
 
+        operator bool() const {
+            return !empty();
+        }
+
     private:
         list_array<chat> extra;
         std::string text;

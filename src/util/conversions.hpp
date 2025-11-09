@@ -11,7 +11,7 @@
 #include <boost/json.hpp>
 #include <cstddef>
 #include <cstdint>
-#include <library/enbt/enbt.hpp>
+#include <src/base_objects/uuid.hpp>
 #include <string>
 #include <vector>
 
@@ -30,8 +30,8 @@ namespace copper_server::util::conversions {
     }
 
     namespace uuid {
-        std::string to(enbt::raw_uuid id);
-        enbt::raw_uuid from(std::string_view id);
+        std::string to(base_objects::uuid id);
+        base_objects::uuid from(std::string_view id);
     }
 
     namespace string {

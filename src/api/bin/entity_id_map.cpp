@@ -12,18 +12,19 @@
 #include <src/api/ecs.hpp>
 #include <src/api/selector.hpp>
 #include <src/base_objects/commands.hpp>
+#include <src/base_objects/uuid.hpp>
 
 namespace copper_server::api::entity_id_map {
     struct id_s {
         std::vector<int32_t> id;
-        enbt::raw_uuid uuid;
+        base_objects::uuid uuid;
         api::ecs::entity assigned_entity;
     };
 
     using id_sp = std::shared_ptr<id_s>;
 
     std::unordered_map<int32_t, id_sp> ids_l;
-    std::unordered_map<enbt::raw_uuid, id_sp> ids_r;
+    std::unordered_map<base_objects::uuid, id_sp> ids_r;
     fast_task::task_mutex mutex;
     int32_t id_allocator = 0;
 
@@ -47,13 +48,13 @@ namespace copper_server::api::entity_id_map {
         return successfully_allocated;
     }
 
-    std::pair<int32_t, enbt::raw_uuid> allocate_id() {
-        enbt::raw_uuid uuid = enbt::raw_uuid::generate_v4();
+    std::pair<int32_t, base_objects::uuid> allocate_id() {
+        base_objects::uuid uuid = base_objects::uuid::generate_v4();
         std::unique_lock lock(mutex);
         if (ids_l.size() == INT32_MAX)
             throw std::runtime_error("Too many registered UUID's, can't allocate more");
         while (ids_r.find(uuid) != ids_r.end())
-            uuid = enbt::raw_uuid::generate_v4();
+            uuid = base_objects::uuid::generate_v4();
         while (ids_l.find(id_allocator) != ids_l.end())
             id_increment();
         auto id = std::make_shared<id_s>(std::vector<int32_t>{id_allocator}, uuid);
@@ -62,13 +63,13 @@ namespace copper_server::api::entity_id_map {
         return {id_increment(), uuid};
     }
 
-    std::pair<int32_t, enbt::raw_uuid> allocate_special_sequence(uint8_t required_ids) {
-        enbt::raw_uuid uuid = enbt::raw_uuid::generate_v4();
+    std::pair<int32_t, base_objects::uuid> allocate_special_sequence(uint8_t required_ids) {
+        base_objects::uuid uuid = base_objects::uuid::generate_v4();
         std::unique_lock lock(mutex);
         if (ids_l.size() == INT32_MAX)
             throw std::runtime_error("Too many registered UUID's, can't allocate more");
         while (ids_r.find(uuid) != ids_r.end())
-            uuid = enbt::raw_uuid::generate_v4();
+            uuid = base_objects::uuid::generate_v4();
         auto id = std::make_shared<id_s>();
         while (allocate_special(required_ids) != required_ids)
             ;
@@ -83,7 +84,7 @@ namespace copper_server::api::entity_id_map {
         return {id_off, uuid};
     }
 
-    int32_t allocate_id(const enbt::raw_uuid& uuid) {
+    int32_t allocate_id(const base_objects::uuid& uuid) {
         std::unique_lock lock(mutex);
         if (ids_l.size() == INT32_MAX)
             throw std::runtime_error("Too many registered UUID's, can't allocate more");
@@ -97,7 +98,7 @@ namespace copper_server::api::entity_id_map {
         return id_increment();
     }
 
-    int32_t allocate_special_sequence(const enbt::raw_uuid& uuid, uint8_t required_ids) {
+    int32_t allocate_special_sequence(const base_objects::uuid& uuid, uint8_t required_ids) {
         std::unique_lock lock(mutex);
         if (ids_l.size() == INT32_MAX)
             throw std::runtime_error("Too many registered UUID's, can't allocate more");
@@ -128,7 +129,7 @@ namespace copper_server::api::entity_id_map {
         }
     }
 
-    int32_t remove_id(const enbt::raw_uuid& uuid) {
+    int32_t remove_id(const base_objects::uuid& uuid) {
         std::unique_lock lock(mutex);
         if (auto it = ids_r.find(uuid); it != ids_r.end()) {
             auto id_ptr = it->second;
@@ -141,7 +142,7 @@ namespace copper_server::api::entity_id_map {
         return -1;
     }
 
-    int32_t get_id(const enbt::raw_uuid& uuid) {
+    int32_t get_id(const base_objects::uuid& uuid) {
         std::unique_lock lock(mutex);
         auto it = ids_r.find(uuid);
         if (it == ids_r.end())
@@ -149,11 +150,11 @@ namespace copper_server::api::entity_id_map {
         return it->second->id[0];
     }
 
-    enbt::raw_uuid get_uuid(int32_t id) {
+    base_objects::uuid get_uuid(int32_t id) {
         std::unique_lock lock(mutex);
         auto it = ids_l.find(id);
         if (it == ids_l.end())
-            return enbt::raw_uuid();
+            return base_objects::uuid();
         return it->second->uuid;
     }
 
@@ -165,7 +166,7 @@ namespace copper_server::api::entity_id_map {
         it->second->assigned_entity = entity;
     }
 
-    void assign_entity(const enbt::raw_uuid& uuid, api::ecs::entity entity) {
+    void assign_entity(const base_objects::uuid& uuid, api::ecs::entity entity) {
         std::unique_lock lock(mutex);
         auto it = ids_r.find(uuid);
         if (it == ids_r.end())
@@ -181,7 +182,7 @@ namespace copper_server::api::entity_id_map {
         return it->second->assigned_entity;
     }
 
-    std::optional<api::ecs::entity> get_entity(const enbt::raw_uuid& id) {
+    std::optional<api::ecs::entity> get_entity(const base_objects::uuid& id) {
         std::unique_lock lock(mutex);
         auto it = ids_r.find(id);
         if (it == ids_r.end())
@@ -194,7 +195,7 @@ namespace copper_server::api::entity_id_map {
         return ids_l.contains(id);
     }
 
-    bool has_uuid(const enbt::raw_uuid& uuid) {
+    bool has_uuid(const base_objects::uuid& uuid) {
         std::unique_lock lock(mutex);
         return ids_r.contains(uuid);
     }

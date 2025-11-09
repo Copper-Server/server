@@ -10,6 +10,7 @@
 #include <library/fast_task.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/mojang/session_server.hpp>
+#include <src/base_objects/uuid.hpp>
 #include <src/util/conversions.hpp>
 #include <src/util/mojang/api/http.hpp>
 
@@ -55,7 +56,7 @@ namespace copper_server::api::mojang {
                 return std::make_shared<player_data>(std::move(data));
 
         } else {
-            auto uuid = enbt::raw_uuid::from_string(username);
+            auto uuid = base_objects::uuid::create_offline(username);
             if (cache_result)
                 return (cache[username] = std::make_shared<player_data>(copper_server::util::conversions::uuid::to(uuid), uuid, std::chrono::system_clock::now(), false));
             else

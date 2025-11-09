@@ -15,6 +15,7 @@
 #include <src/api/world.hpp>
 #include <src/base_objects/commands.hpp>
 #include <src/base_objects/player.hpp>
+#include <src/base_objects/uuid.hpp>
 #include <src/plugin/main.hpp>
 
 namespace copper_server::build_in_plugins::processors_providers {
@@ -40,7 +41,7 @@ namespace copper_server::build_in_plugins::processors_providers {
         return false; //TODO
     }
 
-    bool __entity_check([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] enbt::raw_uuid entity_uuid) {
+    bool __entity_check([[maybe_unused]] const enbt::compound_const_ref& predicate, [[maybe_unused]] base_objects::uuid entity_uuid) {
         auto entity_ = api::entity_id_map::get_entity(entity_uuid);
         if (!entity_)
             return false;

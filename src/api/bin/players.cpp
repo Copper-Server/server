@@ -382,7 +382,7 @@ namespace copper_server::api::players {
         get_storage().iterate_players(callback);
     }
 
-    void save_player(base_objects::player&& player, enbt::raw_uuid uuid) {
+    void save_player(base_objects::player&& player, base_objects::uuid uuid) {
         auto path = api::configuration::get().server.get_storage_path() / "players";
         std::filesystem::create_directories(path);
         fast_task::files::atomic_async_ofstream file(path / (uuid.to_string() + ".enbt"));
@@ -445,7 +445,7 @@ namespace copper_server::api::players {
         file.flush();
     }
 
-    base_objects::player load_player(enbt::raw_uuid uuid) {
+    base_objects::player load_player(base_objects::uuid uuid) {
         auto path = api::configuration::get().server.get_storage_path() / "players";
         auto file_path = path / (uuid.to_string() + ".enbt");
         std::filesystem::create_directories(path);

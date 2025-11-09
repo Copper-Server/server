@@ -10,8 +10,8 @@
 #ifndef SRC_API_MOJANG_SESSION_SERVER
 #define SRC_API_MOJANG_SESSION_SERVER
 #include <chrono>
-#include <library/enbt/enbt.hpp>
 #include <random>
+#include <src/base_objects/uuid.hpp>
 #include <string>
 #include <vector>
 
@@ -26,7 +26,7 @@ namespace copper_server::api::mojang {
             };
 
             std::string uuid_str;
-            enbt::raw_uuid uuid;
+            base_objects::uuid uuid;
             std::chrono::system_clock::time_point last_check;
             bool online_data;
 

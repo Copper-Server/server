@@ -94,7 +94,7 @@ namespace copper_server::api::packets {
                 res += std::to_string(value);
             else if constexpr (std::is_same_v<std::string, Type>)
                 res += "\"" + value + "\"";
-            else if constexpr (std::is_same_v<enbt::raw_uuid, Type>)
+            else if constexpr (std::is_same_v<base_objects::uuid, Type>)
                 res += "\"" + value.to_string() + "\"";
             else if constexpr (std::is_same_v<base_objects::chat, Type>) {
                 std::string alignment(spacing + 1, ' ');

@@ -22,6 +22,7 @@
 #include <library/list_array.hpp>
 #include <src/api/mojang/session_server.hpp>
 #include <src/base_objects/events/sync_event.hpp>
+#include <src/base_objects/uuid.hpp>
 #include <src/plugin/registration.hpp>
 
 namespace copper_server {
@@ -105,7 +106,7 @@ namespace copper_server {
 
                 struct play_data_t {
                     struct signature_t {
-                        enbt::raw_uuid chat_session_id;
+                        base_objects::uuid chat_session_id;
                         uint64_t pub_key_expiries_timestamp;
                         list_array<uint8_t> public_key;
                         list_array<uint8_t> public_signature;
@@ -242,7 +243,7 @@ namespace copper_server {
 
                 fast_task::protected_value<internal_data_t> internal_data;
 
-                std::unordered_set<enbt::raw_uuid> active_resource_packs;
+                std::unordered_set<base_objects::uuid> active_resource_packs;
                 std::chrono::system_clock::time_point pong_timer;
                 std::chrono::system_clock::time_point last_batch_check = std::chrono::system_clock::time_point::min();
                 std::atomic_int32_t keep_alive_ping_ms = 0;

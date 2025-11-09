@@ -15,6 +15,7 @@
 #include <src/api/packets.hpp>
 #include <src/api/world.hpp>
 #include <src/base_objects/shared_client_data.hpp>
+#include <src/base_objects/uuid.hpp>
 #include <src/generated/entity/components.hpp>
 #include <src/generated/entity/factory.hpp>
 #include <src/storage/world_data.hpp>
@@ -290,7 +291,7 @@ namespace enbt::io_helper {
             //        .iterable(value->attached, [](auto& attached, value_write_stream& attached_stream) {
             //            std::visit(
             //                [&attached_stream]<class T>(const T& item) {
-            //                    if constexpr (std::is_same_v<T, enbt::raw_uuid>)
+            //                    if constexpr (std::is_same_v<T, base_objects::uuid>)
             //                        attached_stream.write(item);
             //                    else {
             //                        attached_stream.write(item->id);
@@ -304,7 +305,7 @@ namespace enbt::io_helper {
             //    compound.write("attached_to", [&value](value_write_stream& stream) {
             //        std::visit(
             //            [&stream]<class T>(const T& item) {
-            //                if constexpr (std::is_same_v<T, enbt::raw_uuid>)
+            //                if constexpr (std::is_same_v<T, base_objects::uuid>)
             //                    stream.write(item);
             //                else {
             //                    stream.write(item->id);
@@ -380,7 +381,7 @@ namespace enbt::io_helper {
             //    for (auto& attached : value->attached) {
             //        std::visit(
             //            [&arr]<class T>(const T& item) {
-            //                if constexpr (std::is_same_v<T, enbt::raw_uuid>)
+            //                if constexpr (std::is_same_v<T, base_objects::uuid>)
             //                    arr.push_back(item);
             //                else
             //                    arr.push_back(item->id);
@@ -397,7 +398,7 @@ namespace enbt::io_helper {
             //        "attached_to",
             //        std::visit(
             //            []<class T>(const T& item) {
-            //                if constexpr (std::is_same_v<T, enbt::raw_uuid>)
+            //                if constexpr (std::is_same_v<T, base_objects::uuid>)
             //                    return item;
             //                else
             //                    return item->id;
@@ -492,13 +493,13 @@ namespace enbt::io_helper {
                 //.collect("attached_to", [&](auto& stream) {
                 //    auto val = stream.read();
                 //    if (val.is_uuid())
-                //        res->attached_to = (enbt::raw_uuid)val;
+                //        res->attached_to = (base_objects::uuid)val;
                 //})
                 //.collect("attached", [&](auto& stream) {
                 //    stream.iterate(
                 //        [&res](auto size) { res->attached.reserve(size); },
                 //        [&res](value_read_stream& value) {
-                //            res->attached.push_back((enbt::raw_uuid)value.read());
+                //            res->attached.push_back((base_objects::uuid)value.read());
                 //        }
                 //    );
                 //})
@@ -513,7 +514,7 @@ namespace enbt::io_helper {
                 } else if (name == "entity_id")
                     res.get<com_entity_type>().type = (int32_t)value;
                 else if (name == "id")
-                    res.get<com_uuid>().id = (enbt::raw_uuid)value;
+                    res.get<com_uuid>().id = (base_objects::uuid)value;
                 else if (name == "motion") {
                     enbt::io_helper::serialization_read<copper_server::util::vector>(res.get<com_motion>(), value);
                 } else if (name == "position") {
@@ -578,11 +579,11 @@ namespace enbt::io_helper {
                 //        ride_entity->set_ride_entity(res);
                 //    }
                 //} else if (name == "attached_to") {
-                //    res->attached_to = (enbt::raw_uuid)value;
+                //    res->attached_to = (base_objects::uuid)value;
                 //} else if (name == "attached") {
                 //    res->attached.reserve(value.size());
                 //    for (auto& entity : value.as_array())
-                //        res->attached.push_back((enbt::raw_uuid)entity);
+                //        res->attached.push_back((base_objects::uuid)entity);
                 //}
             }
         }
@@ -701,9 +702,9 @@ namespace copper_server {
             return handle.copy_and_wait();
         }
 
-        void resolve_entity(std::variant<ecs::entity, enbt::raw_uuid>& it) {
-            if (std::holds_alternative<enbt::raw_uuid>(it)) {
-                auto entity = api::entity_id_map::get_entity(std::get<enbt::raw_uuid>(it));
+        void resolve_entity(std::variant<ecs::entity, base_objects::uuid>& it) {
+            if (std::holds_alternative<base_objects::uuid>(it)) {
+                auto entity = api::entity_id_map::get_entity(std::get<base_objects::uuid>(it));
                 if (entity)
                     it = *entity;
             }

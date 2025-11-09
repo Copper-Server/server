@@ -82,7 +82,7 @@ namespace copper_server::api::packets::server_bound::config {
             discarded = 7
         };
         using enum result_e;
-        enbt::raw_uuid uuid;
+        base_objects::uuid uuid;
         enum_as<result_e, var_int32> result;
     };
 

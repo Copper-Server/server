@@ -16,6 +16,7 @@
 #include <src/base_objects/events/sync_event.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/base_objects/shared_client_data.hpp>
+#include <src/base_objects/uuid.hpp>
 #include <string>
 
 namespace copper_server::api::network::tcp {
@@ -74,8 +75,8 @@ namespace copper_server::api::players {
     void iterate_players(const std::function<bool(base_objects::shared_client_data&)>& callback);
 
 
-    void save_player(base_objects::player&& sav, enbt::raw_uuid uuid);
-    base_objects::player load_player(enbt::raw_uuid uuid);
+    void save_player(base_objects::player&& sav, base_objects::uuid uuid);
+    base_objects::player load_player(base_objects::uuid uuid);
 }
 
 #endif /* SRC_API_PLAYERS */
