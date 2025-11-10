@@ -29,26 +29,28 @@ std::map<std::string, std::string> type_map = {
     {"DefaultedList<ItemStack>", "std::array<base_objects::slot, "},
     {"Either<CreakingEntity, UUID>", "base_objects::identifier"},
     {"Identifier", "base_objects::identifier"},
-    {"Inventory", "base_objects::inventory"},
+    {"Inventory", "base_objects::slot_data"}, //TODO investigate more
     {"ItemStack", "base_objects::slot_data"},
     {"LazyEntityReference<LivingEntity>", "api::ecs::entity_ref"},
     {"List<BeehiveBlockEntity$Bee>", "list_array<api::ecs::entity>"},
     {"List<ItemStack>", "list_array<base_objects::slot_data>"},
     {"List<TestInstanceBlockEntity$Error>", "list_array<base_objects::block_entity::test_instance::error>"},
     {"ProfileComponent", "base_objects::component::profile"},
+    {"Pool<spawner.MobSpawnerEntry>", "base_objects::pool<base_objects::block_entity::mob_spawner_entry>"}, //TODO implement
     {"Reference2IntOpenHashMap<RegistryKey<Recipe<?>>>", "std::unordered_map<api::id::recipe, int32_t>"},
     {"RegistryKey<TestInstance>", "api::id::test_instance_type"},
     {"RegistryKey<LootTable>", "api::id::loot_table"},
     {"RegistryKey<StructurePool>", "api::id::worldgen__structure_pool_element"},
     {"SculkCatalystBlockEntity$Listener", "base_objects::block_entity::sculk_catalyst::listener"},
     {"Set<UUID>", "std::unordered_set<base_objects::uuid>"},
-    {"Sherds", "std::array<base_objects::sherd, 4>"},
+    {"Sherds", "std::array<api::id::item, 4>"},
     {"SignText", "std::array<base_objects::chat, 5>"},
     {"String", "std::string"},
     {"TestBlockMode", "base_objects::block_entity::test::mode"},
     {"Text", "base_objects::chat"},
     {"Vec3i", "util::xyz<int32_t>"},
     {"Vibrations$VibrationListener", "base_objects::vibration_listener"},
+    {"spawner.MobSpawnerEntry", "base_objects::block_entity::mob_spawner_entry"}, //TODO implement
     {"ViewerCountManager", "base_objects::viewer_count_manager"},
     {"boolean", "bool"},
     {"double", "double"},
@@ -167,11 +169,19 @@ std::string get_enum_member_name(const pt::ptree& enum_value) {
 }
 
 std::string get_enum_nbt_string(const pt::ptree& enum_value) {
-    auto id_opt = enum_value.get_optional<std::string>("id");
-    if (id_opt && !id_opt->empty()) {
-        return *id_opt;
+    std::string name = enum_value.get<std::string>("name");
+    if (name.starts_with("translation{")) {
+        auto id_opt = enum_value.get_optional<std::string>("id");
+        if (!id_opt || id_opt->empty()) {
+            throw std::runtime_error("Enum with translation key name '" + name + "' is missing a required 'id' field.");
+        }
+        name = *id_opt;
     }
-    return enum_value.get<std::string>("name");
+    boost::algorithm::to_upper(name);
+    if (!name.empty() && isdigit(name[0])) {
+        name = "_" + name;
+    }
+    return name;
 }
 
 void generate_struct_fields(std::ostream& out, const pt::ptree& fields_node, int indent_level);
@@ -183,8 +193,9 @@ void generate_struct_fields(std::ostream& out, const pt::ptree& fields_node, int
     for (const auto& pair : fields_node) {
         const pt::ptree& field = pair.second;
         std::string field_name = get_field_name(field.get<std::string>("name"));
+        std::string java_type = field.get<std::string>("type");
 
-        if (field.get_child_optional("nested_fields")) {
+        if (field.get_child_optional("nested_fields") && !type_map.contains(java_type)) {
             out << indent << "struct " << field_name << "_t {\n";
             generate_struct_fields(out, field.get_child("nested_fields"), indent_level + 1);
             out << indent << "} " << field_name << ";\n";
@@ -228,23 +239,30 @@ void generate_to_nbt_body(std::ostream& out, const std::string& parent_accessor,
 
         out << stream_name << ".write(\"" << nbt_name << "\", [this](util::nbt_write_stream& stream) {";
 
-        if (field.get_child_optional("nested_fields")) {
+        if (field.get_child_optional("nested_fields") && !type_map.contains(java_type)) {
             out << "\n"
                 << indent << "    auto compound_stream = stream.write_compound();\n";
             generate_to_nbt_body(out, current_accessor, prev_structs + "::" + field_name + "_t", "compound_stream", field.get_child("nested_fields"), indent_level + 1);
             out << indent << "});\n";
         } else if (auto enums = field.get_child_optional("enum_values")) {
-            out << "\n"
-                << indent << "    switch (" << (is_optional(java_type) ? "*" : "") << current_accessor << ") {";
-            for (const auto& enum_pair : *enums) {
-                std::string member_name = get_enum_member_name(enum_pair.second);
-                std::string nbt_string = get_enum_nbt_string(enum_pair.second);
+            if (auto default_value = field.get_child_optional("enum_value_sample")) {
                 out << "\n"
-                    << indent << "    case " << prev_structs << (prev_structs.empty() ? "" : "::") << field_name << "_e::" << member_name << ": stream.write(\"" << nbt_string << "\"); break;";
-            }
-            out << "\n"
-                << indent << "    }\n"
-                << indent << "});\n";
+                    << indent << "    switch (" << (is_optional(java_type) ? "*" : "") << current_accessor << ") {";
+
+                for (const auto& enum_pair : *enums) {
+                    std::string member_name = get_enum_member_name(enum_pair.second);
+                    std::string nbt_string = get_enum_nbt_string(enum_pair.second);
+                    out << "\n"
+                        << indent << "    case " << prev_structs << (prev_structs.empty() ? "" : "::") << field_name << "_e::" << member_name << ": stream.write(\"" << nbt_string << "\"); break;";
+                }
+                out << "\n"
+                    << indent << "    default: stream.write(\"" << default_value->get_value<std::string>() << "\"); break;";
+                out << "\n"
+                    << indent << "    }\n";
+            } else
+                out << "\n"
+                    << indent << "stream.write(static_cast<int>(" << (is_optional(java_type) ? "*" : "") << current_accessor << "));\n";
+            out << indent << "});\n";
         } else if (java_type.starts_with("List<") || java_type == "ComponentMap") {
             std::string item_accessor = java_type == "ComponentMap" ? "item.second" : "item";
             out << "stream.write_list(" << current_accessor << ".size(), util::nbt_type::tag_compound).iterable(" << current_accessor
@@ -276,9 +294,9 @@ void generate_from_nbt_body(std::ostream& out, const std::string& result_accesso
             collect_method = (preservation == "REQUIRED" || preservation == "REQUIRED_DEFAULT_EMPTY") ? "collect_required" : "collect";
 
         out << "\n"
-            << indent << "." << collect_method << "(\"" << nbt_name << "\", [&result](util::nbt_read_stream& stream) {";
+            << indent << "." << collect_method << "(\"" << nbt_name << "\", [&ref](util::nbt_read_stream& stream) {";
 
-        if (field.get_child_optional("nested_fields")) {
+        if (field.get_child_optional("nested_fields") && !type_map.contains(java_type)) {
             out << "\n"
                 << indent << "    util::nbt_collection::compound_flex flex;\n"
                 << indent << "    flex";
@@ -287,21 +305,32 @@ void generate_from_nbt_body(std::ostream& out, const std::string& result_accesso
                 << indent << "        .make_collect(stream);\n"
                 << indent << "})";
         } else if (auto enums = field.get_child_optional("enum_values")) {
-            out << "\n"
-                << indent << "    std::string nbt_val;\n";
-            out << indent << "    util::encoding::nbt::deserialize_entry(nbt_val, stream);";
-            bool first = true;
-            for (const auto& enum_pair : *enums) {
-                std::string member_name = get_enum_member_name(enum_pair.second);
-                std::string nbt_string = get_enum_nbt_string(enum_pair.second);
+            if (auto default_value = field.get_child_optional("enum_value_sample")) {
                 out << "\n"
-                    << indent << "    ";
-                if (first) {
-                    first = false;
-                } else {
-                    out << "else ";
+                    << indent << "    std::string nbt_val;\n";
+                out << indent << "    stream.read_into(nbt_val);";
+                bool first = true;
+                for (const auto& enum_pair : *enums) {
+                    std::string member_name = get_enum_member_name(enum_pair.second);
+                    std::string nbt_string = get_enum_nbt_string(enum_pair.second);
+                    out << "\n"
+                        << indent << "    ";
+                    if (first) {
+                        first = false;
+                    } else
+                        out << "else ";
+                    out << "if (nbt_val == \"" << nbt_string << "\") " << current_accessor << " = " << prev_structs << (prev_structs.empty() ? "" : "::") << field_name << "_e::" << member_name << ";";
                 }
-                out << "if (nbt_val == \"" << nbt_string << "\") " << current_accessor << " = " << prev_structs << (prev_structs.empty() ? "" : "::") << field_name << "_e::" << member_name << ";";
+                auto def = default_value->get_value<std::string>();
+                boost::algorithm::to_lower(def);
+                out
+                    << "\n"
+                    << indent << "    " << (enums->size() ? "else " : "") << current_accessor << " = " << prev_structs << (prev_structs.empty() ? "" : "::") << field_name << "_e::" << def << ";";
+            } else {
+                out << "\n"
+                    << indent << "    int nbt_val;\n";
+                out << indent << "    stream.read_into(nbt_val);\n";
+                out << indent << "    " << current_accessor << " = static_cast<" << prev_structs << (prev_structs.empty() ? "" : "::") << field_name << "_e>(nbt_val);";
             }
             out << "\n"
                 << indent << "})";
@@ -366,6 +395,7 @@ int main(int argc, char* argv[]) {
     header_file << file_header
                 << "\n#pragma once\n\n"
                    "#include <src/api/id.hpp>\n"
+                   "#include <src/base_objects/block_entity.hpp>\n"
                    "#include <src/base_objects/chat.hpp>\n"
                    "#include <src/base_objects/component.hpp>\n"
                    "#include <src/base_objects/slot.hpp>\n"
@@ -395,6 +425,8 @@ int main(int argc, char* argv[]) {
                                  "namespace copper_server::generated::block_entity {\n\n";
 
     try {
+        std::string from_nbt_select;
+
         for (const auto& pair : root) {
             if (pair.first.starts_with("data:"))
                 continue;
@@ -410,26 +442,42 @@ int main(int argc, char* argv[]) {
             header_file << "\n";
             header_file << "        virtual ~" << struct_name << "() = default;\n";
             header_file << "        void to_nbt(util::nbt_write_stream& stream) override;\n";
-            header_file << "        static " << struct_name << " from_nbt(util::nbt_read_stream& stream);\n";
+            header_file << "        static std::unique_ptr<base_objects::block_entity> from_nbt(util::nbt_read_stream& stream);\n";
             header_file << "    };\n\n";
 
             source_file << "    void " << struct_name << "::to_nbt(util::nbt_write_stream& stream) {\n";
             source_file << "        auto compound_stream = stream.write_compound();\n";
+            source_file << "        to_nbt_base_data(compound_stream);\n";
             generate_to_nbt_body(source_file, "(*this)", struct_name, "compound_stream", *fields_node_opt, 2);
             source_file << "    }\n\n";
 
-            source_file << "    " << struct_name << " " << struct_name << "::from_nbt(util::nbt_read_stream& stream) {\n";
-            source_file << "        " << struct_name << " result;\n";
+            source_file << "    std::unique_ptr<base_objects::block_entity> " << struct_name << "::from_nbt(util::nbt_read_stream& stream) {\n";
+            source_file << "        std::unique_ptr<" << struct_name << "> result = std::make_unique<" << struct_name << ">();\n";
+            source_file << "        " << struct_name << "& ref = *result;\n";
             source_file << "        util::nbt_collection::compound_flex read_flex;\n";
+            source_file << "        ref.from_nbt_base_data(read_flex);\n";
             source_file << "        read_flex";
-            generate_from_nbt_body(source_file, "result", struct_name, *fields_node_opt, 3);
+            generate_from_nbt_body(source_file, "ref", struct_name, *fields_node_opt, 3);
             source_file << "\n            .make_collect(stream);\n";
-            source_file << "        return result;\n\n";
+            source_file << "        return result;\n";
             source_file << "    }\n";
+            from_nbt_select += "            case " + std::to_string(block_node.get<int>("id")) + ": return " + struct_name + "::from_nbt(stream);\n";
         }
 
-        header_file << "    //std::unique_ptr<base_objects::block_entity> from_nbt(base_objects::block_id_t id, util::nbt_read_stream& stream);\n"; //TODO create implementation
+        header_file << "    std::unique_ptr<base_objects::block_entity> from_nbt(base_objects::block_id_t id, util::nbt_read_stream& stream);\n";
 
+        // clang-format off
+        source_file <<
+            "    std::unique_ptr<base_objects::block_entity> from_nbt(base_objects::block id, util::nbt_read_stream& stream){\n"
+            "        if (id.is_block_entity()){\n"
+            "            switch (id.block_entity_id()){\n"
+                               << from_nbt_select << 
+                            "            default: return {};\n"
+            "            }\n"
+            "        } else\n"
+            "            return {};\n"
+            "    }\n";
+        // clang-format on
         header_file << "} // namespace copper_server::generated::block_entity\n";
         source_file << "} // namespace copper_server::generated::block_entity\n";
 

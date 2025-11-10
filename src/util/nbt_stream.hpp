@@ -57,6 +57,9 @@ namespace copper_server::util {
 
         std::string read_string(std::istream& read_stream);
     }
+    
+    class nbt_read_list_stream;
+    class nbt_read_compound_stream;
 
     class nbt_read_stream {
         std::istream& read_stream;
@@ -67,7 +70,8 @@ namespace copper_server::util {
         nbt_read_stream(std::istream& read_stream, nbt_type current_type_id);
 
         void check_io_state();
-
+        friend class nbt_read_list_stream;
+        friend class nbt_read_compound_stream;
     public:
         nbt_read_stream(std::istream& read_stream);
         ~nbt_read_stream();
@@ -100,184 +104,8 @@ namespace copper_server::util {
 
         nbt_type get_type() const;
 
-        class list {
-            std::istream& read_stream;
-            int32_t current_item = 0;
-            int32_t items = 0;
-            nbt_type items_type;
-
-            void advance();
-
-        public:
-            list(std::istream& read_stream);
-
-            nbt_type get_items_type() const;
-
-            ~list();
-
-            int32_t size() const noexcept;
-            int32_t current_index() const noexcept;
-            list& read_one_into(bool& res);
-            list& read_one_into(uint8_t& res);
-            list& read_one_into(uint16_t& res);
-            list& read_one_into(uint32_t& res);
-            list& read_one_into(uint64_t& res);
-            list& read_one_into(int8_t& res);
-            list& read_one_into(int16_t& res);
-            list& read_one_into(int32_t& res);
-            list& read_one_into(int64_t& res);
-            list& read_one_into(float& res);
-            list& read_one_into(double& res);
-            list& read_one_into(std::string& res);
-            list& read_one_as(bool& res);
-            list& read_one_as(uint8_t& res);
-            list& read_one_as(uint16_t& res);
-            list& read_one_as(uint32_t& res);
-            list& read_one_as(uint64_t& res);
-            list& read_one_as(int8_t& res);
-            list& read_one_as(int16_t& res);
-            list& read_one_as(int32_t& res);
-            list& read_one_as(int64_t& res);
-            list& read_one_as(float& res);
-            list& read_one_as(double& res);
-            list& read_one_as(std::string& res);
-
-            template <class FN>
-            list& read_one(FN&& fn)
-                requires(std::is_invocable_v<FN, nbt_read_stream&>)
-            {
-                advance();
-                nbt_read_stream inner(read_stream);
-                fn(inner);
-                return *this;
-            }
-
-            template <class FN>
-            list& iterable(FN&& fn)
-                requires(std::is_invocable_v<FN, nbt_read_stream&>)
-            {
-                while (current_item != items)
-                    read_one(fn);
-                return *this;
-            }
-        };
-
-        class compound {
-            std::istream& read_stream;
-            std::size_t current_item = 0;
-            nbt_type current_type_id;
-            bool enable_collector_strict_order = false;
-            bool reached_end = false;
-
-            std::unordered_map<std::string, std::function<void(nbt_read_stream&)>> automated_collector;
-            std::vector<std::string> collector_strict_order_data;
-
-        public:
-            compound(std::istream& read_stream, bool enable_collector_strict_order);
-            ~compound();
-
-            bool is_reached_end() const noexcept;
-
-            template <class FN>
-            compound& read(FN&& fn)
-                requires(std::is_invocable_v<FN, std::string&, nbt_read_stream&>)
-            {
-                if (reached_end)
-                    throw std::out_of_range("Tried to read value out of compounds range.");
-                auto str = __internal::read_string(read_stream);
-                nbt_read_stream inner(read_stream, current_type_id);
-                fn(str, inner);
-                current_type_id = __internal::read_value<nbt_type>(read_stream);
-                if (current_type_id == nbt_type::tag_end)
-                    reached_end = true;
-                return *this;
-            }
-
-            template <class FN>
-            compound& iterable(FN&& fn)
-                requires(std::is_invocable_v<FN, std::string&, nbt_read_stream&>)
-            {
-                while (reached_end == false)
-                    read(fn);
-                return *this;
-            }
-
-            template <class FN>
-            compound& collect(const std::string& name, FN&& fn)
-                requires(std::is_invocable_v<FN, nbt_read_stream&>)
-            {
-                automated_collector[name] = std::forward<FN>(fn);
-                if (enable_collector_strict_order)
-                    collector_strict_order_data.push_back(name);
-                return *this;
-            }
-
-            compound& collect_into(const std::string& name, bool& res);
-            compound& collect_into(const std::string& name, uint8_t& res);
-            compound& collect_into(const std::string& name, uint16_t& res);
-            compound& collect_into(const std::string& name, uint32_t& res);
-            compound& collect_into(const std::string& name, uint64_t& res);
-            compound& collect_into(const std::string& name, int8_t& res);
-            compound& collect_into(const std::string& name, int16_t& res);
-            compound& collect_into(const std::string& name, int32_t& res);
-            compound& collect_into(const std::string& name, int64_t& res);
-            compound& collect_into(const std::string& name, float& res);
-            compound& collect_into(const std::string& name, double& res);
-            compound& collect_into(const std::string& name, std::string& res);
-            compound& collect_as(const std::string& name, bool& res);
-            compound& collect_as(const std::string& name, uint8_t& res);
-            compound& collect_as(const std::string& name, uint16_t& res);
-            compound& collect_as(const std::string& name, uint32_t& res);
-            compound& collect_as(const std::string& name, uint64_t& res);
-            compound& collect_as(const std::string& name, int8_t& res);
-            compound& collect_as(const std::string& name, int16_t& res);
-            compound& collect_as(const std::string& name, int32_t& res);
-            compound& collect_as(const std::string& name, int64_t& res);
-            compound& collect_as(const std::string& name, float& res);
-            compound& collect_as(const std::string& name, double& res);
-            compound& collect_as(const std::string& name, std::string& res);
-
-            template <class FN>
-            compound& collect_iterate(const std::string& name, FN&& fn)
-                requires(
-                    std::is_invocable_v<FN, nbt_read_stream&>
-                    || std::is_invocable_v<FN, std::string_view, nbt_read_stream&>
-                    || std::is_invocable_v<FN, const std::string&, nbt_read_stream&>
-                )
-            {
-                automated_collector[name] = [fn](nbt_read_stream& stream) {
-                    stream.iterate(fn);
-                };
-                if (enable_collector_strict_order)
-                    collector_strict_order_data.push_back(name);
-                return *this;
-            }
-
-            template <class FN>
-            compound& make_collect(FN&& on_uncollected)
-                requires(std::is_invocable_v<FN, std::string&, nbt_read_stream&>)
-            {
-                if (!enable_collector_strict_order)
-                    return iterable([this, &on_uncollected](std::string& name, nbt_read_stream& stream) {
-                        if (auto it = automated_collector.find(name); it != automated_collector.end())
-                            it->second(stream);
-                        else
-                            on_uncollected(name, stream);
-                    });
-                else
-                    return iterable([this, order = size_t(0)](std::string& name, nbt_read_stream& stream) mutable {
-                        if (auto& excepted = collector_strict_order_data.at(order++); excepted != name)
-                            throw std::runtime_error("Invalid order, excepted: " + excepted + ", but got: " + name);
-                        automated_collector.at(name)(stream);
-                    });
-            }
-
-            compound& make_collect();
-            compound& force_all_collect();
-        };
-
-        list read_list();
-        compound read_compound(bool enable_collector_strict_order = false);
+        nbt_read_list_stream read_list();
+        nbt_read_compound_stream read_compound(bool enable_collector_strict_order = false);
 
         template <class FN>
         void iterate(FN&& callback)
@@ -416,7 +244,7 @@ namespace copper_server::util {
                     callback(name, stream);
                 }
                 readed = true;
-            }else
+            } else
                 throw std::invalid_argument("not compound type");
         }
 
@@ -544,6 +372,188 @@ namespace copper_server::util {
         }
     };
 
+
+        class nbt_read_list_stream {
+            std::istream& read_stream;
+            int32_t current_item = 0;
+            int32_t items = 0;
+            nbt_type items_type;
+
+            void advance();
+
+        public:
+            nbt_read_list_stream(std::istream& read_stream);
+
+            nbt_type get_items_type() const;
+
+            ~nbt_read_list_stream();
+
+            int32_t size() const noexcept;
+            int32_t current_index() const noexcept;
+            nbt_read_list_stream& read_one_into(bool& res);
+            nbt_read_list_stream& read_one_into(uint8_t& res);
+            nbt_read_list_stream& read_one_into(uint16_t& res);
+            nbt_read_list_stream& read_one_into(uint32_t& res);
+            nbt_read_list_stream& read_one_into(uint64_t& res);
+            nbt_read_list_stream& read_one_into(int8_t& res);
+            nbt_read_list_stream& read_one_into(int16_t& res);
+            nbt_read_list_stream& read_one_into(int32_t& res);
+            nbt_read_list_stream& read_one_into(int64_t& res);
+            nbt_read_list_stream& read_one_into(float& res);
+            nbt_read_list_stream& read_one_into(double& res);
+            nbt_read_list_stream& read_one_into(std::string& res);
+            nbt_read_list_stream& read_one_as(bool& res);
+            nbt_read_list_stream& read_one_as(uint8_t& res);
+            nbt_read_list_stream& read_one_as(uint16_t& res);
+            nbt_read_list_stream& read_one_as(uint32_t& res);
+            nbt_read_list_stream& read_one_as(uint64_t& res);
+            nbt_read_list_stream& read_one_as(int8_t& res);
+            nbt_read_list_stream& read_one_as(int16_t& res);
+            nbt_read_list_stream& read_one_as(int32_t& res);
+            nbt_read_list_stream& read_one_as(int64_t& res);
+            nbt_read_list_stream& read_one_as(float& res);
+            nbt_read_list_stream& read_one_as(double& res);
+            nbt_read_list_stream& read_one_as(std::string& res);
+
+            template <class FN>
+            nbt_read_list_stream& read_one(FN&& fn)
+                requires(std::is_invocable_v<FN, nbt_read_stream&>)
+            {
+                advance();
+                nbt_read_stream inner(read_stream);
+                fn(inner);
+                return *this;
+            }
+
+            template <class FN>
+            nbt_read_list_stream& iterable(FN&& fn)
+                requires(std::is_invocable_v<FN, nbt_read_stream&>)
+            {
+                while (current_item != items)
+                    read_one(fn);
+                return *this;
+            }
+        };
+
+        class nbt_read_compound_stream {
+            std::istream& read_stream;
+            std::size_t current_item = 0;
+            nbt_type current_type_id;
+            bool enable_collector_strict_order = false;
+            bool reached_end = false;
+
+            std::unordered_map<std::string, std::function<void(nbt_read_stream&)>> automated_collector;
+            std::vector<std::string> collector_strict_order_data;
+
+        public:
+            nbt_read_compound_stream(std::istream& read_stream, bool enable_collector_strict_order);
+            ~nbt_read_compound_stream();
+
+            bool is_reached_end() const noexcept;
+
+            template <class FN>
+            nbt_read_compound_stream& read(FN&& fn)
+                requires(std::is_invocable_v<FN, std::string&, nbt_read_stream&>)
+            {
+                if (reached_end)
+                    throw std::out_of_range("Tried to read value out of compounds range.");
+                auto str = __internal::read_string(read_stream);
+                nbt_read_stream inner(read_stream, current_type_id);
+                fn(str, inner);
+                current_type_id = __internal::read_value<nbt_type>(read_stream);
+                if (current_type_id == nbt_type::tag_end)
+                    reached_end = true;
+                return *this;
+            }
+
+            template <class FN>
+            nbt_read_compound_stream& iterable(FN&& fn)
+                requires(std::is_invocable_v<FN, std::string&, nbt_read_stream&>)
+            {
+                while (reached_end == false)
+                    read(fn);
+                return *this;
+            }
+
+            template <class FN>
+            nbt_read_compound_stream& collect(const std::string& name, FN&& fn)
+                requires(std::is_invocable_v<FN, nbt_read_stream&>)
+            {
+                automated_collector[name] = std::forward<FN>(fn);
+                if (enable_collector_strict_order)
+                    collector_strict_order_data.push_back(name);
+                return *this;
+            }
+
+            nbt_read_compound_stream& collect_into(const std::string& name, bool& res);
+            nbt_read_compound_stream& collect_into(const std::string& name, uint8_t& res);
+            nbt_read_compound_stream& collect_into(const std::string& name, uint16_t& res);
+            nbt_read_compound_stream& collect_into(const std::string& name, uint32_t& res);
+            nbt_read_compound_stream& collect_into(const std::string& name, uint64_t& res);
+            nbt_read_compound_stream& collect_into(const std::string& name, int8_t& res);
+            nbt_read_compound_stream& collect_into(const std::string& name, int16_t& res);
+            nbt_read_compound_stream& collect_into(const std::string& name, int32_t& res);
+            nbt_read_compound_stream& collect_into(const std::string& name, int64_t& res);
+            nbt_read_compound_stream& collect_into(const std::string& name, float& res);
+            nbt_read_compound_stream& collect_into(const std::string& name, double& res);
+            nbt_read_compound_stream& collect_into(const std::string& name, std::string& res);
+            nbt_read_compound_stream& collect_as(const std::string& name, bool& res);
+            nbt_read_compound_stream& collect_as(const std::string& name, uint8_t& res);
+            nbt_read_compound_stream& collect_as(const std::string& name, uint16_t& res);
+            nbt_read_compound_stream& collect_as(const std::string& name, uint32_t& res);
+            nbt_read_compound_stream& collect_as(const std::string& name, uint64_t& res);
+            nbt_read_compound_stream& collect_as(const std::string& name, int8_t& res);
+            nbt_read_compound_stream& collect_as(const std::string& name, int16_t& res);
+            nbt_read_compound_stream& collect_as(const std::string& name, int32_t& res);
+            nbt_read_compound_stream& collect_as(const std::string& name, int64_t& res);
+            nbt_read_compound_stream& collect_as(const std::string& name, float& res);
+            nbt_read_compound_stream& collect_as(const std::string& name, double& res);
+            nbt_read_compound_stream& collect_as(const std::string& name, std::string& res);
+
+            template <class FN>
+            nbt_read_compound_stream& collect_iterate(const std::string& name, FN&& fn)
+                requires(
+                    std::is_invocable_v<FN, nbt_read_stream&>
+                    || std::is_invocable_v<FN, std::string_view, nbt_read_stream&>
+                    || std::is_invocable_v<FN, const std::string&, nbt_read_stream&>
+                )
+            {
+                automated_collector[name] = [fn](nbt_read_stream& stream) {
+                    stream.iterate(fn);
+                };
+                if (enable_collector_strict_order)
+                    collector_strict_order_data.push_back(name);
+                return *this;
+            }
+
+            template <class FN>
+            nbt_read_compound_stream& make_collect(FN&& on_uncollected)
+                requires(std::is_invocable_v<FN, std::string&, nbt_read_stream&>)
+            {
+                if (!enable_collector_strict_order)
+                    return iterable([this, &on_uncollected](std::string& name, nbt_read_stream& stream) {
+                        if (auto it = automated_collector.find(name); it != automated_collector.end())
+                            it->second(stream);
+                        else
+                            on_uncollected(name, stream);
+                    });
+                else
+                    return iterable([this, order = size_t(0)](std::string& name, nbt_read_stream& stream) mutable {
+                        if (auto& excepted = collector_strict_order_data.at(order++); excepted != name)
+                            throw std::runtime_error("Invalid order, excepted: " + excepted + ", but got: " + name);
+                        automated_collector.at(name)(stream);
+                    });
+            }
+
+            nbt_read_compound_stream& make_collect();
+            nbt_read_compound_stream& force_all_collect();
+        };
+
+
+
+    class nbt_write_list_stream;
+    class nbt_write_compound_stream;
+
     class nbt_write_stream {
         std::ostream& write_stream;
         std::string_view to_write_field_name;
@@ -554,115 +564,6 @@ namespace copper_server::util {
 
     public:
         nbt_type get_written_type() const;
-
-        class list {
-            std::ostream& write_stream;
-            std::ostream::pos_type type_size_field_pos;
-            int32_t items;
-            bool type_id_written;
-            bool length_fixed;
-            uint16_t depth;
-            nbt_type check_type;
-
-        public:
-            list(std::ostream& write_stream, uint16_t depth);
-            list(std::ostream& write_stream, uint16_t depth, int32_t items, nbt_type);
-            ~list();
-
-            list& write(bool res);
-            list& write(uint8_t res);
-            list& write(uint16_t res);
-            list& write(uint32_t res);
-            list& write(uint64_t res);
-            list& write(int8_t res);
-            list& write(int16_t res);
-            list& write(int32_t res);
-            list& write(int64_t res);
-            list& write(float res);
-            list& write(double res);
-            list& write(const std::string& res);
-            list& write(std::string_view res);
-
-            template <class FN>
-            list& write(FN&& fn)
-                requires(std::is_invocable_v<FN, nbt_write_stream&>)
-            {
-                nbt_write_stream inner(write_stream, "", false, depth + 1);
-                fn(inner);
-                items++;
-                return *this;
-            }
-
-            //fn(item, inner)
-            template <class Iterable, class FN>
-            list& iterable(const Iterable& iter, FN&& fn) {
-                for (const auto& item : iter)
-                    write([&](nbt_write_stream& inner) {
-                        fn(item, inner);
-                    });
-                return *this;
-            }
-
-            template <class Iterable>
-            list& iterable(const Iterable& iter) {
-                for (const auto& item : iter)
-                    write([&](nbt_write_stream& inner) {
-                        inner.write(item);
-                    });
-                return *this;
-            }
-        };
-
-        class compound {
-            std::ostream& write_stream;
-            uint16_t depth = 0;
-
-        public:
-            compound(std::ostream& write_stream, uint16_t depth = 0);
-            ~compound();
-
-            compound& write(std::string_view filed_name, bool res);
-            compound& write(std::string_view filed_name, uint8_t res);
-            compound& write(std::string_view filed_name, uint16_t res);
-            compound& write(std::string_view filed_name, uint32_t res);
-            compound& write(std::string_view filed_name, uint64_t res);
-            compound& write(std::string_view filed_name, int8_t res);
-            compound& write(std::string_view filed_name, int16_t res);
-            compound& write(std::string_view filed_name, int32_t res);
-            compound& write(std::string_view filed_name, int64_t res);
-            compound& write(std::string_view filed_name, float res);
-            compound& write(std::string_view filed_name, double res);
-            compound& write(std::string_view filed_name, const std::string& res);
-            compound& write(std::string_view filed_name, std::string_view res);
-
-            template <class FN>
-            compound& write(std::string_view filed_name, FN&& fn)
-                requires(std::is_invocable_v<FN, nbt_write_stream&>)
-            {
-                nbt_write_stream inner(write_stream, filed_name, true, depth + 1);
-                fn(inner);
-                return *this;
-            }
-
-            //fn(name, item, inner)
-            template <class Iterable, class FN>
-            compound& iterable(const Iterable& iter, FN&& fn) {
-                for (const auto& [name, item] : iter)
-                    write(name, [&](nbt_write_stream& inner) {
-                        fn(name, item, inner);
-                    });
-                return *this;
-            }
-
-            template <class Iterable, class FN>
-            compound& iterable(const Iterable& iter) {
-                for (const auto& [name, item] : iter)
-                    write(name, [&](nbt_write_stream& inner) {
-                        inner.write(item);
-                    });
-                return *this;
-            }
-        };
 
         void write(bool res);
         void write(uint8_t res);
@@ -677,11 +578,120 @@ namespace copper_server::util {
         void write(double res);
         void write(const std::string& res);
         void write(std::string_view res);
-        compound write_compound();
-        list write_list();
-        list write_list(int32_t fixed_size, nbt_type tag);
+        nbt_write_compound_stream write_compound();
+        nbt_write_list_stream write_list();
+        nbt_write_list_stream write_list(int32_t fixed_size, nbt_type tag);
 
         nbt_write_stream(std::ostream& write_stream, std::string_view to_write_field_name = "", bool field_required = false, uint16_t depth = 0);
+    };
+
+    class nbt_write_list_stream {
+        std::ostream& write_stream;
+        std::ostream::pos_type type_size_field_pos;
+        int32_t items;
+        bool type_id_written;
+        bool length_fixed;
+        uint16_t depth;
+        nbt_type check_type;
+
+    public:
+        nbt_write_list_stream(std::ostream& write_stream, uint16_t depth);
+        nbt_write_list_stream(std::ostream& write_stream, uint16_t depth, int32_t items, nbt_type);
+        ~nbt_write_list_stream();
+
+        nbt_write_list_stream& write(bool res);
+        nbt_write_list_stream& write(uint8_t res);
+        nbt_write_list_stream& write(uint16_t res);
+        nbt_write_list_stream& write(uint32_t res);
+        nbt_write_list_stream& write(uint64_t res);
+        nbt_write_list_stream& write(int8_t res);
+        nbt_write_list_stream& write(int16_t res);
+        nbt_write_list_stream& write(int32_t res);
+        nbt_write_list_stream& write(int64_t res);
+        nbt_write_list_stream& write(float res);
+        nbt_write_list_stream& write(double res);
+        nbt_write_list_stream& write(const std::string& res);
+        nbt_write_list_stream& write(std::string_view res);
+
+        template <class FN>
+        nbt_write_list_stream& write(FN&& fn)
+            requires(std::is_invocable_v<FN, nbt_write_stream&>)
+        {
+            nbt_write_stream inner(write_stream, "", false, depth + 1);
+            fn(inner);
+            items++;
+            return *this;
+        }
+
+        //fn(item, inner)
+        template <class Iterable, class FN>
+        nbt_write_list_stream& iterable(const Iterable& iter, FN&& fn) {
+            for (const auto& item : iter)
+                write([&](nbt_write_stream& inner) {
+                    fn(item, inner);
+                });
+            return *this;
+        }
+
+        template <class Iterable>
+        nbt_write_list_stream& iterable(const Iterable& iter) {
+            for (const auto& item : iter)
+                write([&](nbt_write_stream& inner) {
+                    inner.write(item);
+                });
+            return *this;
+        }
+    };
+
+    class nbt_write_compound_stream {
+        std::ostream& write_stream;
+        uint16_t depth = 0;
+
+    public:
+        nbt_write_compound_stream(std::ostream& write_stream, uint16_t depth = 0);
+        ~nbt_write_compound_stream();
+
+        nbt_write_compound_stream& write(std::string_view filed_name, bool res);
+        nbt_write_compound_stream& write(std::string_view filed_name, uint8_t res);
+        nbt_write_compound_stream& write(std::string_view filed_name, uint16_t res);
+        nbt_write_compound_stream& write(std::string_view filed_name, uint32_t res);
+        nbt_write_compound_stream& write(std::string_view filed_name, uint64_t res);
+        nbt_write_compound_stream& write(std::string_view filed_name, int8_t res);
+        nbt_write_compound_stream& write(std::string_view filed_name, int16_t res);
+        nbt_write_compound_stream& write(std::string_view filed_name, int32_t res);
+        nbt_write_compound_stream& write(std::string_view filed_name, int64_t res);
+        nbt_write_compound_stream& write(std::string_view filed_name, float res);
+        nbt_write_compound_stream& write(std::string_view filed_name, double res);
+        nbt_write_compound_stream& write(std::string_view filed_name, const std::string& res);
+        nbt_write_compound_stream& write(std::string_view filed_name, std::string_view res);
+
+        template <class FN>
+        nbt_write_compound_stream& write(std::string_view filed_name, FN&& fn)
+            requires(std::is_invocable_v<FN, nbt_write_stream&>)
+        {
+            nbt_write_stream inner(write_stream, filed_name, true, depth + 1);
+            fn(inner);
+            return *this;
+        }
+
+        //fn(name, item, inner)
+        template <class Iterable, class FN>
+        nbt_write_compound_stream& iterable(const Iterable& iter, FN&& fn) {
+            for (const auto& [name, item] : iter)
+                write(name, [&](nbt_write_stream& inner) {
+                    fn(name, item, inner);
+                });
+            return *this;
+        }
+
+        template <class Iterable, class FN>
+        nbt_write_compound_stream& iterable(const Iterable& iter) {
+            for (const auto& [name, item] : iter)
+                write(name, [&](nbt_write_stream& inner) {
+                    inner.write(item);
+                });
+            return *this;
+        }
     };
 
     namespace nbt_collection {
