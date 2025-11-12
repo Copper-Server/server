@@ -14,45 +14,73 @@
 
 namespace copper_server::util::encoding::nbt {
     template <class T, class T_prev>
-    void deserialize_entry(T& res, util::nbt_read_stream stream, T_prev& prev) {
+    void deserialize_entry(T& res, util::nbt_read_stream& stream, T_prev& prev) {
         using Type = std::decay_t<T>;
         if constexpr (
             std::is_arithmetic_v<Type>
             || std::is_same_v<std::string, Type>
-            || std::is_same_v<::enbt::raw_uuid, Type>
-            || std::is_same_v<::enbt::value, Type>
+            || std::is_same_v<std::string_view, Type>
+            || std::is_same_v<base_objects::uuid, Type>
+            || std::is_same_v<base_objects::uuid_hex, Type>
+            || std::is_same_v<base_objects::uuid_flat_hex, Type>
         )
-            res = (Type)stream.read();
-        else if constexpr (std::is_same_v<base_objects::uuid, Type>)
-            res = base_objects::uuid::to_uuid((::enbt::raw_uuid)stream.read());
-        else if constexpr (std::is_same_v<::enbt::compound, Type>)
-            res = stream.read().as_compound();
-        else if constexpr (std::is_same_v<::enbt::dynamic_array, Type>)
-            res = stream.read().as_dyn_array();
-        else if constexpr (std::is_same_v<::enbt::fixed_array, Type>)
-            res = stream.read().as_fixed_array();
-        else if constexpr (std::is_same_v<::enbt::uuid, Type>)
-            res = stream.read().as_uuid();
-        else if constexpr (std::is_same_v<::enbt::simple_array_i8, Type>)
-            res = stream.read().as_i8_array();
-        else if constexpr (std::is_same_v<::enbt::simple_array_i16, Type>)
-            res = stream.read().as_i16_array();
-        else if constexpr (std::is_same_v<::enbt::simple_array_i32, Type>)
-            res = stream.read().as_i32_array();
-        else if constexpr (std::is_same_v<::enbt::simple_array_i64, Type>)
-            res = stream.read().as_i64_array();
-        else if constexpr (std::is_same_v<::enbt::simple_array_ui8, Type>)
-            res = stream.read().as_ui8_array();
-        else if constexpr (std::is_same_v<::enbt::simple_array_ui16, Type>)
-            res = stream.read().as_ui16_array();
-        else if constexpr (std::is_same_v<::enbt::simple_array_ui32, Type>)
-            res = stream.read().as_ui32_array();
-        else if constexpr (std::is_same_v<::enbt::simple_array_ui64, Type>)
-            res = stream.read().as_ui64_array();
-        else if constexpr (is_std_array<Type>) {
+            stream.read_as(res);
+        else if constexpr (std::is_same_v<::enbt::value, Type>) {
+            nbt_enbt_convert ss;
+            stream.read_into(ss);
+            res = ss.get_as_enbt();
+        } else if constexpr (std::is_same_v<::enbt::compound, Type>) {
+            nbt_enbt_convert ss;
+            stream.read_into(ss);
+            res = ss.get_as_enbt().as_compound();
+        } else if constexpr (std::is_same_v<::enbt::dynamic_array, Type>) {
+            nbt_enbt_convert ss;
+            stream.read_into(ss);
+            res = ss.get_as_enbt().as_dyn_array();
+        } else if constexpr (std::is_same_v<::enbt::fixed_array, Type>) {
+            nbt_enbt_convert ss;
+            stream.read_into(ss);
+            res = ss.get_as_enbt().as_fixed_array();
+        } else if constexpr (std::is_same_v<::enbt::uuid, Type>) {
+            nbt_enbt_convert ss;
+            stream.read_into(ss);
+            res = ss.get_as_enbt().as_uuid();
+        } else if constexpr (std::is_same_v<::enbt::simple_array_i8, Type>) {
+            nbt_enbt_convert ss;
+            stream.read_into(ss);
+            res = ss.get_as_enbt().as_i8_array();
+        } else if constexpr (std::is_same_v<::enbt::simple_array_i16, Type>) {
+            nbt_enbt_convert ss;
+            stream.read_into(ss);
+            res = ss.get_as_enbt().as_i16_array();
+        } else if constexpr (std::is_same_v<::enbt::simple_array_i32, Type>) {
+            nbt_enbt_convert ss;
+            stream.read_into(ss);
+            res = ss.get_as_enbt().as_i32_array();
+        } else if constexpr (std::is_same_v<::enbt::simple_array_i64, Type>) {
+            nbt_enbt_convert ss;
+            stream.read_into(ss);
+            res = ss.get_as_enbt().as_i64_array();
+        } else if constexpr (std::is_same_v<::enbt::simple_array_ui8, Type>) {
+            nbt_enbt_convert ss;
+            stream.read_into(ss);
+            res = ss.get_as_enbt().as_ui8_array();
+        } else if constexpr (std::is_same_v<::enbt::simple_array_ui16, Type>) {
+            nbt_enbt_convert ss;
+            stream.read_into(ss);
+            res = ss.get_as_enbt().as_ui16_array();
+        } else if constexpr (std::is_same_v<::enbt::simple_array_ui32, Type>) {
+            nbt_enbt_convert ss;
+            stream.read_into(ss);
+            res = ss.get_as_enbt().as_ui32_array();
+        } else if constexpr (std::is_same_v<::enbt::simple_array_ui64, Type>) {
+            nbt_enbt_convert ss;
+            stream.read_into(ss);
+            res = ss.get_as_enbt().as_ui64_array();
+        } else if constexpr (is_std_array<Type>) {
             stream.iterate(
                 [&res](auto size) { if (res.size() != size)
-                    throw ::enbt::exception("Size mismatch, detected for std::array"); },
+                    throw std::runtime_error("Size mismatch, detected for std::array"); },
                 [&res](auto& item_stream) {
                     for (auto& item : res)
                         deserialize_entry(item, item_stream, res);
@@ -73,42 +101,57 @@ namespace copper_server::util::encoding::nbt {
             || std::is_same_v<api::packets::var_int32, Type>
             || std::is_same_v<api::packets::var_int64, Type>
         )
-            res.value = (typename Type::underlying_type)stream.read();
+            stream.read_as(res.value);
         else if constexpr (std::is_same_v<base_objects::velocity, Type>) {
             stream.iterate([&res](auto& name, auto& value) {
                 if (name == "x")
-                    res.x = value.read();
+                    value.read_into(res.x);
                 else if (name == "y")
-                    res.y = value.read();
+                    value.read_into(res.y);
                 else if (name == "z")
-                    res.z = value.read();
+                    value.read_into(res.z);
             });
-        } else if constexpr (std::is_same_v<base_objects::chat, Type>)
-            res = base_objects::chat::from_enbt(stream.read());
-        else if constexpr (std::is_same_v<api::packets::optional_var_int32, Type> || std::is_same_v<api::packets::optional_var_int64, Type>) {
-            stream.read_optional([&res](auto& has_stream) {
-                deserialize_entry(res, has_stream, res);
-            });
+        } else if constexpr (std::is_same_v<base_objects::chat, Type>) {
+            nbt_enbt_convert ss;
+            stream.read_into(ss);
+            res = base_objects::chat::from_enbt(ss.get_as_enbt());
+        } else if constexpr (std::is_same_v<api::packets::optional_var_int32, Type>) {
+            int32_t res_value = 0;
+            stream.read_into(res_value);
+            if (res_value != 0)
+                res = res_value - 1;
+        } else if constexpr (std::is_same_v<api::packets::optional_var_int64, Type>) {
+            int64_t res_value = 0;
+            stream.read_into(res_value);
+            if (res_value != 0)
+                res = res_value - 1;
         } else if constexpr (std::is_same_v<base_objects::position, Type>) {
             stream.iterate([&res](auto& name, auto& value) {
                 if (name == "x")
-                    res.x = value.read();
+                    value.read_into(res.x);
                 else if (name == "y")
-                    res.y = value.read();
+                    value.read_into(res.y);
                 else if (name == "z")
-                    res.z = value.read();
+                    value.read_into(res.z);
             });
         } else if constexpr (is_template_base_of<api::packets::ignored, Type>) {
-            stream.read(); //check if stream allows seek and peek ope
+            nbt_enbt_convert ss;
+            stream.read_into(ss);
         } else if constexpr (is_template_base_of<std::optional, Type>) {
-            stream.read_optional([&res, &prev](auto& has_stream) {
-                res.emplace();
-                deserialize_entry(*res, has_stream, prev);
-            });
+            stream.read_compound()
+                .collect("opt", [&](util::nbt_read_stream& opt_stream) {
+                    res.emplace();
+                    deserialize_entry(*res, has_stream, prev);
+                })
+                .make_collect();
         } else if constexpr (is_template_base_of<api::packets::enum_as, Type>) {
-            res.value = reflect::get_enum_value<typename Type::enum_t>((std::string&)stream.read());
+            std::string str;
+            stream.read_into(str);
+            res.value = reflect::get_enum_value<typename Type::enum_t>(str);
         } else if constexpr (is_template_base_of<api::packets::enum_as_flag, Type>) {
-            res.value = reflect::get_enum_flag_value<typename Type::enum_t>((std::string&)stream.read());
+            std::string str;
+            stream.read_into(str);
+            res.value = reflect::get_enum_flag_value<typename Type::enum_t>(str);
         } else if constexpr (is_template_base_of<api::packets::or_, Type>) {
             stream.iterate([&res, &prev](std::string_view view, auto& var_stream) {
                 if (view == "var_0") {
@@ -144,58 +187,90 @@ namespace copper_server::util::encoding::nbt {
                 if (name == "flag") {
                     deserialize_entry(res, comp_stream, prev);
                 } else if (name == "items") {
-                    auto arr_r = comp_stream.read_array();
+                    auto arr_r = comp_stream.read_list();
                     res.for_each_set_flag_in_order([&arr_r, &res, &prev]<class Ty>() {
                         arr_r.read_one([&res, &prev](auto& flag_stream) {
-                            Ty tmp{};
-                            deserialize_entry(tmp, flag_stream, prev);
-                            res.values.emplace(Ty::flag_order::value, std::move(tmp));
+                            flag_stream
+                                .read_compound()
+                                .collect("", [&](auto& i_flag_stream) {
+                                    Ty tmp{};
+                                    deserialize_entry(tmp, i_flag_stream, prev);
+                                    res.values.emplace(Ty::flag_order::value, std::move(tmp));
+                                })
+                                .make_collect();
                         });
                     });
                 }
             });
         } else if constexpr (is_flags_list_from<Type>) {
-            auto arr_r = stream.read_array();
+            auto arr_r = stream.read_list();
             auto& it = (*prev).*Type::preprocess_source_name::value;
             Type::for_each_set_flag_in_order(it, [&arr_r, &res]<class Ty>() {
                 arr_r.read_one([&res](auto& flag_stream) {
-                    Ty tmp{};
-                    deserialize_entry(tmp, flag_stream);
-                    res.set(std::move(tmp));
+                    flag_stream
+                        .read_compound()
+                        .collect("", [&](auto& i_flag_stream) {
+                            Ty tmp{};
+                            deserialize_entry(tmp, flag_stream);
+                            res.set(std::move(tmp));
+                        })
+                        .force_all_collect();
                 });
             });
         } else if constexpr (is_ordered_id<Type>) {
             deserialize_entry(res.value, stream, prev);
         } else if constexpr (is_template_base_of<api::packets::value_optional, Type>) {
-            stream.read_optional(
-                [&res, &prev](auto& vopt_stream) {
-                    vopt_stream
-                        .read_darray()
-                        .read_one([&res, &prev](auto& opt_stream) {
-                            deserialize_entry(res.v, opt_stream, prev);
+            stream.read_compound()
+                .collect("opt", [&res, &prev](auto& opt_stream) {
+                    opt_stream
+                        .read_list()
+                        .read_one([&res, &prev](auto& a_stream) {
+                            a_stream
+                                .read_compound()
+                                .collect("", [&res, &prev](auto& ac_stream) {
+                                    deserialize_entry(res.v, ac_stream, prev);
+                                })
+                                .force_all_collect();
                         })
-                        .read_one([&res, &prev](auto& opt_stream) {
-                            res.rest.emplace();
-                            deserialize_entry(*res.rest, opt_stream, prev);
+                        .read_one([&res, &prev](auto& a_stream) {
+                            a_stream
+                                .read_compound()
+                                .collect("", [&res, &prev](auto& ac_stream) {
+                                    res.rest.emplace();
+                                    deserialize_entry(*res.rest, ac_stream, prev);
+                                })
+                                .force_all_collect();
                         });
-                },
-                [&res]() {
-                    res.v = {};
-                    res.rest = std::nullopt;
-                }
-            );
+                })
+                .make_collect();
         } else if constexpr (is_template_base_of<api::packets::sized_entry, Type>) {
-            stream.join_log_item([&res, &prev](auto& log_stream) {
-                deserialize_entry(res, log_stream, prev);
-            });
+            deserialize_entry(res.value, stream, prev);
         } else if constexpr (is_limited_num<Type>) {
-            res.value = stream.read();
+            stream.read_into(res.value);
+        } else if constexpr (is_convertible_to_nbt_form<Type>) {
+            res = Type::from_nbt(stream);
         } else if constexpr (api::packets::is_convertible_to_packet_form<Type>) {
             api::packets::convertible_to_packet_type<Type> tmp{};
             deserialize_entry(tmp, stream, prev);
             res = Type::from_packet(std::move(tmp));
         } else if constexpr (api::id::is_source<Type>) {
-            res = (std::string)stream.read();
+            std::string tmp;
+            stream.read_into(tmp);
+            res = Type(tmp);
+        } else if constexpr (is_template_base_of<base_objects::pool, Type>) {
+            stream.iterate([&lis](util::nbt_read_stream& pool_item) {
+                int32_t weight = 0;
+                Type::value_type data;
+
+                pool_item
+                    .read_compound()
+                    .collect_as("weight", weight)
+                    .collect("data", [&](auto& data_stream) {
+                        deserialize_entry(data, data_stream, prev);
+                    })
+                    .force_all_collect();
+                res.add(weight, std::move(data));
+            });
         } else {
             if (stream.get_type_id().type == ::enbt::type::compound)
                 stream.iterate([&res, &prev](auto& name, auto& item_stream) {
@@ -208,7 +283,7 @@ namespace copper_server::util::encoding::nbt {
                     deserialize_entry(res_v, stream, prev);
                 });
             else if constexpr (reflect::fields_count<Type>() != 0)
-                throw ::enbt::exception("Invalid encoding");
+                throw std::runtime_error("Invalid encoding");
         }
     }
 

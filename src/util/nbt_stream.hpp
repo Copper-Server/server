@@ -57,7 +57,7 @@ namespace copper_server::util {
 
         std::string read_string(std::istream& read_stream);
     }
-    
+
     class nbt_read_list_stream;
     class nbt_read_compound_stream;
 
@@ -72,8 +72,9 @@ namespace copper_server::util {
         void check_io_state();
         friend class nbt_read_list_stream;
         friend class nbt_read_compound_stream;
+
     public:
-        nbt_read_stream(std::istream& read_stream);
+        nbt_read_stream(std::istream& read_stream, bool is_root = false);
         ~nbt_read_stream();
         nbt_read_stream& read_into(bool& res);
         nbt_read_stream& read_into(uint8_t& res);
@@ -87,6 +88,12 @@ namespace copper_server::util {
         nbt_read_stream& read_into(float& res);
         nbt_read_stream& read_into(double& res);
         nbt_read_stream& read_into(std::string& res);
+        nbt_read_stream& read_into(nbt_enbt_convert& res);
+        nbt_read_stream& read_into(nbt& res);
+        nbt_read_stream& read_into(base_objects::uuid& res);
+        nbt_read_stream& read_into(base_objects::uuid_hex& res);
+        nbt_read_stream& read_into(base_objects::uuid_flat_hex& res);
+
         nbt_read_stream& read_as(bool& res);
         nbt_read_stream& read_as(uint8_t& res);
         nbt_read_stream& read_as(uint16_t& res);
@@ -99,6 +106,12 @@ namespace copper_server::util {
         nbt_read_stream& read_as(float& res);
         nbt_read_stream& read_as(double& res);
         nbt_read_stream& read_as(std::string& res);
+        nbt_read_stream& read_as(nbt_enbt_convert& res);
+        nbt_read_stream& read_as(nbt& res);
+        nbt_read_stream& read_as(base_objects::uuid& res);
+        nbt_read_stream& read_as(base_objects::uuid_hex& res);
+        nbt_read_stream& read_as(base_objects::uuid_flat_hex& res);
+
 
         void skip();
 
@@ -372,183 +385,202 @@ namespace copper_server::util {
         }
     };
 
+    class nbt_read_list_stream {
+        std::istream& read_stream;
+        int32_t current_item = 0;
+        int32_t items = 0;
+        nbt_type items_type;
 
-        class nbt_read_list_stream {
-            std::istream& read_stream;
-            int32_t current_item = 0;
-            int32_t items = 0;
-            nbt_type items_type;
+        void advance();
 
-            void advance();
+    public:
+        nbt_read_list_stream(std::istream& read_stream);
 
-        public:
-            nbt_read_list_stream(std::istream& read_stream);
+        nbt_type get_items_type() const;
 
-            nbt_type get_items_type() const;
+        ~nbt_read_list_stream();
 
-            ~nbt_read_list_stream();
+        int32_t size() const noexcept;
+        int32_t current_index() const noexcept;
+        nbt_read_list_stream& read_one_into(bool& res);
+        nbt_read_list_stream& read_one_into(uint8_t& res);
+        nbt_read_list_stream& read_one_into(uint16_t& res);
+        nbt_read_list_stream& read_one_into(uint32_t& res);
+        nbt_read_list_stream& read_one_into(uint64_t& res);
+        nbt_read_list_stream& read_one_into(int8_t& res);
+        nbt_read_list_stream& read_one_into(int16_t& res);
+        nbt_read_list_stream& read_one_into(int32_t& res);
+        nbt_read_list_stream& read_one_into(int64_t& res);
+        nbt_read_list_stream& read_one_into(float& res);
+        nbt_read_list_stream& read_one_into(double& res);
+        nbt_read_list_stream& read_one_into(std::string& res);
+        nbt_read_list_stream& read_one_into(nbt_enbt_convert& res);
+        nbt_read_list_stream& read_one_into(nbt& res);
+        nbt_read_list_stream& read_one_into(base_objects::uuid& res);
+        nbt_read_list_stream& read_one_into(base_objects::uuid_hex& res);
+        nbt_read_list_stream& read_one_into(base_objects::uuid_flat_hex& res);
 
-            int32_t size() const noexcept;
-            int32_t current_index() const noexcept;
-            nbt_read_list_stream& read_one_into(bool& res);
-            nbt_read_list_stream& read_one_into(uint8_t& res);
-            nbt_read_list_stream& read_one_into(uint16_t& res);
-            nbt_read_list_stream& read_one_into(uint32_t& res);
-            nbt_read_list_stream& read_one_into(uint64_t& res);
-            nbt_read_list_stream& read_one_into(int8_t& res);
-            nbt_read_list_stream& read_one_into(int16_t& res);
-            nbt_read_list_stream& read_one_into(int32_t& res);
-            nbt_read_list_stream& read_one_into(int64_t& res);
-            nbt_read_list_stream& read_one_into(float& res);
-            nbt_read_list_stream& read_one_into(double& res);
-            nbt_read_list_stream& read_one_into(std::string& res);
-            nbt_read_list_stream& read_one_as(bool& res);
-            nbt_read_list_stream& read_one_as(uint8_t& res);
-            nbt_read_list_stream& read_one_as(uint16_t& res);
-            nbt_read_list_stream& read_one_as(uint32_t& res);
-            nbt_read_list_stream& read_one_as(uint64_t& res);
-            nbt_read_list_stream& read_one_as(int8_t& res);
-            nbt_read_list_stream& read_one_as(int16_t& res);
-            nbt_read_list_stream& read_one_as(int32_t& res);
-            nbt_read_list_stream& read_one_as(int64_t& res);
-            nbt_read_list_stream& read_one_as(float& res);
-            nbt_read_list_stream& read_one_as(double& res);
-            nbt_read_list_stream& read_one_as(std::string& res);
+        nbt_read_list_stream& read_one_as(bool& res);
+        nbt_read_list_stream& read_one_as(uint8_t& res);
+        nbt_read_list_stream& read_one_as(uint16_t& res);
+        nbt_read_list_stream& read_one_as(uint32_t& res);
+        nbt_read_list_stream& read_one_as(uint64_t& res);
+        nbt_read_list_stream& read_one_as(int8_t& res);
+        nbt_read_list_stream& read_one_as(int16_t& res);
+        nbt_read_list_stream& read_one_as(int32_t& res);
+        nbt_read_list_stream& read_one_as(int64_t& res);
+        nbt_read_list_stream& read_one_as(float& res);
+        nbt_read_list_stream& read_one_as(double& res);
+        nbt_read_list_stream& read_one_as(std::string& res);
+        nbt_read_list_stream& read_one_as(nbt_enbt_convert& res);
+        nbt_read_list_stream& read_one_as(nbt& res);
+        nbt_read_list_stream& read_one_as(base_objects::uuid& res);
+        nbt_read_list_stream& read_one_as(base_objects::uuid_hex& res);
+        nbt_read_list_stream& read_one_as(base_objects::uuid_flat_hex& res);
 
-            template <class FN>
-            nbt_read_list_stream& read_one(FN&& fn)
-                requires(std::is_invocable_v<FN, nbt_read_stream&>)
-            {
-                advance();
-                nbt_read_stream inner(read_stream);
-                fn(inner);
-                return *this;
-            }
+        template <class FN>
+        nbt_read_list_stream& read_one(FN&& fn)
+            requires(std::is_invocable_v<FN, nbt_read_stream&>)
+        {
+            advance();
+            nbt_read_stream inner(read_stream);
+            fn(inner);
+            return *this;
+        }
 
-            template <class FN>
-            nbt_read_list_stream& iterable(FN&& fn)
-                requires(std::is_invocable_v<FN, nbt_read_stream&>)
-            {
-                while (current_item != items)
-                    read_one(fn);
-                return *this;
-            }
-        };
+        template <class FN>
+        nbt_read_list_stream& iterable(FN&& fn)
+            requires(std::is_invocable_v<FN, nbt_read_stream&>)
+        {
+            while (current_item != items)
+                read_one(fn);
+            return *this;
+        }
+    };
 
-        class nbt_read_compound_stream {
-            std::istream& read_stream;
-            std::size_t current_item = 0;
-            nbt_type current_type_id;
-            bool enable_collector_strict_order = false;
-            bool reached_end = false;
+    class nbt_read_compound_stream {
+        std::istream& read_stream;
+        std::size_t current_item = 0;
+        nbt_type current_type_id;
+        bool enable_collector_strict_order = false;
+        bool reached_end = false;
 
-            std::unordered_map<std::string, std::function<void(nbt_read_stream&)>> automated_collector;
-            std::vector<std::string> collector_strict_order_data;
+        std::unordered_map<std::string, std::function<void(nbt_read_stream&)>> automated_collector;
+        std::vector<std::string> collector_strict_order_data;
 
-        public:
-            nbt_read_compound_stream(std::istream& read_stream, bool enable_collector_strict_order);
-            ~nbt_read_compound_stream();
+    public:
+        nbt_read_compound_stream(std::istream& read_stream, bool enable_collector_strict_order);
+        ~nbt_read_compound_stream();
 
-            bool is_reached_end() const noexcept;
+        bool is_reached_end() const noexcept;
 
-            template <class FN>
-            nbt_read_compound_stream& read(FN&& fn)
-                requires(std::is_invocable_v<FN, std::string&, nbt_read_stream&>)
-            {
-                if (reached_end)
-                    throw std::out_of_range("Tried to read value out of compounds range.");
-                auto str = __internal::read_string(read_stream);
-                nbt_read_stream inner(read_stream, current_type_id);
-                fn(str, inner);
-                current_type_id = __internal::read_value<nbt_type>(read_stream);
-                if (current_type_id == nbt_type::tag_end)
-                    reached_end = true;
-                return *this;
-            }
+        template <class FN>
+        nbt_read_compound_stream& read(FN&& fn)
+            requires(std::is_invocable_v<FN, std::string&, nbt_read_stream&>)
+        {
+            if (reached_end)
+                throw std::out_of_range("Tried to read value out of compounds range.");
+            auto str = __internal::read_string(read_stream);
+            nbt_read_stream inner(read_stream, current_type_id);
+            fn(str, inner);
+            current_type_id = __internal::read_value<nbt_type>(read_stream);
+            if (current_type_id == nbt_type::tag_end)
+                reached_end = true;
+            return *this;
+        }
 
-            template <class FN>
-            nbt_read_compound_stream& iterable(FN&& fn)
-                requires(std::is_invocable_v<FN, std::string&, nbt_read_stream&>)
-            {
-                while (reached_end == false)
-                    read(fn);
-                return *this;
-            }
+        template <class FN>
+        nbt_read_compound_stream& iterable(FN&& fn)
+            requires(std::is_invocable_v<FN, std::string&, nbt_read_stream&>)
+        {
+            while (reached_end == false)
+                read(fn);
+            return *this;
+        }
 
-            template <class FN>
-            nbt_read_compound_stream& collect(const std::string& name, FN&& fn)
-                requires(std::is_invocable_v<FN, nbt_read_stream&>)
-            {
-                automated_collector[name] = std::forward<FN>(fn);
-                if (enable_collector_strict_order)
-                    collector_strict_order_data.push_back(name);
-                return *this;
-            }
+        template <class FN>
+        nbt_read_compound_stream& collect(const std::string& name, FN&& fn)
+            requires(std::is_invocable_v<FN, nbt_read_stream&>)
+        {
+            automated_collector[name] = std::forward<FN>(fn);
+            if (enable_collector_strict_order)
+                collector_strict_order_data.push_back(name);
+            return *this;
+        }
 
-            nbt_read_compound_stream& collect_into(const std::string& name, bool& res);
-            nbt_read_compound_stream& collect_into(const std::string& name, uint8_t& res);
-            nbt_read_compound_stream& collect_into(const std::string& name, uint16_t& res);
-            nbt_read_compound_stream& collect_into(const std::string& name, uint32_t& res);
-            nbt_read_compound_stream& collect_into(const std::string& name, uint64_t& res);
-            nbt_read_compound_stream& collect_into(const std::string& name, int8_t& res);
-            nbt_read_compound_stream& collect_into(const std::string& name, int16_t& res);
-            nbt_read_compound_stream& collect_into(const std::string& name, int32_t& res);
-            nbt_read_compound_stream& collect_into(const std::string& name, int64_t& res);
-            nbt_read_compound_stream& collect_into(const std::string& name, float& res);
-            nbt_read_compound_stream& collect_into(const std::string& name, double& res);
-            nbt_read_compound_stream& collect_into(const std::string& name, std::string& res);
-            nbt_read_compound_stream& collect_as(const std::string& name, bool& res);
-            nbt_read_compound_stream& collect_as(const std::string& name, uint8_t& res);
-            nbt_read_compound_stream& collect_as(const std::string& name, uint16_t& res);
-            nbt_read_compound_stream& collect_as(const std::string& name, uint32_t& res);
-            nbt_read_compound_stream& collect_as(const std::string& name, uint64_t& res);
-            nbt_read_compound_stream& collect_as(const std::string& name, int8_t& res);
-            nbt_read_compound_stream& collect_as(const std::string& name, int16_t& res);
-            nbt_read_compound_stream& collect_as(const std::string& name, int32_t& res);
-            nbt_read_compound_stream& collect_as(const std::string& name, int64_t& res);
-            nbt_read_compound_stream& collect_as(const std::string& name, float& res);
-            nbt_read_compound_stream& collect_as(const std::string& name, double& res);
-            nbt_read_compound_stream& collect_as(const std::string& name, std::string& res);
+        nbt_read_compound_stream& collect_into(const std::string& name, bool& res);
+        nbt_read_compound_stream& collect_into(const std::string& name, uint8_t& res);
+        nbt_read_compound_stream& collect_into(const std::string& name, uint16_t& res);
+        nbt_read_compound_stream& collect_into(const std::string& name, uint32_t& res);
+        nbt_read_compound_stream& collect_into(const std::string& name, uint64_t& res);
+        nbt_read_compound_stream& collect_into(const std::string& name, int8_t& res);
+        nbt_read_compound_stream& collect_into(const std::string& name, int16_t& res);
+        nbt_read_compound_stream& collect_into(const std::string& name, int32_t& res);
+        nbt_read_compound_stream& collect_into(const std::string& name, int64_t& res);
+        nbt_read_compound_stream& collect_into(const std::string& name, float& res);
+        nbt_read_compound_stream& collect_into(const std::string& name, double& res);
+        nbt_read_compound_stream& collect_into(const std::string& name, std::string& res);
+        nbt_read_compound_stream& collect_into(const std::string& name, nbt_enbt_convert& res);
+        nbt_read_compound_stream& collect_into(const std::string& name, nbt& res);
+        nbt_read_compound_stream& collect_into(const std::string& name,base_objects::uuid& res);
+        nbt_read_compound_stream& collect_into(const std::string& name,base_objects::uuid_hex& res);
+        nbt_read_compound_stream& collect_into(const std::string& name,base_objects::uuid_flat_hex& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, bool& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, uint8_t& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, uint16_t& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, uint32_t& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, uint64_t& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, int8_t& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, int16_t& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, int32_t& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, int64_t& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, float& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, double& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, std::string& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, nbt_enbt_convert& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, nbt& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, base_objects::uuid& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, base_objects::uuid_hex& res);
+        nbt_read_compound_stream& collect_as(const std::string& name, base_objects::uuid_flat_hex& res);
 
-            template <class FN>
-            nbt_read_compound_stream& collect_iterate(const std::string& name, FN&& fn)
-                requires(
-                    std::is_invocable_v<FN, nbt_read_stream&>
-                    || std::is_invocable_v<FN, std::string_view, nbt_read_stream&>
-                    || std::is_invocable_v<FN, const std::string&, nbt_read_stream&>
-                )
-            {
-                automated_collector[name] = [fn](nbt_read_stream& stream) {
-                    stream.iterate(fn);
-                };
-                if (enable_collector_strict_order)
-                    collector_strict_order_data.push_back(name);
-                return *this;
-            }
+        template <class FN>
+        nbt_read_compound_stream& collect_iterate(const std::string& name, FN&& fn)
+            requires(
+                std::is_invocable_v<FN, nbt_read_stream&>
+                || std::is_invocable_v<FN, std::string_view, nbt_read_stream&>
+                || std::is_invocable_v<FN, const std::string&, nbt_read_stream&>
+            )
+        {
+            automated_collector[name] = [fn](nbt_read_stream& stream) {
+                stream.iterate(fn);
+            };
+            if (enable_collector_strict_order)
+                collector_strict_order_data.push_back(name);
+            return *this;
+        }
 
-            template <class FN>
-            nbt_read_compound_stream& make_collect(FN&& on_uncollected)
-                requires(std::is_invocable_v<FN, std::string&, nbt_read_stream&>)
-            {
-                if (!enable_collector_strict_order)
-                    return iterable([this, &on_uncollected](std::string& name, nbt_read_stream& stream) {
-                        if (auto it = automated_collector.find(name); it != automated_collector.end())
-                            it->second(stream);
-                        else
-                            on_uncollected(name, stream);
-                    });
-                else
-                    return iterable([this, order = size_t(0)](std::string& name, nbt_read_stream& stream) mutable {
-                        if (auto& excepted = collector_strict_order_data.at(order++); excepted != name)
-                            throw std::runtime_error("Invalid order, excepted: " + excepted + ", but got: " + name);
-                        automated_collector.at(name)(stream);
-                    });
-            }
+        template <class FN>
+        nbt_read_compound_stream& make_collect(FN&& on_uncollected)
+            requires(std::is_invocable_v<FN, std::string&, nbt_read_stream&>)
+        {
+            if (!enable_collector_strict_order)
+                return iterable([this, &on_uncollected](std::string& name, nbt_read_stream& stream) {
+                    if (auto it = automated_collector.find(name); it != automated_collector.end())
+                        it->second(stream);
+                    else
+                        on_uncollected(name, stream);
+                });
+            else
+                return iterable([this, order = size_t(0)](std::string& name, nbt_read_stream& stream) mutable {
+                    if (auto& excepted = collector_strict_order_data.at(order++); excepted != name)
+                        throw std::runtime_error("Invalid order, excepted: " + excepted + ", but got: " + name);
+                    automated_collector.at(name)(stream);
+                });
+        }
 
-            nbt_read_compound_stream& make_collect();
-            nbt_read_compound_stream& force_all_collect();
-        };
-
+        nbt_read_compound_stream& make_collect();
+        nbt_read_compound_stream& force_all_collect();
+    };
 
 
     class nbt_write_list_stream;
@@ -578,9 +610,22 @@ namespace copper_server::util {
         void write(double res);
         void write(const std::string& res);
         void write(std::string_view res);
+        void write(const nbt_enbt_convert&);
+        void write(nbt_enbt_convert&&);
+        void write(const nbt&);
+        void write(base_objects::uuid res);
+        void write(base_objects::uuid_hex res);
+        void write(base_objects::uuid_flat_hex res);
+
         nbt_write_compound_stream write_compound();
         nbt_write_list_stream write_list();
         nbt_write_list_stream write_list(int32_t fixed_size, nbt_type tag);
+
+
+        void write(const int8_t* arr, uint32_t size);
+        void write(const uint8_t* arr, uint32_t size);
+        void write(const int32_t* arr, uint32_t size);
+        void write(const int64_t* arr, uint32_t size);
 
         nbt_write_stream(std::ostream& write_stream, std::string_view to_write_field_name = "", bool field_required = false, uint16_t depth = 0);
     };
@@ -612,6 +657,12 @@ namespace copper_server::util {
         nbt_write_list_stream& write(double res);
         nbt_write_list_stream& write(const std::string& res);
         nbt_write_list_stream& write(std::string_view res);
+        nbt_write_list_stream& write(const nbt_enbt_convert&);
+        nbt_write_list_stream& write(nbt_enbt_convert&&);
+        nbt_write_list_stream& write(const nbt&);
+        nbt_write_list_stream& write(base_objects::uuid res);
+        nbt_write_list_stream& write(base_objects::uuid_hex res);
+        nbt_write_list_stream& write(base_objects::uuid_flat_hex res);
 
         template <class FN>
         nbt_write_list_stream& write(FN&& fn)
@@ -664,6 +715,12 @@ namespace copper_server::util {
         nbt_write_compound_stream& write(std::string_view filed_name, double res);
         nbt_write_compound_stream& write(std::string_view filed_name, const std::string& res);
         nbt_write_compound_stream& write(std::string_view filed_name, std::string_view res);
+        nbt_write_compound_stream& write(std::string_view filed_name, const nbt_enbt_convert&);
+        nbt_write_compound_stream& write(std::string_view filed_name, nbt_enbt_convert&&);
+        nbt_write_compound_stream& write(std::string_view filed_name, const nbt&);
+        nbt_write_compound_stream& write(std::string_view filed_name, base_objects::uuid res);
+        nbt_write_compound_stream& write(std::string_view filed_name, base_objects::uuid_hex res);
+        nbt_write_compound_stream& write(std::string_view filed_name, base_objects::uuid_flat_hex res);
 
         template <class FN>
         nbt_write_compound_stream& write(std::string_view filed_name, FN&& fn)
@@ -755,64 +812,94 @@ namespace copper_server::util {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_relaxed& collect_into(const std::string& name, base_objects::uuid& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
-            }
-
             compound_relaxed& collect_into(const std::string& name, std::string& res) {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_relaxed& collect_as(const std::string& name, bool& res) {
+            compound_relaxed& collect_into(const std::string& name,nbt_enbt_convert& res){
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+            
+            compound_relaxed& collect_into(const std::string& name, nbt& res){
+                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+
+            compound_relaxed& collect_into(const std::string& name, base_objects::uuid& res) {
+                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+            compound_relaxed& collect_into(const std::string& name, base_objects::uuid_hex& res) {
+                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+            
+            compound_relaxed& collect_into(const std::string& name, base_objects::uuid_flat_hex& res) {
+                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+
+            compound_relaxed& collect_as(const std::string& name, bool& res) {
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_relaxed& collect_as(const std::string& name, uint8_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_relaxed& collect_as(const std::string& name, uint16_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_relaxed& collect_as(const std::string& name, uint32_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_relaxed& collect_as(const std::string& name, uint64_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_relaxed& collect_as(const std::string& name, int8_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_relaxed& collect_as(const std::string& name, int16_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_relaxed& collect_as(const std::string& name, int32_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_relaxed& collect_as(const std::string& name, int64_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_relaxed& collect_as(const std::string& name, float& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_relaxed& collect_as(const std::string& name, double& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
-            }
-
-            compound_relaxed& collect_as(const std::string& name, base_objects::uuid& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_relaxed& collect_as(const std::string& name, std::string& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+
+            compound_relaxed& collect_as(const std::string& name, nbt_enbt_convert& res){
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+            
+            compound_relaxed& collect_as(const std::string& name, nbt& res){
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+
+            compound_relaxed& collect_as(const std::string& name, base_objects::uuid& res) {
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+            compound_relaxed& collect_as(const std::string& name, base_objects::uuid_hex& res) {
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+            
+            compound_relaxed& collect_as(const std::string& name, base_objects::uuid_flat_hex& res) {
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             template <class FN>
@@ -925,65 +1012,95 @@ namespace copper_server::util {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_strict& collect_into(const std::string& name, base_objects::uuid& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
-            }
-
             compound_strict& collect_into(const std::string& name, std::string& res) {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_strict& collect_as(const std::string& name, bool& res) {
+            compound_strict& collect_into(const std::string& name, nbt_enbt_convert& res){
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+            
+            compound_strict& collect_into(const std::string& name, nbt& res){
+                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+
+            compound_strict& collect_into(const std::string& name, base_objects::uuid& res) {
+                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+            compound_strict& collect_into(const std::string& name, base_objects::uuid_hex& res) {
+                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+            
+            compound_strict& collect_into(const std::string& name, base_objects::uuid_flat_hex& res) {
+                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+
+            compound_strict& collect_as(const std::string& name, bool& res) {
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_strict& collect_as(const std::string& name, uint8_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_strict& collect_as(const std::string& name, uint16_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_strict& collect_as(const std::string& name, uint32_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_strict& collect_as(const std::string& name, uint64_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_strict& collect_as(const std::string& name, int8_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_strict& collect_as(const std::string& name, int16_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_strict& collect_as(const std::string& name, int32_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_strict& collect_as(const std::string& name, int64_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_strict& collect_as(const std::string& name, float& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_strict& collect_as(const std::string& name, double& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
-            }
-
-            compound_strict& collect_as(const std::string& name, base_objects::uuid& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_strict& collect_as(const std::string& name, std::string& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
+            compound_strict& collect_as(const std::string& name, nbt_enbt_convert& res){
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+            
+            compound_strict& collect_as(const std::string& name, nbt& res){
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+
+            compound_strict& collect_as(const std::string& name, base_objects::uuid& res) {
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+            compound_strict& collect_as(const std::string& name, base_objects::uuid_hex& res) {
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+            
+            compound_strict& collect_as(const std::string& name, base_objects::uuid_flat_hex& res) {
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+
 
             template <class FN>
             compound_strict& collect_iterate(const std::string& name, FN&& fn)
@@ -1118,64 +1235,94 @@ namespace copper_server::util {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_flex& collect_into(const std::string& name, base_objects::uuid& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
-            }
-
             compound_flex& collect_into(const std::string& name, std::string& res) {
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_flex& collect_as(const std::string& name, bool& res) {
+            compound_flex& collect_into(const std::string& name, nbt_enbt_convert& res){
                 return collect(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+            
+            compound_flex& collect_into(const std::string& name, nbt& res){
+                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+
+            compound_flex& collect_into(const std::string& name, base_objects::uuid& res) {
+                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+            compound_flex& collect_into(const std::string& name, base_objects::uuid_hex& res) {
+                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+            
+            compound_flex& collect_into(const std::string& name, base_objects::uuid_flat_hex& res) {
+                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+
+            compound_flex& collect_as(const std::string& name, bool& res) {
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as(const std::string& name, uint8_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as(const std::string& name, uint16_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as(const std::string& name, uint32_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as(const std::string& name, uint64_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as(const std::string& name, int8_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as(const std::string& name, int16_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as(const std::string& name, int32_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as(const std::string& name, int64_t& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as(const std::string& name, float& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as(const std::string& name, double& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
-            }
-
-            compound_flex& collect_as(const std::string& name, base_objects::uuid& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as(const std::string& name, std::string& res) {
-                return collect(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+
+            compound_flex& collect_as(const std::string& name, nbt_enbt_convert& res) {
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+
+            compound_flex& collect_as(const std::string& name, nbt& res){
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+
+            compound_flex& collect_as(const std::string& name, base_objects::uuid& res) {
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+            compound_flex& collect_as(const std::string& name, base_objects::uuid_hex& res) {
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+            
+            compound_flex& collect_as(const std::string& name, base_objects::uuid_flat_hex& res) {
+                return collect(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             template <class FN>
@@ -1236,64 +1383,94 @@ namespace copper_server::util {
                 return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_flex& collect_into_required(const std::string& name, base_objects::uuid& res) {
-                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
-            }
-
             compound_flex& collect_into_required(const std::string& name, std::string& res) {
                 return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
             }
 
-            compound_flex& collect_as_required(const std::string& name, bool& res) {
+            compound_flex& collect_into_required(const std::string& name, nbt_enbt_convert& res){
                 return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+            
+            compound_flex& collect_into_required(const std::string& name, nbt& res){
+                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+
+            compound_flex& collect_into_required(const std::string& name, base_objects::uuid& res) {
+                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+            compound_flex& collect_into_required(const std::string& name, base_objects::uuid_hex& res) {
+                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+            
+            compound_flex& collect_into_required(const std::string& name, base_objects::uuid_flat_hex& res) {
+                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
+            }
+
+            compound_flex& collect_as_required(const std::string& name, bool& res) {
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as_required(const std::string& name, uint8_t& res) {
-                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as_required(const std::string& name, uint16_t& res) {
-                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as_required(const std::string& name, uint32_t& res) {
-                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as_required(const std::string& name, uint64_t& res) {
-                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as_required(const std::string& name, int8_t& res) {
-                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as_required(const std::string& name, int16_t& res) {
-                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as_required(const std::string& name, int32_t& res) {
-                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as_required(const std::string& name, int64_t& res) {
-                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as_required(const std::string& name, float& res) {
-                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as_required(const std::string& name, double& res) {
-                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
-            }
-
-            compound_flex& collect_as_required(const std::string& name, base_objects::uuid& res) {
-                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             compound_flex& collect_as_required(const std::string& name, std::string& res) {
-                return collect_required(name, [&res](auto& stream) { stream.read_into(res); });
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+
+            compound_flex& collect_as_required(const std::string& name, nbt_enbt_convert& res) {
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+
+            compound_flex& collect_as_required(const std::string& name, nbt& res){
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+
+            compound_flex& collect_as_required(const std::string& name, base_objects::uuid& res) {
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+            compound_flex& collect_as_required(const std::string& name, base_objects::uuid_hex& res) {
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
+            }
+            
+            compound_flex& collect_as_required(const std::string& name, base_objects::uuid_flat_hex& res) {
+                return collect_required(name, [&res](auto& stream) { stream.read_as(res); });
             }
 
             template <class FN>

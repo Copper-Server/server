@@ -9,7 +9,7 @@ namespace enbt{
 }
 
 namespace copper_server::base_objects {
-    struct uuid {
+    struct uuid { //in nbt stored as 4 ints
         enum class family_t {
             unknown = -1,
             ncs = 0,
@@ -98,6 +98,17 @@ namespace copper_server::base_objects {
             return res;
         }
 
+        // Format: only hex
+        constexpr std::string to_string_flat() const {
+            std::string res;
+            res.reserve(32);
+            for (std::size_t i = 0; i < 16; i++) {
+                res += "0123456789abcdef"[data[i] >> 4];
+                res += "0123456789abcdef"[data[i] & 0xF];
+            }
+            return res;
+        }
+
         static uuid from_string(std::string_view view);//uses from_string_sha1
 
         static uuid from_string_sha1(std::string_view view);
@@ -140,6 +151,16 @@ namespace copper_server::base_objects {
         operator enbt::raw_uuid() const noexcept;
 
         uint8_t data[16];
+    };
+
+    struct uuid_hex : public uuid { //in nbt stored as string using to_string
+        using uuid::uuid;
+        using uuid::operator=;
+    };
+
+    struct uuid_flat_hex : public uuid { //in nbt stored as string using to_string_flat
+        using uuid::uuid;
+        using uuid::operator=;
     };
 }
 

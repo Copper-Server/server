@@ -23,6 +23,17 @@ namespace enbt::io_helper {
     class value_read_stream;
 }
 
+namespace copper_server::util {
+    class nbt_read_stream;
+    class nbt_write_stream;
+
+    namespace nbt_collection {
+        template <template <class...> class map_base>
+        class compound_flex;
+    }
+
+    class nbt_write_compound_stream;
+}
 namespace copper_server::api::packets {
     struct slot;
 }
@@ -170,6 +181,12 @@ namespace copper_server::base_objects {
 
         copper_server::api::packets::slot to_packet() const;
         static slot_data from_packet(copper_server::api::packets::slot&&);
+
+        void to_nbt(util::nbt_write_stream& stream) const;
+        static slot_data from_nbt(util::nbt_read_stream& stream);
+
+        void to_nbt_base(util::nbt_write_compound_stream& stream) const;
+        void from_nbt_base(util::nbt_collection::compound_flex<std::unordered_map>& collector);
 
     private:
         friend struct static_slot_data;

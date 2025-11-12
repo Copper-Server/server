@@ -26,7 +26,7 @@ std::map<std::string, std::string> type_map = {
     {"BlockState", "base_objects::block"},
     {"ComponentMap", "std::unordered_map<int32_t, base_objects::component>"},
     {"ContainerLock", "base_objects::block_entity::container_lock"},
-    {"DefaultedList<ItemStack>", "std::array<base_objects::slot, "},
+    {"DefaultedList<ItemStack>", "base_objects::container_sized< "},
     {"Either<CreakingEntity, UUID>", "base_objects::identifier"},
     {"Identifier", "base_objects::identifier"},
     {"Inventory", "base_objects::slot_data"}, //TODO investigate more
@@ -88,7 +88,7 @@ std::string camel_to_snake(const std::string& input) {
 bool is_sized_required(const std::string& java_type) {
     if (type_map.count(java_type)) {
         const auto& mapped = type_map.at(java_type);
-        return mapped.starts_with("std::array<") && !mapped.ends_with('>');
+        return (mapped.starts_with("std::array<") || mapped.starts_with("base_objects::container_sized<")) && !mapped.ends_with('>');
     }
     return false;
 }
@@ -222,12 +222,43 @@ void generate_to_nbt_body(std::ostream& out, const std::string& parent_accessor,
     for (const auto& pair : fields_node) {
         const pt::ptree& field = pair.second;
         std::string field_name = get_field_name(field.get<std::string>("name"));
-        std::string nbt_name = field.get<std::string>("nbt_name");
         std::string preservation = field.get<std::string>("preservation");
         std::string java_type = field.get<std::string>("type");
         std::string current_accessor = parent_accessor + "." + field_name;
 
-        if (nbt_name == "_____UNKNOWN_____")
+        auto nested_fields_opt = field.get_child_optional("nested_fields");
+        if (nested_fields_opt && type_map.contains(java_type)) {
+            std::string base_accessor = current_accessor;
+            bool is_opt = is_optional(java_type) || preservation == "OPTIONAL";
+            if (is_opt) {
+                out << indent << "if (" << base_accessor << ") {\n";
+                std::string indent_inner((indent_level + 1) * 4, ' ');
+                for (const auto& nested_pair : *nested_fields_opt) {
+                    const pt::ptree& nested_field = nested_pair.second;
+                    auto nested_nbt_name_opt = nested_field.get_optional<std::string>("nbt_name");
+                    if (!nested_nbt_name_opt || *nested_nbt_name_opt == "_____UNKNOWN_____")
+                        continue;
+                    std::string nested_field_name = get_field_name(nested_field.get<std::string>("name"));
+                    std::string nested_value_accessor = base_accessor + "->" + nested_field_name;
+                    out << indent_inner << stream_name << ".write(\"" << *nested_nbt_name_opt << "\", [this](util::nbt_write_stream& stream) { util::encoding::nbt::serialize_entry(stream, " << nested_value_accessor << "); });\n";
+                }
+                out << indent << "}\n";
+            } else {
+                for (const auto& nested_pair : *nested_fields_opt) {
+                    const pt::ptree& nested_field = nested_pair.second;
+                    auto nested_nbt_name_opt = nested_field.get_optional<std::string>("nbt_name");
+                    if (!nested_nbt_name_opt || *nested_nbt_name_opt == "_____UNKNOWN_____")
+                        continue;
+                    std::string nested_field_name = get_field_name(nested_field.get<std::string>("name"));
+                    std::string nested_value_accessor = base_accessor + "." + nested_field_name;
+                    out << indent << stream_name << ".write(\"" << *nested_nbt_name_opt << "\", [this](util::nbt_write_stream& stream) { util::encoding::nbt::serialize_entry(stream, " << nested_value_accessor << "); });\n";
+                }
+            }
+            continue;
+        }
+
+        auto nbt_name = field.get_optional<std::string>("nbt_name");
+        if (!nbt_name || *nbt_name == "_____UNKNOWN_____")
             continue;
 
         if (preservation == "OPTIONAL") {
@@ -237,7 +268,7 @@ void generate_to_nbt_body(std::ostream& out, const std::string& parent_accessor,
         } else
             out << indent;
 
-        out << stream_name << ".write(\"" << nbt_name << "\", [this](util::nbt_write_stream& stream) {";
+        out << stream_name << ".write(\"" << *nbt_name << "\", [this](util::nbt_write_stream& stream) {";
 
         if (field.get_child_optional("nested_fields") && !type_map.contains(java_type)) {
             out << "\n"
@@ -279,13 +310,51 @@ void generate_from_nbt_body(std::ostream& out, const std::string& result_accesso
     for (const auto& pair : fields_node) {
         const pt::ptree& field = pair.second;
         std::string field_name = get_field_name(field.get<std::string>("name"));
-        std::string nbt_name = field.get<std::string>("nbt_name");
+        auto nbt_name_opt = field.get_optional<std::string>("nbt_name");
+        auto nested_fields_opt = field.get_child_optional("nested_fields");
         std::string preservation = field.get<std::string>("preservation");
         std::string java_type = field.get<std::string>("type");
         std::string current_accessor = result_accessor + "." + field_name;
 
-        if (nbt_name == "_____UNKNOWN_____")
+
+        if (!nbt_name_opt && nested_fields_opt && type_map.contains(java_type)) {
+            bool is_opt = is_optional(java_type) || preservation == "OPTIONAL";
+            // Iterate through the nested JSON fields (x, y, z).
+            for (const auto& nested_pair : *nested_fields_opt) {
+                const pt::ptree& nested_field = nested_pair.second;
+                auto nested_nbt_name_opt = nested_field.get_optional<std::string>("nbt_name");
+                if (!nested_nbt_name_opt || *nested_nbt_name_opt == "_____UNKNOWN_____")
+                    continue;
+
+                std::string nested_field_name = get_field_name(nested_field.get<std::string>("name"));
+                std::string nested_value_accessor = current_accessor;
+                if (is_opt)
+                    nested_value_accessor += "->";
+                else
+                    nested_value_accessor += ".";
+                nested_value_accessor += nested_field_name;
+
+                // Use 'collect' for optional and 'collect_required' for required fields.
+                std::string collect_method = is_opt ? "collect" : "collect_required";
+
+                out << "\n"
+                    << indent << "." << collect_method << "(\"" << *nested_nbt_name_opt << "\", [&ref](util::nbt_read_stream& stream) {";
+                // If the parent object is optional, we must create it before setting a member.
+                if (is_opt) {
+                    out << "\n"
+                        << indent << "    if (!" << current_accessor << ") " << current_accessor << ".emplace();";
+                }
+                out << "\n"
+                    << indent << "    util::encoding::nbt::deserialize_entry(" << nested_value_accessor << ", stream);";
+                out << "\n"
+                    << indent << "})";
+            }
+            continue; // Skip the original logic for this field.
+        }
+
+        if (!nbt_name_opt || *nbt_name_opt == "_____UNKNOWN_____")
             continue;
+
 
         std::string collect_method;
         if (java_type.starts_with("List<") || java_type == "ComponentMap")
@@ -294,13 +363,13 @@ void generate_from_nbt_body(std::ostream& out, const std::string& result_accesso
             collect_method = (preservation == "REQUIRED" || preservation == "REQUIRED_DEFAULT_EMPTY") ? "collect_required" : "collect";
 
         out << "\n"
-            << indent << "." << collect_method << "(\"" << nbt_name << "\", [&ref](util::nbt_read_stream& stream) {";
+            << indent << "." << collect_method << "(\"" << *nbt_name_opt << "\", [&ref](util::nbt_read_stream& stream) {";
 
-        if (field.get_child_optional("nested_fields") && !type_map.contains(java_type)) {
+        if (nested_fields_opt && !type_map.contains(java_type)) {
             out << "\n"
                 << indent << "    util::nbt_collection::compound_flex flex;\n"
                 << indent << "    flex";
-            generate_from_nbt_body(out, current_accessor, prev_structs + "::" + field_name + "_t", field.get_child("nested_fields"), indent_level + 1);
+            generate_from_nbt_body(out, current_accessor, prev_structs + "::" + field_name + "_t", *nested_fields_opt, indent_level + 1);
             out << "\n"
                 << indent << "        .make_collect(stream);\n"
                 << indent << "})";
@@ -400,6 +469,7 @@ int main(int argc, char* argv[]) {
                    "#include <src/base_objects/component.hpp>\n"
                    "#include <src/base_objects/slot.hpp>\n"
                    "#include <src/base_objects/uuid.hpp>\n"
+                   "#include <src/base_objects/container.hpp>\n"
                    "\n"
                    "namespace copper_server::util {\n"
                    "    class nbt_read_stream;\n"
@@ -414,6 +484,7 @@ int main(int argc, char* argv[]) {
                                  "#include <src/util/reflect.hpp>\n"
                                  "#include <src/util/reflect/api/packets/slot.hpp>\n"
                                  "#include <src/util/reflect/api/packets/types.hpp>\n"
+                                 "#include <src/util/reflect/base_objects/block_entity.hpp>\n"
                                  "#include <src/util/reflect/base_objects/component.hpp>\n"
                                  "#include <src/util/reflect/base_objects/dye_color.hpp>\n"
 

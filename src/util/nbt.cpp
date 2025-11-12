@@ -6,9 +6,20 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <istream>
 #include <src/util/nbt.hpp>
 
 namespace copper_server::util {
+    template <class T>
+    T read_value(std::istream& read_stream) {
+        T res;
+        read_stream.read((char*)&res, sizeof(T));
+        if constexpr (sizeof(T) != 1)
+            return enbt::endian_helpers::convert_endian(std::endian::big, res);
+        else
+            return res;
+    }
+
 #pragma region NBT
 
     void nbt::clear() {
@@ -633,19 +644,19 @@ namespace copper_server::util {
         }
     }
 
-    void nbt_enbt_convert::BuildCompoundItem(const std::string& c_name, const enbt::value& comp, bool compress) {
-        if (c_name.size() > UINT16_MAX)
-            throw std::out_of_range("enbt::value string too big to fit in nbt_enbt_convert");
+    void nbt_enbt_convert::BuildCompoundItem(std::string_view c_name, const enbt::value& comp, bool compress) {
         InsertType(comp.type_id());
-        insertValue((uint16_t)c_name.size());
-        insertString(c_name.data(), c_name.size());
+        bool negate_zero = c_name.ends_with('\0');
+        insertValue<uint16_t>(c_name.size() - negate_zero);
+        insertString(c_name.data(), c_name.size() - negate_zero);
         RecursiveBuilder(comp, false, "", compress, false);
     }
 
-    void nbt_enbt_convert::BuildCompound(const std::string& c_name, const enbt::value& comp, bool compress, bool insert_name) {
+    void nbt_enbt_convert::BuildCompound(std::string_view c_name, const enbt::value& comp, bool compress, bool insert_name) {
         if (insert_name) {
-            insertValue((uint16_t)c_name.size());
-            insertString(c_name.data(), c_name.size());
+            bool negate_zero = c_name.ends_with('\0');
+            insertValue<uint16_t>(c_name.size() - negate_zero);
+            insertString(c_name.data(), c_name.size() - negate_zero);
         }
 
         for (const auto& [name, tmp] : comp) {
@@ -814,7 +825,7 @@ namespace copper_server::util {
         BuildArray((int32_t)enbt.size(), enbt, base_type, compress);
     }
 
-    void nbt_enbt_convert::RecursiveBuilder(const enbt::value& enbt, bool insert_type, const std::string& name, bool compress, bool insert_name) {
+    void nbt_enbt_convert::RecursiveBuilder(const enbt::value& enbt, bool insert_type, std::string_view name, bool compress, bool insert_name) {
         switch (enbt.get_type()) {
         case enbt::type::none:
             if (insert_type)
@@ -837,10 +848,9 @@ namespace copper_server::util {
             if (insert_type)
                 nbt_data.push_back(8);
             const std::string& str = (const std::string&)enbt;
-            if (((uint16_t)str.size()) != str.size())
-                throw std::runtime_error("Unsupported string len");
-            insertValue((uint16_t)str.size());
-            insertString(str.data(), str.size());
+            bool negate_zero = str.ends_with('\0');
+            insertValue<uint16_t>(str.size() - negate_zero);
+            insertString(str.data(), str.size() - negate_zero);
             break;
         }
         case enbt::type::uuid: {
@@ -967,7 +977,342 @@ namespace copper_server::util {
     }
 
 #pragma endregion
+#pragma region NBT_TO_NBT
 
+    void nbt_enbt_convert::BuildCompoundItem(std::string_view c_name, const nbt& comp) {
+        insertValue(comp.get_type());
+        bool negate_zero = c_name.ends_with('\0');
+        insertValue<uint16_t>(c_name.size() - negate_zero);
+        insertString(c_name.data(), c_name.size() - negate_zero);
+        RecursiveBuilder(comp, false, "", false);
+    }
+
+    void nbt_enbt_convert::RecursiveBuilder(const nbt& comp, bool insert_type, std::string_view name, bool insert_name) {
+        switch (comp.get_type()) {
+        case nbt_type::tag_end:
+            if (insert_type)
+                nbt_data.push_back(0);
+            break;
+        case nbt_type::tag_byte:
+            if (insert_type)
+                nbt_data.push_back(1);
+            nbt_data.push_back(comp.get_byte());
+            break;
+        case nbt_type::tag_short:
+            if (insert_type)
+                nbt_data.push_back(2);
+            insertValue(comp.get_short());
+            break;
+        case nbt_type::tag_int:
+            if (insert_type)
+                nbt_data.push_back(3);
+            insertValue(comp.get_int());
+            break;
+        case nbt_type::tag_long:
+            if (insert_type)
+                nbt_data.push_back(4);
+            insertValue(comp.get_long());
+            break;
+        case nbt_type::tag_float:
+            if (insert_type)
+                nbt_data.push_back(5);
+            insertValue(comp.get_float());
+            break;
+        case nbt_type::tag_double:
+            if (insert_type)
+                nbt_data.push_back(6);
+            insertValue(comp.get_double());
+            break;
+        case nbt_type::tag_byte_array: {
+            if (insert_type)
+                nbt_data.push_back(7);
+            auto& arr = comp.get_byte_array();
+            insertValue<int32_t>(arr.size());
+            nbt_data.push_back(arr);
+            break;
+        }
+        case nbt_type::tag_string: {
+            if (insert_type)
+                nbt_data.push_back(8);
+            const std::string& str = comp.get_string();
+            bool negate_zero = str.ends_with('\0');
+            insertValue<uint16_t>(str.size() - negate_zero);
+            insertString(str.data(), str.size() - negate_zero);
+            break;
+        }
+        case nbt_type::tag_list:
+            if (insert_type)
+                nbt_data.push_back(9);
+            auto& arr = comp.get_list();
+            if (arr.size())
+                insertValue(arr[0].get_type());
+            else
+                insertValue(nbt_type::tag_end);
+            insertValue<int32_t>(arr.size());
+            for (auto& it : arr)
+                RecursiveBuilder(it, false, "", false);
+            break;
+        case nbt_type::tag_compound:
+            if (insert_type)
+                nbt_data.push_back(10);
+            auto& components = comp.get_compound();
+            if (name.size() > UINT16_MAX)
+                throw std::out_of_range("nbt compound is too big to fit in actual format");
+            if (insert_name) {
+                bool negate_zero = name.ends_with('\0');
+                insertValue<uint16_t>(name.size() - negate_zero);
+                insertString(name.data(), name.size() - negate_zero);
+            }
+
+            for (const auto& [name, tmp] : components)
+                BuildCompoundItem(name, tmp);
+            InsertType(enbt::type::none);
+            break;
+        case nbt_type::tag_int_array:
+            if (insert_type)
+                nbt_data.push_back(11);
+            auto& arr = comp.get_int_array();
+            insertValue<int32_t>(arr.size());
+            for (auto& it : arr)
+                insertValue(it);
+            break;
+        case nbt_type::tag_long_array:
+            if (insert_type)
+                nbt_data.push_back(12);
+            auto& arr = comp.get_long_array();
+            insertValue<int32_t>(arr.size());
+            for (auto& it : arr)
+                insertValue(it);
+            break;
+        default:
+            throw std::runtime_error("Unsupported tag");
+        }
+    }
+
+    template <class T>
+    nbt nbt_enbt_convert::extractArray_NBT(const uint8_t* data, size_t& i, size_t max_size) {
+        int32_t len = extractValue<int32_t>(data, i, max_size);
+        if (i + sizeof(T) * len >= max_size)
+            throw std::out_of_range("Out of bounds");
+        list_array<T> ret;
+        ret.reserve(len);
+        for (int32_t j = 0; j < len; j++)
+            ret.push_back(uncheckedExtractValue<T>(data, i));
+        return nbt(ret);
+    }
+
+    nbt nbt_enbt_convert::RecursiveExtractor_1_NBT(uint8_t type, const uint8_t* data, size_t& i, size_t max_size) {
+        switch (type) {
+        case 0: //end
+            return nbt();
+        case 1: //byte
+            return nbt(extractValue<int8_t>(data, i, max_size));
+        case 2: //short
+            return nbt(extractValue<int16_t>(data, i, max_size));
+        case 3: //int
+            return nbt(extractValue<int32_t>(data, i, max_size));
+        case 4: //long
+            return nbt(extractValue<int64_t>(data, i, max_size));
+        case 5: //float
+            return nbt(extractValue<float>(data, i, max_size));
+        case 6: //double
+            return nbt(extractValue<double>(data, i, max_size));
+        case 7: //byte array
+            return extractArray_NBT<int8_t>(data, i, max_size);
+        case 8: { //string
+            uint16_t length = extractValue<uint16_t>(data, i, max_size);
+            if (i + length > max_size)
+                throw std::out_of_range("Out of bounds");
+            i += length;
+            return nbt((const char*)data + i - length, length);
+        }
+        case 9: { //list
+            uint8_t list_type = data[i++];
+            int32_t length = extractValue<int32_t>(data, i, max_size);
+            if (length < 0)
+                length = 0;
+            list_array<nbt> res;
+            res.reserve(length);
+            for (int32_t iterate = 0; iterate < length; iterate++)
+                res.emplace_back(RecursiveExtractor_1_NBT(list_type, data, i, max_size));
+            return nbt(res);
+        }
+        case 10: { //compound
+            std::unordered_map<std::string, nbt> compound;
+            while (true) {
+                uint8_t compound_type = data[i++];
+                if (!compound_type)
+                    break;
+                uint16_t length = extractValue<uint16_t>(data, i, max_size);
+                if (i + length >= max_size)
+                    throw std::out_of_range("Out of bounds");
+                std::string res(data + i, data + i + length);
+                i += length;
+                compound[res] = RecursiveExtractor_1_NBT(compound_type, data, i, max_size);
+            }
+            return compound;
+        }
+        case 11: { //int array
+            int32_t length = extractValue<int32_t>(data, i, max_size);
+            if (i + length * 4 >= max_size)
+                throw std::out_of_range("Out of bounds");
+            i += length * 4;
+            return nbt(list_array<int32_t>((const int32_t*)data, length));
+        }
+        case 12: { //long array
+            int32_t length = extractValue<int32_t>(data, i, max_size);
+            if (i + length * 8 >= max_size)
+                throw std::out_of_range("Out of bounds");
+            i += length * 8;
+            return nbt(list_array<int64_t>((const int64_t*)data, length));
+        }
+        default:
+            throw std::runtime_error("Invalid type");
+        }
+    }
+
+    nbt nbt_enbt_convert::RecursiveExtractor_NBT(const uint8_t* data, size_t& i, size_t max_size) {
+        if (max_size == 0)
+            return nbt();
+        if (data[0] == 10) {
+            //skip first base compound name tag
+            i++;
+            i += extractValue<uint16_t>(data, i, max_size);
+            return RecursiveExtractor_1_NBT(10, data, i, max_size);
+        }
+        return RecursiveExtractor_1_NBT(data[i++], data, i, max_size);
+    }
+
+    nbt nbt_enbt_convert::RecursiveExtractorNetwork_NBT(const uint8_t* data, size_t& i, size_t max_size) {
+        if (max_size == 0)
+            return nbt();
+        return RecursiveExtractor_1_NBT(data[i++], data, i, max_size);
+    }
+
+#pragma endregion
+
+#pragma region STREAM_TO_NBT
+
+    void nbt_enbt_convert::RecursiveBuilder(nbt_type type, std::istream& stream, bool insert_type) {
+        switch (type) {
+        case nbt_type::tag_end:
+            if (insert_type)
+                nbt_data.push_back(0);
+            break;
+        case nbt_type::tag_byte:
+            if (insert_type)
+                nbt_data.push_back(1);
+            nbt_data.push_back(read_value<int8_t>(stream));
+            break;
+        case nbt_type::tag_short:
+            if (insert_type)
+                nbt_data.push_back(2);
+            insertValue(read_value<int16_t>(stream));
+            break;
+        case nbt_type::tag_int:
+            if (insert_type)
+                nbt_data.push_back(3);
+            insertValue(read_value<int32_t>(stream));
+            break;
+        case nbt_type::tag_long:
+            if (insert_type)
+                nbt_data.push_back(4);
+            insertValue(read_value<int64_t>(stream));
+            break;
+        case nbt_type::tag_float:
+            if (insert_type)
+                nbt_data.push_back(5);
+            insertValue(read_value<float>(stream));
+            break;
+        case nbt_type::tag_double:
+            if (insert_type)
+                nbt_data.push_back(6);
+            insertValue(read_value<double>(stream));
+            break;
+        case nbt_type::tag_byte_array: {
+            if (insert_type)
+                nbt_data.push_back(7);
+            int32_t size = read_value<int32_t>(stream);
+            insertValue(size);
+            list_array<uint8_t> arr;
+            arr.resize(size);
+            stream.read((char*)arr.data(), size);
+            nbt_data.push_back(arr);
+            break;
+        }
+        case nbt_type::tag_string: {
+            if (insert_type)
+                nbt_data.push_back(8);
+            uint16_t size = read_value<uint16_t>(stream);
+            insertValue(size);
+            list_array<uint8_t> arr;
+            arr.resize(size);
+            stream.read((char*)arr.data(), size);
+            nbt_data.push_back(arr);
+            break;
+        }
+        case nbt_type::tag_list: {
+            if (insert_type)
+                nbt_data.push_back(9);
+            auto type = read_value<nbt_type>(stream);
+            insertValue(type);
+            int32_t size = read_value<int32_t>(stream);
+            insertValue(size);
+            for (int32_t i = 0; i < size; i++)
+                RecursiveBuilder(type, stream, false);
+            break;
+        }
+        case nbt_type::tag_compound: {
+            if (insert_type)
+                nbt_data.push_back(10);
+            uint16_t size = read_value<uint16_t>(stream);
+            insertValue(size);
+            list_array<uint8_t> arr;
+            arr.resize(size);
+            stream.read((char*)arr.data(), size);
+            nbt_data.push_back(arr);
+            nbt_type curr_type;
+            while ((curr_type = read_value<nbt_type>(stream)) != nbt_type::tag_end) {
+                insertValue(curr_type);
+
+                uint16_t size = read_value<uint16_t>(stream);
+                insertValue(size);
+                list_array<uint8_t> arr;
+                arr.resize(size);
+                stream.read((char*)arr.data(), size);
+                nbt_data.push_back(arr);
+
+                RecursiveBuilder(curr_type, stream, false);
+            }
+            insertValue(curr_type);
+            break;
+        }
+        case nbt_type::tag_int_array: {
+            if (insert_type)
+                nbt_data.push_back(11);
+            int32_t size = read_value<int32_t>(stream);
+            list_array<uint8_t> arr;
+            arr.resize(size * sizeof(int32_t));
+            stream.read((char*)arr.data(), size * sizeof(int32_t));
+            nbt_data.push_back(arr);
+            break;
+        }
+        case nbt_type::tag_long_array: {
+            if (insert_type)
+                nbt_data.push_back(12);
+            int32_t size = read_value<int32_t>(stream);
+            list_array<uint8_t> arr;
+            arr.resize(size * sizeof(int64_t));
+            stream.read((char*)arr.data(), size * sizeof(int64_t));
+            nbt_data.push_back(arr);
+            break;
+        }
+        default:
+            throw std::runtime_error("Unsupported tag");
+        }
+    }
+
+#pragma endregion
     nbt_enbt_convert::nbt_enbt_convert() {}
 
     enbt::value nbt_enbt_convert::readNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size) {
@@ -975,8 +1320,13 @@ namespace copper_server::util {
         return RecursiveExtractor(data, nbt_size, max_size);
     }
 
-    nbt_enbt_convert nbt_enbt_convert::readNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress, const std::string& entry_name) {
-        return build(readNBT_asENBT(data, max_size, nbt_size), compress, entry_name);
+    nbt nbt_enbt_convert::readNBT_asNBT(const uint8_t* data, size_t max_size, size_t& nbt_size) {
+        nbt_size = 0;
+        return RecursiveExtractor_NBT(data, nbt_size, max_size);
+    }
+
+    nbt_enbt_convert nbt_enbt_convert::readNBT(const uint8_t* data, size_t max_size, size_t& nbt_size) {
+        return build(readNBT_asNBT(data, max_size, nbt_size));
     }
 
     enbt::value nbt_enbt_convert::readNetworkNBT_asENBT(const uint8_t* data, size_t max_size, size_t& nbt_size) {
@@ -984,16 +1334,33 @@ namespace copper_server::util {
         return RecursiveExtractorNetwork(data, nbt_size, max_size);
     }
 
-    nbt_enbt_convert nbt_enbt_convert::readNetworkNBT(const uint8_t* data, size_t max_size, size_t& nbt_size, bool compress, const std::string& entry_name) {
-        return build(readNetworkNBT_asENBT(data, max_size, nbt_size), compress, entry_name);
+    nbt nbt_enbt_convert::readNetworkNBT_asNBT(const uint8_t* data, size_t max_size, size_t& nbt_size) {
+        nbt_size = 0;
+        return RecursiveExtractorNetwork_NBT(data, nbt_size, max_size);
+    }
+
+    nbt_enbt_convert nbt_enbt_convert::readNetworkNBT(const uint8_t* data, size_t max_size, size_t& nbt_size) {
+        return build(readNetworkNBT_asNBT(data, max_size, nbt_size));
     }
 
     nbt_enbt_convert::nbt_enbt_convert(nbt_enbt_convert&& move)
-        : nbt_data(std::move(move)) {}
+        : nbt_data(std::move(move.nbt_data)) {}
+
+    nbt_enbt_convert::nbt_enbt_convert(const nbt_enbt_convert& copy) : nbt_data(copy.nbt_data) {}
+
+    nbt_enbt_convert& nbt_enbt_convert::operator=(nbt_enbt_convert&& move) {
+        nbt_data = std::move(move.nbt_data);
+        return *this;
+    }
+
+    nbt_enbt_convert& nbt_enbt_convert::operator=(const nbt_enbt_convert& copy) {
+        nbt_data = copy.nbt_data;
+        return *this;
+    }
 
     nbt_enbt_convert::~nbt_enbt_convert() = default;
 
-    nbt_enbt_convert nbt_enbt_convert::build(const enbt::value& enbt, bool compress, const std::string& entry_name) {
+    nbt_enbt_convert nbt_enbt_convert::build(const enbt::value& enbt, bool compress, std::string_view entry_name) {
         nbt_enbt_convert ret;
         ret.RecursiveBuilder(enbt, true, entry_name, compress, true);
         return ret;
@@ -1005,6 +1372,12 @@ namespace copper_server::util {
         return ret;
     }
 
+    nbt_enbt_convert nbt_enbt_convert::build(const nbt& comp, std::string_view entry_name) {
+        nbt_enbt_convert ret;
+        ret.RecursiveBuilder(comp, true, entry_name, true);
+        return ret;
+    }
+
     nbt_enbt_convert nbt_enbt_convert::build_network(const list_array<uint8_t>& data) {
         nbt_enbt_convert ret;
         ret.nbt_data = data;
@@ -1012,6 +1385,21 @@ namespace copper_server::util {
         if (ret.nbt_data[0] == 10)
             ret.nbt_data.insert(1, tmp, 2); //add length to fix it
 
+        return ret;
+    }
+
+    nbt_enbt_convert nbt_enbt_convert::build(nbt_type type, std::istream& stream) {
+        nbt_enbt_convert ret;
+        ret.RecursiveBuilder(type, stream, true);
+        return ret;
+    }
+
+    nbt_enbt_convert nbt_enbt_convert::build_network(nbt_type type, std::istream& stream) {
+        nbt_enbt_convert ret;
+        ret.RecursiveBuilder(type, stream, true);
+        uint8_t tmp[] = {0, 0};
+        if (ret.nbt_data[0] == 10)
+            ret.nbt_data.insert(1, tmp, 2); //add length to fix it
         return ret;
     }
 
@@ -1038,6 +1426,11 @@ namespace copper_server::util {
         return RecursiveExtractor(nbt_data.data(), i, nbt_data.size());
     }
 
+    nbt nbt_enbt_convert::get_as_nbt() const {
+        size_t i = 0;
+        return RecursiveExtractor_NBT(nbt_data.data(), i, nbt_data.size());
+    }
+
     std::string nbt_enbt_convert::get_entry_name() const {
         size_t i = 0;
         const uint8_t* data = nbt_data.data();
@@ -1050,8 +1443,17 @@ namespace copper_server::util {
             return "";
     }
 
-    enbt::value nbt_enbt_convert::extract_from_array(const uint8_t* arr, size_t& result, size_t max_size) {
+    enbt::value nbt_enbt_convert::extract_from_array_enbt(const uint8_t* arr, size_t& result, size_t max_size) {
         result = 0;
         return RecursiveExtractor(arr, result, max_size);
+    }
+
+    nbt nbt_enbt_convert::extract_from_array_nbt(const uint8_t* arr, size_t& result, size_t max_size) {
+        result = 0;
+        return RecursiveExtractor_NBT(arr, result, max_size);
+    }
+
+    list_array<uint8_t> nbt_enbt_convert::take_data() {
+        return nbt_data.take();
     }
 }

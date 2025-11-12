@@ -219,6 +219,8 @@ namespace copper_server::base_objects {
 
         struct container_lock;
         struct test_instance;
+        struct sculk_catalyst;
+        struct mob_spawner_entry;
     };
 
     struct viewer_count_manager {
@@ -232,6 +234,24 @@ namespace copper_server::base_objects {
             util::xyz<int32_t> pos;
             chat text;
         };
+    };
+
+    struct block_entity::test_instance {
+        struct error {
+            util::xyz<int32_t> pos;
+            chat text;
+        };
+    };
+
+    struct block_entity::sculk_catalyst {
+        struct listener {
+        };
+    };
+
+    struct block_entity::mob_spawner_entry {
+    };
+
+    struct vibration_listener {
     };
 }
 

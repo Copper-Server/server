@@ -54,9 +54,11 @@ namespace copper_server::util {
             throw std::runtime_error("Invalid read state, item has been already readed");
     }
 
-    nbt_read_stream::nbt_read_stream(std::istream& read_stream)
+    nbt_read_stream::nbt_read_stream(std::istream& read_stream, bool is_root)
         : read_stream(read_stream) {
         current_type_id = __internal::read_value<nbt_type>(read_stream);
+        if (is_root)
+            __internal::read_string(read_stream);
     }
 
     nbt_read_stream::~nbt_read_stream() {
@@ -226,6 +228,38 @@ namespace copper_server::util {
         return *this;
     }
 
+    nbt_read_stream& nbt_read_stream::read_into(nbt_enbt_convert& res) {
+        check_io_state();
+        res = nbt_enbt_convert::build(current_type_id, read_stream);
+        readed = true;
+        return *this;
+    }
+
+    nbt_read_stream& nbt_read_stream::read_into(nbt& res) {
+        check_io_state();
+        res = nbt_enbt_convert::build(current_type_id, read_stream).get_as_nbt();
+        readed = true;
+        return *this;
+    }
+
+    nbt_read_stream& nbt_read_stream::read_into(base_objects::uuid& res) {
+        iterate_into((int32_t*)res.data, 4);
+    }
+
+    nbt_read_stream& nbt_read_stream::read_into(base_objects::uuid_hex& res) {
+        std::string tmp;
+        read_into(tmp);
+        res.from_uuid_string(res, tmp, true);
+        return *this;
+    }
+
+    nbt_read_stream& nbt_read_stream::read_into(base_objects::uuid_flat_hex& res) {
+        std::string tmp;
+        read_into(tmp);
+        res.from_uuid_string(res, tmp, true);
+        return *this;
+    }
+
     nbt_read_stream& nbt_read_stream::read_as(bool& res) {
         check_io_state();
         _read_number(res, current_type_id, read_stream);
@@ -310,6 +344,37 @@ namespace copper_server::util {
         return *this;
     }
 
+    nbt_read_stream& nbt_read_stream::read_as(nbt_enbt_convert& res) {
+        check_io_state();
+        res = nbt_enbt_convert::build(current_type_id, read_stream);
+        readed = true;
+        return *this;
+    }
+
+    nbt_read_stream& nbt_read_stream::read_as(nbt& res) {
+        check_io_state();
+        res = nbt_enbt_convert::build(current_type_id, read_stream).get_as_nbt();
+        return *this;
+    }
+
+    nbt_read_stream& nbt_read_stream::read_as(base_objects::uuid& res) {
+        iterate_into((int32_t*)res.data, 4);
+    }
+
+    nbt_read_stream& nbt_read_stream::read_as(base_objects::uuid_hex& res) {
+        std::string tmp;
+        read_into(tmp);
+        res.from_uuid_string(res, tmp, true);
+        return *this;
+    }
+
+    nbt_read_stream& nbt_read_stream::read_as(base_objects::uuid_flat_hex& res) {
+        std::string tmp;
+        read_into(tmp);
+        res.from_uuid_string(res, tmp, true);
+        return *this;
+    }
+
     void nbt_read_stream::skip() {
         check_io_state();
         readed = true;
@@ -339,7 +404,6 @@ namespace copper_server::util {
             blind_iterate([](auto& name, auto& it) { it.skip(); }, [](auto& it) { it.skip(); });
             return;
         }
-
     }
 
     nbt_type nbt_read_stream::get_type() const {
@@ -455,6 +519,41 @@ namespace copper_server::util {
         return *this;
     }
 
+    nbt_read_list_stream& nbt_read_list_stream::read_one_into(nbt_enbt_convert& res) {
+        advance();
+        nbt_read_stream tmp(read_stream, items_type);
+        tmp.read_into(res);
+        return *this;
+    }
+
+    nbt_read_list_stream& nbt_read_list_stream::read_one_into(nbt& res) {
+        advance();
+        nbt_read_stream tmp(read_stream, items_type);
+        tmp.read_into(res);
+        return *this;
+    }
+
+    nbt_read_list_stream& nbt_read_list_stream::read_one_into(base_objects::uuid& res) {
+        advance();
+        nbt_read_stream tmp(read_stream, items_type);
+        tmp.read_into(res);
+        return *this;
+    }
+
+    nbt_read_list_stream& nbt_read_list_stream::read_one_into(base_objects::uuid_hex& res) {
+        advance();
+        nbt_read_stream tmp(read_stream, items_type);
+        tmp.read_into(res);
+        return *this;
+    }
+
+    nbt_read_list_stream& nbt_read_list_stream::read_one_into(base_objects::uuid_flat_hex& res) {
+        advance();
+        nbt_read_stream tmp(read_stream, items_type);
+        tmp.read_into(res);
+        return *this;
+    }
+
     nbt_read_list_stream& nbt_read_list_stream::read_one_as(bool& res) {
         advance();
         nbt_read_stream tmp(read_stream, items_type);
@@ -539,6 +638,41 @@ namespace copper_server::util {
         return *this;
     }
 
+    nbt_read_list_stream& nbt_read_list_stream::read_one_as(nbt_enbt_convert& res) {
+        advance();
+        nbt_read_stream tmp(read_stream, items_type);
+        tmp.read_as(res);
+        return *this;
+    }
+
+    nbt_read_list_stream& nbt_read_list_stream::read_one_as(nbt& res) {
+        advance();
+        nbt_read_stream tmp(read_stream, items_type);
+        tmp.read_as(res);
+        return *this;
+    }
+
+    nbt_read_list_stream& nbt_read_list_stream::read_one_as(base_objects::uuid& res) {
+        advance();
+        nbt_read_stream tmp(read_stream, items_type);
+        tmp.read_as(res);
+        return *this;
+    }
+
+    nbt_read_list_stream& nbt_read_list_stream::read_one_as(base_objects::uuid_hex& res) {
+        advance();
+        nbt_read_stream tmp(read_stream, items_type);
+        tmp.read_as(res);
+        return *this;
+    }
+
+    nbt_read_list_stream& nbt_read_list_stream::read_one_as(base_objects::uuid_flat_hex& res) {
+        advance();
+        nbt_read_stream tmp(read_stream, items_type);
+        tmp.read_as(res);
+        return *this;
+    }
+
     nbt_read_compound_stream::nbt_read_compound_stream(std::istream& read_stream, bool enable_collector_strict_order) : read_stream(read_stream), enable_collector_strict_order(enable_collector_strict_order) {
         current_type_id = __internal::read_value<nbt_type>(read_stream);
         if (current_type_id == nbt_type::tag_end)
@@ -604,6 +738,26 @@ namespace copper_server::util {
         return collect(name, [&res](auto& stream) { stream.read_into(res); });
     }
 
+    nbt_read_compound_stream& nbt_read_compound_stream::collect_into(const std::string& name, nbt_enbt_convert& res) {
+        return collect(name, [&res](auto& stream) { stream.read_into(res); });
+    }
+
+    nbt_read_compound_stream& nbt_read_compound_stream::collect_into(const std::string& name, nbt& res) {
+        return collect(name, [&res](auto& stream) { stream.read_into(res); });
+    }
+
+    nbt_read_compound_stream& nbt_read_compound_stream::collect_into(const std::string& name, base_objects::uuid& res) {
+        return collect(name, [&res](auto& stream) { stream.read_into(res); });
+    }
+
+    nbt_read_compound_stream& nbt_read_compound_stream::collect_into(const std::string& name, base_objects::uuid_hex& res) {
+        return collect(name, [&res](auto& stream) { stream.read_into(res); });
+    }
+
+    nbt_read_compound_stream& nbt_read_compound_stream::collect_into(const std::string& name, base_objects::uuid_flat_hex& res) {
+        return collect(name, [&res](auto& stream) { stream.read_into(res); });
+    }
+
     nbt_read_compound_stream& nbt_read_compound_stream::collect_as(const std::string& name, bool& res) {
         return collect(name, [&res](auto& stream) { stream.read_as(res); });
     }
@@ -651,6 +805,27 @@ namespace copper_server::util {
     nbt_read_compound_stream& nbt_read_compound_stream::collect_as(const std::string& name, std::string& res) {
         return collect(name, [&res](auto& stream) { stream.read_as(res); });
     }
+
+    nbt_read_compound_stream& nbt_read_compound_stream::collect_as(const std::string& name, nbt_enbt_convert& res) {
+        return collect(name, [&res](auto& stream) { stream.read_as(res); });
+    }
+
+    nbt_read_compound_stream& nbt_read_compound_stream::collect_as(const std::string& name, nbt& res) {
+        return collect(name, [&res](auto& stream) { stream.read_as(res); });
+    }
+
+    nbt_read_compound_stream& nbt_read_compound_stream::collect_as(const std::string& name, base_objects::uuid& res) {
+        return collect(name, [&res](auto& stream) { stream.read_as(res); });
+    }
+
+    nbt_read_compound_stream& nbt_read_compound_stream::collect_as(const std::string& name, base_objects::uuid_hex& res) {
+        return collect(name, [&res](auto& stream) { stream.read_as(res); });
+    }
+
+    nbt_read_compound_stream& nbt_read_compound_stream::collect_as(const std::string& name, base_objects::uuid_flat_hex& res) {
+        return collect(name, [&res](auto& stream) { stream.read_as(res); });
+    }
+
 
     nbt_read_compound_stream& nbt_read_compound_stream::make_collect() {
         if (!enable_collector_strict_order)
@@ -713,9 +888,6 @@ namespace copper_server::util {
         return nbt_read_compound_stream(read_stream, enable_collector_strict_order);
     }
 
-    nbt_type nbt_write_stream::get_written_type() const {
-        return written_type_id;
-    }
 
     nbt_write_list_stream::nbt_write_list_stream(std::ostream& write_stream, uint16_t depth)
         : write_stream(write_stream),
@@ -804,6 +976,31 @@ namespace copper_server::util {
         return write([res](auto& s) { s.write(res); });
     }
 
+    nbt_write_list_stream& nbt_write_list_stream::write(const nbt_enbt_convert& res) {
+        return write([res](auto& s) { s.write(res); });
+    }
+
+    nbt_write_list_stream& nbt_write_list_stream::write(nbt_enbt_convert&& res) {
+        return write([res](auto& s) mutable { s.write(std::move(res)); });
+    }
+
+    nbt_write_list_stream& nbt_write_list_stream::write(const nbt& res) {
+        return write([res](auto& s) { s.write(res); });
+    }
+
+    nbt_write_list_stream& nbt_write_list_stream::write(base_objects::uuid res) {
+        return write([res](auto& s) { s.write(res); });
+    }
+
+    nbt_write_list_stream& nbt_write_list_stream::write(base_objects::uuid_hex res) {
+        return write([res](auto& s) { s.write(res); });
+    }
+
+    nbt_write_list_stream& nbt_write_list_stream::write(base_objects::uuid_flat_hex res) {
+        return write([res](auto& s) { s.write(res); });
+    }
+
+
     nbt_write_compound_stream::nbt_write_compound_stream(std::ostream& write_stream, uint16_t depth) : write_stream(write_stream), depth(depth) {}
 
     nbt_write_compound_stream::~nbt_write_compound_stream() {
@@ -860,6 +1057,34 @@ namespace copper_server::util {
 
     nbt_write_compound_stream& nbt_write_compound_stream::write(std::string_view filed_name, std::string_view res) {
         return write(filed_name, [res](auto& s) { s.write(res); });
+    }
+
+    nbt_write_compound_stream& nbt_write_compound_stream::write(std::string_view filed_name, const nbt_enbt_convert& res) {
+        return write(filed_name, [res](auto& s) { s.write(res); });
+    }
+
+    nbt_write_compound_stream& nbt_write_compound_stream::write(std::string_view filed_name, nbt_enbt_convert&& res) {
+        return write(filed_name, [res](auto& s) mutable { s.write(std::move(res)); });
+    }
+
+    nbt_write_compound_stream& nbt_write_compound_stream::write(std::string_view filed_name, const nbt& res) {
+        return write(filed_name, [res](auto& s) { s.write(res); });
+    }
+
+    nbt_write_compound_stream& nbt_write_compound_stream::write(std::string_view filed_name, base_objects::uuid res) {
+        return write(filed_name, [res](auto& s) { s.write(res); });
+    }
+
+    nbt_write_compound_stream& nbt_write_compound_stream::write(std::string_view filed_name, base_objects::uuid_hex res) {
+        return write(filed_name, [res](auto& s) { s.write(res); });
+    }
+
+    nbt_write_compound_stream& nbt_write_compound_stream::write(std::string_view filed_name, base_objects::uuid_flat_hex res) {
+        return write(filed_name, [res](auto& s) { s.write(res); });
+    }
+
+    nbt_type nbt_write_stream::get_written_type() const {
+        return written_type_id;
     }
 
     void nbt_write_stream::write(bool res) {
@@ -1005,11 +1230,45 @@ namespace copper_server::util {
         write_string(write_stream, res);
     }
 
+    void nbt_write_stream::write(const nbt_enbt_convert& res) {
+        if (already_written)
+            throw std::runtime_error("Invalid write state, item has been already written");
+        auto data = (list_array<uint8_t>)res;
+        written_type_id = static_cast<nbt_type>(data.at(0));
+        already_written = true;
+        write_stream.write((const char*)data.data(), data.size());
+    }
+
+    void nbt_write_stream::write(nbt_enbt_convert&& res) {
+        if (already_written)
+            throw std::runtime_error("Invalid write state, item has been already written");
+        auto data = res.take_data();
+        written_type_id = static_cast<nbt_type>(data.at(0));
+        already_written = true;
+        write_stream.write((const char*)data.data(), data.size());
+    }
+
+    void nbt_write_stream::write(const nbt& res) {
+        write(nbt_enbt_convert::build(res));
+    }
+
+    void nbt_write_stream::write(base_objects::uuid res) {
+        write((int32_t*)res.data, 4);
+    }
+
+    void nbt_write_stream::write(base_objects::uuid_hex res) {
+        write(res.to_string());
+    }
+
+    void nbt_write_stream::write(base_objects::uuid_flat_hex res) {
+        write(res.to_string_flat());
+    }
+
     nbt_write_compound_stream nbt_write_stream::write_compound() {
         if (already_written)
             throw std::runtime_error("Invalid write state, item has been already written");
         already_written = true;
-        written_type_id = nbt_type::tag_list;
+        written_type_id = nbt_type::tag_compound;
         write_value(write_stream, written_type_id);
         if (field_required)
             write_string(write_stream, to_write_field_name);
@@ -1042,6 +1301,52 @@ namespace copper_server::util {
         if (depth == 512)
             throw std::runtime_error("Invalid format, the depth limit is 512");
         return nbt_write_list_stream(write_stream, depth + 1, fixed_size, tag);
+    }
+
+    void nbt_write_stream::write(const int8_t* arr, uint32_t size) {
+        if (already_written)
+            throw std::runtime_error("Invalid write state, item has been already written");
+        already_written = true;
+        written_type_id = nbt_type::tag_byte_array;
+        write_value(write_stream, written_type_id);
+        write_value(write_stream, size);
+        write_stream.write((const char*)arr, size);
+    }
+
+    void nbt_write_stream::write(const uint8_t* arr, uint32_t size) {
+        if (already_written)
+            throw std::runtime_error("Invalid write state, item has been already written");
+        already_written = true;
+        written_type_id = nbt_type::tag_byte_array;
+        write_value(write_stream, written_type_id);
+        write_value(write_stream, size);
+        write_stream.write((const char*)arr, size);
+    }
+
+    void nbt_write_stream::write(const int32_t* arr, uint32_t size) {
+        if (already_written)
+            throw std::runtime_error("Invalid write state, item has been already written");
+        already_written = true;
+        written_type_id = nbt_type::tag_int_array;
+        write_value(write_stream, written_type_id);
+        write_value(write_stream, size);
+        while (size) {
+            write_value(write_stream, *arr++);
+            --size;
+        }
+    }
+
+    void nbt_write_stream::write(const int64_t* arr, uint32_t size) {
+        if (already_written)
+            throw std::runtime_error("Invalid write state, item has been already written");
+        already_written = true;
+        written_type_id = nbt_type::tag_long_array;
+        write_value(write_stream, written_type_id);
+        write_value(write_stream, size);
+        while (size) {
+            write_value(write_stream, *arr++);
+            --size;
+        }
     }
 
     nbt_write_stream::nbt_write_stream(std::ostream& write_stream, std::string_view to_write_field_name, bool field_required, uint16_t depth)

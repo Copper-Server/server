@@ -27,6 +27,7 @@ set(COMMANDLINE_SHARED_LIBS OFF)
 FILE(GLOB REFLECTION_FILES CONFIGURE_DEPENDS
   src/api/packets/*.hpp
   src/api/packets/*/*.hpp
+  src/base_objects/block_entity.hpp
   src/base_objects/entity/metadata.hpp
   src/base_objects/component.hpp
   src/base_objects/dye_color.hpp
