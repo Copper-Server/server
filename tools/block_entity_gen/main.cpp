@@ -270,7 +270,20 @@ void generate_to_nbt_body(std::ostream& out, const std::string& parent_accessor,
 
         out << stream_name << ".write(\"" << *nbt_name << "\", [this](util::nbt_write_stream& stream) {";
 
-        if (field.get_child_optional("nested_fields") && !type_map.contains(java_type)) {
+
+        auto nbt_override_opt = field.get_optional<std::string>("nbt_type_override");
+        if (nbt_override_opt) {
+            std::string override_type_str = *nbt_override_opt;
+            std::string accessor = (is_optional(java_type) || preservation == "OPTIONAL") ? ("(*" + current_accessor + ")") : current_accessor;
+            if (override_type_str == "int[3]" && java_type == "BlockPos") {
+                out << "\n"
+                    << indent << "    std::array<int32_t, 3> temp_arr = {" << accessor << ".x, " << accessor << ".y, " << accessor << ".z};\n"
+                    << indent << "    util::encoding::nbt::serialize_entry(stream, temp_arr);\n"
+                    << indent << "});\n";
+            } else {
+                out << " /* FIXME: Unhandled nbt_type_override */ util::encoding::nbt::serialize_entry(stream, " << (is_optional(java_type) || preservation == "OPTIONAL" ? "*" : "") + current_accessor << "); });\n";
+            }
+        } else if (field.get_child_optional("nested_fields") && !type_map.contains(java_type)) {
             out << "\n"
                 << indent << "    auto compound_stream = stream.write_compound();\n";
             generate_to_nbt_body(out, current_accessor, prev_structs + "::" + field_name + "_t", "compound_stream", field.get_child("nested_fields"), indent_level + 1);
@@ -365,7 +378,28 @@ void generate_from_nbt_body(std::ostream& out, const std::string& result_accesso
         out << "\n"
             << indent << "." << collect_method << "(\"" << *nbt_name_opt << "\", [&ref](util::nbt_read_stream& stream) {";
 
-        if (nested_fields_opt && !type_map.contains(java_type)) {
+
+        auto nbt_override_opt = field.get_optional<std::string>("nbt_type_override");
+        if (nbt_override_opt) {
+            std::string override_type_str = *nbt_override_opt;
+            if (override_type_str == "int[3]" && java_type == "BlockPos") {
+                out << "\n"
+                    << indent << "    std::array<int32_t, 3> temp_arr;";
+                out << "\n"
+                    << indent << "    util::encoding::nbt::deserialize_entry(temp_arr, stream);";
+                if (preservation == "OPTIONAL") {
+                    out << "\n"
+                        << indent << "    " << current_accessor << ".emplace(temp_arr[0], temp_arr[1], temp_arr[2]);";
+                } else {
+                    out << "\n"
+                        << indent << "    " << current_accessor << " = {temp_arr[0], temp_arr[1], temp_arr[2]};";
+                }
+            } else {
+                out << " /* FIXME: Unhandled nbt_type_override */ util::encoding::nbt::deserialize_entry(" << current_accessor << ", stream);";
+            }
+            out << "\n"
+                << indent << "})";
+        } else if (nested_fields_opt && !type_map.contains(java_type)) {
             out << "\n"
                 << indent << "    util::nbt_collection::compound_flex flex;\n"
                 << indent << "    flex";
