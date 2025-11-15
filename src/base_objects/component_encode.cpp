@@ -16,6 +16,7 @@
 #include <src/util/reflect/base_objects/dye_color.hpp>
 
 #include <src/util/encoding/enbt/serialization.hpp>
+#include <src/util/encoding/nbt/serialization.hpp>
 
 namespace copper_server::base_objects {
     enbt::value component::encode_component(const component& item) {
@@ -48,6 +49,23 @@ namespace copper_server::base_objects {
                     nam = "minecraft:" + std::string(reflect::get_pretty_type_name<T>());
                 stream.write_compound(1).write(nam, [&it](enbt::io_helper::value_write_stream& stream) {
                     util::encoding::enbt::serialize_entry(stream, it);
+                });
+            },
+            item.type
+        );
+    }
+
+    void component::encode_component(const component& item, util::nbt_write_compound_stream& stream) {
+        std::visit(
+            [&stream](auto& it) {
+                using T = std::decay_t<decltype(it)>;
+                std::string nam;
+                if constexpr (requires { T::actual_name::value; })
+                    nam = "minecraft:" + std::string(T::actual_name::value);
+                else
+                    nam = "minecraft:" + std::string(reflect::get_pretty_type_name<T>());
+                stream.write(nam, [&it](util::nbt_write_stream& stream) {
+                    util::encoding::nbt::serialize_entry(stream, it);
                 });
             },
             item.type

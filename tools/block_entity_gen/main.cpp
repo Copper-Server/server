@@ -22,12 +22,13 @@ namespace pt = boost::property_tree;
 
 
 std::map<std::string, std::string> type_map = {
+    {"BannerPatternsComponent", "base_objects::component::banner_patterns"},
     {"BlockPos", "util::xyz<int32_t>"},
     {"BlockState", "base_objects::block"},
     {"ComponentMap", "std::unordered_map<int32_t, base_objects::component>"},
     {"ContainerLock", "base_objects::block_entity::container_lock"},
     {"DefaultedList<ItemStack>", "base_objects::container_sized< "},
-    {"Either<CreakingEntity, UUID>", "base_objects::identifier"},
+    {"Either<CreakingEntity, UUID>", "api::ecs::entity_ref"},
     {"Identifier", "base_objects::identifier"},
     {"Inventory", "base_objects::slot_data"}, //TODO investigate more
     {"ItemStack", "base_objects::slot_data"},
@@ -41,6 +42,9 @@ std::map<std::string, std::string> type_map = {
     {"RegistryKey<TestInstance>", "api::id::test_instance_type"},
     {"RegistryKey<LootTable>", "api::id::loot_table"},
     {"RegistryKey<StructurePool>", "api::id::worldgen__structure_pool_element"},
+    {"RegistryEntry<spawner.TrialSpawnerConfig>", "api::id::trial_spawner_config"}, //TODO add support for new configurations
+    {"RegistryEntry<jukebox.JukeboxSong>", "api::id::jukebox_song"},
+    {"RegistryEntry<effect.StatusEffect>", "api::id::mob_effect"},
     {"SculkCatalystBlockEntity$Listener", "base_objects::block_entity::sculk_catalyst::listener"},
     {"Set<UUID>", "std::unordered_set<base_objects::uuid>"},
     {"Sherds", "std::array<api::id::item, 4>"},
@@ -222,12 +226,13 @@ void generate_to_nbt_body(std::ostream& out, const std::string& parent_accessor,
     for (const auto& pair : fields_node) {
         const pt::ptree& field = pair.second;
         std::string field_name = get_field_name(field.get<std::string>("name"));
+        auto nbt_name_opt = field.get_optional<std::string>("nbt_name");
         std::string preservation = field.get<std::string>("preservation");
         std::string java_type = field.get<std::string>("type");
         std::string current_accessor = parent_accessor + "." + field_name;
 
         auto nested_fields_opt = field.get_child_optional("nested_fields");
-        if (nested_fields_opt && type_map.contains(java_type)) {
+        if (!nbt_name_opt && nested_fields_opt && type_map.contains(java_type)) {
             std::string base_accessor = current_accessor;
             bool is_opt = is_optional(java_type) || preservation == "OPTIONAL";
             if (is_opt) {
@@ -257,8 +262,7 @@ void generate_to_nbt_body(std::ostream& out, const std::string& parent_accessor,
             continue;
         }
 
-        auto nbt_name = field.get_optional<std::string>("nbt_name");
-        if (!nbt_name || *nbt_name == "_____UNKNOWN_____")
+        if (!nbt_name_opt || *nbt_name_opt == "_____UNKNOWN_____")
             continue;
 
         if (preservation == "OPTIONAL") {
@@ -268,7 +272,7 @@ void generate_to_nbt_body(std::ostream& out, const std::string& parent_accessor,
         } else
             out << indent;
 
-        out << stream_name << ".write(\"" << *nbt_name << "\", [this](util::nbt_write_stream& stream) {";
+        out << stream_name << ".write(\"" << *nbt_name_opt << "\", [this](util::nbt_write_stream& stream) {";
 
 
         auto nbt_override_opt = field.get_optional<std::string>("nbt_type_override");
@@ -548,13 +552,14 @@ int main(int argc, char* argv[]) {
             header_file << "        virtual ~" << struct_name << "() = default;\n";
             header_file << "        void to_nbt(util::nbt_write_stream& stream) override;\n";
             header_file << "        static std::unique_ptr<base_objects::block_entity> from_nbt(util::nbt_read_stream& stream);\n";
+            header_file << "        std::unique_ptr<base_objects::block_entity> clone() const override;\n";
             header_file << "    };\n\n";
 
             source_file << "    void " << struct_name << "::to_nbt(util::nbt_write_stream& stream) {\n";
             source_file << "        auto compound_stream = stream.write_compound();\n";
             source_file << "        to_nbt_base_data(compound_stream);\n";
             generate_to_nbt_body(source_file, "(*this)", struct_name, "compound_stream", *fields_node_opt, 2);
-            source_file << "    }\n\n";
+            source_file << "    }\n";
 
             source_file << "    std::unique_ptr<base_objects::block_entity> " << struct_name << "::from_nbt(util::nbt_read_stream& stream) {\n";
             source_file << "        std::unique_ptr<" << struct_name << "> result = std::make_unique<" << struct_name << ">();\n";
@@ -565,6 +570,9 @@ int main(int argc, char* argv[]) {
             generate_from_nbt_body(source_file, "ref", struct_name, *fields_node_opt, 3);
             source_file << "\n            .make_collect(stream);\n";
             source_file << "        return result;\n";
+            source_file << "    }\n";
+            source_file << "    std::unique_ptr<base_objects::block_entity> " << struct_name << "::clone() const {\n";
+            source_file << "        return std::make_unique<" << struct_name << ">(*this);\n";
             source_file << "    }\n";
             from_nbt_select += "            case " + std::to_string(block_node.get<int>("id")) + ": return " + struct_name + "::from_nbt(stream);\n";
         }

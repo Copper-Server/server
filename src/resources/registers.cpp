@@ -617,6 +617,7 @@ namespace copper_server::resources {
                     }
                     return std::make_shared<base_objects::number_provider_weighted_list>(std::move(values));
                 } else if (type == "biased_to_bottom") {
+
                     std::variant<int32_t, float> min;
                     std::variant<int32_t, float> max;
 
@@ -915,6 +916,62 @@ namespace copper_server::resources {
         if (!res)
             throw std::runtime_error("Failed to read file: " + file_path.string());
         load_file_armorTrimMaterial(util::js_object::get_object(*res), id);
+    }
+
+    void load_file_trial_spawner(util::js_object&& config_js, const std::string& id, bool send_via_network_body = true) {
+        check_override(api::registers::trial_spawner_configs, id, "trial spawner");
+        api::registers::trial_spawner_config config;
+        if (config_js.contains("spawn_range"))
+            config.spawn_range = config_js["spawn_range"];
+        if (config_js.contains("total_mobs"))
+            config.total_mobs = config_js["total_mobs"];
+        if (config_js.contains("simultaneous_mobs"))
+            config.simultaneous_mobs = config_js["simultaneous_mobs"];
+        if (config_js.contains("total_mobs_added_per_player"))
+            config.total_mobs_added_per_player = config_js["total_mobs_added_per_player"];
+        if (config_js.contains("simultaneous_mobs_added_per_player"))
+            config.simultaneous_mobs_added_per_player = config_js["simultaneous_mobs_added_per_player"];
+        if (config_js.contains("ticks_between_spawn"))
+            config.ticks_between_spawn = config_js["ticks_between_spawn"];
+        if (config_js.contains("items_to_drop_when_ominous"))
+            config.items_to_drop_when_ominous = (std::string)config_js["items_to_drop_when_ominous"];
+        if (config_js.contains("loot_tables_to_eject")) {
+            config.loot_tables_to_eject.clear();
+            for (auto it : util::js_array::get_array(config_js["loot_tables_to_eject"])) {
+                auto obj = util::js_object::get_object(it);
+                config.loot_tables_to_eject.add(obj.at("weight"), obj.at("data"));
+            }
+        }
+        if (config_js.contains("spawn_potentials")) {
+            config.spawn_potentials.clear();
+            for (auto it : util::js_array::get_array(config_js["spawn_potentials"])) {
+                auto obj = util::js_object::get_object(it);
+                auto data_js = util::js_object::get_object(obj.at("data"));
+                auto entity = util::js_object::get_object(data_js.at("entity"));
+                if (!entity.contains("id"))
+                    entity.parsing_error("Entity type must be defined");
+                int32_t weight = obj.at("weight");
+                api::registers::trial_spawner_config::spawn_data data;
+                if (data_js.contains("custom_spawn_rules")) {
+                    auto rules = util::js_object::get_object(data_js.at("custom_spawn_rules"));
+                    auto block_light_limit = read_number_provider(rules.at("block_light_limit"));
+                    auto sky_light_limit = read_number_provider(rules.at("sky_light_limit"));
+                    data.custom_spawn_rules = {block_light_limit, sky_light_limit};
+                }
+                data.entity = util::conversions::json::from_json(entity.get());
+                config.spawn_potentials.add(weight, std::move(data));
+            }
+        }
+
+        api::registers::trial_spawner_configs[id] = std::move(config);
+    }
+
+    void load_file_trial_spawner(const std::filesystem::path& file_path, const std::string& id) {
+        check_override(api::registers::trial_spawner_configs, id, "trial spawner");
+        auto res = util::try_read_json_file(file_path);
+        if (!res)
+            throw std::runtime_error("Failed to read file: " + file_path.string());
+        load_file_trial_spawner(util::js_object::get_object(*res), id);
     }
 
     void load_file_wolfVariant(util::js_object&& variant_js, const std::string& id, bool send_via_network_body = true) {
@@ -1307,10 +1364,12 @@ namespace copper_server::resources {
             load_file_paintingVariant(memory, id);
         else if (type == "recipe")
             load_file_recipe(memory, id);
-        else if (type == "trim_pattern")
-            load_file_armorTrimPattern(memory, id);
+        else if (type == "trial_spawner")
+            load_file_trial_spawner(memory, id);
         else if (type == "trim_material")
             load_file_armorTrimMaterial(memory, id);
+        else if (type == "trim_pattern")
+            load_file_armorTrimPattern(memory, id);
         else if (type == "wolf_variant")
             load_file_wolfVariant(memory, id);
         else if (type == "cat_variant")
@@ -1392,10 +1451,12 @@ namespace copper_server::resources {
             load_file_paintingVariant(file_path, id);
         else if (type == "recipe")
             load_file_recipe(file_path, id);
-        else if (type == "trim_pattern")
-            load_file_armorTrimPattern(file_path, id);
+        else if (type == "trial_spawner")
+            load_file_trial_spawner(file_path, id);
         else if (type == "trim_material")
             load_file_armorTrimMaterial(file_path, id);
+        else if (type == "trim_pattern")
+            load_file_armorTrimPattern(file_path, id);
         else if (type == "wolf_variant")
             load_file_wolfVariant(file_path, id);
         else if (type == "cat_variant")

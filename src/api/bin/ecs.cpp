@@ -7,6 +7,8 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <src/api/bin/ecs/manager.hpp>
+#include <src/api/ecs/base_components.hpp>
+#include <src/api/entity_id_map.hpp>
 
 namespace copper_server::api::ecs {
 
@@ -1489,5 +1491,49 @@ namespace copper_server::api::ecs {
 
     std::optional<entity> entity::copy_and_wait() const {
         return detail::copy_entity(std::nullopt, *this)->take();
+    }
+
+    entity entity_ref::get_entity() {
+        return std::visit(
+            [this](auto& it) {
+                if constexpr (std::is_same_v<std ::decay_t<decltype(it)>, base_objects::uuid>) {
+                    auto res = api::entity_id_map::get_entity(it);
+                    if (!res)
+                        throw std::runtime_error("The entity is not loaded");
+                    value = *res;
+                    return *res;
+                } else
+                    return it;
+            },
+            value
+        );
+    }
+
+    base_objects::uuid entity_ref::get_uuid() {
+        return std::visit(
+            [this](auto& it) {
+                if constexpr (std::is_same_v<std ::decay_t<decltype(it)>, base_objects::uuid>) {
+                    return it;
+                } else
+                    return it.get<com::uuid>().id;
+            },
+            value
+        );
+    }
+
+    bool entity_ref::is_resolved() {
+        return std::visit(
+            [this](auto& it) {
+                if constexpr (std::is_same_v<std ::decay_t<decltype(it)>, base_objects::uuid>) {
+                    auto res = api::entity_id_map::get_entity(it);
+                    if (!res)
+                        return false;
+                    value = *res;
+                    return true;
+                } else
+                    return true;
+            },
+            value
+        );
     }
 }

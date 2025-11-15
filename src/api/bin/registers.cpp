@@ -49,6 +49,9 @@ namespace copper_server::api::registers {
     //SERVER
     std::unordered_map<std::string, advancement> advancements;
 
+    std::unordered_map<std::string, trial_spawner_config> trial_spawner_configs;
+    list_array<std::unordered_map<std::string, trial_spawner_config>::iterator> trial_spawner_configs_cache;
+
     std::unordered_map<std::string, attribute> attributes;
     list_array<decltype(attributes)::iterator> attributes_cache;
 

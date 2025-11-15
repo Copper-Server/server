@@ -12,6 +12,7 @@
 #include <src/api/id.hpp>
 #include <src/base_objects/chat.hpp>
 #include <src/base_objects/number_provider.hpp>
+#include <src/base_objects/pool.hpp>
 #include <src/base_objects/recipe.hpp>
 #include <string>
 #include <unordered_map>
@@ -608,6 +609,35 @@ namespace copper_server::api::registers {
         double default_value = 0.0;
     };
 
+    struct trial_spawner_config {
+        struct spawn_data {
+            enbt::value entity;
+
+            struct custom_spawn_rules_t {
+                std::shared_ptr<base_objects::number_provider> block_light_limit;
+                std::shared_ptr<base_objects::number_provider> sky_light_limit;
+            };
+
+            std::optional<custom_spawn_rules_t> custom_spawn_rules;
+        };
+
+        int32_t spawn_range = 4;
+        float total_mobs = 6;
+        float simultaneous_mobs = 2;
+        float total_mobs_added_per_player = 2;
+        float simultaneous_mobs_added_per_player = 1;
+        int32_t ticks_between_spawn = 40;
+        api::id::loot_table items_to_drop_when_ominous = "minecraft:spawners/trial_chamber/items_to_drop_when_ominous";
+
+        base_objects::pool<spawn_data> spawn_potentials;
+        base_objects::pool<api::id::loot_table> loot_tables_to_eject{
+            {1, "minecraft:spawners/trial_chamber/consumables"},
+            {1, "minecraft:spawners/trial_chamber/key"}
+        };
+
+        uint32_t id = 0;
+    };
+
     //CLIENT/SERVER
     extern std::unordered_map<std::string, armor_trim_material> armor_trim_materials;
     extern std::unordered_map<std::string, armor_trim_pattern> armor_trim_patterns;
@@ -649,6 +679,8 @@ namespace copper_server::api::registers {
     //SERVER
     extern std::unordered_map<std::string, advancement> advancements;
 
+    extern std::unordered_map<std::string, trial_spawner_config> trial_spawner_configs;
+    extern list_array<std::unordered_map<std::string, trial_spawner_config>::iterator> trial_spawner_configs_cache;
 
     extern std::unordered_map<std::string, attribute> attributes;
     extern list_array<decltype(attributes)::iterator> attributes_cache;

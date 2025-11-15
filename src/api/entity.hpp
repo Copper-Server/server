@@ -48,7 +48,6 @@ namespace copper_server {
 
         struct block;
         struct block_entity;
-        struct const_block_entity_ref;
     }
 }
 
@@ -157,7 +156,7 @@ namespace copper_server::api {
             void (*entity_cancel_break)(ecs::entity self, ecs::entity, int64_t x, int64_t y, int64_t z) = nullptr;
             void (*entity_finish_break)(ecs::entity self, ecs::entity, int64_t x, int64_t y, int64_t z) = nullptr;
             void (*entity_place_block)(ecs::entity self, ecs::entity, bool is_main_hand, int64_t x, int64_t y, int64_t z, const base_objects::block&) = nullptr;
-            void (*entity_place_block_entity)(ecs::entity self, ecs::entity, bool is_main_hand, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref) = nullptr;
+            void (*entity_place_block_entity)(ecs::entity self, ecs::entity, bool is_main_hand, int64_t x, int64_t y, int64_t z, const std::unique_ptr<base_objects::block_entity>&) = nullptr;
 
 
             void (*entity_animation)(ecs::entity self, ecs::entity, base_objects::entity_animation animation) = nullptr;
@@ -172,9 +171,9 @@ namespace copper_server::api {
 
             void (*notify_block_event)(ecs::entity self, const base_objects::world::block_action& action, int64_t x, int64_t y, int64_t z) = nullptr;
             void (*notify_block_change)(ecs::entity self, int64_t x, int64_t y, int64_t z, const base_objects::block& block) = nullptr;
-            void (*notify_block_entity_change)(ecs::entity self, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block) = nullptr;
+            void (*notify_block_entity_change)(ecs::entity self, int64_t x, int64_t y, int64_t z, const std::unique_ptr<base_objects::block_entity>&) = nullptr;
             void (*notify_block_destroy_change)(ecs::entity self, int64_t x, int64_t y, int64_t z, const base_objects::block& block) = nullptr;
-            void (*notify_block_entity_destroy_change)(ecs::entity self, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block) = nullptr;
+            void (*notify_block_entity_destroy_change)(ecs::entity self, int64_t x, int64_t y, int64_t z, const std::unique_ptr<base_objects::block_entity>&) = nullptr;
             void (*notify_biome_change)(ecs::entity self, int64_t x, int64_t y, int64_t z, uint32_t) = nullptr;
 
             void (*notify_sub_chunk)(ecs::entity self, int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const base_objects::world::sub_chunk_data&) = nullptr; //used after multiply changes
@@ -335,8 +334,8 @@ namespace copper_server::api {
 
         void breaking_block(int64_t global_x, uint64_t global_y, int64_t global_z, uint32_t time);
         void place_block(int64_t global_x, uint64_t global_y, int64_t global_z, const base_objects::block&);
-        void place_block(int64_t global_x, uint64_t global_y, int64_t global_z, base_objects::const_block_entity_ref);
-        void place_block(int64_t global_x, uint64_t global_y, int64_t global_z, base_objects::block_entity&&);
+        void place_block(int64_t global_x, uint64_t global_y, int64_t global_z, const std::unique_ptr<base_objects::block_entity>&);
+        void place_block(int64_t global_x, uint64_t global_y, int64_t global_z, std::unique_ptr<base_objects::block_entity>&&);
 
         static ecs::entity create(int32_t id);
         static ecs::entity create(int32_t id, const enbt::compound_const_ref& nbt);

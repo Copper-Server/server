@@ -235,8 +235,7 @@ namespace copper_server::storage {
         int32_t world_y_offset = 0;       //calculated_from(world_type)
 
 
-        void __set_block_silent(const base_objects::full_block_data& block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
-        void __set_block_silent(base_objects::full_block_data&& block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
+        void __set_block_silent(base_objects::any_block block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
         void __update_block(int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode, base_objects::block_id_t);
 
 
@@ -419,13 +418,13 @@ namespace copper_server::storage {
         void for_each_entity(base_objects::spherical_bounds_chunk bounds, const std::function<void(api::ecs::entity entity)>& func);
         void for_each_entity(base_objects::spherical_bounds_chunk_out bounds, const std::function<void(api::ecs::entity entity)>& func);
         void for_each_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(api::ecs::entity entity)>& func);
-        void for_each_block_entity(base_objects::cubic_bounds_chunk bounds, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
-        void for_each_block_entity(base_objects::cubic_bounds_chunk_radius bounds, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
-        void for_each_block_entity(base_objects::cubic_bounds_chunk_radius_out bounds, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
-        void for_each_block_entity(base_objects::spherical_bounds_chunk bounds, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
-        void for_each_block_entity(base_objects::spherical_bounds_chunk_out bounds, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
-        void for_each_block_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
-        void for_each_block_entity(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(base_objects::cubic_bounds_chunk bounds, const std::function<void(const std::unique_ptr<base_objects::block_entity>&)>& func);
+        void for_each_block_entity(base_objects::cubic_bounds_chunk_radius bounds, const std::function<void(const std::unique_ptr<base_objects::block_entity>&)>& func);
+        void for_each_block_entity(base_objects::cubic_bounds_chunk_radius_out bounds, const std::function<void(const std::unique_ptr<base_objects::block_entity>&)>& func);
+        void for_each_block_entity(base_objects::spherical_bounds_chunk bounds, const std::function<void(const std::unique_ptr<base_objects::block_entity>&)>& func);
+        void for_each_block_entity(base_objects::spherical_bounds_chunk_out bounds, const std::function<void(const std::unique_ptr<base_objects::block_entity>&)>& func);
+        void for_each_block_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(const std::unique_ptr<base_objects::block_entity>&)>& func);
+        void for_each_block_entity(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z, const std::function<void(const std::unique_ptr<base_objects::block_entity>&)>& func);
 
 
         void for_each_entity(base_objects::cubic_bounds_block bounds, const std::function<void(api::ecs::entity entity)>& func);
@@ -434,20 +433,19 @@ namespace copper_server::storage {
         void for_each_entity(base_objects::spherical_bounds_block bounds, const std::function<void(api::ecs::entity entity)>& func);
         void for_each_entity(base_objects::spherical_bounds_block_out bounds, const std::function<void(api::ecs::entity entity)>& func);
         void for_each_entity_at(int64_t global_x, int64_t global_z, const std::function<void(api::ecs::entity entity)>& func);
-        void for_each_block_entity_at(int64_t global_x, int64_t global_z, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
-        void for_each_block_entity_at(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
+        void for_each_block_entity_at(int64_t global_x, int64_t global_z, const std::function<void(const std::unique_ptr<base_objects::block_entity>&)>& func);
+        void for_each_block_entity_at(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(const std::unique_ptr<base_objects::block_entity>&)>& func);
 
 
         //priority accepts only negative values, doesn't work for unloaded chunks
         void query_for_tick(int64_t global_x, int64_t global_y, int64_t global_z, uint64_t duration, int8_t priority = 0);
         void query_for_liquid_tick(int64_t global_x, int64_t global_y, int64_t global_z, uint64_t duration);
 
-        void set_block(const base_objects::full_block_data& block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
-        void set_block(base_objects::full_block_data&& block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
+        void set_block(base_objects::any_block block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
         void remove_block(int64_t global_x, int64_t global_y, int64_t global_z);
         base_objects::block get_block(int64_t global_x, int64_t global_y, int64_t global_z);
-        void get_block(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block block)>& func, const std::function<void(base_objects::block block, enbt::value& extended_data)>& block_entity);
-        void query_block(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block block)>& func, const std::function<void(base_objects::block block, enbt::value& extended_data)>& block_entity, const std::function<void()>& fault);
+        void get_block(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block block)>& func, const std::function<void(const std::unique_ptr<base_objects::block_entity>&)>& block_entity);
+        void query_block(int64_t global_x, int64_t global_y, int64_t global_z, const std::function<void(base_objects::block block)>& func, const std::function<void(const std::unique_ptr<base_objects::block_entity>&)>& block_entity, const std::function<void()>& fault);
 
         void block_updated(int64_t global_x, int64_t global_y, int64_t global_z);
         void chunk_updated(int64_t chunk_x, int64_t chunk_z);
@@ -456,10 +454,13 @@ namespace copper_server::storage {
 
         void locked(const std::function<void(world_data& self)>& func);
 
-        void set_block_range(base_objects::cubic_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks, block_set_mode mode = block_set_mode::replace);
-        void set_block_range(base_objects::cubic_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks, block_set_mode mode = block_set_mode::replace);
-        void set_block_range(base_objects::spherical_bounds_block bounds, const list_array<base_objects::full_block_data>& blocks, block_set_mode mode = block_set_mode::replace);
-        void set_block_range(base_objects::spherical_bounds_block bounds, list_array<base_objects::full_block_data>&& blocks, block_set_mode mode = block_set_mode::replace);
+        void set_block(base_objects::block block, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
+        void set_block(std::unique_ptr<base_objects::block_entity> block_entity, int64_t global_x, int64_t global_y, int64_t global_z, block_set_mode mode = block_set_mode::replace);
+
+        void set_block_range(base_objects::cubic_bounds_block bounds, const list_array<base_objects::any_block>& blocks, block_set_mode mode = block_set_mode::replace);
+        void set_block_range(base_objects::cubic_bounds_block bounds, list_array<base_objects::any_block>&& blocks, block_set_mode mode = block_set_mode::replace);
+        void set_block_range(base_objects::spherical_bounds_block bounds, const list_array<base_objects::any_block>& blocks, block_set_mode mode = block_set_mode::replace);
+        void set_block_range(base_objects::spherical_bounds_block bounds, list_array<base_objects::any_block>&& blocks, block_set_mode mode = block_set_mode::replace);
 
 
         int32_t get_biome(int64_t global_x, int64_t global_y, int64_t global_z);
@@ -512,7 +513,7 @@ namespace copper_server::storage {
         void entity_cancel_break(api::ecs::entity, int64_t x, int64_t y, int64_t z);
         void entity_finish_break(api::ecs::entity, int64_t x, int64_t y, int64_t z);
         void entity_place(api::ecs::entity, bool is_main_hand, int64_t x, int64_t y, int64_t z, base_objects::block);
-        void entity_place(api::ecs::entity, bool is_main_hand, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref);
+        void entity_place(api::ecs::entity, bool is_main_hand, int64_t x, int64_t y, int64_t z, std::unique_ptr<base_objects::block_entity>);
 
 
         void entity_animation(api::ecs::entity, base_objects::entity_animation animation);
@@ -528,9 +529,9 @@ namespace copper_server::storage {
 
         void notify_block_event(const base_objects::world::block_action& action, int64_t x, int64_t y, int64_t z);
         void notify_block_change(int64_t x, int64_t y, int64_t z, base_objects::block);
-        void notify_block_change(int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref);
+        void notify_block_change(int64_t x, int64_t y, int64_t z, std::unique_ptr<base_objects::block_entity>);
         void notify_block_destroy_change(int64_t x, int64_t y, int64_t z, base_objects::block);
-        void notify_block_destroy_change(int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref);
+        void notify_block_destroy_change(int64_t x, int64_t y, int64_t z, std::unique_ptr<base_objects::block_entity>);
         void notify_biome_change(int64_t x, int64_t y, int64_t z, uint32_t);
 
         void notify_sub_chunk(int64_t chunk_x, int64_t chunk_y, int64_t chunk_z); //used after multiply changes

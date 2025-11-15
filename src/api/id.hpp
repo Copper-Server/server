@@ -57,6 +57,7 @@ namespace copper_server::api::id {
         horse_variant,
         llama_variant,
         axolotl_variant,
+        trial_spawner_config,
 
 
         activity,
@@ -142,7 +143,7 @@ namespace copper_server::api::id {
         worldgen__tree_decorator_type,
         worldgen__trunk_placer_type,
 
-        
+
         block_state,
         motive,
         entity_pose,
@@ -450,6 +451,7 @@ namespace copper_server::api::id {
     using horse_variant = source<int32_t, registry_source::horse_variant>;
     using llama_variant = source<int32_t, registry_source::llama_variant>;
     using axolotl_variant = source<int32_t, registry_source::axolotl_variant>;
+    using trial_spawner_config = source<int32_t, registry_source::trial_spawner_config>;
 
 
     using activity = source<int32_t, registry_source::activity>;

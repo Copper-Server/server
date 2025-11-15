@@ -24,13 +24,20 @@ namespace copper_server::base_objects {
         pool(pool&& mov) : total_pool(mov.total_pool), data(std::move(mov.data)) {}
         pool(const pool& cop) : total_pool(cop.total_pool), data(cop.data) {}
 
+        pool(std::initializer_list<std::pair<int32_t, T>> init) : total_pool(0) {
+            for (auto& [weight, value] : init) {
+                data.emplace_back(weight, std::move(value));
+                total_pool += weight;
+            }
+        }
+
         pool& operator=(pool&& mov){
             total_pool = mov.total_pool;
             data = std::move(mov.data);
             return *this;
         }
 
-        pool& operator=(pool&& cop) {
+        pool& operator=(const pool& cop) {
             if(this == &cop)
                 return *this;
             total_pool = cop.total_pool;
@@ -45,6 +52,11 @@ namespace copper_server::base_objects {
 
         void add(int32_t weight, const T& copy){
             data.emplace_back(weight, copy);
+        }
+
+        void clear() {
+            data.clear();
+            total_pool = 0;
         }
 
         T& make_select() {

@@ -67,6 +67,8 @@ namespace copper_server::api::id::detail {
             return api::registers::biomes_cache.at(value)->first;
         case registry_source::entity_pose:
             return api::registers::entity_pose_cache.at(value)->first;
+        case registry_source::trial_spawner_config:
+            return api::registers::trial_spawner_configs_cache.at(value)->first;
 
 
         case registry_source::activity:
@@ -327,6 +329,8 @@ namespace copper_server::api::id::detail {
             return api::registers::biomes.at(value).id;
         case registry_source::entity_pose:
             return api::registers::entity_pose.at(value);
+        case registry_source::trial_spawner_config:
+            return api::registers::trial_spawner_configs.at(value).id;
 
 
         case registry_source::activity:
@@ -611,6 +615,8 @@ namespace copper_server::api::id::detail {
             return api::registers::biomes_cache.convert_fn([](auto& it) { return it->second.id; });
         case registry_source::entity_pose:
             return api::registers::entity_pose_cache.convert_fn([](auto& it) { return it->second; });
+        case registry_source::trial_spawner_config:
+            return api::registers::trial_spawner_configs_cache.convert_fn([](auto& it) { return it->second.id; });
 
 
         case registry_source::activity:

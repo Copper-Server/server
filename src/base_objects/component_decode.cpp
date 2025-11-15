@@ -19,6 +19,8 @@
 #include <src/util/templates.hpp>
 
 #include <src/util/encoding/enbt/deserialization.hpp>
+#include <src/util/encoding/nbt/deserialization.hpp>
+
 namespace copper_server::base_objects {
     boost::unordered_flat_map<std::string, void (*)(component& item, const enbt::value& input)> create_map_value() {
         boost::unordered_flat_map<std::string, void (*)(component& item, const enbt::value& input)> result;
@@ -76,5 +78,28 @@ namespace copper_server::base_objects {
         stream.read_compound().read([&item](auto& name, auto& item_stream) {
             map_of_deserializers[name](item, item_stream);
         });
+    }
+
+    boost::unordered_flat_map<std::string, void (*)(component& item, util::nbt_read_stream& stream)> create_nbt_map_io() {
+        boost::unordered_flat_map<std::string, void (*)(component& item, util::nbt_read_stream& stream)> result;
+
+        util::for_each_type<component::base::base>::each([&result]<class T>() {
+            std::string nam;
+            if constexpr (requires { T::actual_name::value; })
+                nam = "minecraft:" + std::string(T::actual_name::value);
+            else
+                nam = "minecraft:" + std::string(reflect::get_pretty_type_name<T>());
+            result[nam] = [](component& item, util::nbt_read_stream& stream) {
+                T result{};
+                util::encoding::nbt::deserialize_entry(result, stream, result);
+                item = std::move(result);
+            };
+        });
+        return result;
+    }
+
+    void component::parse_component(component& item, const std::string& name, util::nbt_read_stream& stream) {
+        static auto map_of_deserializers = create_nbt_map_io();
+        map_of_deserializers[name](item, stream);
     }
 }

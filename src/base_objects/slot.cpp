@@ -9,6 +9,7 @@
 #include <library/enbt/io.hpp>
 #include <src/api/packets.hpp>
 #include <src/base_objects/slot.hpp>
+#include <src/util/nbt_stream.hpp>
 
 namespace copper_server::base_objects {
     std::unordered_map<std::string, std::shared_ptr<static_slot_data>> slot_data::named_full_item_data;
@@ -246,6 +247,53 @@ namespace copper_server::base_objects {
             return res;
         } else
             return slot_data{};
+    }
+
+    void slot_data::to_nbt(util::nbt_write_stream& stream) const {
+        stream.write_compound()
+            .write("id", id)
+            .write("count", count)
+            .write("components", [this](auto& components_stream) {
+                auto compound = components_stream.write_compound();
+                for (auto& [_, component] : components)
+                    component.encode_component(component, compound);
+            });
+    }
+
+    slot_data slot_data::from_nbt(util::nbt_read_stream& stream) {
+        slot_data res;
+        util::nbt_collection::compound_relaxed collect;
+        collect
+            .collect_as("id", res.id)
+            .collect_as("count", res.count)
+            .collect_iterate("components", [&res](auto& name, auto& stream) {
+                base_objects::component com;
+                com.parse_component(com, name, stream);
+                res.components[com.get_id()] = std::move(com);
+            })
+            .force_all_collect(stream);
+    }
+
+    void slot_data::to_nbt_base(util::nbt_write_compound_stream& stream) const {
+        stream
+            .write("id", id)
+            .write("count", count)
+            .write("components", [this](auto& components_stream) {
+                auto compound = components_stream.write_compound();
+                for (auto& [_, component] : components)
+                    component.encode_component(component, compound);
+            });
+    }
+
+    void slot_data::from_nbt_base(util::nbt_collection::compound_flex<std::unordered_map>& collector) {
+        collector
+            .collect_as_required("id", id)
+            .collect_as_required("count", count)
+            .collect_iterate_required("components", [this](auto& name, auto& stream) {
+                base_objects::component com;
+                com.parse_component(com, name, stream);
+                components[com.get_id()] = std::move(com);
+            });
     }
 
     copper_server::api::packets::slot slot::to_packet() const {

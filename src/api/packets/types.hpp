@@ -458,6 +458,7 @@ namespace copper_server::api::packets {
         using horse_variant = api::id::source<var_int32, api::id::registry_source::horse_variant>;
         using llama_variant = api::id::source<var_int32, api::id::registry_source::llama_variant>;
         using axolotl_variant = api::id::source<var_int32, api::id::registry_source::axolotl_variant>;
+        using trial_spawner_config = api::id::source<var_int32, api::id::registry_source::trial_spawner_config>;
 
         using activity = api::id::source<var_int32, api::id::registry_source::activity>;
         using attribute = api::id::source<var_int32, api::id::registry_source::attribute>;
@@ -669,6 +670,7 @@ namespace copper_server::api::packets {
         using horse_variant = api::id::source<optional_var_int32, api::id::registry_source::horse_variant>;
         using llama_variant = api::id::source<optional_var_int32, api::id::registry_source::llama_variant>;
         using axolotl_variant = api::id::source<optional_var_int32, api::id::registry_source::axolotl_variant>;
+        using trial_spawner_config = api::id::source<optional_var_int32, api::id::registry_source::trial_spawner_config>;
 
         using activity = api::id::source<optional_var_int32, api::id::registry_source::activity>;
         using attribute = api::id::source<optional_var_int32, api::id::registry_source::attribute>;

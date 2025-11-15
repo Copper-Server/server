@@ -23,17 +23,12 @@ namespace copper_server::base_objects {
         std::unordered_map<int32_t, component> components;
         block id;
         int32_t x, y, z;
-        bool keep_packed : 1;
-
+        bool keep_packed = false;
 
         block_entity();
-        block_entity(slot_data&& move) noexcept;
-        block_entity(const slot_data& copy);
         virtual ~block_entity();
 
-        block_entity& operator=(const block_entity&);
-        block_entity& operator=(block_entity&&) noexcept;
-
+        virtual std::unique_ptr<block_entity> clone() const = 0;
 
         void from_nbt_base_data(util::nbt_collection::compound_flex<std::unordered_map>& collector);
         void to_nbt_base_data(util::nbt_write_compound_stream& collector);
@@ -252,6 +247,11 @@ namespace copper_server::base_objects {
     };
 
     struct vibration_listener {
+    };
+
+    struct any_block : public std::variant<block, std::unique_ptr<block_entity>> {
+        using std::variant<block, std::unique_ptr<block_entity>>::variant;
+        using std::variant<block, std::unique_ptr<block_entity>>::operator=;
     };
 }
 

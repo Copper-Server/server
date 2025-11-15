@@ -27,6 +27,18 @@ namespace enbt::io_helper {
     class value_read_stream;
 }
 
+namespace copper_server::util {
+    class nbt_read_stream;
+    class nbt_write_stream;
+
+    namespace nbt_collection {
+        template <template <class...> class map_base>
+        class compound_flex;
+    }
+
+    class nbt_write_compound_stream;
+}
+
 namespace copper_server::base_objects {
     struct slot;
     struct slot_data;
@@ -1110,6 +1122,12 @@ namespace copper_server::base_objects {
         static void parse_component(component& item, enbt::io_helper::value_read_stream& stream);
         static void encode_component(const component& item, enbt::io_helper::value_write_stream& stream);
 
+        //the entries should be ordered same as got from encode_component, any reorder could break flags_list_from items(currently not used but reserved for future)
+        static void parse_component(component& item, enbt::io_helper::value_read_stream& stream);
+        static void encode_component(const component& item, enbt::io_helper::value_write_stream& stream);
+
+        static void parse_component(component& item, const std::string& name, util::nbt_read_stream& stream);
+        static void encode_component(const component& item, util::nbt_write_compound_stream& stream);
 
         component();
         component(component&& mov) noexcept;

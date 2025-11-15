@@ -156,7 +156,9 @@ namespace copper_server::api::ecs {
     struct entity_ref {
         std::variant<base_objects::uuid, entity> value;
         entity get_entity();
-        std::array<base_objects::uuid, 2> get_uuid();
+        base_objects::uuid get_uuid();
+
+        bool is_resolved();
     };
 
     template <class... params>
