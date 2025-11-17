@@ -141,7 +141,7 @@ namespace copper_server::util::encoding::nbt {
             stream.read_compound()
                 .collect("opt", [&](util::nbt_read_stream& opt_stream) {
                     res.emplace();
-                    deserialize_entry(*res, has_stream, prev);
+                    deserialize_entry(*res, opt_stream, prev);
                 })
                 .make_collect();
         } else if constexpr (is_template_base_of<api::packets::enum_as, Type>) {
@@ -180,7 +180,7 @@ namespace copper_server::util::encoding::nbt {
         } else if constexpr (is_template_base_of<base_objects::box, Type>) {
             res.ptr = std::make_shared<typename Type::value_type>();
             deserialize_entry(*res, stream, prev);
-        } else if constexpr (is_template_base_of<api::packets::any_of, Type>) {
+        } else if constexpr (is_template_base_of<api::packets::any_of, Type> || is_ordered_id<Type> || is_template_base_of<api::packets::sized_entry, Type>) {
             deserialize_entry(res.value, stream, prev);
         } else if constexpr (is_template_base_of<api::packets::flags_list, Type>) {
             stream.iterate([&res, &prev](auto& name, auto& comp_stream) {
@@ -217,8 +217,6 @@ namespace copper_server::util::encoding::nbt {
                         .force_all_collect();
                 });
             });
-        } else if constexpr (is_ordered_id<Type>) {
-            deserialize_entry(res.value, stream, prev);
         } else if constexpr (is_template_base_of<api::packets::value_optional, Type>) {
             stream.read_compound()
                 .collect("opt", [&res, &prev](auto& opt_stream) {
@@ -243,8 +241,6 @@ namespace copper_server::util::encoding::nbt {
                         });
                 })
                 .make_collect();
-        } else if constexpr (is_template_base_of<api::packets::sized_entry, Type>) {
-            deserialize_entry(res.value, stream, prev);
         } else if constexpr (is_limited_num<Type>) {
             stream.read_into(res.value);
         } else if constexpr (is_convertible_to_nbt_form<Type>) {
@@ -258,9 +254,9 @@ namespace copper_server::util::encoding::nbt {
             stream.read_into(tmp);
             res = Type(tmp);
         } else if constexpr (is_template_base_of<base_objects::pool, Type>) {
-            stream.iterate([&lis](util::nbt_read_stream& pool_item) {
+            stream.iterate([&res, &prev](util::nbt_read_stream& pool_item) {
                 int32_t weight = 0;
-                Type::value_type data;
+                typename Type::value_type data;
 
                 pool_item
                     .read_compound()
@@ -272,7 +268,7 @@ namespace copper_server::util::encoding::nbt {
                 res.add(weight, std::move(data));
             });
         } else {
-            if (stream.get_type_id().type == ::enbt::type::compound)
+            if (stream.get_type() == nbt_type::tag_compound)
                 stream.iterate([&res, &prev](auto& name, auto& item_stream) {
                     reflect::visit_field(name, res, [&item_stream, &prev](auto& res_v) {
                         deserialize_entry(res_v, item_stream, prev);

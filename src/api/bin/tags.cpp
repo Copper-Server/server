@@ -702,6 +702,14 @@ namespace copper_server::api::tags {
         return handle->tag;
     }
 
+    const std::string& get_namespace(const tag_handle& handle) {
+        return handle->namespace_;
+    }
+
+    const std::string& get_full_name(const tag_handle& handle) {
+        return handle->namespace_ + ":" + handle->tag;
+    }
+
     const std::string& get_entry(const tag_handle& handle) {
         return handle->entry;
     }

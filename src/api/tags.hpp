@@ -91,6 +91,8 @@ namespace copper_server::api::tags {
     const list_array<int32_t>& unfold_tag_ids(const tag_handle&);
     const list_array<std::string>& unfold_tag_strings(const tag_handle&);
     const std::string& get_name(const tag_handle&);
+    const std::string& get_namespace(const tag_handle&);
+    const std::string& get_full_name(const tag_handle&);
     const std::string& get_entry(const tag_handle&);
 
 

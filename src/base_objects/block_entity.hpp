@@ -1,5 +1,6 @@
 #ifndef SRC_BASE_OBJECTS_BLOCK_ENTITY
 #define SRC_BASE_OBJECTS_BLOCK_ENTITY
+#include <atomic>
 #include <src/base_objects/block.hpp>
 #include <src/base_objects/chat.hpp>
 #include <src/base_objects/component.hpp>
@@ -212,23 +213,25 @@ namespace copper_server::base_objects {
             return id.is_block_entity();
         }
 
-        struct container_lock;
         struct test_instance;
         struct sculk_catalyst;
         struct mob_spawner_entry;
     };
 
     struct viewer_count_manager {
-    };
+        std::atomic_uint32_t users;
 
-    struct block_entity::container_lock {
-    };
+        uint32_t use() {
+            return ++users;
+        }
 
-    struct block_entity::test_instance {
-        struct error {
-            util::xyz<int32_t> pos;
-            chat text;
-        };
+        void unuse() {
+            --users;
+        }
+
+        uint32_t current() {
+            return users;
+        }
     };
 
     struct block_entity::test_instance {
@@ -240,18 +243,102 @@ namespace copper_server::base_objects {
 
     struct block_entity::sculk_catalyst {
         struct listener {
+            enum class facing_e {
+                down = 0,
+                up = 1,
+                north = 2,
+                south = 3,
+                west = 4,
+                east = 5,
+            };
+
+            int32_t charge;         //the vanilla limits it up to 1000, idk would it break backward compatibility if there would be value greater than 1000, TODO check
+            list_array<double> pos; //x,y,z
+            int32_t decay_delay = 0;
+            int32_t update_delay = 0;
+            list_array<facing_e> facings;
         };
     };
 
     struct block_entity::mob_spawner_entry {
+        struct rules_t {
+            int32_t block_light_limit;
+            int32_t sky_light_limit;
+        };
+
+        struct equipment_t {
+            struct chances_t {
+                std::optional<float> feet;
+                std::optional<float> legs;
+                std::optional<float> chest;
+                std::optional<float> head;
+                std::optional<float> body;
+                std::optional<float> mainhand;
+                std::optional<float> offhand;
+            };
+
+            api::id::loot_table loot_table;
+            std::optional<std::variant<float, chances_t>> slot_drop_chances;
+
+
+            void from_nbt_base_data(util::nbt_collection::compound_flex<std::unordered_map>& collector);
+            void to_nbt_base_data(util::nbt_write_compound_stream& collector);
+            void from_nbt(util::nbt_read_stream& stream);
+            void to_nbt(util::nbt_write_stream& stream);
+        };
+
+        util::nbt entity;
+        std::optional<rules_t> custom_spawn_rules;
+        std::optional<equipment_t> equipment;
     };
 
     struct vibration_listener {
+        struct event_t {
+            float distance;
+            api::id::game_event game_event;
+            list_array<double> pos; //x,y,z
+            std::optional<base_objects::uuid> projectile_owner;
+            std::optional<base_objects::uuid> source;
+        };
+
+        struct selector_t {
+            int64_t tick;
+            event_t event;
+        };
+
+        std::optional<event_t> event;
+        int32_t event_delay = 0;
+        selector_t selector;
     };
 
     struct any_block : public std::variant<block, std::unique_ptr<block_entity>> {
         using std::variant<block, std::unique_ptr<block_entity>>::variant;
         using std::variant<block, std::unique_ptr<block_entity>>::operator=;
+
+        any_block(const any_block& value) {
+            std::visit(
+                [this]<class T>(const T& it) {
+                    if constexpr (std::is_same_v<T, block>)
+                        *this = it;
+                    else
+                        *this = it->clone();
+                },
+                value
+            );
+        }
+
+        any_block& operator=(const any_block& value) {
+            std::visit(
+                [this]<class T>(const T& it) {
+                    if constexpr (std::is_same_v<T, block>)
+                        *this = it;
+                    else
+                        *this = it->clone();
+                },
+                value
+            );
+            return *this;
+        }
     };
 }
 

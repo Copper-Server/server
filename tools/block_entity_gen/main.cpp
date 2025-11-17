@@ -26,8 +26,8 @@ std::map<std::string, std::string> type_map = {
     {"BlockPos", "util::xyz<int32_t>"},
     {"BlockState", "base_objects::block"},
     {"ComponentMap", "std::unordered_map<int32_t, base_objects::component>"},
-    {"ContainerLock", "base_objects::block_entity::container_lock"},
-    {"DefaultedList<ItemStack>", "base_objects::container_sized< "},
+    {"ContainerLock", "base_objects::item_predicate"},
+    {"DefaultedList<ItemStack>", "base_objects::container_sized<"},
     {"Either<CreakingEntity, UUID>", "api::ecs::entity_ref"},
     {"Identifier", "base_objects::identifier"},
     {"Inventory", "base_objects::slot_data"}, //TODO investigate more
@@ -198,11 +198,14 @@ void generate_struct_fields(std::ostream& out, const pt::ptree& fields_node, int
         const pt::ptree& field = pair.second;
         std::string field_name = get_field_name(field.get<std::string>("name"));
         std::string java_type = field.get<std::string>("type");
+        auto nbt_name = field.get_optional<std::string>("nbt_name");
+        bool not_preserved = nbt_name && *nbt_name == "_____UNKNOWN_____";
+
 
         if (field.get_child_optional("nested_fields") && !type_map.contains(java_type)) {
             out << indent << "struct " << field_name << "_t {\n";
             generate_struct_fields(out, field.get_child("nested_fields"), indent_level + 1);
-            out << indent << "} " << field_name << ";\n";
+            out << indent << "} " << field_name << (not_preserved ? "; //not preserved\n" : ";\n");
         } else if (field.get_child_optional("enum_values")) {
             out << indent << "enum class " << field_name << "_e {\n";
             int enum_index_counter = 0;
@@ -214,9 +217,9 @@ void generate_struct_fields(std::ostream& out, const pt::ptree& fields_node, int
                 enum_index_counter++;
             }
             out << indent << "};" << "\n";
-            out << indent << get_cpp_type(field) << " " << field_name << ";\n";
+            out << indent << get_cpp_type(field) << " " << field_name << (not_preserved ? "; //not preserved\n" : ";\n");
         } else {
-            out << indent << get_cpp_type(field) << " " << field_name << ";\n";
+            out << indent << get_cpp_type(field) << " " << field_name << (not_preserved ? "; //not preserved\n" : ";\n");
         }
     }
 }
@@ -505,9 +508,11 @@ int main(int argc, char* argv[]) {
                    "#include <src/base_objects/block_entity.hpp>\n"
                    "#include <src/base_objects/chat.hpp>\n"
                    "#include <src/base_objects/component.hpp>\n"
+                   "#include <src/base_objects/container.hpp>\n"
+                   "#include <src/base_objects/item_predicate.hpp>\n"
+                   "#include <src/base_objects/pool.hpp>\n"
                    "#include <src/base_objects/slot.hpp>\n"
                    "#include <src/base_objects/uuid.hpp>\n"
-                   "#include <src/base_objects/container.hpp>\n"
                    "\n"
                    "namespace copper_server::util {\n"
                    "    class nbt_read_stream;\n"
@@ -525,6 +530,7 @@ int main(int argc, char* argv[]) {
                                  "#include <src/util/reflect/base_objects/block_entity.hpp>\n"
                                  "#include <src/util/reflect/base_objects/component.hpp>\n"
                                  "#include <src/util/reflect/base_objects/dye_color.hpp>\n"
+
 
                                  "\n"
                                  "#include <src/util/nbt_stream.hpp>\n"

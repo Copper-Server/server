@@ -323,6 +323,18 @@ namespace copper_server::api::id {
             );
         }
 
+        std::string to_string() const {
+            return std::visit(
+                [](const auto& it) {
+                    if constexpr (std::is_same_v<int32_t, decltype(it)>) {
+                        return detail::from_registry_source_value(sourc, it);
+                    } else
+                        return api::tags::get_full_name(it);
+                },
+                value
+            );
+        }
+
         auto operator<=>(const source_set& other) const = default;
     };
 
@@ -407,6 +419,13 @@ namespace copper_server::api::id {
 
     template <class type>
     concept is_source = requires(type& d) {
+        typename type::underlying_type;
+        type::reg_source::value;
+        d.value;
+    };
+
+    template <class type>
+    concept is_source_set = requires(type& d) {
         typename type::underlying_type;
         type::reg_source::value;
         d.value;
