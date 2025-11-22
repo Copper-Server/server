@@ -752,9 +752,8 @@ namespace copper_server::util {
     };
 
     namespace nbt_collection {
-        template <template <class...> class map_base = std::unordered_map>
         class compound_relaxed {
-            map_base<std::string, std::function<void(nbt_read_stream&)>> automated_collector;
+            std::unordered_map<std::string, std::function<void(nbt_read_stream&)>> automated_collector;
 
         public:
             compound_relaxed() = default;
@@ -950,10 +949,9 @@ namespace copper_server::util {
             }
         };
 
-        template <template <class...> class map_base = std::unordered_map, template <class...> class arr_base = std::vector>
         class compound_strict {
-            map_base<std::string, std::function<void(nbt_read_stream&)>> automated_collector;
-            arr_base<std::string> collector_strict_order_data;
+            std::unordered_map<std::string, std::function<void(nbt_read_stream&)>> automated_collector;
+            std::vector<std::string> collector_strict_order_data;
 
         public:
             compound_strict() = default;
@@ -1166,10 +1164,9 @@ namespace copper_server::util {
             }
         };
 
-        template <template <class...> class map_base = std::unordered_map>
         class compound_flex {
-            map_base<std::string, std::function<void(nbt_read_stream&)>> automated_collector;
-            map_base<std::string, std::function<void(nbt_read_stream&)>> automated_collector_required;
+            std::unordered_map<std::string, std::function<void(nbt_read_stream&)>> automated_collector;
+            std::unordered_map<std::string, std::function<void(nbt_read_stream&)>> automated_collector_required;
 
         public:
             compound_flex() = default;

@@ -47,8 +47,8 @@ namespace copper_server::base_objects::world {
         void calculate_active();
         void update_metadata(); //update_height_map + calculate_active (called automatically)
 
-        void for_each_block_entity(const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
-        void for_each_block_entity(uint64_t local_y, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func);
+        void for_each_block_entity(const std::function<void(api::ecs::entity block_entity)>& func);
+        void for_each_block_entity(uint64_t local_y, const std::function<void(api::ecs::entity block_entity)>& func);
 
         void for_each_sub_chunk(const std::function<void(base_objects::world::sub_chunk_data& sub_chunk)>& func);
         void get_sub_chunk(uint64_t local_y, const std::function<void(base_objects::world::sub_chunk_data& sub_chunk)>& func);
@@ -71,19 +71,22 @@ namespace copper_server::base_objects::world {
         void tick_block_entity(storage::chunk_tick_result& rr, storage::world_data& world);
         void tick_game_event(storage::chunk_tick_result& rr, storage::world_data& world);
 
-        //affects active_blocks and height_maps, thread unsafe
-        void set_block(const base_objects::full_block_data& block, uint8_t local_x, uint64_t local_y, uint8_t local_z);
-        //affects active_blocks and height_maps, thread unsafe
-        void set_block(base_objects::full_block_data&& block, uint8_t local_x, uint64_t local_y, uint8_t local_z);
+        void set_state(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block_id_t, api::ecs::world_local_registry& world);
+        void set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block, api::ecs::world_local_registry& world);
+        void set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, api::ecs::entity&&, api::ecs::world_local_registry& world);
+        void set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, const api::ecs::entity&, api::ecs::world_local_registry& world);
+
+        void set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, const base_objects::any_block& block, api::ecs::world_local_registry& world);
+        void set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::any_block&& block, api::ecs::world_local_registry& world);
         base_objects::block get_block(uint8_t local_x, uint64_t local_y, uint8_t local_z);
-        enbt::value& get_block_entity_data(uint8_t local_x, uint64_t local_y, uint8_t local_z);
+        api::ecs::entity get_block_entity(uint8_t local_x, uint64_t local_y, uint8_t local_z);
 
         //generator functions
-        void gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block);
-        void gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block_entity&&);
-        void gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, const base_objects::block_entity&);
-        void gen_remove_block(uint8_t local_x, uint64_t local_y, uint8_t local_z);
-        base_objects::full_block_data_ref gen_get_block(uint8_t local_x, uint64_t local_y, uint8_t local_z);
+        void gen_set_state(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block_id_t, api::ecs::world_local_registry& world);
+        void gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block, api::ecs::world_local_registry& world);
+        void gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, api::ecs::entity&&, api::ecs::world_local_registry& world);
+        void gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, const api::ecs::entity&, api::ecs::world_local_registry& world);
+        void gen_remove_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, api::ecs::world_local_registry& world);
 
     private:
         friend class storage::world_data;

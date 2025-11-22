@@ -5,7 +5,7 @@ namespace copper_server::base_objects {
     block_entity::block_entity() = default;
     block_entity::~block_entity() = default;
 
-    void block_entity::from_nbt_base_data(util::nbt_collection::compound_flex<std::unordered_map>& collector) {
+    void block_entity::from_nbt_base_data(util::nbt_collection::compound_flex& collector) {
         collector.collect_as_required("id", id.id);
         collector.collect_as_required("x", x);
         collector.collect_as_required("y", y);
@@ -32,7 +32,7 @@ namespace copper_server::base_objects {
             });
     }
 
-    void block_entity::mob_spawner_entry::equipment_t::from_nbt_base_data(util::nbt_collection::compound_flex<std::unordered_map>& collector) {
+    void block_entity::mob_spawner_entry::equipment_t::from_nbt_base_data(util::nbt_collection::compound_flex& collector) {
         collector.collect_as_required("loot_table", loot_table);
         collector.collect("slot_drop_chances", [this](util::nbt_read_stream& slot_drop_chances_stream) {
             if (slot_drop_chances_stream.get_type() == util::nbt_type::tag_float) {

@@ -2,7 +2,7 @@
 #include <src/util/nbt_stream.hpp>
 
 namespace copper_server::base_objects {
-    void item_predicate::from_nbt_base_data(util::nbt_collection::compound_flex<std::unordered_map>& collector) {
+    void item_predicate::from_nbt_base_data(util::nbt_collection::compound_flex& collector) {
         collector.collect("items", [this](util::nbt_read_stream& items_stream) {
             if (items_stream.get_type() == util::nbt_type::tag_string) {
                 std::string res;

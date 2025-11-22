@@ -545,6 +545,8 @@ namespace copper_server::api::ecs {
             } else
                 --worlds[id].usages;
         }
+
+        static manager& instance();
     };
 }
 

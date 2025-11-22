@@ -71,7 +71,7 @@ namespace copper_server::build_in_plugins {
             });
 
             console_data.set_special_callback([](base_objects::virtual_client& _, base_objects::shared_client_data& client, base_objects::network::response&& resp) {
-                resp.data.for_each([&](base_objects::network::response::item& data) {
+                resp.data.for_each([&](base_objects::network::response_item& data) {
                     if (data.data.empty())
                         return;
                     ArrayStream arr(data.data.data(), data.data.size());

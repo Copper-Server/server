@@ -9,17 +9,16 @@
 #include <boost/iostreams/filter/zstd.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 
-#include <library/fast_task/include/files.hpp>
 #include <library/enbt/io_tools.hpp>
+#include <library/fast_task/include/files.hpp>
 
-#include <src/base_objects/world/chunk.hpp>
-#include <src/util/readers.hpp>
-#include <src/base_objects/network/response.hpp>
-#include <src/storage/world_data.hpp>
-#include <src/api/entity.hpp>
 #include <src/api/configuration.hpp>
 #include <src/api/ecs/base_components.hpp>
-
+#include <src/api/entity.hpp>
+#include <src/base_objects/network/response.hpp>
+#include <src/base_objects/world/chunk.hpp>
+#include <src/storage/world_data.hpp>
+#include <src/util/readers.hpp>
 
 namespace enbt::io_helper {
 
@@ -86,7 +85,7 @@ namespace enbt::io_helper {
         }
 
         static void write(const palette_container_block& palette, enbt::io_helper::value_write_stream& write_stream) {
-            copper_server::base_objects::network::response::item res;
+            copper_server::base_objects::network::response_item res;
             std::visit(
                 [&]<class IT>(const IT& it) {
                     if constexpr (std::is_same_v<copper_server::base_objects::palette_container_indirect, IT>) {
@@ -152,7 +151,7 @@ namespace enbt::io_helper {
         }
 
         static void write(const palette_container_biome& palette, enbt::io_helper::value_write_stream& write_stream) {
-            copper_server::base_objects::network::response::item res;
+            copper_server::base_objects::network::response_item res;
             std::visit(
                 [&]<class IT>(const IT& it) {
                     if constexpr (std::is_same_v<copper_server::base_objects::palette_container_indirect, IT>) {
@@ -333,7 +332,7 @@ namespace copper_server::base_objects::world {
                                     .collect("id", [&](auto& stream) {
                                         base_objects::block_id_t id = 0;
                                         self.read_as(id);
-                                        sub_chunk_data.set_block(local_pos.x, local_pos.y, local_pos.z, base_objects::block(id));
+                                        sub_chunk_data.set_block(local_pos.x, local_pos.y, local_pos.z, base_objects::block(id), world.);
                                     })
                                     .collect("nbt", [&](auto& stream) {
                                         sub_chunk_data.block_entities[local_pos.z | (local_pos.y << 4) | (local_pos.x << 8)] = stream.read();
@@ -344,16 +343,16 @@ namespace copper_server::base_objects::world {
                         .make_collect([](auto& name, auto& stream) { stream.read(); });
                     sub_chunk_data.need_to_recalculate_light = need_recalculate_light_block_light || need_recalculate_light_sky_light;
                     if (!sub_chunk_data.need_to_recalculate_light) {
-                        if (!need_recalculate_light_block_light) 
+                        if (!need_recalculate_light_block_light)
                             sub_chunk_data.block_lighted = sub_chunk_data.block_light.is_lighted();
-                        
-                        if (!need_recalculate_light_sky_light) 
+
+                        if (!need_recalculate_light_sky_light)
                             sub_chunk_data.sky_lighted = sub_chunk_data.sky_light.is_lighted();
                     }
                 })
                 .collect_iterate( //format-fix
                     "entities",
-    
+
                     [&](std::uint64_t len) { stored_entities.reserve(len); },
                     [&](enbt::io_helper::value_read_stream& self) {
                         auto res = api::entity::load_from_file(self);
@@ -508,27 +507,27 @@ namespace copper_server::base_objects::world {
         : chunk_x(chunk_x), chunk_z(chunk_z) {}
 
     void chunk_data::update_height_map_on(uint8_t local_x, uint64_t local_y_block, uint8_t local_z) {
-        if(local_y_block == 0)
+        if (local_y_block == 0)
             return;
         auto& leaves = api::tags::unfold_tag(api::tags::builtin_entry::block, "minecraft:block/leaves");
         auto bloc = get_block(local_x, local_y_block, local_z);
-        if(!bloc.is_air()){
-            if(height_maps.ocean_floor[local_x][local_z] < local_y_block)
+        if (!bloc.is_air()) {
+            if (height_maps.ocean_floor[local_x][local_z] < local_y_block)
                 height_maps.ocean_floor[local_x][local_z] = local_y_block;
-            if(bloc.is_liquid()){
-                if(height_maps.surface[local_x][local_z] < local_y_block)
+            if (bloc.is_liquid()) {
+                if (height_maps.surface[local_x][local_z] < local_y_block)
                     height_maps.surface[local_x][local_z] = local_y_block;
             }
-            if(bloc.is_solid()){
-                if(height_maps.motion_blocking[local_x][local_z] < local_y_block)
+            if (bloc.is_solid()) {
+                if (height_maps.motion_blocking[local_x][local_z] < local_y_block)
                     height_maps.motion_blocking[local_x][local_z] = local_y_block;
 
-                if(!leaves.contains(bloc.general_block_id()))
+                if (!leaves.contains(bloc.general_block_id()))
                     if (height_maps.motion_blocking_no_leaves[local_x][local_z] < local_y_block)
                         height_maps.motion_blocking_no_leaves[local_x][local_z] = local_y_block;
             }
 
-        }else{
+        } else {
             uint64_t to_skip = local_y_block / 16 + bool(local_y_block % 16);
             auto end = sub_chunks.rend();
 
@@ -651,25 +650,25 @@ namespace copper_server::base_objects::world {
         }
     }
 
-    void chunk_data::for_each_block_entity(const std::function<void(base_objects::block block, enbt::value& extended_data)>& func) {
+    void chunk_data::for_each_block_entity(const std::function<void(api::ecs::entity block_entity)>& func) {
         for (auto& sub_chunk : sub_chunks)
             for (auto& [_pos, data] : sub_chunk.block_entities) {
                 base_objects::local_block_pos pos;
                 pos.x = _pos >> 8;
                 pos.y = (_pos >> 4) & 0xF;
                 pos.z = _pos & 0xF;
-                func(sub_chunk.get_block(pos.x, pos.y, pos.z), data);
+                func(data);
             }
     }
 
-    void chunk_data::for_each_block_entity(uint64_t local_y, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func) {
+    void chunk_data::for_each_block_entity(uint64_t local_y, const std::function<void(api::ecs::entity block_entity)>& func) {
         if (local_y < sub_chunks.size())
             for (auto& [_pos, data] : sub_chunks[local_y].block_entities) {
                 base_objects::local_block_pos pos;
                 pos.x = _pos >> 8;
                 pos.y = (_pos >> 4) & 0xF;
                 pos.z = _pos & 0xF;
-                func(sub_chunks[local_y].get_block(pos.x, pos.y, pos.z), data);
+                func(data);
             }
     }
 
@@ -898,43 +897,56 @@ namespace copper_server::base_objects::world {
             return;
     }
 
-    void chunk_data::set_block(const base_objects::full_block_data& block, uint8_t local_x, uint64_t local_y, uint8_t local_z) {
-        sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, block);
-        update_height_map_on(local_x, local_y, local_z);
+    void chunk_data::set_state(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block_id_t id, api::ecs::world_local_registry& world) {
+        sub_chunks.at(local_y >> 4).set_state(local_x, local_y & 15, local_z, id, world);
     }
 
-    void chunk_data::set_block(base_objects::full_block_data&& block, uint8_t local_x, uint64_t local_y, uint8_t local_z) {
-        sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, std::move(block));
-        update_height_map_on(local_x, local_y, local_z);
+    void chunk_data::set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block block, api::ecs::world_local_registry& world) {
+        sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, block, world);
+    }
+
+    void chunk_data::set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, api::ecs::entity&& block, api::ecs::world_local_registry& world) {
+        sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, std::move(block), world);
+    }
+
+    void chunk_data::set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, const api::ecs::entity& block, api::ecs::world_local_registry& world) {
+        sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, block, world);
+    }
+
+    void chunk_data::set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, const base_objects::any_block& block, api::ecs::world_local_registry& world){
+        sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, block, world);
+    }
+
+    void chunk_data::set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::any_block&& block, api::ecs::world_local_registry& world){
+        sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, std::move(block), world);
     }
 
     base_objects::block chunk_data::get_block(uint8_t local_x, uint64_t local_y, uint8_t local_z) {
         return sub_chunks.at(local_y >> 4).get_block(local_x, local_y & 15, local_z);
     }
 
-    enbt::value& chunk_data::get_block_entity_data(uint8_t local_x, uint64_t local_y, uint8_t local_z) {
-        return sub_chunks.at(local_y >> 4).get_block_entity_data(local_x, local_y & 15, local_z);
+    api::ecs::entity chunk_data::get_block_entity(uint8_t local_x, uint64_t local_y, uint8_t local_z) {
+        return sub_chunks.at(local_y >> 4).get_block_entity(local_x, local_y & 15, local_z);
     }
 
-    void chunk_data::gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block block) {
-        sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, block);
+    //generator functions
+    void chunk_data::gen_set_state(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block_id_t id, api::ecs::world_local_registry& world) {
+        sub_chunks.at(local_y >> 4).set_state_gen(local_x, local_y & 15, local_z, id, world);
     }
 
-    void chunk_data::gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block_entity&& block) {
-        sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, std::move(block));
+    void chunk_data::gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block block, api::ecs::world_local_registry& world) {
+        sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, block, world);
     }
 
-    void chunk_data::gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, const base_objects::block_entity& block) {
-        sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, block);
+    void chunk_data::gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, api::ecs::entity&& block, api::ecs::world_local_registry& world){
+        sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, std::move(block), world);
     }
 
-    void chunk_data::gen_remove_block(uint8_t local_x, uint64_t local_y, uint8_t local_z) {
-        sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, base_objects::block());
+    void chunk_data::gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, const api::ecs::entity& block, api::ecs::world_local_registry& world) {
+        sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, block, world);
     }
 
-    base_objects::full_block_data_ref chunk_data::gen_get_block(uint8_t local_x, uint64_t local_y, uint8_t local_z) {
-        std::optional<base_objects::full_block_data_ref> res;
-        sub_chunks.at(local_y >> 4).get_block(local_x, local_y & 15, local_z, [&res](auto block) { res = block; }, [&res](auto block, auto& enbt) { res.emplace(base_objects::block_entity_ref(block, enbt)); });
-        return *res;
+    void chunk_data::gen_remove_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, api::ecs::world_local_registry& world) {
+        sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, base_objects::block(), world);
     }
 }

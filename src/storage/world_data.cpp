@@ -461,7 +461,7 @@ namespace copper_server::storage {
             }
     }
 
-    void world_data::entity_place(api::ecs::entity self, bool is_main_hand, int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block) {
+    void world_data::entity_place(api::ecs::entity self, bool is_main_hand, int64_t x, int64_t y, int64_t z, api::ecs::entity block) {
         std::unique_lock lock(mutex);
         for (auto& [id, entity] : entities)
             if (entity != self) {
@@ -511,7 +511,7 @@ namespace copper_server::storage {
         world_notify<&ew_processor::notify_block_change>(this, entities, x, z, x, y, z, block);
     }
 
-    void world_data::notify_block_change(int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block) {
+    void world_data::notify_block_change(int64_t x, int64_t y, int64_t z, api::ecs::entity block) {
         std::unique_lock lock(mutex);
         world_notify<&ew_processor::notify_block_entity_change>(this, entities, x, z, x, y, z, block);
     }
@@ -521,7 +521,7 @@ namespace copper_server::storage {
         world_notify<&ew_processor::notify_block_destroy_change>(this, entities, x, z, x, y, z, block);
     }
 
-    void world_data::notify_block_destroy_change(int64_t x, int64_t y, int64_t z, base_objects::const_block_entity_ref block) {
+    void world_data::notify_block_destroy_change(int64_t x, int64_t y, int64_t z, api::ecs::entity block) {
         std::unique_lock lock(mutex);
         world_notify<&ew_processor::notify_block_entity_destroy_change>(this, entities, x, z, x, y, z, block);
     }
@@ -636,36 +636,29 @@ namespace copper_server::storage {
         );
     }
 
-    void world_data::__set_block_silent(const base_objects::full_block_data& block, int64_t global_x, int64_t global_y_raw, int64_t global_z, block_set_mode mode) {
+    void world_data::__set_block_silent(base_objects::any_block block, int64_t global_x, int64_t global_y_raw, int64_t global_z, block_set_mode mode) {
         TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
+        base_objects::block_id_t general_id;
         get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
-            sub_chunk.set_block(global_x & 15, global_y & 15, global_z & 15, block);
+            sub_chunk.set_block(global_x & 15, global_y & 15, global_z & 15, std::move(block));
+            if (mode == block_set_mode::destroy){
+                sub_chunk.get_block(
+                    global_x & 15,
+                    global_y & 15,
+                    global_z & 15,
+                    [&](auto block) {
+                        general_id = block.general_block_id();
+                        notify_block_destroy_change(global_x, global_y_raw, global_z, block);
+                    },
+                    [&](auto block) {
+                        general_id = block->general_block_id();
+                        notify_block_destroy_change(global_x, global_y_raw, global_z, block);
+                    }
+                );
+            }
         });
 
-        std::visit(
-            [&](auto& b) {
-                if (mode == block_set_mode::destroy)
-                    WORLD_ASYNC_RUN(notify_block_destroy_change, global_x, global_y_raw, global_z, b);
-                __update_block(global_x, global_y_raw, global_z, mode, b.general_block_id());
-            },
-            block
-        );
-    }
-
-    void world_data::__set_block_silent(base_objects::full_block_data&& block, int64_t global_x, int64_t global_y_raw, int64_t global_z, block_set_mode mode) {
-        TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
-        auto b = std::visit(
-            [&](auto& b) {
-                if (mode == block_set_mode::destroy)
-                    WORLD_ASYNC_RUN(notify_block_destroy_change, global_x, global_y_raw, global_z, b);
-                return b.general_block_id();
-            },
-            block
-        );
-        get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
-            sub_chunk.set_block(global_x & 15, global_y & 15, global_z & 15, block);
-        });
-        __update_block(global_x, global_y_raw, global_z, mode, b);
+        __update_block(global_x, global_y_raw, global_z, mode, general_id);
     }
 
     void world_data::__update_block(int64_t global_x, int64_t global_y_raw, int64_t global_z, block_set_mode mode, base_objects::block_id_t b) {
@@ -759,7 +752,7 @@ namespace copper_server::storage {
         world_records = load_from_nbt.at("world_records");
 
         set_seed(load_from_nbt.at("world_seed"));
-        wandering_trader_id = load_from_nbt.at("wandering_trader_id");
+        wandering_trader_id = base_objects::uuid::to_uuid(load_from_nbt.at("wandering_trader_id"));
 
 
         wandering_trader_spawn_chance = load_from_nbt.at("wandering_trader_spawn_chance");
@@ -1447,7 +1440,7 @@ namespace copper_server::storage {
                                 func(entity);
     }
 
-    void world_data::for_each_block_entity(base_objects::cubic_bounds_chunk bounds, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func) {
+    void world_data::for_each_block_entity(base_objects::cubic_bounds_chunk bounds, const std::function<void(api::ecs::entity block_entity)>& func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
@@ -1457,7 +1450,7 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::for_each_block_entity(base_objects::cubic_bounds_chunk_radius bounds, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func) {
+    void world_data::for_each_block_entity(base_objects::cubic_bounds_chunk_radius bounds, const std::function<void(api::ecs::entity block_entity)>& func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
@@ -1467,7 +1460,7 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::for_each_block_entity(base_objects::cubic_bounds_chunk_radius_out bounds, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func) {
+    void world_data::for_each_block_entity(base_objects::cubic_bounds_chunk_radius_out bounds, const std::function<void(api::ecs::entity block_entity)>& func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
@@ -1477,7 +1470,7 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::for_each_block_entity(base_objects::spherical_bounds_chunk bounds, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func) {
+    void world_data::for_each_block_entity(base_objects::spherical_bounds_chunk bounds, const std::function<void(api::ecs::entity block_entity)>& func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
@@ -1487,7 +1480,7 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::for_each_block_entity(base_objects::spherical_bounds_chunk_out bounds, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func) {
+    void world_data::for_each_block_entity(base_objects::spherical_bounds_chunk_out bounds, const std::function<void(api::ecs::entity block_entity)>& func) {
         std::unique_lock lock(mutex);
         bounds.enum_points([&](int64_t x, int64_t z) {
             if (auto x_axis = chunks.find(x); x_axis != chunks.end())
@@ -1497,12 +1490,12 @@ namespace copper_server::storage {
         });
     }
 
-    void world_data::for_each_block_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func) {
+    void world_data::for_each_block_entity(int64_t chunk_x, int64_t chunk_z, const std::function<void(api::ecs::entity block_entity)>& func) {
         std::unique_lock lock(mutex);
         get_chunk(chunk_x, chunk_z, [&](auto& chunk) { chunk.for_each_block_entity(func); });
     }
 
-    void world_data::for_each_block_entity(int64_t chunk_x, int64_t chunk_y_raw, int64_t chunk_z, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func) {
+    void world_data::for_each_block_entity(int64_t chunk_x, int64_t chunk_y_raw, int64_t chunk_z, const std::function<void(api::ecs::entity block_entity)>& func) {
         TO_WORLD_POS_CHUNK(chunk_y, chunk_y_raw);
         std::unique_lock lock(mutex);
         get_chunk(chunk_x, chunk_z, [&](auto& chunk) { chunk.for_each_block_entity(chunk_y, func); });
@@ -1552,11 +1545,11 @@ namespace copper_server::storage {
         for_each_entity(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z), func);
     }
 
-    void world_data::for_each_block_entity_at(int64_t global_x, int64_t global_z, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func) {
+    void world_data::for_each_block_entity_at(int64_t global_x, int64_t global_z, const std::function<void(api::ecs::entity block_entity)>& func) {
         for_each_block_entity(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z), func);
     }
 
-    void world_data::for_each_block_entity_at(int64_t global_x, int64_t global_y_raw, int64_t global_z, const std::function<void(base_objects::block block, enbt::value& extended_data)>& func) {
+    void world_data::for_each_block_entity_at(int64_t global_x, int64_t global_y_raw, int64_t global_z, const std::function<void(api::ecs::entity block_entity)>& func) {
         TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
         for_each_block_entity(convert_chunk_global_pos(global_x), convert_chunk_global_pos(global_z), convert_chunk_global_pos(global_y), func);
     }
@@ -1641,14 +1634,14 @@ namespace copper_server::storage {
         return res;
     }
 
-    void world_data::get_block(int64_t global_x, int64_t global_y_raw, int64_t global_z, const std::function<void(base_objects::block block)>& func, const std::function<void(base_objects::block block, enbt::value& extended_data)>& block_entity) {
+    void world_data::get_block(int64_t global_x, int64_t global_y_raw, int64_t global_z, const std::function<void(base_objects::block block)>& func, const std::function<void(const std::unique_ptr<base_objects::block_entity>&)>& block_entity) {
         TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
         get_sub_chunk(global_x >> 4, global_y >> 4, global_z >> 4, [&](sub_chunk_data& sub_chunk) {
             sub_chunk.get_block(global_x & 15, global_y & 15, global_z & 15, func, block_entity);
         });
     }
 
-    void world_data::query_block(int64_t global_x, int64_t global_y_raw, int64_t global_z, const std::function<void(base_objects::block block)>& func, const std::function<void(base_objects::block block, enbt::value& extended_data)>& block_entity, const std::function<void()>& fault) {
+    void world_data::query_block(int64_t global_x, int64_t global_y_raw, int64_t global_z, const std::function<void(base_objects::block block)>& func, const std::function<void(const std::unique_ptr<base_objects::block_entity>&)>& block_entity, const std::function<void()>& fault) {
         TO_WORLD_POS_GLOBAL(global_y, global_y_raw);
         request_chunk_data(
             global_x >> 4,
@@ -1672,9 +1665,8 @@ namespace copper_server::storage {
             global_y,
             global_z,
             [&](auto normal) { WORLD_ASYNC_RUN(notify_block_change, global_x, global_y, global_z, normal); },
-            [&](auto block, auto& nbt) {
-                base_objects::const_block_entity_ref ref(block, nbt);
-                WORLD_ASYNC_RUN(notify_block_change, global_x, global_y, global_z, ref);
+            [&](const std::unique_ptr<base_objects::block_entity>& block) {
+                WORLD_ASYNC_RUN(notify_block_change, global_x, global_y, global_z, block);
             }
         );
         get_light_processor()->block_changed(*this, global_x, global_y, global_z);
@@ -2148,10 +2140,8 @@ namespace copper_server::storage {
                     entities.erase(id);
                 rr.unrelated_entities.clear();
             });
-            entity_tick_scheduler.execute_frame(current_world_reg);
-            to_tick_chunks.for_each([&](auto&& chunk) {
-                chunk->tick_block_entity(rr, *this);
-            });
+            entity_tick_scheduler.execute_frame(current_world_reg, api::ecs::tick_phase::mobile_entity);
+            entity_tick_scheduler.execute_frame(current_world_reg, api::ecs::tick_phase::block_entity);
             to_tick_chunks.for_each([&](auto&& chunk) {
                 chunk->tick_game_event(rr, *this);
             });
@@ -2241,17 +2231,17 @@ namespace copper_server::storage {
                     tick_local_time = actual_time;
                 });
                 {
-                    entity_tick_scheduler.execute_frame(current_world_reg);
+                    entity_tick_scheduler.execute_frame(current_world_reg, api::ecs::tick_phase::mobile_entity);
                     auto actual_time = std::chrono::high_resolution_clock::now();
                     profiling.entity_tick_speed = std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
                     tick_local_time = actual_time;
                 }
-                to_tick_chunks.for_each([&](auto&& chunk) {
-                    chunk->tick_block_entity(rr, *this);
+                {
+                    entity_tick_scheduler.execute_frame(current_world_reg, api::ecs::tick_phase::block_entity);
                     auto actual_time = std::chrono::high_resolution_clock::now();
-                    chunk->tick_speed += std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
+                    profiling.block_entity_tick_speed = std::chrono::duration_cast<std::chrono::milliseconds>(actual_time - tick_local_time);
                     tick_local_time = actual_time;
-                });
+                }
                 to_tick_chunks.for_each([&](auto&& chunk) {
                     chunk->tick_game_event(rr, *this);
                     auto actual_time = std::chrono::high_resolution_clock::now();

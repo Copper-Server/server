@@ -16,6 +16,11 @@
 #include <type_traits>
 #include <vector>
 
+namespace copper_server::util {
+    class nbt_read_stream;
+    class nbt_write_stream;
+}
+
 namespace copper_server::api::ecs {
     using component_id = uint32_t;
     struct entity_recipe;
@@ -32,12 +37,19 @@ namespace copper_server::api::ecs {
     };
 
     namespace detail {
+        struct archetype_layout {
+            std::vector<component_id> component_ids;
+            std::unordered_map<component_id, uint32_t> component_index_map;
+            std::vector<size_t> component_offsets;
+        };
+
         struct component_type_info {
             using constructor_fn = void (*)(void* memory);
             using destructor_fn = void (*)(void* memory);
             using move_constructor_fn = void (*)(void* destination, void* source);
             using copy_assignation_fn = void (*)(void* destination, void* source);
             using move_fn = void (*)(void* destination, void* source);
+            using reset_fn = void (*)(void* memory);
 
             size_t size = 0;
             size_t alignment = 0;
@@ -46,6 +58,7 @@ namespace copper_server::api::ecs {
             copy_assignation_fn copy_assign = nullptr;
             destructor_fn destroy = nullptr;
             move_fn move = nullptr;
+            reset_fn reset = nullptr;
         };
 
         struct system_info {
@@ -80,7 +93,8 @@ namespace copper_server::api::ecs {
                         .move_construct = [](void* dest, void* src) { new (dest) T(std::move(*static_cast<T*>(src))); },
                         .copy_assign = [](void* dest, void* src) { *static_cast<T*>(dest) = *static_cast<T*>(src); },
                         .destroy = [](void* mem) { static_cast<T*>(mem)->~T(); },
-                        .move = [](void* dest, void* src) { *static_cast<T*>(dest) = std::move(*static_cast<T*>(src)); }
+                        .move = [](void* dest, void* src) { *static_cast<T*>(dest) = std::move(*static_cast<T*>(src)); },
+                        .reset = [](void* mem) { static_cast<T*>(mem)->~T(); new (mem) T(); }
                     };
                 }
             }
@@ -153,6 +167,13 @@ namespace copper_server::api::ecs {
 
         void* get_entity_component(int32_t id, uint32_t generation, component_id component_id);
 
+        //this is used for accelerating serialization/deserialization logic
+        size_t get_entity_archetype_id(int32_t id, uint32_t generation);
+        //this is used for accelerating serialization/deserialization logic
+        archetype_layout get_archetype_layout(int32_t id, uint32_t generation);
+        //this is used for accelerating serialization/deserialization logic
+        void* get_entity_component_by_offset(int32_t id, uint32_t generation, size_t offset, size_t component_size);
+
         //this function moves the component to heap allocated buffer, accepts reference to the component.
         template <class component>
         void queue_set_entity_component(int32_t id, uint32_t generation, component_id component_id, component&& comp) {
@@ -163,9 +184,7 @@ namespace copper_server::api::ecs {
             queue_command(std::move(queue));
         }
 
-        inline void queue_remove_entity_component(int32_t id, uint32_t generation, component_id component_id) {
-            queue_command(mutation_queue_item{id, generation, component_id});
-        }
+        void queue_remove_entity_component(int32_t id, uint32_t generation, component_id component_id);
 
         void queue_destroy_entity(int32_t id, uint32_t generation);
         void queue_mark_dirty(int32_t id, uint32_t generation, component_id component_id);
@@ -180,10 +199,14 @@ namespace copper_server::api::ecs {
         fast_task::future_ptr<std::optional<entity>> copy_entity(std::optional<int32_t> world_id, const api::ecs::entity& base_entity);
         fast_task::task_rw_mutex& immediate_lock();
 
+        entity load_ecs_entity(const std::string& named_id, util::nbt_read_stream& stream, std::optional<int32_t> world_id = std::nullopt);
+        void store_ecs_entity(const std::string& named_id, util::nbt_write_stream& stream, entity);
+
         template <class... components>
         fast_task::future_ptr<entity> create_entity__cc(std::optional<int32_t> world_id, components&&... args);
         template <class... components>
         fast_task::future_ptr<entity> create_entity_r_cc(std::optional<int32_t> world_id, const entity_recipe& recipe, components&&... args);
+
 
         struct iteration_handle {
             struct iteration_data;

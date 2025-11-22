@@ -12,7 +12,6 @@ namespace copper_server::util {
     class nbt_write_stream;
 
     namespace nbt_collection {
-        template <template <class...> class map_base>
         class compound_flex;
     }
 
@@ -31,7 +30,7 @@ namespace copper_server::base_objects {
 
         virtual std::unique_ptr<block_entity> clone() const = 0;
 
-        void from_nbt_base_data(util::nbt_collection::compound_flex<std::unordered_map>& collector);
+        void from_nbt_base_data(util::nbt_collection::compound_flex& collector);
         void to_nbt_base_data(util::nbt_write_compound_stream& collector);
         virtual void to_nbt(util::nbt_write_stream& stream) = 0;
 
@@ -281,7 +280,7 @@ namespace copper_server::base_objects {
             std::optional<std::variant<float, chances_t>> slot_drop_chances;
 
 
-            void from_nbt_base_data(util::nbt_collection::compound_flex<std::unordered_map>& collector);
+            void from_nbt_base_data(util::nbt_collection::compound_flex& collector);
             void to_nbt_base_data(util::nbt_write_compound_stream& collector);
             void from_nbt(util::nbt_read_stream& stream);
             void to_nbt(util::nbt_write_stream& stream);
@@ -309,36 +308,6 @@ namespace copper_server::base_objects {
         std::optional<event_t> event;
         int32_t event_delay = 0;
         selector_t selector;
-    };
-
-    struct any_block : public std::variant<block, std::unique_ptr<block_entity>> {
-        using std::variant<block, std::unique_ptr<block_entity>>::variant;
-        using std::variant<block, std::unique_ptr<block_entity>>::operator=;
-
-        any_block(const any_block& value) {
-            std::visit(
-                [this]<class T>(const T& it) {
-                    if constexpr (std::is_same_v<T, block>)
-                        *this = it;
-                    else
-                        *this = it->clone();
-                },
-                value
-            );
-        }
-
-        any_block& operator=(const any_block& value) {
-            std::visit(
-                [this]<class T>(const T& it) {
-                    if constexpr (std::is_same_v<T, block>)
-                        *this = it;
-                    else
-                        *this = it->clone();
-                },
-                value
-            );
-            return *this;
-        }
     };
 }
 

@@ -116,7 +116,7 @@ namespace copper_server::api::packets {
     concept need_preprocess_result_v = need_preprocess_result<T>();
 
     template <class T>
-    void serialize_entry(base_objects::network::response::item& res, base_objects::shared_client_data& context, T&& value) {
+    void serialize_entry(base_objects::network::response_item& res, base_objects::shared_client_data& context, T&& value) {
         using Type = std::decay_t<T>;
         if constexpr (is_convertible_to_packet_form<Type>) {
             serialize_entry(res, context, value.to_packet());
@@ -303,7 +303,7 @@ namespace copper_server::api::packets {
                 serialize_entry(res, context, tmp);
             }
         } else if constexpr (is_template_base_of<sized_entry, Type>) {
-            base_objects::network::response::item inner;
+            base_objects::network::response_item inner;
             serialize_entry(inner, context, value.value);
             typename Type::size_type size;
             if constexpr (sizeof(typename Type::size_type) >= 8)
@@ -539,7 +539,7 @@ namespace copper_server::api::packets {
         } else if constexpr (std::is_same_v<Type, client_bound::play::play_packet>) {
             std::visit([&](auto& it) { serialize_packet(res, context, it); }, value);
         } else if constexpr (is_packet<Type>) {
-            base_objects::network::response::item it;
+            base_objects::network::response_item it;
             it.write_id(Type::packet_id::value);
             serialize_entry(it, context, value);
             res += std::move(it);

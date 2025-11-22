@@ -25,6 +25,18 @@ namespace copper_server::api::ecs {
             }
         }
 
+        template <class component, typename... Args>
+        component& emplace(Args&&... args) {
+            auto id = detail::get_component_id<component>();
+            if (auto it = components.find(id); it != components.end())
+                delete static_cast<component*>(it->second);
+
+            auto res = std::make_unique<component>(std::forward<Args>(args)...);
+            component* ptr = res.get();
+            components[id] = res.release();
+            return *ptr;
+        }
+
         template <class component>
         void set(component&& move) {
             auto id = detail::get_component_id<component>();
@@ -40,25 +52,41 @@ namespace copper_server::api::ecs {
 
         template <class component>
         void set() {
-            auto id = detail::get_component_id<component>();
-
-            component* res_;
-            if (auto it = components.find(id); it != components.end())
-                res_ = static_cast<component*>(it->second);
-            else {
-                auto res = std::make_unique<component>();
-                components[id] = res.get();
-                res_ = res.release();
-            }
-            *res_ = component();
+            emplace<component>();
         }
 
         template <class component>
         void remove() {
             if (auto it = components.find(id); it != components.end()){
-                delete it->second;
+                delete static_cast<component*>(it->second);
                 components.erase(it);
             }
+        }
+
+        // Type-erased remove for internal use
+        void remove_by_id(component_id id) {
+            if (auto it = components.find(id); it != components.end()) {
+                const auto& info = detail::component_info_registry.at(id);
+                info.destroy(it->second);
+                ::operator delete(it->second);
+                components.erase(it);
+            }
+        }
+
+        // Helper for dynamic deserialization access
+        void* get_raw_or_create(component_id id) {
+            if (auto it = components.find(id); it != components.end()) {
+                return it->second;
+            }
+
+            const auto& info = detail::component_info_registry.at(id);
+            // Allocate memory using global new with correct alignment
+            void* ptr = ::operator new(info.size, std::align_val_t(info.alignment));
+            // Construct default
+            info.construct(ptr);
+
+            components[id] = ptr;
+            return ptr;
         }
 
         template <class component>
@@ -85,11 +113,32 @@ namespace copper_server::api::ecs {
         }
 
         entity_construction() = default;
+
+        entity_construction(entity_construction&& other) noexcept : components(std::move(other.components)) {
+        }
+
+        entity_construction& operator=(entity_construction&& other) noexcept {
+            if (this != &other) {
+                clear();
+                components = std::move(other.components);
+            }
+            return *this;
+        }
+
+        entity_construction(const entity_construction&) = delete;
+        entity_construction& operator=(const entity_construction&) = delete;
+
         ~entity_construction() {
+            clear();
+        }
+
+        void clear() {
             for (auto& [id, ptr] : components) {
                 auto& info = detail::component_info_registry.at(id);
                 info.destroy(ptr);
+                ::operator delete(ptr);
             }
+            components.clear();
         }
 
     private:

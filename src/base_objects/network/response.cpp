@@ -49,13 +49,13 @@ namespace copper_server::base_objects::network {
         }
     }
 
-    response::item::item()
+    response_item::response_item()
         : compression_threshold(-1), apply_compression(false) {}
 
-    response::item::item(const list_array<uint8_t>& data, int32_t compression_threshold, bool apply_compression)
+    response_item::response_item(const list_array<uint8_t>& data, int32_t compression_threshold, bool apply_compression)
         : data(data), compression_threshold(compression_threshold), apply_compression(apply_compression) {}
 
-    response::item::item(list_array<uint8_t>&& data, int32_t compression_threshold, bool apply_compression)
+    response_item::response_item(list_array<uint8_t>&& data, int32_t compression_threshold, bool apply_compression)
         : data(std::move(data)), compression_threshold(compression_threshold), apply_compression(apply_compression) {}
 
     template <class T>
@@ -69,11 +69,11 @@ namespace copper_server::base_objects::network {
         }
     }
 
-    void response::item::write_id(uint8_t id) {
+    void response_item::write_id(uint8_t id) {
         _write_value_tem(id, data, std::endian::little);
     }
 
-    void response::item::write_value(velocity val) {
+    void response_item::write_value(velocity val) {
         static constexpr double threshold = double(1.0) / 32766;
         double x = copper_server::util::minecraft::packets::velocity_clamp(val.x);
         double y = copper_server::util::minecraft::packets::velocity_clamp(val.y);
@@ -100,59 +100,59 @@ namespace copper_server::base_objects::network {
         }
     }
 
-    void response::item::write_value(const base_objects::uuid& val) {
+    void response_item::write_value(const base_objects::uuid& val) {
         _write_value_tem(val, data, std::endian::little);
     }
 
-    void response::item::write_value(int8_t val) {
+    void response_item::write_value(int8_t val) {
         _write_value_tem(val, data, std::endian::little);
     }
 
-    void response::item::write_value(int16_t val, std::endian endian) {
+    void response_item::write_value(int16_t val, std::endian endian) {
         _write_value_tem(val, data, endian);
     }
 
-    void response::item::write_value(int32_t val, std::endian endian) {
+    void response_item::write_value(int32_t val, std::endian endian) {
         _write_value_tem(val, data, endian);
     }
 
-    void response::item::write_value(int64_t val, std::endian endian) {
+    void response_item::write_value(int64_t val, std::endian endian) {
         _write_value_tem(val, data, endian);
     }
 
-    void response::item::write_value(uint8_t val) {
+    void response_item::write_value(uint8_t val) {
         _write_value_tem(val, data, std::endian::little);
     }
 
-    void response::item::write_value(uint16_t val, std::endian endian) {
+    void response_item::write_value(uint16_t val, std::endian endian) {
         _write_value_tem(val, data, endian);
     }
 
-    void response::item::write_value(uint32_t val, std::endian endian) {
+    void response_item::write_value(uint32_t val, std::endian endian) {
         _write_value_tem(val, data, endian);
     }
 
-    void response::item::write_value(uint64_t val, std::endian endian) {
+    void response_item::write_value(uint64_t val, std::endian endian) {
         _write_value_tem(val, data, endian);
     }
 
-    void response::item::write_value(float val, std::endian endian) {
+    void response_item::write_value(float val, std::endian endian) {
         _write_value_tem(val, data, endian);
     }
 
-    void response::item::write_value(double val, std::endian endian) {
+    void response_item::write_value(double val, std::endian endian) {
         _write_value_tem(val, data, endian);
     }
 
-    void response::item::write_value(char val) {
+    void response_item::write_value(char val) {
         _write_value_tem(val, data, std::endian::little);
     }
 
-    void response::item::write_value(bool val) {
+    void response_item::write_value(bool val) {
         _write_value_tem(val, data, std::endian::little);
     }
 
-    void response::item::write_var32(int32_t value) {
+    void response_item::write_var32(int32_t value) {
         constexpr size_t buf_len = sizeof(int32_t) + (sizeof(int32_t) / 7) + 1;
         uint8_t buf[buf_len];
         size_t len = util::toVar(buf, buf_len, enbt::endian_helpers::convert_endian(std::endian::little, value));
@@ -160,7 +160,7 @@ namespace copper_server::base_objects::network {
             data.push_back(buf[i]);
     }
 
-    void response::item::write_var64(int64_t value) {
+    void response_item::write_var64(int64_t value) {
         constexpr size_t buf_len = sizeof(int64_t) + (sizeof(int64_t) / 7) + 1;
         uint8_t buf[buf_len];
         size_t len = util::toVar(buf, buf_len, enbt::endian_helpers::convert_endian(std::endian::little, value));
@@ -168,7 +168,7 @@ namespace copper_server::base_objects::network {
             data.push_back(buf[i]);
     }
 
-    void response::item::write_string(const std::string& str, int32_t max_string_len) {
+    void response_item::write_string(const std::string& str, int32_t max_string_len) {
         size_t actual_len = str.size();
         if (actual_len != str.size())
             throw std::out_of_range("actual string len out of range");
@@ -178,38 +178,38 @@ namespace copper_server::base_objects::network {
         data.push_back((uint8_t*)str.data(), str.size());
     }
 
-    void response::item::write_identifier(const std::string& str) {
+    void response_item::write_identifier(const std::string& str) {
         write_string(str, 32767);
     }
 
-    void response::item::write_json_component(const std::string& str) {
+    void response_item::write_json_component(const std::string& str) {
         write_string(str, 262144);
     }
 
-    void response::item::write_direct(const list_array<uint8_t>& value) {
+    void response_item::write_direct(const list_array<uint8_t>& value) {
         data.push_back(value);
     }
 
-    void response::item::write_direct(list_array<uint8_t>&& value) {
+    void response_item::write_direct(list_array<uint8_t>&& value) {
         data.push_back(std::move(value));
     }
 
-    void response::item::write_direct(const list_array<uint16_t>& value, std::endian endian) {
+    void response_item::write_direct(const list_array<uint16_t>& value, std::endian endian) {
         for (auto& it : value)
             write_value(it, endian);
     }
 
-    void response::item::write_direct(const list_array<uint32_t>& value, std::endian endian) {
+    void response_item::write_direct(const list_array<uint32_t>& value, std::endian endian) {
         for (auto& it : value)
             write_value(it, endian);
     }
 
-    void response::item::write_direct(const list_array<uint64_t>& value, std::endian endian) {
+    void response_item::write_direct(const list_array<uint64_t>& value, std::endian endian) {
         for (auto& it : value)
             write_value(it, endian);
     }
 
-    void response::item::write_direct(const list_array<int8_t>& value) {
+    void response_item::write_direct(const list_array<int8_t>& value) {
         if (value.need_commit()) {
             for (auto& it : value)
                 write_value(it);
@@ -217,42 +217,42 @@ namespace copper_server::base_objects::network {
             data.push_back((uint8_t*)value.data(), value.size());
     }
 
-    void response::item::write_direct(const list_array<int16_t>& value, std::endian endian) {
+    void response_item::write_direct(const list_array<int16_t>& value, std::endian endian) {
         for (auto& it : value)
             write_value(it, endian);
     }
 
-    void response::item::write_direct(const list_array<int32_t>& value, std::endian endian) {
+    void response_item::write_direct(const list_array<int32_t>& value, std::endian endian) {
         for (auto& it : value)
             write_value(it, endian);
     }
 
-    void response::item::write_direct(const list_array<int64_t>& value, std::endian endian) {
+    void response_item::write_direct(const list_array<int64_t>& value, std::endian endian) {
         for (auto& it : value)
             write_value(it, endian);
     }
 
-    void response::item::write_direct(const uint8_t* value, size_t size) {
+    void response_item::write_direct(const uint8_t* value, size_t size) {
         data.push_back(value, size);
     }
 
-    void response::item::write_in(item&& value) {
+    void response_item::write_in(response_item&& value) {
         data.push_back(std::move(value.data));
     }
 
-    void response::item::write_in(const item& value) {
+    void response_item::write_in(const response_item& value) {
         data.push_back(value.data);
     }
 
     response::response() = default;
 
-    response::response(const item& copy)
+    response::response(const response_item& copy)
         : do_disconnect(false), do_disconnect_after_send(false), valid_till(0) {
         data.reserve(1);
         data.emplace_back(copy);
     }
 
-    response::response(item&& move)
+    response::response(response_item&& move)
         : do_disconnect(false), do_disconnect_after_send(false), valid_till(0) {
         data.reserve(1);
         data.emplace_back(std::move(move));
@@ -276,14 +276,14 @@ namespace copper_server::base_objects::network {
     }
 
     response response::enable_compress_answer(const list_array<uint8_t>& data, int32_t compression_threshold, size_t valid_till) {
-        return response({item(data, compression_threshold, true)}, valid_till);
+        return response({response_item(data, compression_threshold, true)}, valid_till);
     }
 
-    response response::answer(const list_array<item>& data, size_t valid_till) {
+    response response::answer(const list_array<response_item>& data, size_t valid_till) {
         return response(data.copy(), valid_till);
     }
 
-    response response::answer(list_array<item>&& data, size_t valid_till) {
+    response response::answer(list_array<response_item>&& data, size_t valid_till) {
         return response(data.take(), valid_till);
     }
 
@@ -295,11 +295,11 @@ namespace copper_server::base_objects::network {
         return response({}, 0, true);
     }
 
-    response response::disconnect(const list_array<item>& data, size_t valid_till) {
+    response response::disconnect(const list_array<response_item>& data, size_t valid_till) {
         return response(data.copy(), valid_till, false, true);
     }
 
-    response response::disconnect(list_array<item>&& data, size_t valid_till) {
+    response response::disconnect(list_array<response_item>&& data, size_t valid_till) {
         return response(data.take(), valid_till, false, true);
     }
 
@@ -341,11 +341,11 @@ namespace copper_server::base_objects::network {
         return !data.empty() || do_disconnect || do_disconnect_after_send;
     }
 
-    response::response(const list_array<item>& response_bytes, size_t valid_till, bool disconnect, bool disconnect_after_send)
+    response::response(const list_array<response_item>& response_bytes, size_t valid_till, bool disconnect, bool disconnect_after_send)
         : valid_till(valid_till), data(response_bytes), do_disconnect(disconnect), do_disconnect_after_send(disconnect_after_send) {
     }
 
-    response::response(list_array<item>&& response_bytes, size_t valid_till, bool disconnect, bool disconnect_after_send)
+    response::response(list_array<response_item>&& response_bytes, size_t valid_till, bool disconnect, bool disconnect_after_send)
         : valid_till(valid_till), data(std::move(response_bytes)), do_disconnect(disconnect), do_disconnect_after_send(disconnect_after_send) {
     }
 }

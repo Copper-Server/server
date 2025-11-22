@@ -37,7 +37,32 @@ namespace copper_server {
     }
 }
 
+namespace copper_server::api::ecs {
+    struct entity_definition;
+}
 namespace copper_server::api::ecs::com {
+
+    struct type_definition { //if this component defined in recipe it will protect some components from removal and provide additional info
+        const entity_definition* type;
+    };
+
+    struct block_entity_tag {};
+
+    struct mobile_entity_tag {};
+
+    struct item_entity_tag {};
+
+    struct owns_children {
+        std::vector<
+            std::function<
+                std::vector<ecs::entity>(ecs::entity self)>>
+            child_getters;
+    };
+
+    struct owned_by {
+        ecs::entity parent;
+    };
+
     struct inventory { //some entities
         std::unique_ptr<std::unordered_map<uint32_t, base_objects::slot_data>> value;
 
@@ -554,5 +579,11 @@ namespace copper_server::api::ecs::com {
     struct food {
         int32_t value;
     };
+
+    namespace block_entity {
+        struct block_id {
+            int32_t id; //block state id
+        };
+    }
 }
 #endif /* SRC_API_ECS_BASE_COMPONENTS */

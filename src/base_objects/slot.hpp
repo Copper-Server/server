@@ -28,7 +28,6 @@ namespace copper_server::util {
     class nbt_write_stream;
 
     namespace nbt_collection {
-        template <template <class...> class map_base>
         class compound_flex;
     }
 
@@ -186,7 +185,7 @@ namespace copper_server::base_objects {
         static slot_data from_nbt(util::nbt_read_stream& stream);
 
         void to_nbt_base(util::nbt_write_compound_stream& stream) const;
-        void from_nbt_base(util::nbt_collection::compound_flex<std::unordered_map>& collector);
+        void from_nbt_base(util::nbt_collection::compound_flex& collector);
 
     private:
         friend struct static_slot_data;

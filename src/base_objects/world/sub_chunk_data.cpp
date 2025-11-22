@@ -6,8 +6,12 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <src/api/ecs/base_components.hpp>
+#include <src/api/ecs/entity_construction.hpp>
+#include <src/api/ecs/entity_definition.hpp>
 #include <src/api/registers.hpp>
 #include <src/base_objects/world/sub_chunk_data.hpp>
+#include <src/storage/world_data.hpp>
 
 namespace copper_server::base_objects::world {
     sub_chunk_data::sub_chunk_data() = default;
@@ -32,14 +36,14 @@ namespace copper_server::base_objects::world {
         return *this;
     }
 
-    enbt::value& sub_chunk_data::get_block_entity_data(uint8_t local_x, uint8_t local_y, uint8_t local_z) {
-        return block_entities[local_z | (local_y << 4) | (local_x << 8)];
+    api::ecs::entity sub_chunk_data::get_block_entity(uint8_t local_x, uint8_t local_y, uint8_t local_z) {
+        return block_entities.at(local_z | (local_y << 4) | (local_x << 8));
     }
 
-    void sub_chunk_data::get_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, std::function<void(base_objects::block block)> on_normal, std::function<void(base_objects::block block, enbt::value& entity_data)> on_entity) {
+    void sub_chunk_data::get_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, std::function<void(base_objects::block block)> on_normal, std::function<void(api::ecs::entity block_entity)> on_entity) {
         auto block = (base_objects::block)blocks.get(local_x, local_y, local_z);
         if (block.is_block_entity())
-            on_entity(block, get_block_entity_data(local_x, local_y, local_z));
+            on_entity(block_entities[local_z | (local_y << 4) | (local_x << 8)]);
         else
             on_normal(block);
     }
@@ -48,21 +52,9 @@ namespace copper_server::base_objects::world {
         return (base_objects::block)blocks.get(local_x, local_y, local_z);
     }
 
-    void sub_chunk_data::set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::full_block_data& block) {
+    void sub_chunk_data::set_state(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block_id_t state, api::ecs::world_local_registry& world) {
         bool prev_active = !base_objects::block(blocks.get(local_x, local_y, local_z)).is_air();
-        std::visit(
-            [&](auto& block) {
-                using T = std::decay_t<decltype(block)>;
-                if constexpr (std::is_same_v<T, base_objects::block>) {
-                    blocks.set(local_x, local_y, local_z, block.id);
-                    block_entities.erase(local_z | (local_y << 4) | (local_x << 8));
-                } else {
-                    blocks.set(local_x, local_y, local_z, block.block.id);
-                    get_block_entity_data(local_x, local_y, local_z) = block.data;
-                }
-            },
-            block
-        );
+        set_state_gen(local_x, local_y, local_z, state, world);
         bool now_active = !base_objects::block(blocks.get(local_x, local_y, local_z)).is_air();
         if (prev_active && !now_active)
             --active_blocks;
@@ -70,42 +62,105 @@ namespace copper_server::base_objects::world {
             ++active_blocks;
     }
 
-    void sub_chunk_data::set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::full_block_data&& block) {
+    void sub_chunk_data::set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block block, api::ecs::world_local_registry& world) {
         bool prev_active = !base_objects::block(blocks.get(local_x, local_y, local_z)).is_air();
-        std::visit(
-            [&](auto& block) {
-                using T = std::decay_t<decltype(block)>;
-                if constexpr (std::is_same_v<T, base_objects::block>) {
-                    blocks.set(local_x, local_y, local_z, block.id);
-                    block_entities.erase(local_z | (local_y << 4) | (local_x << 8));
-                } else {
-                    blocks.set(local_x, local_y, local_z, block.block.id);
-                    get_block_entity_data(local_x, local_y, local_z) = std::move(block.data);
-                }
-            },
-            block
-        );
+        set_block_gen(local_x, local_y, local_z, block, world);
         bool now_active = !base_objects::block(blocks.get(local_x, local_y, local_z)).is_air();
-
         if (prev_active && !now_active)
             --active_blocks;
         else if (!prev_active && now_active)
             ++active_blocks;
     }
 
-    void sub_chunk_data::set_block_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::block_entity& block) {
-        blocks.set(local_x, local_y, local_z, block.block.id);
-        get_block_entity_data(local_x, local_y, local_z) = block.data;
+    void sub_chunk_data::set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, api::ecs::entity&& block, api::ecs::world_local_registry& world) {
+        bool prev_active = !base_objects::block(blocks.get(local_x, local_y, local_z)).is_air();
+        set_block_gen(local_x, local_y, local_z, std::move(block), world);
+
+        bool now_active = !base_objects::block(blocks.get(local_x, local_y, local_z)).is_air();
+        if (prev_active && !now_active)
+            --active_blocks;
+        else if (!prev_active && now_active)
+            ++active_blocks;
     }
 
-    void sub_chunk_data::set_block_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block_entity&& block) {
-        blocks.set(local_x, local_y, local_z, block.block.id);
-        get_block_entity_data(local_x, local_y, local_z) = std::move(block.data);
+    void sub_chunk_data::set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, const api::ecs::entity& block, api::ecs::world_local_registry& world) {
+        auto res = block.copy_and_wait();
+        if (!res)
+            throw std::runtime_error("Failed to copy block_entity");
+        set_block(local_x, local_y, local_z, std::move(*res), world);
     }
 
-    void sub_chunk_data::set_block_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block block) {
+    void sub_chunk_data::set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, const base_objects::any_block& block, api::ecs::world_local_registry& world) {
+        std::visit(
+            [&](auto& block) {
+                set_block(local_x, local_y, local_z, block, world);
+            },
+            block
+        );
+    }
+
+    void sub_chunk_data::set_block(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::any_block&& block, api::ecs::world_local_registry& world) {
+        std::visit(
+            [&](auto& block) {
+                set_block(local_x, local_y, local_z, std::move(block), world);
+            },
+            block
+        );
+    }
+
+    void sub_chunk_data::set_block_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, const api::ecs::entity& block, api::ecs::world_local_registry& world) {
+        auto res = block.copy_and_wait();
+        if (!res)
+            throw std::runtime_error("Failed to copy block_entity");
+        set_block_gen(local_x, local_y, local_z, std::move(*res), world);
+    }
+
+    void sub_chunk_data::set_block_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, api::ecs::entity&& block, api::ecs::world_local_registry& world) {
+        if (!block.has<api::ecs::com::block_entity_tag>() || !block.has<api::ecs::com::block_entity::block_id>())
+            throw std::runtime_error("Expected block entity, received other kind.");
+        if (!world.transfer_entity_and_block(block))
+            throw std::runtime_error("Failed to assign the entity to the new world.");
+
+        blocks.set(local_x, local_y, local_z, block.get<api::ecs::com::block_entity::block_id>().id);
+        auto it = block_entities.find(local_z | (local_y << 4) | (local_x << 8));
+        if (it != block_entities.end()) {
+            it->second.add<api::ecs::com::dead_mark>();
+            it->second = block;
+        } else
+            block_entities[local_z | (local_y << 4) | (local_x << 8)] = block;
+    }
+
+    void sub_chunk_data::set_state_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block_id_t block, api::ecs::world_local_registry& world) {
+        base_objects::block b(block);
+
+        if (!b.is_block_entity()) {
+            set_block_gen(local_x, local_y, local_z, b, world);
+        } else {
+            auto e_id_m = get_block_entity(local_x, local_y, local_z).modify<api::ecs::com::block_entity::block_id>();
+            base_objects::block ee(e_id_m->id);
+            if (ee.block_entity_id() != b.block_entity_id()) {
+                set_block_gen(local_x, local_y, local_z, b, world);
+            } else {
+                e_id_m->id = block;
+                blocks.set(local_x, local_y, local_z, block);
+            }
+        }
+    }
+
+    void sub_chunk_data::set_block_gen(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block block, api::ecs::world_local_registry& world) {
         blocks.set(local_x, local_y, local_z, block.id);
-        block_entities.erase(local_z | (local_y << 4) | (local_x << 8));
+        auto it = block_entities.find(local_z | (local_y << 4) | (local_x << 8));
+        if (it != block_entities.end()) {
+            it->second.add<api::ecs::com::dead_mark>();
+            block_entities.erase(it);
+        }
+        if (block.is_block_entity()) {
+            api::ecs::entity_construction construct;
+            construct.set<api::ecs::com::block_entity_tag>();
+            construct.emplace<api::ecs::com::block_entity::block_id>(block.id);
+            auto entity_dat = std::move(construct).create_and_wait(api::ecs::get_block_entity_definition(block.name()).get_recipe(), world.get_id());
+            block_entities[local_z | (local_y << 4) | (local_x << 8)] = entity_dat;
+        }
     }
 
     int32_t sub_chunk_data::get_biome(uint8_t local_x, uint8_t local_y, uint8_t local_z) {
@@ -123,12 +178,13 @@ namespace copper_server::base_objects::world {
                     func(x, y, z, (base_objects::block)blocks.get(x, y, z));
     }
 
-    void sub_chunk_data::for_each_block_entity(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block block, const enbt::value& entity_data)> func) const {
+    void sub_chunk_data::for_each_block_entity(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, api::ecs::entity block_entity)> func) const {
         for (auto& [pos, data] : block_entities) {
             auto local_z = uint8_t(pos & 0xF);
             auto local_y = uint8_t((pos >> 4) & 0xF);
             auto local_x = uint8_t((pos >> 8) & 0xF);
-            func(local_x, local_y, local_z, (base_objects::block)blocks.get(local_x, local_y, local_z), data);
+            //TODO add check for id (base_objects::block)blocks.get(local_x, local_y, local_z)
+            func(local_x, local_y, local_z, data);
         }
     }
 
@@ -139,12 +195,13 @@ namespace copper_server::base_objects::world {
                     func(x, y, z, (base_objects::block)blocks.get(x, y, z));
     }
 
-    void sub_chunk_data::for_each_block_entity(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, base_objects::block block, enbt::value& entity_data)> func) {
+    void sub_chunk_data::for_each_block_entity(std::function<void(uint8_t local_x, uint8_t local_y, uint8_t local_z, api::ecs::entity block_entity)> func) {
         for (auto& [pos, data] : block_entities) {
             auto local_z = uint8_t(pos & 0xF);
             auto local_y = uint8_t((pos >> 4) & 0xF);
             auto local_x = uint8_t((pos >> 8) & 0xF);
-            func(local_x, local_y, local_z, (base_objects::block)blocks.get(local_x, local_y, local_z), data);
+            //TODO add check for id (base_objects::block)blocks.get(local_x, local_y, local_z)
+            func(local_x, local_y, local_z, data);
         }
     }
 }

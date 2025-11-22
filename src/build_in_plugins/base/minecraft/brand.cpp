@@ -20,7 +20,7 @@ namespace copper_server::build_in_plugins::base::minecraft {
         }
 
         bool on_configuration(base_objects::shared_client_data& client) override {
-            base_objects::network::response::item r;
+            base_objects::network::response_item r;
             r.write_string("CopperServer");
             client << api::packets::client_bound::config::custom_payload{
                 .channel = "minecraft:brand",

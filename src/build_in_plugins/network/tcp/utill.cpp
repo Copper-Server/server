@@ -197,7 +197,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         }
     }
 
-    list_array<uint8_t> tcp_client_handle::prepare_send(base_objects::network::response::item&& packet_item, api::network::tcp::session* session) {
+    list_array<uint8_t> tcp_client_handle::prepare_send(base_objects::network::response_item&& packet_item, api::network::tcp::session* session) {
         list_array<uint8_t>& packet = packet_item.data;
         list_array<uint8_t> build_packet;
         if (session->compression_threshold == -1) {
@@ -371,7 +371,7 @@ namespace copper_server::build_in_plugins::network::tcp {
         list_array<list_array<uint8_t>> answer;
         for (auto& resp : res.data)
             answer.push_back(prepare_send(std::move(resp), session));
-        res.data = answer.take().convert<base_objects::network::response::item>([](list_array<uint8_t>&& item) { return base_objects::network::response::item(std::move(item)); });
+        res.data = answer.take().convert<base_objects::network::response_item>([](list_array<uint8_t>&& item) { return base_objects::network::response_item(std::move(item)); });
         return res;
     }
 }

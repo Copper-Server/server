@@ -43,7 +43,7 @@ namespace copper_server::build_in_plugins::base::ecs {
 
     struct metadata_sync : public plugin_auto_register<"base/ecs/metadata_sync", metadata_sync> {
         void register_systems(api::ecs::scheduler& sched) override {
-            sched.add_system<metadata_sync_system>();
+            sched.add_system<metadata_sync_system>(api::ecs::tick_phase::mobile_entity);
         }
     };
 }

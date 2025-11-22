@@ -32,7 +32,6 @@ namespace copper_server::util {
     class nbt_write_stream;
 
     namespace nbt_collection {
-        template <template <class...> class map_base>
         class compound_flex;
     }
 

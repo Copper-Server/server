@@ -48,7 +48,7 @@ namespace copper_server::build_in_plugins::network::tcp {
 
         static uint64_t generate_random_int();
         list_array<uint8_t> prepare_incoming(ArrayStream& packet);
-        static list_array<uint8_t> prepare_send(base_objects::network::response::item&& packet_item, api::network::tcp::session* session);
+        static list_array<uint8_t> prepare_send(base_objects::network::response_item&& packet_item, api::network::tcp::session* session);
         static list_array<list_array<uint8_t>> prepare_send(base_objects::network::response&& packet, api::network::tcp::session* session);
         virtual base_objects::network::response work_packet(ArrayStream& packet) = 0;
         virtual base_objects::network::response too_large_packet() = 0;

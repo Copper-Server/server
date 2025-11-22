@@ -10,7 +10,6 @@ namespace copper_server::util {
     class nbt_write_stream;
 
     namespace nbt_collection {
-        template <template <class...> class map_base>
         class compound_flex;
     }
 
@@ -87,7 +86,7 @@ namespace copper_server::base_objects {
             return components.contains(T::item_id::value);
         }
 
-        void from_nbt_base_data(util::nbt_collection::compound_flex<std::unordered_map>& collector);
+        void from_nbt_base_data(util::nbt_collection::compound_flex& collector);
         void to_nbt_base_data(util::nbt_write_compound_stream& collector);
         void from_nbt(util::nbt_read_stream& stream);
         void to_nbt(util::nbt_write_stream& stream);

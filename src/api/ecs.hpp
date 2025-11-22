@@ -168,7 +168,7 @@ namespace copper_server::api::ecs {
         query(query&& mov) : id(mov.id), with_relations(std::move(mov.with_relations)) {}
 
         query(int32_t world_id) : id(world_id) {}
-        
+
         query(std::optional<int32_t> id, list_array<std::pair<component_id, entity>>&& with_relations) : id(id), with_relations(std::move(with_relations)) {}
 
         query& operator=(query&& mov) {
@@ -360,6 +360,39 @@ namespace copper_server::api::ecs {
             return id;
         }
 
+        //note for yourself, you need to parse the stream twice to get the entity, first one before calling this function to get id and second one to get result from load_ecs_entity
+        entity load_ecs_entity(const std::string& named_id, util::nbt_read_stream& stream) {
+            return detail::load_ecs_entity(named_id, stream, id);
+        }
+
+        entity load_item(const std::string& named_id, util::nbt_read_stream& stream) {
+            return detail::load_ecs_entity("@item:" + named_id, stream, id);
+        }
+
+        entity load_entity(const std::string& named_id, util::nbt_read_stream& stream) {
+            return detail::load_ecs_entity("@entity:" + named_id, stream, id);
+        }
+
+        entity load_block_entity(const std::string& named_id, util::nbt_read_stream& stream) {
+            return detail::load_ecs_entity("@block_entity:" + named_id, stream, id);
+        }
+
+        void store_ecs_entity(const std::string& id, util::nbt_write_stream& stream, entity ecs_e) {
+            detail::store_ecs_entity(id, stream, ecs_e);
+        }
+
+        void store_item(const std::string& id, util::nbt_write_stream& stream, entity item) {
+            detail::store_ecs_entity("@item:" + id, stream, item);
+        }
+
+        void store_entity(const std::string& id, util::nbt_write_stream& stream, entity e) {
+            detail::store_ecs_entity("@entity:" + id, stream, e);
+        }
+
+        void store_block_entity(const std::string& id, util::nbt_write_stream& stream, entity block_e) {
+            detail::store_ecs_entity("@block_entity:" + id, stream, block_e);
+        }
+
     private:
         int32_t id;
     };
@@ -407,6 +440,38 @@ namespace copper_server::api::ecs {
             return entity;
         }
 
+        entity load_ecs_entity(const std::string& id, util::nbt_read_stream& stream) {
+            return detail::load_ecs_entity(id, stream);
+        }
+
+        entity load_item(const std::string& id, util::nbt_read_stream& stream) {
+            return detail::load_ecs_entity("@item:" + id, stream);
+        }
+
+        entity load_entity(const std::string& id, util::nbt_read_stream& stream) {
+            return detail::load_ecs_entity("@entity:" + id, stream);
+        }
+
+        entity load_block_entity(const std::string& id, util::nbt_read_stream& stream) {
+            return detail::load_ecs_entity("@block_entity:" + id, stream);
+        }
+
+        void store_ecs_entity(const std::string& id, util::nbt_write_stream& stream, entity ecs_e) {
+            detail::store_ecs_entity(id, stream, ecs_e);
+        }
+
+        void store_item(const std::string& id, util::nbt_write_stream& stream, entity item) {
+            detail::store_ecs_entity("@item:" + id, stream, item);
+        }
+
+        void store_entity(const std::string& id, util::nbt_write_stream& stream, entity e) {
+            detail::store_ecs_entity("@entity:" + id, stream, e);
+        }
+
+        void store_block_entity(const std::string& id, util::nbt_write_stream& stream, entity block_e) {
+            detail::store_ecs_entity("@block_entity:" + id, stream, block_e);
+        }
+
         void global_tick();
     }
 
@@ -419,21 +484,27 @@ namespace copper_server::api::ecs {
         virtual void tick(world_local_registry& world) = 0;
     };
 
+    enum class tick_phase {
+        mobile_entity,
+        block_entity,
+        //slot_entity,
+    };
+
     struct scheduler {
         scheduler();
         ~scheduler();
 
         template <typename T>
-        void add_system() {
-            add_system_impl(std::make_unique<T>(), detail::get_system_info<T>());
+        void add_system(tick_phase phase) {
+            add_system_impl(std::make_unique<T>(), detail::get_system_info<T>(), phase);
         }
 
         // Called each tick to run all systems in parallel
         //  also builds the dependency graph if system added
-        void execute_frame(world_local_registry& registry);
+        void execute_frame(world_local_registry& registry, tick_phase phase);
 
     private:
-        void add_system_impl(std::unique_ptr<system_interface> system, const detail::system_info& info);
+        void add_system_impl(std::unique_ptr<system_interface> system, const detail::system_info& info, tick_phase);
         struct scheduler_data;
         std::unique_ptr<scheduler_data> data;
     };

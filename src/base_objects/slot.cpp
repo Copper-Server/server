@@ -285,7 +285,7 @@ namespace copper_server::base_objects {
             });
     }
 
-    void slot_data::from_nbt_base(util::nbt_collection::compound_flex<std::unordered_map>& collector) {
+    void slot_data::from_nbt_base(util::nbt_collection::compound_flex& collector) {
         collector
             .collect_as_required("id", id)
             .collect_as_required("count", count)

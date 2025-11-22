@@ -6,14 +6,13 @@
  * in the file LICENSE in the source distribution or at
  * http://www.apache.org/licenses/LICENSE-2.0
  */
+#include <boost/unordered/unordered_flat_map.hpp>
 #include <src/api/bin/ecs/manager.hpp>
 #include <src/api/ecs/base_components.hpp>
+#include <src/api/ecs/entity_definition.hpp>
 #include <src/api/entity_id_map.hpp>
 
 namespace copper_server::api::ecs {
-
-    manager management;
-
     struct entity_allocation_request {
         const entity_recipe& recipe;
         std::optional<int32_t> world_id;
@@ -67,11 +66,11 @@ namespace copper_server::api::ecs {
     moodycamel::ConcurrentQueue<relation_change_item> relation_change_queue;
 
     world_local_registry::world_local_registry(int32_t id) : id(id) {
-        management.enable_world(id);
+        manager::instance().enable_world(id);
     }
 
     world_local_registry::~world_local_registry() {
-        management.disable_world(id);
+        manager::instance().disable_world(id);
     }
 
     fast_task::future_ptr<bool> world_local_registry::register_entity_async(entity& entity) {
@@ -101,6 +100,10 @@ namespace copper_server::api::ecs {
     }
 
     fast_task::future_ptr<bool> world_local_registry::transfer_entity_async(entity& entity) {
+        auto& man = manager::instance();
+        auto& record = man.records.at(entity.id);
+        if (record.world_owner->id == id)
+            return fast_task::future<bool>::make_ready(true);
         return register_entity_async(entity);
     }
 
@@ -128,7 +131,12 @@ namespace copper_server::api::ecs {
     }
 
     bool world_local_registry::transfer_entity_and_block(entity& entity) {
-        return transfer_entity_async(entity).get();
+        auto& man = manager::instance();
+        auto& record = man.records.at(entity.id);
+        if (record.world_owner->id == id)
+            return true;
+
+        return register_entity_async(entity).get();
     }
 
     entity world_local_registry::allocate_entity_and_wait(const entity_recipe& recipe) {
@@ -161,107 +169,112 @@ namespace copper_server::api::ecs {
     };
 
     struct scheduler::scheduler_data {
-        std::vector<system_node> systems;
-        std::unordered_map<size_t, std::vector<size_t>> dependency_graph;
-        bool graph_is_dirty = false;
 
-        void build_tree() {
-            dependency_graph.clear();
-            for (auto& node : systems)
-                node.in_degree = 0;
+        struct tick_group {
+            std::vector<system_node> systems;
+            std::unordered_map<size_t, std::vector<size_t>> dependency_graph;
+            bool graph_is_dirty = false;
 
-            std::unordered_map<component_id, std::vector<size_t>> component_writers;
-            std::unordered_map<component_id, std::vector<size_t>> component_readers;
+            void build_tree() {
+                dependency_graph.clear();
+                for (auto& node : systems)
+                    node.in_degree = 0;
 
-            for (size_t i = 0; i < systems.size(); ++i) {
-                const auto& info = systems[i].info;
+                std::unordered_map<component_id, std::vector<size_t>> component_writers;
+                std::unordered_map<component_id, std::vector<size_t>> component_readers;
 
-                for (const auto& comp_id : info.write_dependencies)
-                    component_writers[comp_id].push_back(i);
-                for (const auto& comp_id : info.read_dependencies)
-                    component_readers[comp_id].push_back(i);
-            }
+                for (size_t i = 0; i < systems.size(); ++i) {
+                    const auto& info = systems[i].info;
+
+                    for (const auto& comp_id : info.write_dependencies)
+                        component_writers[comp_id].push_back(i);
+                    for (const auto& comp_id : info.read_dependencies)
+                        component_readers[comp_id].push_back(i);
+                }
 
 
-            bit_list_array<> dependency_added(systems.size());
+                bit_list_array<> dependency_added(systems.size());
 
-            for (size_t predecessor_idx = 0; predecessor_idx < systems.size(); ++predecessor_idx) {
-                const auto& predecessor_info = systems[predecessor_idx].info;
+                for (size_t predecessor_idx = 0; predecessor_idx < systems.size(); ++predecessor_idx) {
+                    const auto& predecessor_info = systems[predecessor_idx].info;
 
-                dependency_added.zero_all();
-                dependency_added.set(predecessor_idx, true);
+                    dependency_added.zero_all();
+                    dependency_added.set(predecessor_idx, true);
 
-                for (const auto& comp_id : predecessor_info.write_dependencies) {
-                    if (component_readers.count(comp_id)) {
-                        for (const auto successor_idx : component_readers.at(comp_id)) {
-                            if (!dependency_added[successor_idx]) {
-                                dependency_graph[predecessor_idx].push_back(successor_idx);
-                                systems[successor_idx].in_degree++;
-                                dependency_added[successor_idx] = true;
+                    for (const auto& comp_id : predecessor_info.write_dependencies) {
+                        if (component_readers.count(comp_id)) {
+                            for (const auto successor_idx : component_readers.at(comp_id)) {
+                                if (!dependency_added[successor_idx]) {
+                                    dependency_graph[predecessor_idx].push_back(successor_idx);
+                                    systems[successor_idx].in_degree++;
+                                    dependency_added[successor_idx] = true;
+                                }
+                            }
+                        }
+
+                        if (component_writers.count(comp_id)) {
+                            for (const auto successor_idx : component_writers.at(comp_id)) {
+                                if (!dependency_added.get_unchecked(successor_idx)) {
+                                    dependency_graph[predecessor_idx].push_back(successor_idx);
+                                    systems[successor_idx].in_degree++;
+                                    dependency_added.set(successor_idx, true);
+                                }
                             }
                         }
                     }
-
-                    if (component_writers.count(comp_id)) {
-                        for (const auto successor_idx : component_writers.at(comp_id)) {
-                            if (!dependency_added.get_unchecked(successor_idx)) {
-                                dependency_graph[predecessor_idx].push_back(successor_idx);
-                                systems[successor_idx].in_degree++;
-                                dependency_added.set(successor_idx, true);
-                            }
-                        }
-                    }
-                }
-            }
-
-            graph_is_dirty = false;
-        }
-
-        void proceed_tree(world_local_registry& registry) {
-            std::vector<size_t> current_in_degrees;
-            current_in_degrees.reserve(systems.size());
-            for (const auto& node : systems) {
-                current_in_degrees.push_back(node.in_degree);
-            }
-
-            size_t systems_executed_count = 0;
-            list_array<size_t> ready_queue;
-            for (size_t i = 0; i < systems.size(); ++i)
-                if (current_in_degrees[i] == 0)
-                    ready_queue.push_back(i);
-
-            while (!ready_queue.empty()) {
-                std::vector<size_t> systems_in_current_stage;
-                while (!ready_queue.empty()) {
-                    systems_in_current_stage.push_back(ready_queue.front());
-                    ready_queue.pop_front();
                 }
 
-                fast_task::future_tool::for_each_wait(systems_in_current_stage, [&](size_t system_index) {
-                    systems[system_index].instance->tick(registry);
-                });
-
-                systems_executed_count += systems_in_current_stage.size();
-
-                for (size_t completed_system_index : systems_in_current_stage) {
-                    if (dependency_graph.count(completed_system_index)) {
-                        for (size_t dependent_index : dependency_graph.at(completed_system_index)) {
-                            current_in_degrees[dependent_index]--;
-                            if (current_in_degrees[dependent_index] == 0)
-                                ready_queue.push_back(dependent_index);
-                        }
-                    }
-                }
+                graph_is_dirty = false;
             }
 
-            if (systems_executed_count < systems.size()) {
-                std::string error_message = "Circular dependency detected in systems! The following systems could not be executed:\n";
+            void proceed_tree(world_local_registry& registry) {
+                std::vector<size_t> current_in_degrees;
+                current_in_degrees.reserve(systems.size());
+                for (const auto& node : systems) {
+                    current_in_degrees.push_back(node.in_degree);
+                }
+
+                size_t systems_executed_count = 0;
+                list_array<size_t> ready_queue;
                 for (size_t i = 0; i < systems.size(); ++i)
-                    if (current_in_degrees[i] > 0)
-                        error_message += "\tSystem " + std::string(systems[i].info.info.name()) + "\n";
-                throw std::runtime_error(error_message);
+                    if (current_in_degrees[i] == 0)
+                        ready_queue.push_back(i);
+
+                while (!ready_queue.empty()) {
+                    std::vector<size_t> systems_in_current_stage;
+                    while (!ready_queue.empty()) {
+                        systems_in_current_stage.push_back(ready_queue.front());
+                        ready_queue.pop_front();
+                    }
+
+                    fast_task::future_tool::for_each_wait(systems_in_current_stage, [&](size_t system_index) {
+                        systems[system_index].instance->tick(registry);
+                    });
+
+                    systems_executed_count += systems_in_current_stage.size();
+
+                    for (size_t completed_system_index : systems_in_current_stage) {
+                        if (dependency_graph.count(completed_system_index)) {
+                            for (size_t dependent_index : dependency_graph.at(completed_system_index)) {
+                                current_in_degrees[dependent_index]--;
+                                if (current_in_degrees[dependent_index] == 0)
+                                    ready_queue.push_back(dependent_index);
+                            }
+                        }
+                    }
+                }
+
+                if (systems_executed_count < systems.size()) {
+                    std::string error_message = "Circular dependency detected in systems! The following systems could not be executed:\n";
+                    for (size_t i = 0; i < systems.size(); ++i)
+                        if (current_in_degrees[i] > 0)
+                            error_message += "\tSystem " + std::string(systems[i].info.info.name()) + "\n";
+                    throw std::runtime_error(error_message);
+                }
             }
-        }
+        };
+
+        boost::unordered_flat_map<tick_phase, tick_group> groups;
     };
 
     scheduler::scheduler() : data(std::make_unique<scheduler_data>()) {}
@@ -353,23 +366,23 @@ namespace copper_server::api::ecs {
         }
 
         void process_relation_changes() {
-            std::lock_guard guard(management.relation_mutex);
+            std::lock_guard guard(manager::instance().relation_mutex);
             consume_all_(relation_change_queue, [](relation_change_item&& item) {
-                if (!management.has_entity(item.parent.id, item.parent.generation))
+                if (!manager::instance().has_entity(item.parent.id, item.parent.generation))
                     return;
-                if (!management.has_entity(item.child.id, item.child.generation))
+                if (!manager::instance().has_entity(item.child.id, item.child.generation))
                     return;
                 if (item.is_add)
-                    management.add_entity_relation(item.parent.id, item.child.id, item.component);
+                    manager::instance().add_entity_relation(item.parent.id, item.child.id, item.component);
                 else
-                    management.remove_entity_relation(item.parent.id, item.child.id, item.component);
+                    manager::instance().remove_entity_relation(item.parent.id, item.child.id, item.component);
             });
         }
 
         void process_destruction_queue(world& w) {
             consume_all_(w.entity_destroy_queue, [](entity_destroy_queue_item&& item) {
-                if (management.has_entity(item.id, item.generation))
-                    management.deallocate_entity(item.id);
+                if (manager::instance().has_entity(item.id, item.generation))
+                    manager::instance().deallocate_entity(item.id);
             });
         }
 
@@ -401,10 +414,10 @@ namespace copper_server::api::ecs {
         grouped_mutation_ops prepare_mutations(world& w) {
             grouped_mutation_ops res;
             consume_all_(w.mutation_queue, [&](detail::mutation_queue_item&& item) {
-                if (!management.has_entity(item.entity_id, item.generation))
+                if (!manager::instance().has_entity(item.entity_id, item.generation))
                     return;
 
-                auto& record = management.records.at(item.entity_id);
+                auto& record = manager::instance().records.at(item.entity_id);
                 archetype* from_archetype = record.type;
                 world* in_world = record.world_owner;
 
@@ -446,12 +459,12 @@ namespace copper_server::api::ecs {
             res.reserve(allocation_queue.size_approx());
             consume_all_(allocation_queue, [&](entity_allocation_request* item) {
                 if (item->world_id)
-                    if (auto it = management.worlds.find(*item->world_id); it != management.worlds.end()) {
+                    if (auto it = manager::instance().worlds.find(*item->world_id); it != manager::instance().worlds.end()) {
                         res.emplace_back(item, it->second.map_get_archetype(item->recipe.get_ids()), &it->second);
                         return;
                     }
 
-                res.emplace_back(item, management.limbo.map_get_archetype(item->recipe.get_ids()), &management.limbo);
+                res.emplace_back(item, manager::instance().limbo.map_get_archetype(item->recipe.get_ids()), &manager::instance().limbo);
             });
             return res;
         }
@@ -461,11 +474,11 @@ namespace copper_server::api::ecs {
             res.reserve(creation_queue.size_approx());
             consume_all_(creation_queue, [&](entity_creation_request* item) {
                 if (item->world_id)
-                    if (auto it = management.worlds.find(*item->world_id); it != management.worlds.end()) {
+                    if (auto it = manager::instance().worlds.find(*item->world_id); it != manager::instance().worlds.end()) {
                         res.emplace_back(item, it->second.map_get_archetype(item->calculated_recipe.get_ids()), &it->second);
                         return;
                     }
-                res.emplace_back(item, management.limbo.map_get_archetype(item->calculated_recipe.get_ids()), &management.limbo);
+                res.emplace_back(item, manager::instance().limbo.map_get_archetype(item->calculated_recipe.get_ids()), &manager::instance().limbo);
             });
             return res;
         }
@@ -474,14 +487,14 @@ namespace copper_server::api::ecs {
             std::vector<parallel_copy_op> res;
             res.reserve(copy_queue.size_approx());
             consume_all_(copy_queue, [&](entity_copy_request* item) {
-                res.emplace_back(item, management.records.at(item->other_entity.id).type);
+                res.emplace_back(item, manager::instance().records.at(item->other_entity.id).type);
             });
             return res;
         }
 
         void execute_mutations(grouped_mutation_ops mutations, ::moodycamel::ConcurrentQueue<int32_t>& arch_type_changes) {
             consume_all_(mutations.prepared_updates, [](prepared_in_place_update_op&& update) {
-                auto& record = management.records.at(update.entity_id);
+                auto& record = manager::instance().records.at(update.entity_id);
                 auto& component_info = detail::component_info_registry.at(update.comp_id);
                 auto component_index = record.type->component_index_map.at(update.comp_id);
                 void* dest_ptr = record.chunk->memory_block.get() + record.type->layout.component_offsets[component_index] + (record.chunk_index * component_info.size);
@@ -503,7 +516,7 @@ namespace copper_server::api::ecs {
                         std::swap(arch1, arch2);
 
                     {
-                        auto& record = management.records[move.entity_id];
+                        auto& record = manager::instance().records[move.entity_id];
                         archetype* expected = nullptr;
                         if (record.archetype_before_mutation.compare_exchange_strong(expected, record.type, std::memory_order_relaxed))
                             arch_type_changes.enqueue(move.entity_id);
@@ -511,8 +524,8 @@ namespace copper_server::api::ecs {
                     std::unique_lock lock1(arch1->arch_mutex);
                     std::unique_lock lock2(arch2->arch_mutex);
 
-                    auto& record = management.records[move.entity_id];
-                    management.move_entity(move.entity_id, move.to_archetype, record.world_owner);
+                    auto& record = manager::instance().records[move.entity_id];
+                    manager::instance().move_entity(move.entity_id, move.to_archetype, record.world_owner);
                     lock2.unlock();
                     lock1.unlock();
 
@@ -532,16 +545,16 @@ namespace copper_server::api::ecs {
             std::vector<parallel_transfer_op> res;
             res.reserve(transfer_queue.size_approx());
             consume_all_(transfer_queue, [&res](entity_transfer_request* transfer) {
-                if (management.records.size() > transfer->id) {
-                    auto& record = management.records[transfer->id];
+                if (manager::instance().records.size() > transfer->id) {
+                    auto& record = manager::instance().records[transfer->id];
                     if (record.generation == transfer->generation) {
 
                         if (transfer->world_id)
-                            if (auto it = management.worlds.find(*transfer->world_id); it != management.worlds.end()) {
+                            if (auto it = manager::instance().worlds.find(*transfer->world_id); it != manager::instance().worlds.end()) {
                                 res.emplace_back(transfer, it->second.map_get_archetype(record.type->component_ids), &it->second);
                                 return;
                             }
-                        res.emplace_back(transfer, management.limbo.map_get_archetype(record.type->component_ids), &management.limbo);
+                        res.emplace_back(transfer, manager::instance().limbo.map_get_archetype(record.type->component_ids), &manager::instance().limbo);
                     }
                 }
             });
@@ -550,7 +563,7 @@ namespace copper_server::api::ecs {
             fast_task::future_tool::for_each_move(std::move(res), [](parallel_transfer_op&& transfer) {
                 fast_task::unique_lock lock(transfer.request->mut);
                 transfer.request->success = false;
-                auto arch1 = management.records[transfer.request->id].type;
+                auto arch1 = manager::instance().records[transfer.request->id].type;
                 auto arch2 = transfer.target_archetype;
 
 
@@ -560,7 +573,7 @@ namespace copper_server::api::ecs {
                 std::unique_lock lock1(arch1->arch_mutex);
                 std::unique_lock lock2(arch2->arch_mutex);
 
-                management.move_entity(transfer.request->id, transfer.target_archetype, transfer.w);
+                manager::instance().move_entity(transfer.request->id, transfer.target_archetype, transfer.w);
                 lock2.unlock();
                 lock1.unlock();
 
@@ -572,7 +585,7 @@ namespace copper_server::api::ecs {
 
         void process_dirty_marking(world& w) {
             parallel_drain(w.marking_queue, [](entity_dirty_mark_item&& mark) {
-                auto& record = management.records.at(mark.id);
+                auto& record = manager::instance().records.at(mark.id);
                 if (record.generation != mark.generation)
                     if (auto component_index = record.type->component_index_map.find(mark.component); component_index != record.type->component_index_map.end())
                         record.type->mark_dirty(record.chunk, component_index->second, record.chunk_index);
@@ -584,7 +597,7 @@ namespace copper_server::api::ecs {
                 auto [item, arch, world] = reg;
                 fast_task::lock_guard message_lock(item->mut);
                 fast_task::lock_guard arch_lock(arch->arch_mutex);
-                item->result = management.allocate_entity(arch, world);
+                item->result = manager::instance().allocate_entity(arch, world);
                 item->ready = true;
                 item->cv.notify_one();
             })->wait();
@@ -595,10 +608,10 @@ namespace copper_server::api::ecs {
                 auto [item, arch, world] = reg;
                 fast_task::lock_guard message_lock(item->mut);
                 fast_task::lock_guard arch_lock(arch->arch_mutex);
-                item->result = management.allocate_entity(arch, world);
+                item->result = manager::instance().allocate_entity(arch, world);
 
 
-                auto& record = management.records.at(item->result.id);
+                auto& record = manager::instance().records.at(item->result.id);
                 for (auto& [id, ptr] : reg.request->components->components_reference) {
                     auto& component_info = detail::component_info_registry.at(id);
                     auto component_index = record.type->component_index_map.at(id);
@@ -624,10 +637,10 @@ namespace copper_server::api::ecs {
                     return;
                 }
                 fast_task::lock_guard arch_lock(arch->arch_mutex);
-                auto& other_record = management.records.at(item->other_entity.id);
-                item->result = management.allocate_entity(arch, other_record.world_owner);
+                auto& other_record = manager::instance().records.at(item->other_entity.id);
+                item->result = manager::instance().allocate_entity(arch, other_record.world_owner);
 
-                auto& record = management.records.at(item->result->id);
+                auto& record = manager::instance().records.at(item->result->id);
                 for (auto& [id, component_index] : arch->component_index_map) {
                     auto& component_info = detail::component_info_registry.at(id);
                     void* src_ptr = other_record.chunk->memory_block.get() + arch->layout.component_offsets[component_index] + (other_record.chunk_index * component_info.size);
@@ -663,20 +676,25 @@ namespace copper_server::api::ecs {
     }
 
     void global_registry::global_tick() {
-        fast_task::unique_lock world_guard(management.manager_mutex);
+        fast_task::unique_lock world_guard(manager::instance().manager_mutex);
         mutation_processing::proceed_mutations();
     }
 
-    void scheduler::execute_frame(world_local_registry& registry) {
-        fast_task::shared_lock world_guard(management.manager_mutex);
-        world& current_world = management.worlds.at(registry.get_id());
+    void scheduler::execute_frame(world_local_registry& registry, tick_phase phase) {
+        fast_task::unique_lock data_world_guard(manager::instance().manager_mutex);
+        auto& current_group = data->groups[phase];
+        data_world_guard.unlock();
+
+        fast_task::shared_lock world_guard(manager::instance().manager_mutex);
+        world& current_world = manager::instance().worlds.at(registry.get_id());
         mutation_processing::proceed_mutations(current_world);
 
-        if (data->graph_is_dirty)
-            data->build_tree();
+
+        if (current_group.graph_is_dirty)
+            current_group.build_tree();
         {
             fast_task::relock_guard relock(world_guard);
-            data->proceed_tree(registry);
+            current_group.proceed_tree(registry);
         }
 
         fast_task::future_tool::for_each_wait(current_world.archetypes, [](const std::unique_ptr<archetype>& archetype_ptr) {
@@ -687,14 +705,15 @@ namespace copper_server::api::ecs {
         });
 
         mutation_processing::parallel_drain(current_world.arch_type_changes, [](int32_t id) {
-            management.records[id].archetype_before_mutation = nullptr;
+            manager::instance().records[id].archetype_before_mutation = nullptr;
         });
     }
 
-    void scheduler::add_system_impl(std::unique_ptr<system_interface> system, const detail::system_info& info) {
-        fast_task::unique_lock world_guard(management.manager_mutex);
-        data->systems.push_back(system_node(std::move(system), info));
-        data->graph_is_dirty = true;
+    void scheduler::add_system_impl(std::unique_ptr<system_interface> system, const detail::system_info& info, tick_phase phase) {
+        fast_task::unique_lock world_guard(manager::instance().manager_mutex);
+        auto& current_group = data->groups[phase];
+        current_group.systems.push_back(system_node(std::move(system), info));
+        current_group.graph_is_dirty = true;
     }
 
     namespace detail {
@@ -703,14 +722,14 @@ namespace copper_server::api::ecs {
         fast_task::mutex registry_mutex;
 
         world* get_queues_for_entity(int32_t id, uint32_t generation) {
-            if (!management.has_entity(id, generation))
+            if (!manager::instance().has_entity(id, generation))
                 return nullptr;
-            auto& record = management.records.at(id);
+            auto& record = manager::instance().records.at(id);
             return record.world_owner;
         }
 
         void* get_entity_component(int32_t id, uint32_t generation, component_id component_id) {
-            auto& record = management.records.at(id);
+            auto& record = manager::instance().records.at(id);
             if (record.generation != generation)
                 return nullptr;
             auto arch = record.type;
@@ -725,20 +744,44 @@ namespace copper_server::api::ecs {
         }
 
         void queue_command(detail::mutation_queue_item&& command) {
-            if (!get_queues_for_entity(command.entity_id, command.generation) //TODO add check
-                     ->mutation_queue.enqueue(std::move(command)))
+            auto world = get_queues_for_entity(command.entity_id, command.generation);
+            if (!world)
+                return;
+            else if (!world->mutation_queue.enqueue(std::move(command)))
                 throw std::bad_alloc();
         }
 
+        void queue_remove_entity_component(int32_t id, uint32_t generation, component_id component_id) {
+            auto check_comp = static_cast<const com::type_definition*>(detail::get_entity_component(id, generation, detail::get_component_id<com::type_definition>()));
+            if (check_comp) {
+                switch (check_comp->type->get_remove_action(component_id)) {
+                case entity_definition::component_remove_act::optional:
+                    break;
+                case entity_definition::component_remove_act::locked:
+                    throw std::runtime_error("Removing this component is not allowed");
+                case entity_definition::component_remove_act::reset_on_remove: {
+                    component_info_registry.at(component_id).reset(get_entity_component(id, generation, component_id));
+                    queue_mark_dirty(id, generation, component_id);
+                    return;
+                }
+                }
+            } else
+                queue_command(mutation_queue_item{id, generation, component_id});
+        }
+
         void queue_destroy_entity(int32_t id, uint32_t generation) {
-            if (!get_queues_for_entity(id, generation) //TODO add check
-                     ->entity_destroy_queue.enqueue(entity_destroy_queue_item{id, generation}))
+            auto world = get_queues_for_entity(id, generation);
+            if (!world)
+                return;
+            else if (!world->entity_destroy_queue.enqueue(entity_destroy_queue_item{id, generation}))
                 throw std::bad_alloc();
         }
 
         void queue_mark_dirty(int32_t id, uint32_t generation, component_id component_id) {
-            if (!get_queues_for_entity(id, generation) //TODO add check
-                     ->marking_queue.enqueue(entity_dirty_mark_item{id, generation, component_id}))
+            auto world = get_queues_for_entity(id, generation);
+            if (!world)
+                return;
+            else if (!world->marking_queue.enqueue(entity_dirty_mark_item{id, generation, component_id}))
                 throw std::bad_alloc();
         }
 
@@ -751,10 +794,10 @@ namespace copper_server::api::ecs {
         }
 
         bool has_relation(component_id component_id, entity parent, entity child) {
-            fast_task::shared_lock lock(management.manager_mutex);
-            if (!management.has_entity(parent.id, parent.generation) || !management.has_entity(child.id, child.generation))
+            fast_task::shared_lock lock(manager::instance().manager_mutex);
+            if (!manager::instance().has_entity(parent.id, parent.generation) || !manager::instance().has_entity(child.id, child.generation))
                 return false;
-            if (auto com = management.relation_index.find(component_id); com != management.relation_index.end())
+            if (auto com = manager::instance().relation_index.find(component_id); com != manager::instance().relation_index.end())
                 if (auto it = com->second.find(parent.id); it != com->second.end())
                     if (auto item = std::find(it->second.begin(), it->second.end(), child.id); item != it->second.end())
                         return true;
@@ -762,7 +805,7 @@ namespace copper_server::api::ecs {
         }
 
         bool has_entity_component(int32_t id, uint32_t generation, component_id component_id) {
-            auto& record = management.records.at(id);
+            auto& record = manager::instance().records.at(id);
             if (record.generation == generation)
                 return record.type->component_index_map.contains(component_id);
             else
@@ -770,11 +813,34 @@ namespace copper_server::api::ecs {
         }
 
         std::optional<int32_t> get_entity_assigned_to_world(int32_t id, uint32_t generation) {
-            auto& record = management.records.at(id);
-            if (record.generation == generation && record.world_owner != &management.limbo)
+            auto& record = manager::instance().records.at(id);
+            if (record.generation == generation && record.world_owner != &manager::instance().limbo)
                 return record.world_owner->id;
             else
                 return std::nullopt;
+        }
+
+        size_t get_entity_archetype_id(int32_t id, uint32_t generation) { //this function returns pointer as integer instead of hash, because the hash could collide with other types. better be safe than oops
+            auto& record = manager::instance().records.at(id);
+            if (record.generation == generation)
+                return std::bit_cast<size_t>(record.type);
+            else
+                return 0;
+        }
+
+        archetype_layout get_archetype_layout(int32_t id, uint32_t generation) {
+            auto& record = manager::instance().records.at(id);
+            if (record.generation == generation)
+                return {record.type->component_ids, record.type->component_index_map, record.type->layout.component_offsets};
+            else
+                return {};
+        }
+
+        void* get_entity_component_by_offset(int32_t id, uint32_t generation, size_t offset, size_t type_size) {
+            auto& record = manager::instance().records.at(id);
+            if (record.generation != generation)
+                return nullptr;
+            return record.chunk->memory_block.get() + offset + (record.chunk_index * type_size);
         }
 
         fast_task::future_ptr<entity> create_entity(std::optional<int32_t> world_id, std::unique_ptr<components_holder> components) {
@@ -829,7 +895,15 @@ namespace copper_server::api::ecs {
         }
 
         fast_task::task_rw_mutex& immediate_lock() {
-            return management.manager_mutex;
+            return manager::instance().manager_mutex;
+        }
+
+        entity load_ecs_entity(const std::string& named_id, util::nbt_read_stream& stream, std::optional<int32_t> world_id) {
+            return get_entity_definition(named_id).from_nbt(stream, world_id);
+        }
+
+        void store_ecs_entity(const std::string& named_id, util::nbt_write_stream& stream, entity ee) {
+            get_entity_definition(named_id).to_nbt(stream, ee);
         }
 
         struct iteration_handle::iteration_data {
@@ -989,7 +1063,7 @@ namespace copper_server::api::ecs {
 
                 if (with_changes.size()) {
                     auto id = active_chunk.get()->entities()[entity_index];
-                    auto& record = management.records.at(id);
+                    auto& record = manager::instance().records.at(id);
                     archetype* before_arch = record.archetype_before_mutation.load(std::memory_order_relaxed);
                     if (record.archetype_before_mutation.load(std::memory_order_relaxed) != nullptr) {
                         for (auto component_id_ : with_changes) {
@@ -1015,7 +1089,7 @@ namespace copper_server::api::ecs {
                 auto& active_chunk = active_arch_data.type->chunks[chunk_index - 1];
                 auto id = active_chunk.get()->entities()[entity_index];
 
-                auto& record = management.records.at(id);
+                auto& record = manager::instance().records.at(id);
                 return {id, record.generation};
             }
 
@@ -1024,7 +1098,7 @@ namespace copper_server::api::ecs {
                 auto& active_chunk = active_arch_data.type->chunks[chunk_index - 1];
                 auto id = active_chunk.get()->entities()[entity_index];
 
-                auto& record = management.records.at(id);
+                auto& record = manager::instance().records.at(id);
 
                 archetype* before_arch = record.archetype_before_mutation.load(std::memory_order_relaxed);
                 if (before_arch == nullptr) {
@@ -1088,13 +1162,13 @@ namespace copper_server::api::ecs {
                 std::span<std::pair<component_id, entity>> relations,
                 std::optional<int32_t> world_id = std::nullopt
             ) {
-                fast_task::shared_lock guard(management.relation_mutex);
-                std::vector<int32_t> candidate_ids = management.get_relation_query(relations);
+                fast_task::shared_lock guard(manager::instance().relation_mutex);
+                std::vector<int32_t> candidate_ids = manager::instance().get_relation_query(relations);
                 auto_mark_dirty = {writes_components.begin(), writes_components.end()};
 
 
                 for (int32_t entity_id : candidate_ids) {
-                    auto& record = management.records.at(entity_id);
+                    auto& record = manager::instance().records.at(entity_id);
                     if (world_id)
                         if (record.world_owner->id != *world_id)
                             continue;
@@ -1183,7 +1257,7 @@ namespace copper_server::api::ecs {
 
             void mark_component_dirty(size_t archetype_index, size_t chunk_index, component_id component, size_t entity_index) {
                 archetype* archetype = matched_entities[chunk_index].source_archetype;
-                auto chunk = management.records.at(matched_entities[chunk_index].e.id).chunk;
+                auto chunk = manager::instance().records.at(matched_entities[chunk_index].e.id).chunk;
                 auto it = archetype->component_index_map.find(component);
                 if (it != archetype->component_index_map.end()) {
                     uint32_t component_index_in_archetype = it->second;
@@ -1201,7 +1275,7 @@ namespace copper_server::api::ecs {
             }
 
             structural_changes get_component_change_state(size_t archetype_index, size_t chunk_index, size_t entity_index, component_id cid) {
-                auto& record = management.records.at(matched_entities[chunk_index].e.id);
+                auto& record = manager::instance().records.at(matched_entities[chunk_index].e.id);
                 auto& active_chunk = record.chunk;
 
                 archetype* before_arch = record.archetype_before_mutation.load(std::memory_order_relaxed);
@@ -1412,13 +1486,13 @@ namespace copper_server::api::ecs {
         ) {
             iteration_handle handle;
             if (with_relation.size()) {
-                auto data = std::make_unique<iteration_handle::relational_iteration_data>(management.manager_mutex);
+                auto data = std::make_unique<iteration_handle::relational_iteration_data>(manager::instance().manager_mutex);
                 data->calculate_data(components, with_components, without_components, writes_components, with_dirty_components, with_clean_components, with_changes, with_relation, world_id);
                 handle.data = data.release();
             } else {
-                auto data = std::make_unique<iteration_handle::iteration_data>(management.manager_mutex);
+                auto data = std::make_unique<iteration_handle::iteration_data>(manager::instance().manager_mutex);
 
-                if (auto it = management.worlds.find(world_id); it != management.worlds.end())
+                if (auto it = manager::instance().worlds.find(world_id); it != manager::instance().worlds.end())
                     for (const auto& archetype_ptr : it->second.archetypes)
                         if (archetype_ptr->matches_query(components, with_components, without_components))
                             data->arch_data.push_back(archetype_ptr.get());
@@ -1443,17 +1517,17 @@ namespace copper_server::api::ecs {
             iteration_handle handle;
 
             if (with_relation.size()) {
-                auto data = std::make_unique<iteration_handle::relational_iteration_data>(management.manager_mutex);
+                auto data = std::make_unique<iteration_handle::relational_iteration_data>(manager::instance().manager_mutex);
                 data->calculate_data(components, with_components, without_components, writes_components, with_dirty_components, with_clean_components, with_changes, with_relation);
                 handle.data = data.release();
             } else {
-                auto data = std::make_unique<iteration_handle::iteration_data>(management.manager_mutex);
+                auto data = std::make_unique<iteration_handle::iteration_data>(manager::instance().manager_mutex);
 
-                for (const auto& archetype_ptr : management.limbo.archetypes)
+                for (const auto& archetype_ptr : manager::instance().limbo.archetypes)
                     if (archetype_ptr->matches_query(components, with_components, without_components))
                         data->arch_data.push_back(archetype_ptr.get());
 
-                for (const auto& [id, world] : management.worlds)
+                for (const auto& [id, world] : manager::instance().worlds)
                     for (const auto& archetype_ptr : world.archetypes)
                         if (archetype_ptr->matches_query(components, with_components, without_components))
                             data->arch_data.push_back(archetype_ptr.get());
