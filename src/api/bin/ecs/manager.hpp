@@ -87,6 +87,12 @@ namespace copper_server::api::ecs {
         }
     };
 
+    struct flat_relation_data {
+        size_t chunk_offset;
+        size_t comp_size;
+        detail::component_type_info::get_relations_fn fn;
+    };
+
     struct archetype {
         std::vector<component_id> component_ids;
         size_t hash;
@@ -97,6 +103,7 @@ namespace copper_server::api::ecs {
         std::unordered_map<component_id, archetype*> add_transition_cache;
         std::unordered_map<component_id, archetype*> remove_transition_cache;
         std::unordered_map<component_id, uint32_t> component_index_map;
+        std::vector<flat_relation_data> component_calculate_relations;
 
         struct chunk_layout {
             std::vector<size_t> component_offsets;
@@ -171,6 +178,18 @@ namespace copper_server::api::ecs {
                 }
 
                 layout.chunk_size_bytes = current_offset;
+
+                component_calculate_relations.reserve(component_ids.size());
+                for (auto& id : component_ids) {
+                    auto& com_reg = detail::component_info_registry[id];
+                    if (com_reg.get_flat_relations)
+                        component_calculate_relations.emplace_back(
+                            layout.component_offsets[id],
+                            com_reg.size,
+                            com_reg.get_flat_relations
+                        );
+                }
+                component_calculate_relations.shrink_to_fit();
             }
         }
 
@@ -256,15 +275,25 @@ namespace copper_server::api::ecs {
 
             records.at(last_entity_id).chunk_index = old_pos;
         }
+
+        std::vector<ecs::entity> request_flat_relation(entity_record& record) {
+            list_array<ecs::entity> entities;
+            for (auto& [component_offset, size, fn] : component_calculate_relations) {
+                auto* component = record.chunk->memory_block.get() + component_offset + (record.chunk_index * size);
+                auto res = fn(component);
+                entities.push_back(res.data(), res.size());
+            }
+            return entities.to_container<std::vector>();
+        }
     };
 
     struct entity_destroy_queue_item {
-        int32_t id;
+        uint32_t id;
         uint32_t generation;
     };
 
     struct entity_dirty_mark_item {
-        int32_t id;
+        uint32_t id;
         uint32_t generation;
         component_id component;
     };
@@ -280,7 +309,7 @@ namespace copper_server::api::ecs {
         moodycamel::ConcurrentQueue<detail::mutation_queue_item> mutation_queue;
         moodycamel::ConcurrentQueue<entity_destroy_queue_item> entity_destroy_queue;
         moodycamel::ConcurrentQueue<entity_dirty_mark_item> marking_queue;
-        moodycamel::ConcurrentQueue<int32_t> arch_type_changes;
+        moodycamel::ConcurrentQueue<uint32_t> arch_type_changes;
 
         archetype* map_get_archetype(const std::vector<component_id>& sorted_ids) {
             auto hash = archetype_hash()(sorted_ids);
@@ -324,15 +353,15 @@ namespace copper_server::api::ecs {
         std::unordered_map<int32_t, world> worlds;
 
         std::vector<entity_record> records;
-        list_array<int32_t> free_entity_ids;
+        list_array<uint32_t> free_entity_ids;
 
 
         fast_task::task_rw_mutex relation_mutex;
-        std::unordered_map<component_id, std::unordered_map<int32_t, std::vector<int32_t>>> relation_index;         //component -> parent -> child
-        std::unordered_map<int32_t, std::unordered_map<component_id, std::vector<int32_t>>> reverse_relation_index; //child -> component -> parent
-        std::unordered_map<int32_t, std::unordered_set<component_id>> defined_relations;                            //entity -> component
+        std::unordered_map<component_id, std::unordered_map<uint32_t, std::vector<uint32_t>>> relation_index;         //component -> parent -> child
+        std::unordered_map<uint32_t, std::unordered_map<component_id, std::vector<uint32_t>>> reverse_relation_index; //child -> component -> parent
+        std::unordered_map<uint32_t, std::unordered_set<component_id>> defined_relations;                             //entity -> component
 
-        static void swap_remove(std::vector<int32_t>& arr, int32_t value) {
+        static void swap_remove(std::vector<uint32_t>& arr, uint32_t value) {
             auto it = std::find(arr.begin(), arr.end(), value);
             if (it != arr.end()) {
                 std::swap(*it, arr.back());
@@ -342,7 +371,7 @@ namespace copper_server::api::ecs {
 
         //internal, should be used only by implementation
         //transfers the entity across archetypes and/or worlds
-        void move_entity(int32_t id, archetype* to, world* w) {
+        void move_entity(uint32_t id, archetype* to, world* w) {
             auto& record = records.at(id);
             archetype* old_type = record.type;
 
@@ -386,7 +415,7 @@ namespace copper_server::api::ecs {
 
         //internal, should be used only by implementation
         //removes entity data, but keeps the record for reuse
-        void deallocate_entity(int32_t id) {
+        void deallocate_entity(uint32_t id) {
             auto& record = records.at(id);
             bool was_full = (record.chunk->entity_count == CHUNK_CAPACITY);
 
@@ -429,9 +458,12 @@ namespace copper_server::api::ecs {
 
         //internal, should be used only by implementation
         entity allocate_entity(archetype* in, world* w) {
-            int32_t id;
+            uint32_t id;
             if (free_entity_ids.empty()) {
-                id = int32_t(records.size());
+                if (records.size() >= UINT32_MAX)
+                    return {UINT32_MAX, UINT32_MAX}; //return invalid entity
+
+                id = uint32_t(records.size());
                 records.resize(records.size() + 1);
             } else
                 id = free_entity_ids.take_front();
@@ -457,14 +489,14 @@ namespace copper_server::api::ecs {
         }
 
         //internal, should be used only by implementation
-        void add_entity_relation(int32_t parent, int32_t child, component_id component) {
+        void add_entity_relation(uint32_t parent, uint32_t child, component_id component) {
             relation_index[component][parent].push_back(child);
             reverse_relation_index[child][component].push_back(parent);
             defined_relations[parent].insert(component);
         }
 
         //internal, should be used only by implementation
-        void remove_entity_relation(int32_t parent, int32_t child, component_id component) {
+        void remove_entity_relation(uint32_t parent, uint32_t child, component_id component) {
             auto& relation = relation_index[component][parent];
             swap_remove(relation, child);
             auto& reverse_relation = reverse_relation_index[child][component];
@@ -481,8 +513,8 @@ namespace copper_server::api::ecs {
         }
 
         //internal, should be used only by implementation
-        std::vector<int32_t> get_relation_query(std::span<std::pair<component_id, entity>> relations) {
-            if (relations.empty()) 
+        std::vector<uint32_t> get_relation_query(std::span<std::pair<component_id, entity>> relations) {
+            if (relations.empty())
                 return {};
 
             auto& first_rel = relations[0];
@@ -493,7 +525,7 @@ namespace copper_server::api::ecs {
             if (it_parent == it_comp->second.end())
                 return {};
 
-            std::vector<int32_t> candidates = it_parent->second;
+            std::vector<uint32_t> candidates = it_parent->second;
 
             for (size_t i = 1; i < relations.size(); ++i) {
                 if (candidates.empty())
@@ -515,7 +547,7 @@ namespace copper_server::api::ecs {
             return candidates;
         }
 
-        bool has_entity(int32_t id, uint32_t generation) {
+        bool has_entity(uint32_t id, uint32_t generation) {
             if (records.size() > id)
                 if (records[id].generation == generation)
                     return true;

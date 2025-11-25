@@ -12,6 +12,7 @@
 #include <library/list_array.hpp>
 #include <src/api/ecs/detail.hpp>
 #include <src/base_objects/uuid.hpp>
+#include <src/util/cts.hpp>
 #include <variant>
 
 //entity component system
@@ -55,7 +56,7 @@ namespace copper_server::api::ecs {
     };
 
     struct entity {
-        int32_t id;
+        mutable uint32_t id;
         uint32_t generation;
 
         template <class component>
@@ -132,16 +133,16 @@ namespace copper_server::api::ecs {
         //could throw depending on components
         std::optional<entity> copy_and_wait() const;
 
-        void destroy() {
-            detail::queue_destroy_entity(id, generation);
-        }
-
         bool is_assigned_to_world(int32_t world_id) const {
             return detail::get_entity_assigned_to_world(id, generation) == world_id;
         }
 
         std::optional<int32_t> get_assigned_world_id() const {
             return detail::get_entity_assigned_to_world(id, generation);
+        }
+
+        std::vector<entity> get_flat_relation() const {
+            return detail::request_flat_childs(id, generation);
         }
 
         bool operator==(const entity& other) const {
@@ -151,6 +152,16 @@ namespace copper_server::api::ecs {
         bool operator!=(const entity& other) const {
             return id != other.id || generation != other.generation;
         }
+
+        bool is_valid() const {
+            if (id == UINT32_MAX)
+                return false;
+            else if (detail::is_valid(id, generation)) {
+                id = UINT32_MAX;
+                return false;
+            } else
+                return true;
+        }
     };
 
     struct entity_ref {
@@ -159,6 +170,31 @@ namespace copper_server::api::ecs {
         base_objects::uuid get_uuid();
 
         bool is_resolved();
+        bool is_valid() const;
+
+        bool try_resolve();
+
+        bool operator==(const entity_ref& other) const;
+        bool operator!=(const entity_ref& other) const;
+
+        bool operator==(const entity& other) const;
+        bool operator!=(const entity& other) const;
+
+        bool operator==(const base_objects::uuid& other) const;
+        bool operator!=(const base_objects::uuid& other) const;
+    };
+
+    struct unique_entity : public entity {
+        using entity::entity;
+        using entity::operator=;
+
+        unique_entity() = default;
+
+        ~unique_entity();
+
+        entity release();
+
+        bool has_value();
     };
 
     template <class... params>
@@ -485,9 +521,11 @@ namespace copper_server::api::ecs {
     };
 
     enum class tick_phase {
+        early_processing, //for cleanup or for other things before processing anything
+
         mobile_entity,
         block_entity,
-        //slot_entity,
+        item_entity,
     };
 
     struct scheduler {
@@ -510,6 +548,11 @@ namespace copper_server::api::ecs {
     };
 }
 
+template <copper_server::util::CTS path>
+struct ecs_nbt_path {
+    static inline constexpr std::string_view value = []() { return custom_name.data; }();
+};
+
 #include <src/api/ecs/late_definition.hpp>
 
 namespace std {
@@ -520,5 +563,30 @@ namespace std {
         }
     };
 }
+
+//Small self doc:
+//This ecs been created specifically for copper_server to archive some features:
+// like tick_phase
+// global relation for leashed entities
+// "flat" relation for simple relations to reduce contention
+// compile time query builder
+// non pod components
+//      (with some limitations:
+//           std::is_constructible_v<T>
+//           && std::is_nothrow_destructible_v<T>
+//           && std::is_nothrow_move_constructible_v<T>
+//           && std::is_nothrow_move_assignable_v<T>
+//           && std::is_copy_assignable_v<T>
+//      )
+// integrated nbt de/serialization support
+// integrated fast_task support
+//
+//
+//The flat relation is dynamically calculated for each component that declares special member function:
+//      std::vector<api::ecs::entity> get_flat_relations();
+//
+//To remove entity, just add com::dead_mark
+// this component is used by the deletion_system to remove its child entities
+// the deletion_system is automatically registered for all worlds and could not be removed
 
 #endif /* SRC_API_ECS */

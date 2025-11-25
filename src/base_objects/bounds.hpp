@@ -25,12 +25,12 @@ namespace copper_server::base_objects {
     }
 
     struct cubic_bounds_chunk {
-        int64_t x1;
-        int64_t z1;
-        int64_t x2;
-        int64_t z2;
+        int32_t x1;
+        int32_t z1;
+        int32_t x2;
+        int32_t z2;
 
-        cubic_bounds_chunk(int64_t set_x1, int64_t set_z1, int64_t set_x2, int64_t set_z2)
+        cubic_bounds_chunk(int32_t set_x1, int32_t set_z1, int32_t set_x2, int32_t set_z2)
             : x1(set_x1), z1(set_z1), x2(set_x2), z2(set_z2) {
             if (x1 > x2)
                 std::swap(x1, x2);
@@ -40,34 +40,34 @@ namespace copper_server::base_objects {
 
         template <class _FN>
         void enum_points(_FN fn) const {
-            for (int64_t i = x1; i <= x2; i++)
-                for (int64_t j = z1; j <= z2; j++)
+            for (int32_t i = x1; i <= x2; i++)
+                for (int32_t j = z1; j <= z2; j++)
                     fn(i, j);
         }
 
         template <class _FN>
         void enum_points_from_center(_FN fn) const {
-            int64_t centerX = (x1 + x2) / 2;
-            int64_t centerZ = (z1 + z2) / 2;
+            int32_t centerX = (x1 + x2) / 2;
+            int32_t centerZ = (z1 + z2) / 2;
 
-            int64_t maxLayerX = std::max(x2 - centerX, centerX - x1);
-            int64_t maxLayerZ = std::max(z2 - centerZ, centerZ - z1);
-            int64_t maxLayer = std::max(maxLayerX, maxLayerZ);
+            int32_t maxLayerX = std::max(x2 - centerX, centerX - x1);
+            int32_t maxLayerZ = std::max(z2 - centerZ, centerZ - z1);
+            int32_t maxLayer = std::max(maxLayerX, maxLayerZ);
             fn(centerX, centerZ);
 
-            for (int64_t layer = 1; layer <= maxLayer; ++layer) {
+            for (int32_t layer = 1; layer <= maxLayer; ++layer) {
                 if (layer <= maxLayerZ) {
-                    int64_t minX = std::max(-layer, -maxLayerX);
-                    int64_t maxX = std::min(layer, maxLayerX);
-                    for (int64_t i = minX; i <= maxX; ++i) {
+                    int32_t minX = std::max(-layer, -maxLayerX);
+                    int32_t maxX = std::min(layer, maxLayerX);
+                    for (int32_t i = minX; i <= maxX; ++i) {
                         fn(centerX + i, centerZ - layer);
                         fn(centerX + i, centerZ + layer);
                     }
                 }
                 if (layer <= maxLayerX) {
-                    int64_t minZ = std::max(-layer, -maxLayerZ);
-                    int64_t maxZ = std::min(layer, maxLayerZ);
-                    for (int64_t i = minZ + 1; i < maxZ; ++i) {
+                    int32_t minZ = std::max(-layer, -maxLayerZ);
+                    int32_t maxZ = std::min(layer, maxLayerZ);
+                    for (int32_t i = minZ + 1; i < maxZ; ++i) {
                         fn(centerX - layer, centerZ + i);
                         fn(centerX + layer, centerZ + i);
                     }
@@ -75,11 +75,11 @@ namespace copper_server::base_objects {
             }
         }
 
-        bool in_bounds(int64_t x, int64_t z) const {
+        bool in_bounds(int32_t x, int32_t z) const {
             return x >= x1 && x <= x2 && z >= z1 && z <= z2;
         }
 
-        bool out_of_bounds(int64_t x, int64_t z) const {
+        bool out_of_bounds(int32_t x, int32_t z) const {
             return !in_bounds(x, z);
         }
 
@@ -87,10 +87,10 @@ namespace copper_server::base_objects {
             return (x2 - x1 + 1) * (z2 - z1 + 1);
         }
 
-        std::pair<int64_t, int64_t> random_point() const {
+        std::pair<int32_t, int32_t> random_point() const {
             std::mt19937_64 gen(std::random_device{}());
-            std::uniform_int_distribution<int64_t> disX(x1, x2);
-            std::uniform_int_distribution<int64_t> disZ(z1, z2);
+            std::uniform_int_distribution<int32_t> disX(x1, x2);
+            std::uniform_int_distribution<int32_t> disZ(z1, z2);
             return std::make_pair(disX(gen), disZ(gen));
         }
 
@@ -98,24 +98,24 @@ namespace copper_server::base_objects {
     };
 
     struct cubic_bounds_chunk_radius {
-        int64_t center_x;
-        int64_t center_z;
-        int64_t radius;
+        int32_t center_x;
+        int32_t center_z;
+        int32_t radius;
 
         template <class _FN>
         void enum_points(_FN fn) const {
-            int64_t max_x = center_x + radius;
-            int64_t max_z = center_z + radius;
-            for (int64_t i = center_x - radius; i <= max_x; i++)
-                for (int64_t j = center_z - radius; j <= max_z; j++)
+            int32_t max_x = center_x + radius;
+            int32_t max_z = center_z + radius;
+            for (int32_t i = center_x - radius; i <= max_x; i++)
+                for (int32_t j = center_z - radius; j <= max_z; j++)
                     fn(i, j);
         }
 
         template <class _FN>
         void enum_points_from_center(_FN fn) const {
             fn(center_x, center_z);
-            for (int64_t layer = 1; layer <= radius; ++layer) {
-                for (int64_t i = -layer + 1; i < layer; ++i) {
+            for (int32_t layer = 1; layer <= radius; ++layer) {
+                for (int32_t i = -layer + 1; i < layer; ++i) {
                     fn(center_x + i, center_z - layer);
                     fn(center_x - layer, center_z + i);
                     fn(center_x + i, center_z + layer);
@@ -128,11 +128,11 @@ namespace copper_server::base_objects {
             }
         }
 
-        bool in_bounds(int64_t x, int64_t z) const {
+        bool in_bounds(int32_t x, int32_t z) const {
             return x >= (center_x - radius) && x <= (center_x + radius) && z >= (center_z - radius) && z <= (center_z + radius);
         }
 
-        bool out_of_bounds(int64_t x, int64_t z) const {
+        bool out_of_bounds(int32_t x, int32_t z) const {
             return !in_bounds(x, z);
         }
 
@@ -140,10 +140,10 @@ namespace copper_server::base_objects {
             return (radius * 2 + 1) * (radius * 2 + 1);
         }
 
-        std::pair<int64_t, int64_t> random_point() const {
+        std::pair<int32_t, int32_t> random_point() const {
             std::mt19937_64 gen(std::random_device{}());
-            std::uniform_int_distribution<int64_t> dis_x(center_x - radius, center_x + radius);
-            std::uniform_int_distribution<int64_t> dis_z(center_z - radius, center_z + radius);
+            std::uniform_int_distribution<int32_t> dis_x(center_x - radius, center_x + radius);
+            std::uniform_int_distribution<int32_t> dis_z(center_z - radius, center_z + radius);
             return std::make_pair(dis_x(gen), dis_z(gen));
         }
 
@@ -151,17 +151,17 @@ namespace copper_server::base_objects {
     };
 
     struct cubic_bounds_chunk_radius_out {
-        int64_t center_x;
-        int64_t center_z;
-        int64_t radius_begin;
-        int64_t radius_end;
+        int32_t center_x;
+        int32_t center_z;
+        int32_t radius_begin;
+        int32_t radius_end;
 
         template <class _FN>
         void enum_points(_FN fn) const {
-            int64_t max_x = center_x + radius_end;
-            int64_t max_z = center_z + radius_end;
-            for (int64_t i = center_x - radius_begin; i <= max_x; i++)
-                for (int64_t j = center_z - radius_begin; j <= max_z; j++)
+            int32_t max_x = center_x + radius_end;
+            int32_t max_z = center_z + radius_end;
+            for (int32_t i = center_x - radius_begin; i <= max_x; i++)
+                for (int32_t j = center_z - radius_begin; j <= max_z; j++)
                     fn(i, j);
         }
 
@@ -169,8 +169,8 @@ namespace copper_server::base_objects {
         void enum_points_from_center(_FN fn) const {
             if (radius_begin == 0)
                 fn(center_x, center_z);
-            for (int64_t layer = radius_begin ? radius_begin : 1; layer <= radius_end; ++layer) {
-                for (int64_t i = -layer + 1; i < layer; ++i) {
+            for (int32_t layer = radius_begin ? radius_begin : 1; layer <= radius_end; ++layer) {
+                for (int32_t i = -layer + 1; i < layer; ++i) {
                     fn(center_x + i, center_z - layer);
                     fn(center_x - layer, center_z + i);
                     fn(center_x + i, center_z + layer);
@@ -187,8 +187,8 @@ namespace copper_server::base_objects {
         void enum_points_from_center_w_layer(_FN fn) const {
             if (radius_begin == 0)
                 fn(center_x, center_z, 0);
-            for (int64_t layer = radius_begin ? radius_begin : 1; layer <= radius_end; ++layer) {
-                for (int64_t i = -layer + 1; i < layer; ++i) {
+            for (int32_t layer = radius_begin ? radius_begin : 1; layer <= radius_end; ++layer) {
+                for (int32_t i = -layer + 1; i < layer; ++i) {
                     fn(center_x + i, center_z - layer, layer);
                     fn(center_x - layer, center_z + i, layer);
                     fn(center_x + i, center_z + layer, layer);
@@ -203,8 +203,8 @@ namespace copper_server::base_objects {
 
         template <class _FN>
         void enum_points_from_center_w_layer_no_center(_FN fn) const {
-            for (int64_t layer = radius_begin ? radius_begin : 1; layer <= radius_end; ++layer) {
-                for (int64_t i = -layer + 1; i < layer; ++i) {
+            for (int32_t layer = radius_begin ? radius_begin : 1; layer <= radius_end; ++layer) {
+                for (int32_t i = -layer + 1; i < layer; ++i) {
                     fn(center_x + i, center_z - layer, layer);
                     fn(center_x - layer, center_z + i, layer);
                     fn(center_x + i, center_z + layer, layer);
@@ -217,11 +217,11 @@ namespace copper_server::base_objects {
             }
         }
 
-        bool in_bounds(int64_t x, int64_t z) const {
+        bool in_bounds(int32_t x, int32_t z) const {
             return x >= (center_x - radius_begin) && x <= (center_x + radius_end) && z >= (center_z - radius_begin) && z <= (center_z + radius_end);
         }
 
-        bool out_of_bounds(int64_t x, int64_t z) const {
+        bool out_of_bounds(int32_t x, int32_t z) const {
             return !in_bounds(x, z);
         }
 
@@ -229,10 +229,10 @@ namespace copper_server::base_objects {
             return (radius_end - radius_begin + 1) * (radius_end - radius_begin + 1);
         }
 
-        std::pair<int64_t, int64_t> random_point() const {
+        std::pair<int32_t, int32_t> random_point() const {
             std::mt19937_64 gen(std::random_device{}());
-            std::uniform_int_distribution<int64_t> dis_x(center_x - radius_begin, center_x + radius_end);
-            std::uniform_int_distribution<int64_t> dis_z(center_z - radius_begin, center_z + radius_end);
+            std::uniform_int_distribution<int32_t> dis_x(center_x - radius_begin, center_x + radius_end);
+            std::uniform_int_distribution<int32_t> dis_z(center_z - radius_begin, center_z + radius_end);
             return std::make_pair(dis_x(gen), dis_z(gen));
         }
 
@@ -240,14 +240,14 @@ namespace copper_server::base_objects {
     };
 
     struct cubic_bounds_block {
-        int64_t x1;
-        int64_t y1;
-        int64_t z1;
-        int64_t x2;
-        int64_t y2;
-        int64_t z2;
+        int32_t x1;
+        int32_t y1;
+        int32_t z1;
+        int32_t x2;
+        int32_t y2;
+        int32_t z2;
 
-        cubic_bounds_block(int64_t set_x1, int64_t set_y1, int64_t set_z1, int64_t set_x2, int64_t set_y2, int64_t set_z2)
+        cubic_bounds_block(int32_t set_x1, int32_t set_y1, int32_t set_z1, int32_t set_x2, int32_t set_y2, int32_t set_z2)
             : x1(set_x1), y1(set_y1), z1(set_z1), x2(set_x2), y2(set_y2), z2(set_z2) {
             if (x1 > x2)
                 std::swap(x1, x2);
@@ -259,17 +259,17 @@ namespace copper_server::base_objects {
 
         template <class _FN>
         void enum_points(_FN fn) const {
-            for (int64_t i = x1; i <= x2; i++)
-                for (int64_t j = y1; j <= y2; j++)
-                    for (int64_t k = z1; k <= z2; k++)
+            for (int32_t i = x1; i <= x2; i++)
+                for (int32_t j = y1; j <= y2; j++)
+                    for (int32_t k = z1; k <= z2; k++)
                         fn(i, j, k);
         }
 
-        bool in_bounds(int64_t x, int64_t y, int64_t z) const {
+        bool in_bounds(int32_t x, int32_t y, int32_t z) const {
             return x >= x1 && x <= x2 && y >= y1 && y <= y2 && z >= z1 && z <= z2;
         }
 
-        bool out_of_bounds(int64_t x, int64_t y, int64_t z) const {
+        bool out_of_bounds(int32_t x, int32_t y, int32_t z) const {
             return !in_bounds(x, y, z);
         }
 
@@ -277,11 +277,11 @@ namespace copper_server::base_objects {
             return (x2 - x1 + 1) * (y2 - y1 + 1) * (z2 - z1 + 1);
         }
 
-        std::tuple<int64_t, int64_t, int64_t> random_point() const {
+        std::tuple<int32_t, int32_t, int32_t> random_point() const {
             std::mt19937_64 gen(std::random_device{}());
-            std::uniform_int_distribution<int64_t> dis_x(x1, x2);
-            std::uniform_int_distribution<int64_t> dis_y(y1, y2);
-            std::uniform_int_distribution<int64_t> dis_z(z1, z2);
+            std::uniform_int_distribution<int32_t> dis_x(x1, x2);
+            std::uniform_int_distribution<int32_t> dis_y(y1, y2);
+            std::uniform_int_distribution<int32_t> dis_z(z1, z2);
             return std::make_tuple(dis_x(gen), dis_y(gen), dis_z(gen));
         }
 
@@ -299,24 +299,24 @@ namespace copper_server::base_objects {
     };
 
     struct cubic_bounds_block_radius {
-        int64_t x;
-        int64_t y;
-        int64_t z;
-        int64_t radius;
+        int32_t x;
+        int32_t y;
+        int32_t z;
+        int32_t radius;
 
         template <class _FN>
         void enum_points(_FN fn) const {
-            for (int64_t i = x - radius; i <= x + radius; i++)
-                for (int64_t j = y - radius; j <= y + radius; j++)
-                    for (int64_t k = z - radius; k <= z + radius; k++)
+            for (int32_t i = x - radius; i <= x + radius; i++)
+                for (int32_t j = y - radius; j <= y + radius; j++)
+                    for (int32_t k = z - radius; k <= z + radius; k++)
                         fn(i, j, k);
         }
 
-        bool in_bounds(int64_t _x, int64_t _y, int64_t _z) const {
+        bool in_bounds(int32_t _x, int32_t _y, int32_t _z) const {
             return ((_x - this->x) * (_x - this->x) + (_y - this->y) * (_y - this->y) + (_z - this->z) * (_z - this->z)) <= radius * radius;
         }
 
-        bool out_of_bounds(int64_t _x, int64_t _y, int64_t _z) const {
+        bool out_of_bounds(int32_t _x, int32_t _y, int32_t _z) const {
             return !in_bounds(_x, _y, _z);
         }
 
@@ -324,11 +324,11 @@ namespace copper_server::base_objects {
             return (radius * 2 + 1) * (radius * 2 + 1) * (radius * 2 + 1);
         }
 
-        std::tuple<int64_t, int64_t, int64_t> random_point() const {
+        std::tuple<int32_t, int32_t, int32_t> random_point() const {
             std::mt19937_64 gen(std::random_device{}());
-            std::uniform_int_distribution<int64_t> dis_x(x - radius, x + radius);
-            std::uniform_int_distribution<int64_t> dis_y(y - radius, y + radius);
-            std::uniform_int_distribution<int64_t> dis_z(z - radius, z + radius);
+            std::uniform_int_distribution<int32_t> dis_x(x - radius, x + radius);
+            std::uniform_int_distribution<int32_t> dis_y(y - radius, y + radius);
+            std::uniform_int_distribution<int32_t> dis_z(z - radius, z + radius);
 
             return {dis_x(gen), dis_y(gen), dis_z(gen)};
         }
@@ -345,28 +345,28 @@ namespace copper_server::base_objects {
     };
 
     struct cubic_bounds_block_radius_out {
-        int64_t center_x;
-        int64_t center_y;
-        int64_t center_z;
-        int64_t radius_begin;
-        int64_t radius_end;
+        int32_t center_x;
+        int32_t center_y;
+        int32_t center_z;
+        int32_t radius_begin;
+        int32_t radius_end;
 
         template <class _FN>
         void enum_points(_FN fn) const {
-            int64_t max_x = center_x + radius_end;
-            int64_t max_y = center_y + radius_end;
-            int64_t max_z = center_z + radius_end;
-            for (int64_t i = center_x - radius_begin; i <= max_x; i++)
-                for (int64_t j = center_y - radius_begin; j <= max_y; j++)
-                    for (int64_t k = center_z - radius_begin; k <= max_z; k++)
+            int32_t max_x = center_x + radius_end;
+            int32_t max_y = center_y + radius_end;
+            int32_t max_z = center_z + radius_end;
+            for (int32_t i = center_x - radius_begin; i <= max_x; i++)
+                for (int32_t j = center_y - radius_begin; j <= max_y; j++)
+                    for (int32_t k = center_z - radius_begin; k <= max_z; k++)
                         fn(i, j, k);
         }
 
-        bool in_bounds(int64_t x, int64_t y, int64_t z) const {
+        bool in_bounds(int32_t x, int32_t y, int32_t z) const {
             return x >= (center_x - radius_begin) && x <= (center_x + radius_end) && y >= (center_y - radius_begin) && y <= (center_y + radius_end) && z >= (center_z - radius_begin) && z <= (center_z + radius_end);
         }
 
-        bool out_of_bounds(int64_t x, int64_t y, int64_t z) const {
+        bool out_of_bounds(int32_t x, int32_t y, int32_t z) const {
             return !in_bounds(x, y, z);
         }
 
@@ -374,11 +374,11 @@ namespace copper_server::base_objects {
             return (radius_end - radius_begin + 1) * (radius_end - radius_begin + 1) * (radius_end - radius_begin + 1);
         }
 
-        std::tuple<int64_t, int64_t, int64_t> random_point() const {
+        std::tuple<int32_t, int32_t, int32_t> random_point() const {
             std::mt19937_64 gen(std::random_device{}());
-            std::uniform_int_distribution<int64_t> dis_x(center_x - radius_begin, center_x + radius_end);
-            std::uniform_int_distribution<int64_t> dis_y(center_y - radius_begin, center_y + radius_end);
-            std::uniform_int_distribution<int64_t> dis_z(center_z - radius_begin, center_z + radius_end);
+            std::uniform_int_distribution<int32_t> dis_x(center_x - radius_begin, center_x + radius_end);
+            std::uniform_int_distribution<int32_t> dis_y(center_y - radius_begin, center_y + radius_end);
+            std::uniform_int_distribution<int32_t> dis_z(center_z - radius_begin, center_z + radius_end);
             return std::make_tuple(dis_x(gen), dis_y(gen), dis_z(gen));
         }
 
@@ -395,31 +395,31 @@ namespace copper_server::base_objects {
     };
 
     struct spherical_bounds_chunk {
-        int64_t x;
-        int64_t z;
+        int32_t x;
+        int32_t z;
         double radius;
 
         template <class _FN>
         void enum_points(_FN fn) const {
             double radius2 = radius * radius;
-            int64_t start_x = int64_t(x - radius);
-            int64_t end_x = int64_t(x + radius);
+            int32_t start_x = int32_t(x - radius);
+            int32_t end_x = int32_t(x + radius);
 
 
-            int64_t start_z = int64_t(x - radius);
-            int64_t end_z = int64_t(x + radius);
+            int32_t start_z = int32_t(x - radius);
+            int32_t end_z = int32_t(x + radius);
 
-            for (int64_t i = start_x; i <= end_x; i++)
-                for (int64_t j = start_z; j <= end_z; j++)
+            for (int32_t i = start_x; i <= end_x; i++)
+                for (int32_t j = start_z; j <= end_z; j++)
                     if (double((i - x) * (i - x) + (j - z) * (j - z)) <= radius2)
                         fn(i, j);
         }
 
-        bool in_bounds(int64_t _x, int64_t _z) const {
+        bool in_bounds(int32_t _x, int32_t _z) const {
             return ((_x - this->x) * (_x - this->x) + (_z - this->z) * (_z - this->z)) <= radius * radius;
         }
 
-        bool out_of_bounds(int64_t _x, int64_t _z) const {
+        bool out_of_bounds(int32_t _x, int32_t _z) const {
             return !in_bounds(_x, _z);
         }
 
@@ -437,8 +437,8 @@ namespace copper_server::base_objects {
     };
 
     struct spherical_bounds_chunk_out {
-        int64_t x;
-        int64_t z;
+        int32_t x;
+        int32_t z;
         double radius_begin;
         double radius_end;
 
@@ -446,27 +446,27 @@ namespace copper_server::base_objects {
         void enum_points(_FN fn) const {
             double radius2_begin = radius_begin * radius_begin;
             double radius2_end = radius_end * radius_end;
-            int64_t start_x = int64_t(x - radius_begin);
-            int64_t end_x = int64_t(x + radius_begin);
+            int32_t start_x = int32_t(x - radius_begin);
+            int32_t end_x = int32_t(x + radius_begin);
 
 
-            int64_t start_z = int64_t(x - radius_end);
-            int64_t end_z = int64_t(x + radius_end);
+            int32_t start_z = int32_t(x - radius_end);
+            int32_t end_z = int32_t(x + radius_end);
 
-            for (int64_t i = start_x; i <= end_x; i++)
-                for (int64_t j = start_z; j <= end_z; j++) {
+            for (int32_t i = start_x; i <= end_x; i++)
+                for (int32_t j = start_z; j <= end_z; j++) {
                     auto check = ((i - x) * (i - x) + (j - z) * (j - z));
                     if (check >= radius2_begin && check <= radius2_end)
                         fn(i, j);
                 }
         }
 
-        bool in_bounds(int64_t _x, int64_t _z) const {
+        bool in_bounds(int32_t _x, int32_t _z) const {
             auto res = ((_x - this->x) * (_x - this->x) + (_z - this->z) * (_z - this->z));
             return res >= radius_begin * radius_begin && res <= radius_end * radius_end;
         }
 
-        bool out_of_bounds(int64_t _x, int64_t _z) const {
+        bool out_of_bounds(int32_t _x, int32_t _z) const {
             return !in_bounds(_x, _z);
         }
 
@@ -484,35 +484,35 @@ namespace copper_server::base_objects {
     };
 
     struct spherical_bounds_block {
-        int64_t x;
-        int64_t y;
-        int64_t z;
+        int32_t x;
+        int32_t y;
+        int32_t z;
         double radius;
 
         template <class _FN>
         void enum_points(_FN fn) const {
             double radius2 = radius * radius;
-            int64_t start_x = int64_t(x - radius);
-            int64_t end_x = int64_t(x + radius);
+            int32_t start_x = int32_t(x - radius);
+            int32_t end_x = int32_t(x + radius);
 
-            int64_t start_y = int64_t(y - radius);
-            int64_t end_y = int64_t(y + radius);
+            int32_t start_y = int32_t(y - radius);
+            int32_t end_y = int32_t(y + radius);
 
-            int64_t start_z = int64_t(z - radius);
-            int64_t end_z = int64_t(z + radius);
+            int32_t start_z = int32_t(z - radius);
+            int32_t end_z = int32_t(z + radius);
 
-            for (int64_t i = start_x; i <= end_x; i++)
-                for (int64_t j = start_y; j <= end_y; j++)
-                    for (int64_t k = start_z; k <= end_z; k++)
+            for (int32_t i = start_x; i <= end_x; i++)
+                for (int32_t j = start_y; j <= end_y; j++)
+                    for (int32_t k = start_z; k <= end_z; k++)
                         if (double((i - x) * (i - x) + (j - y) * (j - y) + (k - z) * (k - z)) <= radius2)
                             fn(i, j, k);
         }
 
-        bool in_bounds(int64_t _x, int64_t _y, int64_t _z) const {
+        bool in_bounds(int32_t _x, int32_t _y, int32_t _z) const {
             return ((_x - this->x) * (_x - this->x) + (_y - this->y) * (_y - this->y) + (_z - this->z) * (_z - this->z)) <= radius * radius;
         }
 
-        bool out_of_bounds(int64_t _x, int64_t _y, int64_t _z) const {
+        bool out_of_bounds(int32_t _x, int32_t _y, int32_t _z) const {
             return !in_bounds(_x, _y, _z);
         }
 
@@ -538,9 +538,9 @@ namespace copper_server::base_objects {
     };
 
     struct spherical_bounds_block_out {
-        int64_t x;
-        int64_t y;
-        int64_t z;
+        int32_t x;
+        int32_t y;
+        int32_t z;
         double radius_begin;
         double radius_end;
 
@@ -548,30 +548,30 @@ namespace copper_server::base_objects {
         void enum_points(_FN fn) const {
             double radius2_begin = radius_begin * radius_begin;
             double radius2_end = radius_end * radius_end;
-            int64_t start_x = int64_t(x - radius_begin);
-            int64_t end_x = int64_t(x + radius_end);
+            int32_t start_x = int32_t(x - radius_begin);
+            int32_t end_x = int32_t(x + radius_end);
 
-            int64_t start_y = int64_t(y - radius_begin);
-            int64_t end_y = int64_t(y + radius_end);
+            int32_t start_y = int32_t(y - radius_begin);
+            int32_t end_y = int32_t(y + radius_end);
 
-            int64_t start_z = int64_t(z - radius_begin);
-            int64_t end_z = int64_t(z + radius_end);
+            int32_t start_z = int32_t(z - radius_begin);
+            int32_t end_z = int32_t(z + radius_end);
 
-            for (int64_t i = start_x; i <= end_x; i++)
-                for (int64_t j = start_y; j <= end_y; j++)
-                    for (int64_t k = start_z; k <= end_z; k++) {
+            for (int32_t i = start_x; i <= end_x; i++)
+                for (int32_t j = start_y; j <= end_y; j++)
+                    for (int32_t k = start_z; k <= end_z; k++) {
                         auto check = ((i - x) * (i - x) + (j - y) * (j - y) + (k - z) * (k - z));
                         if (check >= radius2_begin && check <= radius2_end)
                             fn(i, j, k);
                     }
         }
 
-        bool in_bounds(int64_t _x, int64_t _y, int64_t _z) const {
+        bool in_bounds(int32_t _x, int32_t _y, int32_t _z) const {
             auto res = ((_x - this->x) * (_x - this->x) + (_y - this->y) * (_y - this->y) + (_z - this->z) * (_z - this->z));
             return res >= radius_begin * radius_begin && res <= radius_end * radius_end;
         }
 
-        bool out_of_bounds(int64_t _x, int64_t _y, int64_t _z) const {
+        bool out_of_bounds(int32_t _x, int32_t _y, int32_t _z) const {
             return !in_bounds(_x, _y, _z);
         }
 

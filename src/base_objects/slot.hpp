@@ -33,6 +33,7 @@ namespace copper_server::util {
 
     class nbt_write_compound_stream;
 }
+
 namespace copper_server::api::packets {
     struct slot;
 }

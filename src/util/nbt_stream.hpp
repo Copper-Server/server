@@ -73,6 +73,7 @@ namespace copper_server::util {
         friend class nbt_read_list_stream;
         friend class nbt_read_compound_stream;
 
+
     public:
         nbt_read_stream(std::istream& read_stream, bool is_root = false);
         ~nbt_read_stream();
@@ -119,6 +120,24 @@ namespace copper_server::util {
 
         nbt_read_list_stream read_list();
         nbt_read_compound_stream read_compound(bool enable_collector_strict_order = false);
+
+        template <class FN_first, class FN_second>
+        void double_pass_read(FN_first&& first_pass, FN_second&& second_pass)
+            requires(std::is_invocable_v<FN_first, nbt_read_stream&> && std::is_invocable_v<FN_second, nbt_read_stream&>)
+        {
+            nbt_enbt_convert temp;
+            read_into(temp);
+            auto data = temp.take_data().to_container<std::vector>();
+            std::stringstream buf((const char*)data.data(), data.size());
+            {
+                nbt_read_stream stream(buf);
+                first_pass(stream);
+            }
+            {
+                nbt_read_stream stream(buf);
+                second_pass(stream);
+            }
+        }
 
         template <class FN>
         void iterate(FN&& callback)

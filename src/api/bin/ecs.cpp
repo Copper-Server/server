@@ -7,6 +7,7 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <boost/unordered/unordered_flat_map.hpp>
+#include <src/api/bin/ecs/deletion_system.hpp>
 #include <src/api/bin/ecs/manager.hpp>
 #include <src/api/ecs/base_components.hpp>
 #include <src/api/ecs/entity_definition.hpp>
@@ -43,7 +44,7 @@ namespace copper_server::api::ecs {
     };
 
     struct entity_transfer_request {
-        int32_t id;
+        uint32_t id;
         uint32_t generation;
         std::optional<int32_t> world_id;
         fast_task::task_mutex mut;
@@ -277,20 +278,22 @@ namespace copper_server::api::ecs {
         boost::unordered_flat_map<tick_phase, tick_group> groups;
     };
 
-    scheduler::scheduler() : data(std::make_unique<scheduler_data>()) {}
+    scheduler::scheduler() : data(std::make_unique<scheduler_data>()) {
+        add_system<deletion_system>(tick_phase::early_processing);
+    }
 
     scheduler::~scheduler() {}
 
     namespace mutation_processing {
         struct pre_allocated_mutation_op {
-            int32_t entity_id;
+            uint32_t entity_id;
             component_id component;
             archetype* to_archetype;
             std::vector<char> data; //if nullptr the component will be removed
         };
 
         struct prepared_move_op {
-            int32_t entity_id;
+            uint32_t entity_id;
             archetype* from_archetype;
             archetype* to_archetype;
             component_id comp_id;
@@ -298,7 +301,7 @@ namespace copper_server::api::ecs {
         };
 
         struct prepared_in_place_update_op {
-            int32_t entity_id;
+            uint32_t entity_id;
             component_id comp_id;
             std::vector<char> data;
         };
@@ -492,7 +495,7 @@ namespace copper_server::api::ecs {
             return res;
         }
 
-        void execute_mutations(grouped_mutation_ops mutations, ::moodycamel::ConcurrentQueue<int32_t>& arch_type_changes) {
+        void execute_mutations(grouped_mutation_ops mutations, ::moodycamel::ConcurrentQueue<uint32_t>& arch_type_changes) {
             consume_all_(mutations.prepared_updates, [](prepared_in_place_update_op&& update) {
                 auto& record = manager::instance().records.at(update.entity_id);
                 auto& component_info = detail::component_info_registry.at(update.comp_id);
@@ -704,7 +707,7 @@ namespace copper_server::api::ecs {
                         flag_word.store(0, std::memory_order_relaxed);
         });
 
-        mutation_processing::parallel_drain(current_world.arch_type_changes, [](int32_t id) {
+        mutation_processing::parallel_drain(current_world.arch_type_changes, [](uint32_t id) {
             manager::instance().records[id].archetype_before_mutation = nullptr;
         });
     }
@@ -721,14 +724,14 @@ namespace copper_server::api::ecs {
         std::vector<component_type_info> component_info_registry;
         fast_task::mutex registry_mutex;
 
-        world* get_queues_for_entity(int32_t id, uint32_t generation) {
+        world* get_queues_for_entity(uint32_t id, uint32_t generation) {
             if (!manager::instance().has_entity(id, generation))
                 return nullptr;
             auto& record = manager::instance().records.at(id);
             return record.world_owner;
         }
 
-        void* get_entity_component(int32_t id, uint32_t generation, component_id component_id) {
+        void* get_entity_component(uint32_t id, uint32_t generation, component_id component_id) {
             auto& record = manager::instance().records.at(id);
             if (record.generation != generation)
                 return nullptr;
@@ -751,7 +754,7 @@ namespace copper_server::api::ecs {
                 throw std::bad_alloc();
         }
 
-        void queue_remove_entity_component(int32_t id, uint32_t generation, component_id component_id) {
+        void queue_remove_entity_component(uint32_t id, uint32_t generation, component_id component_id) {
             auto check_comp = static_cast<const com::type_definition*>(detail::get_entity_component(id, generation, detail::get_component_id<com::type_definition>()));
             if (check_comp) {
                 switch (check_comp->type->get_remove_action(component_id)) {
@@ -769,7 +772,7 @@ namespace copper_server::api::ecs {
                 queue_command(mutation_queue_item{id, generation, component_id});
         }
 
-        void queue_destroy_entity(int32_t id, uint32_t generation) {
+        void queue_destroy_entity(uint32_t id, uint32_t generation) {
             auto world = get_queues_for_entity(id, generation);
             if (!world)
                 return;
@@ -777,7 +780,7 @@ namespace copper_server::api::ecs {
                 throw std::bad_alloc();
         }
 
-        void queue_mark_dirty(int32_t id, uint32_t generation, component_id component_id) {
+        void queue_mark_dirty(uint32_t id, uint32_t generation, component_id component_id) {
             auto world = get_queues_for_entity(id, generation);
             if (!world)
                 return;
@@ -804,7 +807,7 @@ namespace copper_server::api::ecs {
             return false;
         }
 
-        bool has_entity_component(int32_t id, uint32_t generation, component_id component_id) {
+        bool has_entity_component(uint32_t id, uint32_t generation, component_id component_id) {
             auto& record = manager::instance().records.at(id);
             if (record.generation == generation)
                 return record.type->component_index_map.contains(component_id);
@@ -812,7 +815,14 @@ namespace copper_server::api::ecs {
                 return false;
         }
 
-        std::optional<int32_t> get_entity_assigned_to_world(int32_t id, uint32_t generation) {
+        bool is_valid(uint32_t id, uint32_t generation) {
+            auto& records = manager::instance().records;
+            if (records.size() <= id)
+                return false;
+            return records.at(id).generation == generation;
+        }
+
+        std::optional<int32_t> get_entity_assigned_to_world(uint32_t id, uint32_t generation) {
             auto& record = manager::instance().records.at(id);
             if (record.generation == generation && record.world_owner != &manager::instance().limbo)
                 return record.world_owner->id;
@@ -820,7 +830,15 @@ namespace copper_server::api::ecs {
                 return std::nullopt;
         }
 
-        size_t get_entity_archetype_id(int32_t id, uint32_t generation) { //this function returns pointer as integer instead of hash, because the hash could collide with other types. better be safe than oops
+        std::vector<ecs::entity> request_flat_childs(uint32_t id, uint32_t generation) {
+            auto& record = manager::instance().records.at(id);
+            if (record.generation == generation && record.world_owner != &manager::instance().limbo)
+                return record.type->request_flat_relation(record);
+            else
+                return {};
+        }
+
+        size_t get_entity_archetype_id(uint32_t id, uint32_t generation) { //this function returns pointer as integer instead of hash, because the hash could collide with other types. better be safe than oops
             auto& record = manager::instance().records.at(id);
             if (record.generation == generation)
                 return std::bit_cast<size_t>(record.type);
@@ -828,7 +846,7 @@ namespace copper_server::api::ecs {
                 return 0;
         }
 
-        archetype_layout get_archetype_layout(int32_t id, uint32_t generation) {
+        archetype_layout get_archetype_layout(uint32_t id, uint32_t generation) {
             auto& record = manager::instance().records.at(id);
             if (record.generation == generation)
                 return {record.type->component_ids, record.type->component_index_map, record.type->layout.component_offsets};
@@ -836,7 +854,7 @@ namespace copper_server::api::ecs {
                 return {};
         }
 
-        void* get_entity_component_by_offset(int32_t id, uint32_t generation, size_t offset, size_t type_size) {
+        void* get_entity_component_by_offset(uint32_t id, uint32_t generation, size_t offset, size_t type_size) {
             auto& record = manager::instance().records.at(id);
             if (record.generation != generation)
                 return nullptr;
@@ -1023,7 +1041,7 @@ namespace copper_server::api::ecs {
                 return is_entity_match(current_archetype_index, current_chunk_index, entity_index);
             }
 
-            std::pair<int32_t, uint32_t> get_current_entity(size_t entity_index) {
+            std::pair<uint32_t, uint32_t> get_current_entity(size_t entity_index) {
                 return get_current_entity(current_archetype_index, current_chunk_index, entity_index);
             }
 
@@ -1081,7 +1099,7 @@ namespace copper_server::api::ecs {
                 return true;
             }
 
-            std::pair<int32_t, uint32_t> get_current_entity(size_t archetype_index, size_t chunk_index, size_t entity_index) {
+            std::pair<uint32_t, uint32_t> get_current_entity(size_t archetype_index, size_t chunk_index, size_t entity_index) {
                 if (chunk_index == 0)
                     return {0, UINT32_MAX};
 
@@ -1163,11 +1181,11 @@ namespace copper_server::api::ecs {
                 std::optional<int32_t> world_id = std::nullopt
             ) {
                 fast_task::shared_lock guard(manager::instance().relation_mutex);
-                std::vector<int32_t> candidate_ids = manager::instance().get_relation_query(relations);
+                std::vector<uint32_t> candidate_ids = manager::instance().get_relation_query(relations);
                 auto_mark_dirty = {writes_components.begin(), writes_components.end()};
 
 
-                for (int32_t entity_id : candidate_ids) {
+                for (uint32_t entity_id : candidate_ids) {
                     auto& record = manager::instance().records.at(entity_id);
                     if (world_id)
                         if (record.world_owner->id != *world_id)
@@ -1247,7 +1265,7 @@ namespace copper_server::api::ecs {
                 return true;
             }
 
-            std::pair<int32_t, uint32_t> get_current_entity(size_t entity_index) {
+            std::pair<uint32_t, uint32_t> get_current_entity(size_t entity_index) {
                 return get_current_entity(0, current_index - 1, entity_index);
             }
 
@@ -1269,7 +1287,7 @@ namespace copper_server::api::ecs {
                 return true;
             }
 
-            std::pair<int32_t, uint32_t> get_current_entity(size_t archetype_index, size_t chunk_index, size_t entity_index) {
+            std::pair<uint32_t, uint32_t> get_current_entity(size_t archetype_index, size_t chunk_index, size_t entity_index) {
                 auto& e = matched_entities[chunk_index].e;
                 return {e.id, e.generation};
             }
@@ -1376,9 +1394,9 @@ namespace copper_server::api::ecs {
             );
         }
 
-        std::pair<int32_t, uint32_t> iteration_handle::get_current_entity(size_t entity_index) {
+        std::pair<uint32_t, uint32_t> iteration_handle::get_current_entity(size_t entity_index) {
             return std::visit(
-                [entity_index]<class T>(T& ptr) -> std::pair<int32_t, uint32_t> {
+                [entity_index]<class T>(T& ptr) -> std::pair<uint32_t, uint32_t> {
                     if constexpr (!std::is_same_v<T, std::nullptr_t>)
                         return ptr->get_current_entity(entity_index);
                     else
@@ -1422,9 +1440,9 @@ namespace copper_server::api::ecs {
             );
         }
 
-        std::pair<int32_t, uint32_t> iteration_handle::preserved_state::get_current_entity(iteration_handle& handle, size_t current_index_in_chunk) {
+        std::pair<uint32_t, uint32_t> iteration_handle::preserved_state::get_current_entity(iteration_handle& handle, size_t current_index_in_chunk) {
             return std::visit(
-                [this, current_index_in_chunk]<class T>(T& ptr) -> std::pair<int32_t, uint32_t> {
+                [this, current_index_in_chunk]<class T>(T& ptr) -> std::pair<uint32_t, uint32_t> {
                     if constexpr (!std::is_same_v<T, std::nullptr_t>)
                         return ptr->get_current_entity(archetype_index, chunk_index, current_index_in_chunk);
                     else
@@ -1567,10 +1585,25 @@ namespace copper_server::api::ecs {
         return detail::copy_entity(std::nullopt, *this)->take();
     }
 
+    bool entity_ref::try_resolve() {
+        return std::visit(
+            [this](auto& it) {
+                if constexpr (std::is_same_v<std::decay_t<decltype(it)>, base_objects::uuid>) {
+                    auto res = api::entity_id_map::get_entity(it);
+                    if (!res)
+                        return false;
+                    value = *res;
+                }
+                return true;
+            },
+            value
+        );
+    }
+
     entity entity_ref::get_entity() {
         return std::visit(
             [this](auto& it) {
-                if constexpr (std::is_same_v<std ::decay_t<decltype(it)>, base_objects::uuid>) {
+                if constexpr (std::is_same_v<std::decay_t<decltype(it)>, base_objects::uuid>) {
                     auto res = api::entity_id_map::get_entity(it);
                     if (!res)
                         throw std::runtime_error("The entity is not loaded");
@@ -1586,10 +1619,10 @@ namespace copper_server::api::ecs {
     base_objects::uuid entity_ref::get_uuid() {
         return std::visit(
             [this](auto& it) {
-                if constexpr (std::is_same_v<std ::decay_t<decltype(it)>, base_objects::uuid>) {
+                if constexpr (std::is_same_v<std::decay_t<decltype(it)>, base_objects::uuid>) {
                     return it;
                 } else
-                    return it.get<com::uuid>().id;
+                    return it.get<com::entities::uuid>().id;
             },
             value
         );
@@ -1598,7 +1631,7 @@ namespace copper_server::api::ecs {
     bool entity_ref::is_resolved() {
         return std::visit(
             [this](auto& it) {
-                if constexpr (std::is_same_v<std ::decay_t<decltype(it)>, base_objects::uuid>) {
+                if constexpr (std::is_same_v<std::decay_t<decltype(it)>, base_objects::uuid>) {
                     auto res = api::entity_id_map::get_entity(it);
                     if (!res)
                         return false;
@@ -1609,5 +1642,71 @@ namespace copper_server::api::ecs {
             },
             value
         );
+    }
+
+    bool entity_ref::is_valid() const {
+        return std::visit(
+            [this](auto& it) {
+                if constexpr (std::is_same_v<std::decay_t<decltype(it)>, base_objects::uuid>) {
+                    return true;
+                } else
+                    return it.is_valid();
+            },
+            value
+        );
+    }
+
+    bool entity_ref::operator==(const entity_ref& other) const {
+        return std::visit(
+            [&other]<class T0>(const T0& it) {
+                return std::visit(
+                    [&it]<class T1>(const T1& other_it) {
+                        if constexpr (std::is_same_v<T0, T1>) {
+                            return it == other_it;
+                        } else if constexpr (std::is_same_v<T0, base_objects::uuid>) {
+                            return it == other_it.get<com::entities::uuid>().id;
+                        } else
+                            return it.get<com::entities::uuid>().id == other_it;
+                    },
+                    other.value
+                );
+            },
+            value
+        );
+    }
+
+    bool entity_ref::operator!=(const entity_ref& other) const {
+        return !(*this == other);
+    }
+
+    bool entity_ref::operator==(const entity& other) const {
+        return *this == entity_ref{other};
+    }
+
+    bool entity_ref::operator!=(const entity& other) const {
+        return !(*this == other);
+    }
+
+    bool entity_ref::operator==(const base_objects::uuid& other) const {
+        return *this == entity_ref{other};
+    }
+
+    bool entity_ref::operator!=(const base_objects::uuid& other) const {
+        return !(*this == other);
+    }
+
+    unique_entity::~unique_entity() {
+        if (id != UINT32_MAX)
+            add<com::dead_mark>();
+    }
+
+    entity unique_entity::release() {
+        entity self = *this;
+        id = UINT32_MAX;
+        return self;
+    }
+
+    bool unique_entity::has_value() {
+        return id != UINT32_MAX;
     }
 }

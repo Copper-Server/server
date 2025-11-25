@@ -26,19 +26,19 @@ namespace enbt::io_helper {
     using ecs_entity = copper_server::api::ecs::entity;
     using ecs_entity_construction = copper_server::api::ecs::entity_construction;
     using entity = copper_server::api::entity;
-    using com_uuid = copper_server::api::ecs::com::uuid;
-    using com_nbt = copper_server::api::ecs::com::nbt;
-    using com_server_nbt = copper_server::api::ecs::com::server_nbt;
-    using com_inventory = copper_server::api::ecs::com::inventory;
-    using com_custom_inventory = copper_server::api::ecs::com::custom_inventory;
-    using com_effects = copper_server::api::ecs::com::effects;
+    using com_uuid = copper_server::api::ecs::com::entities::uuid;
+    using com_nbt = copper_server::api::ecs::com::entities::nbt;
+    using com_server_nbt = copper_server::api::ecs::com::entities::server_nbt;
+    using com_inventory = copper_server::api::ecs::com::entities::inventory;
+    using com_custom_inventory = copper_server::api::ecs::com::entities::custom_inventory;
+    using com_effects = copper_server::api::ecs::com::entities::effects;
     using com_dead_mark = copper_server::api::ecs::com::dead_mark;
-    using com_entity_type = copper_server::api::ecs::com::entity_type;
-    using com_motion = copper_server::api::ecs::com::motion;
-    using com_position = copper_server::api::ecs::com::position;
-    using com_rotation = copper_server::api::ecs::com::rotation;
-    using com_head_rotation = copper_server::api::ecs::com::head_rotation;
-    using com_world_syncing = copper_server::api::ecs::com::world_syncing;
+    using com_entity_type = copper_server::api::ecs::com::entities::entity_type;
+    using com_motion = copper_server::api::ecs::com::entities::motion;
+    using com_position = copper_server::api::ecs::com::entities::position;
+    using com_rotation = copper_server::api::ecs::com::entities::rotation;
+    using com_head_rotation = copper_server::api::ecs::com::entities::head_rotation;
+    using com_world_syncing = copper_server::api::ecs::com::entities::world_syncing;
     using com_dead_mark = copper_server::api::ecs::com::dead_mark;
     using com_dead_mark = copper_server::api::ecs::com::dead_mark;
     using com_dead_mark = copper_server::api::ecs::com::dead_mark;
@@ -324,7 +324,7 @@ namespace enbt::io_helper {
             enbt::compound compound{
                 {"died", ee.is_died()},
                 {"entity_ud", ee.const_data().entity_id},
-                {"id", value.get<com_uuid>().id},
+                {"id", (enbt::raw_uuid)value.get<com_uuid>().id},
                 {"nbt", value.get<com_nbt>().get()},
                 {"server_data", value.get<com_server_nbt>().get()},
             };
@@ -420,7 +420,7 @@ namespace enbt::io_helper {
                 .read_compound()
                 .collect("died", [&](auto& stream) { if (stream.read()) res.set<com_dead_mark>(); })
                 .collect("entity_id", [&](auto& stream) { stream.read_as(res.get<com_entity_type>().type); })
-                .collect("id", [&](auto& stream) { stream.read_as(res.get<com_uuid>().id); })
+                .collect("id", [&](auto& stream) { enbt::raw_uuid uuid; stream.read_as(uuid); res.get<com_uuid>().id = copper_server::base_objects::uuid::to_uuid(uuid); })
                 .collect("motion", [&](auto& stream) { enbt::io_helper::serialization_read<copper_server::util::vector>(res.get<com_motion>(), stream); })
                 .collect("position", [&](auto& stream) { enbt::io_helper::serialization_read<copper_server::util::vector>(res.get<com_position>(), stream); })
                 .collect("rotation", [&](auto& stream) { enbt::io_helper::serialization_read<copper_server::util::angle_deg>(res.get<com_rotation>(), stream); })
@@ -514,7 +514,7 @@ namespace enbt::io_helper {
                 } else if (name == "entity_id")
                     res.get<com_entity_type>().type = (int32_t)value;
                 else if (name == "id")
-                    res.get<com_uuid>().id = (base_objects::uuid)value;
+                    res.get<com_uuid>().id = (copper_server::base_objects::uuid)value;
                 else if (name == "motion") {
                     enbt::io_helper::serialization_read<copper_server::util::vector>(res.get<com_motion>(), value);
                 } else if (name == "position") {
@@ -646,7 +646,7 @@ namespace copper_server {
         }
 
         const entity_data& entity_data::view(ecs::entity entity) {
-            return entity.get<ecs::com::entity_type>().const_data();
+            return entity.get<ecs::com::entities::entity_type>().const_data();
         }
 
         entity_data& entity_data::initialization_get(int32_t id) {
@@ -687,15 +687,15 @@ namespace copper_server {
         int32_t entity_data::player_entity_id;
 
         storage::world_data* entity::current_world() const {
-            return handle.get<ecs::com::world_syncing>().world;
+            return handle.get<ecs::com::entities::world_syncing>().world;
         }
 
         int32_t entity::get_protocol_id() const {
-            return handle.get<api::ecs::com::protocol_id>().value;
+            return handle.get<api::ecs::com::entities::protocol_id>().value;
         }
 
         util::vector entity::get_position() const {
-            return handle.get<api::ecs::com::position>();
+            return handle.get<api::ecs::com::entities::position>();
         }
 
         std::optional<ecs::entity> entity::copy() const {
@@ -710,7 +710,7 @@ namespace copper_server {
             }
         }
 
-        void reduce_effects(ecs::com::effects& eff) { //TODO replace with system
+        void reduce_effects(ecs::com::entities::effects& eff) { //TODO replace with system
             list_array<uint32_t> expired_effects;
 
             for (auto& [id, effect] : eff.active_effects()) {
@@ -730,10 +730,10 @@ namespace copper_server {
                         effect.duration--;
                 }
 
-                effects.remove_if([](const ecs::com::effects::effect& effect) {
+                effects.remove_if([](const ecs::com::entities::effects::effect& effect) {
                     return !effect.duration;
                 });
-                effects.sort([](const ecs::com::effects::effect& effect0, const ecs::com::effects::effect& effect1) {
+                effects.sort([](const ecs::com::entities::effects::effect& effect0, const ecs::com::entities::effects::effect& effect1) {
                     return effect0.amplifier > effect1.amplifier;
                 });
             }
@@ -746,19 +746,19 @@ namespace copper_server {
         }
 
         void entity::tick() {
-            if (handle.has<ecs::com::attached_to>())
-                if (handle.modify<ecs::com::attached_to>()->other)
-                    resolve_entity(*handle.modify<ecs::com::attached_to>()->other);
+            if (handle.has<ecs::com::entities::attached_to>())
+                if (handle.modify<ecs::com::entities::attached_to>()->follow)
+                    handle.modify<ecs::com::entities::attached_to>()->follow->try_resolve();
 
-            if (handle.has<ecs::com::attached>())
-                for (auto& it : handle.modify<ecs::com::attached>()->ride_by_entity)
-                    resolve_entity(it);
+            if (handle.has<ecs::com::entities::attached>())
+                for (auto& it : handle.modify<ecs::com::entities::attached>()->followers)
+                    it.try_resolve();
 
             auto proc = const_data().processor;
             if (proc)
                 if (proc->on_tick)
                     proc->on_tick(handle);
-            reduce_effects(*handle.modify<ecs::com::effects>());
+            reduce_effects(*handle.modify<ecs::com::entities::effects>());
         }
 
         base_objects::entity_metadata::entity_pose entity::get_pose() const {
@@ -800,27 +800,27 @@ namespace copper_server {
         }
 
         bool entity::hitboxes_touching_x(double min, double max) {
-            auto& position = handle.get<api::ecs::com::position>();
-            auto& bounds = handle.get<api::ecs::com::bounding_box>();
+            auto& position = handle.get<api::ecs::com::entities::position>();
+            auto& bounds = handle.get<api::ecs::com::entities::bounding_box>();
             return (position.x - bounds.xz) >= min && (position.x + bounds.xz) <= max;
         }
 
         bool entity::hitboxes_touching_y(double min, double max) {
-            auto& position = handle.get<api::ecs::com::position>();
-            auto& bounds = handle.get<api::ecs::com::bounding_box>();
+            auto& position = handle.get<api::ecs::com::entities::position>();
+            auto& bounds = handle.get<api::ecs::com::entities::bounding_box>();
             return (position.y) >= min && (position.y + bounds.y) <= max;
         }
 
         bool entity::hitboxes_touching_z(double min, double max) {
-            auto& position = handle.get<api::ecs::com::position>();
-            auto& bounds = handle.get<api::ecs::com::bounding_box>();
+            auto& position = handle.get<api::ecs::com::entities::position>();
+            auto& bounds = handle.get<api::ecs::com::entities::bounding_box>();
             return (position.z - bounds.xz) >= min && (position.z + bounds.xz) <= max;
         }
 
         void entity::moved(util::vector pos) {
             if (current_world())
                 current_world()->entity_move(handle, pos);
-            *handle.modify<api::ecs::com::position>() = pos;
+            *handle.modify<api::ecs::com::entities::position>() = pos;
         }
 
         void entity::moved(util::vector pos, float yaw, float pitch) {
@@ -828,8 +828,8 @@ namespace copper_server {
                 current_world()->entity_move(handle, pos);
                 current_world()->entity_rotation_changes(handle, {yaw, pitch});
             }
-            *handle.modify<api::ecs::com::position>() = pos;
-            *handle.modify<api::ecs::com::rotation>() = {yaw, pitch};
+            *handle.modify<api::ecs::com::entities::position>() = pos;
+            *handle.modify<api::ecs::com::entities::rotation>() = {yaw, pitch};
         }
 
         void entity::moved(util::vector pos, float yaw, float pitch, bool on_ground) {
@@ -837,32 +837,32 @@ namespace copper_server {
                 current_world()->entity_move(handle, pos);
                 current_world()->entity_rotation_changes(handle, {yaw, pitch});
             }
-            *handle.modify<api::ecs::com::position>() = pos;
-            *handle.modify<api::ecs::com::rotation>() = {yaw, pitch};
+            *handle.modify<api::ecs::com::entities::position>() = pos;
+            *handle.modify<api::ecs::com::entities::rotation>() = {yaw, pitch};
             set_on_ground(on_ground);
         }
 
         void entity::rotated(float yaw, float pitch) {
             if (current_world())
                 current_world()->entity_rotation_changes(handle, {yaw, pitch});
-            *handle.modify<api::ecs::com::rotation>() = {yaw, pitch};
+            *handle.modify<api::ecs::com::entities::rotation>() = {yaw, pitch};
         }
 
         void entity::rotated(float yaw, float pitch, bool on_ground) {
             if (current_world())
                 current_world()->entity_rotation_changes(handle, {yaw, pitch});
-            *handle.modify<api::ecs::com::rotation>() = {yaw, pitch};
+            *handle.modify<api::ecs::com::entities::rotation>() = {yaw, pitch};
             set_on_ground(on_ground);
         }
 
         void entity::teleport(util::vector pos) {
             if (current_world())
                 current_world()->entity_teleport(handle, pos);
-            *handle.modify<api::ecs::com::position>() = pos;
-            auto assigned_player = handle.get<ecs::com::assigned_player>().player;
-            auto protocol_id = handle.get<ecs::com::protocol_id>().value;
-            auto mot = handle.get<ecs::com::motion>();
-            auto rot = handle.get<ecs::com::rotation>();
+            *handle.modify<api::ecs::com::entities::position>() = pos;
+            auto assigned_player = handle.get<ecs::com::entities::assigned_player>().player;
+            auto protocol_id = handle.get<ecs::com::entities::protocol_id>().value;
+            auto mot = handle.get<ecs::com::entities::motion>();
+            auto rot = handle.get<ecs::com::entities::rotation>();
             if (assigned_player)
                 *assigned_player << api::packets::client_bound::play::entity_position_sync{
                     .id = protocol_id,
@@ -883,11 +883,11 @@ namespace copper_server {
                 current_world()->entity_teleport(handle, pos);
                 current_world()->entity_rotation_changes(handle, {yaw, pitch});
             }
-            auto assigned_player = handle.get<ecs::com::assigned_player>().player;
-            auto protocol_id = handle.get<ecs::com::protocol_id>().value;
-            *handle.modify<api::ecs::com::position>() = pos;
-            auto mot = handle.get<ecs::com::motion>();
-            auto& rot = *handle.modify<api::ecs::com::rotation>() = {yaw, pitch};
+            auto assigned_player = handle.get<ecs::com::entities::assigned_player>().player;
+            auto protocol_id = handle.get<ecs::com::entities::protocol_id>().value;
+            *handle.modify<api::ecs::com::entities::position>() = pos;
+            auto mot = handle.get<ecs::com::entities::motion>();
+            auto& rot = *handle.modify<api::ecs::com::entities::rotation>() = {yaw, pitch};
             if (assigned_player)
                 *assigned_player << api::packets::client_bound::play::entity_position_sync{
                     .id = protocol_id,
@@ -908,11 +908,11 @@ namespace copper_server {
                 current_world()->entity_teleport(handle, pos);
                 current_world()->entity_rotation_changes(handle, {yaw, pitch});
             }
-            auto assigned_player = handle.get<ecs::com::assigned_player>().player;
-            auto protocol_id = handle.get<ecs::com::protocol_id>().value;
-            *handle.modify<api::ecs::com::position>() = pos;
-            auto mot = handle.get<ecs::com::motion>();
-            *handle.modify<api::ecs::com::rotation>() = {yaw, pitch};
+            auto assigned_player = handle.get<ecs::com::entities::assigned_player>().player;
+            auto protocol_id = handle.get<ecs::com::entities::protocol_id>().value;
+            *handle.modify<api::ecs::com::entities::position>() = pos;
+            auto mot = handle.get<ecs::com::entities::motion>();
+            *handle.modify<api::ecs::com::entities::rotation>() = {yaw, pitch};
             set_on_ground(on_ground);
             if (assigned_player)
                 *assigned_player << api::packets::client_bound::play::entity_position_sync{
@@ -932,29 +932,30 @@ namespace copper_server {
         void entity::set_ride_entity(ecs::entity entity) {
             if (current_world()) {
                 if (api::entity(entity).current_world() == current_world()) {
-                    current_world()->entity_rides(handle, entity.get<ecs::com::world_syncing>().assigned_world_id);
-                    auto& other = handle.modify<ecs::com::ride_entity>()->other;
+                    current_world()->entity_rides(handle, entity.get<ecs::com::entities::world_syncing>().assigned_world_id);
+                    auto& other = handle.modify<ecs::com::entities::ride_entity>()->other;
                     if (other)
-                        current_world()->entity_leaves_ride(handle, other->get<ecs::com::world_syncing>().assigned_world_id);
-                    other = entity;
+                        current_world()->entity_leaves_ride(handle, other->get_entity().get<ecs::com::entities::world_syncing>().assigned_world_id);
+                    other = {entity};
                     return;
                 }
             }
         }
 
         void entity::remove_ride_entity() {
-            if (handle.get<ecs::com::ride_entity>().other) {
+            if (handle.get<ecs::com::entities::ride_entity>().other) {
                 if (current_world()) {
-                    auto& ride_entity = handle.modify<ecs::com::ride_entity>()->other;
+                    auto& ride_entity = handle.modify<ecs::com::entities::ride_entity>()->other;
                     if (ride_entity)
-                        if (api::entity(*ride_entity).current_world() == current_world())
-                            current_world()->entity_leaves_ride(handle, ride_entity->get<ecs::com::world_syncing>().assigned_world_id);
+                        if (api::entity(ride_entity->get_entity()).current_world() == current_world())
+                            current_world()->entity_leaves_ride(handle, ride_entity->get_entity().get<ecs::com::entities::world_syncing>().assigned_world_id);
+                        
                 }
             }
         }
 
         void entity::add_effect(uint32_t id_, uint32_t duration, uint8_t amplifier, bool ambient, bool show_particles, bool show_icon, bool use_blend) {
-            ecs::com::effects::effect to_add_effect{
+            ecs::com::entities::effects::effect to_add_effect{
                 .duration = duration,
                 .id = id_,
                 .amplifier = amplifier,
@@ -963,7 +964,7 @@ namespace copper_server {
                 .show_icon = show_icon,
                 .use_blend = use_blend,
             };
-            auto effects = handle.modify<api::ecs::com::effects>();
+            auto effects = handle.modify<api::ecs::com::entities::effects>();
             auto& active_effects = effects->active_effects();
             auto& hidden_effects = effects->hidden_effects();
             if (auto it = active_effects.find(id_); it != active_effects.end()) {
@@ -983,7 +984,7 @@ namespace copper_server {
         }
 
         void entity::remove_effect(uint32_t id_) {
-            auto effects = handle.modify<api::ecs::com::effects>();
+            auto effects = handle.modify<api::ecs::com::entities::effects>();
             auto& active_effects = effects->active_effects();
             auto& hidden_effects = effects->hidden_effects();
             active_effects.erase(id_);
@@ -993,7 +994,7 @@ namespace copper_server {
         }
 
         void entity::remove_all_effects() {
-            auto effects = handle.modify<api::ecs::com::effects>();
+            auto effects = handle.modify<api::ecs::com::entities::effects>();
             auto& active_effects = effects->active_effects();
             auto& hidden_effects = effects->hidden_effects();
             if (current_world())
@@ -1004,39 +1005,39 @@ namespace copper_server {
         }
 
         bool entity::is_sleeping() const {
-            return handle.get<ecs::com::world_syncing>().is_sleeping;
+            return handle.get<ecs::com::entities::world_syncing>().is_sleeping;
         }
 
         bool entity::is_on_ground() const {
-            return handle.get<ecs::com::world_syncing>().on_ground;
+            return handle.get<ecs::com::entities::world_syncing>().on_ground;
         }
 
         bool entity::is_sneaking() const {
-            return handle.get<ecs::com::world_syncing>().is_sneaking;
+            return handle.get<ecs::com::entities::world_syncing>().is_sneaking;
         }
 
         bool entity::is_sprinting() const {
-            return handle.get<ecs::com::world_syncing>().is_sprinting;
+            return handle.get<ecs::com::entities::world_syncing>().is_sprinting;
         }
 
         void entity::set_sleeping(bool sleeping) {
             if (current_world())
-                handle.modify<ecs::com::world_syncing>()->is_sleeping = sleeping;
+                handle.modify<ecs::com::entities::world_syncing>()->is_sleeping = sleeping;
         }
 
         void entity::set_on_ground(bool on_ground) {
             if (current_world())
-                handle.modify<ecs::com::world_syncing>()->on_ground = on_ground;
+                handle.modify<ecs::com::entities::world_syncing>()->on_ground = on_ground;
         }
 
         void entity::set_sneaking(bool sneaking) {
             if (current_world())
-                handle.modify<ecs::com::world_syncing>()->is_sneaking = sneaking;
+                handle.modify<ecs::com::entities::world_syncing>()->is_sneaking = sneaking;
         }
 
         void entity::set_sprinting(bool sprinting) {
             if (current_world())
-                handle.modify<ecs::com::world_syncing>()->is_sprinting = sprinting;
+                handle.modify<ecs::com::entities::world_syncing>()->is_sprinting = sprinting;
         }
 
         float entity::get_health() const {
@@ -1061,21 +1062,21 @@ namespace copper_server {
         }
 
         void entity::damage(float health, int32_t type_id, std::optional<util::vector> pos) {
-            handle.modify<ecs::com::world_syncing>()->inactivity_counter = 0;
+            handle.modify<ecs::com::entities::world_syncing>()->inactivity_counter = 0;
             if (current_world())
                 current_world()->entity_damage(handle, health, type_id, pos);
             reduce_health(health);
         }
 
         void entity::damage(float health, int32_t type_id, std::optional<ecs::entity> source, std::optional<util::vector> pos) {
-            handle.modify<ecs::com::world_syncing>()->inactivity_counter = 0;
+            handle.modify<ecs::com::entities::world_syncing>()->inactivity_counter = 0;
             if (current_world())
                 current_world()->entity_damage(handle, health, type_id, source, pos);
             reduce_health(health);
         }
 
         void entity::damage(float health, int32_t type_id, std::optional<ecs::entity> source, std::optional<ecs::entity> source_direct, std::optional<util::vector> pos) {
-            handle.modify<ecs::com::world_syncing>()->inactivity_counter = 0;
+            handle.modify<ecs::com::entities::world_syncing>()->inactivity_counter = 0;
             if (current_world())
                 current_world()->entity_damage(handle, health, type_id, source, source_direct, pos);
             reduce_health(health);
@@ -1086,15 +1087,15 @@ namespace copper_server {
         }
 
         int32_t entity::get_food() const {
-            if (handle.has<api::ecs::com::food>()) {
-                return handle.get<api::ecs::com::food>().value;
+            if (handle.has<api::ecs::com::entities::food>()) {
+                return handle.get<api::ecs::com::entities::food>().value;
             } else
                 return 0;
         }
 
         void entity::set_food(int32_t food) {
-            if (handle.has<api::ecs::com::food>())
-                handle.modify<api::ecs::com::food>()->value = food;
+            if (handle.has<api::ecs::com::entities::food>())
+                handle.modify<api::ecs::com::entities::food>()->value = food;
         }
 
         void entity::add_food(int32_t food) {
@@ -1106,15 +1107,15 @@ namespace copper_server {
         }
 
         float entity::get_saturation() const {
-            if (handle.has<api::ecs::com::saturation>()) {
-                return handle.get<api::ecs::com::saturation>().value;
+            if (handle.has<api::ecs::com::entities::saturation>()) {
+                return handle.get<api::ecs::com::entities::saturation>().value;
             } else
                 return 0;
         }
 
         void entity::set_saturation(float saturation) {
-            if (handle.has<api::ecs::com::saturation>())
-                handle.modify<api::ecs::com::saturation>()->value = saturation;
+            if (handle.has<api::ecs::com::entities::saturation>())
+                handle.modify<api::ecs::com::entities::saturation>()->value = saturation;
         }
 
         void entity::add_saturation(float saturation) {
@@ -1146,15 +1147,15 @@ namespace copper_server {
         }
 
         int32_t entity::get_level() const {
-            if (handle.has<api::ecs::com::experience>())
-                return handle.get<api::ecs::com::experience>().get_level();
+            if (handle.has<api::ecs::com::entities::experience>())
+                return handle.get<api::ecs::com::entities::experience>().get_level();
             else
                 return 0;
         }
 
         void entity::set_level(int32_t level) {
-            if (handle.has<api::ecs::com::experience>())
-                handle.modify<api::ecs::com::experience>()->set_level(level);
+            if (handle.has<api::ecs::com::entities::experience>())
+                handle.modify<api::ecs::com::entities::experience>()->set_level(level);
         }
 
         void entity::add_level(int32_t level) {
@@ -1166,25 +1167,25 @@ namespace copper_server {
         }
 
         int32_t entity::get_experience() const {
-            if (handle.has<api::ecs::com::experience>())
-                return handle.get<api::ecs::com::experience>().get_experience();
+            if (handle.has<api::ecs::com::entities::experience>())
+                return handle.get<api::ecs::com::entities::experience>().get_experience();
             else
                 return 0;
         }
 
         void entity::set_experience(int32_t experience) {
-            if (handle.has<api::ecs::com::experience>())
-                handle.modify<api::ecs::com::experience>()->set_experience(experience);
+            if (handle.has<api::ecs::com::entities::experience>())
+                handle.modify<api::ecs::com::entities::experience>()->set_experience(experience);
         }
 
         void entity::add_experience(int32_t experience) {
-            if (handle.has<api::ecs::com::experience>())
-                handle.modify<api::ecs::com::experience>()->add_experience(experience);
+            if (handle.has<api::ecs::com::entities::experience>())
+                handle.modify<api::ecs::com::entities::experience>()->add_experience(experience);
         }
 
         void entity::reduce_experience(int32_t experience) {
-            if (handle.has<api::ecs::com::experience>())
-                handle.modify<api::ecs::com::experience>()->reduce_experience(experience);
+            if (handle.has<api::ecs::com::entities::experience>())
+                handle.modify<api::ecs::com::entities::experience>()->reduce_experience(experience);
         }
 
         int32_t entity::get_fall_distance() const {
@@ -1201,15 +1202,15 @@ namespace copper_server {
         }
 
         uint8_t entity::get_selected_item() const {
-            if (handle.has<api::ecs::com::held_slot>())
-                return handle.get<api::ecs::com::held_slot>().hotbar_slot;
+            if (handle.has<api::ecs::com::entities::held_slot>())
+                return handle.get<api::ecs::com::entities::held_slot>().hotbar_slot;
             else
                 return 0;
         }
 
         void entity::set_selected_item(uint8_t selected_item) {
-            if (handle.has<api::ecs::com::held_slot>())
-                handle.modify<api::ecs::com::held_slot>()->hotbar_slot = selected_item;
+            if (handle.has<api::ecs::com::entities::held_slot>())
+                handle.modify<api::ecs::com::entities::held_slot>()->hotbar_slot = selected_item;
         }
 
         void entity::move([[maybe_unused]] float side, [[maybe_unused]] float forward, [[maybe_unused]] bool jump, [[maybe_unused]] bool sneaking) {
@@ -1221,26 +1222,26 @@ namespace copper_server {
         }
 
         void entity::look_at(float x, float y, float z) {
-            set_head_rotation(util::direction(handle.get<api::ecs::com::position>(), util::vector{x, y, z}));
+            set_head_rotation(util::direction(handle.get<api::ecs::com::entities::position>(), util::vector{x, y, z}));
         }
 
         void entity::look_at(util::vector pos) {
-            set_head_rotation(util::direction(handle.get<api::ecs::com::position>(), pos));
+            set_head_rotation(util::direction(handle.get<api::ecs::com::entities::position>(), pos));
         }
 
         void entity::look_at(ecs::entity entity) {
             if (api::entity(entity).current_world() == current_world())
-                look_at(entity.get<api::ecs::com::position>());
+                look_at(entity.get<api::ecs::com::entities::position>());
         }
 
         util::vector entity::get_motion() const {
-            return handle.get<api::ecs::com::motion>();
+            return handle.get<api::ecs::com::entities::motion>();
         }
 
         void entity::set_motion(util::vector mot) {
             if (current_world())
                 current_world()->entity_motion_changes(handle, mot);
-            *handle.modify<api::ecs::com::motion>() = mot;
+            *handle.modify<api::ecs::com::entities::motion>() = mot;
         }
 
         void entity::add_motion(util::vector mot) {
@@ -1248,13 +1249,13 @@ namespace copper_server {
         }
 
         util::angle_deg entity::get_rotation() const {
-            return handle.get<api::ecs::com::rotation>();
+            return handle.get<api::ecs::com::entities::rotation>();
         }
 
         void entity::set_rotation(util::angle_deg rot) {
             if (current_world())
                 current_world()->entity_rotation_changes(handle, rot);
-            *handle.modify<api::ecs::com::rotation>() = rot;
+            *handle.modify<api::ecs::com::entities::rotation>() = rot;
         }
 
         void entity::add_rotation(util::angle_deg rot) {
@@ -1262,13 +1263,13 @@ namespace copper_server {
         }
 
         util::angle_deg entity::get_head_rotation() const {
-            return handle.get<api::ecs::com::head_rotation>();
+            return handle.get<api::ecs::com::entities::head_rotation>();
         }
 
         void entity::set_head_rotation(util::angle_deg rot) {
             if (current_world())
                 current_world()->entity_look_changes(handle, rot);
-            *handle.modify<api::ecs::com::head_rotation>() = rot;
+            *handle.modify<api::ecs::com::entities::head_rotation>() = rot;
         }
 
         void entity::add_head_rotation(util::angle_deg rot) {
@@ -1284,11 +1285,9 @@ namespace copper_server {
         void entity::place_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] const base_objects::block&) {
         }
 
-        void entity::place_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] base_objects::const_block_entity_ref) {
+        void entity::place_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] ecs::entity) {
         }
 
-        void entity::place_block([[maybe_unused]] int64_t global_x, [[maybe_unused]] uint64_t global_y, [[maybe_unused]] int64_t global_z, [[maybe_unused]] base_objects::block_entity&&) {
-        }
 
         ecs::entity entity::create(int32_t id) {
             auto it = entity_data::get_entity(id);
@@ -1301,8 +1300,8 @@ namespace copper_server {
         ecs::entity entity::create(int32_t id, const enbt::compound_const_ref& nbt) {
             auto it = entity_data::get_entity(id);
             ecs::entity res = ecs::global_registry::allocate_entity_and_wait(it.recipe);
-            res.modify<api::ecs::com::entity_type>()->type = it.entity_id;
-            res.modify<ecs::com::nbt>()->get() = nbt;
+            res.modify<api::ecs::com::entities::entity_type>()->type = it.entity_id;
+            res.modify<ecs::com::entities::nbt>()->get() = nbt;
             if (it.create_callback)
                 it.create_callback(res);
             return res;
@@ -1311,7 +1310,7 @@ namespace copper_server {
         ecs::entity entity::create(const std::string& id) {
             auto it = entity_data::get_entity(id);
             ecs::entity res = ecs::global_registry::allocate_entity_and_wait(it.recipe);
-            res.modify<api::ecs::com::entity_type>()->type = it.entity_id;
+            res.modify<api::ecs::com::entities::entity_type>()->type = it.entity_id;
             if (it.create_callback)
                 it.create_callback(res);
             return res;
@@ -1320,7 +1319,7 @@ namespace copper_server {
         ecs::entity entity::create(const std::string& id, const enbt::compound_const_ref& nbt) {
             auto it = entity_data::get_entity(id);
             ecs::entity res = ecs::global_registry::allocate_entity_and_wait(it.recipe);
-            res.modify<ecs::com::nbt>()->get() = nbt;
+            res.modify<ecs::com::entities::nbt>()->get() = nbt;
             if (it.create_callback)
                 it.create_callback(res);
             return res;
@@ -1334,7 +1333,7 @@ namespace copper_server {
         }
 
         bool entity::is_player() const {
-            return handle.get<ecs::com::entity_type>().type == entity_data::player_entity_id;
+            return handle.get<ecs::com::entities::entity_type>().type == entity_data::player_entity_id;
         }
 
         void entity::store_to_file(ecs::entity entity, enbt::io_helper::value_write_stream& w) {
@@ -1344,8 +1343,8 @@ namespace copper_server {
         auto construct_entity(enbt::io_helper::value_read_stream& w) {
             ecs::entity_construction construction;
             enbt::io_helper::serialization_read(construction, w);
-            if (construction.has<ecs::com::entity_type>())
-                return std::move(construction).create_and_wait(construction.get<ecs::com::entity_type>().const_data().recipe);
+            if (construction.has<ecs::com::entities::entity_type>())
+                return std::move(construction).create_and_wait(construction.get<ecs::com::entities::entity_type>().const_data().recipe);
             else
                 return std::move(construction).create_and_wait();
         }
@@ -1353,8 +1352,8 @@ namespace copper_server {
         auto construct_entity(const enbt::compound_const_ref& nbt) {
             ecs::entity_construction construction;
             enbt::io_helper::serialization_read(construction, (const enbt::value&)nbt);
-            if (construction.has<ecs::com::entity_type>())
-                return std::move(construction).create_and_wait(construction.get<ecs::com::entity_type>().const_data().recipe);
+            if (construction.has<ecs::com::entities::entity_type>())
+                return std::move(construction).create_and_wait(construction.get<ecs::com::entities::entity_type>().const_data().recipe);
             else
                 return std::move(construction).create_and_wait();
         }

@@ -1632,8 +1632,9 @@ namespace copper_server::api::packets {
         }
     };
 
-    template <class base_type, class... Ty>
+    template <class base_type_, class... Ty>
     struct any_of {
+        using base_type = base_type_;
         base_type value;
 
         template <class T>
@@ -1792,6 +1793,7 @@ namespace copper_server::api::packets {
 
     template <class T, util::CTS id>
     struct ordered_id {
+        using value_type = T;
         static inline const std::string id_source{id.data};
         T value;
         bool is_valid = true;

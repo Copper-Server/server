@@ -14,6 +14,7 @@
 
 #include <src/api/configuration.hpp>
 #include <src/api/ecs/base_components.hpp>
+#include <src/api/ecs/entity_definition.hpp>
 #include <src/api/entity.hpp>
 #include <src/base_objects/network/response.hpp>
 #include <src/base_objects/world/chunk.hpp>
@@ -324,6 +325,7 @@ namespace copper_server::base_objects::world {
                             [&sub_chunk_data](std::uint64_t len) { sub_chunk_data.block_entities.reserve(len); },
                             [&sub_chunk_data](enbt::io_helper::value_read_stream& self) {
                                 base_objects::local_block_pos local_pos;
+                                base_objects::block block;
                                 self
                                     .read_compound(true)
                                     .collect("x", [&](auto& stream) { local_pos.x = stream.read(); })
@@ -332,10 +334,20 @@ namespace copper_server::base_objects::world {
                                     .collect("id", [&](auto& stream) {
                                         base_objects::block_id_t id = 0;
                                         self.read_as(id);
-                                        sub_chunk_data.set_block(local_pos.x, local_pos.y, local_pos.z, base_objects::block(id), world.);
+                                        block = {id};
                                     })
                                     .collect("nbt", [&](auto& stream) {
-                                        sub_chunk_data.block_entities[local_pos.z | (local_pos.y << 4) | (local_pos.x << 8)] = stream.read();
+                                        auto& def = api::ecs::get_item_definition(block.getStaticData().name);
+                                        auto cache = stream.iterate_into<char>();
+                                        std::stringstream ss(cache.data(), cache.size());
+                                        util::nbt_read_stream nbt_stream(ss);
+                                        sub_chunk_data.set_block(
+                                            local_pos.x,
+                                            local_pos.y,
+                                            local_pos.z,
+                                            def.from_nbt(nbt_stream, world.world_id),
+                                            world.current_world_reg
+                                        );
                                     })
                                     .force_all_collect();
                             }
@@ -433,12 +445,21 @@ namespace copper_server::base_objects::world {
                                       pos.y = (_pos >> 4) & 0xF;
                                       pos.z = _pos & 0xF;
 
+                                      auto& def = *data.get<api::ecs::com::type_definition>().type;
+
+                                      std::stringstream ss;
+                                      util::nbt_write_stream nbt_stream(ss);
+                                      def.to_nbt(nbt_stream, data);
+
                                       auto compound = stream.write_compound(5);
                                       compound.write("x", pos.x);
                                       compound.write("y", pos.y);
                                       compound.write("z", pos.z);
                                       compound.write("id", sub_chunk.blocks.get(pos.x, pos.y, pos.z));
-                                      compound.write("nbt", data);
+                                      compound.write("nbt", [&ss](enbt::io_helper::value_write_stream& be_stream) {
+                                          auto buf = ss.view();
+                                          be_stream.write_sarray_dir(buf.data(), buf.size());
+                                      });
                                   });
                               });
                               compound.write("biomes", [&](enbt::io_helper::value_write_stream& stream) {
@@ -460,8 +481,8 @@ namespace copper_server::base_objects::world {
                           auto entities = stream.write_array(stored_entities.size());
                           for (auto& [id, entity] : stored_entities)
                               if (entity.is_assigned_to_world(world.world_id))
-                                  if (entity.get<api::ecs::com::world_syncing>().assigned_world_id == id)
-                                      if (entity.get<api::ecs::com::entity_type>().const_data().is_saveable)
+                                  if (entity.get<api::ecs::com::entities::world_syncing>().assigned_world_id == id)
+                                      if (entity.get<api::ecs::com::entities::entity_type>().const_data().is_saveable)
                                           entities.write([&entity](auto& stream) {
                                               api::entity::store_to_file(entity, stream);
                                           });
@@ -503,10 +524,10 @@ namespace copper_server::base_objects::world {
         return true;
     }
 
-    chunk_data::chunk_data(int64_t chunk_x, int64_t chunk_z)
+    chunk_data::chunk_data(int32_t chunk_x, int32_t chunk_z)
         : chunk_x(chunk_x), chunk_z(chunk_z) {}
 
-    void chunk_data::update_height_map_on(uint8_t local_x, uint64_t local_y_block, uint8_t local_z) {
+    void chunk_data::update_height_map_on(uint8_t local_x, uint32_t local_y_block, uint8_t local_z) {
         if (local_y_block == 0)
             return;
         auto& leaves = api::tags::unfold_tag(api::tags::builtin_entry::block, "minecraft:block/leaves");
@@ -528,7 +549,7 @@ namespace copper_server::base_objects::world {
             }
 
         } else {
-            uint64_t to_skip = local_y_block / 16 + bool(local_y_block % 16);
+            uint32_t to_skip = local_y_block / 16 + bool(local_y_block % 16);
             auto end = sub_chunks.rend();
 
             for (auto beg = sub_chunks.rbegin(); beg != end; ++beg) {
@@ -566,7 +587,7 @@ namespace copper_server::base_objects::world {
 
     void chunk_data::update_height_map() {
         height_maps.make_zero();
-        uint64_t local_y_block = (sub_chunks.size() - 1) * 16;
+        uint32_t local_y_block = (sub_chunks.size() - 1) * 16;
         auto& leaves = api::tags::unfold_tag(api::tags::builtin_entry::block, "minecraft:block/leaves");
         auto end = sub_chunks.rend();
         for (auto beg = sub_chunks.rbegin(); beg != end; ++beg) {
@@ -613,7 +634,7 @@ namespace copper_server::base_objects::world {
 
     void chunk_data::update_metadata() {
         height_maps.make_zero();
-        uint64_t local_y_block = (sub_chunks.size() - 1) * 16;
+        uint32_t local_y_block = (sub_chunks.size() - 1) * 16;
         auto& leaves = api::tags::unfold_tag(api::tags::builtin_entry::block, "minecraft:block/leaves");
         auto end = sub_chunks.rend();
         for (auto beg = sub_chunks.rbegin(); beg != end; ++beg) {
@@ -661,7 +682,7 @@ namespace copper_server::base_objects::world {
             }
     }
 
-    void chunk_data::for_each_block_entity(uint64_t local_y, const std::function<void(api::ecs::entity block_entity)>& func) {
+    void chunk_data::for_each_block_entity(uint32_t local_y, const std::function<void(api::ecs::entity block_entity)>& func) {
         if (local_y < sub_chunks.size())
             for (auto& [_pos, data] : sub_chunks[local_y].block_entities) {
                 base_objects::local_block_pos pos;
@@ -677,12 +698,12 @@ namespace copper_server::base_objects::world {
             func(sub_chunk);
     }
 
-    void chunk_data::get_sub_chunk(uint64_t sub_chunk_y, const std::function<void(sub_chunk_data& sub_chunk)>& func) {
+    void chunk_data::get_sub_chunk(uint32_t sub_chunk_y, const std::function<void(sub_chunk_data& sub_chunk)>& func) {
         if (sub_chunk_y < sub_chunks.size())
             func(sub_chunks[sub_chunk_y]);
     }
 
-    void chunk_data::query_for_tick(uint8_t local_x, uint64_t global_y, uint8_t local_z, uint64_t on_tick, int8_t priority) {
+    void chunk_data::query_for_tick(uint8_t local_x, uint32_t global_y, uint8_t local_z, uint64_t on_tick, int8_t priority) {
         if (priority > 0)
             throw std::runtime_error("Priority must be negative");
         uint8_t real_priority = +priority;
@@ -691,7 +712,7 @@ namespace copper_server::base_objects::world {
         queried_for_tick[real_priority].push_back({on_tick, base_objects::chunk_block_pos{local_x, uint8_t(global_y & 15), local_z}});
     }
 
-    void chunk_data::query_for_liquid_tick(uint8_t local_x, uint64_t global_y, uint8_t local_z, uint64_t on_tick) {
+    void chunk_data::query_for_liquid_tick(uint8_t local_x, uint32_t global_y, uint8_t local_z, uint64_t on_tick) {
         queried_for_liquid_tick.push_back({on_tick, base_objects::chunk_block_pos{local_x, uint8_t(global_y & 15), local_z}});
     }
 
@@ -756,7 +777,7 @@ namespace copper_server::base_objects::world {
         if (load_level > 32)
             return;
 
-        uint64_t sub_chunk_y = 0;
+        uint32_t sub_chunk_y = 0;
         for (auto& sub_chunk : sub_chunks) {
             auto max_random_tick_per_sub_chunk = random_tick_speed;
             while (sub_chunk.has_tickable_blocks && max_random_tick_per_sub_chunk) {
@@ -801,44 +822,44 @@ namespace copper_server::base_objects::world {
         std::normal_distribution<> dis(0.0, 1.0);
         for (auto& [id, entity] : stored_entities) {
             if (entity.is_assigned_to_world(world.world_id)) {
-                auto sd = entity.modify<api::ecs::com::world_syncing>();
-                if (entity.has<api::ecs::com::assigned_player>())
+                auto sd = entity.modify<api::ecs::com::entities::world_syncing>();
+                if (entity.has<api::ecs::com::entities::assigned_player>())
                     ; //skip check
                 else if (sd->despawn_immune)
                     ; //skip check
-                else if (sd->state == api::ecs::com::world_syncing::state_e::scheduled_for_despawn) {
+                else if (sd->state == api::ecs::com::entities::world_syncing::state_e::scheduled_for_despawn) {
                     world.unregister_entity(entity);
                     rr.unrelated_entities.push_back(id);
-                } else if (sd->state == api::ecs::com::world_syncing::state_e::no_player) {
-                    sd->state = api::ecs::com::world_syncing::state_e::scheduled_for_despawn;
+                } else if (sd->state == api::ecs::com::entities::world_syncing::state_e::no_player) {
+                    sd->state = api::ecs::com::entities::world_syncing::state_e::scheduled_for_despawn;
                 } else if (sd->inactivity_counter > max_inactivity) {
                     if (dis(random_engine) >= despawn_chance)
-                        sd->state = api::ecs::com::world_syncing::state_e::scheduled_for_despawn;
+                        sd->state = api::ecs::com::entities::world_syncing::state_e::scheduled_for_despawn;
                 } else
-                    sd->state = api::ecs::com::world_syncing::state_e::no_player;
+                    sd->state = api::ecs::com::entities::world_syncing::state_e::no_player;
 
-                if (entity.has<api::ecs::com::assigned_player>()) {
-                    auto& pos = entity.get<api::ecs::com::position>();
+                if (entity.has<api::ecs::com::entities::assigned_player>()) {
+                    auto& pos = entity.get<api::ecs::com::entities::position>();
                     world.for_each_entity(
                         base_objects::spherical_bounds_block{
-                            (int64_t)pos.x,
-                            (int64_t)pos.y,
-                            (int64_t)pos.z,
+                            (int32_t)pos.x,
+                            (int32_t)pos.y,
+                            (int32_t)pos.z,
                             api::configuration::get().game_play.entity.despawn_mobs_outside
                         },
                         [&pos, t_m_r = api::configuration::get().game_play.entity.squared_values.tick_mobs_in_range](auto mark_entity) {
-                            auto& mark_pos = mark_entity.get<api::ecs::com::position>();
-                            if (mark_entity.has<api::ecs::com::assigned_player>())
+                            auto& mark_pos = mark_entity.get<api::ecs::com::entities::position>();
+                            if (mark_entity.has<api::ecs::com::entities::assigned_player>())
                                 return;
-                            auto sd = mark_entity.modify<api::ecs::com::world_syncing>();
+                            auto sd = mark_entity.modify<api::ecs::com::entities::world_syncing>();
                             if (sd->despawn_immune || sd->inactivity_immune)
                                 return;
                             switch (sd->state) {
-                            case api::ecs::com::world_syncing::state_e::init:
-                            case api::ecs::com::world_syncing::state_e::no_player: {
+                            case api::ecs::com::entities::world_syncing::state_e::init:
+                            case api::ecs::com::entities::world_syncing::state_e::no_player: {
                                 auto dist_sq = util::distance_sq(pos, mark_pos); //how to be with fish? fish has different despawn range
-                                sd->state = dist_sq > t_m_r ? api::ecs::com::world_syncing::state_e::player_far : api::ecs::com::world_syncing::state_e::player_near;
-                                if (sd->state == api::ecs::com::world_syncing::state_e::player_near)
+                                sd->state = dist_sq > t_m_r ? api::ecs::com::entities::world_syncing::state_e::player_far : api::ecs::com::entities::world_syncing::state_e::player_near;
+                                if (sd->state == api::ecs::com::entities::world_syncing::state_e::player_near)
                                     sd->inactivity_counter = 0;
                                 else
                                     ++sd->inactivity_counter;
@@ -853,18 +874,20 @@ namespace copper_server::base_objects::world {
                 if (load_level > 31)
                     continue;
 
-                if (entity.has<api::ecs::com::ride_entity>()) {
-                    if (!entity.get<api::ecs::com::ride_entity>().other) {
-                        entity.get<api::ecs::com::entity_type>().tick(entity);
-                        if (entity.has<api::ecs::com::ride_by_entity>())
-                            for (auto ride_entity : entity.get<api::ecs::com::ride_by_entity>().ride_by)
-                                ride_entity.get<api::ecs::com::entity_type>().tick(ride_entity);
+                if (entity.has<api::ecs::com::entities::ride_entity>()) {
+                    if (!entity.get<api::ecs::com::entities::ride_entity>().other) {
+                        entity.get<api::ecs::com::entities::entity_type>().tick(entity);
+                        if (entity.has<api::ecs::com::entities::ride_by_entity>())
+                            for (auto ride_entity : entity.get<api::ecs::com::entities::ride_by_entity>().ride_by)
+                                if (ride_entity.is_resolved())
+                                    ride_entity.get_entity().get<api::ecs::com::entities::entity_type>().tick(ride_entity.get_entity());
                     }
                 } else {
-                    entity.get<api::ecs::com::entity_type>().tick(entity);
-                    if (entity.has<api::ecs::com::ride_by_entity>())
-                        for (auto ride_entity : entity.get<api::ecs::com::ride_by_entity>().ride_by)
-                            ride_entity.get<api::ecs::com::entity_type>().tick(ride_entity);
+                    entity.get<api::ecs::com::entities::entity_type>().tick(entity);
+                    if (entity.has<api::ecs::com::entities::ride_by_entity>())
+                        for (auto ride_entity : entity.get<api::ecs::com::entities::ride_by_entity>().ride_by)
+                            if (ride_entity.is_resolved())
+                                ride_entity.get_entity().get<api::ecs::com::entities::entity_type>().tick(ride_entity.get_entity());
                 }
                 continue;
             } else
@@ -877,7 +900,7 @@ namespace copper_server::base_objects::world {
     void chunk_data::tick_block_entity(storage::chunk_tick_result& rr, storage::world_data& world) {
         if (load_level > 32)
             return;
-        uint64_t y = 0;
+        uint32_t y = 0;
         for (auto& sub_chunk : sub_chunks) {
             for (auto& [_pos, data] : sub_chunk.block_entities) {
                 base_objects::local_block_pos pos;
@@ -897,56 +920,60 @@ namespace copper_server::base_objects::world {
             return;
     }
 
-    void chunk_data::set_state(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block_id_t id, api::ecs::world_local_registry& world) {
+    void chunk_data::set_state(uint8_t local_x, uint32_t local_y, uint8_t local_z, base_objects::block_id_t id, api::ecs::world_local_registry& world) {
         sub_chunks.at(local_y >> 4).set_state(local_x, local_y & 15, local_z, id, world);
     }
 
-    void chunk_data::set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block block, api::ecs::world_local_registry& world) {
+    void chunk_data::set_block(uint8_t local_x, uint32_t local_y, uint8_t local_z, base_objects::block block, api::ecs::world_local_registry& world) {
         sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, block, world);
     }
 
-    void chunk_data::set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, api::ecs::entity&& block, api::ecs::world_local_registry& world) {
+    void chunk_data::set_block(uint8_t local_x, uint32_t local_y, uint8_t local_z, api::ecs::entity&& block, api::ecs::world_local_registry& world) {
         sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, std::move(block), world);
     }
 
-    void chunk_data::set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, const api::ecs::entity& block, api::ecs::world_local_registry& world) {
+    void chunk_data::set_block(uint8_t local_x, uint32_t local_y, uint8_t local_z, const api::ecs::entity& block, api::ecs::world_local_registry& world) {
         sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, block, world);
     }
 
-    void chunk_data::set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, const base_objects::any_block& block, api::ecs::world_local_registry& world){
+    void chunk_data::set_block(uint8_t local_x, uint32_t local_y, uint8_t local_z, const base_objects::any_block& block, api::ecs::world_local_registry& world) {
         sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, block, world);
     }
 
-    void chunk_data::set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::any_block&& block, api::ecs::world_local_registry& world){
+    void chunk_data::set_block(uint8_t local_x, uint32_t local_y, uint8_t local_z, base_objects::any_block&& block, api::ecs::world_local_registry& world) {
         sub_chunks.at(local_y >> 4).set_block(local_x, local_y & 15, local_z, std::move(block), world);
     }
 
-    base_objects::block chunk_data::get_block(uint8_t local_x, uint64_t local_y, uint8_t local_z) {
+    base_objects::block chunk_data::get_block(uint8_t local_x, uint32_t local_y, uint8_t local_z) {
         return sub_chunks.at(local_y >> 4).get_block(local_x, local_y & 15, local_z);
     }
 
-    api::ecs::entity chunk_data::get_block_entity(uint8_t local_x, uint64_t local_y, uint8_t local_z) {
+    api::ecs::entity chunk_data::get_block_entity(uint8_t local_x, uint32_t local_y, uint8_t local_z) {
         return sub_chunks.at(local_y >> 4).get_block_entity(local_x, local_y & 15, local_z);
     }
 
     //generator functions
-    void chunk_data::gen_set_state(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block_id_t id, api::ecs::world_local_registry& world) {
+    void chunk_data::gen_set_state(uint8_t local_x, uint32_t local_y, uint8_t local_z, base_objects::block_id_t id, api::ecs::world_local_registry& world) {
         sub_chunks.at(local_y >> 4).set_state_gen(local_x, local_y & 15, local_z, id, world);
     }
 
-    void chunk_data::gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, base_objects::block block, api::ecs::world_local_registry& world) {
+    void chunk_data::gen_set_block(uint8_t local_x, uint32_t local_y, uint8_t local_z, base_objects::block block, api::ecs::world_local_registry& world) {
         sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, block, world);
     }
 
-    void chunk_data::gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, api::ecs::entity&& block, api::ecs::world_local_registry& world){
+    void chunk_data::gen_set_block(uint8_t local_x, uint32_t local_y, uint8_t local_z, api::ecs::entity&& block, api::ecs::world_local_registry& world) {
         sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, std::move(block), world);
     }
 
-    void chunk_data::gen_set_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, const api::ecs::entity& block, api::ecs::world_local_registry& world) {
+    void chunk_data::gen_set_block(uint8_t local_x, uint32_t local_y, uint8_t local_z, const api::ecs::entity& block, api::ecs::world_local_registry& world) {
         sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, block, world);
     }
 
-    void chunk_data::gen_remove_block(uint8_t local_x, uint64_t local_y, uint8_t local_z, api::ecs::world_local_registry& world) {
+    void chunk_data::gen_remove_block(uint8_t local_x, uint32_t local_y, uint8_t local_z, api::ecs::world_local_registry& world) {
         sub_chunks.at(local_y >> 4).set_block_gen(local_x, local_y & 15, local_z, base_objects::block(), world);
+    }
+
+    bool chunk_data::could_be_unloaded() const noexcept {
+        return load_level > 44;
     }
 }

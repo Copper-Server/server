@@ -36,7 +36,7 @@ namespace copper_server::build_in_plugins::base::ecs {
                 }
             });
             for (auto [entity, packet] : data_updates)
-                packet.id = entity.get<api::ecs::com::protocol_id>().value;
+                packet.id = entity.get<api::ecs::com::entities::protocol_id>().value;
             //TODO send updates
         }
     };

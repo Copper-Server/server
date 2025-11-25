@@ -37,6 +37,11 @@ namespace copper_server::api::ecs {
     };
 
     namespace detail {
+        template <class T>
+        concept has_relation_discovery = requires(T& it, std::vector<ecs::entity>& res) {
+            res = it.get_flat_relations();
+        };
+
         struct archetype_layout {
             std::vector<component_id> component_ids;
             std::unordered_map<component_id, uint32_t> component_index_map;
@@ -51,6 +56,8 @@ namespace copper_server::api::ecs {
             using move_fn = void (*)(void* destination, void* source);
             using reset_fn = void (*)(void* memory);
 
+            using get_relations_fn = std::vector<ecs::entity> (*)(void* memory);
+
             size_t size = 0;
             size_t alignment = 0;
             constructor_fn construct = nullptr;
@@ -59,6 +66,7 @@ namespace copper_server::api::ecs {
             destructor_fn destroy = nullptr;
             move_fn move = nullptr;
             reset_fn reset = nullptr;
+            get_relations_fn get_flat_relations = nullptr;
         };
 
         struct system_info {
@@ -96,6 +104,8 @@ namespace copper_server::api::ecs {
                         .move = [](void* dest, void* src) { *static_cast<T*>(dest) = std::move(*static_cast<T*>(src)); },
                         .reset = [](void* mem) { static_cast<T*>(mem)->~T(); new (mem) T(); }
                     };
+                    if constexpr (has_relation_discovery<T>)
+                        component_info_registry[id].get_flat_relations = [](void* mem) { return static_cast<T*>(mem)->get_flat_relations(); };
                 }
             }
             return id;
@@ -152,7 +162,7 @@ namespace copper_server::api::ecs {
         }
 
         struct mutation_queue_item {
-            int32_t entity_id;
+            uint32_t entity_id;
             uint32_t generation;
             component_id component;
             std::vector<char> data; //if nullptr the component will be removed
@@ -165,18 +175,18 @@ namespace copper_server::api::ecs {
 
         void queue_command(mutation_queue_item&&);
 
-        void* get_entity_component(int32_t id, uint32_t generation, component_id component_id);
+        void* get_entity_component(uint32_t id, uint32_t generation, component_id component_id);
 
         //this is used for accelerating serialization/deserialization logic
-        size_t get_entity_archetype_id(int32_t id, uint32_t generation);
+        size_t get_entity_archetype_id(uint32_t id, uint32_t generation);
         //this is used for accelerating serialization/deserialization logic
-        archetype_layout get_archetype_layout(int32_t id, uint32_t generation);
+        archetype_layout get_archetype_layout(uint32_t id, uint32_t generation);
         //this is used for accelerating serialization/deserialization logic
-        void* get_entity_component_by_offset(int32_t id, uint32_t generation, size_t offset, size_t component_size);
+        void* get_entity_component_by_offset(uint32_t id, uint32_t generation, size_t offset, size_t component_size);
 
         //this function moves the component to heap allocated buffer, accepts reference to the component.
         template <class component>
-        void queue_set_entity_component(int32_t id, uint32_t generation, component_id component_id, component&& comp) {
+        void queue_set_entity_component(uint32_t id, uint32_t generation, component_id component_id, component&& comp) {
             auto& info = component_info_registry.at(component_id);
             mutation_queue_item queue{id, generation, component_id};
             queue.data.resize(info.size);
@@ -184,15 +194,18 @@ namespace copper_server::api::ecs {
             queue_command(std::move(queue));
         }
 
-        void queue_remove_entity_component(int32_t id, uint32_t generation, component_id component_id);
+        void queue_remove_entity_component(uint32_t id, uint32_t generation, component_id component_id);
 
-        void queue_destroy_entity(int32_t id, uint32_t generation);
-        void queue_mark_dirty(int32_t id, uint32_t generation, component_id component_id);
+        void queue_destroy_entity(uint32_t id, uint32_t generation);
+        void queue_mark_dirty(uint32_t id, uint32_t generation, component_id component_id);
         bool queue_add_relation(component_id component_id, entity parent, entity child);
         bool queue_remove_relation(component_id component_id, entity parent, entity child);
         bool has_relation(component_id component_id, entity parent, entity child);
-        bool has_entity_component(int32_t id, uint32_t generation, component_id component_id);
-        std::optional<int32_t> get_entity_assigned_to_world(int32_t id, uint32_t generation);
+        bool has_entity_component(uint32_t id, uint32_t generation, component_id component_id);
+        bool is_valid(uint32_t id, uint32_t generation);
+        std::optional<int32_t> get_entity_assigned_to_world(uint32_t id, uint32_t generation);
+
+        std::vector<ecs::entity> request_flat_childs(uint32_t id, uint32_t generation);
 
         fast_task::future_ptr<entity> create_entity(std::optional<int32_t> world_id, std::unique_ptr<components_holder> components);
         fast_task::future_ptr<entity> create_entity(std::optional<int32_t> world_id, const entity_recipe& recipe, std::unique_ptr<components_holder> components);
@@ -230,7 +243,7 @@ namespace copper_server::api::ecs {
 
             void mark_component_dirty(component_id, size_t index);
             bool is_entity_match(size_t current_index_in_chunk) const;
-            std::pair<int32_t, uint32_t> get_current_entity(size_t current_index_in_chunk);
+            std::pair<uint32_t, uint32_t> get_current_entity(size_t current_index_in_chunk);
             structural_changes get_component_change_state(size_t entity_index, component_id cid);
 
             struct preserved_state {
@@ -238,7 +251,7 @@ namespace copper_server::api::ecs {
                 size_t chunk_index;
                 void mark_component_dirty(iteration_handle&, component_id, size_t index);
                 bool is_entity_match(iteration_handle&, size_t current_index_in_chunk) const;
-                std::pair<int32_t, uint32_t> get_current_entity(iteration_handle&, size_t current_index_in_chunk);
+                std::pair<uint32_t, uint32_t> get_current_entity(iteration_handle&, size_t current_index_in_chunk);
                 structural_changes get_component_change_state(iteration_handle&, size_t entity_index, component_id cid);
             };
 
@@ -849,7 +862,7 @@ namespace copper_server::api::ecs {
     private:
         friend struct entity;
 
-        mutable_component(T* ptr, int32_t owner_entity, uint32_t generation)
+        mutable_component(T* ptr, uint32_t owner_entity, uint32_t generation)
             : component_ptr_(ptr), owner_entity_(owner_entity), generation(generation) {}
 
         void mark_dirty_if_valid() {
@@ -858,7 +871,7 @@ namespace copper_server::api::ecs {
         }
 
         T* component_ptr_;
-        int32_t owner_entity_;
+        uint32_t owner_entity_;
         uint32_t generation;
     };
 }

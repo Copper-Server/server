@@ -10,9 +10,10 @@
 #ifndef SRC_UTIL_ENCODING_NBT_DESERIALIZATION
 #define SRC_UTIL_ENCODING_NBT_DESERIALIZATION
 #include <src/util/encoding/common.hpp>
-#include <src/util/nbt_stream.hpp>
+#include <src/util/encoding/nbt/nbt_common.hpp>
 
 namespace copper_server::util::encoding::nbt {
+
     template <class T, class T_prev>
     void deserialize_entry(T& res, util::nbt_read_stream& stream, T_prev& prev) {
         using Type = std::decay_t<T>;
@@ -152,31 +153,63 @@ namespace copper_server::util::encoding::nbt {
             std::string str;
             stream.read_into(str);
             res.value = reflect::get_enum_flag_value<typename Type::enum_t>(str);
-        } else if constexpr (is_template_base_of<api::packets::or_, Type>) {
-            stream.iterate([&res, &prev](std::string_view view, auto& var_stream) {
-                if (view == "var_0") {
+        } else if constexpr (is_template_base_of<api::packets::or_, Type> || is_template_base_of<api::packets::bool_or, Type>) {
+            if constexpr (get_nbt_type<typename Type::var_0>() != get_nbt_type<typename Type::var_1>()) {
+                if (get_nbt_type<typename Type::var_0>() == stream.get_type()) {
                     typename Type::var_0 it{};
                     deserialize_entry(it, var_stream, prev);
                     res = std::move(it);
-                } else if (view == "var_1") {
+                } else {
                     typename Type::var_1 it{};
                     deserialize_entry(it, var_stream, prev);
                     res = std::move(it);
                 }
-            });
+            } else {
+                stream.iterate([&res, &prev](std::string_view view, auto& var_stream) {
+                    if (view == "var_0") {
+                        typename Type::var_0 it{};
+                        deserialize_entry(it, var_stream, prev);
+                        res = std::move(it);
+                    } else if (view == "var_1") {
+                        typename Type::var_1 it{};
+                        deserialize_entry(it, var_stream, prev);
+                        res = std::move(it);
+                    }
+                });
+            }
         } else if constexpr (is_template_base_of<api::packets::enum_switch, Type>) {
-            typename Type::encode_type selected_type{};
-            stream
-                .read_compound(true)
-                .collect_as("type", selected_type)
-                .collect("data", [&res, &prev, &selected_type](auto& data_stream) {
-                    Type::get_enum(selected_type, [&res, &prev, &data_stream]<class Ty>() {
+            if constexpr (enum_switch_is_inline_eligible<Type>) {
+                Type::for_each([]<class Ty>() {
+                    if (get_nbt_type<Ty>() == type) {
                         Ty it{};
                         deserialize_entry(it, data_stream, prev);
                         res = std::move(it);
-                    });
-                })
-                .force_all_collect();
+                    }
+                });
+            } else {
+                std::string type;
+                stream.double_pass_read(
+                    [&type](util::nbt_read_stream& this_stream) {
+                        this_stream
+                            .read_compound()
+                            .collect_into("type", type)
+                            .make_collect();
+                    },
+                    [&res, &prev](util::nbt_read_stream& data_stream) {
+                        Type::for_each([&data_stream, &res, &prev]<class Ty>() {
+                            if (type == reflect::get_pretty_type_name<it_T>()) {
+                                stream.iterate([&res, &prev](auto& name, auto& item_stream) {
+                                    if (name == "type")
+                                        return;
+                                    reflect::visit_field(name, res, [&item_stream, &prev](auto& res_v) {
+                                        deserialize_entry(res_v, item_stream, prev);
+                                    });
+                                });
+                            }
+                        });
+                    }
+                );
+            }
         } else if constexpr (is_template_base_of<base_objects::box, Type>) {
             res.ptr = std::make_shared<typename Type::value_type>();
             deserialize_entry(*res, stream, prev);
@@ -266,6 +299,10 @@ namespace copper_server::util::encoding::nbt {
                     })
                     .force_all_collect();
                 res.add(weight, std::move(data));
+            });
+        } else if constexpr (nbt_is_inline<Type> && reflect::fields_count<Type> == 1) {
+            reflect::visit_field<Type>(0, [&]<class T>() {
+                deserialize_entry(res, stream, prev);
             });
         } else {
             if (stream.get_type() == nbt_type::tag_compound)

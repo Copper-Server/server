@@ -10,7 +10,7 @@
 #ifndef SRC_UTIL_ENCODING_NBT_SERIALIZATION
 #define SRC_UTIL_ENCODING_NBT_SERIALIZATION
 #include <src/util/encoding/common.hpp>
-#include <src/util/nbt_stream.hpp>
+#include <src/util/encoding/nbt/nbt_common.hpp>
 
 //include <src/util/reflect/*.hpp> headers to use reflection for serialization
 namespace copper_server::util::encoding::nbt {
@@ -97,32 +97,61 @@ namespace copper_server::util::encoding::nbt {
             res.write(reflect::get_enum_value(value.value));
         } else if constexpr (is_template_base_of<api::packets::enum_as_flag, Type>) {
             res.write(reflect::get_enum_flag_value(value.value));
-        } else if constexpr (is_template_base_of<api::packets::or_, Type>) {
-            std::visit(
-                [&res](auto& it) {
-                    if constexpr (std::is_same_v<typename Type::var_0, std::decay_t<decltype(it)>>)
-                        res.write_compound().write("var_0", [&it](auto& stream) {
-                            serialize_entry(stream, it);
-                        });
-                    else
-                        res.write_compound().write("var_1", [&it](auto& stream) {
-                            serialize_entry(stream, it);
-                        });
-                },
-                value
-            );
+        } else if constexpr (is_template_base_of<api::packets::or_, Type> || is_template_base_of<api::packets::bool_or, Type>) {
+            if constexpr (get_nbt_type<typename Type::var_0>() != get_nbt_type<typename Type::var_1>()) {
+                std::visit(
+                    [&res](auto& it) {
+                        serialize_entry(res, it);
+                    },
+                    value
+                );
+            } else {
+                std::visit(
+                    [&res](auto& it) {
+                        if constexpr (std::is_same_v<typename Type::var_0, std::decay_t<decltype(it)>>)
+                            res.write_compound().write("var_0", [&it](auto& stream) {
+                                serialize_entry(stream, it);
+                            });
+                        else
+                            res.write_compound().write("var_1", [&it](auto& stream) {
+                                serialize_entry(stream, it);
+                            });
+                    },
+                    value
+                );
+            }
         } else if constexpr (is_template_base_of<api::packets::enum_switch, Type>) {
             std::visit(
                 [&](auto& it) {
                     using it_T = std::decay_t<decltype(it)>;
-                    res
-                        .write_compound()
-                        .write("type", [&res](auto& stream) {
-                            serialize_entry(stream, typename Type::encode_type(it_T::item_id::value));
-                        })
-                        .write("data", [&it](auto& stream) {
-                            serialize_entry(stream, it);
+                    if constexpr (nbt_is_inline<it_T> && reflect::fields_count<it_T> == 1 && enum_switch_is_inline_eligible<Type>) {
+                        reflect::visit_field<Type>(0, [&]<class T>() {
+                            serialize_entry(res, value);
                         });
+                    } else {
+                        auto comp = res.write_compound();
+                        comp.write("type", reflect::get_pretty_type_name<it_T>());
+                        bool process_next = true;
+                        reflect::for_each_field_with_name(value, [&process_next, &comp](auto& item, std::string_view name) {
+                            if (process_next) {
+                                if constexpr (is_template_base_of<std::optional, Type>) {
+                                    if (!item)
+                                        return;
+                                    else
+                                        comp.write(name, [&item](auto& stream) {
+                                            serialize_entry(stream, *item);
+                                        });
+                                } else if constexpr (is_template_base_of<api::packets::ignored, Type>)
+                                    return;
+                                else
+                                    else comp.write(name, [&item](auto& stream) {
+                                        serialize_entry(stream, item);
+                                    });
+                            }
+                            if constexpr (is_template_base_of<api::packets::depends_next, std::decay_t<decltype(item)>>)
+                                process_next = (bool)item.value;
+                        });
+                    }
                 },
                 value
             );
@@ -196,17 +225,28 @@ namespace copper_server::util::encoding::nbt {
                     });
                 });
             });
+        } else if constexpr (nbt_is_inline<Type> && reflect::fields_count<Type> == 1) {
+            reflect::visit_field<Type>(0, [&]<class T>() {
+                serialize_entry(res, value);
+            });
         } else {
             bool process_next = true;
             auto comp = res.write_compound();
-            reflect::for_each_field_with_name(value, [&res, &process_next, &comp](auto& item, std::string_view name) {
+            reflect::for_each_field_with_name(value, [&process_next, &comp](auto& item, std::string_view name) {
                 if (process_next) {
-                    if constexpr (is_template_base_of<std::optional, Type>)
+                    if constexpr (is_template_base_of<std::optional, Type>) {
                         if (!item)
                             return;
-                    comp.write(name, [&item](auto& stream) {
-                        serialize_entry(stream, item);
-                    });
+                        else
+                            comp.write(name, [&item](auto& stream) {
+                                serialize_entry(stream, *item);
+                            });
+                    } else if constexpr (is_template_base_of<api::packets::ignored, Type>)
+                        return;
+                    else
+                        comp.write(name, [&item](auto& stream) {
+                            serialize_entry(stream, item);
+                        });
                 }
                 if constexpr (is_template_base_of<api::packets::depends_next, std::decay_t<decltype(item)>>)
                     process_next = (bool)item.value;
