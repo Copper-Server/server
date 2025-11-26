@@ -86,16 +86,23 @@ namespace copper_server::reflect {
     }
 
     template <class T>
+    concept has_name_override_cts = requires { T::name_override::data; };
+
+    template <class T>
     consteval std::string_view get_pretty_type_name() {
-        constexpr std::string_view name = type_name<T>();
-        if (name == "enbt::value")
-            return "nbt";
-        if (name == "enbt::raw_uuid")
-            return "UUID";
-        if (auto it = name.rfind("::"); it != name.npos) {
-            return name.substr(it + 2);
-        } else
-            return name;
+        if constexpr (has_name_override_cts<T>) {
+            return T::name_override::data;
+        } else {
+            constexpr std::string_view name = type_name<T>();
+            if (name == "enbt::value")
+                return "nbt";
+            if (name == "enbt::raw_uuid")
+                return "UUID";
+            if (auto it = name.rfind("::"); it != name.npos) {
+                return name.substr(it + 2);
+            } else
+                return name;
+        }
     }
 
     template <class T>

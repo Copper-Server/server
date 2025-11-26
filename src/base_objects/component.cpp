@@ -10,20 +10,20 @@
 #include <src/base_objects/slot.hpp>
 
 namespace copper_server::base_objects {
-    potion_effect::data_t::data_t() : amplifier(0), duration(0), is_ambient(false), show_particles(false), show_icon(false) {}
+    potion_effect::data_t::data_t() : amplifier(0), duration(0), ambient(false), show_particles(false), show_icon(false) {}
 
-    potion_effect::data_t::data_t(data_t&& mov) : amplifier(mov.amplifier), duration(mov.duration), is_ambient(mov.is_ambient), show_particles(mov.show_particles), show_icon(mov.show_icon), hidden_effect(std::move(mov.hidden_effect)) {}
+    potion_effect::data_t::data_t(data_t&& mov) : amplifier(mov.amplifier), duration(mov.duration), ambient(mov.ambient), show_particles(mov.show_particles), show_icon(mov.show_icon), hidden_effect(std::move(mov.hidden_effect)) {}
 
-    potion_effect::data_t::data_t(const data_t& copy) : amplifier(copy.amplifier), duration(copy.duration), is_ambient(copy.is_ambient), show_particles(copy.show_particles), show_icon(copy.show_icon), hidden_effect(copy.hidden_effect) {}
+    potion_effect::data_t::data_t(const data_t& copy) : amplifier(copy.amplifier), duration(copy.duration), ambient(copy.ambient), show_particles(copy.show_particles), show_icon(copy.show_icon), hidden_effect(copy.hidden_effect) {}
 
     potion_effect::data_t::data_t(var_int32 amplifier, var_int32 duration, bool is_ambient, bool show_particles, bool show_icon, std::optional<box<data_t>>&& hidden_effect)
-        : amplifier(amplifier), duration(duration), is_ambient(is_ambient), show_particles(show_particles), show_icon(show_icon), hidden_effect(std::move(hidden_effect)) {}
+        : amplifier(amplifier), duration(duration), ambient(is_ambient), show_particles(show_particles), show_icon(show_icon), hidden_effect(std::move(hidden_effect)) {}
 
     potion_effect::data_t::data_t(var_int32 amplifier, var_int32 duration, bool is_ambient, bool show_particles, bool show_icon, const std::optional<box<data_t>>& hidden_effect)
-        : amplifier(amplifier), duration(duration), is_ambient(is_ambient), show_particles(show_particles), show_icon(show_icon), hidden_effect(hidden_effect) {}
+        : amplifier(amplifier), duration(duration), ambient(is_ambient), show_particles(show_particles), show_icon(show_icon), hidden_effect(hidden_effect) {}
 
     bool potion_effect::data_t::operator==(const data_t& other) const {
-        return amplifier == other.amplifier && duration == other.duration && is_ambient == other.is_ambient && show_particles == other.show_particles && show_icon == other.show_icon && hidden_effect == other.hidden_effect;
+        return amplifier == other.amplifier && duration == other.duration && ambient == other.ambient && show_particles == other.show_particles && show_icon == other.show_icon && hidden_effect == other.hidden_effect;
     }
 
     bool potion_effect::data_t::operator!=(const data_t& other) const {
@@ -33,7 +33,7 @@ namespace copper_server::base_objects {
     potion_effect::data_t& potion_effect::data_t::operator=(data_t&& mov) {
         amplifier = mov.amplifier;
         duration = mov.duration;
-        is_ambient = mov.is_ambient;
+        ambient = mov.ambient;
         show_particles = mov.show_particles;
         show_icon = mov.show_icon;
         hidden_effect = std::move(mov.hidden_effect);
@@ -43,7 +43,7 @@ namespace copper_server::base_objects {
     potion_effect::data_t& potion_effect::data_t::operator=(const data_t& copy) {
         amplifier = copy.amplifier;
         duration = copy.duration;
-        is_ambient = copy.is_ambient;
+        ambient = copy.ambient;
         show_particles = copy.show_particles;
         show_icon = copy.show_icon;
         hidden_effect = copy.hidden_effect;

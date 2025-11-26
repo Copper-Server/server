@@ -276,6 +276,18 @@ namespace copper_server::api::packets {
             value.for_each_in_order([&](auto& it) {
                 serialize_entry(res, context, it);
             });
+        } else if constexpr (is_template_base_of<std::unordered_map, Type> && std::is_same_v<typename Type::key_type, std::string>) {
+            res.write_var32_check(value.size());
+            for (auto& [key, it] : value) {
+                res.write_string(key);
+                serialize_entry(res, context, it);
+            }
+        } else if constexpr (is_template_base_of<std::unordered_map, Type> && is_map_compatible<Type>) {
+            res.write_var32_check(value.size());
+            for (auto& [key, it] : value) {
+                serialize_entry(key, context, it);
+                serialize_entry(res, context, it);
+            }
         } else if constexpr (is_flags_list_from<Type>) {
             value.for_each_in_order([&](auto& it) {
                 serialize_entry(res, context, it);
@@ -363,6 +375,19 @@ namespace copper_server::api::packets {
                 }
             } else
                 res.write_var32(0);
+        } else if constexpr (make_packet_as_nbt<Type>) {
+            std::stringstream ss;
+            util::nbt_write_stream nbt_stream(ss);
+            util::encoding::nbt::serialize_entry(nbt_stream, value);
+            res.write_direct(
+                util::nbt_enbt_convert::build(
+                    list_array<uint8_t>(
+                        (const uint8_t*)ss.view().data(),
+                        ss.view().size()
+                    )
+                )
+                    .get_as_network()
+            );
         } else {
             bool process_next = true;
             reflect::for_each_field(value, [&value, &res, &context, &process_next]<class IT>(IT& item) {

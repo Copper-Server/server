@@ -125,6 +125,33 @@ namespace copper_server::util::encoding::nbt {
         }
         return false;
     }
+
+    template <class T>
+    concept is_map_compatible = requires(typename T::key_type& key) {
+        key = key.to_string();
+    };
+
+
+    template <class T>
+    concept nbt_is_inline = requires { typename T::nbt_inline; };
+
+    template <class T>
+    struct is_flattened_type : std::false_type {};
+
+    template <class T>
+        requires nbt_is_inline<T>
+    struct is_flattened_type<T> : std::true_type {};
+
+    template <class... Ts>
+    struct is_flattened_type<api::packets::bool_or<Ts...>>
+        : std::bool_constant<(is_flattened_type<Ts>::value && ...)> {};
+
+    template <class... Ts>
+    struct is_flattened_type<api::packets::or_<Ts...>>
+        : std::bool_constant<(is_flattened_type<Ts>::value && ...)> {};
+
+    template <class T>
+    constexpr bool is_flattened_type_v = is_flattened_type<T>::value;
 }
 
 #endif /* SRC_UTIL_ENCODING_NBT_NBT_COMMON */

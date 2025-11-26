@@ -19,6 +19,11 @@ namespace copper_server::util {
             std::copy_n(str, N, data);
         }
     };
+
+    template <CTS str>
+    struct cts_string {
+        static constexpr inline const char* data = str.data;
+    };
 }
 
 

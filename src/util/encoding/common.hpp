@@ -154,10 +154,6 @@ namespace copper_server::util::encoding {
 
 
     template <class type>
-    concept nbt_is_inline = requires { typename type::nbt_inline; };
-
-
-    template <class type>
     concept is_convertible_to_nbt_form = requires(const type& d, util::nbt_write_stream& w_stream, util::nbt_read_stream& r_stream) {
         d.to_nbt(w_stream);
         type::from_packet(r_stream);

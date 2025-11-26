@@ -415,6 +415,19 @@ namespace copper_server::api::packets {
         }
 
         auto operator<=>(const limited_num& other) const = default;
+
+        operator T() const {
+            return value;
+        }
+
+        operator T&() {
+            return value;
+        }
+
+        template <class U>
+        operator U() const {
+            return static_cast<U>(value);
+        }
     };
 
     struct var_int32 {

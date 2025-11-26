@@ -13,6 +13,17 @@
 #include <src/util/encoding/nbt/nbt_common.hpp>
 
 namespace copper_server::util::encoding::nbt {
+    template <class T>
+    consteval bool has_flattened_fields() {
+        bool res = false;
+        if constexpr (reflect::fields_count<T> > 0) {
+            reflect::for_each_field_type<T>([&]<class FieldT>() {
+                if constexpr (is_flattened_type_v<FieldT>)
+                    res = true;
+            });
+        }
+        return res;
+    }
 
     template <class T, class T_prev>
     void deserialize_entry(T& res, util::nbt_read_stream& stream, T_prev& prev) {
@@ -165,17 +176,29 @@ namespace copper_server::util::encoding::nbt {
                     res = std::move(it);
                 }
             } else {
-                stream.iterate([&res, &prev](std::string_view view, auto& var_stream) {
-                    if (view == "var_0") {
-                        typename Type::var_0 it{};
-                        deserialize_entry(it, var_stream, prev);
-                        res = std::move(it);
-                    } else if (view == "var_1") {
-                        typename Type::var_1 it{};
-                        deserialize_entry(it, var_stream, prev);
-                        res = std::move(it);
+                nbt_enbt_convert converter;
+                stream.read_into(converter);
+                auto buffered_data = converter.get_as_normal();
+
+                auto try_decode = [&]<class VariantT>() -> std::optional<VariantT> {
+                    try {
+                        std::stringstream ss((const char*)buffered_data.data(), buffered_data.size());
+                        util::nbt_read_stream temp_stream(ss);
+
+                        VariantT val{};
+                        deserialize_entry(val, temp_stream, prev);
+                        return val;
+                    } catch (...) {
+                        return std::nullopt;
                     }
-                });
+                };
+
+                if (auto v0 = try_decode.template operator()<typename Type::var_0>())
+                    res = std::move(*v0);
+                else if (auto v1 = try_decode.template operator()<typename Type::var_1>())
+                    res = std::move(*v1);
+                else
+                    throw std::runtime_error("Failed to decode either variant of field");
             }
         } else if constexpr (is_template_base_of<api::packets::enum_switch, Type>) {
             if constexpr (enum_switch_is_inline_eligible<Type>) {
@@ -235,6 +258,18 @@ namespace copper_server::util::encoding::nbt {
                     });
                 }
             });
+        } else if constexpr (is_template_base_of<std::unordered_map, Type> && std::is_same_v<typename Type::key_type, std::string>) {
+            stream.iterate(
+                [&res, &prev](auto& key, auto& item_stream) {
+                    deserialize_entry(res[key], item_stream, prev);
+                }
+            );
+        } else if constexpr (is_template_base_of<std::unordered_map, Type> && is_map_compatible<Type>) {
+            stream.iterate(
+                [&res, &prev](auto& key, auto& item_stream) {
+                    deserialize_entry(res[key], item_stream, prev);
+                }
+            );
         } else if constexpr (is_flags_list_from<Type>) {
             auto arr_r = stream.read_list();
             auto& it = (*prev).*Type::preprocess_source_name::value;
@@ -305,7 +340,36 @@ namespace copper_server::util::encoding::nbt {
                 deserialize_entry(res, stream, prev);
             });
         } else {
-            if (stream.get_type() == nbt_type::tag_compound)
+            if constexpr (has_flattened_fields<Type>()) {
+                if (stream.get_type() != nbt_type::tag_compound)
+                    throw std::runtime_error("Expected Compound for struct");
+
+                nbt_enbt_convert converter;
+                stream.read_into(converter);
+                auto buffer = converter.get_as_normal();
+
+                reflect::for_each_field_with_name(res, [&](auto& field, std::string_view name) {
+                    using FieldType = std::decay_t<decltype(field)>;
+                    if constexpr (is_flattened_type_v<FieldType>) {
+                        std::stringstream ss(std::string((char*)buffer.data(), buffer.size()));
+                        util::nbt_read_stream replay_stream(ss);
+                        deserialize_entry(field, replay_stream, prev);
+                    }
+                });
+
+                std::stringstream ss(std::string((char*)buffer.data(), buffer.size()));
+                util::nbt_read_stream normal_stream(ss);
+
+                normal_stream.iterate([&res, &prev](std::string_view name, util::nbt_read_stream& item_stream) {
+                    reflect::visit_field(name, res, [&](auto& field) {
+                        using FieldType = std::decay_t<decltype(field)>;
+                        if constexpr (!is_flattened_type_v<FieldType>)
+                            deserialize_entry(field, item_stream, prev);
+                        else
+                            item_stream.skip();
+                    });
+                });
+            } else if (stream.get_type() == nbt_type::tag_compound)
                 stream.iterate([&res, &prev](auto& name, auto& item_stream) {
                     reflect::visit_field(name, res, [&item_stream, &prev](auto& res_v) {
                         deserialize_entry(res_v, item_stream, prev);

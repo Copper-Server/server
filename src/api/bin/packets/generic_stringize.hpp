@@ -186,6 +186,44 @@ namespace copper_server::api::packets {
                     res += "\n" + std::string(spacing + 4, ' ') + "}\n" + std::string(spacing, ' ') + "}";
                 else
                     res += "}\n" + std::string(spacing, ' ') + "}";
+            } else if constexpr (is_template_base_of<std::unordered_map, Type> && std::is_same_v<typename Type::key_type, std::string>) {
+                res += "{";
+                bool has_prev = false;
+                for (auto& it : value) {
+                    if (has_prev)
+                        res += ',';
+                    else {
+                        res += "\n" + std::string(spacing + 4, ' ');
+                        has_prev = true;
+                    }
+                    res += "\n" + std::string(spacing + 4, ' ');
+                    serialize_entry(res, spacing + 4, it.first);
+                    res += ": ";
+                    serialize_entry(res, spacing + 4, it.second);
+                }
+                if (has_prev)
+                    res += "\n" + std::string(spacing + 4, ' ') + "}";
+                else
+                    res += "}\n" + std::string(spacing, ' ');
+            } else if constexpr (is_template_base_of<std::unordered_map, Type> && is_map_compatible<Type>) {
+                res += "{";
+                bool has_prev = false;
+                for (auto& it : value) {
+                    if (has_prev)
+                        res += ',';
+                    else {
+                        res += "\n" + std::string(spacing + 4, ' ');
+                        has_prev = true;
+                    }
+                    res += "\n" + std::string(spacing + 4, ' ');
+                    serialize_entry(res, spacing + 4, it.first.to_string());
+                    res += ": ";
+                    serialize_entry(res, spacing + 4, it.second);
+                }
+                if (has_prev)
+                    res += "\n" + std::string(spacing + 4, ' ') + "}";
+                else
+                    res += "}\n" + std::string(spacing, ' ');
             } else if constexpr (is_flags_list_from<Type>) {
                 res += "{";
                 bool has_prev = false;
@@ -268,6 +306,21 @@ namespace copper_server::api::packets {
                     res += "\n" + std::string(spacing, ' ') + "]";
                 else
                     res += "]";
+            } else if constexpr (make_packet_as_nbt<Type>) {
+                std::stringstream ss;
+                util::nbt_write_stream nbt_stream(ss);
+                util::encoding::nbt::serialize_entry(nbt_stream, value);
+                serialize_entry(
+                    res,
+                    spacing,
+                    util::nbt_enbt_convert::build(
+                        list_array<uint8_t>(
+                            (const uint8_t*)ss.view().data(),
+                            ss.view().size()
+                        )
+                    )
+                        .get_as_enbt()
+                );
             } else {
                 bool process_next = true;
                 bool processed = false;

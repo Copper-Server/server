@@ -15,46 +15,9 @@
 #include <src/util/reflect/base_objects/component.hpp>
 #include <src/util/reflect/base_objects/dye_color.hpp>
 
-#include <src/util/encoding/enbt/serialization.hpp>
 #include <src/util/encoding/nbt/serialization.hpp>
 
 namespace copper_server::base_objects {
-    enbt::value component::encode_component(const component& item) {
-        return std::visit(
-            [](auto& it) {
-                using T = std::decay_t<decltype(it)>;
-                enbt::value res;
-                util::encoding::enbt::serialize_entry(res, it);
-                std::string nam;
-                if constexpr (requires { T::actual_name::value; })
-                    nam = "minecraft:" + std::string(T::actual_name::value);
-                else
-                    nam = "minecraft:" + std::string(reflect::get_pretty_type_name<T>());
-
-
-                return enbt::compound{{std::move(nam), std::move(res)}};
-            },
-            item.type
-        );
-    }
-
-    void component::encode_component(const component& item, enbt::io_helper::value_write_stream& stream) {
-        std::visit(
-            [&stream](auto& it) {
-                using T = std::decay_t<decltype(it)>;
-                std::string nam;
-                if constexpr (requires { T::actual_name::value; })
-                    nam = "minecraft:" + std::string(T::actual_name::value);
-                else
-                    nam = "minecraft:" + std::string(reflect::get_pretty_type_name<T>());
-                stream.write_compound(1).write(nam, [&it](enbt::io_helper::value_write_stream& stream) {
-                    util::encoding::enbt::serialize_entry(stream, it);
-                });
-            },
-            item.type
-        );
-    }
-
     void component::encode_component(const component& item, util::nbt_write_compound_stream& stream) {
         std::visit(
             [&stream](auto& it) {

@@ -16,6 +16,9 @@
 namespace copper_server::util::encoding::nbt {
 
     template <class T>
+    void serialize_flattened(util::nbt_write_compound_stream& comp, const T& value);
+
+    template <class T>
     void serialize_entry(util::nbt_write_stream& res, const T& value) {
         using Type = std::decay_t<T>;
         if constexpr (
@@ -98,28 +101,12 @@ namespace copper_server::util::encoding::nbt {
         } else if constexpr (is_template_base_of<api::packets::enum_as_flag, Type>) {
             res.write(reflect::get_enum_flag_value(value.value));
         } else if constexpr (is_template_base_of<api::packets::or_, Type> || is_template_base_of<api::packets::bool_or, Type>) {
-            if constexpr (get_nbt_type<typename Type::var_0>() != get_nbt_type<typename Type::var_1>()) {
-                std::visit(
-                    [&res](auto& it) {
-                        serialize_entry(res, it);
-                    },
-                    value
-                );
-            } else {
-                std::visit(
-                    [&res](auto& it) {
-                        if constexpr (std::is_same_v<typename Type::var_0, std::decay_t<decltype(it)>>)
-                            res.write_compound().write("var_0", [&it](auto& stream) {
-                                serialize_entry(stream, it);
-                            });
-                        else
-                            res.write_compound().write("var_1", [&it](auto& stream) {
-                                serialize_entry(stream, it);
-                            });
-                    },
-                    value
-                );
-            }
+            std::visit(
+                [&res](auto& it) {
+                    serialize_entry(res, it);
+                },
+                value
+            );
         } else if constexpr (is_template_base_of<api::packets::enum_switch, Type>) {
             std::visit(
                 [&](auto& it) {
@@ -174,6 +161,18 @@ namespace copper_server::util::encoding::nbt {
                             });
                         });
                     });
+                });
+        } else if constexpr (is_template_base_of<std::unordered_map, Type> && std::is_same_v<typename Type::key_type, std::string>) {
+            auto compound = res.write_compound();
+            for (auto& [key, it] : value)
+                compound.write(key, [&it](auto& stream) {
+                    serialize_entry(stream, it);
+                });
+        } else if constexpr (is_template_base_of<std::unordered_map, Type> && is_map_compatible<Type>) {
+            auto compound = res.write_compound();
+            for (auto& [key, it] : value)
+                compound.write(key.to_string(), [&it](auto& stream) {
+                    serialize_entry(stream, it);
                 });
         } else if constexpr (is_flags_list_from<Type>) {
             auto arr_w = res.write_list();
@@ -233,6 +232,7 @@ namespace copper_server::util::encoding::nbt {
             bool process_next = true;
             auto comp = res.write_compound();
             reflect::for_each_field_with_name(value, [&process_next, &comp](auto& item, std::string_view name) {
+                using ItemType = std::decay_t<decltype(item)>;
                 if (process_next) {
                     if constexpr (is_template_base_of<std::optional, Type>) {
                         if (!item)
@@ -243,13 +243,36 @@ namespace copper_server::util::encoding::nbt {
                             });
                     } else if constexpr (is_template_base_of<api::packets::ignored, Type>)
                         return;
-                    else
+                    else if constexpr (is_flattened_type_v<ItemType>) {
+                        serialize_flattened(comp, item);
+                    } else
                         comp.write(name, [&item](auto& stream) {
                             serialize_entry(stream, item);
                         });
                 }
                 if constexpr (is_template_base_of<api::packets::depends_next, std::decay_t<decltype(item)>>)
                     process_next = (bool)item.value;
+            });
+        }
+    }
+
+    template <class T>
+    void serialize_flattened(util::nbt_write_compound_stream& comp, const T& value) {
+        using Type = std::decay_t<T>;
+
+        if constexpr (is_template_base_of<api::packets::or_, Type> || is_template_base_of<api::packets::bool_or, Type>) {
+            std::visit([&comp](auto& it) { serialize_flattened(comp, it); }, value);
+        } else {
+            reflect::for_each_field_with_name(value, [&comp](auto& item, std::string_view name) {
+                using ItemType = std::decay_t<decltype(item)>;
+
+                if constexpr (is_template_base_of<std::optional, ItemType>) {
+                    if (item)
+                        comp.write(name, [&](auto& s) { serialize_entry(s, *item); });
+                } else if constexpr (is_flattened_type_v<ItemType>)
+                    serialize_flattened(comp, item);
+                else
+                    comp.write(name, [&](auto& s) { serialize_entry(s, item); });
             });
         }
     }

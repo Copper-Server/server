@@ -9,6 +9,9 @@
 #ifndef SRC_API_BIN_PACKETS_GENERIC
 #define SRC_API_BIN_PACKETS_GENERIC
 
+#include <src/util/encoding/nbt/deserialization.hpp>
+#include <src/util/encoding/nbt/serialization.hpp>
+
 namespace copper_server::base_objects {
     struct chat;
 }
@@ -32,7 +35,15 @@ namespace copper_server::api::packets::client_bound::play {
 }
 
 namespace copper_server::api::packets {
+    template <class T>
+    concept is_map_compatible = requires(typename T::key_type& key) {
+        key = key.to_string();
+    };
 
+    template <class T>
+    concept make_packet_as_nbt = requires {
+        typename T::packet_as_nbt;
+    }
 
     template <template <auto...> class Base, auto... Ts>
     static void value_test(Base<Ts...>&) {}

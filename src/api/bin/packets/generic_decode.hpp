@@ -214,6 +214,28 @@ namespace copper_server::api::packets {
                 res.set(std::move(make_res));
             });
             value = std::move(res);
+        } else if constexpr (is_template_base_of<std::unordered_map, Type> && std::is_same_v<typename Type::key_type, std::string>) {
+            std::unordered_map<std::string, typename Type::mapped_type> res;
+            auto size = stream.read_var<int32_t>();
+            for (int32_t i = 0; i < size; i++) {
+                std::string key;
+                decode_entry(context, stream, key, prev);
+                typename Type::mapped_type val;
+                decode_entry(context, stream, val, prev);
+                res.emplace(std::move(key), std::move(val));
+            }
+            value = std::move(res);
+        } else if constexpr (is_template_base_of<std::unordered_map, Type> && is_map_compatible<Type>) {
+            Type res;
+            auto size = stream.read_var<int32_t>();
+            for (int32_t i = 0; i < size; i++) {
+                typename Type::key_type key;
+                decode_entry(context, stream, key, prev);
+                typename Type::mapped_type val;
+                decode_entry(context, stream, val, prev);
+                res.emplace(std::move(key), std::move(val));
+            }
+            value = std::move(res);
         } else if constexpr (is_flags_list_from<Type>) {
             Type res;
             auto& it = (*prev).*Type::preprocess_source_name::value;
@@ -288,6 +310,11 @@ namespace copper_server::api::packets {
                 for (size_t j = 0; j < std::tuple_size_v<Tupple_T>; j++)
                     if (bit.at(i))
                         type_table[i + 1](context, stream, value, prev);
+        } else if constexpr (make_packet_as_nbt<Type>) {
+            std::stringstream ss(stream.data_read(), stream.size_read());
+            util::nbt_read_stream nbt_stream(ss);
+            util::encoding::nbt::deserialize_entry(value, nbt_stream, *prev);
+            stream.range_read(ss.tellg());
         } else {
             bool process_next = true;
             reflect::for_each_field(value, [&](auto& item) {
