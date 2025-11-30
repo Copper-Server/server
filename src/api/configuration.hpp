@@ -11,7 +11,6 @@
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
-#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <string>
 #include <unordered_map>
@@ -19,6 +18,7 @@
 #include <vector>
 
 #include <src/base_objects/events/event.hpp>
+#include <src/util/nbt.hpp>
 
 namespace copper_server::api::configuration {
     struct server_configuration {
@@ -166,8 +166,6 @@ namespace copper_server::api::configuration {
             }
         } server;
 
-        //allows custom plugin settings
-        enbt::compound plugins;
 
         std::unordered_set<std::string> disabled_plugins;
 
@@ -176,23 +174,29 @@ namespace copper_server::api::configuration {
         std::unordered_set<std::string> allowed_dimensions = {"overworld"};
 
         class plugin_actions {
-            enbt::value& it;
-            plugin_actions(enbt::value& it);
+            util::nbt& it;
+            plugin_actions(util::nbt& it);
             friend struct server_configuration;
 
         public:
             struct get_value {};
 
             plugin_actions operator^(std::string_view name);
-            const enbt::value& operator^(get_value);
-            plugin_actions& operator^=(const enbt::value& value);
-            plugin_actions& operator|=(const enbt::value& value);
-            operator const enbt::value&() const;
+            const util::nbt& operator^(get_value);
+            plugin_actions& operator^=(const util::nbt& value);
+            plugin_actions& operator|=(const util::nbt& value);
+            operator const util::nbt&() const;
         };
 
         plugin_actions operator^(std::string_view name);
 
         std::string get(const std::string& config_item_path);
+
+
+    private:
+        util::nbt plugins;
+
+        friend util::nbt& _get_plugins_(server_configuration& cfg);
     };
 
     server_configuration& get();

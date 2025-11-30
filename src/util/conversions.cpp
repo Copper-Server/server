@@ -9,12 +9,15 @@
 #include <boost/json.hpp>
 #include <cstddef>
 #include <cstdint>
-#include <library/enbt/enbt.hpp>
 #include <stdexcept>
 #include <string>
 #include <utf8.h>
 #include <utility>
 #include <vector>
+
+#include <library/enbt/enbt.hpp>
+#include <src/base_objects/uuid.hpp>
+#include <src/util/nbt.hpp>
 
 namespace copper_server::util::conversions {
 
@@ -711,6 +714,106 @@ namespace copper_server::util::conversions {
             for (auto& item : arr)
                 result.push_back(from_json(item));
             return enbt::dynamic_array(std::move(result));
+        }
+
+        boost::json::value to_json(const util::nbt& nbt) {
+            auto type = nbt.get_type();
+            switch (type) {
+                using enum util::nbt_type;
+            case tag_end:
+                return boost::json::value();
+            case tag_byte:
+                return boost::json::value(nbt.get_byte());
+            case tag_short:
+                return boost::json::value(nbt.get_short());
+            case tag_int:
+                return boost::json::value(nbt.get_int());
+            case tag_long:
+                return boost::json::value(nbt.get_long());
+            case tag_float:
+                return boost::json::value(nbt.get_float());
+            case tag_double:
+                return boost::json::value(nbt.get_double());
+            case tag_byte_array: {
+                boost::json::array result;
+                auto arr = nbt.get_byte_array();
+                result.reserve(arr.size());
+                for (auto& item : arr)
+                    result.push_back(item);
+                return result;
+            }
+            case tag_string:
+                return boost::json::value(nbt.get_string());
+            case tag_list: {
+                boost::json::array result;
+                auto arr = nbt.get_list();
+                result.reserve(arr.size());
+                for (auto& item : arr)
+                    result.push_back(to_json(item));
+                return result;
+            }
+            case tag_compound: {
+                boost::json::object result;
+                auto com = nbt.get_compound();
+                result.reserve(com.size());
+                for (auto&& [key, value] : com)
+                    result[key] = to_json(value);
+                return result;
+            }
+            case tag_int_array: {
+                boost::json::array result;
+                auto arr = nbt.get_int_array();
+                result.reserve(arr.size());
+                for (auto& item : arr)
+                    result.push_back(item);
+                return result;
+            }
+            case tag_long_array: {
+                boost::json::array result;
+                auto arr = nbt.get_long_array();
+                result.reserve(arr.size());
+                for (auto& item : arr)
+                    result.push_back(item);
+                return result;
+            }
+            default:
+                throw std::runtime_error("Unknown type");
+            }
+        }
+
+        util::nbt from_json_nbt(const boost::json::value& json) {
+            switch (json.kind()) {
+            case boost::json::kind::null:
+                return util::nbt();
+            case boost::json::kind::bool_:
+                return util::nbt(json.as_bool());
+            case boost::json::kind::int64:
+                return util::nbt(json.as_int64());
+            case boost::json::kind::uint64:
+                return util::nbt(std::bit_cast<int64_t>(json.as_uint64()));
+            case boost::json::kind::double_:
+                return util::nbt(json.as_double());
+            case boost::json::kind::string:
+                return util::nbt(string::to_direct(json.as_string()));
+            case boost::json::kind::array: {
+                auto arr = json.as_array();
+                list_array<util::nbt> result;
+                result.reserve(arr.size());
+                for (auto& item : arr)
+                    result.emplace_back(from_json_nbt(item));
+                return result;
+            }
+            case boost::json::kind::object: {
+                auto obj = json.as_object();
+                std::unordered_map<std::string, util::nbt> result;
+                result.reserve(obj.size());
+                for (auto& [key, value] : obj)
+                    result[key] = from_json_nbt(value);
+                return result;
+            }
+            default:
+                throw std::runtime_error("Unknown type");
+            }
         }
     }
 }

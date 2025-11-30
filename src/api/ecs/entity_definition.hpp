@@ -23,13 +23,13 @@ namespace copper_server::api::ecs {
         template <class T>
         concept has_nbt_fields_exclusive = requires(T& it, util::nbt_write_stream& write, util::nbt_read_stream& read) {
             it.to_nbt(write);
-            T::from_nbt(read);
+            it.from_nbt(read);
         };
 
         template <class T>
         concept has_nbt_fields_shared = requires(T& it, util::nbt_write_compound_stream& write, util::nbt_collection::compound_flex& read) {
             it.to_nbt(write);
-            T::from_nbt(read);
+            it.from_nbt(read);
         };
 
         template <class T>
@@ -55,12 +55,12 @@ namespace copper_server::api::ecs {
 
         template <class T>
         void deserialize_via_fields(void* data, util::nbt_write_stream& stream) {
-            *static_cast<T*>(data) = T::from_nbt(stream);
+            static_cast<T*>(data)->from_nbt(stream);
         }
 
         template <class T>
         void deserialize_via_fields_shared(void* data, util::nbt_collection::compound_flex& stream) {
-            *static_cast<T*>(data) = T::from_nbt(stream);
+            static_cast<T*>(data)->from_nbt(stream);
         }
 
         template <class T>
@@ -239,6 +239,16 @@ namespace copper_server::api::ecs {
             return *this;
         }
 
+        template <class T>
+        entity_definition& add_constant(T value) {
+            base_recipe.with_value<T>(std::move(value));
+            auto res = rules.emplace_back(component_rule{T::item_id::value, component_remove_act::locked});
+            rule_lookup[T::item_id::value] = &res;
+
+            try_auto_map<T>();
+            return *this;
+        }
+
         const component_remove_act get_remove_action(component_id id) const {
             if (rule_lookup.contains(id))
                 return rules[rule_lookup.at(id)].remove_action;
@@ -262,7 +272,6 @@ namespace copper_server::api::ecs {
     //  @entity:minecraft:player
     const entity_definition& get_ecs_entity_definition(const std::string& id);
 
-    const entity_definition& get_item_definition(const std::string& id);
     const entity_definition& get_entity_definition(const std::string& id);
     const entity_definition& get_block_entity_definition(const std::string& id);
 
@@ -272,7 +281,6 @@ namespace copper_server::api::ecs {
         // ids should be same as for get_ecs_entity_definition
         entity_definition& make_ecs_entity_definition(const std::string& id);
 
-        entity_definition& make_item_definition(const std::string& id);
         entity_definition& make_entity_definition(const std::string& id);
         entity_definition& make_block_entity_definition(const std::string& id);
     }

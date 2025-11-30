@@ -18,19 +18,15 @@
 //entity component system
 namespace copper_server::api::ecs {
     struct entity_recipe {
-        entity_recipe& with(const entity_recipe& recipe) {
-            if (!is_frozen_) {
-                component_ids.reserve(component_ids.size() + recipe.component_ids.size());
-                component_ids.insert(component_ids.end(), recipe.component_ids.begin(), recipe.component_ids.end());
-            }
-            return *this;
-        }
+        entity_recipe();
+        ~entity_recipe();
+        entity_recipe(const entity_recipe& other);
+        entity_recipe(entity_recipe&& other) noexcept;
+        entity_recipe& operator=(const entity_recipe& other);
+        entity_recipe& operator=(entity_recipe&& other) noexcept;
 
-        entity_recipe& with(component_id id) {
-            if (!is_frozen_)
-                component_ids.push_back(id);
-            return *this;
-        }
+        entity_recipe& with(const entity_recipe& recipe);
+        entity_recipe& with(component_id id);
 
         template <class component>
         entity_recipe& with() {
@@ -39,18 +35,48 @@ namespace copper_server::api::ecs {
             return *this;
         }
 
-        entity_recipe& freeze();
+        template <class component>
+        entity_recipe& with_value(const component& value) {
+            if (!is_frozen_) {
+                component_id id = detail::get_component_id<component>();
+                component_ids.push_back(id);
 
-        bool is_frozen() const {
-            return is_frozen_;
+                // Remove existing default if present
+                if (auto it = default_values.find(id); it != default_values.end()) {
+                    const auto& info = detail::component_info_registry.at(id);
+                    info.destroy(it->second);
+                    ::operator delete(it->second);
+                    default_values.erase(it);
+                }
+
+                // Allocate and copy
+                const auto& info = detail::component_info_registry.at(id);
+                void* mem = ::operator new(info.size, std::align_val_t(info.alignment));
+                info.construct(mem);                  // Default construct first
+                info.copy_assign(mem, (void*)&value); // Then assign
+                default_values[id] = mem;
+            }
+            return *this;
         }
 
+        entity_recipe& freeze();
+
+        bool is_frozen() const;
+
         const std::vector<component_id>& get_ids() const;
+
+        const std::unordered_map<component_id, void*>& get_defaults() const {
+            return default_values;
+        }
 
         size_t get_hash() const;
 
     private:
+        void cleanup();
+        void clone_value(component_id id, void* src);
+
         std::vector<component_id> component_ids;
+        std::unordered_map<component_id, void*> default_values; // Owns the memory
         size_t hash = 0;
         bool is_frozen_ = false;
     };
@@ -525,7 +551,6 @@ namespace copper_server::api::ecs {
 
         mobile_entity,
         block_entity,
-        item_entity,
     };
 
     struct scheduler {

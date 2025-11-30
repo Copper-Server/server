@@ -12,6 +12,7 @@
 #include <memory>
 #include <src/api/ecs.hpp>
 #include <src/api/entity.hpp>
+#include <src/base_objects/slot.hpp>
 #include <src/util/calculations.hpp>
 
 namespace copper_server {
@@ -38,9 +39,7 @@ namespace copper_server::api::ecs::com {
 
     struct mobile_entity_tag {};
 
-    struct item_entity_tag {};
-
-    struct owned_by { //flat relation, used for ecs entities i.e. items to store the holder entity(movable entity or block entity)
+    struct owned_by { //flat relation
         ecs::entity parent;
     };
 
@@ -59,24 +58,24 @@ namespace copper_server::api::ecs::com {
 
     namespace entities {
         struct inventory { //some entities
-            std::unique_ptr<std::unordered_map<uint32_t, ecs::unique_entity>> value;
+            std::unique_ptr<std::unordered_map<uint32_t, base_objects::slot>> value;
 
             inventory()
-                : value(std::make_unique<std::unordered_map<uint32_t, ecs::unique_entity>>()) {}
+                : value(std::make_unique<std::unordered_map<uint32_t, base_objects::slot>>()) {}
 
             inventory(inventory&&) noexcept = default;
             inventory& operator=(inventory&&) noexcept = default;
 
             inventory(const inventory& other) {
                 if (other.value)
-                    value = std::make_unique<std::unordered_map<uint32_t, ecs::unique_entity>>(*other.value);
+                    value = std::make_unique<std::unordered_map<uint32_t, base_objects::slot>>(*other.value);
             }
 
             inventory& operator=(const inventory& other) {
                 if (this != &other) {
                     if (other.value) {
                         if (!value) {
-                            value = std::make_unique<std::unordered_map<uint32_t, ecs::unique_entity>>(*other.value);
+                            value = std::make_unique<std::unordered_map<uint32_t, base_objects::slot>>(*other.value);
                         } else
                             *value = *other.value;
                     } else
@@ -85,34 +84,34 @@ namespace copper_server::api::ecs::com {
                 return *this;
             }
 
-            std::unordered_map<uint32_t, ecs::unique_entity>& get() {
+            std::unordered_map<uint32_t, base_objects::slot>& get() {
                 return *value;
             }
 
-            const std::unordered_map<uint32_t, ecs::unique_entity>& get() const {
+            const std::unordered_map<uint32_t, base_objects::slot>& get() const {
                 return *value;
             }
         };
 
         struct custom_inventory { //player only
-            std::unique_ptr<std::unordered_map<std::string, std::unordered_map<uint32_t, ecs::unique_entity>>> value;
+            std::unique_ptr<std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot>>> value;
 
             custom_inventory()
-                : value(std::make_unique<std::unordered_map<std::string, std::unordered_map<uint32_t, ecs::unique_entity>>>()) {}
+                : value(std::make_unique<std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot>>>()) {}
 
             custom_inventory(custom_inventory&&) noexcept = default;
             custom_inventory& operator=(custom_inventory&&) noexcept = default;
 
             custom_inventory(const custom_inventory& other) {
                 if (other.value)
-                    value = std::make_unique<std::unordered_map<std::string, std::unordered_map<uint32_t, ecs::unique_entity>>>(*other.value);
+                    value = std::make_unique<std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot>>>(*other.value);
             }
 
             custom_inventory& operator=(const custom_inventory& other) {
                 if (this != &other) {
                     if (other.value) {
                         if (!value) {
-                            value = std::make_unique<std::unordered_map<std::string, std::unordered_map<uint32_t, ecs::unique_entity>>>(*other.value);
+                            value = std::make_unique<std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot>>>(*other.value);
                         } else
                             *value = *other.value;
                     } else
@@ -121,11 +120,11 @@ namespace copper_server::api::ecs::com {
                 return *this;
             }
 
-            std::unordered_map<std::string, std::unordered_map<uint32_t, ecs::unique_entity>>& get() {
+            std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot>>& get() {
                 return *value;
             }
 
-            const std::unordered_map<std::string, std::unordered_map<uint32_t, ecs::unique_entity>>& get() const {
+            const std::unordered_map<std::string, std::unordered_map<uint32_t, base_objects::slot>>& get() const {
                 return *value;
             }
         };
@@ -570,16 +569,6 @@ namespace copper_server::api::ecs::com {
         };
 
         struct food {
-            int32_t value;
-        };
-    }
-
-    namespace items {
-        struct item_id {
-            int32_t id;
-        };
-
-        struct count {
             int32_t value;
         };
     }

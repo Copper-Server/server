@@ -7,7 +7,6 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 #include <filesystem>
-#include <library/enbt/enbt.hpp>
 #include <library/fast_task/include/files.hpp>
 #include <library/list_array.hpp>
 #include <src/api/configuration.hpp>
@@ -247,9 +246,24 @@ namespace copper_server::api::configuration {
             cfg.status.favicon.clear();
     }
 
+    void merge_compounds(std::unordered_map<std::string, util::nbt>& left, std::unordered_map<std::string, util::nbt>& right) {
+        for (auto& [name, val] : right) {
+            auto& it = left[name];
+            if (it.is_compound() && val.is_compound())
+                merge_compounds(it.get_compound(), val.get_compound());
+            else
+                it = std::move(val);
+        }
+    }
+
+    util::nbt& _get_plugins_(server_configuration& cfg) {
+        return cfg.plugins;
+    }
+
     void merge_configs_plugins(server_configuration& cfg, util::js_object& data) {
-        cfg.plugins = std::move(cfg.plugins).merge(util::conversions::json::from_json(util::js_object::get_object(data["plugins"]).get()));
-        data["plugins"] = util::conversions::json::to_json(cfg.plugins);
+        auto nbt = util::conversions::json::from_json_nbt(util::js_object::get_object(data["plugins"]).get());
+        merge_compounds(_get_plugins_(cfg).get_compound(), nbt.get_compound());
+        data["plugins"] = util::conversions::json::to_json(_get_plugins_(cfg));
     }
 
     void merge_configs_disabled_plugins(server_configuration& cfg, util::js_object& data, bool load) {
@@ -382,19 +396,17 @@ namespace copper_server::api::configuration {
 
     base_objects::events::event<void> updated;
 
-    server_configuration::plugin_actions::plugin_actions(enbt::value& it) : it(it) {}
+    server_configuration::plugin_actions::plugin_actions(util::nbt& it) : it(it) {}
 
     auto server_configuration::plugin_actions::operator^(std::string_view name) -> plugin_actions {
-        if (it.is_none())
-            operator^=(enbt::compound());
-        return it[std::string(name)];
+        return it.get_compound()[std::string(name)];
     }
 
-    auto server_configuration::plugin_actions::operator^(get_value) -> const enbt::value& {
+    auto server_configuration::plugin_actions::operator^(get_value) -> const util::nbt& {
         return it;
     }
 
-    auto server_configuration::plugin_actions::operator^=(const enbt::value& value) -> plugin_actions& {
+    auto server_configuration::plugin_actions::operator^=(const util::nbt& value) -> plugin_actions& {
         it = value;
         updated();
         if (config.server.frozen_config)
@@ -406,18 +418,19 @@ namespace copper_server::api::configuration {
         return *this;
     }
 
-    auto server_configuration::plugin_actions::operator|=(const enbt::value& value) -> plugin_actions& {
-        if (it.is_none())
-            return operator^=(value);
+    auto server_configuration::plugin_actions::operator|=(const util::nbt& value) -> plugin_actions& {
+        if (it.is_compound())
+            if (it.get_compound().empty())
+                return operator^=(value);
         return *this;
     }
 
-    server_configuration::plugin_actions::operator const enbt::value&() const {
+    server_configuration::plugin_actions::operator const util::nbt&() const {
         return it;
     }
 
     auto server_configuration::operator^(std::string_view name) -> plugin_actions {
-        return plugins[std::string(name)];
+        return plugins.get_compound()[std::string(name)];
     }
 
     void load(bool fill_default_values) {

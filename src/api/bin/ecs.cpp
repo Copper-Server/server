@@ -601,6 +601,23 @@ namespace copper_server::api::ecs {
                 fast_task::lock_guard message_lock(item->mut);
                 fast_task::lock_guard arch_lock(arch->arch_mutex);
                 item->result = manager::instance().allocate_entity(arch, world);
+
+                const auto& defaults = item->recipe.get_defaults();
+                if (!defaults.empty()) {
+                    auto& record = manager::instance().records.at(item->result.id);
+
+                    for (auto& [id, src_ptr] : defaults) {
+                        auto component_index = arch->component_index_map.at(id);
+                        const auto& info = detail::component_info_registry.at(id);
+
+                        size_t offset = arch->layout.component_offsets[component_index];
+                        void* dest_ptr = record.chunk->memory_block.get() + offset + (record.chunk_index * info.size);
+
+                        info.copy_assign(dest_ptr, src_ptr);
+                        arch->mark_dirty(record.chunk, component_index, record.chunk_index);
+                    }
+                }
+
                 item->ready = true;
                 item->cv.notify_one();
             })->wait();
@@ -613,6 +630,21 @@ namespace copper_server::api::ecs {
                 fast_task::lock_guard arch_lock(arch->arch_mutex);
                 item->result = manager::instance().allocate_entity(arch, world);
 
+                const auto& defaults = item->calculated_recipe.get_defaults();
+                if (!defaults.empty()) {
+                    auto& record = manager::instance().records.at(item->result.id);
+
+                    for (auto& [id, src_ptr] : defaults) {
+                        auto component_index = arch->component_index_map.at(id);
+                        const auto& info = detail::component_info_registry.at(id);
+
+                        size_t offset = arch->layout.component_offsets[component_index];
+                        void* dest_ptr = record.chunk->memory_block.get() + offset + (record.chunk_index * info.size);
+
+                        info.copy_assign(dest_ptr, src_ptr);
+                        arch->mark_dirty(record.chunk, component_index, record.chunk_index);
+                    }
+                }
 
                 auto& record = manager::instance().records.at(item->result.id);
                 for (auto& [id, ptr] : reg.request->components->components_reference) {
@@ -1559,27 +1591,121 @@ namespace copper_server::api::ecs {
         }
     }
 
-    entity_recipe& entity_recipe::freeze() {
-        if (is_frozen_)
-            return *this;
-        is_frozen_ = true;
-        std::sort(component_ids.begin(), component_ids.end());
-        component_ids.erase(
-            std::unique(component_ids.begin(), component_ids.end()),
-            component_ids.end()
-        );
-        hash = archetype_hash{}(component_ids);
+    entity_recipe::entity_recipe() = default;
+
+    entity_recipe::~entity_recipe() {
+        cleanup();
+    }
+
+    entity_recipe::entity_recipe(const entity_recipe& other) : component_ids(other.component_ids), hash(other.hash), is_frozen_(other.is_frozen_) {
+        for (auto& [id, ptr] : other.default_values) {
+            clone_value(id, ptr);
+        }
+    }
+
+    entity_recipe::entity_recipe(entity_recipe&& other) noexcept
+        : component_ids(std::move(other.component_ids)),
+          default_values(std::move(other.default_values)),
+          hash(other.hash),
+          is_frozen_(other.is_frozen_) {
+    }
+
+    // Copy Assignment
+    entity_recipe& entity_recipe::operator=(const entity_recipe& other) {
+        if (this != &other) {
+            cleanup();
+            component_ids = other.component_ids;
+            hash = other.hash;
+            is_frozen_ = other.is_frozen_;
+            for (auto& [id, ptr] : other.default_values) {
+                clone_value(id, ptr);
+            }
+        }
         return *this;
     }
 
-    const std::vector<component_id>& entity_recipe::get_ids() const {
-        return component_ids;
+    // Move Assignment
+    entity_recipe& entity_recipe::operator=(entity_recipe&& other) noexcept {
+        if (this != &other) {
+            cleanup();
+            component_ids = std::move(other.component_ids);
+            default_values = std::move(other.default_values);
+            hash = other.hash;
+            is_frozen_ = other.is_frozen_;
+        }
+        return *this;
     }
 
-    size_t entity_recipe::get_hash() const {
-        assert(is_frozen_ && "Cannot get hash from an unfrozen recipe!");
-        return hash;
+    entity_recipe& entity_recipe::with(const entity_recipe& recipe) {
+        if (!is_frozen_) {
+            // Merge IDs
+            component_ids.reserve(component_ids.size() + recipe.component_ids.size());
+            component_ids.insert(component_ids.end(), recipe.component_ids.begin(), recipe.component_ids.end());
+
+            // Merge Defaults (Deep Copy)
+            for (auto& [id, ptr] : recipe.default_values) {
+                // If we already have a default for this ID, replace it
+                if (default_values.find(id) != default_values.end()) {
+                    const auto& info = detail::component_info_registry.at(id);
+                    info.destroy(default_values[id]);
+                    ::operator delete(default_values[id]);
+                    default_values.erase(id);
+                }
+                clone_value(id, ptr);
+            }
+        }
+        return *this;
     }
+
+    entity_recipe& entity_recipe::with(component_id id) {
+        if (!is_frozen_)
+            component_ids.push_back(id);
+        return *this;
+    }
+
+        entity_recipe& entity_recipe::freeze() {
+            if (is_frozen_)
+                return *this;
+            is_frozen_ = true;
+            std::sort(component_ids.begin(), component_ids.end());
+            component_ids.erase(
+                std::unique(component_ids.begin(), component_ids.end()),
+                component_ids.end()
+            );
+            hash = archetype_hash{}(component_ids);
+            return *this;
+        }
+
+        bool entity_recipe::is_frozen() const {
+            return is_frozen_;
+        }
+
+        const std::vector<component_id>& entity_recipe::get_ids() const {
+            return component_ids;
+        }
+
+        size_t entity_recipe::get_hash() const {
+            assert(is_frozen_ && "Cannot get hash from an unfrozen recipe!");
+            return hash;
+        }
+
+        void entity_recipe::cleanup() {
+            for (auto& [id, ptr] : default_values) {
+                const auto& info = detail::component_info_registry.at(id);
+                info.destroy(ptr);
+                ::operator delete(ptr);
+            }
+            default_values.clear();
+        }
+
+        void entity_recipe::clone_value(component_id id, void* src) {
+            const auto& info = detail::component_info_registry.at(id);
+            void* dest = ::operator new(info.size, std::align_val_t(info.alignment));
+            info.construct(dest);
+            info.copy_assign(dest, src);
+            default_values[id] = dest;
+        }
+
 
     std::optional<entity> entity::copy_and_wait() const {
         return detail::copy_entity(std::nullopt, *this)->take();

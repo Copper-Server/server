@@ -242,10 +242,6 @@ namespace copper_server::api::ecs {
         return get_entity_definitions().at(id);
     }
 
-    const entity_definition& get_item_definition(const std::string& id) {
-        return get_ecs_entity_definition("@item:" + id);
-    }
-
     const entity_definition& get_entity_definition(const std::string& id) {
         return get_ecs_entity_definition("@entity:" + id);
     }
@@ -258,10 +254,6 @@ namespace copper_server::api::ecs {
         entity_definition& make_ecs_entity_definition(const std::string& id){
             auto res = get_entity_definitions().emplace(id, id);
             return res.first->second;
-        }
-
-        entity_definition& make_item_definition(const std::string& id){
-            return make_ecs_entity_definition("@item:" + id);
         }
 
         entity_definition& make_entity_definition(const std::string& id) {

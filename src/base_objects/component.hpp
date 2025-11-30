@@ -10,7 +10,6 @@
 #define SRC_BASE_OBJECTS_COMPONENT
 #include <array>
 #include <compare>
-#include <library/enbt/enbt.hpp>
 #include <library/list_array.hpp>
 #include <optional>
 #include <src/api/ecs.hpp>
@@ -20,13 +19,9 @@
 #include <src/base_objects/dye_color.hpp>
 #include <src/base_objects/position.hpp>
 #include <src/util/cts.hpp>
+#include <src/util/nbt.hpp>
 #include <src/util/readers.hpp>
 #include <string>
-
-namespace enbt::io_helper {
-    class value_write_stream;
-    class value_read_stream;
-}
 
 namespace copper_server::util {
     class nbt_read_stream;
@@ -116,7 +111,7 @@ namespace copper_server::base_objects {
 
         std::optional<id_set<var_int32::block_type>> blocks = std::nullopt;
         std::optional<std::unordered_map<std::string, property>> state = std::nullopt;
-        std::optional<enbt::value> nbt = std::nullopt;
+        std::optional<util::nbt> nbt = std::nullopt;
         list_array<component> full_components_match;            //for block entity
         list_array<partial_component> partial_components_match; //for block entity
     };
@@ -161,7 +156,7 @@ namespace copper_server::base_objects {
 
     struct partial_component {
         var_int32::data_component_type type;
-        enbt::value value;
+        util::nbt value;
         bool operator==(const partial_component& other) const = default;
     };
 
@@ -218,61 +213,52 @@ namespace copper_server::base_objects {
 
 
         struct custom_data : public enum_item<0> {
-            enbt::value data;
+            util::nbt data;
             bool operator==(const custom_data& other) const = default;
 
-            using nbt_path = ecs_nbt_path<"component.minecraft:custom_data">;
             using nbt_inline = void;
         };
 
         struct max_stack_size : public enum_item<1> {
             limited_num<var_int32, 1, 99> size;
             bool operator==(const max_stack_size& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:max_stack_size">;
         };
 
         struct max_damage : public enum_item<2> {
             var_int32 dmg;
             bool operator==(const max_damage& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:max_damage">;
         };
 
         struct damage : public enum_item<3> {
             var_int32 dmg;
             bool operator==(const damage& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:damage">;
         };
 
         struct unbreakable : public enum_item<4> {
             bool operator==(const unbreakable& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:unbreakable">;
         };
 
         struct custom_name : public enum_item<5> {
             base_objects::chat name;
             bool operator==(const custom_name& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:custom_name">;
             using nbt_inline = void;
         };
 
         struct item_name : public enum_item<6> {
             base_objects::chat name;
             bool operator==(const item_name& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:item_name">;
             using nbt_inline = void;
         };
 
         struct item_model : public enum_item<7> {
             identifier model;
             bool operator==(const item_model& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:item_model">;
             using nbt_inline = void;
         };
 
         struct lore : public enum_item<8> {
             list_array_sized<base_objects::chat, 256> lines;
             bool operator==(const lore& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:lore">;
             using nbt_inline = void;
         };
 
@@ -287,7 +273,6 @@ namespace copper_server::base_objects {
 
             enum_as<rarity_e, var_int32> rarity;
             bool operator==(const struct rarity& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:rarity">;
             using nbt_inline = void;
         };
 
@@ -298,14 +283,12 @@ namespace copper_server::base_objects {
                 enchantments;
 
             bool operator==(const struct enchantments& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:enchantments">;
         };
 
         struct can_place_on : public enum_item<11> {
             list_array<block_predicate> predicates;
 
             bool operator==(const can_place_on& other) const;
-            using nbt_path = ecs_nbt_path<"component.minecraft:can_place_on">;
             using nbt_inline = void;
         };
 
@@ -313,7 +296,6 @@ namespace copper_server::base_objects {
             list_array<block_predicate> predicates;
 
             bool operator==(const can_break& other) const;
-            using nbt_path = ecs_nbt_path<"component.minecraft:can_break">;
             using nbt_inline = void;
         };
 
@@ -378,8 +360,6 @@ namespace copper_server::base_objects {
             std::strong_ordering operator<=>(const attribute_modifiers& other) const {
                 return attributes <=> other.attributes;
             }
-
-            using nbt_path = ecs_nbt_path<"component.minecraft:attribute_modifiers">;
             using nbt_inline = void;
         };
 
@@ -389,39 +369,33 @@ namespace copper_server::base_objects {
             list_array<std::string> strings = {};
             list_array<int32_t> colors = {};
             bool operator==(const custom_model_data& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:custom_model_data">;
         };
 
         struct tooltip_display : public enum_item<15> {
             bool hide_tooltip = false;
             list_array<var_int32::data_component_type> hidden_components = {};
             bool operator==(const tooltip_display& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:tooltip_display">;
         };
 
         struct repair_cost : public enum_item<16> {
             var_int32 cost;
             bool operator==(const repair_cost& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:repair_cost">;
             using nbt_inline = void;
         };
 
         struct creative_slot_lock : public enum_item<17> {
             bool operator==(const creative_slot_lock& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:creative_slot_lock">;
         };
 
         struct enchantment_glint_override : public enum_item<18> {
             bool has;
             bool operator==(const enchantment_glint_override& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:enchantment_glint_override">;
             using nbt_inline = void;
         };
 
         struct intangible_projectile : public enum_item<19> {
-            enbt::value value_compound;
+            util::nbt value_compound;
             bool operator==(const intangible_projectile& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:intangible_projectile">;
             using nbt_inline = void;
         };
 
@@ -430,7 +404,6 @@ namespace copper_server::base_objects {
             float saturation;
             bool can_always_eat = false;
             bool operator==(const food& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:food">;
         };
 
         struct consumable : public enum_item<21> {
@@ -452,7 +425,6 @@ namespace copper_server::base_objects {
             bool has_consume_particles = true;
             list_array<consume_effect> on_consume_effects;
             bool operator==(const consumable& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:consumable">;
         };
 
         struct use_remainder : public enum_item<22> {
@@ -475,7 +447,6 @@ namespace copper_server::base_objects {
             use_remainder& operator=(use_remainder&& remainder);
 
             bool operator==(const use_remainder& other) const;
-            using nbt_path = ecs_nbt_path<"component.minecraft:use_remainder">;
             using nbt_inline = void;
         };
 
@@ -483,13 +454,11 @@ namespace copper_server::base_objects {
             float seconds;
             std::optional<identifier> cooldown_group = std::nullopt;
             bool operator==(const use_cooldown& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:use_cooldown">;
         };
 
         struct damage_resistant : public enum_item<24> {
             identifier types; //tag without #
             bool operator==(const damage_resistant& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:damage_resistant">;
         };
 
         struct tool : public enum_item<25> {
@@ -505,20 +474,17 @@ namespace copper_server::base_objects {
             var_int32 damage_per_block = 1;
             bool can_destroy_blocks_in_creative = true;
             bool operator==(const tool& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:tool">;
         };
 
         struct weapon : public enum_item<26> {
             var_int32 item_damage_per_attack = 1;
             float disable_blocking_for_seconds = 0.0f; //axe 5.0f
             bool operator==(const weapon& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:weapon">;
         };
 
         struct enchantable : public enum_item<27> {
             var_int32 value;
             bool operator==(const enchantable& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:enchantable">;
         };
 
         struct equippable : public enum_item<28> {
@@ -543,24 +509,20 @@ namespace copper_server::base_objects {
             or_<var_int32::sound_event, sound_event_t> shearing_sound = var_int32::sound_event("item.shears.snip");
 
             bool operator==(const equippable& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:equippable">;
         };
 
         struct repairable : public enum_item<29> {
             id_set<var_int32::item> items;
             bool operator==(const repairable& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:repairable">;
         };
 
         struct glider : public enum_item<30> {
             bool operator==(const glider& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:glider">;
         };
 
         struct tooltip_style : public enum_item<31> {
             identifier style;
             bool operator==(const tooltip_style& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:tooltip_style">;
             using nbt_inline = void;
         };
 
@@ -592,7 +554,6 @@ namespace copper_server::base_objects {
             }
 
             bool operator==(const death_protection& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:death_protection">;
         };
 
         struct blocks_attacks : public enum_item<33> {
@@ -618,7 +579,6 @@ namespace copper_server::base_objects {
             std::optional<or_<var_int32::sound_event, sound_event_t>> block_sound = std::nullopt;
             std::optional<or_<var_int32::sound_event, sound_event_t>> disabled_sound = std::nullopt;
             bool operator==(const blocks_attacks& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:blocks_attacks">;
         };
 
         struct stored_enchantments : public enum_item<34> {
@@ -627,28 +587,24 @@ namespace copper_server::base_objects {
                 limited_num<var_int32, 1, 255>>
                 enchantments;
             bool operator==(const stored_enchantments& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:stored_enchantments">;
             using nbt_inline = void;
         };
 
         struct dyed_color : public enum_item<35> {
             int32_t rgb = 0xFFA0'6540;
             bool operator==(const dyed_color& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:dyed_color">;
             using nbt_inline = void;
         };
 
         struct map_color : public enum_item<36> {
             int32_t rgb = 0x0046'402E;
             bool operator==(const map_color& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:map_color">;
             using nbt_inline = void;
         };
 
         struct map_id : public enum_item<37> {
             var_int32 id;
             bool operator==(const map_id& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:map_id">;
             using nbt_inline = void;
         };
 
@@ -664,7 +620,6 @@ namespace copper_server::base_objects {
 
             std::unordered_map<std::string, decoration_t> decorations;
             bool operator==(const map_decorations& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:map_decorations">;
             using nbt_inline = void;
             using packet_as_nbt = void;
         };
@@ -677,20 +632,17 @@ namespace copper_server::base_objects {
 
             enum_as<type_e, var_int32> type;
             bool operator==(const map_post_processing& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:map_post_processing">;
         };
 
         struct charged_projectiles : public enum_item<40> {
             list_array<slot> projectiles;
             bool operator==(const charged_projectiles& other) const;
-            using nbt_path = ecs_nbt_path<"component.minecraft:charged_projectiles">;
             using nbt_inline = void;
         };
 
         struct bundle_contents : public enum_item<41> {
             list_array<slot> content;
             bool operator==(const bundle_contents& other) const;
-            using nbt_path = ecs_nbt_path<"component.minecraft:bundle_contents">;
             using nbt_inline = void;
         };
 
@@ -700,13 +652,11 @@ namespace copper_server::base_objects {
             list_array<potion_effect> custom_effects = {};
             std::optional<std::string> custom_name;
             bool operator==(const potion_contents& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:potion_contents">;
         };
 
         struct potion_duration_scale : public enum_item<43> {
             float multiplier;
             bool operator==(const potion_duration_scale& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:potion_duration_scale">;
             using nbt_inline = void;
         };
 
@@ -719,7 +669,6 @@ namespace copper_server::base_objects {
 
             list_array<effect> effects;
             bool operator==(const suspicious_stew_effects& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:suspicious_stew_effects">;
             using nbt_inline = void;
         };
 
@@ -732,7 +681,6 @@ namespace copper_server::base_objects {
 
             list_array_sized<page, 100> pages;
             bool operator==(const writable_book_content& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:writable_book_content">;
         };
 
         struct written_book_content : public enum_item<46> {
@@ -748,50 +696,44 @@ namespace copper_server::base_objects {
             list_array_sized<page, 100> pages = {};
             bool resolved = false;
             bool operator==(const written_book_content& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:written_book_content">;
         };
 
         struct trim : public enum_item<47> {
             or_<var_int32::trim_material, trim_material> material;
             or_<var_int32::trim_pattern, trim_pattern> pattern;
             bool operator==(const trim& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:trim">;
         };
 
         struct debug_stick_state : public enum_item<48> {
             std::unordered_map<api::id::block_type, std::string> block_to_property;
 
             bool operator==(const debug_stick_state& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:debug_stick_state">;
             using nbt_inline = void;
             using packet_as_nbt = void;
         };
 
         struct entity_data : public enum_item<49> {
             api::id::entity_type type;
-            enbt::value nbt;
+            util::nbt nbt;
             bool operator==(const entity_data& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:entity_data">;
         };
 
         struct bucket_entity_data : public enum_item<50> {
-            enbt::value data;
+            util::nbt data;
+
             bool operator==(const bucket_entity_data& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:bucket_entity_data">;
             using nbt_inline = void;
         };
 
         struct block_entity_data : public enum_item<51> {
             api::id::block_entity_type type;
-            enbt::value nbt;
+            util::nbt nbt;
             bool operator==(const block_entity_data& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:block_entity_data">;
         };
 
         struct instrument : public enum_item<52> {
             or_<var_int32::instrument, base_objects::instrument> value;
             bool operator==(const instrument& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:instrument">;
             using nbt_inline = void;
         };
 
@@ -811,14 +753,12 @@ namespace copper_server::base_objects {
             enum_switch<uint8_t, reference, direct> material;
 
             bool operator==(const provides_trim_material& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:provides_trim_material">;
             using nbt_inline = void;
         };
 
         struct ominous_bottle_amplifier : public enum_item<54> {
             limited_num<var_int32, 0, 4> amplifier;
             bool operator==(const ominous_bottle_amplifier& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:ominous_bottle_amplifier">;
             using nbt_inline = void;
         };
 
@@ -839,21 +779,19 @@ namespace copper_server::base_objects {
 
             enum_switch<uint8_t, reference, direct> song;
             bool operator==(const jukebox_playable& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:jukebox_playable">;
             using nbt_inline = void;
         };
 
         struct provides_banner_patterns : public enum_item<56> {
             identifier key;
             bool operator==(const provides_banner_patterns& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:provides_banner_patterns">;
             using nbt_inline = void;
         };
 
         struct recipes : public enum_item<57> {
             list_array<var_int32::recipe> recipe_ids;
+
             bool operator==(const recipes& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:recipes">;
             using nbt_inline = void;
         };
 
@@ -861,6 +799,7 @@ namespace copper_server::base_objects {
             struct position {
                 identifier has_global_position;
                 base_objects::position pos;
+
                 bool operator==(const position& other) const = default;
             };
 
@@ -868,21 +807,20 @@ namespace copper_server::base_objects {
             bool tracked = true;
 
             bool operator==(const lodestone_tracker& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:lodestone_tracker">;
         };
 
         struct firework_explosion : public enum_item<59> {
             item_firework_explosion explosion;
+
             bool operator==(const firework_explosion& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:firework_explosion">;
             using nbt_inline = void;
         };
 
         struct fireworks : public enum_item<60> {
             var_int32 flight_duration = 0;
             list_array_sized<item_firework_explosion, 256> explosions;
+
             bool operator==(const fireworks& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:fireworks">;
         };
 
         struct profile : public enum_item<61> {
@@ -922,13 +860,12 @@ namespace copper_server::base_objects {
             std::optional<enum_as<model_e, var_int32>> model = std::nullopt;
 
             bool operator==(const profile& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:profile">;
         };
 
         struct note_block_sound : public enum_item<62> {
             identifier sound;
+
             bool operator==(const note_block_sound& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:note_block_sound">;
             using nbt_inline = void;
         };
 
@@ -947,15 +884,15 @@ namespace copper_server::base_objects {
             };
 
             list_array<layer> layers;
+
             bool operator==(const banner_patterns& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:banner_patterns">;
             using nbt_inline = void;
         };
 
         struct base_color : public enum_item<64> {
             enum_as<dye_color, var_int32> color;
+
             bool operator==(const base_color& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:base_color">;
             using nbt_inline = void;
         };
 
@@ -963,7 +900,6 @@ namespace copper_server::base_objects {
             std::array<var_int32::item, 4> item_decorations;
 
             bool operator==(const pot_decorations& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:pot_decorations">;
             using nbt_inline = void;
         };
 
@@ -992,37 +928,34 @@ namespace copper_server::base_objects {
             size_t size() const;
 
             bool operator==(const container& other) const;
-            using nbt_path = ecs_nbt_path<"component.minecraft:container">;
         };
 
         struct block_state : public enum_item<67> {
             std::unordered_map<std::string, std::string> properties;
 
             bool operator==(const block_state& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:block_state">;
             using nbt_inline = void;
         };
 
         struct bees : public enum_item<68> {
             struct bee {
-                enbt::compound entity_data;
+                util::nbt entity_data;
                 var_int32 ticks_in_hive;
                 var_int32 min_ticks_in_hive;
+
                 bool operator==(const bee& other) const = default;
             };
 
             list_array<bee> inside;
 
             bool operator==(const bees& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:bees">;
             using nbt_inline = void;
         };
 
         struct lock : public enum_item<69> {
-            enbt::value key;//TODO replace with predicate
+            util::nbt key; //TODO replace with predicate
 
             bool operator==(const lock& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:lock">;
             using nbt_inline = void;
         };
 
@@ -1031,14 +964,13 @@ namespace copper_server::base_objects {
             int64_t seed = 0;
 
             bool operator==(const container_loot& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:container_loot">;
             using packet_as_nbt = void;
         };
 
         struct break_sound : public enum_item<71> {
             or_<var_int32::sound_event, sound_event_t> sound;
+
             bool operator==(const break_sound& other) const = default;
-            using nbt_path = ecs_nbt_path<"component.minecraft:break_sound">;
             using nbt_inline = void;
         };
 
@@ -1047,7 +979,6 @@ namespace copper_server::base_objects {
 
             bool operator==(const villager_variant& other) const = default;
             using actual_name = component_custom_name<"villager/variant">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:villager_variant">;
             using nbt_inline = void;
         };
 
@@ -1056,7 +987,6 @@ namespace copper_server::base_objects {
 
             bool operator==(const wolf_variant& other) const = default;
             using actual_name = component_custom_name<"wolf/variant">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:wolf/variant">;
             using nbt_inline = void;
         };
 
@@ -1065,107 +995,108 @@ namespace copper_server::base_objects {
 
             bool operator==(const wolf_sound_variant& other) const = default;
             using actual_name = component_custom_name<"wolf/sound_variant">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:wolf/sound_variant">;
             using nbt_inline = void;
         };
 
         struct wolf_collar : public enum_item<75> {
             enum_as<dye_color, var_int32> color;
+
             bool operator==(const wolf_collar& other) const = default;
             using actual_name = component_custom_name<"wolf/collar">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:wolf/collar">;
             using nbt_inline = void;
         };
 
         struct fox_variant : public enum_item<76> {
             var_int32::fox_variant variant;
+
             bool operator==(const fox_variant& other) const = default;
             using actual_name = component_custom_name<"fox/variant">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:fox/variant">;
             using nbt_inline = void;
         };
 
         struct salmon_size : public enum_item<77> {
             var_int32 size;
+
             bool operator==(const salmon_size& other) const = default;
             using actual_name = component_custom_name<"salmon/size">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:salmon/size">;
             using nbt_inline = void;
         };
 
         struct parrot_variant : public enum_item<78> {
             var_int32::parrot_variant variant;
+
             bool operator==(const parrot_variant& other) const = default;
             using actual_name = component_custom_name<"parrot/variant">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:parrot/variant">;
             using nbt_inline = void;
         };
 
         struct tropical_fish_pattern : public enum_item<79> {
             var_int32::tropical_fish_pattern variant;
+
             bool operator==(const tropical_fish_pattern& other) const = default;
             using actual_name = component_custom_name<"tropical_fish/pattern">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:tropical_fish/pattern">;
             using nbt_inline = void;
         };
 
         struct tropical_fish_base_color : public enum_item<80> {
             enum_as<dye_color, var_int32> color;
+
             bool operator==(const tropical_fish_base_color& other) const = default;
             using actual_name = component_custom_name<"tropical_fish/base_color">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:tropical_fish/base_color">;
             using nbt_inline = void;
         };
 
         struct tropical_fish_pattern_color : public enum_item<81> {
             enum_as<dye_color, var_int32> color;
+
             bool operator==(const tropical_fish_pattern_color& other) const = default;
             using actual_name = component_custom_name<"tropical_fish/pattern_color">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:tropical_fish/pattern_color">;
             using nbt_inline = void;
         };
 
         struct mooshroom_variant : public enum_item<82> {
             var_int32::mooshroom_variant variant;
+
             bool operator==(const mooshroom_variant& other) const = default;
             using actual_name = component_custom_name<"mooshroom/variant">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:mooshroom/variant">;
             using nbt_inline = void;
         };
 
         struct rabbit_variant : public enum_item<83> {
             var_int32::rabbit_variant variant;
+
             bool operator==(const rabbit_variant& other) const = default;
             using actual_name = component_custom_name<"rabbit/variant">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:rabbit/variant">;
             using nbt_inline = void;
         };
 
         struct pig_variant : public enum_item<84> {
             var_int32::pig_variant variant;
+
             bool operator==(const pig_variant& other) const = default;
             using actual_name = component_custom_name<"pig/variant">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:pig/variant">;
             using nbt_inline = void;
         };
 
         struct cow_variant : public enum_item<85> {
             var_int32::cow_variant variant;
+
             bool operator==(const cow_variant& other) const = default;
             using actual_name = component_custom_name<"cow/variant">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:cow/variant">;
             using nbt_inline = void;
         };
 
         struct chicken_variant : public enum_item<86> {
             struct reference : public default_enum_item<0> {
                 identifier name;
+
                 bool operator==(const reference& other) const = default;
                 using nbt_inline = void;
             };
 
             struct direct : public enum_item<1> {
                 var_int32::chicken_variant id;
+
                 bool operator==(const direct& other) const = default;
                 using nbt_inline = void;
             };
@@ -1174,7 +1105,6 @@ namespace copper_server::base_objects {
 
             bool operator==(const chicken_variant& other) const = default;
             using actual_name = component_custom_name<"chicken/variant">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:chicken/variant">;
             using nbt_inline = void;
         };
 
@@ -1182,7 +1112,6 @@ namespace copper_server::base_objects {
             var_int32::frog_variant variant;
             bool operator==(const frog_variant& other) const = default;
             using actual_name = component_custom_name<"frog/variant">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:frog/variant">;
             using nbt_inline = void;
         };
 
@@ -1190,63 +1119,62 @@ namespace copper_server::base_objects {
             var_int32::horse_variant variant;
             bool operator==(const horse_variant& other) const = default;
             using actual_name = component_custom_name<"horse/variant">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:horse/variant">;
             using nbt_inline = void;
         };
 
         struct painting_variant : public enum_item<89> {
             var_int32::painting_variant variant;
+
             bool operator==(const painting_variant& other) const = default;
             using actual_name = component_custom_name<"painting/variant">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:painting/variant">;
             using nbt_inline = void;
         };
 
         struct llama_variant : public enum_item<90> {
             var_int32::llama_variant variant;
+
             bool operator==(const llama_variant& other) const = default;
             using actual_name = component_custom_name<"llama/variant">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:llama/variant">;
             using nbt_inline = void;
         };
 
         struct axolotl_variant : public enum_item<91> {
             var_int32::axolotl_variant variant;
+
             bool operator==(const axolotl_variant& other) const = default;
             using actual_name = component_custom_name<"axolotl/variant">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:axolotl/variant">;
             using nbt_inline = void;
         };
 
         struct cat_variant : public enum_item<92> {
             var_int32::cat_variant variant;
+
             bool operator==(const cat_variant& other) const = default;
             using actual_name = component_custom_name<"cat/variant">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:cat/variant">;
             using nbt_inline = void;
         };
 
         struct cat_collar : public enum_item<93> {
             enum_as<dye_color, var_int32> color;
+
             bool operator==(const cat_collar& other) const = default;
             using actual_name = component_custom_name<"cat/collar">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:cat/collar">;
             using nbt_inline = void;
         };
 
         struct sheep_color : public enum_item<94> {
             enum_as<dye_color, var_int32> color;
+
             bool operator==(const sheep_color& other) const = default;
             using actual_name = component_custom_name<"sheep/color">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:sheep/color">;
             using nbt_inline = void;
         };
 
         struct shulker_color : public enum_item<95> {
             enum_as<dye_color, var_int32> color;
+
             bool operator==(const shulker_color& other) const = default;
             using actual_name = component_custom_name<"shulker/color">;
-            using nbt_path = ecs_nbt_path<"component.minecraft:shulker/color">;
             using nbt_inline = void;
         };
 

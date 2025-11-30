@@ -37,7 +37,7 @@ std::map<std::string, std::string> type_map = {
     {"List<ItemStack>", "list_array<base_objects::slot_data>"},
     {"List<TestInstanceBlockEntity$Error>", "list_array<base_objects::block_entity::test_instance::error>"},
     {"ProfileComponent", "base_objects::component::profile"},
-    {"Pool<spawner.MobSpawnerEntry>", "base_objects::pool<base_objects::block_entity::mob_spawner_entry>"}, //TODO implement
+    {"Pool<spawner.MobSpawnerEntry>", "base_objects::pool<base_objects::block_entity::mob_spawner_entry>"},
     {"Reference2IntOpenHashMap<RegistryKey<Recipe<?>>>", "std::unordered_map<api::id::recipe, int32_t>"},
     {"RegistryKey<TestInstance>", "api::id::test_instance_type"},
     {"RegistryKey<LootTable>", "api::id::loot_table"},
@@ -54,7 +54,7 @@ std::map<std::string, std::string> type_map = {
     {"Text", "base_objects::chat"},
     {"Vec3i", "util::xyz<int32_t>"},
     {"Vibrations$VibrationListener", "base_objects::vibration_listener"},
-    {"spawner.MobSpawnerEntry", "base_objects::block_entity::mob_spawner_entry"}, //TODO implement
+    {"spawner.MobSpawnerEntry", "base_objects::block_entity::mob_spawner_entry"},
     {"ViewerCountManager", "base_objects::viewer_count_manager"},
     {"boolean", "bool"},
     {"double", "double"},
@@ -63,6 +63,22 @@ std::map<std::string, std::string> type_map = {
     {"int[]", "std::array<int32_t, "},
     {"long", "int64_t"},
 };
+
+struct ComponentDefinition {
+    std::string name;
+    std::string nbt_path = "";
+    std::map<std::string, pt::ptree> fields;
+};
+
+struct entity_definition {
+    std::set<std::string> components;
+    int32_t id;
+};
+
+std::map<std::string, ComponentDefinition> discovered_components;
+
+
+std::map<std::string, entity_definition> entity_map;
 
 std::string camel_to_snake(const std::string& input) {
     if (input.empty())
@@ -87,6 +103,35 @@ std::string camel_to_snake(const std::string& input) {
             result += current_char;
     }
     return result;
+}
+
+std::string class_to_struct_name(const std::string& java_class) {
+    auto last_dot = java_class.rfind('.');
+    std::string class_name = (last_dot == std::string::npos) ? java_class : java_class.substr(last_dot + 1);
+
+    std::vector<std::string> parts;
+    boost::split(parts, class_name, boost::is_any_of("$"));
+
+    std::string combined;
+    for (const auto& part : parts) {
+        if (part.empty())
+            continue;
+        if (std::isdigit(part[0]))
+            continue;
+        if (!combined.empty())
+            combined += "_";
+        combined += part;
+    }
+
+    if (combined.empty())
+        return "unknown_component";
+
+    auto res = camel_to_snake(combined);
+
+    if (res.ends_with("_block_entity"))
+        return res.substr(0, res.size() - 13);
+
+    return res;
 }
 
 bool is_sized_required(const std::string& java_type) {
@@ -339,7 +384,6 @@ void generate_from_nbt_body(std::ostream& out, const std::string& result_accesso
 
         if (!nbt_name_opt && nested_fields_opt && type_map.contains(java_type)) {
             bool is_opt = is_optional(java_type) || preservation == "OPTIONAL";
-            // Iterate through the nested JSON fields (x, y, z).
             for (const auto& nested_pair : *nested_fields_opt) {
                 const pt::ptree& nested_field = nested_pair.second;
                 auto nested_nbt_name_opt = nested_field.get_optional<std::string>("nbt_name");
@@ -354,12 +398,10 @@ void generate_from_nbt_body(std::ostream& out, const std::string& result_accesso
                     nested_value_accessor += ".";
                 nested_value_accessor += nested_field_name;
 
-                // Use 'collect' for optional and 'collect_required' for required fields.
                 std::string collect_method = is_opt ? "collect" : "collect_required";
 
                 out << "\n"
-                    << indent << "." << collect_method << "(\"" << *nested_nbt_name_opt << "\", [&ref](util::nbt_read_stream& stream) {";
-                // If the parent object is optional, we must create it before setting a member.
+                    << indent << "." << collect_method << "(\"" << *nested_nbt_name_opt << "\", [this](util::nbt_read_stream& stream) {";
                 if (is_opt) {
                     out << "\n"
                         << indent << "    if (!" << current_accessor << ") " << current_accessor << ".emplace();";
@@ -369,7 +411,7 @@ void generate_from_nbt_body(std::ostream& out, const std::string& result_accesso
                 out << "\n"
                     << indent << "})";
             }
-            continue; // Skip the original logic for this field.
+            continue;
         }
 
         if (!nbt_name_opt || *nbt_name_opt == "_____UNKNOWN_____")
@@ -383,7 +425,7 @@ void generate_from_nbt_body(std::ostream& out, const std::string& result_accesso
             collect_method = (preservation == "REQUIRED" || preservation == "REQUIRED_DEFAULT_EMPTY") ? "collect_required" : "collect";
 
         out << "\n"
-            << indent << "." << collect_method << "(\"" << *nbt_name_opt << "\", [&ref](util::nbt_read_stream& stream) {";
+            << indent << "." << collect_method << "(\"" << *nbt_name_opt << "\", [this](util::nbt_read_stream& stream) {";
 
 
         auto nbt_override_opt = field.get_optional<std::string>("nbt_type_override");
@@ -488,6 +530,31 @@ int main(int argc, char* argv[]) {
     pt::ptree root;
     try {
         pt::read_json(input_file, root);
+
+
+        for (const auto& pair : root) {
+            if (pair.first.starts_with("data:"))
+                continue;
+
+            std::string entity_id = pair.first;
+            entity_map.emplace(entity_id, entity_definition{.id = pair.second.get<int32_t>("id")});
+            const auto& fields_node_opt = pair.second.get_child_optional("fields");
+            if (!fields_node_opt)
+                continue;
+
+            for (const auto& field_pair : *fields_node_opt) {
+                const pt::ptree& field = field_pair.second;
+
+                std::string declaring_class = field.get<std::string>("declaring_class");
+                std::string component_name = class_to_struct_name(declaring_class);
+                std::string field_name = field.get<std::string>("name");
+
+                discovered_components[component_name].name = component_name;
+                discovered_components[component_name].fields[field_name] = field;
+
+                entity_map[entity_id].components.insert(component_name);
+            }
+        }
     } catch (const pt::json_parser_error& e) {
         std::cerr << "Error parsing JSON file: " << e.what() << std::endl;
         return 1;
@@ -515,8 +582,10 @@ int main(int argc, char* argv[]) {
                    "#include <src/base_objects/uuid.hpp>\n"
                    "\n"
                    "namespace copper_server::util {\n"
-                   "    class nbt_read_stream;\n"
-                   "    class nbt_write_stream;\n"
+                   "    class nbt_write_compound_stream;\n"
+                   "    namespace nbt_collection {\n"
+                   "        class compound_flex;\n"
+                   "    }\n"
                    "}\n"
                    "\n"
                    "namespace copper_server::generated::block_entity {\n";
@@ -527,78 +596,70 @@ int main(int argc, char* argv[]) {
                                  "#include <src/util/reflect.hpp>\n"
                                  "#include <src/util/reflect/api/packets/slot.hpp>\n"
                                  "#include <src/util/reflect/api/packets/types.hpp>\n"
-                                 "#include <src/util/reflect/base_objects/block_entity.hpp>\n"
                                  "#include <src/util/reflect/base_objects/component.hpp>\n"
                                  "#include <src/util/reflect/base_objects/dye_color.hpp>\n"
 
 
                                  "\n"
+                                 "#include <src/api/ecs/entity_definition.hpp>\n"
+                                 "#include <src/api/ecs/block_entity_components.hpp>\n"
                                  "#include <src/util/nbt_stream.hpp>\n"
                                  "#include <src/util/encoding/nbt/serialization.hpp>\n"
                                  "#include <src/util/encoding/nbt/deserialization.hpp>\n"
+
                                  "\n"
                                  "namespace copper_server::generated::block_entity {\n\n";
 
     try {
         std::string from_nbt_select;
 
-        for (const auto& pair : root) {
-            if (pair.first.starts_with("data:"))
-                continue;
+        for (const auto& [comp_name, comp_def] : discovered_components) {
+            const std::string struct_name = sanitize_name(comp_name);
+            pt::ptree fields_ptree;
+            for (auto& [fname, fnode] : comp_def.fields) {
+                fields_ptree.push_back(std::make_pair(fname, fnode));
+            }
 
-            const std::string struct_name = sanitize_name(pair.first);
-            const pt::ptree& block_node = pair.second;
-            const auto& fields_node_opt = block_node.get_child_optional("fields");
-            if (!fields_node_opt)
-                continue;
-
-            header_file << "    struct " << struct_name << " : public base_objects::block_entity {\n";
-            generate_struct_fields(header_file, *fields_node_opt, 2);
+            header_file << "    struct " << struct_name << " {\n";
+            generate_struct_fields(header_file, fields_ptree, 2);
             header_file << "\n";
-            header_file << "        virtual ~" << struct_name << "() = default;\n";
-            header_file << "        void to_nbt(util::nbt_write_stream& stream) override;\n";
-            header_file << "        static std::unique_ptr<base_objects::block_entity> from_nbt(util::nbt_read_stream& stream);\n";
-            header_file << "        std::unique_ptr<base_objects::block_entity> clone() const override;\n";
+            header_file << "        using nbt_path = util::cts_string<\"\">;\n";
+            header_file << "        void to_nbt(util::nbt_write_compound_stream& stream);\n";
+            header_file << "        void from_nbt(util::nbt_collection::compound_flex& flex);\n";
             header_file << "    };\n\n";
 
-            source_file << "    void " << struct_name << "::to_nbt(util::nbt_write_stream& stream) {\n";
-            source_file << "        auto compound_stream = stream.write_compound();\n";
-            source_file << "        to_nbt_base_data(compound_stream);\n";
-            generate_to_nbt_body(source_file, "(*this)", struct_name, "compound_stream", *fields_node_opt, 2);
+            source_file << "    void " << comp_name << "::to_nbt(util::nbt_write_compound_stream& stream) {\n";
+            generate_to_nbt_body(source_file, "(*this)", struct_name, "stream", fields_ptree, 2);
             source_file << "    }\n";
 
-            source_file << "    std::unique_ptr<base_objects::block_entity> " << struct_name << "::from_nbt(util::nbt_read_stream& stream) {\n";
-            source_file << "        std::unique_ptr<" << struct_name << "> result = std::make_unique<" << struct_name << ">();\n";
-            source_file << "        " << struct_name << "& ref = *result;\n";
-            source_file << "        util::nbt_collection::compound_flex read_flex;\n";
-            source_file << "        ref.from_nbt_base_data(read_flex);\n";
-            source_file << "        read_flex";
-            generate_from_nbt_body(source_file, "ref", struct_name, *fields_node_opt, 3);
-            source_file << "\n            .make_collect(stream);\n";
-            source_file << "        return result;\n";
-            source_file << "    }\n";
-            source_file << "    std::unique_ptr<base_objects::block_entity> " << struct_name << "::clone() const {\n";
-            source_file << "        return std::make_unique<" << struct_name << ">(*this);\n";
-            source_file << "    }\n";
-            from_nbt_select += "            case " + std::to_string(block_node.get<int>("id")) + ": return " + struct_name + "::from_nbt(stream);\n";
+            source_file << "    void " << struct_name << "::from_nbt(util::nbt_collection::compound_flex& stream) {\n";
+            source_file << "        stream";
+            generate_from_nbt_body(source_file, "(*this)", struct_name, fields_ptree, 3);
+            source_file << ";\n    }\n";
         }
 
-        header_file << "    std::unique_ptr<base_objects::block_entity> from_nbt(base_objects::block_id_t id, util::nbt_read_stream& stream);\n";
 
-        // clang-format off
-        source_file <<
-            "    std::unique_ptr<base_objects::block_entity> from_nbt(base_objects::block id, util::nbt_read_stream& stream){\n"
-            "        if (id.is_block_entity()){\n"
-            "            switch (id.block_entity_id()){\n"
-                               << from_nbt_select << 
-                            "            default: return {};\n"
-            "            }\n"
-            "        } else\n"
-            "            return {};\n"
-            "    }\n";
-        // clang-format on
+        header_file << "    namespace internal {\n       void register_generated_block_entities();\n    }\n";
+
+        source_file << "    namespace internal {\n";
+        source_file << "        void register_generated_block_entities() {\n";
+        for (const auto& [entity_id, data] : entity_map) {
+            std::string definition_id = "@block_entity:" + entity_id;
+
+            source_file << "            api::ecs::initialization::make_ecs_entity_definition(\"" << definition_id << "\")";
+            source_file << "\n                .add_constant(api::ecs::com::block_entity::type{" << data.id << "})";
+            source_file << "\n                .add_locked<api::ecs::com::block_entity::base_data>()";
+            for (const auto& comp_name : data.components)
+                source_file << "\n                .add_locked<" << comp_name << ">()";
+
+            source_file << ";\n";
+        }
+        source_file << "        }\n";
+        source_file << "    }\n";
+
         header_file << "} // namespace copper_server::generated::block_entity\n";
         source_file << "} // namespace copper_server::generated::block_entity\n";
+
 
         std::cout << "Successfully generated C++ files:\n- " << out_header << "\n- " << out_source << "\n";
     } catch (const std::exception& ex) {
